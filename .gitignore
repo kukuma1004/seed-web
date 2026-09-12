@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.dream-loop/
+*.log
+.env*
+docs/
+AGENTS.md
+BRIEF.md
+Play*.cmd
+tools/*
+!tools/correctness-test.mjs
+!tools/evolution-test.mjs
+!tools/motion-test.mjs
+!tools/journey-test.mjs

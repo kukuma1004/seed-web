@@ -1,0 +1,15 @@
+{
+  "name": "seed-web",
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "test": "node tools/correctness-test.mjs && node tools/evolution-test.mjs && node tools/motion-test.mjs && node tools/journey-test.mjs"
+  },
+  "dependencies": {
+    "three": "^0.180.0",
+    "vite": "^6.1.0"
+  }
+}
