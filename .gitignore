@@ -12,3 +12,4 @@ tools/*
 !tools/evolution-test.mjs
 !tools/motion-test.mjs
 !tools/journey-test.mjs
+!tools/vfx-test.mjs
