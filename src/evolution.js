@@ -1,10 +1,7 @@
 import * as THREE from 'three';
 
-export const LAW_PRESENTATION={
-  reflect:{name:'거울 껍질',hint:'벽을 맞혀 돌아오는 각도를 노려보세요',color:0x8ce8ff},
-  split:{name:'갈라진 꽃',hint:'앞의 적을 맞혀 뒤쪽 무리로 파편을 보내세요',color:0xffaa8a},
-  chain:{name:'번개 가지',hint:'가까이 모인 적들 사이로 번개를 이어보세요',color:0xffdc87}
-};
+import {LAWS} from './laws.js';
+export const LAW_PRESENTATION=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,{name:v.form,hint:v.hint,color:v.color}]));
 
 // Persistent, local-space body parts. No collision or extra lights per frame.
 export function createSeedEvolution(player,body=player){
@@ -48,6 +45,13 @@ export function createSeedEvolution(player,body=player){
       const wire=add(groups.chain,new THREE.CylinderGeometry(.027,.027,d.length(),5),armor,...a.clone().add(b).multiplyScalar(.5).toArray());
       wire.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());}
   });
+  for(const [index,id] of ['orbit','pierce','burst','recall','gravity','frost'].entries()){
+    for(let i=0;i<3;i++){
+      const angle=i*Math.PI*2/3;
+      const geo=id==='orbit'?new THREE.TorusGeometry(.19,.045,4,16):id==='pierce'?new THREE.ConeGeometry(.1,.75,5):id==='burst'?new THREE.IcosahedronGeometry(.2,0):id==='recall'?new THREE.TorusGeometry(.2,.055,4,12,Math.PI*1.5):id==='gravity'?new THREE.OctahedronGeometry(.22):new THREE.ConeGeometry(.17,.48,4);
+      const part=add(groups[id],geo,material[id],Math.cos(angle)*.5,.85+(i===0?.55:0),Math.sin(angle)*.38);part.rotation.z=id==='pierce'?(i-1)*.55:0;parts[id].push(part);
+    }
+  }
   const surgeMaterial=new THREE.MeshBasicMaterial({color:0xb6ffdc,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide});
   const surge=add(player,new THREE.TorusGeometry(.7,.045,5,48),surgeMaterial,0,.08,0);surge.rotation.x=Math.PI/2;surge.visible=false;
   let laws=[],upgrades=new Set(),recoil=0,progress=1;

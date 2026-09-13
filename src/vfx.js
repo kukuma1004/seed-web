@@ -1,7 +1,8 @@
 import * as THREE from 'three';
+import {LAWS} from './laws.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const FX_COLORS={seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52};
+export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52};
 
 // Fixed GPU batches: effects cannot add lights, shadows or an unbounded mesh per spark.
 export function createVFX(scene,{mobile=false,random=Math.random}={}){
@@ -119,7 +120,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {burst,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
+  return {pulse,burst,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
     state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:4,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };

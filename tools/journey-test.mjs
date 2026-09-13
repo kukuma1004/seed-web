@@ -5,7 +5,7 @@ import {createWarden,tickWarden} from '../src/warden.js';
 import {segmentHitsCover} from '../src/collision.js';
 assert.equal(ROOMS.length,5);assert.equal(new Set(ROOMS.map(r=>JSON.stringify(r.covers))).size,5);
 for(const room of ROOMS)for(const [type,x,z] of [...room.enemies,['player',0,5],['exit',EXIT.x,EXIT.z]])assert.equal(segmentHitsCover({x,z},{x,z},room.covers,type==='warden'?1:.65),false,`${room.name}: ${type} inside cover`);
-assert.deepEqual(rewardOptions(0,[]),['reflect','split','chain']);assert.deepEqual(rewardOptions(2,['reflect','split']),['chain']);assert.deepEqual(rewardOptions(3,['reflect','split','chain']),['reflect','split','chain']);
+assert.equal(rewardOptions(0,[]).length,3);assert.equal(new Set(rewardOptions(2,['reflect','split'])).size,3);assert.ok(rewardOptions(3,['reflect','split','chain']).every(id=>['reflect','split','chain'].includes(id)));
 assert.deepEqual(learnedLaws(66,100,['split','reflect','chain']),['split']);assert.deepEqual(learnedLaws(34,100,['split','reflect','chain']),['split','reflect']);
 assert.equal(canUseExit({open:true,mode:'playing',paused:false,x:0,z:-6}),true);
 for(const extra of [{open:false},{paused:true},{mode:'evolving'},{x:8}])assert.equal(canUseExit({open:true,mode:'playing',paused:false,x:0,z:-6,...extra}),false);

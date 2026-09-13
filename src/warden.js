@@ -29,7 +29,7 @@ export function createWarden(scene,mats){
 export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst}){
  e.learned=learnedLaws(e.hp,e.maxHp,laws);e.hit=Math.max(0,e.hit-dt);e.timer-=dt;
  const delta=player.clone().sub(e.g.position).setY(0),distance=delta.length();delta.normalize();
- const type=e.pattern%3, radius=e.learned.includes('chain')?3.4:2.5;
+ const type=e.pattern%3, radius=e.learned.some(id=>['chain','gravity','burst'].includes(id))?3.4:2.5;
  e.nova.scale.setScalar(radius/2.5);
  e.tells.forEach((t,i)=>t.visible=e.state==='tell'&&i===type);
  e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,e.state==='tell'?-.13:e.state==='commit'?.18:0,12,dt);
@@ -45,8 +45,8 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst}){
   if(e.timer<=0){
    e.state='commit';e.timer=type===1?.48:.22;e.attacks++;
    e.tells.forEach(t=>t.visible=false);
-   if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20),e.learned.includes('reflect')?1:0);}
-   if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(22);}
+   if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
+   if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
   }
  }else if(e.state==='commit'){
   if(type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*8);collide(e.g.position,1);
