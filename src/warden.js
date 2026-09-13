@@ -23,7 +23,7 @@ export function createWarden(scene,mats){
  for(let i=-3;i<=3;i++){const ray=add(new THREE.PlaneGeometry(.11,7),mat,Math.sin(i*.20)*3.5,.11,Math.cos(i*.20)*3.5,tells[0]);ray.rotation.x=Math.PI/2;ray.rotation.z=-i*.20;}
  const lane=add(new THREE.PlaneGeometry(1.7,6.5),mat,0,.11,3.25,tells[1]);lane.rotation.x=Math.PI/2;
  const nova=add(new THREE.RingGeometry(2.3,2.5,64),mat,0,.11,0,tells[2]);nova.rotation.x=Math.PI/2;
- const e={g,body,type:'warden',hp:850,maxHp:850,state:'stalk',timer:1.2,pattern:0,dir:new V(0,0,1),learned:[],hit:0,legs:[],tells,nova,attacks:0};
+ const e={g,body,type:'warden',hp:1150,maxHp:1150,state:'stalk',timer:1.2,pattern:0,dir:new V(0,0,1),learned:[],hit:0,legs:[],tells,nova,attacks:0};
  return e;
 }
 export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst}){
@@ -36,25 +36,30 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst}){
  e.body.position.y=e.hit>0?.07:0;
  if(e.state==='stalk'){
   const sign=e.pattern%2?1:-1;
-  e.g.position.addScaledVector(delta,dt*(distance>5?1.8:distance<3?-1.4:.1));
-  e.g.position.x+=delta.z*dt*1.55*sign;e.g.position.z-=delta.x*dt*1.55*sign;
+  e.g.position.addScaledVector(delta,dt*(distance>5?2.9:distance<3?-2.2:.35));
+  e.g.position.x+=delta.z*dt*2.25*sign;e.g.position.z-=delta.x*dt*2.25*sign;
   e.g.rotation.y=Math.atan2(delta.x,delta.z);
-  if(e.timer<=0){e.state='tell';e.timer=type===1?.65:.8;e.dir.copy(delta);}
+  if(e.timer<=0){e.state='tell';e.timer=type===1?.44:type===0?.55:.6;e.dir.copy(delta);}
  }else if(e.state==='tell'){
   e.g.rotation.y=Math.atan2(e.dir.x,e.dir.z);
   if(e.timer<=0){
-   e.state='commit';e.timer=type===1?.48:.22;e.attacks++;
+   e.state='commit';e.timer=type===1?.42:type===0?.48:.2;e.salvos=1;e.attacks++;
    e.tells.forEach(t=>t.visible=false);
    if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
    if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
   }
  }else if(e.state==='commit'){
-  if(type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*8);collide(e.g.position,1);
+  if(type===0&&e.salvos<3&&e.timer<=.48-e.salvos*.16){
+   const n=e.learned.includes('split')?7:5;
+   for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20+(e.salvos%2?.10:-.10)),e.learned.includes('reflect')?1:0,e.learned);
+   e.salvos++;
+  }
+  if(type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*10.5);collide(e.g.position,1);
    const segment=e.g.position.clone().sub(before),length=segment.lengthSq();
    const t=length?THREE.MathUtils.clamp(player.clone().sub(before).dot(segment)/length,0,1):0;
    if(before.addScaledVector(segment,t).distanceTo(player)<1.35)hit(24);
   }
-  if(e.timer<=0){e.state='recover';e.timer=.95;}
- }else if(e.timer<=0){e.pattern++;e.state='stalk';e.timer=1.15;}
+  if(e.timer<=0){e.state='recover';e.timer=.6;}
+ }else if(e.timer<=0){e.pattern++;e.state='stalk';e.timer=.65;}
  collide(e.g.position,1);
 }

@@ -8,12 +8,12 @@ export function createSeedEvolution(player,body=player){
   const groups={}, parts={},material={};
   const add=(parent,geometry,mat,x,y,z)=>{
     const m=new THREE.Mesh(geometry,mat);m.position.set(x,y,z);
-    m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;
+    m.castShadow=false;m.receiveShadow=true;parent.add(m);return m;
   };
   const armor=new THREE.MeshStandardMaterial({color:0xc8d1af,roughness:.48,metalness:.15});
   for(const [id,info] of Object.entries(LAW_PRESENTATION)){
     const g=new THREE.Group();g.visible=false;body.add(g);groups[id]=g;parts[id]=[];
-    material[id]=new THREE.MeshStandardMaterial({color:info.color,emissive:info.color,emissiveIntensity:.75,roughness:.24,metalness:.3});
+    material[id]=new THREE.MeshStandardMaterial({color:info.color,emissive:info.color,emissiveIntensity:.24,roughness:.56,metalness:.1});
   }
   // REFLECT: broad paired shield petals with cold luminous edges, visible from both sides.
   for(const side of [-1,1]){
@@ -66,8 +66,8 @@ export function createSeedEvolution(player,body=player){
       for(const [id,g] of Object.entries(groups)){
         if(!g.visible)continue;
         const reveal=evolving?THREE.MathUtils.smoothstep(p,.12,.75):1;
-        g.scale.setScalar((laws[0]===id?1:.78)*(.25+.75*reveal)*(upgrades.has(id)?1.18:1));
-        material[id].emissiveIntensity=(upgrades.has(id)?1.1:.7)+recoil*1.8+pulse*2.4;
+        g.scale.setScalar((laws[0]===id?.82:.48)*(.25+.75*reveal)*(upgrades.has(id)?1.18:1));
+        material[id].emissiveIntensity=(upgrades.has(id)?.36:.24)+recoil*.3+pulse*1.2;
       }
       parts.reflect.forEach((g,i)=>g.rotation.y=(i?1:-1)*(recoil*.35+Math.sin(time*2)*.035));
       parts.split.forEach((m,i)=>m.rotation.x=Math.sin(time*2.5+i)*.045-recoil*.13);

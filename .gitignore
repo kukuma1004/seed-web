@@ -14,3 +14,17 @@ tools/*
 !tools/journey-test.mjs
 !tools/vfx-test.mjs
 !tools/laws-test.mjs
+
+!tools/seed-body-test.mjs
+!tools/touch-input-test.mjs
+!tools/run-save-test.mjs
+
+# Local shared AI workflow and verification evidence
+CLAUDE.md
+PROJECT_STATE.md
+GAME_DESIGN.md
+ART_DIRECTION.md
+TASKS.md
+AI_WORKFLOW.md
+PROMPTS.md
+artifacts/

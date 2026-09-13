@@ -1,13 +1,13 @@
-// Pointer IDs remain independent: releasing aim never releases movement.
+// Movement owns its pointer; the separate dodge button never releases that pointer.
 export function createTouchControls(canAct){
-  const enabled=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0;
+  const enabled=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
   document.body.classList.toggle('touch-mode',enabled);
-  const panel=document.createElement('div');panel.id='touch-controls';panel.innerHTML=`<div id="move-stick" class="stick" role="group" aria-label="이동 조이스틱"><i></i><span>이동</span></div><div id="aim-stick" class="stick" role="group" aria-label="조준과 발사 조이스틱"><i></i><span>조준 · 발사</span></div><button id="touch-dash" aria-label="회피">◇<small>회피</small></button>`;
+  const panel=document.createElement('div');panel.id='touch-controls';panel.innerHTML=`<div id="move-stick" class="stick" role="group" aria-label="이동 조이스틱"><i></i><span>이동</span></div><button id="touch-dash" aria-label="회피">◇<small>회피</small></button>`;
   document.body.append(panel);
   const axes={move:{x:0,y:0},aim:{x:0,y:0}},owners=new Map();let dashUntil=0;
   function clear(role){axes[role].x=axes[role].y=0;document.querySelector(`#${role}-stick i`).style.transform='translate(-50%,-50%)';}
-  function reset(){for(const [id,{element}] of owners){if(element.hasPointerCapture(id))element.releasePointerCapture(id);}owners.clear();clear('move');clear('aim');dashUntil=0;}
-  for(const role of ['move','aim']){
+  function reset(){for(const [id,{element}] of owners){if(element.hasPointerCapture(id))element.releasePointerCapture(id);}owners.clear();clear('move');dashUntil=0;}
+  for(const role of ['move']){
     const element=document.querySelector(`#${role}-stick`);
     function move(e){
       if(owners.get(e.pointerId)?.role!==role)return;

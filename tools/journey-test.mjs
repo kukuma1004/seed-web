@@ -17,3 +17,8 @@ boss.g.position.set(0,0,0);boss.state='tell';boss.pattern=2;boss.timer=0;boss.hp
 tickWarden(boss,.02,21,new THREE.Vector3(0,0,3),['chain','reflect'],{collide:()=>{},bolt:()=>{},hit:d=>damage+=d,burst:()=>{}});
 assert.equal(damage,22,'Learned chain shock must reach the shown larger radius');assert.ok(boss.nova.scale.x>1.3);
 console.log('Five layouts, safe spawns/exits, rewards/mutation, exit guards, moving three-pattern boss and learned projectiles passed.');
+
+// One fan attack emits exactly three salvos and keeps the telegraph direction.
+const fanBoss=createWarden(new THREE.Scene(),mats);fanBoss.state='tell';fanBoss.timer=0;fanBoss.dir.set(0,0,1);
+let fanCount=0;for(let i=0;i<30;i++)tickWarden(fanBoss,.02,i*.02,new THREE.Vector3(0,0,4),[],{collide(){},bolt(){fanCount++;},hit(){},burst(){}});
+assert.equal(fanCount,15,'Three five-bolt salvos per fan attack');

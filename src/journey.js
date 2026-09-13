@@ -9,6 +9,16 @@ export const ROOMS=[
 ];
 export const EXIT={x:0,z:-6.6,radius:1.65};
 export const LAW_NAMES=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.name]));
-export function rewardOptions(room,laws,mutated=[],options={}){return offerLaws(laws,mutated,{mutation:room===3,...options});}
+export function rewardOptions(room,laws,mutated=[],options={}){
+ const random=options.random||Math.random;
+ const offered=offerLaws(laws,mutated,{mutation:room===3,...options});
+ if(laws.length>=5){
+  const replacements=Object.keys(LAWS).filter(id=>!laws.includes(id));
+  for(let i=replacements.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[replacements[i],replacements[j]]=[replacements[j],replacements[i]];}
+  if(!(options.mutation??(room===3))&&offered.length===3)offered[2]=replacements.shift();
+  for(const id of replacements){if(offered.length===3)break;offered.push(id);}
+ }
+ return offered;
+}
 export function learnedLaws(hp,maxHp,laws){return laws.slice(0,hp/maxHp<=.34?2:hp/maxHp<=.67?1:0);}
 export function canUseExit({open,mode,paused,x,z}){return open&&mode==='playing'&&!paused&&Math.hypot(x-EXIT.x,z-EXIT.z)<EXIT.radius;}
