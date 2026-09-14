@@ -1,5 +1,7 @@
 import {emptyRelics,normalizeRelics,relicOffers,relicLawStats,relicFormScale,relicEffect,equipRelic,RELICS} from './relics.js';
 import {showRelicChoice} from './relic-ui.js';
+import {relicArt} from './relic-art.js';
+import {itemArt} from './item-art.js';
 import {createPauseBuild} from './pause-build.js';
 import {advanceFrame} from './frame-time.js';
 import {formArt} from './form-art.js';
@@ -416,7 +418,7 @@ function rankBuild(entry,place){
  if(!b)return place<=3?'<div class="rank-build none">조합 기록 없음</div>':'';
  const boss=`<span class="rank-boss">${bossText(entry.build)}</span>`;
  if(place>3)return `<div class="rank-build brief">${boss}</div>`;
- const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">유물 ${RELICS[b.relic].name}</span>`:''].join('');
+ const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
 function showRanking(view='online'){
@@ -515,8 +517,8 @@ function renderItemBar(){
  const key=ITEM_ORDER.map(id=>inventory[id]).join(',')+'|'+selectedItem;
  if(key===itemBarKey)return;itemBarKey=key;
  bar.innerHTML=heldItems(inventory).map(id=>{const it=ITEMS[id];
-  if(!usable(id))return `<span class="item-chip" title="${it.desc}"><i class="potion-icon ${id}" aria-hidden="true"></i><b>×${inventory[id]}</b><small>${it.name}</small></span>`;
-  return `<button class="item-button${id===selectedItem?' selected':''}" data-item="${id}"${id==='potion'?' id="use-potion"':''} aria-label="${it.name} · ${it.desc}" title="${it.name} · ${it.desc}"><i class="potion-icon ${id}" aria-hidden="true"></i><b>×${inventory[id]}</b><small>${id===selectedItem?'Q':''}</small></button>`;
+  if(!usable(id))return `<span class="item-chip" title="${it.desc}">${itemArt(id)}<b>×${inventory[id]}</b><small>${it.name}</small></span>`;
+  return `<button class="item-button${id===selectedItem?' selected':''}" data-item="${id}"${id==='potion'?' id="use-potion"':''} aria-label="${it.name} · ${it.desc}" title="${it.name} · ${it.desc}">${itemArt(id)}<b>×${inventory[id]}</b><small>${id===selectedItem?'Q':''}</small></button>`;
  }).join('');
 }
 function updateGauges(){

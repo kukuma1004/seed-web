@@ -4,3 +4,9 @@
 .relic-fx{display:block;font-style:normal;font-size:12px;line-height:1.5;margin-top:6px;padding:4px 7px;border-radius:6px;background:#0d1a1c99}.relic-fx.active{color:#a8ecc0}.relic-fx.missing{color:#e8a58f}.relic-cards>button.fx-missing{opacity:.86}
 @media(max-width:600px){.relic-fx{font-size:11px;margin-top:3px}}
 @media(max-height:500px) and (orientation:landscape){.relic-fx{font-size:11px;margin-top:3px;padding:2px 6px}}
+
+/* Authored relic atlas: physical artifacts replace the reused law tiles. */
+.relic-art{display:block;width:48px;height:48px;flex:none;background-repeat:no-repeat;background-size:200% 200%;filter:drop-shadow(0 3px 5px #0009) drop-shadow(0 0 6px #f2c96b55)}
+.relic-cards .relic-art{width:100px;height:100px;margin:auto}
+@media(max-width:600px){.relic-cards .relic-art{width:60px;height:60px;flex:none;margin:0}}
+@media(max-height:500px) and (orientation:landscape){.relic-cards .relic-art{width:56px;height:56px}}
