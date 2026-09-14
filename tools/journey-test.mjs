@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {ROOMS,EXIT,rewardOptions,learnedLaws,canUseExit} from '../src/journey.js';
-import {createWarden,tickWarden} from '../src/warden.js';
+import {createWarden,tickWarden,FAN_SPACING,FAN_SHIFT} from '../src/warden.js';
 import {segmentHitsCover} from '../src/collision.js';
 assert.equal(ROOMS.length,5);assert.equal(new Set(ROOMS.map(r=>JSON.stringify(r.covers))).size,5);
 for(const room of ROOMS)for(const [type,x,z] of [...room.enemies,['player',0,5],['exit',EXIT.x,EXIT.z]])assert.equal(segmentHitsCover({x,z},{x,z},room.covers,type==='warden'?1:.65),false,`${room.name}: ${type} inside cover`);
@@ -22,3 +22,5 @@ console.log('Five layouts, safe spawns/exits, rewards/mutation, exit guards, mov
 const fanBoss=createWarden(new THREE.Scene(),mats);fanBoss.state='tell';fanBoss.timer=0;fanBoss.dir.set(0,0,1);
 let fanCount=0;for(let i=0;i<30;i++)tickWarden(fanBoss,.02,i*.02,new THREE.Vector3(0,0,4),[],{collide(){},bolt(){fanCount++;},hit(){},burst(){}});
 assert.equal(fanCount,15,'Three five-bolt salvos per fan attack');
+// Neighbouring bolts leave a lane wider than the seed (hit radius .6 each side) within five units.
+{const gap=2*5*Math.sin(FAN_SPACING/2);assert.ok(gap>1.3,`fan lane ${gap.toFixed(2)} at distance 5`);assert.ok(FAN_SHIFT<FAN_SPACING/4,'salvos keep their lanes');}

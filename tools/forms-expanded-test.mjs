@@ -95,13 +95,13 @@ for(const id of Object.keys(FORMS)){
  assert.ok(f.calls.some(c=>c.e===close));assert.ok(!f.calls.some(c=>c.e===distant));assert.equal(f.combat.state().bolts,0);
 }
 
-// Mirror guard: enemy shots touching a mirror become the seed's shots, boss shots hit harder.
+// Mirror guard: ordinary enemy shots touching a mirror become the seed's shots; warden shots are untouched.
 {
  const target=enemy(0,-6),shots=[{life:4,ob:{position:vec(1.9,0)}},{life:4,boss:true,ob:{position:vec(-1.9,0)}}];
  const f=fixture([target],{enemyShots:()=>shots});f.combat.set('mirrorguard');
- f.combat.update(.001);assert.ok(shots.every(q=>q.life===0&&q.struck),'both shots were caught');
+ f.combat.update(.001);assert.ok(shots[0].life===0&&shots[0].struck,'the ordinary shot was caught');assert.equal(shots[1].life,4,'the warden shot was not');
  step(f.combat,1);
  const damages=f.calls.filter(c=>c.kind==='mirrorguard'&&!c.indirect).map(c=>c.damage).sort((a,b)=>a-b);
- assert.deepEqual(damages,[formStats('mirrorguard',1).damage,formStats('mirrorguard',1).damage*1.5]);
+ assert.deepEqual(damages,[formStats('mirrorguard',1).damage]);
 }
 console.log('Forms: ten pairs covering every law twice, uncapped form levels, prism splits, lance lines, bloom delay, crown pulses, tide drag, seed fan, mirror returns passed.');

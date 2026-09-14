@@ -8,6 +8,9 @@ export const WARDEN_VARIANTS=Object.freeze({
  seal:{name:'봉인의 문지기',patterns:[0,3,2],stalk:1,tell:1,chargeSpeed:10.5,tint:0xc9a8ff},
  hunter:{name:'추격의 문지기',patterns:[1,0,1],stalk:1.3,tell:.72,chargeSpeed:13,tint:0xff9c8a}
 });
+// Bolts in a fan are spread wide enough to leave lanes a seed fits through, and the salvos only
+// shift slightly, so reading the gap and stepping into it is the answer rather than luck.
+export const FAN_SPACING=.32,FAN_SHIFT=.06;
 export const SEAL=Object.freeze({radius:2.6,tell:1.05,lock:3.5,damage:12});
 export function wardenVariantFor(cycle){return ['memory','seal','hunter'][((cycle%3)+3)%3];}
 export function createWarden(scene,mats,variant='memory'){
@@ -66,14 +69,14 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()
   if(e.timer<=0){
    e.state='commit';e.timer=type===1?.42:type===0?.48:.2;e.salvos=1;e.attacks++;
    e.tells.forEach(t=>t.visible=false);
-   if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
+   if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
    if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
    if(type===3){e.timer=.25;seal(e.target.clone(),SEAL.radius);}
   }
  }else if(e.state==='commit'){
   if(type===0&&e.salvos<3&&e.timer<=.48-e.salvos*.16){
    const n=e.learned.includes('split')?7:5;
-   for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*.20+(e.salvos%2?.10:-.10)),e.learned.includes('reflect')?1:0,e.learned);
+   for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING+(e.salvos%2?FAN_SHIFT:-FAN_SHIFT)),e.learned.includes('reflect')?1:0,e.learned);
    e.salvos++;
   }
   if(type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*config.chargeSpeed);collide(e.g.position,1);

@@ -16,3 +16,9 @@ html,body{width:100%;height:100%;overscroll-behavior:none}#game{touch-action:non
 
 /* Auto combat: the right thumb is dedicated to dodge. */
 .touch-mode #touch-dash{right:max(28px,env(safe-area-inset-right));bottom:max(34px,env(safe-area-inset-bottom));width:88px;height:88px;font-size:32px}.touch-mode #touch-dash small{font-size:13px}
+
+/* Floating stick: the left movement zone catches a thumb anywhere, and the stick appears under it. */
+#move-zone{position:absolute;left:0;top:22%;bottom:0;width:48%;pointer-events:auto;touch-action:none}
+.stick.floating{bottom:auto;transform:translate(-50%,-50%);border-color:#c8f5d6aa;background:#0c262985}
+.stick.floating span{display:none}
+@media(orientation:portrait){.touch-mode #move-zone{top:40%;width:calc(50% - 42px)}}

@@ -129,8 +129,8 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    ob.position.set(player.position.x+Math.cos(a)*radius,active==='stormcrown'?1.4:.72,player.position.z+Math.sin(a)*radius);
    ob.rotation.y=a;if(active==='frostguard')ob.rotation.z=a*.4;
    if(active==='frostguard'){
-    // Satellites shatter any enemy shot they pass through, the warden's included.
-    for(const q of enemyShots())if(q.life>0&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'frost',8);}
+    // Satellites shatter ordinary enemy shots; the warden's shots pass through every orbit.
+    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'frost',8);}
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.85,1.35)){
      cooldowns.set(e,S.cooldown);const direction=e.g.position.clone().sub(player.position).setY(0).normalize();
      if(support(e,S.damage,{kind:'frostguard',direction})){
@@ -141,11 +141,11 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     }
    }else if(active==='mirrorguard'){
     for(const q of enemyShots()){
-     if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
+     if(!(q.life>0)||q.boss||flat(q.ob.position,ob.position)>=.65)continue;
      q.life=0;q.struck=true;
      const aimAt=nearestEnemy(ob.position,14);
      const dir=aimAt?aimAt.g.position.clone().sub(ob.position).setY(0).normalize():ob.position.clone().sub(player.position).setY(0).normalize();
-     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage*(q.boss?1.5:1)});
+     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage});
      fx.reflect(ob.position,dir);
     }
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){

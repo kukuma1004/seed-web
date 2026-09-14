@@ -59,14 +59,14 @@ assert.equal(validCheckpoint({...base,rules:['split','chain','reflect','pierce']
 assert.equal(validCheckpoint({...base,forms:{unknown:1}}),false);assert.equal(validCheckpoint({...base,forms:{collapse:0}}),false);
 assert.equal(validCheckpoint({...base,forms:['collapse']}),false);
 
-// Frost satellites now shatter enemy shots, the warden's included, and pulse a cold nova.
+// Frost satellites shatter ordinary enemy shots (never the warden's) and pulse a cold nova.
 {
  const player={position:new THREE.Vector3()},calls=[];
  const foe={type:'hound',g:{position:new THREE.Vector3(1,0,0)},dead:false};
  const shots=[{life:3,ob:{position:new THREE.Vector3(2.5,0,0)}},{life:3,boss:true,ob:{position:new THREE.Vector3(-2.5,0,0)}}];
  const combat=createFormCombat(new THREE.Scene(),{player,enemies:()=>[foe],hit(e,d,meta){calls.push({d,...meta});return true;},blocked:()=>false,boundary:()=>false,constrain(){},vfx:{},enemyShots:()=>shots});
  combat.set('frostguard');combat.update(.01);
- assert.ok(shots.every(q=>q.life===0),'both shots shattered by satellites');
+ assert.equal(shots[0].life,0,'an ordinary shot is shattered');assert.equal(shots[1].life,3,'a warden shot passes through the satellites');
  const stats=formStats('frostguard',1);
  for(let t=0;t<stats.novaEvery+.05;t+=.05)combat.update(.05);
  const nova=calls.filter(c=>c.indirect&&c.kind==='frostguard');

@@ -6,7 +6,7 @@ const withPair=f=>Object.freeze({...f,pair:f.requires.map(id=>LAW_KO[id]).join('
 
 export const FORMS=Object.freeze(Object.fromEntries([
  form('collapse',['gravity','burst'],'붕괴의 씨앗','느린 씨앗탄이 적을 모은 뒤 한꺼번에 붕괴합니다.','밀집한 적을 모아 한 번에 처치','발사가 느려 흩어진 적과 빠른 접근에 취약'),
- form('frostguard',['orbit','frost'],'서리 위성','서리 위성이 적을 베어 얼리고 날아오는 탄환을 부수며, 주기적으로 주변을 얼리는 냉기를 터뜨립니다.','근접 제압과 탄막 방어를 함께','사거리가 짧아 멀리 있는 적은 직접 쫓아가야 함',true),
+ form('frostguard',['orbit','frost'],'서리 위성','서리 위성이 적을 베어 얼리고 날아오는 탄환을 부수며(문지기 탄 제외), 주기적으로 주변을 얼리는 냉기를 터뜨립니다.','근접 제압과 탄막 방어를 함께','사거리가 짧아 멀리 있는 적은 직접 쫓아가야 함',true),
  form('returnblade',['recall','pierce'],'귀환의 칼날','큰 칼날이 적의 열을 관통하고 씨앗에게 돌아옵니다.','움직임으로 귀환 경로를 바꾸어 왕복 타격','적을 경로에 모으지 못하면 화력 손실'),
  form('prism',['reflect','split'],'프리즘 가시','벽에 부딪힐 때마다 두 갈래로 갈라지는 수정 가시를 쏩니다.','벽과 엄폐물이 많은 방에서 가시가 불어남','트인 공간과 코앞의 적에게는 갈라질 벽이 없음'),
  form('thunderlance',['pierce','chain'],'천둥 창','긴 번개 창이 한 줄의 적을 꿰뚫고, 꿰뚫린 적에게서 번개가 퍼집니다.','줄지어 오는 적과 먼 거리','발사가 느리고 엄폐물에 막히며 흩어진 적에 약함'),
@@ -14,7 +14,7 @@ export const FORMS=Object.freeze(Object.fromEntries([
  form('stormcrown',['orbit','chain'],'폭풍 왕관','주위를 도는 번개 구슬이 가까운 적에게 스스로 번개를 떨어뜨립니다.','움직이며 주변을 자동으로 정리','사거리가 짧아 멀리 있는 사수·포탑을 못 맞힘',true),
  form('tidepull',['gravity','recall'],'끌어당기는 조수','소용돌이를 던지면 적을 휘감아 씨앗 쪽으로 끌고 돌아와 터집니다.','흩어진 적을 한곳으로 모음','위험한 적까지 내 곁으로 데려옴'),
  form('seedstorm',['split','burst'],'씨앗 폭풍','짧은 거리에 터지는 씨앗을 부채꼴로 흩뿌립니다.','가까이 붙은 무리를 순식간에 정리','사거리가 짧아 멀리서 쏘는 적에게 약함'),
- form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다.','사수·포탑·문지기의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true)
+ form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true)
 ].map(f=>[f.id,withPair(f)])));
 
 export function isFormEligible(id,held){
