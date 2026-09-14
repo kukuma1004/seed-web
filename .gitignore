@@ -18,6 +18,10 @@ tools/*
 !tools/seed-body-test.mjs
 !tools/touch-input-test.mjs
 !tools/run-save-test.mjs
+!tools/forms-test.mjs
+!tools/arena-test.mjs
+!tools/form-combat-test.mjs
+!tools/identity-test.mjs
 
 # Local shared AI workflow and verification evidence
 CLAUDE.md
