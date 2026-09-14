@@ -233,7 +233,7 @@ function wave(){
  clearForms();cachedTarget=null;targetTimer=0;clearEscorts();escortWaves=0;bossDefeated=false;vfx.clear();wells.length=0;roomStartKills=kills;midReward=false;trapClock=0;pulls.length=0;orbitHits.clear();dashLock=0;crowdLeft=CROWD_TOTALS[stage];crowdTimer=0;crowdIndex=0;orbitHitCD=0;
  roomCleared=false;exitOpen=false;gate.visible=false;$('#exit-room').hidden=true;$('#toast').textContent='';
  for(const p of [...shots,...enemyShots,...effects])release(p.ob);shots=[];enemyShots=[];effects=[];
- drawRoom();player.position.set(0,0,5);playerMotion.reset();invuln=Math.max(invuln,.8);
+ drawRoom();player.position.set(0,0,5);playerMotion.reset();invuln=Math.max(invuln,.8);$('#boss-hud').classList.toggle('austin-hud',inAustinRoom());
  if(inAustinRoom()){const e=createAustin(scene);e.g.position.set(0,0,-3);if(AUSTIN_ART)attachActorArt(e,camera,release,{file:AUSTIN_ART,size:4.3,directional:true,baseline:.02});enemies.push(e);$('#boss-hud strong').textContent=AUSTIN.name;}
  else for(const [type,x,z] of ROOMS[stage].enemies){if(type==='warden'){const e=createWarden(scene,mats,wardenVariantFor(cycle));e.tint=0xffffff;e.g.position.set(x,0,z);attachActorArt(e,camera,release,{file:`warden-${e.variant}-v4.png`,order:e.variant==='memory'?[0,3,2,1]:[0,1,2,3],size:4.1,directional:true,baseline:.02});enemies.push(e);$('#boss-hud strong').textContent=e.config.name;}else enemy(type,x,z);}
  if(stage===3){const e=createWarden(scene,mats,wardenVariantFor(cycle+1));e.elite=true;e.tint=0xffffff;e.hp=e.maxHp=1150*.36;e.g.position.set(0,0,-5);attachActorArt(e,camera,release,{file:`warden-${e.variant}-v4.png`,order:e.variant==='memory'?[0,3,2,1]:[0,1,2,3],size:3.1,directional:true,baseline:.02});enemies.push(e);}

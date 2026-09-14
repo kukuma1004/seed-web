@@ -16,7 +16,7 @@ export const AUSTIN=Object.freeze({
 });
 export const AUSTIN_ARENA=Object.freeze({shape:'circle',radius:7.6});
 // GPT art hook: set to e.g. 'boss-austin-v1.png' (2x2 directional atlas, like warden-*-v4.png) once the art exists.
-export const AUSTIN_ART=null;
+export const AUSTIN_ART='boss-austin-v1.png';
 export const PHASES=Object.freeze({
  normal:{tempo:1,label:'정시 근무',jabs:2,alarms:3,bolts:24,gapHalf:.5,rest:1,order:['jab','sweep','alarm']},
  overtime:{tempo:.8,label:'야근 모드',jabs:2,alarms:4,bolts:30,gapHalf:.36,rest:.7,order:['jab','alarm','sweep','jab']},

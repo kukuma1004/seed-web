@@ -50,3 +50,8 @@
 .rank-tabs button{min-height:40px;padding:6px 16px}
 .rank-tabs button[aria-pressed="true"]{border-color:#f0c86a;color:#ffe3a0;background:#3a2a12cc}
 @media(max-height:480px){.name-field{margin:2px 0 6px}.name-field input{min-height:40px;font-size:16px}.name-field small{display:none}}
+
+/* Keep Austin's clock face and boxing guard clear of the boss HUD. */
+#boss-hud.austin-hud{top:auto;bottom:44px}
+.touch-mode #boss-hud.austin-hud{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}
+@media(orientation:portrait){.touch-mode #boss-hud.austin-hud{bottom:166px}}

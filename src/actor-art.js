@@ -1,6 +1,14 @@
 import * as THREE from 'three';
 import {seedFrame} from './seed-body.js';
 const atlases=new Map();
+export function actorArtRotation(state,time,phase){
+ // Austin's phase is a state name, unlike the numeric gait phase of mobs.
+ const gaitPhase=Number.isFinite(phase)?phase:0;
+ if(state==='stalk')return Math.sin(time*9+gaitPhase)*.025;
+ if(state==='commit'||state==='jab')return .08;
+ if(state==='jabTell')return -.035;
+ return 0;
+}
 function frames(file,directional){
  if(atlases.has(file))return atlases.get(file);
  const maps=[];
@@ -24,7 +32,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
  e.updateArt=(time)=>{
   const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
   const frame=seedFrame(e.g.rotation.y,yaw);mat.map=maps[directional?order[frame]:0];ghostMat.map=mat.map;
-  mat.rotation=(e.state==='stalk'?Math.sin(time*9+(e.phase||0))*.025:e.state==='commit'?.08:0);
+  mat.rotation=actorArtRotation(e.state,time,e.phase);
   mat.color.setHex(e.block>0?0xb5efff:e.hit>0?0xffd1aa:(e.tint??0xffffff));ghostMat.rotation=mat.rotation;
  };
  return sprite;
