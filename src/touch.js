@@ -21,12 +21,19 @@ export function createTouchControls(canAct){
     element.addEventListener('pointermove',move);
     for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,e=>{if(owners.get(e.pointerId)?.role===role){owners.delete(e.pointerId);clear(role);}});
   }
-  document.querySelector('#touch-dash').addEventListener('pointerdown',e=>{e.preventDefault();if(canAct())dashUntil=performance.now()+220;});
+  const dashButton=document.querySelector('#touch-dash'),dashLabel=dashButton.querySelector('small');
+  dashButton.addEventListener('pointerdown',e=>{e.preventDefault();if(canAct())dashUntil=performance.now()+220;});
   window.addEventListener('blur',reset);window.addEventListener('resize',reset);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
   return {enabled,axes,reset,
     consumeDash(){const active=dashUntil>performance.now();dashUntil=0;return active;},
-    update(active,cooldown){panel.hidden=!active;if(!active)reset();const button=document.querySelector('#touch-dash');button.classList.toggle('cooling',cooldown>0);button.querySelector('small').textContent=cooldown>0?`${cooldown.toFixed(1)}초`:'회피';},
+    update(active,cooldown){
+      if(panel.hidden!==!active)panel.hidden=!active;
+      if(!active){if(owners.size||dashUntil)reset();return;}
+      const label=cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=cooldown>0;
+      if(dashButton.__cooling!==cooling){dashButton.classList.toggle('cooling',cooling);dashButton.__cooling=cooling;}
+      if(dashLabel.textContent!==label)dashLabel.textContent=label;
+    },
     state(){return {enabled,move:{...axes.move},aim:{...axes.aim},pointers:owners.size};}
   };
 }
