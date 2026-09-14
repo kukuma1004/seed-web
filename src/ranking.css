@@ -37,3 +37,16 @@
 .ranking li.mine{border-color:#f0c86a;background:#3a2a12cc;box-shadow:0 0 14px #f0b44a44}
 .ranking-empty{color:#9fb8ad;margin:10px 0}
 @media(max-height:480px){#rank-board{width:min(720px,100%)}.final-score strong{font-size:32px}.ranking{grid-template-columns:1fr 1fr;width:min(720px,100%)}.ranking li{padding:4px 8px}.ranking li small{display:none}}
+
+/* Name on the title screen and the ranking tabs. */
+.name-field{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0 10px;width:min(320px,100%)}
+.name-field label{font-size:12px;letter-spacing:2px;color:#cdbb86}
+.name-field input{width:100%;min-height:46px;padding:0 14px;border:1px solid #f0c86a88;border-radius:12px;background:#0c1f24;color:#f3f7ea;font:inherit;font-size:18px;text-align:center}
+.name-field input:focus{outline:2px solid #f0c86a;outline-offset:1px}
+.name-field input.need{border-color:#ff7a6a;outline:2px solid #ff7a6a;animation:name-shake .3s}
+.name-field small{font-size:11px;color:#9fb8ad}
+@keyframes name-shake{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.rank-tabs{display:flex;gap:8px;justify-content:center;margin:2px 0 4px}
+.rank-tabs button{min-height:40px;padding:6px 16px}
+.rank-tabs button[aria-pressed="true"]{border-color:#f0c86a;color:#ffe3a0;background:#3a2a12cc}
+@media(max-height:480px){.name-field{margin:2px 0 6px}.name-field input{min-height:40px;font-size:16px}.name-field small{display:none}}

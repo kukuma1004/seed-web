@@ -7,7 +7,7 @@ export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',RUNS_PATH='seedRanking/runs',FETCH_RUNS=100;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v1',RUNS_PATH='seedRanking/runs',FETCH_RUNS=100,PENDING_MAX=10;
 const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 export function validRun(e){
  return Boolean(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at));
@@ -52,18 +52,35 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   const data=await request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`));
   return bestPerPlayer(data,limit);
  }
- // Returns the board after the run, the run's place on it (0 if it is not this player's best or below the board)
- // and the place of this player's best line.
- async function submit({name,score,cycle,stage,kills,time},limit=20){
+ async function post({name,score,cycle,stage,kills,time}){
+  const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:0};
+  if(!validRun(shaped))throw new Error('invalid-run');
   const s=await signIn();
-  const run={uid:s.uid,name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:{'.sv':'timestamp'}};
-  if(!validRun({...run,at:0}))throw new Error('invalid-run');
-  const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(run)});
+  const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
+  return {id:created?.name,uid:s.uid,name:shaped.name};
+ }
+ function pending(){try{const list=JSON.parse(storage?.getItem(PENDING_KEY));return Array.isArray(list)?list:[];}catch{return [];}}
+ function keepPending(list){try{storage?.setItem(PENDING_KEY,JSON.stringify(list.slice(-PENDING_MAX)));}catch{}}
+ // Returns the board after the run, the run's place on it (0 if it is not this player's best or below the board)
+ // and the place of this player's best line. A run that could not be sent waits in this browser for flush().
+ async function submit(entry,limit=20){
+  let sent;
+  try{sent=await post(entry);}
+  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time}]);throw error;}
   const board=await top(limit);
-  const mine=board.findIndex(e=>e.id===created?.name),best=board.findIndex(e=>e.uid===s.uid&&e.name===run.name);
-  return {id:created?.name,board,rank:mine+1,bestRank:best+1};
+  const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
+  return {id:sent.id,board,rank:mine+1,bestRank:best+1};
+ }
+ // Sends runs that failed earlier (offline, or before the database rules were published). Stops at the first failure.
+ async function flush(){
+  const list=pending();let sent=0;
+  while(list.length){
+   try{await post(list[0]);sent++;list.shift();}
+   catch(error){if(error.message==='invalid-run'){list.shift();continue;}break;}
+  }
+  keepPending(list);return sent;
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
  async function remove(id){const s=await signIn();await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
- return {signIn,top,submit,remove,uid:()=>session?.uid||null};
+ return {signIn,top,submit,flush,remove,pendingCount:()=>pending().length,uid:()=>session?.uid||null};
 }

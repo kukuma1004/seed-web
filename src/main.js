@@ -28,7 +28,8 @@ import './journey.css';
 import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit} from './journey.js';
 import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './warden.js';
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,austinHint,createClockFloor} from './austin.js';
-import {killPoints,roomPoints,submitScore,readRanking,lastName,rankingTable,formatScore,NAME_MAX,RANKING_SIZE} from './score.js';
+import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
+import {createOnlineRanking} from './online-ranking.js';
 import {ITEMS,emptyInventory,normalizeInventory,addItem,drinkPotion} from './inventory.js';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,slotsUsed,fusionLevel,canFuse,fuse,effectiveLevels,buildLevel} from './progression.js';
@@ -166,6 +167,9 @@ document.body.insertAdjacentHTML('beforeend','<div id="growth-progress"><span></
 $('#exit-room').onclick=useExit;$('#stages').innerHTML=ROOMS.map(()=>'<span>♧</span>').join('<i></i>');
 function drawRoom(){const clockRoom=inAustinRoom();arena=clockRoom?AUSTIN_ARENA:arenaFor(stage,cycle,region);for(const child of [...arenaGroup.children])release(child);buildRoomBoundary();clockFloor=clockRoom?createClockFloor(arenaGroup):null;for(const child of [...roomCover.children])release(child);obstacles.splice(0,obstacles.length,...(clockRoom?[]:ROOMS[stage].covers).map(o=>({...o})));buildCoverArt(roomCover,obstacles,mats);for(const child of [...trapGroup.children])release(child);traps=clockRoom?[]:trapsFor(stage,cycle);for(const t of traps)t.visual=createTrapVisual(trapGroup,t,mats);}
 let runStorage;try{runStorage=window.localStorage;}catch{runStorage=null;}
+// Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
+const online=createOnlineRanking({storage:runStorage});let playerName=lastName(runStorage),rankSerial=0;
+function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);
 function buildRoomBoundary(){buildArenaBoundary(arenaGroup,arena,mats);}
 function remember(kind,id){const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
@@ -304,22 +308,49 @@ function showIntro(){pauseBuild.hide();austinRoom=false;drawRoom();$('#evolution
   mode='ready';$('#overlay').classList.add('intro');$('#overlay').hidden=false;
   $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>잠든 정원을 깨우다</h2><p>하나의 시드로 시작해 문지기 너머의 여정을 이어가세요.<br>포탑은 당신이 가장 키운 법칙 두 개를 따라 쏩니다. 바닥의 붉은 판은 곧 가시가 솟습니다.</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">정원에 들어가기 <small>↵ ENTER</small></button>';
   if(touch.enabled){$('.intro-controls').innerHTML='<span><kbd>왼손 스틱</kbd> 이동</span><span><kbd>자동 공격</kbd> 이동과 회피에 집중하세요</span><span><kbd>◇ 버튼</kbd> 회피</span>';$('#start-game small').textContent='가로 화면 권장';}
-  $('#start-game').onclick=()=>{$('#overlay').classList.remove('intro');startGame();};
+  $('#start-game').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro');startGame();};
   const saved=readCheckpoint(runStorage);
-  if(saved){$('#start-game').insertAdjacentHTML('beforebegin',`<button id="continue-run" class="primary">여정 ${saved.cycle+1} · ${saved.mode==='crossroads'?'다음 여정':saved.mode==='austin'?AUSTIN.name:(saved.stage+1)+'번째 방'} 이어하기</button>`);$('#continue-run').onclick=()=>restart(saved);$('#start-game').innerHTML='새 씨앗으로 시작 <small>저장된 도전을 교체합니다</small>';}
+  if(saved){$('#start-game').insertAdjacentHTML('beforebegin',`<button id="continue-run" class="primary">여정 ${saved.cycle+1} · ${saved.mode==='crossroads'?'다음 여정':saved.mode==='austin'?AUSTIN.name:(saved.stage+1)+'번째 방'} 이어하기</button>`);$('#continue-run').onclick=()=>{if(requireName())restart(saved);};$('#start-game').innerHTML='새 씨앗으로 시작 <small>저장된 도전을 교체합니다</small>';}
+  ($('#continue-run')||$('#start-game')).insertAdjacentHTML('beforebegin',`<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="별명 (최대 ${NAME_MAX}자)" value="${escapeHtml(playerName)}"><small id="name-hint">이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명</small></form>`);
+  $('#player-name').oninput=()=>{$('#player-name').classList.remove('need');const n=cleanName($('#player-name').value);if(n)playerName=saveName(runStorage,n);};
+  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(runStorage);$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
+  online.flush().catch(()=>0);
   $('#overlay').insertAdjacentHTML('beforeend','<p class="save-note">같은 기기·브라우저에 방 입구를 자동 저장합니다.<br>전투 중 종료하면 방 입구부터 · 쓰러지면 현재 도전 종료</p>');
-  $('#overlay').insertAdjacentHTML('beforeend',`<button id="ranking-link" class="discovery-link">명예의 전당 · 이 기기 랭킹</button><button id="discoveries" class="discovery-link">씨앗의 발견 기록 · ${profile.forms.length}/${Object.keys(FORMS).length}</button>${growthGuide(profile)?`<p class="form-note">다음 도전의 조합 목표 · 필요한 법칙을 선택지에서 안내합니다</p><div class="guide-options"><button class="primary" data-guide="" aria-pressed="${!guideTarget}">자유롭게 성장</button>${profile.forms.map(id=>`<button class="primary" data-guide="${id}" aria-pressed="${guideTarget===id}">${FORMS[id].name}</button>`).join('')}</div>`:''}`);
- $('#ranking-link').onclick=showRanking;
+  $('#overlay').insertAdjacentHTML('beforeend',`<button id="ranking-link" class="discovery-link">명예의 전당 · 모두의 랭킹</button><button id="discoveries" class="discovery-link">씨앗의 발견 기록 · ${profile.forms.length}/${Object.keys(FORMS).length}</button>${growthGuide(profile)?`<p class="form-note">다음 도전의 조합 목표 · 필요한 법칙을 선택지에서 안내합니다</p><div class="guide-options"><button class="primary" data-guide="" aria-pressed="${!guideTarget}">자유롭게 성장</button>${profile.forms.map(id=>`<button class="primary" data-guide="${id}" aria-pressed="${guideTarget===id}">${FORMS[id].name}</button>`).join('')}</div>`:''}`);
+ $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile);$('#close-discoveries').onclick=showIntro;};
  document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>{guideTarget=b.dataset.guide||null;document.querySelectorAll('[data-guide]').forEach(n=>n.setAttribute('aria-pressed',String((n.dataset.guide||null)===guideTarget)));});
  updateFormLabel();
 }
-function showRanking(){mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=`<p>이 기기에서 가장 멀리 간 씨앗들</p><h2>명예의 전당</h2>${rankingTable(readRanking(runStorage))}<p class="form-note">랭킹은 이 기기·브라우저에 저장됩니다 · 쓰러진 뒤 이름을 남길 수 있어요</p><button class="primary" id="close-ranking">돌아가기</button>`;$('#close-ranking').onclick=showIntro;}
+function showRanking(view='online'){
+ mode='ranking';$('#overlay').classList.remove('intro');const serial=++rankSerial;
+ $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage)):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
+ if(view!=='online')return;
+ online.flush().catch(()=>0).then(()=>online.top()).then(board=>{
+  if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 최고 기록 · 한 사람(기기+이름)당 한 줄');
+  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(board,board.find(e=>e.uid===online.uid()&&e.name===playerName),20);
+ }).catch(()=>{
+  if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 랭킹에 연결하지 못했어요 · 이 기기 기록을 보여줘요');
+  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(readRanking(runStorage));
+ });
+}
+// Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
 function showEnd(){touch.reset();$('#use-potion').hidden=true;
- const board=readRanking(runStorage),makesBoard=board.length<RANKING_SIZE||score>board.at(-1).score,name=lastName(runStorage).replace(/&/g,'&amp;').replace(/"/g,'&quot;');
- $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div>${score>0?`<form id="rank-form" class="rank-form"><input id="rank-name" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="done" placeholder="이름 (최대 ${NAME_MAX}자)" value="${name}" aria-label="랭킹에 남길 이름"><button class="primary" type="submit">${makesBoard?'랭킹 등록':'기록 남기기'}</button></form>`:''}<div id="rank-board">${rankingTable(board)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length} · 랭킹은 이 기기·브라우저에 저장됩니다</p><button class="primary" id="restart">다시 시작</button>`;
+ const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=score>0&&Boolean(name);
+ const local=ranked?submitScore(runStorage,{name,score,cycle,stage,kills,time:elapsed}):null;
+ $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingTable(local?.ranking||readRanking(runStorage),local?.entry)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
  $('#restart').onclick=showIntro;
- const form=$('#rank-form');if(form)form.onsubmit=ev=>{ev.preventDefault();const r=submitScore(runStorage,{name:$('#rank-name').value,score,cycle,stage,kills,time:elapsed});if(!r.entry){$('#rank-name').placeholder='이름을 한 글자 이상 적어 주세요';$('#rank-name').focus();return;}form.outerHTML=`<p class="rank-result">${r.rank?`<b>${r.rank}위</b> ${r.entry.name} · 등록했어요!`:`순위 밖이에요 · ${RANKING_SIZE}위 안에 들면 이름이 남습니다`}${r.saved?'':' · 이 브라우저에 저장하지 못했습니다'}</p>`;$('#rank-board').innerHTML=rankingTable(r.ranking,r.entry);};
+ if(!ranked)return;
+ online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed})).then(r=>{
+  if(serial!==rankSerial)return;
+  const status=$('#rank-status'),box=$('#rank-board');
+  if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 20위 밖이에요';
+  if(box)box.innerHTML=rankingTable(r.board,r.board[(r.rank||r.bestRank)-1],20);
+ }).catch(()=>{
+  if(serial!==rankSerial)return;
+  setText($('#rank-status'),'지금은 모두의 랭킹에 연결하지 못했어요 · 다음에 접속하면 자동으로 올라가요 · 아래는 이 기기 기록');
+ });
 }
 function restart(saved=null){const restore=saved?.version===1?saved:null;if(!restore)clearCheckpoint(runStorage);heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dash=0;invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;region=restore?.region||'garden';score=restore?.score||0;wardensDefeated=restore?.wardens||0;austinsDefeated=restore?.austins||0;inventory=normalizeInventory(restore?.inventory);austinRoom=false;potionCD=0;
  if(restore){stage=restore.stage;hp=restore.hp;kills=restore.kills;elapsed=restore.elapsed;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
@@ -329,7 +360,7 @@ function restart(saved=null){const restore=saved?.version===1?saved:null;if(!res
  if(restore?.mode==='crossroads')nextJourney();else{austinRoom=restore?.mode==='austin';wave();}}
 
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
-window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat&&(e.code==='KeyQ'||e.code==='Digit1'))usePotion();if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){const saved=readCheckpoint(runStorage);if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
+window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat&&(e.code==='KeyQ'||e.code==='Digit1'))usePotion();if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if(!requireName())return;const saved=readCheckpoint(runStorage);if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
 function update(dt,time){
 if(mode==='evolving'){
@@ -369,7 +400,7 @@ let last=performance.now(),frames=[],frameCounter=0;function animate(now){reques
 function presentFrame(time){
  touch.update(mode==='playing'&&!paused,Math.max(dash,dashLock));setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
  updateGauges();
- setText($('#score-hud b'),formatScore(score));setHidden($('#score-hud'),!['playing','cards','forms','evolving'].includes(mode));
+ setText($('#score-hud b'),formatScore(score));setText($('#score-hud small'),playerName?playerName+' · 점수':'점수');setHidden($('#score-hud'),!['playing','cards','forms','evolving'].includes(mode));
  setHidden($('#use-potion'),!(inventory.potion>0&&mode==='playing'&&!paused));setText($('#use-potion b'),'×'+inventory.potion);
  if(mode!=='playing'||paused)return;
  const boss=enemies.find(e=>(e.type==='warden'&&!e.elite)||e.type==='austin');if(boss){setWidth($('#boss-hud i'),(boss.hp/boss.maxHp*100).toFixed(1)+'%');setText($('#boss-hud small'),boss.type==='austin'?austinHint(boss):pendingEscorts.length?'호위 등장 예고 · 주황 원에서 떨어지세요':boss.variant==='seal'?'보라 원이 닫힐 때 안에 있으면 회피가 봉인됩니다':boss.variant==='hunter'?'돌진 뒤 곧바로 한 번 더 돌진합니다':boss.learned.length?'습득: '+boss.learned.map(id=>LAW_NAMES[id]).join(' · '):'생명 67% · 34%에서 당신의 법칙을 배웁니다');}else setHidden($('#boss-hud'),true);const nearExit=canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z});setHidden($('#exit-room'),!nearExit);setText($('#exit-room'),stage===4?(austinAhead()?'진짜 보스에게 · E':'다음 여정으로 · E'):touch.enabled?'다음 방으로':'다음 방으로 · E');gateHalo.rotation.y=time*.6;setWidth($('#hpbar'),hp+'%');setText($('#hptext'),`${hp} / 100`);setWidth($('#dashbar'),((1-dash/2.4)*100).toFixed(1)+'%');setText($('#dashtext'),dashLock>0?'봉인 '+dashLock.toFixed(1)+'s':dash>0?dash.toFixed(1)+'s':'준비');

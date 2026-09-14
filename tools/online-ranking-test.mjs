@@ -83,4 +83,19 @@ function fakeFirebase({clock}){
  assert.equal((await noStore.submit({name:'저장불가',score:7,cycle:0,stage:0,kills:1,time:1})).rank>0,true,'works without local storage');
 }
 
-console.log('Online ranking: anonymous sign-in reuse, submit, per-player board, ranks, cleanup and fallbacks passed.');
+// Runs finished while offline or before the rules were published wait in the browser and go up later.
+{
+ const clock={t:10},fb=fakeFirebase({clock}),storage=memory();
+ const ranking=createOnlineRanking({storage,fetchImpl:fb.fetchImpl,now:()=>clock.t});
+ fb.rulesPublished=false;
+ for(const score of [300,800])await assert.rejects(ranking.submit({name:'도윤',score,cycle:0,stage:2,kills:9,time:40}));
+ assert.equal(ranking.pendingCount(),2);assert.equal(await ranking.flush(),0,'still locked: nothing sent, nothing lost');assert.equal(ranking.pendingCount(),2);
+ fb.rulesPublished=true;
+ assert.equal(await ranking.flush(),2);assert.equal(ranking.pendingCount(),0);
+ assert.deepEqual((await ranking.top()).map(e=>[e.name,e.score]),[['도윤',800]]);
+ for(let i=0;i<15;i++){fb.offline=true;await assert.rejects(ranking.submit({name:'많이',score:i+1,cycle:0,stage:0,kills:1,time:1}));}
+ fb.offline=false;assert.equal(ranking.pendingCount(),10,'the waiting list is capped');
+ await assert.rejects(ranking.submit({name:'',score:5,cycle:0,stage:0,kills:1,time:1}),/invalid-run/);assert.equal(ranking.pendingCount(),10,'invalid runs are never queued');
+}
+
+console.log('Online ranking: anonymous sign-in reuse, submit, per-player board, ranks, cleanup, fallbacks and waiting runs passed.');
