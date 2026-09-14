@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {seedFrame} from './seed-body.js';
+import {applySpriteLighting} from './sprite-lighting.js';
 const atlases=new Map();
 export function actorArtRotation(state,time,phase){
  // Austin's phase is a state name, unlike the numeric gait phase of mobs.
@@ -25,7 +26,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
  const body=e.body||e.motion?.body||e.g;
  // Turret head/orbit materials remain live gameplay references until death.
  for(const child of [...body.children])if(preserveBody)child.visible=false;else release(child);
- const maps=frames(file,directional),mat=new THREE.SpriteMaterial({map:maps[0],alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false});
+ const maps=frames(file,directional),mat=applySpriteLighting(new THREE.SpriteMaterial({map:maps[0],alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false}),{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065});
  const sprite=new THREE.Sprite(mat);sprite.center.set(.5,baseline);sprite.scale.set(size,size,1);body.add(sprite);
  const ghostMat=new THREE.SpriteMaterial({map:maps[0],alphaTest:.08,transparent:true,opacity:.26,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xffad7a});
  const ghost=new THREE.Sprite(ghostMat);ghost.center.set(.5,baseline);ghost.scale.set(size,size,1);ghost.renderOrder=2;body.add(ghost);

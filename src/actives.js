@@ -1,4 +1,5 @@
 import {ALL_FORMS} from './forms.js';
+import {rankedEvolutions} from './evolution-rank.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
 // LOCKED (no evolution) · SIGNATURE (one: that evolution's own move) · OVERDRIVE (two or more: the two strongest together).
@@ -46,8 +47,7 @@ export const SIGNATURES=Object.freeze({
 
 // The two strongest evolutions decide the active. Ties go to the evolution gained first (map order).
 export function activeState(forms=new Map()){
- const held=[...forms].filter(([id,level])=>Object.hasOwn(ALL_FORMS,id)&&level>0)
-  .map(([id,level],order)=>({id,level,order})).sort((a,b)=>b.level-a.level||a.order-b.order).slice(0,2);
+ const held=rankedEvolutions(forms,ALL_FORMS,2);
  const state=held.length===0?'LOCKED':held.length===1?'SIGNATURE':'OVERDRIVE';
  return {state,forms:held.map(h=>h.id),level:held.reduce((n,h)=>n+h.level,0)};
 }
