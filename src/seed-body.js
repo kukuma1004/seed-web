@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
-const BODY_SIZE=1.26;
+export const SEED_BODY_ART='seed-body-directions-v5.png';
+export const BODY_SIZE=1.18;
 
 // The atlas is painted from front, right, back, left; direction is camera-relative.
 export function seedFrame(facing,cameraYaw){
@@ -12,7 +13,7 @@ export function seedFrame(facing,cameraYaw){
 }
 export function createSeedBody(scene){
  const root=new THREE.Group();scene.add(root);
- const texture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/seed-body-directions-v4.png');
+ const texture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+SEED_BODY_ART);
  texture.colorSpace=THREE.SRGBColorSpace;texture.repeat.set(.5,.5);texture.offset.set(0,.5);
  const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false});
  const sprite=new THREE.Sprite(material);sprite.center.set(.5,.055);sprite.scale.set(BODY_SIZE,BODY_SIZE,1);root.add(sprite);
@@ -27,8 +28,10 @@ export function createSeedBody(scene){
   const frame=seedFrame(facing,Math.atan2(camera.position.x-root.position.x,camera.position.z-root.position.z));
   texture.offset.set((frame%2)*.5,frame<2?.5:0);root.userData.artFrame=frame;
   const {phase=0,pace=0}=root.userData.motion||{};
-  material.rotation=Math.sin(phase)*pace*.045;
-  sprite.scale.set(BODY_SIZE*(1+Math.sin(phase*2)*pace*.025),BODY_SIZE,1);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
+  const step=Math.sin(phase*2)*pace;
+  material.rotation=Math.sin(phase)*pace*.055;
+  sprite.position.y=Math.max(0,step)*.018;
+  sprite.scale.set(BODY_SIZE*(1+step*.03),BODY_SIZE*(1-step*.018),1);ghost.position.y=sprite.position.y;ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
  };
  return root;
 }
