@@ -13,6 +13,7 @@ tools/*
 !tools/motion-test.mjs
 !tools/journey-test.mjs
 !tools/vfx-test.mjs
+!tools/active-vfx-test.mjs
 !tools/laws-test.mjs
 
 !tools/seed-body-test.mjs

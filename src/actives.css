@@ -11,15 +11,35 @@
 #active-skill .active-key:empty{display:none}
 #active-skill.locked{filter:grayscale(1);opacity:.55}
 #active-skill.ready{border-color:#ffd978;animation:active-ready 1.1s ease-in-out infinite}
+#active-skill.ready:before,#active-skill.ready:after{content:"";position:absolute;inset:-13px;border:1px solid #ffe8a4;border-radius:50%;animation:active-orbit 2.2s linear infinite;pointer-events:none}
+#active-skill.ready:after{inset:-20px;border-style:dashed;opacity:.45;animation-direction:reverse;animation-duration:3.1s}
 #active-skill.ready .active-fill{background:conic-gradient(#ffd978 100%,#0000 0)}
 #active-skill.running .active-fill{background:conic-gradient(#8ff5ff var(--fill),#ffffff14 0)}
 #active-skill.running.overdrive .active-fill{background:conic-gradient(#ff8fd8 var(--fill),#ffffff14 0)}
 #active-skill.running{box-shadow:0 0 22px #8ff5ffaa}
 #active-skill.running.overdrive{box-shadow:0 0 26px #ff8fd8bb}
 @keyframes active-ready{50%{box-shadow:0 0 24px #ffd978cc}}
-@media (prefers-reduced-motion:reduce){#active-skill.ready{animation:none;box-shadow:0 0 18px #ffd978aa}}
+@keyframes active-orbit{to{transform:rotate(360deg)}}
+#active-skill.running{animation:active-running .42s ease-in-out infinite alternate}
+@keyframes active-running{to{transform:scale(1.06);filter:brightness(1.25)}}
+
+/* Event-only activation title. It clears quickly so combat and telegraphs remain readable. */
+#active-cinematic{position:fixed;inset:0;z-index:5;display:flex;align-items:center;justify-content:center;gap:18px;pointer-events:none;color:#fff8dc;text-align:left;opacity:0}
+#active-cinematic[hidden]{display:none}#active-cinematic:before{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 55%,#baffdf55 0,#45c9b11f 22%,#02080dc7 75%);mix-blend-mode:screen}
+#active-cinematic.overdrive:before,#active-cinematic.finale:before{background:radial-gradient(circle at 50% 55%,#fff2a466 0,#ff73cd38 25%,#3b17623d 48%,#02080dba 78%)}
+#active-cinematic.show{animation:active-cinematic 1.15s ease-out forwards}
+#active-cinematic>div{position:relative;text-shadow:0 2px 8px #000,0 0 22px #8fffd9}
+#active-cinematic>div:last-child{padding:8px 16px 9px;border-left:2px solid #eaffefcc;border-radius:0 12px 12px 0;background:linear-gradient(90deg,#07171ed9,#07171e7a 72%,transparent);box-shadow:0 0 28px #08171bd9}
+.active-cinematic-art{display:flex;width:112px;height:112px;overflow:hidden;border:2px solid #dffff0;border-radius:50%;box-shadow:0 0 0 7px #96f7d32e,0 0 44px #7dffdbbb;transform:rotate(-8deg)}
+.active-cinematic-art .active-portrait{width:100%;height:100%;flex:1 1 0;background-size:400% 300%;margin:0;border-radius:0}
+#active-cinematic.overdrive .active-cinematic-art{border-color:#ffe59c;box-shadow:0 0 0 7px #ffcb7c2e,0 0 55px #ff75d7cc}
+#active-cinematic small,#active-cinematic span{display:block;font-size:11px;letter-spacing:3px;color:#e9fff5}#active-cinematic strong{display:block;margin:4px 0;font:700 clamp(26px,4.5vw,54px) Georgia,"Malgun Gothic";letter-spacing:6px;-webkit-text-stroke:1px #fff3bf88}
+.active-finale-mark{font-size:92px;color:#ffe58b;line-height:1;filter:drop-shadow(0 0 20px #ff65c9)}
+@keyframes active-cinematic{0%{opacity:0;transform:scale(.72)}12%{opacity:1;transform:scale(1.06)}32%{opacity:1;transform:scale(1)}72%{opacity:.82}100%{opacity:0;transform:scale(1.08)}}
+@media (prefers-reduced-motion:reduce){#active-skill.ready,#active-skill.running,#active-skill.ready:before,#active-skill.ready:after{animation:none}#active-skill.ready{box-shadow:0 0 18px #ffd978aa}#active-cinematic.show{animation:active-cinematic-reduced .7s ease-out forwards}@keyframes active-cinematic-reduced{0%,70%{opacity:1}100%{opacity:0}}}
 .touch-mode #active-skill{right:calc(max(28px,env(safe-area-inset-right)) + 8px);bottom:calc(max(34px,env(safe-area-inset-bottom)) + 112px);width:72px;height:72px}
 .touch-mode #active-skill .active-name{font-size:11px;bottom:-17px}
+.touch-mode #active-cinematic{gap:10px;padding:20px}.touch-mode .active-cinematic-art{width:78px;height:78px}.touch-mode #active-cinematic strong{font-size:clamp(23px,7vw,36px);letter-spacing:3px}.touch-mode #active-cinematic small,.touch-mode #active-cinematic span{font-size:9px;letter-spacing:1px}
 
 /* Pause sheet */
 .active-sheet{grid-column:1/-1;text-align:left;margin:4px 0;padding:12px 14px;border:1px solid #d9c28a55;border-radius:10px;background:#10272c}
