@@ -45,7 +45,7 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
  assert.deepEqual(drinkPotion(inv,100),{ok:false,reason:'full',hp:100});assert.equal(inv.potion,ITEMS.potion.max);
  const drink=drinkPotion(inv,70);assert.ok(drink.ok);assert.equal(drink.hp,100);assert.equal(drink.healed,30);assert.equal(inv.potion,ITEMS.potion.max-1);
  const empty=emptyInventory();assert.equal(drinkPotion(empty,10).reason,'empty');
- assert.deepEqual(normalizeInventory({potion:99,junk:3}),{potion:ITEMS.potion.max});assert.deepEqual(normalizeInventory('x'),{potion:0});
+ assert.deepEqual(normalizeInventory({potion:99,junk:3}),{...emptyInventory(),potion:ITEMS.potion.max});assert.deepEqual(normalizeInventory('x'),emptyInventory());
  assert.ok(validInventory(undefined)&&validInventory({potion:3}));assert.ok(!validInventory({potion:-1})&&!validInventory({elixir:1})&&!validInventory([]));
 }
 

@@ -3,19 +3,13 @@
 #score-hud[hidden]{display:none}
 #score-hud small{font-size:11px;letter-spacing:2px;color:#cdbb86}
 #score-hud b{font-size:20px;letter-spacing:1px;font-variant-numeric:tabular-nums}
-#use-potion{position:absolute;left:38px;bottom:118px;z-index:3;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;min-height:48px;border:1px solid #f0c86a99;border-radius:14px;background:#2a1d10d9;color:#ffe9b0;box-shadow:0 0 18px #f0b44a44}
-#use-potion[hidden]{display:none}
-#use-potion b{font-size:16px;font-variant-numeric:tabular-nums}
-#use-potion small{font-size:10px;padding:1px 5px;border:1px solid #f0c86a88;border-radius:4px;color:#e8cf8f}
 /* Placeholder flask until the potion icon arrives (docs/ART-REQUEST-AUSTIN-20260914.md). */
 .potion-icon{position:relative;display:block;width:22px;height:28px}
 .potion-icon:before{content:"";position:absolute;left:7px;top:0;width:8px;height:8px;border-radius:2px 2px 0 0;background:#c9a56b}
 .potion-icon:after{content:"";position:absolute;left:0;bottom:0;width:22px;height:21px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#ff5f7a 0 58%,#ffd0da55 59%);box-shadow:0 0 10px #ff6b8a99}
 .touch-mode #score-hud{top:max(66px,calc(env(safe-area-inset-top) + 56px));right:max(14px,env(safe-area-inset-right));gap:6px}
 .touch-mode #score-hud small{font-size:9px}.touch-mode #score-hud b{font-size:15px}
-.touch-mode #use-potion{left:auto;right:calc(max(28px,env(safe-area-inset-right)) + 100px);bottom:max(46px,env(safe-area-inset-bottom));min-height:60px;padding:6px 10px;border-radius:30px;touch-action:manipulation}
-.touch-mode #use-potion small{display:none}
-@media(orientation:portrait){.touch-mode #score-hud{top:max(58px,calc(env(safe-area-inset-top) + 50px))}.touch-mode #use-potion{bottom:max(52px,env(safe-area-inset-bottom))}}
+@media(orientation:portrait){.touch-mode #score-hud{top:max(58px,calc(env(safe-area-inset-top) + 50px))}}
 
 .final-score{display:flex;flex-direction:column;align-items:center;gap:2px;margin:4px 0 10px}
 .final-score small{letter-spacing:3px;color:#cdbb86;font-size:12px}
@@ -55,3 +49,25 @@
 #boss-hud.austin-hud{top:auto;bottom:44px}
 .touch-mode #boss-hud.austin-hud{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}
 @media(orientation:portrait){.touch-mode #boss-hud.austin-hud{bottom:166px}}
+/* Potion bag: one button per potion kind the seed holds. Sprout is passive, so it is a chip, not a button. */
+#item-bar{position:absolute;left:38px;bottom:118px;z-index:3;display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:min(560px,calc(100vw - 90px))}
+#item-bar[hidden],#item-status[hidden]{display:none}
+.item-button,.item-chip{display:flex;align-items:center;gap:6px;padding:5px 10px 5px 7px;min-height:46px;border:1px solid #f0c86a99;border-radius:14px;background:#2a1d10d9;color:#ffe9b0;box-shadow:0 0 14px #f0b44a33;margin:0}
+.item-button{cursor:pointer}
+.item-button.selected{border-color:#ffe29a;box-shadow:0 0 0 2px #ffe29a77,0 0 18px #f0b44a55}
+.item-button b,.item-chip b{font-size:15px;font-variant-numeric:tabular-nums}
+.item-button small{font-size:10px;padding:1px 5px;border:1px solid #f0c86a88;border-radius:4px;color:#e8cf8f}
+.item-chip{border-style:dashed;opacity:.9}.item-chip small{font-size:11px;color:#d9c9a0}
+#item-status{position:absolute;left:38px;bottom:172px;z-index:3;padding:4px 10px;border-radius:8px;background:#1b1409d9;color:#ffe9b0;font-size:13px;font-variant-numeric:tabular-nums}
+.touch-mode #item-bar{left:auto;right:calc(max(28px,env(safe-area-inset-right)) + 100px);bottom:max(46px,env(safe-area-inset-bottom));flex-direction:row-reverse;max-width:calc(100vw - 300px)}
+.touch-mode .item-button,.touch-mode .item-chip{min-height:58px;padding:6px 10px;border-radius:30px;touch-action:manipulation}
+.touch-mode .item-button small,.touch-mode .item-chip small{display:none}
+.touch-mode #item-status{left:auto;right:calc(max(28px,env(safe-area-inset-right)) + 100px);bottom:calc(max(46px,env(safe-area-inset-bottom)) + 66px)}
+/* Placeholder potion colours until the potion art arrives. */
+.potion-icon.tonic:after{background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#ff9f6b 0 48%,#ffe2cc55 49%);box-shadow:0 0 10px #ff9f6b99}
+.potion-icon.wind:after{background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#6fe3c4 0 58%,#d4fff355 59%);box-shadow:0 0 10px #6fe3c499}
+.potion-icon.shell:after{background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#e8c25a 0 58%,#fff1c455 59%);box-shadow:0 0 10px #e8c25a99}
+.potion-icon.sprout:after{border-radius:50% 50% 50% 50%/60% 60% 40% 40%;background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#8fdc6a 0 70%,#e4ffd455 71%);box-shadow:0 0 10px #8fdc6a99}
+.potion-icon.sprout:before{left:9px;width:4px;height:9px;border-radius:2px;background:#8fdc6a}
+@media(max-height:500px) and (orientation:landscape){.touch-mode .item-button,.touch-mode .item-chip{min-height:50px;padding:4px 9px}}
+@media(orientation:portrait){.touch-mode #item-bar{left:calc(max(20px,env(safe-area-inset-left)) + 112px);right:calc(max(28px,env(safe-area-inset-right)) + 92px);bottom:max(14px,env(safe-area-inset-bottom));max-width:none;flex-direction:row;flex-wrap:wrap-reverse;justify-content:center;gap:5px}.touch-mode .item-button,.touch-mode .item-chip{min-height:44px;padding:3px 9px 3px 5px;border-radius:22px;gap:3px}.touch-mode .item-button b,.touch-mode .item-chip b{font-size:13px}.touch-mode #item-bar .potion-icon{transform:scale(.82)}.touch-mode #item-status{left:50%;right:auto;transform:translateX(-50%);bottom:168px;white-space:nowrap}}

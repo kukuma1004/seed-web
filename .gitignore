@@ -43,3 +43,4 @@ artifacts/
 !tools/online-ranking-test.mjs
 
 !tools/relics-test.mjs
+!tools/items-test.mjs
