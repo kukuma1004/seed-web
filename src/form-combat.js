@@ -9,8 +9,8 @@ export const FORM_COMBAT=Object.freeze(Object.fromEntries(Object.keys(FORMS).map
 
 export function segmentDistance(a,b,p){const d=b.clone().sub(a).setY(0),length=d.lengthSq();const t=length?THREE.MathUtils.clamp(p.clone().sub(a).setY(0).dot(d)/length,0,1):0;return a.clone().addScaledVector(d,t).setY(0).distanceTo(p.clone().setY(0));}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const bossReach=(e,normal,boss)=>e.type==='warden'?boss:normal;
-const immovable=e=>e.type==='warden'||e.type==='turret';
+const bossReach=(e,normal,boss)=>e.type==='warden'||e.type==='austin'?boss:normal;
+const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, enemyShots().

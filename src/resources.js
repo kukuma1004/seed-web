@@ -1,10 +1,10 @@
 // Transient actors own geometry and local tell/line materials; common game materials survive.
-export function disposeObject(root,sharedMaterials) {
+export function disposeObject(root,sharedMaterials,sharedGeometries=new Set()) {
   root.removeFromParent();
   const geometries=new Set(),materials=new Set();
   root.traverse(o=>{
     if(o.isInstancedMesh)o.dispose();
-    if(o.geometry&&!o.isSprite)geometries.add(o.geometry);
+    if(o.geometry&&!o.isSprite&&!sharedGeometries.has(o.geometry))geometries.add(o.geometry);
     for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[])
       if(!sharedMaterials.has(m))materials.add(m);
   });

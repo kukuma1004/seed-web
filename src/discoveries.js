@@ -2,7 +2,7 @@ import {LAWS} from './laws.js';
 import {FORMS} from './forms.js';
 
 export const DISCOVERIES_KEY='seed-discoveries-v1';
-const BOSS_IDS=new Set(['warden']);
+const BOSS_IDS=new Set(['warden','austin']);
 const emptyProfile=()=>({version:1,forms:[],bosses:[]});
 const uniqueKnown=(items,known)=>Array.isArray(items)?[...new Set(items.filter(id=>typeof id==='string'&&known(id)))]:[];
 

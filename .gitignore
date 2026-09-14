@@ -38,3 +38,5 @@ PROMPTS.md
 artifacts/
 
 !tools/frame-time-test.mjs
+!tools/austin-test.mjs
+!tools/ranking-test.mjs

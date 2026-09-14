@@ -1,0 +1,39 @@
+/* Run score, the potion slot and the ranking board. */
+#score-hud{position:absolute;top:84px;right:32px;z-index:1;display:flex;align-items:baseline;gap:8px;pointer-events:none;color:#f5e2a8;text-shadow:0 2px 6px #000}
+#score-hud[hidden]{display:none}
+#score-hud small{font-size:11px;letter-spacing:2px;color:#cdbb86}
+#score-hud b{font-size:20px;letter-spacing:1px;font-variant-numeric:tabular-nums}
+#use-potion{position:absolute;left:38px;bottom:118px;z-index:3;display:flex;align-items:center;gap:8px;padding:6px 12px 6px 8px;min-height:48px;border:1px solid #f0c86a99;border-radius:14px;background:#2a1d10d9;color:#ffe9b0;box-shadow:0 0 18px #f0b44a44}
+#use-potion[hidden]{display:none}
+#use-potion b{font-size:16px;font-variant-numeric:tabular-nums}
+#use-potion small{font-size:10px;padding:1px 5px;border:1px solid #f0c86a88;border-radius:4px;color:#e8cf8f}
+/* Placeholder flask until the potion icon arrives (docs/ART-REQUEST-AUSTIN-20260914.md). */
+.potion-icon{position:relative;display:block;width:22px;height:28px}
+.potion-icon:before{content:"";position:absolute;left:7px;top:0;width:8px;height:8px;border-radius:2px 2px 0 0;background:#c9a56b}
+.potion-icon:after{content:"";position:absolute;left:0;bottom:0;width:22px;height:21px;border-radius:50% 50% 45% 45%;background:radial-gradient(circle at 35% 35%,#fff8 0 12%,transparent 13%),linear-gradient(0deg,#ff5f7a 0 58%,#ffd0da55 59%);box-shadow:0 0 10px #ff6b8a99}
+.touch-mode #score-hud{top:max(66px,calc(env(safe-area-inset-top) + 56px));right:max(14px,env(safe-area-inset-right));gap:6px}
+.touch-mode #score-hud small{font-size:9px}.touch-mode #score-hud b{font-size:15px}
+.touch-mode #use-potion{left:auto;right:calc(max(28px,env(safe-area-inset-right)) + 100px);bottom:max(46px,env(safe-area-inset-bottom));min-height:60px;padding:6px 10px;border-radius:30px;touch-action:manipulation}
+.touch-mode #use-potion small{display:none}
+@media(orientation:portrait){.touch-mode #score-hud{top:max(58px,calc(env(safe-area-inset-top) + 50px))}.touch-mode #use-potion{bottom:max(52px,env(safe-area-inset-bottom))}}
+
+.final-score{display:flex;flex-direction:column;align-items:center;gap:2px;margin:4px 0 10px}
+.final-score small{letter-spacing:3px;color:#cdbb86;font-size:12px}
+.final-score strong{font-size:44px;line-height:1.1;color:#ffe3a0;text-shadow:0 0 22px #f0b44a66;font-variant-numeric:tabular-nums}
+.final-score span{font-size:12px;color:#bcd3c6}
+.rank-form{display:flex;gap:8px;justify-content:center;align-items:stretch;margin:4px 0 8px;width:min(420px,100%)}
+.rank-form input{flex:1;min-width:0;min-height:44px;padding:0 12px;border:1px solid #a4b7ab88;border-radius:10px;background:#0c1f24;color:#f3f7ea;font:inherit;font-size:16px}
+.rank-form input:focus{outline:2px solid #f0c86a;outline-offset:1px}
+.rank-form button{min-height:44px;white-space:nowrap}
+#rank-board{width:min(440px,100%)}
+.rank-result{margin:4px 0 8px;color:#ffe3a0}.rank-result b{font-size:18px}
+.ranking{list-style:none;margin:6px auto 8px;padding:0;width:min(440px,100%);display:grid;gap:4px;text-align:left}
+.ranking li{display:grid;grid-template-columns:30px 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:baseline;padding:6px 12px;border-radius:10px;background:#0e2328cc;border:1px solid #a4b7ab26}
+.ranking li b{grid-row:1/3;align-self:center;font-size:16px;color:#9fc5b4;text-align:center}
+.ranking li:nth-child(1) b{color:#ffd76a}.ranking li:nth-child(2) b{color:#dfe6ea}.ranking li:nth-child(3) b{color:#e0a66a}
+.ranking li span{font-size:15px;color:#f3f7ea;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ranking li em{font-style:normal;font-size:15px;color:#ffe3a0;font-variant-numeric:tabular-nums}
+.ranking li small{grid-column:2/4;font-size:10px;color:#8fb0a2}
+.ranking li.mine{border-color:#f0c86a;background:#3a2a12cc;box-shadow:0 0 14px #f0b44a44}
+.ranking-empty{color:#9fb8ad;margin:10px 0}
+@media(max-height:480px){#rank-board{width:min(720px,100%)}.final-score strong{font-size:32px}.ranking{grid-template-columns:1fr 1fr;width:min(720px,100%)}.ranking li{padding:4px 8px}.ranking li small{display:none}}
