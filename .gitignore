@@ -36,3 +36,5 @@ TASKS.md
 AI_WORKFLOW.md
 PROMPTS.md
 artifacts/
+
+!tools/frame-time-test.mjs
