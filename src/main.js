@@ -206,7 +206,7 @@ function wave(){
  saveBoundary();spawnCrowd(8);$('#encounter').textContent=`여정 ${cycle+1} · ${REGION_NAMES[region]} · ${ROOMS[stage].name}`;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));$('#boss-hud').hidden=stage!==4;
 }
-function openExit(){if(stage===4)saveBoundary(4,'crossroads');else saveBoundary(stage+1);exitOpen=true;gate.visible=true;$('#toast').textContent=stage===4?'문지기가 쓰러졌다 · 빛나는 출구로 돌아가세요':'법칙이 몸에 새겨졌다 · 빛나는 출구로 이동하세요';}
+function openExit(){if(stage===4)saveBoundary(4,'crossroads');else saveBoundary(stage+1);exitOpen=true;gate.visible=true;$('#toast').textContent=stage===4?'문지기가 쓰러졌다 · 빛나는 출구로 돌아가세요':'방을 정리했다 · 빛나는 출구로 이동하세요';}
 function useExit(){if(!canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z}))return;touch.reset();keys.clear();keyboardDash=false;exitOpen=false;gate.visible=false;$('#exit-room').hidden=true;$('#toast').textContent='';if(stage===4){showCrossroads();}else{stage++;wave();}}
 function enemyBolt(pos,kind,frost=false){
  const g=new THREE.Group();g.position.set(pos.x,.65,pos.z);scene.add(g);const boss=kind==='boss';
