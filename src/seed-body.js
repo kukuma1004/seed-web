@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
-const BODY_SIZE=1.4;
+const BODY_SIZE=1.26;
 
 // The atlas is painted from front, right, back, left; direction is camera-relative.
 export function seedFrame(facing,cameraYaw){
