@@ -1,0 +1,38 @@
+/* Active button: a gauge ring that fills, glows when ready and drains while the active runs. Placeholder art. */
+#active-skill{position:absolute;right:38px;bottom:150px;z-index:4;width:84px;height:84px;border-radius:50%;border:2px solid #d9c28a88;padding:0;color:#fff6dc;background:#0f262bd9;box-shadow:0 0 0 1px #0008;overflow:visible;touch-action:manipulation;pointer-events:auto;--fill:0%}
+#active-skill[hidden]{display:none}
+#active-skill .active-fill{position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(#f2c96b var(--fill),#ffffff1a 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px))}
+#active-skill .active-icon{position:absolute;inset:9px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1b3a3f}
+#active-skill .active-portrait{width:100%;height:100%;flex:1 1 0;background-size:400% 300%;border-radius:0;box-shadow:none;margin:0}
+#active-skill.overdrive .active-portrait+.active-portrait{border-left:2px solid #f2c96b}
+#active-skill .active-lock{font-size:24px;opacity:.7}
+#active-skill .active-name{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000,0 0 6px #000}
+#active-skill .active-key{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:10px;background:#0b1c20;border:1px solid #d9c28a88;font-size:11px;line-height:18px}
+#active-skill .active-key:empty{display:none}
+#active-skill.locked{filter:grayscale(1);opacity:.55}
+#active-skill.ready{border-color:#ffd978;animation:active-ready 1.1s ease-in-out infinite}
+#active-skill.ready .active-fill{background:conic-gradient(#ffd978 100%,#0000 0)}
+#active-skill.running .active-fill{background:conic-gradient(#8ff5ff var(--fill),#ffffff14 0)}
+#active-skill.running.overdrive .active-fill{background:conic-gradient(#ff8fd8 var(--fill),#ffffff14 0)}
+#active-skill.running{box-shadow:0 0 22px #8ff5ffaa}
+#active-skill.running.overdrive{box-shadow:0 0 26px #ff8fd8bb}
+@keyframes active-ready{50%{box-shadow:0 0 24px #ffd978cc}}
+@media (prefers-reduced-motion:reduce){#active-skill.ready{animation:none;box-shadow:0 0 18px #ffd978aa}}
+.touch-mode #active-skill{right:calc(max(28px,env(safe-area-inset-right)) + 8px);bottom:calc(max(34px,env(safe-area-inset-bottom)) + 112px);width:72px;height:72px}
+.touch-mode #active-skill .active-name{font-size:11px;bottom:-17px}
+
+/* Pause sheet */
+.active-sheet{grid-column:1/-1;text-align:left;margin:4px 0;padding:12px 14px;border:1px solid #d9c28a55;border-radius:10px;background:#10272c}
+.active-sheet h3{margin:0 0 8px;font-size:15px}.active-sheet h3 span{font-weight:400;font-size:12px;color:#cfe3d9;margin-left:6px}
+.active-sheet-body{display:flex;gap:12px;align-items:flex-start}
+.active-sheet-art{display:flex;flex:0 0 auto;width:64px;height:64px;border-radius:50%;overflow:hidden}
+.active-sheet-art .active-portrait{width:100%;height:100%;flex:1 1 0;background-size:400% 300%;margin:0;border-radius:0}
+.active-sheet strong{display:block;margin-bottom:4px}
+.active-sheet ul{margin:0;padding-left:18px;font-size:12px;line-height:1.55;color:#dfeadf}
+.active-sheet .active-rule{margin:6px 0 0;font-size:11px;color:#9fb9ae}
+.active-sheet.locked{opacity:.8}
+
+/* Solo evolution placeholder portrait: the law's own tile inside a gold ring until solo art exists. */
+.form-art.solo-art{position:relative;background-size:400% 300%;box-shadow:inset 0 0 0 3px #f2c96b,0 0 14px #f2c96b66;border-radius:50%}
+.solo-card{border-top-color:#f2c96b}
+.solo-card .solo-tag{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#f2c96b33;color:#ffe3a3;font-size:11px}

@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS} from './forms.js';
+import {ALL_FORMS as FORMS} from './forms.js';
 
 export const DISCOVERIES_KEY='seed-discoveries-v1';
 const BOSS_IDS=new Set(['warden','austin']);

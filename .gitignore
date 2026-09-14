@@ -45,3 +45,7 @@ artifacts/
 !tools/relics-test.mjs
 !tools/items-test.mjs
 !tools/star-room-test.mjs
+!tools/actives-test.mjs
+!tools/solo-forms-test.mjs
+!tools/active-balance-test.mjs
+!tools/balance-sim.mjs

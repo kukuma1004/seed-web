@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS} from './forms.js';
+import {ALL_FORMS} from './forms.js';
 // Run-only relics. Stored relics never grant effects; the equipped slot is separate.
 export const RELICS=Object.freeze({
  mirror:{name:'거울 조각',law:'reflect',desc:'반사탄 튕김 +1 · 법칙 최대치(8회)를 넘어섭니다 · 반사 재료 진화 피해 +12%'},
@@ -65,8 +65,8 @@ export function relicEffect(id,base,heldForms=[]){
   const next=raised(now,s);grows=true;
   lines.push(`${s.label} ${shown(now)}${s.unit} → ${shown(next)}${s.unit}${next>s.cap+1e-9?' · 최대치 초과':''}`);
  }
- const forms=[...heldForms].map(f=>Array.isArray(f)?f[0]:f).filter(f=>FORMS[f]?.requires.includes(law));
- for(const f of forms)lines.push(`${FORMS[f].name} 피해 +12%`);
+ const forms=[...heldForms].map(f=>Array.isArray(f)?f[0]:f).filter(f=>ALL_FORMS[f]?.requires.includes(law));
+ for(const f of forms)lines.push(`${ALL_FORMS[f].name} 피해 +12%`);
  const state=grows||forms.length?'active':'missing';
  return {state,lines,note:state==='missing'?`${LAWS[law].name} 법칙을 얻거나 ${subject(LAWS[law].name)} 재료인 진화를 만들면 효과가 나요`:''};
 }

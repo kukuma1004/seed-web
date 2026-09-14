@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS} from './forms.js';
+import {FORMS,ALL_FORMS,SOLO_FORMS,soloLevel} from './forms.js';
 
 // Laws are stacked, never swapped: five slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -98,9 +98,9 @@ export function upgradeLine(levels,id){
 // Fusing a pair again into a form already held feeds it instead of making a second copy.
 const FORM_PREFIX='form:';
 export const formOffer=id=>FORM_PREFIX+id;
-export const offeredForm=choice=>typeof choice==='string'&&choice.startsWith(FORM_PREFIX)&&Object.hasOwn(FORMS,choice.slice(FORM_PREFIX.length))?choice.slice(FORM_PREFIX.length):null;
+export const offeredForm=choice=>typeof choice==='string'&&choice.startsWith(FORM_PREFIX)&&Object.hasOwn(ALL_FORMS,choice.slice(FORM_PREFIX.length))?choice.slice(FORM_PREFIX.length):null;
 export function slotsUsed(levels,forms=new Map()){return levels.size+forms.size;}
-export function fusionLevel(levels,id){const [a,b]=FORMS[id].requires.map(law=>levels.get(law)||0);return a&&b?a+b-1:0;}
+export function fusionLevel(levels,id){if(!Object.hasOwn(FORMS,id))return 0;const [a,b]=FORMS[id].requires.map(law=>levels.get(law)||0);return a&&b?a+b-1:0;}
 export function canFuse(levels,id){return Object.hasOwn(FORMS,id)&&fusionLevel(levels,id)>0;}
 export function fuse(levels,forms,id){
  if(!canFuse(levels,id))return false;
@@ -112,7 +112,16 @@ export function fuse(levels,forms,id){
 // Every law the seed carries, including those living inside its forms, at the strongest level seen.
 export function effectiveLevels(levels,forms=new Map()){
  const merged=new Map(levels);
- for(const [id,level] of forms)for(const law of FORMS[id].requires)merged.set(law,Math.max(merged.get(law)||0,level));
+ for(const [id,level] of forms)for(const law of ALL_FORMS[id]?.requires||[])merged.set(law,Math.max(merged.get(law)||0,level));
  return merged;
+}
+// Solo evolution: a law at SOLO_LEVEL or higher leaves its slot and becomes its own evolution in that slot.
+export function canEvolveSolo(levels,id){return Object.hasOwn(SOLO_FORMS,id)&&soloLevel(levels,id)>0;}
+export function evolveSolo(levels,forms,id){
+ if(!canEvolveSolo(levels,id))return false;
+ const gained=soloLevel(levels,id);
+ levels.delete(SOLO_FORMS[id].requires[0]);
+ forms.set(id,(forms.get(id)||0)+gained);
+ return true;
 }
 export function buildLevel(levels,forms=new Map()){let n=totalLevel(levels);for(const v of forms.values())n+=v;return n;}

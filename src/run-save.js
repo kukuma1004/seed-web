@@ -1,6 +1,7 @@
 import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
-import {FORMS,isFormEligible} from './forms.js';
+import {ALL_FORMS,isFormEligible} from './forms.js';
+import {validActiveGauge} from './actives.js';
 import {validInventory} from './inventory.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑'};
@@ -11,11 +12,12 @@ export function validCheckpoint(s){
  if(s?.forms!==undefined){
   if(!s.forms||typeof s.forms!=='object'||Array.isArray(s.forms))return false;
   const entries=Object.entries(s.forms);
-  if(!entries.every(([id,v])=>Object.hasOwn(FORMS,id)&&Number.isInteger(v)&&v>=1&&v<=999))return false;
+  if(!entries.every(([id,v])=>Object.hasOwn(ALL_FORMS,id)&&Number.isInteger(v)&&v>=1&&v<=999))return false;
   if(!Array.isArray(s.rules)||s.rules.length+entries.length>5)return false;
  }
  if(s?.form!=null&&!isFormEligible(s.form,s.rules))return false;
- if(s?.guideTarget!=null&&!Object.hasOwn(FORMS,s.guideTarget))return false;
+ if(s?.guideTarget!=null&&!Object.hasOwn(ALL_FORMS,s.guideTarget))return false;
+ if(!validActiveGauge(s?.activeGauge))return false;
  if(s?.rerollUsed!==undefined&&typeof s.rerollUsed!=='boolean')return false;
  // Score, boss counts and potions arrived later; older saves simply do not have them.
  if(s?.score!==undefined&&!(Number.isInteger(s.score)&&s.score>=0&&s.score<1e12))return false;
