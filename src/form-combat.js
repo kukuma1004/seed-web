@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {FORMS,formStats} from './forms.js';
+import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
 
@@ -16,17 +17,7 @@ const immovable=e=>e.type==='warden'||e.type==='turret';
 export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,enemyShots=()=>[]}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','trail','arc','reflect','split'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
- const material=(color,emissive,intensity,extra={})=>new THREE.MeshStandardMaterial({color,emissive,emissiveIntensity:intensity,roughness:.3,...extra});
- const mats={
-  ice:material(0xbbeeff,0x6fbdde,.4),core:material(0xd799ec,0xa04fd2,.8),blade:material(0xb5f2d4,0x58bb97,.5,{metalness:.25,side:THREE.DoubleSide}),
-  prism:material(0xc8f4ff,0x73dfff,1.1,{metalness:.2}),bloom:material(0xd9fbff,0x9af0ff,1),storm:material(0xfff1b0,0xffdc73,1.6),
-  tide:material(0x8f6cc0,0xda9aff,.9),seed:material(0xffc9a0,0xff947b,1),mirror:material(0xe8fbff,0x73dfff,.8,{metalness:.6,side:THREE.DoubleSide})
- };
- const geos={
-  collapse:new THREE.IcosahedronGeometry(.28,1),blade:new THREE.TorusGeometry(.46,.085,5,18,Math.PI*1.55),satellite:new THREE.OctahedronGeometry(.24),
-  shard:new THREE.OctahedronGeometry(.2),bloom:new THREE.DodecahedronGeometry(.3),orb:new THREE.IcosahedronGeometry(.2,0),
-  vortex:new THREE.TorusGeometry(.42,.09,6,20),seed:new THREE.SphereGeometry(.11,6,4),mirror:new THREE.PlaneGeometry(.55,.75),mirrorBolt:new THREE.OctahedronGeometry(.16)
- };
+ const {mats,geos}=createFormVisuals();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  let active=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0;
  let bolts=[],wells=[],shatters=[],cooldowns=new Map();
