@@ -12,9 +12,9 @@ export const EXIT={x:0,z:-6.6,radius:1.65};
 // The star garden replaces one room per journey (see room-rotation.js). Its own cover and first enemies
 // fit inside the star; two short pillars beside the middle give the bent walls something to bounce around.
 export const STAR_ROOM=Object.freeze({id:'star',name:'별빛 정원',hint:'별 끝은 막다른 길 · 가운데로 빠져나오며 꺾인 벽으로 탄을 튕기세요',
- covers:[wall(-3.1,.2,1.1,1.1),wall(3.1,.2,1.1,1.1)],
- enemies:[['hound',6.4,-1.8],['caster',0,-6.2],['hound',-3.6,-2.4]],
- elite:{x:0,z:-4.8},shield:{x:0,z:-.4}});
+ covers:[wall(-3.8,.5,1.1,1.1),wall(3.8,.5,1.1,1.1)],
+ enemies:[['hound',7.6,-2],['caster',0,-6.9],['hound',-4.6,-2.6]],
+ shield:{x:0,z:-.6}});
 export function roomFor(stage,cycle=0){return isStarRoom(stage,cycle)?STAR_ROOM:ROOMS[stage];}
 export const LAW_NAMES=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.name]));
 export function rewardOptions(room,laws,mutated=[],options={}){

@@ -31,7 +31,7 @@ import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit,roomFor} from './journey.j
 import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './warden.js';
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
-import {createOnlineRanking} from './online-ranking.js';
+import {createOnlineRanking,SEASON} from './online-ranking.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,nextHeld,heldItems,usable} from './inventory.js';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,slotsUsed,fusionLevel,canFuse,fuse,effectiveLevels,buildLevel} from './progression.js';
@@ -340,7 +340,7 @@ function showIntro(){pauseBuild.hide();austinRoom=false;drawRoom();$('#evolution
   $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(runStorage);$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
   online.flush().catch(()=>0);
   $('#overlay').insertAdjacentHTML('beforeend','<p class="save-note">같은 기기·브라우저에 방 입구를 자동 저장합니다.<br>전투 중 종료하면 방 입구부터 · 쓰러지면 현재 도전 종료</p>');
-  $('#overlay').insertAdjacentHTML('beforeend',`<button id="ranking-link" class="discovery-link">명예의 전당 · 모두의 랭킹</button><button id="discoveries" class="discovery-link">씨앗의 발견 기록 · ${profile.forms.length}/${Object.keys(FORMS).length}</button>${growthGuide(profile)?`<p class="form-note">다음 도전의 조합 목표 · 필요한 법칙을 선택지에서 안내합니다</p><div class="guide-options"><button class="primary" data-guide="" aria-pressed="${!guideTarget}">자유롭게 성장</button>${profile.forms.map(id=>`<button class="primary" data-guide="${id}" aria-pressed="${guideTarget===id}">${FORMS[id].name}</button>`).join('')}</div>`:''}`);
+  $('#overlay').insertAdjacentHTML('beforeend',`<button id="ranking-link" class="discovery-link">명예의 전당 · 모두의 랭킹 ${SEASON.name}</button><button id="discoveries" class="discovery-link">씨앗의 발견 기록 · ${profile.forms.length}/${Object.keys(FORMS).length}</button>${growthGuide(profile)?`<p class="form-note">다음 도전의 조합 목표 · 필요한 법칙을 선택지에서 안내합니다</p><div class="guide-options"><button class="primary" data-guide="" aria-pressed="${!guideTarget}">자유롭게 성장</button>${profile.forms.map(id=>`<button class="primary" data-guide="${id}" aria-pressed="${guideTarget===id}">${FORMS[id].name}</button>`).join('')}</div>`:''}`);
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile);$('#close-discoveries').onclick=showIntro;};
  document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>{guideTarget=b.dataset.guide||null;document.querySelectorAll('[data-guide]').forEach(n=>n.setAttribute('aria-pressed',String((n.dataset.guide||null)===guideTarget)));});
@@ -348,7 +348,7 @@ function showIntro(){pauseBuild.hide();austinRoom=false;drawRoom();$('#evolution
 }
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro');const serial=++rankSerial;
- $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage)):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage)):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
  online.flush().catch(()=>0).then(()=>online.top()).then(board=>{

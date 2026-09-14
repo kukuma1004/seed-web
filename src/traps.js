@@ -28,7 +28,7 @@ export const TRAP_LAYOUTS=[
 
 // Plates are offset in time so a room never flashes all at once.
 // Star garden: one in the middle lane toward the exit tip, one at the mouth of each side tip.
-export const STAR_TRAPS=[{x:0,z:-2.2},{x:-5.3,z:-1.4},{x:5.3,z:-1.4}];
+export const STAR_TRAPS=[{x:0,z:-2.4},{x:-6.4,z:-1},{x:6.4,z:-1}];
 export function trapsFor(stage,cycle=0){
  const base=isStarRoom(stage,cycle)?STAR_TRAPS:(TRAP_LAYOUTS[stage]||[]);
  const list=base.map((p,i)=>({...p,offset:i*1.1,hitPlayer:false,hitEnemies:new Set()}));

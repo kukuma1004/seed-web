@@ -7,41 +7,43 @@ import {trapsFor,STAR_TRAPS,insideTrap,TRAP_SIZE} from '../src/traps.js';
 import {turretSpots,STAR_TURRETS} from '../src/turret.js';
 import {segmentHitsCover} from '../src/collision.js';
 
-// Rotation: journey 1 has the star in room 2, journey 2 in room 4, then it alternates. Rooms 1, 3 and 5 are never replaced.
-assert.deepEqual([...STAR_STAGES],[1,3]);
+// Rotation: journey 1 has the star in room 2, journey 2 in room 3, then it alternates. Rooms 1, 4 (elite warden) and 5 are never replaced.
+assert.deepEqual([...STAR_STAGES],[1,2]);
 for(let cycle=0;cycle<8;cycle++){
  const stars=ROOMS.map((_,stage)=>isStarRoom(stage,cycle));
  assert.equal(stars.filter(Boolean).length,1,`one star per journey ${cycle}`);
- assert.equal(starStage(cycle),cycle%2?3:1);
+ assert.equal(starStage(cycle),cycle%2?2:1);
  for(const stage of ROOMS.keys()){
   const star=isStarRoom(stage,cycle);
   assert.equal(arenaFor(stage,cycle).id==='star',star);
   assert.equal(roomFor(stage,cycle),star?STAR_ROOM:ROOMS[stage]);
  }
 }
-for(const stage of [0,2,4])for(let cycle=0;cycle<4;cycle++)assert.equal(isStarRoom(stage,cycle),false);
+for(const stage of [0,3,4])for(let cycle=0;cycle<4;cycle++)assert.equal(isStarRoom(stage,cycle),false);
 
 const star=arenaFor(1,0),{start,exit}=star;
 assert.equal(star.shape,'poly');assert.equal(star.points.length,10);
+// Roomier than the circle room (radius 7.2): shoelace area of the star polygon.
+{let area=0;star.points.forEach(([x,z],i)=>{const [x2,z2]=star.points[(i+1)%10];area+=x*z2-x2*z;});assert.ok(Math.abs(area)/2>Math.PI*7.2*7.2*1.15,`star area ${Math.abs(area)/2}`);}
 
 // Placement: start, exit, first enemies, elite, cover, traps and turrets all fit inside the star with room to move.
 assert.ok(insideArena(start,1,star)&&insideArena(exit,1,star));
 assert.ok(Math.hypot(start.x-exit.x,start.z-exit.z)>7,'the exit is across the room');
 const covers=STAR_ROOM.covers;
 for(const c of covers)assert.ok(distanceToArenaEdge(c,star)>Math.hypot(c.w,c.d)/2+.8,'cover leaves a lane to the wall');
-for(const [type,x,z] of [...STAR_ROOM.enemies,['elite',STAR_ROOM.elite.x,STAR_ROOM.elite.z],['shield',STAR_ROOM.shield.x,STAR_ROOM.shield.z],['start',start.x,start.z],['exit',exit.x,exit.z]]){
+for(const [type,x,z] of [...STAR_ROOM.enemies,['shield',STAR_ROOM.shield.x,STAR_ROOM.shield.z],['start',start.x,start.z],['exit',exit.x,exit.z]]){
  assert.ok(insideArena({x,z},.7,star),`${type} inside the star`);
  assert.equal(segmentHitsCover({x,z},{x,z},covers,type==='elite'?1:.65),false,`${type} clear of cover`);
 }
 assert.ok(Math.hypot(STAR_ROOM.shield.x-start.x,STAR_ROOM.shield.z-start.z)>3,'shield stands ahead of the seed');
 for(const [type,x,z] of STAR_ROOM.enemies)assert.ok(Math.hypot(x-start.x,z-start.z)>5,`${type} does not start on the seed`);
-assert.equal(trapsFor(1,0).length,STAR_TRAPS.length);assert.equal(trapsFor(3,1).length,STAR_TRAPS.length);
+assert.equal(trapsFor(1,0).length,STAR_TRAPS.length);assert.equal(trapsFor(2,1).length,STAR_TRAPS.length);
 for(const trap of STAR_TRAPS){
  assert.ok(insideArena(trap,TRAP_SIZE/2+.2,star));
  assert.equal(segmentHitsCover(trap,trap,covers,TRAP_SIZE/2),false);
  assert.equal(insideTrap(trap,start,.6),false);assert.equal(insideTrap(trap,exit,exit.radius),false);
 }
-assert.equal(turretSpots(1,0).length,STAR_TURRETS.base.length);assert.equal(turretSpots(3,1).length,STAR_TURRETS.base.length+STAR_TURRETS.extra.length);
+assert.equal(turretSpots(1,0).length,STAR_TURRETS.base.length);assert.equal(turretSpots(2,1).length,STAR_TURRETS.base.length+STAR_TURRETS.extra.length);
 for(const spot of [...STAR_TURRETS.base,...STAR_TURRETS.extra]){
  assert.ok(insideArena(spot,.8,star));assert.equal(segmentHitsCover(spot,spot,covers,.8),false);
  assert.ok(Math.hypot(spot.x-start.x,spot.z-start.z)>4.5);assert.ok(Math.hypot(spot.x-exit.x,spot.z-exit.z)>exit.radius+.8);

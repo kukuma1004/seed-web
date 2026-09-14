@@ -7,20 +7,20 @@ const EPS=1e-6;
 
 // Five-pointed star garden. One tip points to the top of the screen and holds the exit;
 // the seed starts in the open middle, because the bottom of a star is a notch, not floor.
-// Tips are dead ends: getting pushed into one is dangerous, and the bent walls make ricochets hard to read.
-// Sized close to the circle room's floor area; nudged toward the camera so the top tip stays on screen.
-const STAR_OUTER=9,STAR_INNER=5,STAR_CZ=.4;
+// Tips are dead ends, so the star is kept wide: a fat inner ring (6) and stretched sideways (x1.15), where the screen has room.
+// Its floor is larger than the circle room's; nudged toward the camera so the top tip stays on screen.
+const STAR_OUTER=9.4,STAR_INNER=6,STAR_CZ=.7,STAR_SX=1.15;
 export const STAR_POINTS=Object.freeze(Array.from({length:10},(_,i)=>{
   const radius=i%2?STAR_INNER:STAR_OUTER,a=i*Math.PI/5;
-  return Object.freeze([+(radius*Math.sin(a)).toFixed(4),+(STAR_CZ-radius*Math.cos(a)).toFixed(4)]);
+  return Object.freeze([+(STAR_SX*radius*Math.sin(a)).toFixed(4),+(STAR_CZ-radius*Math.cos(a)).toFixed(4)]);
 }));
-const tipPoint=(k,radius)=>{const a=k*2*Math.PI/5;return Object.freeze({x:+(radius*Math.sin(a)).toFixed(3),z:+(STAR_CZ-radius*Math.cos(a)).toFixed(3)});};
+const tipPoint=(k,radius)=>{const a=k*2*Math.PI/5;return Object.freeze({x:+(STAR_SX*radius*Math.sin(a)).toFixed(3),z:+(STAR_CZ-radius*Math.cos(a)).toFixed(3)});};
 export const STAR=Object.freeze({
   shape:'poly',id:'star',points:STAR_POINTS,
-  start:Object.freeze({x:0,z:3}),
-  exit:Object.freeze({x:0,z:-6,radius:1.65}),
+  start:Object.freeze({x:0,z:3.4}),
+  exit:Object.freeze({x:0,z:-6.2,radius:1.65}),
   // Enemies pour out of the tips: deep in each tip first, then nearer the middle.
-  spawns:Object.freeze([...[0,1,2,3,4].map(k=>tipPoint(k,6.9)),...[0,1,2,3,4].map(k=>tipPoint(k,5.4))])
+  spawns:Object.freeze([...[0,1,2,3,4].map(k=>tipPoint(k,7.6)),...[0,1,2,3,4].map(k=>tipPoint(k,6))])
 });
 
 // A room's visible rim, movement and projectiles share this definition.

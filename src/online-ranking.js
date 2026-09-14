@@ -7,14 +7,21 @@ export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v1',RUNS_PATH='seedRanking/runs',FETCH_RUNS=100,PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v2',RUNS_PATH='seedRanking/runs',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
+// Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
+// (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
+export const SEASON=Object.freeze({id:2,name:'시즌 2',start:1789396500000});
+export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start;
+// Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
+const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
+export function pushKeyPrefix(ms){let n=Math.floor(ms),out='';for(let i=0;i<8;i++){out=PUSH_CHARS[n%64]+out;n=Math.floor(n/64);}return out;}
 const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 export function validRun(e){
  return Boolean(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at));
 }
 // One line per player (same device and same name keep only their best), highest first, earliest wins ties.
-export function bestPerPlayer(data,limit=20){
- const runs=Object.entries(data&&typeof data==='object'?data:{}).map(([id,v])=>({id,...v})).filter(validRun).sort((a,b)=>b.score-a.score||a.at-b.at);
+export function bestPerPlayer(data,limit=20,season=SEASON){
+ const runs=Object.entries(data&&typeof data==='object'?data:{}).map(([id,v])=>({id,...v})).filter(validRun).filter(run=>!season||inSeason(run,season)).sort((a,b)=>b.score-a.score||a.at-b.at);
  const seen=new Set(),out=[];
  for(const run of runs){const key=run.uid+'\n'+run.name;if(seen.has(key))continue;seen.add(key);out.push(run);if(out.length>=limit)break;}
  return out;
@@ -47,10 +54,15 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   return remember({uid:b.localId,idToken:b.idToken,refreshToken:b.refreshToken,expiresAt:now()+Number(b.expiresIn||3600)*1000});
  }
  const runsURL=(s,query='')=>`${config.databaseURL}/${RUNS_PATH}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
+ // Two reads merged: the highest scores overall (old seasons are filtered out) and every recent run since the season began,
+ // so new runs are found even while old high scores fill the score query.
  async function top(limit=20){
   const s=await signIn();
-  const data=await request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`));
-  return bestPerPlayer(data,limit);
+  const [best,recent]=await Promise.all([
+   request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
+   request(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
+  ]);
+  return bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
  }
  async function post({name,score,cycle,stage,kills,time}){
   const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:0};

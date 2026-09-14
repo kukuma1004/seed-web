@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS} from '../src/score.js';
+import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS} from '../src/score.js';
 import {ITEMS,emptyInventory,normalizeInventory,validInventory,addItem,drinkPotion} from '../src/inventory.js';
 import {validCheckpoint,difficulty} from '../src/run-save.js';
 
@@ -30,8 +30,8 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
  for(let i=0;i<RANKING_SIZE+5;i++)submitScore(s,{...base,name:'n'+i,score:1000+i},10+i);
  const board=readRanking(s);assert.equal(board.length,RANKING_SIZE);assert.equal(board.at(-1).score,1005);
  const low=submitScore(s,{...base,name:'낮음',score:1},99);assert.equal(low.rank,0,'a score below the board is not ranked');
- s.setItem('seed-ranking-v1',JSON.stringify({version:1,entries:[{name:'<x>',score:5},{name:'ok',score:-1},'junk']}));
- assert.deepEqual(readRanking(s),[]);s.setItem('seed-ranking-v1','{bad json');assert.deepEqual(readRanking(s),[]);
+ s.setItem(RANKING_KEY,JSON.stringify({version:1,entries:[{name:'<x>',score:5},{name:'ok',score:-1},'junk']}));
+ assert.deepEqual(readRanking(s),[]);s.setItem(RANKING_KEY,'{bad json');assert.deepEqual(readRanking(s),[]);
  const html=rankingTable([{name:'a&b',score:1234,cycle:1,stage:4,kills:9,time:1,at:1}]);
  assert.ok(html.includes('a&amp;b')&&html.includes('1,234')&&html.includes('여정 2'));
  const broken={getItem(){throw new Error('blocked');},setItem(){throw new Error('blocked');}};
