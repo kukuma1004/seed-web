@@ -1,3 +1,4 @@
+import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
 import {FORMS,isFormEligible} from './forms.js';
 import {validInventory} from './inventory.js';
@@ -19,7 +20,7 @@ export function validCheckpoint(s){
  // Score, boss counts and potions arrived later; older saves simply do not have them.
  if(s?.score!==undefined&&!(Number.isInteger(s.score)&&s.score>=0&&s.score<1e12))return false;
  if(!validCount(s?.wardens)||!validCount(s?.austins)||(s?.austins||0)>Math.floor((s?.wardens||0)/5))return false;
- if(!validInventory(s?.inventory))return false;
+ if(!validInventory(s?.inventory)||!validRelics(s?.relics))return false;
  if(s?.mode==='austin'&&s.stage!==4)return false;
  return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=5&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
 }

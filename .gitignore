@@ -41,3 +41,5 @@ artifacts/
 !tools/austin-test.mjs
 !tools/ranking-test.mjs
 !tools/online-ranking-test.mjs
+
+!tools/relics-test.mjs

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {AUSTIN,PHASES,austinPhase,hourDirection,bellDirections,beatsToHour,sweepTime,createAustin,tickAustin,austinHint,createClockFloor} from '../src/austin.js';
+import {AUSTIN,PHASES,austinPhase,hourDirection,bellDirections,beatsToHour,sweepTime,createAustin,tickAustin,damageAustin,volleyDirections,austinHint,createClockFloor} from '../src/austin.js';
 const V=THREE.Vector3;
 const angleTo=(a,b)=>Math.acos(Math.max(-1,Math.min(1,a.dot(b))));
 
@@ -73,7 +73,7 @@ function run(r,seconds,step=1/60,each=()=>{}){for(let t=0;t<seconds;t+=step){tic
  run(r,sweepTime('normal'));assert.ok(r.log.hits.includes(AUSTIN.sweep.damage),'a full turn sweeps over a seed that stands still');
  const late=rig(new V(3,0,0));late.e.state='stalk';late.e.timer=0;late.e.pattern=1;late.e.beats=AUSTIN.hourBeats-2;
  tickAustin(late.e,1/60,late.hooks);assert.equal(late.e.kind,'jab','too close to the hour for a sweep');
- const over=rig(new V(3,0,0));over.e.hp=over.e.maxHp*.4;over.e.state='stalk';over.e.timer=0;over.e.pattern=2;
+ const over=rig(new V(3,0,0));over.e.hp=over.e.maxHp*.4;over.e.phase='overtime';over.e.state='stalk';over.e.timer=0;over.e.pattern=2;
  tickAustin(over.e,1/60,over.hooks);assert.equal(over.e.state,'sweepTell');assert.ok(over.e.parts.beams[1].visible,'two hands in overtime');
 }
 
@@ -103,3 +103,28 @@ function run(r,seconds,step=1/60,each=()=>{}){for(let t=0;t<seconds;t+=step){tic
  const tip=new V(0,0,-1).applyAxisAngle(new V(0,1,0),floor.hand.rotation.y);assert.ok(tip.distanceTo(hourDirection(4))<1e-9);}
 
 console.log('Austin bell gaps, one-two, sweeps, alarms, phases and floor clock passed.');
+
+// A burst cannot skip the two phase changes, and transitional shielding expires.
+{
+ const r=rig(new V(0,0,5));
+ assert.equal(damageAustin(r.e,1e9),r.e.maxHp*.5);
+ tickAustin(r.e,1/60,r.hooks);assert.equal(r.e.state,'phaseShift');
+ assert.equal(damageAustin(r.e,1e9),0);assert.ok(austinHint(r.e).includes('피해'));
+ run(r,AUSTIN.transition+.05);assert.equal(r.e.phase,'overtime');
+ damageAustin(r.e,1e9);assert.equal(r.e.hp,r.e.maxHp*.2);
+ tickAustin(r.e,1/60,r.hooks);run(r,AUSTIN.transition+.05);
+ assert.equal(r.e.phase,'deadline');assert.equal(damageAustin(r.e,1e9),r.e.maxHp*.2);assert.equal(r.e.hp,0);
+}
+// Every fan is telegraphed and locks its aim. Retargeting happens only before the next visible tell.
+{
+ const r=rig(new V(0,0,5));r.e.pattern=3;r.e.timer=0;
+ tickAustin(r.e,1/60,r.hooks);assert.equal(r.e.state,'volleyTell');assert.ok(r.e.parts.fan.visible);
+ const locked=r.e.dir.clone();r.player.set(4,0,2);
+ run(r,.2);assert.ok(locked.distanceTo(r.e.dir)<1e-8);assert.equal(r.log.bolts.length,0);
+ run(r,AUSTIN.volley.tell);assert.ok(r.log.bolts.length>=5);
+ assert.ok(r.log.bolts.slice(0,5).every(b=>b.damage===AUSTIN.volley.damage));
+ assert.equal(volleyDirections(new V(0,0,1)).length,5);
+}
+console.log('Austin phase gates and visible predictive fan passed.');
+
+for(const max of [20763.6,21999.17,1e6+.17])assert.equal(austinPhase(max*AUSTIN.deadline,max),'deadline','fractional scaled HP crosses the exact phase gate');

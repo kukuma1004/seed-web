@@ -5,24 +5,34 @@ const V=THREE.Vector3,TAU=Math.PI*2;
 // a bell fires two rings of bolts with a single gap pointing at the hour hand. The floor clock always
 // shows where the next gap will be, so the fight can be learned rather than guessed.
 export const AUSTIN=Object.freeze({
- name:'정시파이터 오스틴',hp:6000,
+ name:'정시파이터 오스틴',hp:7800,
  beat:.6,hourBeats:10,hourStep:4,
  overtime:.5,deadline:.2,
  bump:{radius:1.35,damage:14,every:.8},
- jab:{tell:.5,retell:.28,dash:.34,speed:17,contact:26,reach:1.3,shock:1.9,shockDamage:20},
- sweep:{tell:.9,turn:3,halfTurn:1.7,length:11,width:.55,damage:24},
- alarm:{countdown:1.8,radius:2.2,damage:22,spread:2.6},
- bell:{warnBeats:3,ringDelay:.32,speed:5.2,damage:20}
+ jab:{tell:.48,retell:.36,dash:.34,speed:20,contact:30,reach:1.3,shock:1.9,shockDamage:24},
+ sweep:{tell:.8,turn:2.7,halfTurn:1.65,length:11,width:.55,damage:28},
+ alarm:{countdown:1.5,radius:2.2,damage:26,spread:2.9},
+ volley:{tell:.6,retell:.48,spread:.32,speed:9,damage:22,lead:.28},
+ transition:.95,
+ bell:{warnBeats:3,ringDelay:.3,speed:6,damage:24}
 });
 export const AUSTIN_ARENA=Object.freeze({shape:'circle',radius:7.6});
 // GPT art hook: set to e.g. 'boss-austin-v1.png' (2x2 directional atlas, like warden-*-v4.png) once the art exists.
 export const AUSTIN_ART='boss-austin-v1.png';
 export const PHASES=Object.freeze({
- normal:{tempo:1,label:'정시 근무',jabs:2,alarms:3,bolts:24,gapHalf:.5,rest:1,order:['jab','sweep','alarm']},
- overtime:{tempo:.8,label:'야근 모드',jabs:2,alarms:4,bolts:30,gapHalf:.36,rest:.7,order:['jab','alarm','sweep','jab']},
- deadline:{tempo:.68,label:'마감 직전',jabs:3,alarms:5,bolts:30,gapHalf:.36,rest:.45,order:['jab','sweep','alarm','jab']}
+ normal:{tempo:1,label:'정시 근무',jabs:3,alarms:3,volleys:3,bolts:24,gapHalf:.5,rest:.65,order:['jab','sweep','alarm','volley']},
+ overtime:{tempo:.8,label:'야근 모드',jabs:3,alarms:4,volleys:4,bolts:30,gapHalf:.4,rest:.45,order:['volley','alarm','sweep','jab','volley','jab']},
+ deadline:{tempo:.7,label:'마감 직전',jabs:4,alarms:5,volleys:5,bolts:36,gapHalf:.4,rest:.3,order:['alarm','volley','jab','sweep','volley','jab']}
 });
-export function austinPhase(hp,maxHp){const r=hp/maxHp;return r<=AUSTIN.deadline?'deadline':r<=AUSTIN.overtime?'overtime':'normal';}
+// Burst damage may reach a phase boundary, but cannot erase an unseen phase.
+// A short, visible wind-up clears the old hazards before the faster phase begins.
+export function damageAustin(e,amount){
+ if(e.state==='phaseShift'||!Number.isFinite(amount)||amount<=0)return 0;
+ const floor=e.phase==='normal'?e.maxHp*AUSTIN.overtime:e.phase==='overtime'?e.maxHp*AUSTIN.deadline:0;
+ const next=Math.max(floor,e.hp-amount),taken=Math.max(0,e.hp-next);e.hp=next;return taken;
+}
+export function volleyDirections(dir){return [-2,-1,0,1,2].map(i=>dir.clone().applyAxisAngle(new V(0,1,0),i*AUSTIN.volley.spread));}
+export function austinPhase(hp,maxHp){return hp<=maxHp*AUSTIN.deadline?'deadline':hp<=maxHp*AUSTIN.overtime?'overtime':'normal';}
 // Hour 0 is twelve o'clock, the top of the screen (-z); hour 3 points right (+x).
 export function hourDirection(hour){const a=hour*Math.PI/6;return new V(Math.sin(a),0,-Math.cos(a));}
 export function bellDirections(hour,phase='normal',offset=0){
@@ -64,16 +74,22 @@ export function createAustin(scene){
  // Tells live in a child group that cancels the boss's own turn, so they are laid out in world directions.
  const fx=new THREE.Group();g.add(fx);
  const lane=new THREE.Group();lane.add(groundPlane(1.6,7,basic(0xff7a3d,.32)));lane.visible=false;fx.add(lane);
+ const fan=new THREE.Group();fx.add(fan);fan.visible=false;
+ for(const i of [-2,-1,0,1,2]){const ray=new THREE.Group();ray.rotation.y=i*AUSTIN.volley.spread;ray.add(groundPlane(.16,11,basic(0xffbd65,.4)));fan.add(ray);}
  const beamMats=[basic(0xff3355,.2),basic(0xff3355,.2)];
  const beams=beamMats.map(mat=>{const b=new THREE.Group();b.add(groundPlane(AUSTIN.sweep.width,AUSTIN.sweep.length,mat));b.visible=false;fx.add(b);return b;});
  const wedgeMat=basic(0xffd66b,.28);
  const wedge=new THREE.Group();const wedgeMesh=new THREE.Mesh(new THREE.CircleGeometry(6.5,20,Math.PI/2-.5,1),wedgeMat);wedgeMesh.rotation.x=-Math.PI/2;wedgeMesh.position.y=.16;wedge.add(wedgeMesh);wedge.visible=false;fx.add(wedge);
  const world=new THREE.Group();scene.add(world);
- return {g,body,world,type:'austin',hp:AUSTIN.hp,maxHp:AUSTIN.hp,state:'stalk',timer:1.6,pattern:0,phase:'normal',
+ return {g,body,world,type:'austin',hp:AUSTIN.hp,maxHp:AUSTIN.hp,state:'stalk',timer:.9,pattern:0,phase:'normal',
+  previousPlayer:null,velocity:new V(),volleys:0,phasePending:null,queuedSweep:false,bellAge:999,
   clock:0,beats:0,hour:0,ringHour:0,pendingRing:0,bellWarn:false,bells:0,
   dir:new V(0,0,1),dashes:0,jabHit:false,bumpCD:0,beamAngle:0,beamSign:1,alarms:[],hit:0,slow:0,
-  parts:{head,hourHand,minuteHand,gloves,fx,lane,beams,beamMats,wedge,wedgeMesh,wedgeMat}};
+  parts:{head,hourHand,minuteHand,gloves,fx,lane,fan,beams,beamMats,wedge,wedgeMesh,wedgeMat}};
 }
+
+function aimAhead(e,player){return player.clone().addScaledVector(e.velocity,AUSTIN.volley.lead).sub(e.g.position).setY(0).normalize();}
+function clearAlarms(e){for(const a of e.alarms){a.group.removeFromParent();a.group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});}e.alarms.length=0;}
 
 function ring(e,hour,offset,bolt,burst){
  for(const dir of bellDirections(hour,e.phase,offset))bolt(e.g.position,dir,{speed:AUSTIN.bell.speed,damage:AUSTIN.bell.damage});
@@ -86,14 +102,17 @@ function beamHits(origin,angle,player){
 }
 function startPattern(e,delta,hooks){
  const P=PHASES[e.phase],beatLen=AUSTIN.beat*P.tempo;
- let kind=P.order[e.pattern%P.order.length];e.pattern++;
+ const sweepFits=(beatsToHour(e)*beatLen-e.clock)>=AUSTIN.sweep.tell*P.tempo+sweepTime(e.phase)+.2;
+ let kind=e.queuedSweep&&sweepFits&&e.bellAge>=1.35?'sweep':P.order[e.pattern%P.order.length];e.pattern++;
  // A sweep never overlaps the bell: if the hour comes too soon, throw punches instead.
- if(kind==='sweep'&&(beatsToHour(e)*beatLen-e.clock)<AUSTIN.sweep.tell*P.tempo+sweepTime(e.phase)+.2)kind='jab';
+ if(kind==='sweep'&&!sweepFits){e.queuedSweep=true;kind='jab';}
+ if(kind==='sweep')e.queuedSweep=false;
  e.kind=kind;
  if(kind==='jab'){e.state='jabTell';e.timer=AUSTIN.jab.tell*P.tempo;e.dashes=0;e.dir.copy(delta);}
  else if(kind==='sweep'){e.state='sweepTell';e.timer=AUSTIN.sweep.tell*P.tempo;e.beamAngle=Math.atan2(delta.x,delta.z);e.beamSign=-e.beamSign;}
+ else if(kind==='volley'){e.state='volleyTell';e.timer=Math.max(.42,AUSTIN.volley.tell*P.tempo);e.volleys=0;e.dir.copy(aimAhead(e,hooks.player));}
  else{
-  e.state='recover';e.timer=.6;
+  e.state='recover';e.timer=.4;
   const count=P.alarms,base=hooks.player.clone().setY(0),spin=e.pattern*.9;
   for(let i=0;i<count;i++){
    const pos=i===0?base.clone():base.clone().add(new V(Math.cos(spin+i*TAU/(count-1)),0,Math.sin(spin+i*TAU/(count-1))).multiplyScalar(AUSTIN.alarm.spread));
@@ -102,7 +121,7 @@ function startPattern(e,delta,hooks){
    const edge=new THREE.Mesh(new THREE.RingGeometry(AUSTIN.alarm.radius-.12,AUSTIN.alarm.radius,40),basic(0xff5a4a,.7));edge.rotation.x=-Math.PI/2;edge.position.y=.15;group.add(edge);
    const fill=new THREE.Mesh(new THREE.CircleGeometry(AUSTIN.alarm.radius,32),basic(0xff5a4a,.08));fill.rotation.x=-Math.PI/2;fill.position.y=.14;group.add(fill);
    const clock=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.16,16),new THREE.MeshStandardMaterial({color:0xf2c14e,emissive:0x7a3a08,emissiveIntensity:.8}));clock.position.y=.4;clock.rotation.x=Math.PI/2;group.add(clock);
-   const time=AUSTIN.alarm.countdown*P.tempo+i*.12;
+   const time=Math.max(1.05,AUSTIN.alarm.countdown*P.tempo)+i*.16;
    e.alarms.push({pos,group,fill,clock,time,max:time});
   }
  }
@@ -110,17 +129,30 @@ function startPattern(e,delta,hooks){
 
 // hooks: player (Vector3), collide(pos,r), bolt(pos,dir,{speed,damage}), hit(amount)->bool, burst(pos,color,n), pulse(pos,color,r,life)
 export function tickAustin(e,dt,hooks){
- const {player,collide=()=>{},bolt=()=>{},hit=()=>false,burst=()=>{},pulse=()=>{}}=hooks;
- e.phase=austinPhase(e.hp,e.maxHp);const P=PHASES[e.phase],beatLen=AUSTIN.beat*P.tempo;
+ const {player,collide=()=>{},bolt=()=>{},hit=()=>false,burst=()=>{},pulse=()=>{},clearBolts=()=>{}}=hooks;
+ if(e.previousPlayer)e.velocity.copy(player).sub(e.previousPlayer).setY(0).divideScalar(Math.max(dt,.001)).clampLength(0,7);
+ else e.previousPlayer=new V();
+ e.previousPlayer.copy(player);
+ const next=austinPhase(e.hp,e.maxHp);
+ if(next!==e.phase&&e.state!=='phaseShift'){
+  e.state='phaseShift';e.phasePending=next;e.timer=AUSTIN.transition;e.pendingRing=0;e.bellWarn=false;
+  clearAlarms(e);clearBolts();pulse(e.g.position,'amber',3,.9);
+ }
+ if(e.state==='phaseShift'){
+  e.timer-=dt;e.tint=Math.floor(e.timer*12)%2?0xffc46b:0xffffff;
+  if(e.timer<=0){e.phase=e.phasePending;e.phasePending=null;e.state='stalk';e.timer=.25;e.pattern=0;e.clock=0;e.beats=0;e.bellAge=999;e.queuedSweep=false;e.tint=0xffffff;}
+  poseAustin(e);return;
+ }
+ const P=PHASES[e.phase],beatLen=AUSTIN.beat*P.tempo;
  e.hit=Math.max(0,e.hit-dt);e.bumpCD=Math.max(0,e.bumpCD-dt);
  const delta=player.clone().sub(e.g.position).setY(0),distance=delta.length();if(distance>1e-6)delta.divideScalar(distance);
  // The clock never stops, whatever he is doing.
- e.clock+=dt;
+ e.clock+=dt;e.bellAge+=dt;
  while(e.clock>=beatLen){
   e.clock-=beatLen;e.beats++;
   const into=e.beats%AUSTIN.hourBeats;
   if(into===AUSTIN.hourBeats-AUSTIN.bell.warnBeats)e.bellWarn=true;
-  if(into===0){e.ringHour=e.hour;ring(e,e.ringHour,0,bolt,burst);e.pendingRing=AUSTIN.bell.ringDelay;e.bellWarn=false;e.hour=(e.hour+AUSTIN.hourStep)%12;}
+  if(into===0){e.bellAge=0;e.ringHour=e.hour;ring(e,e.ringHour,0,bolt,burst);e.pendingRing=AUSTIN.bell.ringDelay;e.bellWarn=false;e.hour=(e.hour+AUSTIN.hourStep)%12;}
  }
  if(e.pendingRing>0){e.pendingRing-=dt;if(e.pendingRing<=0)ring(e,e.ringHour,Math.PI/P.bolts,bolt,burst);}
  for(let i=e.alarms.length-1;i>=0;i--){
@@ -135,8 +167,8 @@ export function tickAustin(e,dt,hooks){
  const face=d=>{e.g.rotation.y=Math.atan2(d.x,d.z);};
  if(e.state==='stalk'){
   const want=distance>5.5?1:distance<3.2?-1:0,side=e.pattern%2?1:-1;
-  e.g.position.addScaledVector(delta,dt*2.4*want);
-  e.g.position.x+=delta.z*dt*1.6*side;e.g.position.z-=delta.x*dt*1.6*side;
+  e.g.position.addScaledVector(delta,dt*3.4*want);
+  e.g.position.x+=delta.z*dt*2.3*side;e.g.position.z-=delta.x*dt*2.3*side;
   face(delta);e.timer-=dt;
   if(e.timer<=0)startPattern(e,delta,{player,collide});
  }else if(e.state==='jabTell'){
@@ -152,8 +184,16 @@ export function tickAustin(e,dt,hooks){
    pulse(e.g.position,'amber',AUSTIN.jab.shock,.3);burst(e.g.position,'amber',16);
    if(!e.jabHit&&Math.hypot(player.x-e.g.position.x,player.z-e.g.position.z)<AUSTIN.jab.shock)hit(AUSTIN.jab.shockDamage);
    e.dashes++;
-   if(e.dashes<P.jabs){e.state='jabTell';e.timer=AUSTIN.jab.retell*P.tempo;e.dir.copy(delta);}
+   if(e.dashes<P.jabs){e.state='jabTell';e.timer=Math.max(.3,AUSTIN.jab.retell*P.tempo);e.dir.copy(aimAhead(e,player));}
    else{e.state='recover';e.timer=.8*P.rest;}
+  }
+ }else if(e.state==='volleyTell'){
+  face(e.dir);e.timer-=dt;
+  if(e.timer<=0){
+   for(const d of volleyDirections(e.dir))bolt(e.g.position,d,{speed:AUSTIN.volley.speed,damage:AUSTIN.volley.damage});
+   burst(e.g.position,'amber',12);e.volleys++;
+   if(e.volleys<P.volleys){e.timer=Math.max(.42,AUSTIN.volley.retell*P.tempo);e.dir.copy(aimAhead(e,player));}
+   else{e.state='recover';e.timer=.6*P.rest;}
   }
  }else if(e.state==='sweepTell'){
   e.timer-=dt;
@@ -166,7 +206,7 @@ export function tickAustin(e,dt,hooks){
   if(e.timer<=0){e.state='recover';e.timer=.7*P.rest;}
  }else{
   e.timer-=dt;
-  if(e.timer<=0){e.state='stalk';e.timer=(.9+(e.pattern%3)*.25)*P.rest;}
+  if(e.timer<=0){e.state='stalk';e.timer=(.65+(e.pattern%3)*.15)*P.rest;}
  }
  if(e.state==='stalk'&&distance<AUSTIN.bump.radius&&e.bumpCD<=0&&hit(AUSTIN.bump.damage))e.bumpCD=AUSTIN.bump.every;
  collide(e.g.position,1);
@@ -174,12 +214,13 @@ export function tickAustin(e,dt,hooks){
 }
 
 function poseAustin(e){
- const {hourHand,minuteHand,gloves,fx,lane,beams,beamMats,wedge,wedgeMat}=e.parts,P=PHASES[e.phase];
+ const {hourHand,minuteHand,gloves,fx,lane,fan,beams,beamMats,wedge,wedgeMat}=e.parts,P=PHASES[e.phase];
  const beatLen=AUSTIN.beat*P.tempo;
  minuteHand.rotation.z=-((e.beats%AUSTIN.hourBeats)+e.clock/beatLen)/AUSTIN.hourBeats*TAU;
  hourHand.rotation.z=-e.hour*Math.PI/6;
  fx.rotation.y=-e.g.rotation.y;
  lane.visible=e.state==='jabTell';lane.rotation.y=Math.atan2(e.dir.x,e.dir.z);
+ fan.visible=e.state==='volleyTell';fan.rotation.y=Math.atan2(e.dir.x,e.dir.z);
  const sweeping=e.state==='sweepTell'||e.state==='sweep';
  beams[0].visible=sweeping;beams[0].rotation.y=e.beamAngle;
  beams[1].visible=sweeping&&e.phase!=='normal';beams[1].rotation.y=e.beamAngle+Math.PI;
@@ -196,9 +237,11 @@ function poseAustin(e){
 }
 
 export function austinHint(e){
+ if(e.state==='phaseShift')return `${PHASES[e.phasePending].label} 돌입 · 시계 재정비 중 · 잠시 피해를 막습니다`;
  if(e.bellWarn||e.pendingRing>0)return '정시 종 · 금빛 틈으로 들어가세요';
+ if(e.state==='volleyTell')return '분침 난사 · 이동 방향을 읽습니다 · 꺾어서 피하세요';
  if(e.state==='sweepTell'||e.state==='sweep')return (e.phase==='normal'?'초침이 한 바퀴 돕니다':'두 시계침이 반 바퀴 돕니다')+' · 회피로 넘으세요';
- if(e.state==='jabTell'||e.state==='jab')return '원투 스트레이트 · 옆으로 비키세요';
+ if(e.state==='jabTell'||e.state==='jab')return `${PHASES[e.phase].jabs}연속 스트레이트 · 옆으로 꺾으세요`;
  if(e.alarms.length)return '알람 시계 · 붉은 원 밖으로';
  return `${PHASES[e.phase].label} · 다음 정시까지 ${beatsToHour(e)}박`;
 }
