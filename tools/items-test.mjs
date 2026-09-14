@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,wardenDrop,austinDrops,nextHeld,heldItems,usable} from '../src/inventory.js';
+import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,nextHeld,heldItems,usable} from '../src/inventory.js';
 import {validCheckpoint} from '../src/run-save.js';
 
 // Every kind is listed once, in screen order, with a stack limit.
@@ -35,12 +35,15 @@ assert.equal(useItem(full,'elixir',{hp:10}).reason,'unknown');
 // The old potion call still behaves the same.
 const old=emptyInventory();addItem(old,'potion',1);assert.equal(drinkPotion(old,100).reason,'full');assert.equal(drinkPotion(old,30).hp,80);
 
-// Warden drops: all three kinds appear, healing most often; a fixed roll gives a fixed item.
-assert.equal(wardenDrop(()=>0),'tonic');assert.equal(wardenDrop(()=>.6),'wind');assert.equal(wardenDrop(()=>.9),'shell');assert.equal(wardenDrop(()=>.999999),'shell');
-let seed=7;const rand=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;const tally={tonic:0,wind:0,shell:0};
-for(let i=0;i<4000;i++)tally[wardenDrop(rand)]++;
-assert.ok(tally.tonic>tally.wind&&tally.tonic>tally.shell&&tally.wind>700&&tally.shell>700,JSON.stringify(tally));
-assert.deepEqual(austinDrops(),['potion','sprout']);
+// Only Austin gives items: always the big potion, plus one bonus kind that is not already full.
+assert.deepEqual(austinDrops(()=>0),['potion','tonic']);assert.deepEqual(austinDrops(()=>.999),['potion','sprout']);
+for(const id of ['potion','tonic','wind','shell','sprout'])assert.equal(ITEMS[id].from,'오스틴',`${id} comes from Austin`);
+assert.deepEqual(AUSTIN_BONUS.map(([id])=>id),['tonic','wind','shell','sprout']);
+let seed=7;const rand=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;const tally={tonic:0,wind:0,shell:0,sprout:0};
+for(let i=0;i<4000;i++)tally[austinBonus(rand)]++;
+assert.ok(tally.tonic>tally.wind&&tally.wind>tally.sprout&&tally.shell>tally.sprout&&tally.sprout>350,JSON.stringify(tally));
+const sproutHeld={...emptyInventory(),sprout:1};for(let i=0;i<300;i++)assert.notEqual(austinBonus(rand,sproutHeld),'sprout','a held sprout is never drawn again');
+const allFull={potion:9,tonic:5,wind:3,shell:3,sprout:1};assert.equal(austinBonus(rand,allFull),null);assert.deepEqual(austinDrops(rand,allFull),['potion']);
 
 // One button can cycle through what is actually held, skipping empty and passive kinds.
 const bag=emptyInventory();assert.equal(nextHeld(bag),null);
@@ -58,4 +61,4 @@ assert.ok(validCheckpoint({...save,inventory:{potion:2}}),'legacy potion-only sa
 assert.ok(validCheckpoint({...save,inventory:{potion:0,tonic:1,wind:1,shell:0,sprout:1}}),'new bag save');
 assert.ok(!validCheckpoint({...save,inventory:{sprout:3}}),'over-limit bag rejected');
 
-console.log('Items: five potion kinds, heal refusal, haste/shell timers, one-shot sprout, warden/Austin drops, cycling and save compatibility passed.');
+console.log('Items: five potion kinds, heal refusal, haste/shell timers, one-shot sprout, Austin-only drops, cycling and save compatibility passed.');

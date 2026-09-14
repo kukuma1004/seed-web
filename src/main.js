@@ -32,7 +32,7 @@ import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './w
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking} from './online-ranking.js';
-import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,addItem,useItem,tryRevive,wardenDrop,austinDrops,nextHeld,heldItems,usable} from './inventory.js';
+import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,nextHeld,heldItems,usable} from './inventory.js';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,slotsUsed,fusionLevel,canFuse,fuse,effectiveLevels,buildLevel} from './progression.js';
 import {createTurret,tickTurret,turretSpots,copiedLaws,TURRET} from './turret.js';
@@ -275,9 +275,10 @@ function enemyDown(e){
  // A boss falls over a short beat instead of vanishing, and the reward waits for it, so a choice screen never seems to erase the boss.
  const main=!e.elite;fallen.push({e,t:0,hold:main});
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);
- if(main){relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
- if(e.type==='austin'){austinsDefeated++;remember('bosses','austin');const got=austinDrops().filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}`;}
- else if(main){wardensDefeated++;const drop=wardenDrop(rng),got=addItem(inventory,drop,1);itemBarKey='';$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · ${ITEMS[drop].name}${got?' 획득':'은 가방이 가득 찼어요'}${austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
+ // Relics and potions come only from Austin, so they stay rare and the wardens stay a real fight.
+ if(main){if(e.type==='austin')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
+ if(e.type==='austin'){austinsDefeated++;remember('bosses','austin');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}`;}
+ else if(main){wardensDefeated++;$('#toast').textContent=`${e.config?.name||'문지기'} 격파!${austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
  else $('#toast').textContent='정예 문지기 격파!';
 }
 function updateFallen(dt,time){for(let i=fallen.length-1;i>=0;i--){const f=fallen[i],e=f.e;f.t+=dt;const k=Math.min(1,f.t/1.3);e.hit=Math.floor(f.t*14)%2?.14:0;e.updateArt?.(time);e.g.position.y=-k*k*1.1;e.g.scale.setScalar(1-k*.3);if(Math.floor(f.t/.18)!==Math.floor((f.t-dt)/.18))vfx.burst(e.g.position,'amber',10,1.2);if(f.t>=1.3){releaseEnemy(e);fallen.splice(i,1);}}}

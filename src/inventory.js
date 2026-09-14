@@ -1,10 +1,10 @@
-// Items carried through a run. Only bosses give them: no loot scattered on the floor.
+// Items carried through a run. Only Austin gives them, so they stay rare: no loot on the floor, none from wardens.
 // kind: heal (refused at full health) · haste · shell (short protection) · revive (used by itself when the seed falls)
 export const ITEMS=Object.freeze({
  potion:{id:'potion',name:'시간의 물약',kind:'heal',heal:50,max:9,key:'1',desc:'마시면 생명력 50 회복',from:'오스틴'},
- tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'2',desc:'마시면 생명력 25 회복',from:'문지기'},
- wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:3,key:'3',desc:'6초 동안 이동 속도 +35%',from:'문지기'},
- shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:3,key:'4',desc:'3초 동안 모든 피해를 막음',from:'문지기'},
+ tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'2',desc:'마시면 생명력 25 회복',from:'오스틴'},
+ wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:3,key:'3',desc:'6초 동안 이동 속도 +35%',from:'오스틴'},
+ shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:3,key:'4',desc:'3초 동안 모든 피해를 막음',from:'오스틴'},
  sprout:{id:'sprout',name:'다시 싹',kind:'revive',heal:50,guard:2,max:1,key:'',desc:'쓰러지는 순간 저절로 생명력 50으로 다시 일어남 (한 번)',from:'오스틴'}
 });
 // Order on screen and in the pause sheet. Passive items come last.
@@ -52,15 +52,21 @@ export function tryRevive(inventory){
  return {hp:ITEMS.sprout.heal,guard:ITEMS.sprout.guard};
 }
 
-// A defeated warden leaves one potion. Healing is the most common, the tactical two are rarer.
-const WARDEN_DROPS=[['tonic',.5],['wind',.25],['shell',.25]];
-export function wardenDrop(random=Math.random){
- let roll=random();
- for(const [id,weight] of WARDEN_DROPS){if(roll<weight)return id;roll-=weight;}
- return WARDEN_DROPS[0][0];
+// Austin is the only source: the big potion every time, plus one more drawn from the rest.
+// Kinds already at their stack limit are not drawn, so the bonus is never wasted.
+export const AUSTIN_BONUS=Object.freeze([['tonic',35],['wind',25],['shell',25],['sprout',15]]);
+export function austinBonus(random=Math.random,inventory=null){
+ const pool=AUSTIN_BONUS.filter(([id])=>!inventory||(inventory[id]||0)<ITEMS[id].max);
+ if(!pool.length)return null;
+ const total=pool.reduce((sum,[,w])=>sum+w,0);
+ let roll=random()*total;
+ for(const [id,w] of pool){if(roll<w)return id;roll-=w;}
+ return pool[pool.length-1][0];
 }
-// Austin leaves the big potion and, if the seed has none, a sprout.
-export function austinDrops(){return ['potion','sprout'];}
+export function austinDrops(random=Math.random,inventory=null){
+ const bonus=austinBonus(random,inventory);
+ return bonus?['potion',bonus]:['potion'];
+}
 
 // The next usable item after `current` that the seed actually holds, for cycling on one button.
 export function nextHeld(inventory,current=null){
