@@ -26,7 +26,7 @@ export function recordDiscovery(storage,profile,kind,id){
 }
 
 export function growthGuide(profile){return normalizeDiscoveries(profile).forms.length>=1;}
-export function rerollUnlocked(profile){return normalizeDiscoveries(profile).forms.length===Object.keys(FORMS).length;}
+export function rerollUnlocked(profile){return normalizeDiscoveries(profile).forms.length>=3;}
 
 // Only call for a normal law reward. This guides a discovered form without
 // adding slots, granting stats, removing laws, or silently replacing a held law.

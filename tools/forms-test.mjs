@@ -12,8 +12,8 @@ for(const form of Object.values(FORMS)){
 }
 assert.equal(isFormEligible('toString',Object.keys(LAWS)),false);
 assert.equal(isFormEligible('collapse',null),false);
-assert.deepEqual(eligibleForms(['gravity','burst','recall','pierce']).map(x=>x.id),['collapse','returnblade']);
-assert.equal(eligibleForms(Object.keys(LAWS)).length,3);
+assert.deepEqual(eligibleForms(['gravity','burst','recall','pierce']).map(x=>x.id),['collapse','returnblade','tidepull']);
+assert.equal(eligibleForms(Object.keys(LAWS)).length,Object.keys(FORMS).length);
 
 const empty={version:1,forms:[],bosses:[]};
 const values=new Map();const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
@@ -70,7 +70,9 @@ for(let mask=0;mask<1<<ids.length;mask++){
   assert.ok(output.length<=3&&new Set(output).size===output.length);
   assert.ok(output.every(id=>Object.hasOwn(LAWS,id)));
   const missing=form.requires.find(id=>!held.includes(id));
-  if(missing&&held.length<5)assert.ok(output.includes(missing));
+  // Only discovered forms guide; the profile here has discovered the first three.
+  if(missing&&held.length<5&&result.profile.forms.includes(form.id))assert.ok(output.includes(missing));
+  if(!result.profile.forms.includes(form.id))assert.deepEqual(output,offer);
   checked++;
  }
 }
