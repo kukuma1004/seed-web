@@ -1,0 +1,27 @@
+/* Health and clip ride above the seed, where the eyes already are during a fight. */
+#overhead{position:fixed;left:0;top:0;z-index:2;width:74px;pointer-events:none;display:flex;flex-direction:column;align-items:center;gap:3px;will-change:transform}
+#overhead[hidden]{display:none}
+#overhead .oh-hp{width:100%;height:8px;border:1px solid #0b1a1acc;border-radius:4px;background:#1a1010cc;overflow:hidden;box-shadow:0 1px 4px #000a}
+#overhead .oh-hp i{display:block;height:100%;width:100%;background:linear-gradient(90deg,#4fd08f,#c3ff8f);transition:width .12s}
+#overhead .oh-hp.low i{background:linear-gradient(90deg,#e0463a,#ff9a5a)}
+#overhead .oh-ammo{display:flex;gap:2px;height:5px;width:100%}
+#overhead .oh-ammo b{flex:1;border-radius:2px;background:#ffffff26}
+#overhead .oh-ammo b.on{background:#f4f0c8;box-shadow:0 0 4px #fff6}
+#overhead .oh-ammo.reloading{background:#ffffff1f;border-radius:2px;overflow:hidden}
+#overhead .oh-ammo.reloading i{display:block;height:100%;background:#ffb65c}
+#overhead .oh-ammo.hidden-ammo{visibility:hidden}
+#overhead .oh-dash{width:70%;height:4px;border-radius:2px;background:#ffffff1f;overflow:hidden}
+#overhead .oh-dash i{display:block;height:100%;background:#8f7cc9}
+#overhead .oh-dash.ready i{background:#c7b2ff;box-shadow:0 0 5px #c7b2ff}
+#overhead .oh-lock{font-size:11px;font-weight:700;color:#e3c8ff;background:#3a1656e6;border:1px solid #b27dff;border-radius:3px;padding:1px 5px;white-space:nowrap}
+
+/* The kill gauge that says how far away the next law is. */
+body #growth-progress{position:fixed;top:114px;left:50%;transform:translateX(-50%);z-index:1;width:320px;max-width:70vw;pointer-events:none;text-align:center;color:#e8f5e8;font-size:12px;letter-spacing:1px;text-shadow:0 1px 4px #000}
+body #growth-progress div{height:10px;margin-top:4px;border:1px solid #b8e8c8aa;border-radius:5px;background:#08161acc;overflow:hidden}
+body #growth-progress i{display:block;height:100%;width:0;background:linear-gradient(90deg,#46c59a,#f1e27a);transition:width .2s}
+body.touch-mode #growth-progress{top:62px;width:220px;max-width:40vw;font-size:10px;white-space:nowrap}
+body.touch-mode #growth-progress div{height:7px}
+@media(orientation:portrait){body.touch-mode #growth-progress{top:88px;max-width:70vw}}
+
+/* Toasts sit below the boss bar instead of on top of it. */
+body #toast{top:31%}

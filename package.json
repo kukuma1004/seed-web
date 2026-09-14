@@ -6,7 +6,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test": "node tools/correctness-test.mjs && node tools/evolution-test.mjs && node tools/motion-test.mjs && node tools/journey-test.mjs && node tools/vfx-test.mjs && node tools/laws-test.mjs && node tools/seed-body-test.mjs && node tools/touch-input-test.mjs && node tools/run-save-test.mjs && node tools/forms-test.mjs && node tools/arena-test.mjs && node tools/form-combat-test.mjs && node tools/identity-test.mjs"
+    "test": "node tools/correctness-test.mjs && node tools/evolution-test.mjs && node tools/motion-test.mjs && node tools/journey-test.mjs && node tools/vfx-test.mjs && node tools/laws-test.mjs && node tools/seed-body-test.mjs && node tools/touch-input-test.mjs && node tools/run-save-test.mjs && node tools/forms-test.mjs && node tools/arena-test.mjs && node tools/form-combat-test.mjs && node tools/identity-test.mjs && node tools/progression-test.mjs && node tools/threat-test.mjs"
   },
   "dependencies": {
     "three": "^0.180.0",

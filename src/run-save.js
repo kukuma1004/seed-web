@@ -2,7 +2,10 @@ import {LAWS} from './laws.js';
 import {FORMS,isFormEligible} from './forms.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑'};
+const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
+const validCount=v=>v===undefined||(Number.isInteger(v)&&v>=0&&v<100000);
 export function validCheckpoint(s){
+ if(!validLevels(s)||!validCount(s?.choicesTaken)||!validCount(s?.choiceKills))return false;
  if(s?.form!=null&&!isFormEligible(s.form,s.rules))return false;
  if(s?.guideTarget!=null&&!Object.hasOwn(FORMS,s.guideTarget))return false;
  if(s?.rerollUsed!==undefined&&typeof s.rerollUsed!=='boolean')return false;

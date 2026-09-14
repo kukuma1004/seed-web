@@ -34,7 +34,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      cooldowns.set(e,.6);const direction=e.g.position.clone().sub(player.position).setY(0).normalize();
      if(support(e,24,{kind:'frostguard',direction})){
       e.slow=Math.max(e.slow||0,1.5);
-      if(e.type!=='warden'&&!e.dead){e.g.position.addScaledVector(direction,.45);constrain(e.g.position,.65);}
+      if(e.type!=='warden'&&e.type!=='turret'&&!e.dead){e.g.position.addScaledVector(direction,.45);constrain(e.g.position,.65);}
       vfx.pulse(e.g.position,'frost',.5,.25);
      }
     }
@@ -71,7 +71,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   for(let i=bolts.length-1;i>=0;i--)if(bolts[i].life<=0){remove(bolts[i].ob);bolts.splice(i,1);}
   for(let i=wells.length-1;i>=0;i--){const w=wells[i];w.life-=dt;w.pulse-=dt;
    if(w.pulse<=0){vfx.pulse(w.pos,'gravity',Math.max(.3,w.life*3),.2);w.pulse=.16;}
-   for(const e of enemies())if(!e.dead&&e.type!=='warden'){const d=w.pos.clone().sub(e.g.position).setY(0);if(d.length()<3.1){e.g.position.addScaledVector(d,dt*2);constrain(e.g.position,.65);}}
+   for(const e of enemies())if(!e.dead&&e.type!=='warden'&&e.type!=='turret'){const d=w.pos.clone().sub(e.g.position).setY(0);if(d.length()<3.1){e.g.position.addScaledVector(d,dt*2);constrain(e.g.position,.65);}}
    if(w.life<=0){vfx.burst(w.pos,'burst',32,1.8);vfx.pulse(w.pos,'burst',3.1,.4);for(const e of enemies())if(!e.dead&&Math.hypot(e.g.position.x-w.pos.x,e.g.position.z-w.pos.z)<3.1)support(e,86,{kind:'collapse',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});wells.splice(i,1);}
   }
  }

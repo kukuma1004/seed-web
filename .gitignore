@@ -22,6 +22,8 @@ tools/*
 !tools/arena-test.mjs
 !tools/form-combat-test.mjs
 !tools/identity-test.mjs
+!tools/progression-test.mjs
+!tools/threat-test.mjs
 
 # Local shared AI workflow and verification evidence
 CLAUDE.md

@@ -2,7 +2,7 @@ export const LAWS={
  reflect:{name:'반사',form:'거울 껍질',icon:'◈',color:0x73dfff,desc:'벽에서 두 번 튕겨 돌아오는 탄환',upgrade:'반사 2 → 4회',hint:'벽을 이용해 뒤쪽 적까지 맞히세요'},
  split:{name:'분열',form:'갈라진 꽃',icon:'✣',color:0xff947b,desc:'적중하면 세 갈래 파편으로 퍼집니다',upgrade:'파편 3 → 5개',hint:'앞의 적을 맞혀 뒤쪽 무리로 파편을 보내세요'},
  chain:{name:'연쇄',form:'번개 가지',icon:'ϟ',color:0xffdc73,desc:'가까운 두 적에게 절반 피해의 번개가 연결됩니다',upgrade:'연쇄 2 → 3명',hint:'가까이 모인 적들 사이로 번개를 이어보세요'},
- orbit:{name:'공전',form:'위성 꽃잎',icon:'◎',color:0x9ca8ff,desc:'두 꽃잎이 주위를 돌며 가까운 적을 때립니다',upgrade:'꽃잎 2 → 3개 · 반경 확대',hint:'주위를 도는 꽃잎으로 가까이 붙은 적을 밀어내세요'},
+ orbit:{name:'공전',form:'위성 꽃잎',icon:'◎',color:0x9ca8ff,desc:'세 꽃잎이 돌며 적을 베어 밀어내고, 날아오는 적 탄환을 막습니다',upgrade:'꽃잎 +1 · 피해·반경 증가',hint:'꽃잎으로 탄막을 막으며 적 사이를 파고드세요'},
  pierce:{name:'관통',form:'유리 가시',icon:'➶',color:0xe1ffad,desc:'탄환 하나가 서로 다른 적 세 명을 관통합니다',upgrade:'관통 3 → 5명',hint:'적들을 한 줄로 모아 꿰뚫으세요'},
  burst:{name:'폭발',form:'불꽃 열매',icon:'✺',color:0xffad58,desc:'적중점 주변에 폭발 피해를 줍니다',upgrade:'폭발 반경 1.5 → 2.1',hint:'무리의 가운데를 맞혀 주변까지 터뜨리세요'},
  recall:{name:'귀환',form:'돌아오는 잎',icon:'↶',color:0x8dffcd,desc:'날아간 탄환이 돌아오며 한 번 더 적을 맞힙니다',upgrade:'귀환 피해 +50%',hint:'탄환이 돌아오는 길에 적을 놓으세요'},
