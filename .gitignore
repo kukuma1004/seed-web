@@ -25,6 +25,7 @@ tools/*
 !tools/progression-test.mjs
 !tools/threat-test.mjs
 !tools/forms-expanded-test.mjs
+!tools/fusion-test.mjs
 
 # Local shared AI workflow and verification evidence
 CLAUDE.md

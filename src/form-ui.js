@@ -1,11 +1,11 @@
 import {FORMS} from './forms.js';
 import {lawArt} from './law-art.js';
 
-export function formCard(form,held=[],discovered=false,selectable=true,level=0){
+export function formCard(form,held=[],discovered=false,selectable=true,level=0,current=0){
  const laws=new Set(held);
  return `<${selectable?'button':'article'} class="form-card" ${selectable?`data-form="${form.id}"`:''}>
  <div class="form-pair">${form.requires.map(id=>lawArt(id)).join('<span>＋</span>')}</div>
- <small>${discovered?'발견한 진화':'새로운 가능성'}${selectable?' · '+(level?'진화 Lv.'+level:form.requires.filter(id=>laws.has(id)).length+'/2 법칙'):''}</small>
+ <small>${discovered?'발견한 진화':'새로운 가능성'}${selectable?' · '+(current?`보유 Lv.${current} → Lv.${level}`:level?'진화 Lv.'+level:form.requires.filter(id=>laws.has(id)).length+'/2 법칙'):''}</small>
  <strong>${form.name}</strong><p>${form.pair}</p><p>${form.desc}</p>
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
  </${selectable?'button':'article'}>`;
@@ -18,9 +18,10 @@ export function discoveryBook(profile){
  <p>기억의 문지기 ${profile.bosses.includes('warden')?'격파 기록 있음':'미격파'}</p><button id="close-discoveries" class="primary">돌아가기</button>`;
 }
 
-export function formLawHint(id,activeForm,level=0){
- if(!activeForm)return '';
- if(FORMS[activeForm].requires.includes(id))return `${FORMS[activeForm].name}의 재료 · 강화하면 진화 Lv.${level} → ${level+1}`;
- if(['reflect','split','recall','pierce'].includes(id))return '진화 중에는 쉬는 탄도 법칙 · 다른 진화의 재료';
- return '현재 진화에 보조 효과로 적용';
+// On a law card: which forms this law would make possible with what is already held.
+export function formLawHint(id,held){
+ const laws=new Set(held);
+ if(laws.has(id))return '';
+ const opens=Object.values(FORMS).filter(f=>f.requires.includes(id)&&f.requires.every(r=>r===id||laws.has(r)));
+ return opens.length?`진화 가능: ${opens.map(f=>f.name).join(' · ')}`:'';
 }

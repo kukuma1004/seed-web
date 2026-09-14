@@ -44,7 +44,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];cooldowns.clear();hits=0;active=null;level=1;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  function set(id,nextLevel=1){
   const L=Math.max(1,Math.floor(nextLevel||1));
-  if(active!==id){clear();active=id;}
+  if(active!==id){clear();active=id;if(id==='frostguard')pulseTimer=formStats(id,L).novaEvery;}
   if(level!==L||S.damage===0){level=L;S=id?formStats(id,L):formStats(null);}
   rebuildOrbit();
  }
@@ -138,8 +138,10 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    ob.position.set(player.position.x+Math.cos(a)*radius,active==='stormcrown'?1.4:.72,player.position.z+Math.sin(a)*radius);
    ob.rotation.y=a;if(active==='frostguard')ob.rotation.z=a*.4;
    if(active==='frostguard'){
+    // Satellites shatter any enemy shot they pass through, the warden's included.
+    for(const q of enemyShots())if(q.life>0&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'frost',8);}
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.85,1.35)){
-     cooldowns.set(e,.6);const direction=e.g.position.clone().sub(player.position).setY(0).normalize();
+     cooldowns.set(e,S.cooldown);const direction=e.g.position.clone().sub(player.position).setY(0).normalize();
      if(support(e,S.damage,{kind:'frostguard',direction})){
       e.slow=Math.max(e.slow||0,S.slow);
       if(!immovable(e)&&!e.dead){e.g.position.addScaledVector(direction,.45);constrain(e.g.position,.65);}
@@ -160,6 +162,15 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     }
    }
   });
+  if(active==='frostguard'){
+   // A cold nova every few seconds gives the satellites real area damage.
+   pulseTimer-=dt;if(pulseTimer>0)return;pulseTimer=S.novaEvery;
+   fx.pulse(player.position,'frost',S.novaRadius,.45);fx.burst(player.position,'frost',26,1.6);
+   for(const e of enemies())if(!e.dead&&flat(e.g.position,player.position)<S.novaRadius){
+    if(support(e,S.nova,{kind:'frostguard',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()}))e.slow=Math.max(e.slow||0,2.5);
+   }
+   return;
+  }
   if(active==='stormcrown'){
    pulseTimer-=dt;if(pulseTimer>0)return;pulseTimer=S.pulse;
    const zapped=new Set();

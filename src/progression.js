@@ -1,4 +1,5 @@
 import {LAWS} from './laws.js';
+import {FORMS} from './forms.js';
 
 // Laws are stacked, never swapped: five slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -32,18 +33,20 @@ export function lawStats(levels){
  };
 }
 
-// Three distinct laws. While slots remain at least one new law is offered; once full, only upgrades.
-export function offerChoices(levels,{random=Math.random,guide=null}={}){
- const held=[...levels.keys()],full=held.length>=SLOT_CAP;
+// Three distinct offers. While a slot is free at least one fresh law is offered; once the
+// slots are full only upgrades appear: held laws, or held forms (offered as "form:<id>").
+export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map()}={}){
+ const used=slotsUsed(levels,forms),full=used>=SLOT_CAP;
  const fresh=full?[]:Object.keys(LAWS).filter(id=>!levels.has(id));
  const shuffle=list=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;};
- shuffle(fresh);shuffle(held);
+ const upgrades=shuffle([...levels.keys(),...[...forms.keys()].map(formOffer)]);
+ shuffle(fresh);
  let pool;
- if(full)pool=held;
+ if(full)pool=upgrades;
  else{
   // Mostly fresh laws early, mixing in upgrades once the seed has something to deepen.
-  const freshCount=held.length===0?3:held.length<3?2:1;
-  pool=[...fresh.slice(0,freshCount),...held,...fresh.slice(freshCount)];
+  const freshCount=used===0?3:used<3?2:1;
+  pool=[...fresh.slice(0,freshCount),...upgrades,...fresh.slice(freshCount)];
  }
  const offer=[...new Set(pool)].slice(0,3);
  if(guide&&!full&&!levels.has(guide)&&Object.hasOwn(LAWS,guide)&&!offer.includes(guide)){
@@ -52,10 +55,12 @@ export function offerChoices(levels,{random=Math.random,guide=null}={}){
  return offer;
 }
 
-export function chooseLaw(levels,id){
+export function chooseLaw(levels,id,forms=new Map()){
+ const form=offeredForm(id);
+ if(form){if(!forms.has(form))return false;forms.set(form,forms.get(form)+1);return true;}
  if(!Object.hasOwn(LAWS,id))return false;
  if(levels.has(id)){levels.set(id,levels.get(id)+1);return true;}
- if(levels.size>=SLOT_CAP)return false;
+ if(slotsUsed(levels,forms)>=SLOT_CAP)return false;
  levels.set(id,1);return true;
 }
 
@@ -87,3 +92,27 @@ export function upgradeLine(levels,id){
   default:return '강화';
  }
 }
+
+// ---------------- fusion ----------------
+// A form is fused from two held laws: both leave their slots and the form takes one.
+// Fusing a pair again into a form already held feeds it instead of making a second copy.
+const FORM_PREFIX='form:';
+export const formOffer=id=>FORM_PREFIX+id;
+export const offeredForm=choice=>typeof choice==='string'&&choice.startsWith(FORM_PREFIX)&&Object.hasOwn(FORMS,choice.slice(FORM_PREFIX.length))?choice.slice(FORM_PREFIX.length):null;
+export function slotsUsed(levels,forms=new Map()){return levels.size+forms.size;}
+export function fusionLevel(levels,id){const [a,b]=FORMS[id].requires.map(law=>levels.get(law)||0);return a&&b?a+b-1:0;}
+export function canFuse(levels,id){return Object.hasOwn(FORMS,id)&&fusionLevel(levels,id)>0;}
+export function fuse(levels,forms,id){
+ if(!canFuse(levels,id))return false;
+ const gained=fusionLevel(levels,id);
+ for(const law of FORMS[id].requires)levels.delete(law);
+ forms.set(id,(forms.get(id)||0)+gained);
+ return true;
+}
+// Every law the seed carries, including those living inside its forms, at the strongest level seen.
+export function effectiveLevels(levels,forms=new Map()){
+ const merged=new Map(levels);
+ for(const [id,level] of forms)for(const law of FORMS[id].requires)merged.set(law,Math.max(merged.get(law)||0,level));
+ return merged;
+}
+export function buildLevel(levels,forms=new Map()){let n=totalLevel(levels);for(const v of forms.values())n+=v;return n;}
