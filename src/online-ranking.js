@@ -3,14 +3,15 @@
 // The web config below is a public project identifier, not a secret; the database rules
 // (docs/FIREBASE-RANKING.md) decide who may read and write.
 import {cleanName} from './score.js';
+import {validBuild} from './ranking-build.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v2',RUNS_PATH='seedRanking/runs',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v2',RUNS_PATH='seedRanking/runs',BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
-export const SEASON=Object.freeze({id:2,name:'시즌 2',start:1789396500000});
+export const SEASON=Object.freeze({id:1,name:'시즌 1 · 정시파이터 오스틴',start:1789396500000});
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start;
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -62,13 +63,23 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
    request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
    request(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
   ]);
-  return bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
+  const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
+  // Builds live beside the runs under the same push id; before their rules are published this read simply fails.
+  try{
+   const builds=await request(`${config.databaseURL}/${BUILDS_PATH}.json?orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&auth=${encodeURIComponent(s.idToken)}`);
+   for(const run of board)if(builds&&validBuild(builds[run.id])&&builds[run.id].uid===run.uid)run.build=builds[run.id];
+  }catch{}
+  return board;
  }
- async function post({name,score,cycle,stage,kills,time}){
+ async function post({name,score,cycle,stage,kills,time,build=null}){
   const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:0};
   if(!validRun(shaped))throw new Error('invalid-run');
   const s=await signIn();
   const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
+  // The build is extra: if it cannot be written (older rules), the run still counts.
+  if(created?.name&&validBuild(build)){
+   try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(created.name)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:s.uid,laws:build.laws,forms:build.forms,relic:build.relic,wardens:build.wardens,austins:build.austins})});}catch{}
+  }
   return {id:created?.name,uid:s.uid,name:shaped.name};
  }
  function pending(){try{const list=JSON.parse(storage?.getItem(PENDING_KEY));return Array.isArray(list)?list:[];}catch{return [];}}
@@ -78,7 +89,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  async function submit(entry,limit=20){
   let sent;
   try{sent=await post(entry);}
-  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time}]);throw error;}
+  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,build:validBuild(entry.build)?entry.build:null}]);throw error;}
   const board=await top(limit);
   const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
   return {id:sent.id,board,rank:mine+1,bestRank:best+1};
@@ -93,6 +104,6 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   keepPending(list);return sent;
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
- async function remove(id){const s=await signIn();await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
+ async function remove(id){const s=await signIn();try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});}catch{}await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
  return {signIn,top,submit,flush,remove,pendingCount:()=>pending().length,uid:()=>session?.uid||null};
 }

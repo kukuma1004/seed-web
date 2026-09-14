@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {buildRecord,parseBuild,validBuild,buildText,bossText,BUILD_TEXT_MAX} from '../src/ranking-build.js';
 import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS} from '../src/score.js';
 import {ITEMS,emptyInventory,normalizeInventory,validInventory,addItem,drinkPotion} from '../src/inventory.js';
 import {validCheckpoint,difficulty} from '../src/run-save.js';
@@ -64,4 +65,21 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
 // Every journey is faster than the one before, without a region choice.
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).speed>difficulty(c).speed);
 
+// Build records: short, validated, unknown ids skipped, shown under a ranking line through a callback.
+{
+ const b=buildRecord({levels:new Map([['split',3],['bogus',9]]),forms:new Map([['prism',2],['blackhole',7]]),relic:'coil',wardens:10,austins:2});
+ assert.deepEqual(b,{laws:'split:3',forms:'blackhole:7,prism:2',relic:'coil',wardens:10,austins:2});
+ assert.ok(validBuild(b));assert.ok(!validBuild({...b,laws:'x'.repeat(BUILD_TEXT_MAX+1)}));assert.ok(!validBuild({...b,austins:-1}));assert.equal(parseBuild(null),null);
+ assert.deepEqual(parseBuild({...b,forms:'blackhole:7,future:3,prism:x'}).forms,[['blackhole',7]]);
+ assert.equal(buildRecord({relic:'nope'}).relic,'');
+ assert.equal(bossText(b),'문지기 10 · 오스틴 2회 격파');assert.equal(bossText({...b,austins:0}),'문지기 10');
+ assert.ok(buildText(b).includes('작은 블랙홀 Lv.7')&&buildText(b).includes('유물 전도 코일'));
+ const s=memory();submitScore(s,{name:'조합',score:10,cycle:0,stage:1,kills:5,time:9,build:b});
+ assert.deepEqual(readRanking(s)[0].build,b,'this device keeps the build too');
+ const html=rankingTable(readRanking(s),null,10,(e,place)=>`<i data-place="${place}">${bossText(e.build)}</i>`);
+ assert.ok(html.includes('data-place="1"')&&html.includes('오스틴 2회'));
+ assert.ok(!rankingTable(readRanking(s)).includes('data-place'),'no callback, no extra line');
+}
+// Potions: Q drinks, so no item claims a number key (1·2·3 choose cards).
+for(const it of Object.values(ITEMS))assert.ok(it.key===''||it.key==='Q',it.id);
 console.log('Score, ranking board, names, potions and save fields passed.');

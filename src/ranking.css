@@ -71,3 +71,16 @@
 .potion-icon.sprout:before{left:9px;width:4px;height:9px;border-radius:2px;background:#8fdc6a}
 @media(max-height:500px) and (orientation:landscape){.touch-mode .item-button,.touch-mode .item-chip{min-height:50px;padding:4px 9px}}
 @media(orientation:portrait){.touch-mode #item-bar{left:calc(max(20px,env(safe-area-inset-left)) + 112px);right:calc(max(28px,env(safe-area-inset-right)) + 92px);bottom:max(14px,env(safe-area-inset-bottom));max-width:none;flex-direction:row;flex-wrap:wrap-reverse;justify-content:center;gap:5px}.touch-mode .item-button,.touch-mode .item-chip{min-height:44px;padding:3px 9px 3px 5px;border-radius:22px;gap:3px}.touch-mode .item-button b,.touch-mode .item-chip b{font-size:13px}.touch-mode #item-bar .potion-icon{transform:scale(.82)}.touch-mode #item-status{left:50%;right:auto;transform:translateX(-50%);bottom:168px;white-space:nowrap}}
+/* Ranking build line: bosses beaten for every row, the whole build for the top three. */
+.ranking .rank-build{grid-column:2/4;display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;margin-top:4px;font-size:11px;color:#d9e8df}
+.ranking .rank-build.none{color:#7f9a8f}
+.ranking .rank-boss{color:#ffd98f;margin-right:4px}
+.ranking .rank-chip{display:inline-flex;align-items:center;gap:3px;padding:1px 7px 1px 2px;border-radius:10px;background:#16343acc;border:1px solid #a4b7ab33;white-space:nowrap}
+.ranking .rank-chip.form{border-color:#e8c26a66}
+.ranking .rank-chip.relic{padding-left:7px;border-color:#b98cff66}
+.ranking .rank-chip i{font-style:normal;color:#9fc5b4}
+.ranking .rank-art{width:18px;height:18px;border-radius:50%;flex:none}
+/* 1·2·3 key badges on choice cards (hidden on touch screens) */
+.pick-key{position:absolute;left:6px;top:6px;z-index:2;min-width:20px;height:20px;padding:0 5px;border-radius:6px;background:#0b1c20e6;border:1px solid #e8c26a99;color:#ffe3a0;font:700 12px/18px system-ui,sans-serif;pointer-events:none}
+[data-choice],[data-form],[data-solo],[data-relic]{position:relative}
+.touch-mode .pick-key{display:none}

@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
 import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
+import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
 const memory=()=>{const data=new Map();return {getItem:k=>data.has(k)?data.get(k):null,setItem:(k,v)=>data.set(k,String(v)),data};};
 
 // A small stand-in for Firebase Auth + Realtime Database REST that enforces the same rules as docs/FIREBASE-RANKING.md.
 function fakeFirebase({clock}){
- const users=new Map(),tokens=new Map(),runs={};let signUps=0,refreshes=0,next=1,offline=false,rulesPublished=true;
+ const users=new Map(),tokens=new Map(),runs={},builds={};let signUps=0,refreshes=0,next=1,offline=false,rulesPublished=true,buildRulesPublished=true;
  const json=(status,body)=>({ok:status>=200&&status<300,status,json:async()=>body});
  const issue=uid=>{const id='id-'+uid+'-'+(next++),refresh='rf-'+uid+'-'+(next++);tokens.set(id,{uid,exp:clock.t+3600e3});users.set(refresh,uid);return {id,refresh};};
  async function fetchImpl(url,opts={}){
@@ -29,11 +30,24 @@ function fakeFirebase({clock}){
    assert.equal(orderBy,'"score"');
    const kept=Object.entries(runs).sort((a,b)=>a[1].score-b[1].score).slice(-limit);return json(200,Object.fromEntries(kept));
   }
+  // Builds: same rules as docs/firebase-rules-with-seed.json — only the run's writer, once, known fields only.
+  const bm=path.match(/^seedRanking\/builds\/(.+)$/);
+  if(path==='seedRanking/builds'||bm){
+   if(!buildRulesPublished)return json(401,{error:'Permission denied'});
+   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt'));return json(200,Object.fromEntries(Object.entries(builds).filter(([k])=>k>=from)));}
+   const id=bm[1];
+   if(opts.method==='PUT'){
+    const b=JSON.parse(opts.body),keys=Object.keys(b).sort().join(',');
+    if(builds[id]||runs[id]?.uid!==uid||b.uid!==uid||keys!=='austins,forms,laws,relic,uid,wardens'||b.laws.length>120||b.forms.length>120)return json(401,{error:'Permission denied'});
+    builds[id]=b;return json(200,b);
+   }
+   if(opts.method==='DELETE'){if(builds[id]&&builds[id].uid!==uid)return json(401,{error:'Permission denied'});delete builds[id];return json(200,null);}
+  }
   const m=path.match(/^seedRanking\/runs\/(.+)$/);
   if(m&&opts.method==='DELETE'){if(runs[m[1]]?.uid!==uid)return json(401,{error:'Permission denied'});delete runs[m[1]];return json(200,null);}
   return json(404,{error:'not found'});
  }
- return {fetchImpl,runs,get signUps(){return signUps;},get refreshes(){return refreshes;},set offline(v){offline=v;},set rulesPublished(v){rulesPublished=v;}};
+ return {fetchImpl,runs,builds,set buildRulesPublished(v){buildRulesPublished=v;},get signUps(){return signUps;},get refreshes(){return refreshes;},set offline(v){offline=v;},set rulesPublished(v){rulesPublished=v;}};
 }
 
 // Board shaping: one line per player, bad data ignored.
@@ -99,6 +113,26 @@ function fakeFirebase({clock}){
  assert.ok(!inSeason({at:T0-1})&&inSeason({at:T0}));
  assert.ok(pushKeyPrefix(T0)<pushKeyPrefix(T0+1)&&pushKeyPrefix(T0-1)<pushKeyPrefix(T0),'key prefixes follow time');
  assert.equal(pushKeyPrefix(0),'--------');
+}
+
+// Builds: the top lines carry what the run was made of; a missing build rule never loses the run.
+{
+ const clock={t:T0+100},fb=fakeFirebase({clock}),storage=memory(),ranking=createOnlineRanking({storage,fetchImpl:fb.fetchImpl,now:()=>clock.t});
+ const build=buildRecord({levels:new Map([['chain',2]]),forms:new Map([['collapse',6],['fullbloom',4]]),relic:'mirror',wardens:5,austins:1});
+ const first=await ranking.submit({name:'빌드왕',score:50000,cycle:5,stage:0,kills:605,time:900,build});
+ assert.deepEqual(first.board[0].build,{uid:first.board[0].uid,...build},'the build comes back with the line');
+ assert.equal(bossText(first.board[0].build),'문지기 5 · 오스틴 1회 격파');
+ assert.ok(buildText(first.board[0].build).startsWith('붕괴의 씨앗 Lv.6 · 만개한 꽃 Lv.4 · 연쇄 Lv.2'));
+ fb.buildRulesPublished=false;
+ const older=await ranking.submit({name:'옛규칙',score:900,cycle:0,stage:2,kills:30,time:100,build});
+ assert.ok(older.rank>0,'the run is kept even when the build cannot be written');assert.equal(older.board.find(e=>e.name==='옛규칙').build,undefined);
+ assert.equal(ranking.pendingCount(),0,'a refused build does not queue the run again');
+ fb.buildRulesPublished=true;
+ const noBuild=await ranking.submit({name:'빈손',score:10,cycle:0,stage:0,kills:1,time:5});assert.equal(noBuild.board.find(e=>e.name==='빈손').build,undefined);
+ // Someone else's build under a run id is ignored.
+ fb.builds[older.id]={...fb.builds[first.id],uid:'intruder'};
+ assert.equal((await ranking.top()).find(e=>e.id===older.id).build,undefined);
+ assert.ok(await ranking.remove(first.id));assert.ok(!fb.builds[first.id]&&!fb.runs[first.id],'removing a run removes its build');
 }
 
 // Runs finished while offline or before the rules were published wait in the browser and go up later.

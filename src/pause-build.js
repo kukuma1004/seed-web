@@ -10,7 +10,7 @@ import './pause-build.css';
 // The bag lists what every potion does, so a player can learn them while the game is stopped.
 function itemBag(inventory){
  const held=heldItems(inventory);
- const rows=held.map(id=>{const it=ITEMS[id];return `<li><i class="potion-icon ${id}" aria-hidden="true"></i><div><strong>${it.name} <span>×${inventory[id]}</span></strong><p>${it.desc}${it.key?` · ${it.key}번 키`:''}</p></div></li>`;}).join('');
+ const rows=held.map(id=>{const it=ITEMS[id];return `<li><i class="potion-icon ${id}" aria-hidden="true"></i><div><strong>${it.name} <span>×${inventory[id]}</span></strong><p>${it.desc}${it.kind!=='revive'?' · Q 마시기 · Shift+Q 고르기':''}</p></div></li>`;}).join('');
  return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:'<p>정시파이터 오스틴을 이기면 물약을 얻어요 · 시간의 물약과 함께 작은 물약·바람 물약·껍질 물약·다시 싹 중 하나</p>'}</section>`;
 }
 export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null){

@@ -35,6 +35,7 @@ import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './w
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
+import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,nextHeld,heldItems,usable} from './inventory.js';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,slotsUsed,fusionLevel,canFuse,fuse,evolveSolo,effectiveLevels,buildLevel} from './progression.js';
@@ -329,6 +330,16 @@ function overdriveBlast(f,radius,damage,first){
  }
  if(first)for(let i=1;i<=f.echoes;i++)finaleEchoes.push({t:.45*i,finale:f,radius:radius*.8,damage:damage*f.echoScale});
 }
+// 1·2·3 keys press the matching choice on whatever choice screen is open (laws, fusions, solo evolutions, relics).
+const CHOICE_GROUPS=['[data-choice]','[data-form]','[data-solo]','[data-relic]','[data-keep],[data-replace]'];
+function choiceButtons(){
+ const overlay=$('#overlay');if(!overlay||overlay.hidden||paused)return [];
+ for(const group of CHOICE_GROUPS){const list=[...overlay.querySelectorAll(group)].filter(b=>!b.disabled&&b.offsetParent!==null);if(list.length)return list;}
+ return [];
+}
+function pickChoice(n){const button=choiceButtons()[n-1];if(!button)return false;button.click();return true;}
+// Small number badges on the first three choices, so the keys are discoverable.
+new MutationObserver(()=>{for(const [i,b] of choiceButtons().slice(0,3).entries())if(!b.querySelector(':scope>.pick-key'))b.insertAdjacentHTML('afterbegin',`<kbd class="pick-key" aria-hidden="true">${i+1}</kbd>`);}).observe($('#overlay'),{childList:true,subtree:true});
 function useInventoryItem(id){
  if(mode!=='playing'||paused||potionCD>0||!id)return;
  const item=ITEMS[id],r=useItem(inventory,id,{hp});
@@ -393,31 +404,41 @@ function showIntro(){pauseBuild.hide();austinRoom=false;drawRoom();$('#evolution
  document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>{guideTarget=b.dataset.guide||null;document.querySelectorAll('[data-guide]').forEach(n=>n.setAttribute('aria-pressed',String((n.dataset.guide||null)===guideTarget)));});
  updateFormLabel();
 }
+// Under each ranking line: bosses beaten for everyone, the full build for the top three.
+function rankBuild(entry,place){
+ const b=parseBuild(entry.build);
+ if(!b)return place<=3?'<div class="rank-build none">조합 기록 없음</div>':'';
+ const boss=`<span class="rank-boss">${bossText(entry.build)}</span>`;
+ if(place>3)return `<div class="rank-build brief">${boss}</div>`;
+ const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">유물 ${RELICS[b.relic].name}</span>`:''].join('');
+ return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
+}
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro');const serial=++rankSerial;
- $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage)):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage),null,10,rankBuild):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
  online.flush().catch(()=>0).then(()=>online.top()).then(board=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 최고 기록 · 한 사람(기기+이름)당 한 줄');
-  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(board,board.find(e=>e.uid===online.uid()&&e.name===playerName),20);
+  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(board,board.find(e=>e.uid===online.uid()&&e.name===playerName),20,rankBuild);
  }).catch(()=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 랭킹에 연결하지 못했어요 · 이 기기 기록을 보여줘요');
-  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(readRanking(runStorage));
+  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(readRanking(runStorage),null,10,rankBuild);
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
 function showEnd(){touch.reset();$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&score>0&&Boolean(name);
- const local=ranked?submitScore(runStorage,{name,score,cycle,stage,kills,time:elapsed}):null;
- $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingTable(local?.ranking||readRanking(runStorage),local?.entry)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
+ const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
+ const local=ranked?submitScore(runStorage,{name,score,cycle,stage,kills,time:elapsed,build}):null;
+ $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingTable(local?.ranking||readRanking(runStorage),local?.entry,10,rankBuild)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
  $('#restart').onclick=showIntro;
  if(!ranked)return;
- online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed})).then(r=>{
+ online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed,build})).then(r=>{
   if(serial!==rankSerial)return;
   const status=$('#rank-status'),box=$('#rank-board');
   if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 20위 밖이에요';
-  if(box)box.innerHTML=rankingTable(r.board,r.board[(r.rank||r.bestRank)-1],20);
+  if(box)box.innerHTML=rankingTable(r.board,r.board[(r.rank||r.bestRank)-1],20,rankBuild);
  }).catch(()=>{
   if(serial!==rankSerial)return;
   setText($('#rank-status'),'지금은 모두의 랭킹에 연결하지 못했어요 · 다음에 접속하면 자동으로 올라가요 · 아래는 이 기기 기록');
@@ -432,7 +453,7 @@ function restart(saved=null){const restore=saved?.version===1?saved:null;if(!res
  if(restore?.mode==='crossroads')nextJourney();else{austinRoom=restore?.mode==='austin';wave();}}
 
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
-window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const direct={Digit1:'potion',Digit2:'tonic',Digit3:'wind',Digit4:'shell'}[e.code];if(direct)useInventoryItem(direct);else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if(!requireName())return;const saved=readCheckpoint(runStorage);if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
+window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if(!requireName())return;const saved=readCheckpoint(runStorage);if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
 function update(dt,time){
 if(mode==='evolving'){
@@ -489,7 +510,7 @@ function renderItemBar(){
  if(key===itemBarKey)return;itemBarKey=key;
  bar.innerHTML=heldItems(inventory).map(id=>{const it=ITEMS[id];
   if(!usable(id))return `<span class="item-chip" title="${it.desc}"><i class="potion-icon ${id}" aria-hidden="true"></i><b>×${inventory[id]}</b><small>${it.name}</small></span>`;
-  return `<button class="item-button${id===selectedItem?' selected':''}" data-item="${id}"${id==='potion'?' id="use-potion"':''} aria-label="${it.name} · ${it.desc}" title="${it.name} · ${it.desc}"><i class="potion-icon ${id}" aria-hidden="true"></i><b>×${inventory[id]}</b><small>${it.key}</small></button>`;
+  return `<button class="item-button${id===selectedItem?' selected':''}" data-item="${id}"${id==='potion'?' id="use-potion"':''} aria-label="${it.name} · ${it.desc}" title="${it.name} · ${it.desc}"><i class="potion-icon ${id}" aria-hidden="true"></i><b>×${inventory[id]}</b><small>${id===selectedItem?'Q':''}</small></button>`;
  }).join('');
 }
 function updateGauges(){
