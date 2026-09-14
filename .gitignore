@@ -44,3 +44,4 @@ artifacts/
 
 !tools/relics-test.mjs
 !tools/items-test.mjs
+!tools/star-room-test.mjs

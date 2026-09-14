@@ -4,7 +4,9 @@ import {arenaFor,insideArena,constrainToArena,reflectArenaBoundary,safeArenaSpaw
 
 const circle=arenaFor(2),rect=arenaFor(0),near=(a,b)=>assert.ok(Math.abs(a-b)<1e-4,`${a} ≈ ${b}`);
 assert.equal(circle.shape,'circle');
-for(const stage of [0,1,3,4])assert.equal(arenaFor(stage,12,'ruins').shape,'rect');
+// Journey 13 (cycle 12) puts the star in room 2; the other square rooms stay square.
+for(const stage of [0,3,4])assert.equal(arenaFor(stage,12,'ruins').shape,'rect');
+assert.equal(arenaFor(1,12,'ruins').id,'star');assert.equal(arenaFor(2,0).shape,'circle');
 for(let i=0;i<360;i++) {
   const a=i*Math.PI/180,n={x:Math.cos(a),z:Math.sin(a)},p={x:n.x*20,y:2,z:n.z*20};
   constrainToArena(p,.4,circle);near(Math.hypot(p.x,p.z),7.2);assert.equal(p.y,2);assert.ok(insideArena(p,.4,circle));

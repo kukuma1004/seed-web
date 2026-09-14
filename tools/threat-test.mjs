@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {ROOMS,EXIT} from '../src/journey.js';
+import {ROOMS,EXIT,roomFor} from '../src/journey.js';
 import {arenaFor,insideArena} from '../src/arena.js';
 import {segmentHitsCover} from '../src/collision.js';
 import {createTurret,tickTurret,turretSpots,copiedLaws,volleySpec,TURRET} from '../src/turret.js';
@@ -8,12 +8,12 @@ import {trapsFor,trapPhase,tickTrap,insideTrap,TRAP_TIMING,TRAP_DAMAGE,TRAP_SIZE
 import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from '../src/warden.js';
 const V=THREE.Vector3;
 const mat=new THREE.MeshBasicMaterial(),mats={enemy:mat,black:mat,armor:mat,amber:mat,dark:mat};
-const START={x:0,z:5};
+const EXIT_DEFAULT=EXIT;
 
 // Placement: turrets and traps sit inside the room, clear of cover, the seed's start and the exit.
-for(const [stage,room] of ROOMS.entries()){
- const arena=arenaFor(stage);
+for(const stage of ROOMS.keys()){
  for(const cycle of [0,1]){
+  const arena=arenaFor(stage,cycle),room=roomFor(stage,cycle),START=arena.start||{x:0,z:5},EXIT=arena.exit||EXIT_DEFAULT;
   for(const spot of turretSpots(stage,cycle)){
    assert.ok(insideArena(spot,.8,arena),`turret outside room ${stage}`);
    assert.equal(segmentHitsCover(spot,spot,room.covers,.8),false,`turret in cover, room ${stage}`);

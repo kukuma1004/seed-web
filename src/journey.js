@@ -1,4 +1,5 @@
 import {LAWS,offerLaws} from './laws.js';
+import {isStarRoom} from './room-rotation.js';
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
 export const ROOMS=[
  {name:'잠든 정원의 입구',hint:'첫 법칙을 깨우세요',covers:[wall(-3,1,2,1.2,1.7),wall(5.8,4,2.4,.9)],enemies:[['hound',-4,-3],['caster',5,-3]]},
@@ -8,6 +9,13 @@ export const ROOMS=[
  {name:'기억의 문지기',hint:'문지기는 당신의 첫 두 법칙을 배웁니다',covers:[wall(-5,1,2,1),wall(5,1,2,1)],enemies:[['warden',0,-3]]}
 ];
 export const EXIT={x:0,z:-6.6,radius:1.65};
+// The star garden replaces one room per journey (see room-rotation.js). Its own cover and first enemies
+// fit inside the star; two short pillars beside the middle give the bent walls something to bounce around.
+export const STAR_ROOM=Object.freeze({id:'star',name:'별빛 정원',hint:'별 끝은 막다른 길 · 가운데로 빠져나오며 꺾인 벽으로 탄을 튕기세요',
+ covers:[wall(-3.1,.2,1.1,1.1),wall(3.1,.2,1.1,1.1)],
+ enemies:[['hound',6.4,-1.8],['caster',0,-6.2],['hound',-3.6,-2.4]],
+ elite:{x:0,z:-4.8},shield:{x:0,z:-.4}});
+export function roomFor(stage,cycle=0){return isStarRoom(stage,cycle)?STAR_ROOM:ROOMS[stage];}
 export const LAW_NAMES=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.name]));
 export function rewardOptions(room,laws,mutated=[],options={}){
  const random=options.random||Math.random;
@@ -21,4 +29,4 @@ export function rewardOptions(room,laws,mutated=[],options={}){
  return offered;
 }
 export function learnedLaws(hp,maxHp,laws){return laws.slice(0,hp/maxHp<=.34?2:hp/maxHp<=.67?1:0);}
-export function canUseExit({open,mode,paused,x,z}){return open&&mode==='playing'&&!paused&&Math.hypot(x-EXIT.x,z-EXIT.z)<EXIT.radius;}
+export function canUseExit({open,mode,paused,x,z,exit=EXIT}){return open&&mode==='playing'&&!paused&&Math.hypot(x-exit.x,z-exit.z)<(exit.radius??EXIT.radius);}

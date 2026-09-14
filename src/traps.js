@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {isStarRoom} from './room-rotation.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 // Spike plates cycle idle -> warning -> active. They hurt enemies as well as the seed,
@@ -26,8 +27,10 @@ export const TRAP_LAYOUTS=[
 ];
 
 // Plates are offset in time so a room never flashes all at once.
+// Star garden: one in the middle lane toward the exit tip, one at the mouth of each side tip.
+export const STAR_TRAPS=[{x:0,z:-2.2},{x:-5.3,z:-1.4},{x:5.3,z:-1.4}];
 export function trapsFor(stage,cycle=0){
- const base=TRAP_LAYOUTS[stage]||[];
+ const base=isStarRoom(stage,cycle)?STAR_TRAPS:(TRAP_LAYOUTS[stage]||[]);
  const list=base.map((p,i)=>({...p,offset:i*1.1,hitPlayer:false,hitEnemies:new Set()}));
  return cycle>0?list.map(t=>({...t,offset:t.offset*.7})):list;
 }
