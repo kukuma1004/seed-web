@@ -1,4 +1,4 @@
-import {SOLO_FORMS,AWAKEN_FORMS} from './forms.js';
+import {SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 // One authored illustration for each completed form, in a 4 by 3 atlas.
 const TILES={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
 // Solo evolutions use their own painted 4 by 3 atlas. The last three cells stay empty.
@@ -12,6 +12,11 @@ const tileStyle=(file,tile)=>`background-image:url('${BASE}assets/${file}');back
 export const AWAKEN_ATLAS='';
 const AWAKEN_TILES={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9};
 export function formArt(id,extra=''){
+ // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).
+ if(Object.hasOwn(TWIN_FORMS,id)){
+  const [a,b]=TWIN_FORMS[id].parts;
+  return `<span class="form-art awakened-art twin-art ${extra}" aria-hidden="true"><i style="${tileStyle(SOLO_ATLAS,SOLO_TILES[a])}"></i><i style="${tileStyle(SOLO_ATLAS,SOLO_TILES[b])}"></i></span>`;
+ }
  if(Object.hasOwn(AWAKEN_FORMS,id)){
   const style=AWAKEN_ATLAS?tileStyle(AWAKEN_ATLAS,AWAKEN_TILES[id]):tileStyle(FUSION_ATLAS,TILES[AWAKEN_FORMS[id].base]);
   return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="${style}"></span>`;

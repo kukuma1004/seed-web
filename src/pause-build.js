@@ -7,7 +7,6 @@ import {itemArt} from './item-art.js';
 import {lawArt} from './law-art.js';
 import {formArt} from './form-art.js';
 import {orbitCore,isOrbitEvolution} from './evolution-family.js';
-import {AUSTIN_TITLE,AUSTIN_TITLE_PERK} from './seed-title.js';
 import './pause-build.css';
 
 // The bag lists what every potion does, so a player can learn them while the game is stopped.
@@ -40,7 +39,8 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
    root.querySelector('#pause-loadout').innerHTML=entries.join('')||'<p class="pause-empty">아직 이름 없는 씨앗이에요.<br>적을 처치하고 첫 법칙을 골라 주세요.</p>';
    if(activeUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',activeSection(forms,activeUI.get()));
    if(itemsUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',itemBag(itemsUI.get()));
-   if(titleUI?.unlocked())root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호</h3><p><strong>${AUSTIN_TITLE}</strong> · ${AUSTIN_TITLE_PERK.text}</p></section>`);
+   const titles=titleUI?.state();
+   if(titles&&(titles.titles.length||titles.next))root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호</h3>${titles.titles.map(t=>`<p><strong>${t.name}</strong> · ${t.perk}</p>`).join('')}${titles.next?`<p class="title-next">도감 ${titles.next.need}개 더 · ${titles.next.reward}</p>`:''}</section>`);
    if(relicUI){root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',relicLoadout(relicUI.get(),relicUI.canSwap(),relicUI.effect));root.querySelectorAll('[data-equip-relic]').forEach(b=>b.onclick=()=>{relicUI.swap(b.dataset.equipRelic);api.show(shownLevels,shownForms);});}
    root.hidden=false;continueButton.focus({preventScroll:true});
   },

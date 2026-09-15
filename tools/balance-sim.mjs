@@ -2,6 +2,7 @@
 // Enemies do not die (huge health) and walk slowly toward the seed, so the numbers compare attack shapes, not kill luck.
 import * as THREE from 'three';
 import {createFormCombat} from '../src/form-combat.js';
+import {TWIN_FORMS} from '../src/forms.js';
 import {arenaFor,constrainToArena,reflectArenaBoundary} from '../src/arena.js';
 const V=THREE.Vector3;
 
@@ -16,11 +17,13 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
  const enemies=SCENES[scene]().map(([x,z],i)=>({type:'swarm',hp:1e9,maxHp:1e9,g:{position:new V(x,0,z)},slow:0,i}));
  const player={position:new V(0,0,0)};
  let damage=0;const shotList=[];
- const combat=createFormCombat(new THREE.Scene(),{player,enemies:()=>enemies,
+ // A twin awakening fights with two combats, like the game (one per attack, openings staggered by five seconds).
+ const parts=TWIN_FORMS[id]?TWIN_FORMS[id].parts:[id];
+ const combats=parts.map((part,i)=>{const c=createFormCombat(new THREE.Scene(),{player,enemies:()=>enemies,
   hit:(e,amount)=>{damage+=amount;return true;},blocked:()=>false,
   boundary:(a,b,dir)=>reflectArenaBoundary(a,b,dir,arena),constrain:(p,r)=>constrainToArena(p,r,arena),vfx:null,enemyShots:()=>shotList});
- combat.set(id,level);
- let cooldown=0,t=0,surged=false;
+  c.set(part,level,TWIN_FORMS[id]?{twin:true,openingDelay:2+i*5}:{});c.cooldown=0;return c;});
+ let t=0,surged=false;
  const steps=Math.round(seconds/dt);
  for(let step=0;step<steps;step++,t+=dt){
   // Enemy shots fly in from 6 units away, three at a time, twice a second.
@@ -29,19 +32,21 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
   for(let i=shotList.length-1;i>=0;i--)if(shotList[i].life<=0)shotList.splice(i,1);
   if(surgeAt!==null&&!surged&&t>=surgeAt){
    const target=nearest(enemies,player.position);
-   combat.surge(surgeSeconds,{aim:target?target.g.position.clone().sub(player.position).setY(0).normalize():null});surged=true;
+   for(const combat of combats)combat.surge(surgeSeconds,{aim:target?target.g.position.clone().sub(player.position).setY(0).normalize():null});surged=true;
   }
   for(const e of enemies){
    e.slow=Math.max(0,e.slow-dt);
    const toward=player.position.clone().sub(e.g.position).setY(0);
    if(toward.length()>1.2)e.g.position.addScaledVector(toward.normalize(),dt*.6*(e.slow>0?.5:1));
   }
-  cooldown-=dt;
   const target=nearest(enemies,player.position);
-  if(cooldown<=0&&target){const aim=target.g.position.clone().sub(player.position).setY(0).normalize();cooldown=combat.fire(player.position,aim,target.g.position);}
-  combat.update(dt);
+  for(const combat of combats){
+   combat.cooldown-=dt;
+   if(combat.cooldown<=0&&target){const aim=target.g.position.clone().sub(player.position).setY(0).normalize();combat.cooldown=combat.fire(player.position,aim,target.g.position);}
+   combat.update(dt);
+  }
  }
- const state=combat.state();combat.dispose();
+ const state=combats[0].state();for(const combat of combats)combat.dispose();
  return {damage,dps:damage/seconds,state};
 }
 const nearest=(enemies,p)=>enemies.slice().sort((a,b)=>a.g.position.distanceToSquared(p)-b.g.position.distanceToSquared(p))[0];

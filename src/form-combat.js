@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,awakenSurgeOpening,formStats} from './forms.js';
+import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -45,9 +45,10 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  const {mats,geos}=createFormVisuals();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
- let active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
+ let twin=false,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
- const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0}):formStats(null);};
+ const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
+ const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
 
  function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,mat);ob.position.set(pos.x,y,pos.z);group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
@@ -59,11 +60,15 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],mats[style.material]));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
- function set(id,nextLevel=1){
+ function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
+ function set(id,nextLevel=1,opts={}){
+  // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
+  if(TWIN_FORMS[id])return set(TWIN_FORMS[id].parts[0],nextLevel,{...opts,twin:true});
   const L=Math.max(1,Math.floor(nextLevel||1));
   const kind=AWAKEN_FORMS[id]?.base||id;
-  if(statId!==id){clear();active=kind;statId=id;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id])awakenTimer=2;}
+  const asTwin=Boolean(opts.twin);
+  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??2;S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   rebuildOrbit();
  }
@@ -308,7 +313,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
 
  function update(dt){
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
-  if(active&&AWAKEN_FORMS[statId])awakenOpening(dt);
+  if(awakened())awakenOpening(dt);
   for(const [e,t] of cooldowns){if(e.dead||t<=dt)cooldowns.delete(e);else cooldowns.set(e,t-dt);}
   updateOrbit(dt);
   for(const b of bolts){
@@ -551,7 +556,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
-  if(AWAKEN_FORMS[statId])awakenTimer=awakenSurgeOpening(statId);
+  if(awakened())awakenTimer=awakenSurgeOpening(statId,twin);
   opening(aim);
   return true;
  }
@@ -561,7 +566,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   awakenTimer-=dt;if(awakenTimer>0)return;
   const target=nearestEnemy(player.position,AWAKEN.openingRange);
   if(!target){awakenTimer=0;return;}
-  awakenTimer=surgeTime>0?awakenSurgeOpening(statId):AWAKEN.openingEvery;
+  awakenTimer=surgeTime>0?awakenSurgeOpening(statId,twin):AWAKEN.openingEvery;
   opening(target.g.position.clone().sub(player.position).setY(0));
  }
  function calm(){if(surgeTime<=0)return;surgeTime=0;refresh();rebuildOrbit();}
@@ -622,6 +627,6 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  }
 
  return {set,fire,update,clear,surge,calm,
-  state:()=>({active,evolution:statId,awakenIn:AWAKEN_FORMS[statId]?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:statId,twin,awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of Object.values(mats))m.dispose();group.removeFromParent();}};
 }

@@ -10,3 +10,7 @@ kbd{display:block;margin-bottom:9px;padding:8px 13px;border:1px solid #7ca18b60;
 button:focus-visible{outline:2px solid #c5f5b4;outline-offset:5px}
 #evolution{position:absolute;left:50%;bottom:138px;transform:translateX(-50%);text-align:center;min-width:300px;max-width:90vw;padding:18px 28px;background:linear-gradient(90deg,#06171900,#061719dc 20%,#061719dc 80%,#06171900);pointer-events:none;color:#daffe8}
 #evolution[hidden]{display:none}#evolution small{display:block;font-size:10px;letter-spacing:3px;color:#a3cabb}#evolution strong{display:block;margin:10px 0;font-size:27px;letter-spacing:5px}#evolution span{display:block;font-size:12px;color:#c0d6cc}#evolution i{display:block;height:2px;background:#b7f7d3;margin-top:16px;transform:scaleX(var(--growth,0));transform-origin:left}
+/* Start screen (2026-09-15): title, one line, name, start, and two small links. */
+#overlay .intro-lead{color:#c5d6cd;margin:6px 0 2px}
+.intro-links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}.intro-links .discovery-link{margin:0}
+.codex-goal{color:#ffe3a0}.title-perk .title-next{color:#a9c8bb;font-size:12px}

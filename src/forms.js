@@ -39,7 +39,7 @@ export const SOLO_FORMS=Object.freeze(Object.fromEntries([
 export const AWAKEN=Object.freeze({openingEvery:10,openingRange:12,surgeOpeningEvery:1.2,damage:1.25,interval:.8});
 // The mirror's opening turns every enemy shot at once, so it does not repeat during the ultimate.
 export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
-export const awakenSurgeOpening=id=>AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
+export const awakenSurgeOpening=(id,twin=false)=>twin?TWIN.surgeOpeningEvery:AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
 const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:FORMS[base].requires,pair:`${FORMS[base].name} 각성`,desc,strength,weakness,passive:FORMS[base].passive,awakened:true});
 export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bigcrunch','collapse','대붕괴','붕괴 씨앗과 우물이 늘고 더 넓게 무너지며, 10초마다 가까운 적 셋의 자리에 붕괴 우물을 한꺼번에 심습니다.','무리를 통째로 끌어모아 한 번에 붕괴','느린 발사는 그대로라 빠르게 파고드는 적에 주의'),
@@ -53,11 +53,50 @@ export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
  awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).','탄막을 통째로 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함')
 ].map(f=>[f.id,f])));
-// Every evolution the seed can hold: ten fusions, nine solo evolutions and ten awakened evolutions.
-export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS});
-export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id);
+// Twin awakenings (2026-09-15): the 26 pairs of solo evolutions whose laws have no fusion recipe awaken too.
+// Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
+// Together with the ten fusion awakenings every one of the 36 solo pairs now leads somewhere.
+export const TWIN=Object.freeze({damage:.7,surgeOpeningEvery:1.5});
+const twin=(id,a,b,name,desc)=>{
+ const A=SOLO_FORMS[a],B=SOLO_FORMS[b],parts=Object.freeze([a,b]);
+ return Object.freeze({id,name,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',passive:false,awakened:true,twin:true});
+};
+export const TWIN_FORMS=Object.freeze(Object.fromEntries([
+ twin('lightningmirror','mirrormaze','thunderweb','번개 거울방','튕기는 거울탄과 적 사이를 뛰는 번개가 한 칸에서 함께 나갑니다.'),
+ twin('glassmaze','mirrormaze','glassspear','유리 미궁','벽을 튕기는 거울탄과 한 줄을 꿰뚫는 유리 창날을 함께 씁니다.'),
+ twin('flaremirror','mirrormaze','flarebloom','불꽃 거울','거울탄이 방을 누비는 사이 목표에 불꽃 다발이 떨어집니다.'),
+ twin('echohall','mirrormaze','rewind','메아리 회랑','튕기는 거울탄과 여러 번 되돌아오는 잎이 같은 길을 겹겹이 훑습니다.'),
+ twin('lensinghole','mirrormaze','blackhole','중력 렌즈','블랙홀이 적을 붙잡는 동안 거울탄이 그 주변을 튕기며 때립니다.'),
+ twin('frostmirror','mirrormaze','winterbreath','서리 거울','앞쪽을 얼리는 숨결과 방을 튕겨 다니는 거울탄을 함께 씁니다.'),
+ twin('stormpetals','fullbloom','thunderweb','번개 꽃잎','퍼지는 꽃잎과 뛰어다니는 번개가 무리 사이를 동시에 파고듭니다.'),
+ twin('petalhalo','fullbloom','starring','꽃잎 후광','씨앗을 감싼 별의 고리가 막는 동안 꽃이 멀리 피어납니다.'),
+ twin('piercingbloom','fullbloom','glassspear','꿰뚫는 꽃비','긴 창날이 줄을 꿰뚫고, 맞은 적마다 꽃잎이 둥글게 퍼집니다.'),
+ twin('returningbloom','fullbloom','rewind','돌아오는 꽃','왕복하는 잎과 퍼지는 꽃잎이 같은 무리를 거듭 훑습니다.'),
+ twin('gravitybloom','fullbloom','blackhole','끌림 꽃밭','블랙홀로 모은 무리 한가운데에 꽃이 터져 꽃잎이 번집니다.'),
+ twin('frostpetals','fullbloom','winterbreath','서리 꽃잎','가까운 적은 숨결로 얼리고, 멀리 있는 무리엔 꽃잎을 퍼뜨립니다.'),
+ twin('thunderflare','thunderweb','flarebloom','천둥 불꽃','번개가 흩어진 적을 훑고, 모인 곳엔 불꽃 다발이 떨어집니다.'),
+ twin('returningbolt','thunderweb','rewind','되감는 번개','되돌아오는 잎이 길을 쓸고, 번개가 그 길 밖의 적까지 뛰어갑니다.'),
+ twin('stormeye','thunderweb','blackhole','폭풍의 눈','블랙홀에 붙잡힌 무리 사이로 번개가 끊임없이 튑니다.'),
+ twin('frozenweb','thunderweb','winterbreath','얼어붙은 그물','앞쪽은 서리로 멈추고, 번개 그물이 사방의 적을 잇습니다.'),
+ twin('spearhalo','starring','glassspear','창날 고리','별의 고리가 가까운 적과 탄을 막고, 유리 창날이 먼 줄을 꿰뚫습니다.'),
+ twin('sunring','starring','flarebloom','태양 고리','씨앗을 도는 고리가 버티는 동안 멀리 불꽃 다발을 떨어뜨립니다.'),
+ twin('tidering','starring','rewind','밀물 고리','고리로 곁을 지키며 잎을 멀리 보냈다 되돌립니다.'),
+ twin('accretionring','starring','blackhole','강착 원반','블랙홀로 적을 멈춰 두고, 다가오는 적은 별의 고리가 벱니다.'),
+ twin('meteorspear','glassspear','flarebloom','유성창','한 줄은 창날로 꿰뚫고, 모인 무리엔 불꽃 다발을 떨어뜨립니다.'),
+ twin('gravityspear','glassspear','blackhole','중력 창','블랙홀이 적을 한 줄로 모으면 유리 창날이 한꺼번에 꿰뚫습니다.'),
+ twin('iciclespear','glassspear','winterbreath','고드름 창','가까운 적은 숨결로 얼리고, 먼 줄은 창날로 꿰뚫습니다.'),
+ twin('boomerangflare','flarebloom','rewind','되돌아오는 불꽃','왕복하는 잎이 길을 쓸고, 모인 곳엔 불꽃 다발이 떨어집니다.'),
+ twin('frostrewind','rewind','winterbreath','서리 되감기','숨결로 멈춘 적 위를 잎이 여러 번 오가며 벱니다.'),
+ twin('frozenhole','blackhole','winterbreath','얼어붙은 블랙홀','블랙홀로 붙잡은 무리를 숨결로 얼려 더 아프게 합니다.')
+].map(f=>[f.id,f])));
+// Every evolution the seed can hold: ten fusions, nine solo evolutions, ten fusion awakenings and 26 twin awakenings.
+export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS});
+export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
+export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
+// The attacks an evolution fights with, one combat each: a twin has two, everything else one.
+export const attackPartsOf=id=>TWIN_FORMS[id]?[...TWIN_FORMS[id].parts]:[AWAKEN_FORMS[id]?.base||id];
 // The attack an evolution fights with: an awakened evolution uses its fusion's attack, everything else its own.
-export const baseFormOf=id=>AWAKEN_FORMS[id]?.base||id;
+export const baseFormOf=id=>AWAKEN_FORMS[id]?.base||TWIN_FORMS[id]?.base||id;
 export const awakenedFormOf=fusion=>Object.values(AWAKEN_FORMS).find(f=>f.base===fusion)?.id||null;
 export const isSoloForm=id=>Object.hasOwn(SOLO_FORMS,id);
 export const soloFormOf=law=>Object.values(SOLO_FORMS).find(f=>f.requires[0]===law)?.id||null;
@@ -92,7 +131,10 @@ export function formLevel(levels,id){
 
 // Level one reproduces the original tuning exactly; counts are capped, damage is not.
 // {surge:true} is the stat sheet while this evolution's active (signature/overdrive) runs.
-export function formStats(id,level=1,{surge=false}={}){
+export function formStats(id,level=1,{surge=false,twin=false}={}){
+ // A twin's sheet is its first attack's; each attack of a twin fights at TWIN.damage.
+ if(TWIN_FORMS[id])return {...formStats(TWIN_FORMS[id].parts[0],level,{surge,twin:true}),parts:TWIN_FORMS[id].parts};
+ if(twin){const s=formStats(id,level,{surge});if(!(s.damage>0))return s;const out={...s,twin:true};for(const key of DAMAGE_KEYS)if(typeof out[key]==='number')out[key]*=TWIN.damage;return out;}
  const awakened=AWAKEN_FORMS[id];
  if(awakened){const base=baseStats(awakened.base,level);if(!(base.damage>0))return base;const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
  const base=baseStats(id,level);

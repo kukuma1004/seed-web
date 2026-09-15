@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
+import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
 import {averageDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
@@ -54,5 +54,11 @@ for(const a of Object.values(AWAKEN_FORMS)){
  const L=SOLO_LEVEL-1,shots=a.passive,pair=averageDps(a.base,L,{shots})+Math.max(...a.requires.map(soloFormOf).map(id=>averageDps(id,L,{shots})));
  const ratio=averageDps(a.id,L+Math.ceil(L/3),{shots})/pair;
  assert.ok(ratio>=.7&&ratio<=1.5,`${a.id}: awakened is ${ratio.toFixed(2)} of fusion + solo`);
+}
+// Twins replace their two solo evolutions at equal levels the same way.
+for(const t of Object.values(TWIN_FORMS)){
+ const L=SOLO_LEVEL-1,shots=t.parts.includes('starring'),pair=t.parts.reduce((sum,id)=>sum+averageDps(id,L,{shots}),0);
+ const ratio=averageDps(t.id,L+Math.ceil(L/3),{shots})/pair;
+ assert.ok(ratio>=.7&&ratio<=1.5,`${t.id}: twin is ${ratio.toFixed(2)} of its two solo evolutions`);
 }
 console.log('Balance: solo evolutions sit just behind fusions at equal picks (levels 4 and 9), the ring matches orbit fusions, every signature is worth 12-32 seconds of its evolution, awakened evolutions match the pair they replace.');

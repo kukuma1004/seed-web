@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,soloLevel,soloFormOf} from './forms.js';
+import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,soloLevel,soloFormOf} from './forms.js';
 
 // Laws are stacked, never swapped: five slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -137,6 +137,12 @@ export function awakenOptions(forms=new Map()){
   if(forms.has(a.id)){for(const id of parts)out.push({id:a.id,from:[id]});continue;}
   if(forms.has(a.base))for(const solo of solos)if(forms.has(solo))out.push({id:a.id,from:[a.base,solo]});
   if(solos.every(solo=>forms.has(solo)))out.push({id:a.id,from:solos});
+ }
+ // Twins: two solo evolutions with no fusion recipe between their laws.
+ for(const t of Object.values(TWIN_FORMS)){
+  const parts=t.parts.filter(id=>forms.has(id));
+  if(forms.has(t.id)){for(const id of parts)out.push({id:t.id,from:[id]});continue;}
+  if(parts.length===2)out.push({id:t.id,from:[...t.parts]});
  }
  return out;
 }

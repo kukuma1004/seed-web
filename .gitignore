@@ -55,3 +55,4 @@ artifacts/
 !tools/active-balance-test.mjs
 !tools/balance-sim.mjs
 !tools/awaken-test.mjs
+!tools/titles-test.mjs

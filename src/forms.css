@@ -17,3 +17,9 @@
 @keyframes awaken-shine{0%{background-position:120% 0}60%,100%{background-position:-120% 0}}
 @media(prefers-reduced-motion:reduce){.form-art.awakened-art::after{animation:none}}
 .awaken-card{border-color:#ffe08a99}.awaken-card .awaken-tag{display:inline-block;margin-left:4px;padding:0 6px;border-radius:8px;background:#ffd36a40;color:#fff0b8;font-size:11px}
+.form-art.twin-art{overflow:hidden}.form-art.twin-art i{position:absolute;inset:0;background-size:400% 300%;background-repeat:no-repeat;border-radius:inherit}
+.form-art.twin-art i:first-child{clip-path:polygon(0 0,100% 0,0 100%)}.form-art.twin-art i:last-child{clip-path:polygon(100% 0,100% 100%,0 100%)}
+.book-scroll{width:min(1040px,100%);max-height:58vh;overflow:auto;margin:8px 0;padding-right:4px}
+.book-scroll .form-cards.book{max-height:none;overflow:visible;margin:6px 0 14px}
+.book-title{margin:10px 0 2px;font-size:14px;color:#dfe9d6;text-align:left}.book-title span{color:#ffe3a0;font-weight:400;margin-left:6px}
+@media(max-height:500px) and (orientation:landscape){.book-scroll{max-height:52vh}.book-title{font-size:12px}}

@@ -1,22 +1,28 @@
 import * as THREE from 'three';
 import './seed-title.css';
+import {AUSTIN_TITLE,AUSTIN_SHOT_SPEED,titleState} from './titles.js';
 
-export const AUSTIN_TITLE='정시를 깨운 자';
-// The title's small lasting merit (2026-09-15): the seed's basic shots fly 2% faster in every later run.
-export const AUSTIN_TITLE_PERK=Object.freeze({shotSpeed:1.02,text:'기본 탄환 속도 +2%'});
-export const titleShotSpeed=unlocked=>unlocked?AUSTIN_TITLE_PERK.shotSpeed:1;
+export {AUSTIN_TITLE};
+// Kept for the Austin victory toast; every title's rules live in titles.js.
+export const AUSTIN_TITLE_PERK=Object.freeze({shotSpeed:1+AUSTIN_SHOT_SPEED,text:`기본 탄환 속도 +${AUSTIN_SHOT_SPEED*100}%`});
 
 // A screen-space nameplate follows the world position. Korean text stays crisp
 // on low-resolution mobile canvases and costs no WebGL texture or draw call.
-export function createSeedTitle(player,unlocked=false){
- const root=document.createElement('div');root.className='seed-victory-title';root.textContent=AUSTIN_TITLE;root.hidden=true;document.body.append(root);
- const world=new THREE.Vector3(),lift=new THREE.Vector3(0,1.42,0);let enabled=Boolean(unlocked);
+// It shows the first title held (Austin's before the codex title); austin/discovered feed titles.js.
+export function createSeedTitle(player,{austin=false,discovered=0,total=Infinity}={}){
+ const root=document.createElement('div');root.className='seed-victory-title';root.hidden=true;document.body.append(root);
+ const world=new THREE.Vector3(),lift=new THREE.Vector3(0,1.42,0);
+ let current={austin:Boolean(austin),discovered,total},state=titleState(current);
+ const refresh=()=>{state=titleState(current);if(root.textContent!==(state.shown||''))root.textContent=state.shown||'';};
+ refresh();
  return {
   root,
-  setUnlocked(value=true){enabled=Boolean(value);},
-  isUnlocked(){return enabled;},
+  setUnlocked(value=true){current={...current,austin:Boolean(value)};refresh();},
+  isUnlocked(){return current.austin;},
+  setDiscovered(count,total=current.total){current={...current,discovered:count,total};refresh();},
+  state(){return state;},
   update(camera,rect,show=true){
-   if(!enabled||!show){root.hidden=true;return;}
+   if(!state.shown||!show){root.hidden=true;return;}
    world.copy(player.position).add(lift).project(camera);
    const visible=world.z>-1&&world.z<1&&world.x>-1.15&&world.x<1.15&&world.y>-1.15&&world.y<1.15;
    root.hidden=!visible;if(!visible)return;

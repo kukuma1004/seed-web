@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {FORMS,SOLO_FORMS,AWAKEN_FORMS,ALL_FORMS,AWAKEN,baseFormOf,isAwakenedForm,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
+import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,TWIN,ALL_FORMS,AWAKEN,baseFormOf,isAwakenedForm,isTwinForm,attackPartsOf,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
 import {awakenOptions,awakenLevel,awaken,slotsUsed,chooseLaw,formOffer} from '../src/progression.js';
 import {createFormCombat} from '../src/form-combat.js';
 import {evolutionFamily,isOrbitEvolution,activeUltimateEvolutions} from '../src/evolution-family.js';
@@ -31,8 +31,36 @@ assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,Object.keys(A
  assert.equal(chooseLaw(new Map(),formOffer('bigcrunch'),forms),true);assert.equal(forms.get('bigcrunch'),12);
 }
 assert.deepEqual(awakenOptions(new Map([['blackhole',5],['flarebloom',5]])),[{id:'bigcrunch',from:['blackhole','flarebloom']}]);
-assert.deepEqual(awakenOptions(new Map([['blackhole',5],['mirrormaze',5]])),[]);
+assert.deepEqual(awakenOptions(new Map([['blackhole',5],['mirrormaze',5]])),[{id:'lensinghole',from:['mirrormaze','blackhole']}]);
+// Every one of the 36 solo pairs awakens: ten through their fusion, 26 as twins.
+{
+ const solos=Object.keys(SOLO_FORMS);let pairs=0;
+ for(let i=0;i<solos.length;i++)for(let j=i+1;j<solos.length;j++){const options=awakenOptions(new Map([[solos[i],5],[solos[j],5]]));assert.equal(options.length,1,`${solos[i]}+${solos[j]}`);pairs++;}
+ assert.equal(pairs,36);assert.equal(Object.keys(TWIN_FORMS).length,26);
+}
+for(const t of Object.values(TWIN_FORMS)){
+ assert.ok(isTwinForm(t.id)&&t.parts.every(id=>SOLO_FORMS[id])&&SIGNATURES[t.id]?.name&&t.name&&t.desc);
+ assert.deepEqual(attackPartsOf(t.id),[...t.parts]);
+ assert.ok(!Object.values(FORMS).some(f=>[...f.requires].sort().join()===[...t.requires].sort().join()),`${t.id} duplicates a fusion`);
+}
+{
+ const forms=new Map([['gravityspear',6],['blackhole',6]]);assert.deepEqual(awakenOptions(forms),[{id:'gravityspear',from:['blackhole']}]);
+ assert.equal(awaken(forms,awakenOptions(forms)[0]),true);assert.deepEqual([...forms],[['gravityspear',8]]);
+ const part=formStats('glassspear',5,{twin:true}),solo=formStats('glassspear',5);
+ assert.ok(Math.abs(part.damage-solo.damage*TWIN.damage)<1e-9);assert.equal(formStats('gravityspear',5).twin,true);
+}
 assert.deepEqual(awakenOptions(new Map([['collapse',5],['prism',5]])),[]);
+// Twin combats: each attack fights on its own with the twin sheet and its own opening timer.
+{
+ const enemies=[{hp:1e9,g:{position:new V(0,0,-4)},slow:0}];
+ const opts={player:{position:new V()},enemies:()=>enemies,hit:()=>true,blocked:()=>false,boundary:()=>null,constrain:p=>p,vfx:null};
+ const a=createFormCombat(new THREE.Scene(),opts),b=createFormCombat(new THREE.Scene(),opts);
+ a.set('glassspear',6,{twin:true,openingDelay:2});b.set('blackhole',6,{twin:true,openingDelay:7});
+ assert.equal(a.state().twin,true);assert.equal(b.state().awakenIn,7);
+ for(let t=0;t<2.2;t+=.05){a.update(.05);b.update(.05);}
+ assert.ok(a.state().awakenIn>AWAKEN.openingEvery-.5,'first attack opened');assert.ok(b.state().awakenIn>4,'second attack waits its turn');
+ a.dispose();b.dispose();
+}
 // A solo shared by two fusions is offered for both; choosing one uses it up.
 {const forms=new Map([['collapse',4],['tidepull',4],['blackhole',5]]);assert.equal(awakenOptions(forms).length,2);awaken(forms,awakenOptions(forms)[0]);assert.deepEqual(awakenOptions(forms),[]);}
 
@@ -62,4 +90,4 @@ assert.equal(activeState(new Map([['bigcrunch',9]])).state,'SIGNATURE');
 }
 // Saved builds and rankings keep awakened evolutions.
 assert.deepEqual(parseBuild(buildRecord({forms:new Map([['maelstrom',8]])})).forms,[['maelstrom',8]]);
-console.log('Awakening: ten recipes, fusion+solo and solo+solo paths, feeding, level rule, lasting surge share, families, self-repeating opening move and saved builds passed.');
+console.log('Awakening: ten fusion recipes and 26 twins (all 36 solo pairs), fusion+solo and solo+solo paths, feeding, level rule, lasting surge share, families, self-repeating opening move and saved builds passed.');

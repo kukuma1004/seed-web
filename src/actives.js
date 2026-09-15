@@ -1,4 +1,4 @@
-import {ALL_FORMS,AWAKEN_FORMS} from './forms.js';
+import {ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
@@ -48,7 +48,9 @@ const BASE_SIGNATURES=Object.freeze({
 export const SIGNATURES=Object.freeze({
  ...BASE_SIGNATURES,
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
- ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)]))
+ ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
+ // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
+ ...Object.fromEntries(Object.values(TWIN_FORMS).map(f=>[f.id,sig(`${BASE_SIGNATURES[f.parts[0]].name} × ${BASE_SIGNATURES[f.parts[1]].name}`,`두 기술을 한꺼번에 펼칩니다. ${BASE_SIGNATURES[f.parts[0]].name}: ${BASE_SIGNATURES[f.parts[0]].desc} ${BASE_SIGNATURES[f.parts[1]].name}: ${BASE_SIGNATURES[f.parts[1]].desc} 궁극기 동안 1.5초마다 되풀이됩니다.`)]))
 });
 
 // The two strongest evolutions decide the active. Ties go to the evolution gained first (map order).
