@@ -35,7 +35,7 @@ export function activeColors(forms=[]){
 export function createActiveVFX(scene,{mobile=false}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
- const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide});return material;};
+ const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
  const glowTex=gradientTexture(64,glowFalloff),haloTex=gradientTexture(64,haloBand),beamTex=gradientTexture(32,beamFalloff);textures.push(glowTex,haloTex,beamTex);
 
  const floor=new THREE.Mesh(new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2),additive(glowTex));floor.position.y=.11;floor.name='active-floor-glow';group.add(floor);

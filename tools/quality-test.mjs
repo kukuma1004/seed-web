@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {QUALITY_LEVELS,QUALITY_NAMES,initialQuality,createQualityGovernor,GOVERNOR,clampLevel} from '../src/quality.js';
+import {QUALITY_LEVELS,QUALITY_NAMES,initialQuality,createQualityGovernor,GOVERNOR,clampLevel,renderPixelRatio} from '../src/quality.js';
 
 // Levels get cheaper step by step and never change gameplay fields.
 assert.equal(QUALITY_LEVELS.length,3);assert.equal(QUALITY_NAMES.length,3);
@@ -43,4 +43,12 @@ assert.equal(initialQuality({stored:'junk',mobile:false}),2);assert.equal(clampL
 {const g=createQualityGovernor(2);for(let t=0;t<(GOVERNOR.settleSeconds+GOVERNOR.windowSeconds*2+.5)*1000;t+=50)g.sample(50);assert.equal(g.state().level,0);assert.equal(g.state().drops,1);}
 // Around 55 fps stays on high.
 {const g=createQualityGovernor(2);for(let t=0;t<30000;t+=18)g.sample(18);assert.equal(g.state().level,2);}
+// Pixel ratio: computers and tablets keep the level floor; a sideways phone draws a sharper frame up to the level budget.
+{const [low,mid,high]=QUALITY_LEVELS;
+ assert.equal(renderPixelRatio(low,{width:1600,height:900,dpr:1.25}),.85);assert.equal(renderPixelRatio(mid,{width:1600,height:900,dpr:2}),1);assert.equal(renderPixelRatio(high,{width:1600,height:900,dpr:2}),1.5);
+ assert.equal(renderPixelRatio(mid,{width:1180,height:820,dpr:2}),1);
+ const phone=l=>renderPixelRatio(l,{width:915,height:412,dpr:3});
+ assert.ok(phone(low)>1&&phone(low)<phone(mid)&&phone(mid)<phone(high)&&phone(high)<=2);
+ for(const l of QUALITY_LEVELS)assert.ok(915*412*phone(l)**2<=l.pixelBudget*1.02||phone(l)===l.pixelRatio);
+ assert.equal(renderPixelRatio(high,{width:915,height:412,dpr:1}),1,'never above the device ratio');}
 console.log('Quality: three render levels, start level (URL/saved/device), steady devices keep quality, slow devices step down once per settle, stalls and pauses ignored passed.');

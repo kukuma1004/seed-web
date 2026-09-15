@@ -6,7 +6,7 @@ export function blocksShield(e,incoming){
 }
 export function createShield(scene){
  const g=new THREE.Group(),body=new THREE.Group();g.add(body);scene.add(g);
- const mat=new THREE.MeshBasicMaterial({color:0x71d6ff,transparent:true,opacity:.55,side:THREE.DoubleSide,depthWrite:false});
+ const mat=new THREE.MeshBasicMaterial({color:0x71d6ff,transparent:true,opacity:.55,side:THREE.DoubleSide,forceSinglePass:true,depthWrite:false});
  const arc=new THREE.Mesh(new THREE.RingGeometry(.78,.87,32,1,-Math.PI/3,Math.PI*2/3),mat);
  arc.rotation.x=-Math.PI/2;arc.rotation.z=-Math.PI/2;arc.position.y=.1;g.add(arc);
  return {g,body,type:'shield',hp:115,maxHp:115,state:'stalk',timer:1,dir:new V(0,0,1),phase:0,hit:0,block:0,arc};

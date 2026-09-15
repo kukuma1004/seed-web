@@ -33,7 +33,10 @@ export function createTouchControls(canAct){
     }
     let x=dx/center.radius,y=dy/center.radius;
     const magnitude=Math.hypot(x,y);if(magnitude>1){x/=magnitude;y/=magnitude;}
-    axes.move.x=magnitude<.14?0:x;axes.move.y=magnitude<.14?0:y;
+    // Speed curve (2026-09-15: half a push only gave half speed, which felt sluggish on a small phone stick).
+    // Past the dead zone the seed starts at 35% speed and reaches full speed at 60% of the stick radius.
+    const push=Math.min(1,magnitude),speed=push<.14?0:Math.min(1,.35+.65*(push-.14)/(.6-.14)),scale=push>0?speed/push:0;
+    axes.move.x=x*scale;axes.move.y=y*scale;
     knob.style.transform=`translate(calc(-50% + ${x*center.radius}px),calc(-50% + ${y*center.radius}px))`;
   }
   function begin(e,element,floating){

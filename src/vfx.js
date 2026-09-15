@@ -32,7 +32,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
   const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
   function batch(geometry,capacity){
-    const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide});
+    const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled=false;mesh.count=0;group.add(mesh);
     return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion()}))};

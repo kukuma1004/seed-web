@@ -5,11 +5,17 @@
 // Gameplay never changes with quality; only how the frame is drawn.
 export const QUALITY_KEY='seed-quality-v1';
 export const QUALITY_NAMES=Object.freeze(['낮음','보통','높음']);
+// pixelBudget (2026-09-15): a phone held sideways is only about 900x400 CSS pixels, so the floor ratio drew a tiny,
+// blurry frame on a sharp screen. Small screens may raise the ratio until the frame reaches the budget; large screens keep the floor.
 export const QUALITY_LEVELS=Object.freeze([
- Object.freeze({level:0,pixelRatio:.85,bloom:'off',shadows:false,shadowSize:1024,lanternLights:false}),
- Object.freeze({level:1,pixelRatio:1,bloom:'half',shadows:true,shadowSize:1024,lanternLights:false}),
- Object.freeze({level:2,pixelRatio:1.5,bloom:'full',shadows:true,shadowSize:2048,lanternLights:true})
+ Object.freeze({level:0,pixelRatio:.85,pixelBudget:400000,bloom:'off',shadows:false,shadowSize:1024,lanternLights:false}),
+ Object.freeze({level:1,pixelRatio:1,pixelBudget:700000,bloom:'half',shadows:true,shadowSize:1024,lanternLights:false}),
+ Object.freeze({level:2,pixelRatio:1.5,pixelBudget:1400000,bloom:'full',shadows:true,shadowSize:2048,lanternLights:true})
 ]);
+export function renderPixelRatio(q,{width=1,height=1,dpr=1}={}){
+ const area=Math.max(1,width*height),wanted=Math.max(q.pixelRatio,Math.sqrt(q.pixelBudget/area));
+ return Math.round(Math.min(dpr||1,2,wanted)*100)/100;
+}
 export const clampLevel=v=>Number.isInteger(v)?Math.max(0,Math.min(2,v)):null;
 
 // Start: ?quality=0|1|2 (testing) > what this device settled on last time > phone 1 / computer 2.
