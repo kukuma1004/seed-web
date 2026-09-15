@@ -435,12 +435,11 @@ function showIntro(){pauseBuild.hide();activeVfx.clear();cancelActive(activeGaug
  document.querySelectorAll('[data-guide]').forEach(b=>b.onclick=()=>{guideTarget=b.dataset.guide||null;document.querySelectorAll('[data-guide]').forEach(n=>n.setAttribute('aria-pressed',String((n.dataset.guide||null)===guideTarget)));});
  updateFormLabel();
 }
-// Under each ranking line: bosses beaten for everyone, the full build for the top three.
+// Every visible ranking line shows its build. Legacy runs explain why they cannot.
 function rankBuild(entry,place){
  const b=parseBuild(entry.build);
- if(!b)return place<=3?'<div class="rank-build none">조합 기록 없음</div>':'';
+ if(!b)return '<div class="rank-build none">이전 버전 기록 · 조합 미저장</div>';
  const boss=`<span class="rank-boss">${bossText(entry.build)}</span>`;
- if(place>3)return `<div class="rank-build brief">${boss}</div>`;
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
@@ -457,7 +456,7 @@ function showRanking(view='online'){
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view==='local'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
- online.flush().catch(()=>0).then(()=>online.top(500)).then(board=>{
+ online.flush().catch(()=>0).then(()=>online.top(500,playerName)).then(board=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
   const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
  }).catch(()=>{

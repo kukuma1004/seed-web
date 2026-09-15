@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,FETCH_RECENT,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
@@ -34,8 +34,9 @@ function fakeFirebase({clock}){
   const bm=path.match(/^seedRanking\/builds\/(.+)$/);
   if(path==='seedRanking/builds'||bm){
    if(!buildRulesPublished)return json(401,{error:'Permission denied'});
-   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt'));return json(200,Object.fromEntries(Object.entries(builds).filter(([k])=>k>=from)));}
+   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt')),limit=Number(u.searchParams.get('limitToLast'));const kept=Object.entries(builds).filter(([k])=>k>=from).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
    const id=bm[1];
+   if(!opts.method||opts.method==='GET')return json(200,builds[id]||null);
    if(opts.method==='PUT'){
     const b=JSON.parse(opts.body),keys=Object.keys(b).sort().join(',');
     if(builds[id]||runs[id]?.uid!==uid||b.uid!==uid||keys!=='austins,forms,laws,relic,uid,wardens'||b.laws.length>120||b.forms.length>120)return json(401,{error:'Permission denied'});
@@ -123,6 +124,9 @@ function fakeFirebase({clock}){
  assert.deepEqual(first.board[0].build,{uid:first.board[0].uid,...build},'the build comes back with the line');
  assert.equal(bossText(first.board[0].build),'문지기 5 · 오스틴 1회 격파');
  assert.ok(buildText(first.board[0].build).startsWith('붕괴의 씨앗 Lv.6 · 만개한 꽃 Lv.4 · 연쇄 Lv.2'));
+ // Enough later builds push this high score outside the recent-build query. Its exact id is recovered for display.
+ for(let i=0;i<=FETCH_RECENT;i++)fb.builds[pushKeyPrefix(clock.t+i+1)+String(i).padStart(12,'0')]={uid:'noise',laws:'chain:1',forms:'',relic:'',wardens:0,austins:0};
+ assert.deepEqual((await ranking.top(20,'빌드왕'))[0].build,{uid:first.board[0].uid,...build},'an old top build is fetched directly after it leaves the recent window');
  fb.buildRulesPublished=false;
  const older=await ranking.submit({name:'옛규칙',score:900,cycle:0,stage:2,kills:30,time:100,build});
  assert.ok(older.rank>0,'the run is kept even when the build cannot be written');assert.equal(older.board.find(e=>e.name==='옛규칙').build,undefined);

@@ -57,17 +57,22 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  const runsURL=(s,query='')=>`${config.databaseURL}/${RUNS_PATH}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
  // Two reads merged: the highest scores overall (old seasons are filtered out) and every recent run since the season began,
  // so new runs are found even while old high scores fill the score query.
- async function top(limit=20){
+ async function top(limit=20,playerName=''){
   const s=await signIn();
   const [best,recent]=await Promise.all([
    request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
    request(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
   ]);
   const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
-  // Builds live beside the runs under the same push id; before their rules are published this read simply fails.
+  // Builds live beside the runs under the same push id. Load the recent batch first, then recover any
+  // displayed old high score (and this player's line) that has fallen outside that moving window.
   try{
    const builds=await request(`${config.databaseURL}/${BUILDS_PATH}.json?orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&auth=${encodeURIComponent(s.idToken)}`);
    for(const run of board)if(builds&&validBuild(builds[run.id])&&builds[run.id].uid===run.uid)run.build=builds[run.id];
+   const cleanPlayer=cleanName(playerName),wanted=[...board.slice(0,10),...board.filter(run=>cleanPlayer&&run.uid===s.uid&&run.name===cleanPlayer)];
+   const missing=[...new Map(wanted.filter(run=>!run.build).map(run=>[run.id,run])).values()];
+   const recovered=await Promise.allSettled(missing.map(run=>request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(run.id)}.json?auth=${encodeURIComponent(s.idToken)}`)));
+   recovered.forEach((result,i)=>{const run=missing[i],build=result.status==='fulfilled'?result.value:null;if(validBuild(build)&&build.uid===run.uid)run.build=build;});
   }catch{}
   return board;
  }
@@ -90,7 +95,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   let sent;
   try{sent=await post(entry);}
   catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,build:validBuild(entry.build)?entry.build:null}]);throw error;}
-  const board=await top(limit);
+  const board=await top(limit,sent.name);
   const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
   return {id:sent.id,board,rank:mine+1,bestRank:best+1};
  }
