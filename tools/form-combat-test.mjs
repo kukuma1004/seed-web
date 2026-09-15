@@ -90,6 +90,7 @@ assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
  step(f.combat,.35);assert.ok(close.g.position.distanceTo(f.player.position)>=FORM_COMBAT.tidepull.safeRadius-.02);
  step(f.combat,1.7);assert.ok(close.g.position.distanceTo(f.player.position)>=FORM_COMBAT.tidepull.safeRadius-.02);
  assert.ok(f.calls.some(c=>c.kind==='tidepull'&&c.damage>=FORM_COMBAT.tidepull.damage),'remote anchor has a meaningful rupture');
+ assert.ok(f.calls.some(c=>c.kind==='tidepull'&&c.phase==='return'&&c.damage===FORM_COMBAT.tidepull.returnDamage),'the returning tide damages along its way home');
  assert.ok(close.slow>0||far.slow>0,'the tide controls the gathered crowd');f.combat.dispose();
 }
 {

@@ -21,6 +21,7 @@ assert.equal(Object.keys(FORMS).length,10);
 assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,10);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
+assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
 
 // Form level follows both ingredients, without a ceiling; stats grow and counts stay bounded.
 assert.equal(formLevel(new Map([['gravity',1],['burst',1]]),'collapse'),1);
@@ -85,8 +86,9 @@ for(const id of Object.keys(FORMS)){
 {
  const foe=enemy(5),boss=enemy(5,.5,'warden'),f=fixture([foe,boss]);f.combat.set('tidepull');f.combat.fire(vec(),vec(1));
  step(f.combat,2.5);
- assert.ok(foe.g.position.x>=formStats('tidepull',1).safeRadius,`kept outside the safe ring (x=${foe.g.position.x.toFixed(2)})`);assert.equal(boss.g.position.x,5);
+ assert.ok(foe.g.position.x>=formStats('tidepull',1).safeRadius-.02,`kept outside the safe ring (x=${foe.g.position.x.toFixed(2)})`);assert.equal(boss.g.position.x,5);
  assert.ok(f.calls.some(c=>c.e===foe&&c.damage===formStats('tidepull',1).damage),'bursts at the remote anchor');
+ assert.ok(f.calls.some(c=>c.phase==='return'),'the current hits again while carrying enemies home');
 }
 
 // Seed storm: a short fan; close enemies are shredded, distant ones are out of reach.

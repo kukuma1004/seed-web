@@ -76,8 +76,8 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    }
    case 'tidepull':{
     if(full('tidepull',S.vortices))return S.interval;
-    const ob=spawnMesh(geos.vortex,mats.tide,pos);ob.rotation.x=-Math.PI/2;
-    bolts.push({kind:'tidepull',ob,dir:aim,age:0,returning:false,anchored:false,hold:S.hold,tick:0,life:4});
+    const ob=spawnMesh(geos.tide,mats.tide,pos);ob.rotation.x=-Math.PI/2;ob.scale.set(1.25,.82,1);
+    bolts.push({kind:'tidepull',ob,dir:aim,age:0,returning:false,anchored:false,hold:S.hold,tick:0,returnHits:new Set(),life:4});
     fx.muzzle(pos,aim,'gravity');return S.interval;
    }
    case 'mirrormaze':{
@@ -359,9 +359,9 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     if(b.age>.7&&!b.anchored){
      b.anchored=true;b.hold=S.hold;b.dir.set(0,0,0);
      fx.flame(b.ob.position,'gravity',15,S.radius*.38);fx.burst(b.ob.position,'gravity',24,1.35);
-     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.damage,{kind:'tidepull',indirect:true,direction:e.g.position.clone().sub(b.ob.position).setY(0).normalize()});e.slow=Math.max(e.slow||0,S.slow);}
+     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.damage,{kind:'tidepull',phase:'turn',indirect:true,direction:e.g.position.clone().sub(b.ob.position).setY(0).normalize()});e.slow=Math.max(e.slow||0,S.slow);}
     }
-    if(b.anchored&&!b.returning){b.hold-=dt;if(b.hold<=0)b.returning=true;}
+    if(b.anchored&&!b.returning){b.hold-=dt;if(b.hold<=0){b.returning=true;fx.pulse(b.ob.position,'recall',S.radius*.75,.28);}}
     if(b.returning){
      b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();
      if(flat(b.ob.position,player.position)<.8){
@@ -370,9 +370,12 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      }
     }
     if(!b.anchored||b.returning)b.ob.position.addScaledVector(b.dir,dt*(b.returning?8:9));b.ob.rotation.z+=dt*(b.anchored&&!b.returning?13:8);
+    if(!b.anchored||b.returning)fx.trail(previous,b.ob.position,b.returning?'recall':'gravity',false);
     if(!b.anchored&&(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position))){b.ob.position.copy(previous);b.age=.71;}
     for(const e of enemies()){
-     if(e.dead||immovable(e)||b.returning)continue;
+     if(e.dead)continue;
+     if(b.returning&&!b.returnHits.has(e)&&flat(e.g.position,b.ob.position)<S.radius){b.returnHits.add(e);support(e,S.returnDamage,{kind:'tidepull',phase:'return',indirect:true,direction:b.dir.clone()});}
+     if(immovable(e))continue;
      const pull=b.ob.position.clone().sub(e.g.position).setY(0),d=pull.length();
      if(d<S.radius&&d>.05){
       const next=e.g.position.clone().addScaledVector(pull.normalize(),Math.min(d,dt*S.pull));
@@ -384,7 +387,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     b.tick-=dt;
     if(b.tick<=0){
      b.tick=.25;fx.pulse(b.ob.position,'gravity',S.radius*.6,.2);
-     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.tick,{kind:'tidepull',indirect:true,direction:b.dir.clone()});e.slow=Math.max(e.slow||0,S.slow);}
+     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.tick,{kind:'tidepull',phase:b.returning?'return-current':'outbound-current',indirect:true,direction:b.dir.clone()});e.slow=Math.max(e.slow||0,S.slow);}
     }
     continue;
    }

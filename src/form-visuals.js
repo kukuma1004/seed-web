@@ -86,6 +86,12 @@ export function createFormVisuals(){
  const swirl=[];
  for(let i=0;i<3;i++)swirl.push(paint(crescent(.67),i===0?C.ivory:i===1?C.jade:C.violet).rotateZ(i*Math.PI*2/3));
  geos.vortex=join('tidal-leaf-whorl',swirl);
+ geos.tide=join('returning-tidal-comet',[
+  paint(crescent(1.02),C.blue).rotateZ(-.12).translate(.2,0,0),
+  paint(crescent(.78),C.ice).rotateZ(Math.PI+.16).translate(-.28,0,.055),
+  paint(leaf(.82,.18,.18,.055,7),C.jade).rotateZ(-Math.PI/2).translate(-.52,0,.08),
+  paint(leaf(.58,.12,.14,.04,6),C.ivory).rotateZ(-Math.PI/2).translate(-.82,.22,.1)
+ ]);
  geos.seed=join('winged-seed',[
   seedBody(.105,.23,C.ivory),
   paint(leaf(.33,.13,.06,.025,5),C.jade).rotateZ(-.65).translate(.07,.095,0)
