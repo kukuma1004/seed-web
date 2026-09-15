@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame} from '../src/seed-body.js';
-import {actorArtRotation} from '../src/actor-art.js';
+import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry} from '../src/actor-art.js';
 for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw,yaw),0);
  assert.equal(seedFrame(yaw+Math.PI/2,yaw),1);
@@ -37,3 +37,6 @@ for(const phase of ['normal','overtime','deadline',undefined,0,.7])for(const sta
 }
 assert.equal(actorArtRotation('stalk',2,.7),Math.sin(18+.7)*.025);
 console.log('Austin named phases and mob gait phases produce finite sprite poses.');
+assert.equal(new Set(Object.values(ACTOR_ART_GEOMETRIES)).size,5);
+for(let frame=0;frame<4;frame++)assert.equal(actorFrameGeometry(frame+4),actorFrameGeometry(frame));
+console.log('Directional actor art reuses one atlas with four shared UV planes.');

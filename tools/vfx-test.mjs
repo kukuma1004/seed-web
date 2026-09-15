@@ -12,6 +12,8 @@ for(const mobile of [false,true]){
   fx.update(.016);
   assert.deepEqual(a,beforeA);assert.deepEqual(b,beforeB,'VFX must never move gameplay objects');
   assert.deepEqual(root.children,meshes,'Effects must reuse five GPU batches');
+  assert.equal(meshes[1].geometry.name,'seed-vfx-broken-shock-crown');
+  assert.equal(meshes[2].geometry.name,'seed-vfx-tapered-streak');
   assert.ok(fx.state().events.flame>0&&fx.state().events.explosion>0,'Explosions add a bounded flame crown');
   assert.ok(fx.state().active<=fx.state().capacity);
   for(const mesh of meshes){

@@ -37,22 +37,24 @@ export function createSeedBody(scene){
 
  let applyEvolution=()=>{};
  const sources={
-  fusion:{file:SEED_FUSION_BODY_ART,tiles:FUSION_BODY_TILES,ready:false,texture:null},
-  solo:{file:SEED_SOLO_BODY_ART,tiles:SOLO_BODY_TILES,ready:false,texture:null}
+  fusion:{file:SEED_FUSION_BODY_ART,tiles:FUSION_BODY_TILES,ready:false,loading:false,texture:null},
+  solo:{file:SEED_SOLO_BODY_ART,tiles:SOLO_BODY_TILES,ready:false,loading:false,texture:null}
  };
- for(const source of Object.values(sources)){
-  source.texture=loader.load(import.meta.env.BASE_URL+'assets/'+source.file,()=>{source.ready=true;applyEvolution();});
-  source.texture.colorSpace=THREE.SRGBColorSpace;source.texture.repeat.set(.25,1/3);
- }
- const evolutionMaterial=applySpriteLighting(new THREE.SpriteMaterial({map:sources.fusion.texture,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.76,highlight:1.1,rim:0xffe8ae,rimStrength:.085});
+ const evolutionMaterial=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.76,highlight:1.1,rim:0xffe8ae,rimStrength:.085});
  const evolutionSprite=new THREE.Sprite(evolutionMaterial);evolutionSprite.center.set(.5,.055);evolutionSprite.scale.set(EVOLUTION_SIZE,EVOLUTION_SIZE,1);evolutionSprite.visible=false;root.add(evolutionSprite);
- const evolutionGhostMaterial=new THREE.SpriteMaterial({map:sources.fusion.texture,alphaTest:.08,transparent:true,opacity:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
+ const evolutionGhostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
  const evolutionGhost=new THREE.Sprite(evolutionGhostMaterial);evolutionGhost.center.set(.5,.055);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhost.renderOrder=2;evolutionGhost.visible=false;root.add(evolutionGhost);
  const secondaryMaterial=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.68,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
  const secondaryAura=new THREE.Mesh(new THREE.TorusGeometry(.48,.025,5,36),secondaryMaterial);secondaryAura.rotation.x=Math.PI/2;secondaryAura.position.y=.12;secondaryAura.visible=false;root.add(secondaryAura);
 
  let currentEvolution=null,secondaryEvolution=null;
  const sourceFor=id=>Object.values(sources).find(source=>Object.hasOwn(source.tiles,id));
+ const ensureSource=source=>{
+  if(!source||source.loading||source.ready)return;
+  source.loading=true;
+  source.texture=loader.load(import.meta.env.BASE_URL+'assets/'+source.file,()=>{source.ready=true;applyEvolution();});
+  source.texture.colorSpace=THREE.SRGBColorSpace;source.texture.repeat.set(.25,1/3);
+ };
  applyEvolution=()=>{
   const source=sourceFor(currentEvolution),active=Boolean(source?.ready);
   if(active){const tile=source.tiles[currentEvolution];source.texture.offset.set((tile%4)/4,1-(Math.floor(tile/4)+1)/3);evolutionMaterial.map=evolutionGhostMaterial.map=source.texture;evolutionMaterial.needsUpdate=evolutionGhostMaterial.needsUpdate=true;}
@@ -63,7 +65,7 @@ export function createSeedBody(scene){
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null};
  root.userData.setEvolution=forms=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
-  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;applyEvolution();return currentEvolution;
+  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
   if(!secondaryAura.visible)return;const pulse=1+Math.sin(time*4)*.055+(overdrive?.12:0);secondaryAura.scale.setScalar(pulse);secondaryAura.rotation.z=time*(overdrive?2.2:.8);secondaryMaterial.opacity=overdrive?.92:.68;

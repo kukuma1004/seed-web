@@ -3,7 +3,16 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 const alongZ=geometry=>geometry.rotateX(Math.PI/2);
 const merge=(name,parts)=>{
- const geometries=parts.map(g=>g.index?g.toNonIndexed():g);
+ const geometries=parts.map((g,partIndex)=>{
+  const geometry=g.index?g.toNonIndexed():g;if(geometry!==g)g.dispose();
+  const position=geometry.getAttribute('position'),colors=new Float32Array(position.count*3);
+  const base=[.7,1.15,.9,1.35][partIndex%4];
+  for(let i=0;i<position.count;i++){
+   const tip=Math.max(0,Math.min(1,(position.getZ(i)+.4)/.8)),brightness=base*(.78+tip*.34);
+   colors[i*3]=brightness;colors[i*3+1]=brightness*(.94+tip*.06);colors[i*3+2]=brightness*(.82+tip*.18);
+  }
+  geometry.setAttribute('color',new THREE.BufferAttribute(colors,3));return geometry;
+ });
  const out=mergeGeometries(geometries,false);out.name=`seed-shot-${name}`;out.computeVertexNormals();out.computeBoundingSphere();
  for(const g of geometries)g.dispose();return out;
 };
