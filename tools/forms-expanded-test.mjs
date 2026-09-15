@@ -80,12 +80,13 @@ for(const id of Object.keys(FORMS)){
  f.combat.set('stormcrown',7);assert.equal(f.combat.state().orbit,formStats('stormcrown',7).orbs);assert.equal(f.combat.state().level,7);
 }
 
-// Tide pull: drags ordinary enemies back to the seed and bursts there; wardens hold their ground.
+// Tide pull: gathers ordinary enemies at a remote anchor, never across the
+// seed's safe ring; wardens hold their ground.
 {
  const foe=enemy(5),boss=enemy(5,.5,'warden'),f=fixture([foe,boss]);f.combat.set('tidepull');f.combat.fire(vec(),vec(1));
  step(f.combat,2.5);
- assert.ok(foe.g.position.x<3,`dragged toward the seed (x=${foe.g.position.x.toFixed(2)})`);assert.equal(boss.g.position.x,5);
- assert.ok(f.calls.some(c=>c.e===foe&&c.damage===formStats('tidepull',1).damage),'bursts on return');
+ assert.ok(foe.g.position.x>=formStats('tidepull',1).safeRadius,`kept outside the safe ring (x=${foe.g.position.x.toFixed(2)})`);assert.equal(boss.g.position.x,5);
+ assert.ok(f.calls.some(c=>c.e===foe&&c.damage===formStats('tidepull',1).damage),'bursts at the remote anchor');
 }
 
 // Seed storm: a short fan; close enemies are shredded, distant ones are out of reach.

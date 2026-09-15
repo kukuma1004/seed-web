@@ -18,6 +18,8 @@
 #active-skill.running.overdrive .active-fill{background:conic-gradient(#ff8fd8 var(--fill),#ffffff14 0)}
 #active-skill.running{box-shadow:0 0 22px #8ff5ffaa}
 #active-skill.running.overdrive{box-shadow:0 0 26px #ff8fd8bb}
+#active-skill.cooling{filter:saturate(.45);box-shadow:0 0 12px #7db5b866}
+#active-skill.cooling .active-fill{background:conic-gradient(#7baeb7 var(--fill),#ffffff10 0)}
 @keyframes active-ready{50%{box-shadow:0 0 24px #ffd978cc}}
 @keyframes active-orbit{to{transform:rotate(360deg)}}
 #active-skill.running{animation:active-running .42s ease-in-out infinite alternate}

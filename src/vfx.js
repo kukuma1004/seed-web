@@ -8,7 +8,7 @@ export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=
 export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0);
-  const counters={burst:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
+  const counters={burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -18,6 +18,9 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const sparks=batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
   const rings=batch(new THREE.RingGeometry(.92,1,48).rotateX(-Math.PI/2),mobile?18:32);
   const beams=batch(new THREE.BoxGeometry(1,1,1),mobile?120:240);
+  // One tapered batch gives explosions a rising flame crown without creating a
+  // mesh or a light for every lick of fire.
+  const flames=batch(new THREE.ConeGeometry(1,2,5).translate(0,1,0),mobile?96:180);
   const ghostParts=[];
   const part=(geo,x,y,z)=>{geo.translate(x,y,z);ghostParts.push(geo);};
   part(new THREE.IcosahedronGeometry(.43,1).scale(1,1.2,.75),0,.65,0);
@@ -31,7 +34,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const unindexed=ghostParts.map(g=>g.index?g.toNonIndexed():g.clone());
   const ghosts=batch(mergeGeometries(unindexed),mobile?4:8);
   for(const geo of [...ghostParts,...unindexed])geo.dispose();
-  const batches=[sparks,rings,beams,ghosts];
+  const batches=[sparks,rings,beams,flames,ghosts];
   function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
     p.rotation.copy(rotation||new THREE.Quaternion());p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=FX_COLORS[tint]??tint??FX_COLORS.seed;
@@ -45,6 +48,14 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     const delta=b.clone().sub(a),length=delta.length();if(length<.001)return;
     emit(beams,a.clone().add(b).multiplyScalar(.5),id,life,width,length,width,{rotation:new THREE.Quaternion().setFromUnitVectors(up,delta.normalize()),delay});
   }
+  function flame(pos,id='burst',n=10,spread=1,delay=0){
+    counters.flame++;
+    const count=Math.ceil(n*(mobile?.62:1));
+    for(let i=0;i<count;i++){
+      const a=random()*Math.PI*2,r=random()*.55*spread,size=.045+random()*.055;
+      emit(flames,new THREE.Vector3(pos.x+Math.cos(a)*r,pos.y+.08,pos.z+Math.sin(a)*r),id,.28+random()*.34,size,size*(2.5+random()*2),size,{velocity:new THREE.Vector3(Math.cos(a)*.18,.45+random()*1.25,Math.sin(a)*.18),rotation:new THREE.Quaternion().setFromAxisAngle(up,a),delay});
+    }
+  }
   function burst(pos,id='seed',n=12,spread=1,delay=0){
     counters.burst++;
     for(let i=0;i<Math.ceil(n*(mobile?.65:1));i++){
@@ -52,6 +63,15 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
       const size=.04+random()*.06;
       emit(sparks,new THREE.Vector3(pos.x,pos.y+.6,pos.z),id,.25+random()*.3,size,size*2.5,size,{velocity:new THREE.Vector3(Math.cos(a)*speed,.5+random()*2,Math.sin(a)*speed),gravity:3,delay});
     }
+    if(id==='burst')flame(pos,id,Math.max(5,Math.ceil(n*.55)),spread,delay);
+  }
+  function explosion(pos,id='burst',radius=1,big=false){
+    counters.explosion++;
+    // A compact shock ring keeps impact timing readable; flames and embers carry
+    // the actual radius so the blast does not become a flat colored disc.
+    pulse(pos,id,radius*.46,.34);pulse(pos,'amber',radius*.27,.24,.035);
+    burst(pos,id,big?34:18,Math.max(.8,radius*.55));
+    flame(pos,id,big?18:10,Math.max(.8,radius*.48),.03);
   }
   function impact(pos,id='seed',big=false){
     counters.impact++;burst(pos,id,big?30:9,big?1.4:1);
@@ -112,7 +132,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
         if(p.delay>0){p.delay-=dt;continue;}
         p.life-=dt;if(p.life<=0)continue;
         p.vel.y-=p.gravity*dt;p.pos.addScaledVector(p.vel,dt);
-        const t=p.life/p.max,scale=pool===rings?1+(1-t)*p.grow:pool===ghosts?1:.4+.6*t;
+        const t=p.life/p.max,scale=pool===rings?1+(1-t)*p.grow:pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
         dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);dummy.updateMatrix();
         pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4));pool.mesh.setColorAt(count,color);count++;
       }
@@ -120,8 +140,8 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
-    state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:4,events:{...counters}}),
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
+    state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:5,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

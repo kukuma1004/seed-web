@@ -1,7 +1,7 @@
 import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS,isFormEligible} from './forms.js';
-import {validActiveGauge} from './actives.js';
+import {validActiveGauge,validActiveCooldown} from './actives.js';
 import {validInventory} from './inventory.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑'};
@@ -17,7 +17,7 @@ export function validCheckpoint(s){
  }
  if(s?.form!=null&&!isFormEligible(s.form,s.rules))return false;
  if(s?.guideTarget!=null&&!Object.hasOwn(ALL_FORMS,s.guideTarget))return false;
- if(!validActiveGauge(s?.activeGauge))return false;
+ if(!validActiveGauge(s?.activeGauge)||!validActiveCooldown(s?.activeCooldown))return false;
  if(s?.rerollUsed!==undefined&&typeof s.rerollUsed!=='boolean')return false;
  // Score, boss counts and potions arrived later; older saves simply do not have them.
  if(s?.score!==undefined&&!(Number.isInteger(s.score)&&s.score>=0&&s.score<1e12))return false;

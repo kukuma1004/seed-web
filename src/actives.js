@@ -1,17 +1,18 @@
 import {ALL_FORMS} from './forms.js';
-import {rankedEvolutions} from './evolution-rank.js';
+import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
 // LOCKED (no evolution) · SIGNATURE (one: that evolution's own move) · OVERDRIVE (two or more: the two strongest together).
 // Numbers here are first-pass values meant to be tuned; they all live in ACTIVE.
 export const ACTIVE=Object.freeze({
  max:100,
- kill:3,            // each enemy kill (about 34 kills per active)
- eliteKill:12,      // elite, shield and turret kills
- bossShare:60,      // a whole boss health bar is worth this much, spread over the damage dealt
+ kill:1,            // a whole crowd is required; fast-clearing builds no longer loop ultimates
+ eliteKill:6,       // elite, shield and turret kills
+ bossShare:30,      // a whole boss health bar contributes less than a third of the gauge
+ cooldownSeconds:20,// post-use lock prevents a screen clear from paying for the next ultimate
  signatureSeconds:3,
- overdriveSeconds:5,
- finaleDamage:70,
+ overdriveSeconds:4.5,
+ finaleDamage:60,
  finaleRadius:4.2,
  maxArcs:6,
  maxEchoes:2
@@ -47,7 +48,7 @@ export const SIGNATURES=Object.freeze({
 
 // The two strongest evolutions decide the active. Ties go to the evolution gained first (map order).
 export function activeState(forms=new Map()){
- const held=rankedEvolutions(forms,ALL_FORMS,2);
+ const held=activeUltimateEvolutions(forms,ALL_FORMS,2);
  const state=held.length===0?'LOCKED':held.length===1?'SIGNATURE':'OVERDRIVE';
  return {state,forms:held.map(h=>h.id),level:held.reduce((n,h)=>n+h.level,0)};
 }
@@ -78,11 +79,13 @@ export function overdriveFinale(tags=[],level=2){
 }
 
 // The gauge. It does not fill while an active is running, so an active can never pay for the next one.
-export function createActiveGauge(value=0){return {value:clampGauge(value),plan:null};}
+export function createActiveGauge(value=0,cooldown=0){return {value:clampGauge(value),plan:null,cooldown:clampActiveCooldown(cooldown)};}
 export const clampGauge=v=>Number.isFinite(v)?Math.max(0,Math.min(ACTIVE.max,v)):0;
+export const clampActiveCooldown=v=>Number.isFinite(v)?Math.max(0,Math.min(ACTIVE.cooldownSeconds,v)):0;
 export const validActiveGauge=v=>v===undefined||(Number.isFinite(v)&&v>=0&&v<=ACTIVE.max);
+export const validActiveCooldown=v=>v===undefined||(Number.isFinite(v)&&v>=0&&v<=ACTIVE.cooldownSeconds);
 export function chargeActive(gauge,amount){
- if(gauge.plan||!(amount>0))return gauge.value;
+ if(gauge.plan||gauge.cooldown>0||!(amount>0))return gauge.value;
  gauge.value=clampGauge(gauge.value+amount);return gauge.value;
 }
 export function killCharge(enemy){
@@ -92,7 +95,7 @@ export function killCharge(enemy){
  return enemy.type==='shield'||enemy.type==='turret'?ACTIVE.eliteKill:ACTIVE.kill;
 }
 export function bossCharge(amount,maxHp){return maxHp>0&&amount>0?Math.min(amount,maxHp)/maxHp*ACTIVE.bossShare:0;}
-export function activeReady(gauge,forms){return !gauge.plan&&gauge.value>=ACTIVE.max&&activeState(forms).state!=='LOCKED';}
+export function activeReady(gauge,forms){return !gauge.plan&&gauge.cooldown<=0&&gauge.value>=ACTIVE.max&&activeState(forms).state!=='LOCKED';}
 
 export function startActive(gauge,forms){
  if(!activeReady(gauge,forms))return null;
@@ -105,19 +108,19 @@ export function startActive(gauge,forms){
 }
 // Returns the finished plan on the frame it ends, otherwise null.
 export function tickActive(gauge,dt){
- if(!gauge.plan)return null;
+ if(!gauge.plan){gauge.cooldown=Math.max(0,gauge.cooldown-dt);return null;}
  gauge.plan.time-=dt;
  if(gauge.plan.time>0)return null;
- const done=gauge.plan;gauge.plan=null;return done;
+ const done=gauge.plan;gauge.plan=null;gauge.cooldown=ACTIVE.cooldownSeconds;return done;
 }
-export function cancelActive(gauge){gauge.plan=null;}
+export function cancelActive(gauge){if(gauge.plan)gauge.cooldown=Math.max(gauge.cooldown,ACTIVE.cooldownSeconds);gauge.plan=null;}
 
 // Text for the button and the pause sheet.
 export function activeSummary(forms,gauge){
  const s=activeState(forms);
  if(s.state==='LOCKED')return {state:s.state,title:'궁극기 잠김',lines:['완성 진화나 단독 진화를 얻으면 열립니다']};
- if(s.state==='SIGNATURE'){const g=SIGNATURES[s.forms[0]];return {state:s.state,forms:s.forms,title:g.name,lines:[g.desc,`${ACTIVE.signatureSeconds}초`]};}
+ if(s.state==='SIGNATURE'){const g=SIGNATURES[s.forms[0]];return {state:s.state,forms:s.forms,title:g.name,lines:[g.desc,`${ACTIVE.signatureSeconds}초 · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`]};}
  const tags=overdriveTags(s.forms),finale=overdriveFinale(tags,s.level);
  return {state:s.state,forms:s.forms,title:`오버드라이브 · ${s.forms.map(id=>SIGNATURES[id].name).join(' + ')}`,
-  lines:[`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
+  lines:[`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`공전 진화는 가장 강한 하나만 공명`,`사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`,`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
 }

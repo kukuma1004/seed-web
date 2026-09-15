@@ -2,8 +2,17 @@ import * as THREE from 'three';
 import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 
-// A bounded five-draw-call stage around the seed. It is allocated once and
-// only shown while a signature or overdrive is running or finishing.
+// A bounded five-draw-call stage around the seed. Broken petal wheels carry the
+// silhouette; the floor wash stays faint so the effect does not read as circles.
+function petalWheel(count,inner=.72,outer=1,width=.16){
+ const positions=[],indices=[];
+ for(let i=0;i<count;i++){
+  const a=i*Math.PI*2/count,c=Math.cos(a),s=Math.sin(a),tx=-s,tz=c,mid=(inner+outer)*.5,base=positions.length/3;
+  positions.push(c*inner,0,s*inner,c*mid+tx*width,0,s*mid+tz*width,c*outer,0,s*outer,c*mid-tx*width,0,s*mid-tz*width);
+  indices.push(base,base+1,base+3,base+1,base+2,base+3);
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
+}
 export function activeColors(forms=[]){
  const colors=[];
  for(const id of forms)for(const law of ALL_FORMS[id]?.requires||[]){const color=LAWS[law]?.color;if(color!=null&&!colors.includes(color))colors.push(color);}
@@ -12,10 +21,10 @@ export function activeColors(forms=[]){
 export function createActiveVFX(scene,{mobile=false}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const additive=(color=0xffffff)=>new THREE.MeshBasicMaterial({color,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide});
- const floor=new THREE.Mesh(new THREE.CircleGeometry(1,48).rotateX(-Math.PI/2),additive());floor.position.y=.105;group.add(floor);
- const ringA=new THREE.Mesh(new THREE.RingGeometry(.88,1,64).rotateX(-Math.PI/2),additive());ringA.position.y=.13;group.add(ringA);
- const ringB=new THREE.Mesh(new THREE.RingGeometry(.9,1,48).rotateX(-Math.PI/2),additive());ringB.position.y=.15;group.add(ringB);
- const column=new THREE.Mesh(new THREE.CylinderGeometry(.16,1.15,7,24,1,true),additive());column.position.y=3.5;group.add(column);
+ const floor=new THREE.Mesh(new THREE.CircleGeometry(1,32).rotateX(-Math.PI/2),additive());floor.position.y=.105;group.add(floor);
+ const ringA=new THREE.Mesh(petalWheel(8,.62,1,.16),additive());ringA.position.y=.13;group.add(ringA);
+ const ringB=new THREE.Mesh(petalWheel(13,.76,1,.09),additive());ringB.position.y=.15;group.add(ringB);
+ const column=new THREE.Mesh(new THREE.ConeGeometry(.72,5.5,7,1,true),additive());column.position.y=2.85;group.add(column);
  const shardGeo=new THREE.OctahedronGeometry(.18,0);shardGeo.scale(.5,2.1,1);
  const shardMat=additive();shardMat.vertexColors=true;
  const shardCount=mobile?10:16,shards=new THREE.InstancedMesh(shardGeo,shardMat,shardCount);shards.instanceMatrix.setUsage(THREE.DynamicDrawUsage);shards.frustumCulled=false;group.add(shards);
@@ -36,9 +45,9 @@ export function createActiveVFX(scene,{mobile=false}={}){
   const running=effect.mode==='running',over=effect.state==='OVERDRIVE',intro=Math.min(1,effect.age/.34),life=Math.max(0,effect.time/effect.total);
   const power=running?(over?.8:.62)+Math.sin(effect.age*8)*.08:Math.sin(Math.PI*life);
   const primary=effect.colors[0],secondary=effect.colors[1]??(over?0xff8fd8:primary);
-  paint(floor.material,primary,(running?.1:.24)*power);floor.scale.setScalar((running?2.3:1.5+5.5*(1-life))*intro);
+  paint(floor.material,primary,(running?.055:.12)*power);floor.scale.setScalar((running?1.75:1.3+3.2*(1-life))*intro);
   paint(ringA.material,primary,(running?.78:1)*power);paint(ringB.material,secondary,(running?.58:.9)*power);
-  const base=running?(1.55+.18*Math.sin(effect.age*5)):(1.3+5.8*(1-life));
+  const base=running?(1.55+.18*Math.sin(effect.age*5)):(1.3+4.2*(1-life));
   ringA.scale.setScalar(base*intro);ringB.scale.setScalar((base+(over?.48:.28))*intro);ringA.rotation.y=effect.age*1.8;ringB.rotation.y=-effect.age*2.4;
   paint(column.material,over?secondary:primary,(running?.18:.55)*power);column.scale.set(running?1+.12*Math.sin(effect.age*6):1+1.4*(1-life),running?.7+intro*.3:1+.8*(1-life),running?1+.12*Math.sin(effect.age*6):1+1.4*(1-life));
   shards.count=shardCount;

@@ -15,7 +15,7 @@ const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, enemyShots().
 export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,enemyShots=()=>[]}){
- const fx=Object.fromEntries(['muzzle','pulse','burst','trail','arc','reflect','split'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
+ const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
@@ -77,7 +77,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    case 'tidepull':{
     if(full('tidepull',S.vortices))return S.interval;
     const ob=spawnMesh(geos.vortex,mats.tide,pos);ob.rotation.x=-Math.PI/2;
-    bolts.push({kind:'tidepull',ob,dir:aim,age:0,returning:false,tick:0,life:4});
+    bolts.push({kind:'tidepull',ob,dir:aim,age:0,returning:false,anchored:false,hold:S.hold,tick:0,life:4});
     fx.muzzle(pos,aim,'gravity');return S.interval;
    }
    case 'mirrormaze':{
@@ -202,7 +202,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   }
  }
 
- function plant(pos){if(wells.length>=S.wells)wells.shift();wells.push({pos:pos.clone(),life:.8,pulse:0});fx.pulse(pos,'gravity',S.radius,.8);}
+ function plant(pos){if(wells.length>=S.wells)wells.shift();wells.push({pos:pos.clone(),life:.8,pulse:0});fx.flame(pos,'gravity',18,S.radius*.42);fx.burst(pos,'gravity',24,S.radius*.34);}
 
  function updateOrbit(dt){
   if(!orbit.visible)return;
@@ -356,26 +356,35 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    }
    if(b.kind==='tidepull'){
     b.age+=dt;
-    if(b.age>.7&&!b.returning)b.returning=true;
+    if(b.age>.7&&!b.anchored){
+     b.anchored=true;b.hold=S.hold;b.dir.set(0,0,0);
+     fx.flame(b.ob.position,'gravity',15,S.radius*.38);fx.burst(b.ob.position,'gravity',24,1.35);
+     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.damage,{kind:'tidepull',indirect:true,direction:e.g.position.clone().sub(b.ob.position).setY(0).normalize()});e.slow=Math.max(e.slow||0,S.slow);}
+    }
+    if(b.anchored&&!b.returning){b.hold-=dt;if(b.hold<=0)b.returning=true;}
     if(b.returning){
      b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();
      if(flat(b.ob.position,player.position)<.8){
-      b.life=0;fx.pulse(b.ob.position,'gravity',S.radius,.4);fx.burst(b.ob.position,'burst',28,1.6);
-      for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius)support(e,S.damage,{kind:'tidepull',indirect:true,direction:e.g.position.clone().sub(b.ob.position).setY(0).normalize()});
+      b.life=0;fx.pulse(b.ob.position,'gravity',S.safeRadius,.32);fx.burst(b.ob.position,'gravity',14,1);
       continue;
      }
     }
-    b.ob.position.addScaledVector(b.dir,dt*(b.returning?7:9));b.ob.rotation.z+=dt*8;
-    if(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position)){b.ob.position.copy(previous);b.returning=true;}
+    if(!b.anchored||b.returning)b.ob.position.addScaledVector(b.dir,dt*(b.returning?8:9));b.ob.rotation.z+=dt*(b.anchored&&!b.returning?13:8);
+    if(!b.anchored&&(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position))){b.ob.position.copy(previous);b.age=.71;}
     for(const e of enemies()){
-     if(e.dead||immovable(e))continue;
+     if(e.dead||immovable(e)||b.returning)continue;
      const pull=b.ob.position.clone().sub(e.g.position).setY(0),d=pull.length();
-     if(d<S.radius&&d>.05){e.g.position.addScaledVector(pull.normalize(),Math.min(d,dt*6));constrain(e.g.position,.65);}
+     if(d<S.radius&&d>.05){
+      const next=e.g.position.clone().addScaledVector(pull.normalize(),Math.min(d,dt*S.pull));
+      const fromSeed=next.clone().sub(player.position).setY(0),seedDistance=fromSeed.length();
+      if(seedDistance<S.safeRadius)next.copy(player.position).addScaledVector(fromSeed.lengthSq()?fromSeed.normalize():b.ob.position.clone().sub(player.position).setY(0).normalize(),S.safeRadius);
+      e.g.position.copy(next);constrain(e.g.position,.65);e.slow=Math.max(e.slow||0,S.slow);
+     }
     }
     b.tick-=dt;
     if(b.tick<=0){
      b.tick=.25;fx.pulse(b.ob.position,'gravity',S.radius*.6,.2);
-     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius)support(e,S.tick,{kind:'tidepull',indirect:true,direction:b.dir.clone()});
+     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.ob.position)<S.radius){support(e,S.tick,{kind:'tidepull',indirect:true,direction:b.dir.clone()});e.slow=Math.max(e.slow||0,S.slow);}
     }
     continue;
    }
@@ -417,7 +426,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     b.t+=dt;const k=Math.min(1,b.t/S.flight);
     b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.4);b.ob.rotation.y+=dt*6;
     if(k<1)continue;
-    b.life=0;fx.pulse(b.to,'burst',S.radius,.45);fx.burst(b.to,'burst',26,1.5);
+    b.life=0;fx.explosion(b.to,'burst',S.radius,true);
     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.to)<S.radius+bossReach(e,0,.5))support(e,S.damage,{kind:'flarebloom',indirect:true,direction:e.g.position.clone().sub(b.to).setY(0).normalize()});
     // Embers land around the blast one after another, on a fixed spiral so replays are identical.
     for(let i=0;i<S.embers&&embers.length<24;i++){

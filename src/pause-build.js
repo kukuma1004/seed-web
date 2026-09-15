@@ -6,6 +6,7 @@ import {activeSection} from './active-ui.js';
 import {itemArt} from './item-art.js';
 import {lawArt} from './law-art.js';
 import {formArt} from './form-art.js';
+import {orbitCore,isOrbitEvolution} from './evolution-family.js';
 import './pause-build.css';
 
 // The bag lists what every potion does, so a player can learn them while the game is stopped.
@@ -31,7 +32,8 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
  const api={
   show(levels,forms){
    shownLevels=levels;shownForms=forms;
-   const entries=[...forms].map(([id,level])=>{const f=FORMS[id];return `<article class="pause-item evolved">${formArt(id)}<div><small>${f.solo?'':'완성 진화 · '}${f.pair}</small><h3>${f.name} <span>Lv.${level}</span></h3><p>${f.desc}</p></div></article>`;})
+   const core=orbitCore(forms,FORMS);
+   const entries=[...forms].map(([id,level])=>{const f=FORMS[id],orbitStatus=isOrbitEvolution(id)?id===core?' · 공전 코어 활성':' · 공전 코어 대기':'';return `<article class="pause-item evolved">${formArt(id)}<div><small>${f.solo?'':'완성 진화 · '}${f.pair}${orbitStatus}</small><h3>${f.name} <span>Lv.${level}</span></h3><p>${f.desc}</p></div></article>`;})
     .concat([...levels].map(([id,level])=>{const law=LAWS[id];return `<article class="pause-item">${lawArt(id)}<div><small>법칙</small><h3>${law.name} <span>Lv.${level}</span></h3><p>${law.hint}</p></div></article>`;}));
    root.querySelector('#pause-slots').textContent=`보유 ${levels.size+forms.size}/5칸 · 진화 ${forms.size}개`;
    root.querySelector('#pause-loadout').innerHTML=entries.join('')||'<p class="pause-empty">아직 이름 없는 씨앗이에요.<br>적을 처치하고 첫 법칙을 골라 주세요.</p>';

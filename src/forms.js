@@ -12,7 +12,7 @@ export const FORMS=Object.freeze(Object.fromEntries([
  form('thunderlance',['pierce','chain'],'천둥 창','긴 번개 창이 한 줄의 적을 꿰뚫고, 꿰뚫린 적에게서 번개가 퍼집니다.','줄지어 오는 적과 먼 거리','발사가 느리고 엄폐물에 막히며 흩어진 적에 약함'),
  form('frostbloom',['burst','frost'],'서리 꽃봉오리','목표 지점에 봉오리를 던져 얼린 뒤, 잠시 후 얼음째 부숩니다.','몰려오는 무리를 멈추고 한꺼번에 부숨','떨어지기까지 지연 · 빠른 적은 빠져나감'),
  form('stormcrown',['orbit','chain'],'폭풍 왕관','주위를 도는 번개 구슬이 가까운 적에게 스스로 번개를 떨어뜨립니다.','움직이며 주변을 자동으로 정리','사거리가 짧아 멀리 있는 사수·포탑을 못 맞힘',true),
- form('tidepull',['gravity','recall'],'끌어당기는 조수','소용돌이를 던지면 적을 휘감아 씨앗 쪽으로 끌고 돌아와 터집니다.','흩어진 적을 한곳으로 모음','위험한 적까지 내 곁으로 데려옴'),
+ form('tidepull',['gravity','recall'],'끌어당기는 조수','소용돌이가 멀리서 적을 묶어 휘감고 터진 뒤, 적은 두고 씨앗에게 돌아옵니다.','안전거리 밖에 무리를 묶고 계속 피해','문지기와 포탑은 끌 수 없어 직접 위치를 잡아야 함'),
  form('seedstorm',['split','burst'],'씨앗 폭풍','짧은 거리에 터지는 씨앗을 부채꼴로 흩뿌립니다.','가까이 붙은 무리를 순식간에 정리','사거리가 짧아 멀리서 쏘는 적에게 약함'),
  form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true)
 ].map(f=>[f.id,withPair(f)])));
@@ -80,7 +80,7 @@ const SURGE=Object.freeze({
  thunderlance:s=>({jumps:s.jumps+2,pierce:s.pierce+4}),
  frostbloom:s=>({bombs:s.bombs+3,delay:s.delay*.5}),
  stormcrown:s=>({orbs:s.orbs+2,pulse:s.pulse*.55,range:s.range+1.5}),
- tidepull:s=>({vortices:s.vortices+2,radius:s.radius+1}),
+ tidepull:s=>({vortices:s.vortices+2,radius:s.radius+1,hold:s.hold+.5}),
  seedstorm:s=>({seeds:s.seeds+3}),
  mirrorguard:s=>({mirrors:s.mirrors+3,radius:s.radius+.4}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
@@ -118,7 +118,7 @@ function baseStats(id,level){
   case 'thunderlance':return {interval:1.25*faster,damage:40*power,length:Math.min(15,11+.8*up),pierce:Math.min(14,8+up),jumps:Math.min(5,1+Math.floor(L/2)),jumpDamage:18*power};
   case 'frostbloom':return {interval:1.4*faster,damage:30*power,shatter:45*power,radius:Math.min(3.4,2.4+.15*up),range:9,flight:.55,delay:.8,bombs:3};
   case 'stormcrown':return {interval:Infinity,damage:22*power,orbs:Math.min(5,2+Math.floor(L/2)),range:4.2,pulse:.75*faster,radius:1.6};
-  case 'tidepull':return {interval:1.6*faster,damage:38*power,tick:10*power,radius:Math.min(3.4,2.2+.12*up),vortices:2};
+  case 'tidepull':return {interval:1.45*faster,damage:56*power,tick:16*power,radius:Math.min(3.8,2.7+.12*up),vortices:2,hold:.75,pull:6,safeRadius:2.45,slow:1.25};
   case 'seedstorm':return {interval:.95*faster,damage:14*power,pop:12*power,seeds:Math.min(12,6+L),spread:.55,life:.42};
   case 'mirrorguard':return {interval:Infinity,damage:30*power,mirrors:Math.min(5,2+Math.floor(L/2)),ram:10*power,radius:1.9};
   default:return {interval:Infinity,damage:0};

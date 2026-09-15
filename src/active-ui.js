@@ -31,24 +31,26 @@ export function renderActiveButton(button,{forms,gauge,live,touch=false}){
  if(!button)return;
  const s=activeState(forms),running=Boolean(gauge.plan),ready=activeReady(gauge,forms);
  const shownForms=running?gauge.plan.forms:s.forms;
- const fill=running?Math.max(0,gauge.plan.time/gauge.plan.seconds):gauge.value/ACTIVE.max;
+ const cooling=!running&&gauge.cooldown>0;
+ const fill=running?Math.max(0,gauge.plan.time/gauge.plan.seconds):cooling?gauge.cooldown/ACTIVE.cooldownSeconds:gauge.value/ACTIVE.max;
  const hide=!live;
  if(button.hidden!==hide)button.hidden=hide;
  if(hide)return;
  const pct=Math.round(fill*100);
- const key=[s.state,shownForms.join('+'),running?'run':ready?'ready':'charge',pct,touch].join('|');
+ const key=[s.state,shownForms.join('+'),running?'run':cooling?'cool':ready?'ready':'charge',pct,touch].join('|');
  if(button.__key===key)return;button.__key=key;
  button.style.setProperty('--fill',pct+'%');
  button.classList.toggle('locked',s.state==='LOCKED');
  button.classList.toggle('ready',ready);
  button.classList.toggle('running',running);
+ button.classList.toggle('cooling',cooling);
  button.classList.toggle('overdrive',(running?gauge.plan.state:s.state)==='OVERDRIVE');
  const iconKey=shownForms.join('+');
  const icon=button.querySelector('.active-icon');if(icon.__forms!==iconKey){icon.innerHTML=activeIcon(shownForms);icon.__forms=iconKey;}
- const name=s.state==='LOCKED'?'궁극기 잠김':running?(gauge.plan.state==='OVERDRIVE'?'오버드라이브':SIGNATURES[shownForms[0]].name):ready?(s.state==='OVERDRIVE'?'오버드라이브':SIGNATURES[s.forms[0]].name):`${pct}%`;
+ const name=s.state==='LOCKED'?'궁극기 잠김':running?(gauge.plan.state==='OVERDRIVE'?'오버드라이브':SIGNATURES[shownForms[0]].name):cooling?`안정화 ${Math.ceil(gauge.cooldown)}초`:ready?(s.state==='OVERDRIVE'?'오버드라이브':SIGNATURES[s.forms[0]].name):`${pct}%`;
  button.querySelector('.active-name').textContent=name;
  button.querySelector('.active-key').textContent=touch?'':'F';
- button.setAttribute('aria-label',`궁극기 · ${STATE_NAMES[s.state]} · ${ready?'사용 가능':running?'발동 중':'게이지 '+pct+'%'}`);
+ button.setAttribute('aria-label',`궁극기 · ${STATE_NAMES[s.state]} · ${ready?'사용 가능':running?'발동 중':cooling?'안정화 '+Math.ceil(gauge.cooldown)+'초':'게이지 '+pct+'%'}`);
 }
 
 // Pause sheet: what the active will do with this exact build.
@@ -57,7 +59,8 @@ export function activeSection(forms,gauge){
  const art=summary.forms?activeIcon(summary.forms):'';
  const lines=summary.lines.map(line=>`<li>${line}</li>`).join('');
  const detail=summary.state==='OVERDRIVE'?summary.forms.map(id=>`<li><b>${SIGNATURES[id].name}</b> · ${ALL_FORMS[id].name} · ${SIGNATURES[id].desc}</li>`).join(''):'';
- return `<section class="active-sheet ${summary.state.toLowerCase()}"><h3>궁극기 <span>${STATE_NAMES[summary.state]} · 게이지 ${Math.floor(gauge.value)}/${ACTIVE.max}</span></h3>
+ const gaugeText=gauge.cooldown>0?`안정화 ${Math.ceil(gauge.cooldown)}초`:`게이지 ${Math.floor(gauge.value)}/${ACTIVE.max}`;
+ return `<section class="active-sheet ${summary.state.toLowerCase()}"><h3>궁극기 <span>${STATE_NAMES[summary.state]} · ${gaugeText}</span></h3>
  <div class="active-sheet-body">${art?`<div class="active-sheet-art">${art}</div>`:''}<div><strong>${summary.title}</strong><ul>${lines}${detail}</ul>
- <p class="active-rule">진화 1개: 그 진화의 시그니처 · 진화 2개 이상: 가장 강한 둘의 오버드라이브 · 적을 처치하면 차고 발동 중에는 차지 않아요 · F 키 또는 궁극기 버튼</p></div></div></section>`;
+ <p class="active-rule">진화 1개: 그 진화의 시그니처 · 진화 2개 이상: 서로 다른 계열 중 가장 강한 둘의 오버드라이브 · 일반 적 100마리 분량 · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화 · F 키 또는 궁극기 버튼</p></div></div></section>`;
 }

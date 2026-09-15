@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {ACTIVE,LAW_TAGS,TAG_NAMES,SIGNATURES,activeState,overdriveTags,overdriveFinale,createActiveGauge,chargeActive,killCharge,bossCharge,activeReady,startActive,tickActive,cancelActive,activeSummary,validActiveGauge} from '../src/actives.js';
+import {ACTIVE,LAW_TAGS,TAG_NAMES,SIGNATURES,activeState,overdriveTags,overdriveFinale,createActiveGauge,chargeActive,killCharge,bossCharge,activeReady,startActive,tickActive,cancelActive,activeSummary,validActiveGauge,validActiveCooldown} from '../src/actives.js';
+import {activeCombatEvolutions,orbitCore,canAcquireEvolution} from '../src/evolution-family.js';
 import {ALL_FORMS,FORMS,SOLO_FORMS} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
 import {createFormCombat} from '../src/form-combat.js';
@@ -19,6 +20,12 @@ assert.deepEqual(activeState(new Map([['prism',3]])),{state:'SIGNATURE',forms:['
 const three=new Map([['prism',2],['collapse',5],['rewind',2]]);
 assert.deepEqual(activeState(three),{state:'OVERDRIVE',forms:['collapse','prism'],level:7});
 assert.equal(activeState(new Map([['nope',4]])).state,'LOCKED','unknown ids are ignored');
+const tripleOrbit=new Map([['frostguard',5],['stormcrown',8],['mirrorguard',7],['collapse',4]]);
+assert.deepEqual(activeState(tripleOrbit).forms,['stormcrown','collapse'],'only one orbit family may enter an overdrive');
+assert.equal(orbitCore(tripleOrbit,ALL_FORMS),'stormcrown');
+assert.deepEqual(activeCombatEvolutions(tripleOrbit,ALL_FORMS).map(x=>x.id),['stormcrown','collapse'],'only the strongest orbit combat stays active');
+assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'mirrorguard',ALL_FORMS),false,'a second orbit evolution is not offered');
+assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'stormcrown',ALL_FORMS),true,'the active orbit core may still be upgraded');
 
 // Tags: union of the laws inside the chosen evolutions, each once.
 assert.deepEqual(overdriveTags(['collapse','tidepull']),['CONTROL','EXPLOSION','RETURN']);
@@ -44,11 +51,16 @@ assert.equal(plan.state,'SIGNATURE');assert.equal(plan.seconds,ACTIVE.signatureS
 chargeActive(g,40);assert.equal(g.value,0,'no charge while the active runs (no self-refilling loop)');
 assert.equal(startActive(g,new Map([['prism',2]])),null,'no second start while running');
 assert.equal(tickActive(g,ACTIVE.signatureSeconds-.1),null);const ended=tickActive(g,.2);assert.equal(ended,plan);assert.equal(g.plan,null);
-chargeActive(g,10);assert.equal(g.value,10,'charging resumes after it ends');
+assert.equal(g.cooldown,ACTIVE.cooldownSeconds);chargeActive(g,10);assert.equal(g.value,0,'post-use stabilization blocks immediate refill');
+tickActive(g,ACTIVE.cooldownSeconds-.1);chargeActive(g,10);assert.equal(g.value,0,'cooldown must fully finish');
+tickActive(g,.2);chargeActive(g,10);assert.equal(g.value,10,'charging resumes after stabilization');
 g.value=ACTIVE.max;const od=startActive(g,three);
 assert.equal(od.state,'OVERDRIVE');assert.equal(od.seconds,ACTIVE.overdriveSeconds);assert.deepEqual(od.tags,['CONTROL','EXPLOSION','BOUNCE','MULTI']);assert.ok(od.finale.pull>0&&od.finale.hits===2);
 cancelActive(g);assert.equal(g.plan,null);
 assert.equal(createActiveGauge(250).value,ACTIVE.max);assert.equal(createActiveGauge(NaN).value,0);
+assert.equal(createActiveGauge(0,999).cooldown,ACTIVE.cooldownSeconds);
+const normalCycle=ACTIVE.max/(ACTIVE.kill*2)+ACTIVE.cooldownSeconds,fastCycle=ACTIVE.max/(ACTIVE.kill*8)+ACTIVE.cooldownSeconds;
+assert.ok(normalCycle>=60&&fastCycle>=30,`ultimate cadence remains special (${normalCycle}s normal, ${fastCycle}s fast-clear)`);
 
 // Texts for the pause sheet.
 assert.equal(activeSummary(new Map(),g).state,'LOCKED');
@@ -60,7 +72,8 @@ const save={version:1,cycle:0,stage:1,mode:'entry',region:'garden',hp:90,rules:[
 assert.ok(validCheckpoint(save),'solo evolution in a save');
 assert.ok(validCheckpoint({...save,activeGauge:70}));assert.ok(validCheckpoint({...save,activeGauge:0}));
 for(const bad of [-1,101,NaN,'50'])assert.ok(!validCheckpoint({...save,activeGauge:bad}),String(bad));
-assert.ok(validActiveGauge(undefined));
+assert.ok(validCheckpoint({...save,activeCooldown:12.5}));assert.ok(!validCheckpoint({...save,activeCooldown:ACTIVE.cooldownSeconds+.1}));
+assert.ok(validActiveGauge(undefined));assert.ok(validActiveCooldown(undefined));
 
 // Every evolution's surge runs in the real combat code: its opening move and boosted attacks deal damage, then it calms down.
 const V=THREE.Vector3;
@@ -81,4 +94,4 @@ for(const id of Object.keys(ALL_FORMS)){
  combat.dispose();
 }
 assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,19);
-console.log('Actives: 19 signatures, locked/signature/overdrive states, tag union finale, gauge without self-refill, saves and every surge in real combat passed.');
+console.log('Actives: 19 signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.');

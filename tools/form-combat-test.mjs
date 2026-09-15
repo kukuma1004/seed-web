@@ -83,6 +83,15 @@ assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
  const near=enemy(2.5),f=fixture([near],{hit:()=>false});f.combat.set('frostguard');f.combat.update(.01);
  assert.equal(near.g.position.x,2.5);assert.equal(near.slow,undefined);assert.equal(f.combat.state().hits,0);f.combat.dispose();
 }
+// Tidepull gathers at a remote anchor. It may move a close enemy away from the
+// seed, but can never drag one inside its safe ring on the return trip.
+{
+ const close=enemy(1.2),far=enemy(4.2),f=fixture([close,far]);f.combat.set('tidepull');f.combat.fire(vec(),vec(1));
+ step(f.combat,.35);assert.ok(close.g.position.distanceTo(f.player.position)>=FORM_COMBAT.tidepull.safeRadius-.02);
+ step(f.combat,1.7);assert.ok(close.g.position.distanceTo(f.player.position)>=FORM_COMBAT.tidepull.safeRadius-.02);
+ assert.ok(f.calls.some(c=>c.kind==='tidepull'&&c.damage>=FORM_COMBAT.tidepull.damage),'remote anchor has a meaningful rupture');
+ assert.ok(close.slow>0||far.slow>0,'the tide controls the gathered crowd');f.combat.dispose();
+}
 {
  const f=fixture([enemy(1)]);f.combat.set('collapse');f.combat.fire(vec(),vec(1));f.combat.update(.1);
  assert.equal(f.combat.state().wells,1);f.combat.clear();step(f.combat,4);
