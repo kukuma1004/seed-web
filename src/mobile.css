@@ -46,3 +46,4 @@ body.phone-landscape #toast{top:22%;font-size:12px}
 .touch-mode #rotate-hint strong{display:block;font-size:20px;margin-bottom:6px}.touch-mode #rotate-hint span{font-size:13px;color:#a9c8bb}}
 @keyframes rotate-hint{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
 body.native-app #app-actions,body.native-app #install-game{display:none!important}
+#context-lost{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#071b21f0;color:#e8f5e8;text-align:center;padding:24px}#context-lost strong{display:block;font-size:20px;margin-bottom:8px}#context-lost span{display:block;font-size:13px;color:#a9c8bb;margin-bottom:16px}#context-lost button{min-height:44px;padding:0 24px}

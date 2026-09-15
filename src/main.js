@@ -77,6 +77,14 @@ const inspection=localInspection?document.createElement('pre'):null;if(inspectio
 let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return localStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
 // Mobile pixels are already softened by DPR and post-processing. Context MSAA cost more fill-rate than it returns there.
 const renderer=new THREE.WebGLRenderer({canvas:$('#game'),antialias:qualityLevel>1&&!mobileDevice,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,QUALITY_LEVELS[qualityLevel].pixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=qualityLevel<2?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
+// Phones under memory pressure can drop the WebGL context: the picture freezes or goes black, which players see as the game crashing.
+// Stop the run, remember one step lower quality, and reload once the browser gives the context back (or on a tap).
+// The run continues from the saved room entrance, so only the current room is replayed.
+renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(mode==='playing'&&!paused)paused=true;
+ try{localStorage.setItem(QUALITY_KEY,String(Math.max(0,qualityLevel-1)));}catch{}
+ const box=document.createElement('div');box.id='context-lost';box.innerHTML='<div><strong>그래픽 메모리가 부족해서 화면이 멈췄어요</strong><span>화질을 한 단계 낮춰서 다시 불러와요 · 방 입구부터 이어서 할 수 있어요</span><button class="primary">다시 불러오기</button></div>';
+ box.querySelector('button').onclick=()=>location.reload();document.body.append(box);},false);
+renderer.domElement.addEventListener('webglcontextrestored',()=>location.reload(),false);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#2a4550');scene.fog=new THREE.FogExp2('#2d4a55',.011);
 const vfx=createVFX(scene,{mobile:mobileDevice});
 const playerTrailInterval=mobileDevice?.07:.045;
@@ -466,8 +474,8 @@ function showRanking(view='online'){
   if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
   const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
  }).catch(()=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 랭킹에 연결하지 못했어요 · 이 기기 기록을 보여줘요');
-  const board=readRanking(runStorage),mine=board.find(e=>e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
+  if(serial!==rankSerial)return;const status=$('#rank-status');if(status)status.innerHTML='랭킹 서버에 잠깐 연결하지 못했어요 · <b>모두의 기록은 서버에 그대로 있어요</b><br><button class="primary" id="rank-retry">다시 불러오기</button>';
+  const retry=$('#rank-retry');if(retry)retry.onclick=()=>showRanking('online');
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
@@ -485,7 +493,7 @@ function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('
   const mine=r.board[(r.rank||r.bestRank)-1]||r.board.find(e=>e.uid===online.uid()&&e.name===name)||null;if(box)box.innerHTML=rankingBoard(r.board,mine);
  }).catch(()=>{
   if(serial!==rankSerial)return;
-  setText($('#rank-status'),'지금은 모두의 랭킹에 연결하지 못했어요 · 다음에 접속하면 자동으로 올라가요 · 아래는 이 기기 기록');
+  const status=$('#rank-status');if(status)status.innerHTML='지금은 랭킹 서버에 연결하지 못했어요 · 이 기록은 기기에 보관했다가 다음에 자동으로 올라가요<br>아래는 <b>이 기기</b> 기록이에요 · 모두의 기록은 서버에 그대로 있어요';
  });
 }
 function restart(saved=null){if(touch.enabled)appShell.enterFullscreen();const restore=saved?.version===1?saved:null;if(!restore)clearCheckpoint(runStorage);heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dash=0;invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;region=restore?.region||'garden';score=restore?.score||0;wardensDefeated=restore?.wardens||0;austinsDefeated=restore?.austins||0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;austinRoom=false;potionCD=0;

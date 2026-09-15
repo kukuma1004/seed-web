@@ -27,7 +27,7 @@ export function bestPerPlayer(data,limit=20,season=SEASON){
  for(const run of runs){const key=run.uid+'\n'+run.name;if(seen.has(key))continue;seen.add(key);out.push(run);if(out.length>=limit)break;}
  return out;
 }
-export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...a)=>fetch(...a),now=()=>Date.now(),timeoutMs=7000}={}){
+export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...a)=>fetch(...a),now=()=>Date.now(),timeoutMs=12000}={}){
  let session=null;
  async function request(url,options={}){
   const controller=typeof AbortController==='function'?new AbortController():null;
@@ -39,6 +39,9 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
    return body;
   }finally{clearTimeout(timer);}
  }
+ // Reads are safe to repeat, so a slow school network or a phone waking from sleep gets one more try before the board gives up.
+ // (2026-09-15: a failed read showed only this device's runs and players thought the ranking was wiped.)
+ async function read(url){try{return await request(url);}catch(error){if(error.status>=400&&error.status<500)throw error;return request(url);}}
  function remember(next){session=next;try{storage?.setItem(AUTH_KEY,JSON.stringify({uid:next.uid,refreshToken:next.refreshToken}));}catch{}return next;}
  function saved(){try{const s=JSON.parse(storage?.getItem(AUTH_KEY));return s?.refreshToken?s:null;}catch{return null;}}
  // Keeps the same anonymous player on this browser by refreshing the stored token; signs up once otherwise.
@@ -60,8 +63,8 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  async function top(limit=20,playerName=''){
   const s=await signIn();
   const [best,recent]=await Promise.all([
-   request(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
-   request(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
+   read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
+   read(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
   ]);
   const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
   // Builds live beside the runs under the same push id. Load the recent batch first, then recover any
