@@ -49,6 +49,7 @@ artifacts/
 !tools/items-test.mjs
 !tools/star-room-test.mjs
 !tools/quality-test.mjs
+!tools/offline-test.mjs
 !tools/actives-test.mjs
 !tools/solo-forms-test.mjs
 !tools/active-balance-test.mjs

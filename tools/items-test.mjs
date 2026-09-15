@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,nextHeld,heldItems,usable} from '../src/inventory.js';
+import {STARTING_ITEMS,startingInventory,ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,nextHeld,heldItems,usable} from '../src/inventory.js';
 import {validCheckpoint} from '../src/run-save.js';
 
 // Every kind is listed once, in screen order, with a stack limit.
@@ -61,4 +61,7 @@ assert.ok(validCheckpoint({...save,inventory:{potion:2}}),'legacy potion-only sa
 assert.ok(validCheckpoint({...save,inventory:{potion:0,tonic:1,wind:1,shell:0,sprout:1}}),'new bag save');
 assert.ok(!validCheckpoint({...save,inventory:{sprout:3}}),'over-limit bag rejected');
 
+// A fresh run starts with exactly one big potion; the starting bag is a fresh object each time and a valid save.
+assert.deepEqual(startingInventory(),{...emptyInventory(),potion:1});assert.deepEqual(STARTING_ITEMS,{potion:1});
+{const a=startingInventory(),b=startingInventory();a.potion=0;assert.equal(b.potion,1);assert.ok(validInventory(b));}
 console.log('Items: five potion kinds, heal refusal, haste/shell timers, one-shot sprout, Austin-only drops, cycling and save compatibility passed.');

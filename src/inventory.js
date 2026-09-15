@@ -12,6 +12,10 @@ export const ITEM_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']
 export const usable=id=>Object.hasOwn(ITEMS,id)&&ITEMS[id].kind!=='revive';
 
 export function emptyInventory(){return Object.fromEntries(ITEM_ORDER.map(id=>[id,0]));}
+// A new run starts with one healing potion (2026-09-15: students kept asking for a way to heal).
+// Continued runs keep whatever their save holds. A later idea: watch an ad for one more.
+export const STARTING_ITEMS=Object.freeze({potion:1});
+export function startingInventory(){const inv=emptyInventory();for(const [id,n] of Object.entries(STARTING_ITEMS))inv[id]=Math.min(ITEMS[id].max,n);return inv;}
 export function normalizeInventory(value){
  const out=emptyInventory();
  if(value&&typeof value==='object'&&!Array.isArray(value))for(const id of ITEM_ORDER){const n=value[id];if(Number.isInteger(n))out[id]=Math.max(0,Math.min(ITEMS[id].max,n));}
