@@ -27,7 +27,7 @@ export function awakenCard(option,forms,level,discovered=false,index=0){
  return `<button class="form-card awaken-card" data-awaken="${index}">
  ${formArt(form.id,'form-portrait')}
  <small>${discovered?'발견한 각성 진화':'새로운 각성 진화'} · ${current?`보유 Lv.${current} → Lv.${level}`:'진화 Lv.'+level}<span class="awaken-tag">각성</span></small>
- <strong>${form.name}</strong><p>${parts}</p><p>${form.desc}</p>
+ <strong>${form.name}</strong><p>${parts}</p><p>${form.desc}</p>${form.synergy?`<small class="twin-synergy">${form.synergy.name} · 두 공격이 ${form.synergy.window}초 안에 같은 적을 맞히면 추가 피해와 두 성질이 함께 발동</small>`:''}
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
  </button>`;
 }

@@ -43,24 +43,30 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
+ const awakenedMats=new Map();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
- let twin=false,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
+ let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
 
- function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,mat);ob.position.set(pos.x,y,pos.z);group.add(ob);return ob;}
+ function combatMaterial(mat){
+  if(!awakened())return mat;
+  if(!awakenedMats.has(mat)){const gold=mat.clone();if(gold.emissive){gold.emissive.setHex(0xffb84f);gold.emissiveIntensity=Math.max(.38,gold.emissiveIntensity||0);}gold.roughness=Math.max(.18,(gold.roughness??.5)*.72);awakenedMats.set(mat,gold);}
+  return awakenedMats.get(mat);
+ }
+ function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,combatMaterial(mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
-  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],mats[style.material]));
+  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -68,11 +74,11 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   const L=Math.max(1,Math.floor(nextLevel||1));
   const kind=AWAKEN_FORMS[id]?.base||id;
   const asTwin=Boolean(opts.twin);
-  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??2;S.damage=0;}
+  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;ownerId=opts.twinId||id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??2;S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   rebuildOrbit();
  }
- function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,metadata)===false)return false;hits++;return true;}
+ function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;return true;}
  const count=kind=>bolts.filter(b=>b.kind===kind).length;
  const nearestEnemy=(from,range,skip=new Set(),clearLine=false)=>{let best=null,bestDistance=range;for(const e of enemies()){if(e.dead||skip.has(e))continue;const d=flat(e.g.position,from);if(d<bestDistance&&(!clearLine||!blocked(from.clone().setY(0),e.g.position.clone().setY(0)))){best=e;bestDistance=d;}}return best;};
 
@@ -575,6 +581,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   const dir=aim&&aim.lengthSq()>1e-6?aim.clone().setY(0).normalize():new V(0,0,-1);
   const around=n=>Array.from({length:n},(_,i)=>dir.clone().applyAxisAngle(Y,i*Math.PI*2/n));
   const nearest=(n,range=10)=>enemies().filter(e=>!e.dead&&flat(e.g.position,pos)<range).sort((a,b)=>flat(a.g.position,pos)-flat(b.g.position,pos)).slice(0,n);
+  if(awakened()){fx.pulse(pos,'awaken',3.2,.55);fx.burst(pos,'awaken',36,2.2);}
   fx.pulse(pos,OPENING_FX[active]||'seed',2.4,.5);fx.burst(pos,OPENING_FX[active]||'seed',30,1.8);
   switch(active){
    case 'collapse':{const spots=nearest(3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
@@ -627,6 +634,6 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  }
 
  return {set,fire,update,clear,surge,calm,
-  state:()=>({active,evolution:statId,twin,awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
-  dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of Object.values(mats))m.dispose();group.removeFromParent();}};
+  state:()=>({active,evolution:ownerId||statId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
+  dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

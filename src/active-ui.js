@@ -3,8 +3,8 @@ import {ALL_FORMS} from './forms.js';
 import {formArt} from './form-art.js';
 import './actives.css';
 
-// The one active button. Art is a placeholder built from the evolution portraits already in the game;
-// when dedicated active icons arrive (docs/ART-REQUEST-ACTIVES.md) only activeIcon() changes.
+// The one active button reuses the evolution's finished portrait, including dedicated awakened art
+// and the diagonally composed twin portrait, so the skill and the build always share one identity.
 export const ACTIVE_BUTTON_HTML='<button id="active-skill" hidden aria-live="off"><span class="active-fill" aria-hidden="true"></span><span class="active-icon" aria-hidden="true"></span><b class="active-name"></b><small class="active-key">F</small></button>';
 export const ACTIVE_EFFECT_HTML='<div id="active-cinematic" hidden aria-live="polite"></div>';
 

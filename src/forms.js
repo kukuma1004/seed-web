@@ -57,9 +57,21 @@ export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
 // Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
 // Together with the ten fusion awakenings every one of the 36 solo pairs now leads somewhere.
 export const TWIN=Object.freeze({damage:.7,surgeOpeningEvery:1.5});
+const TWIN_TRAITS=Object.freeze({
+ mirrormaze:Object.freeze({word:'굴절',effect:'reflect',bonus:.03}),
+ fullbloom:Object.freeze({word:'개화',effect:'split',bonus:.04}),
+ thunderweb:Object.freeze({word:'낙뢰',effect:'chain',bonus:.03}),
+ starring:Object.freeze({word:'성환',effect:'orbit',bonus:.035}),
+ glassspear:Object.freeze({word:'관통',effect:'pierce',bonus:.05}),
+ flarebloom:Object.freeze({word:'발화',effect:'burst',bonus:.055}),
+ rewind:Object.freeze({word:'회귀',effect:'recall',bonus:.035}),
+ blackhole:Object.freeze({word:'특이점',effect:'gravity',bonus:.03}),
+ winterbreath:Object.freeze({word:'빙결',effect:'frost',bonus:.035})
+});
 const twin=(id,a,b,name,desc)=>{
- const A=SOLO_FORMS[a],B=SOLO_FORMS[b],parts=Object.freeze([a,b]);
- return Object.freeze({id,name,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',passive:false,awakened:true,twin:true});
+ const A=SOLO_FORMS[a],B=SOLO_FORMS[b],parts=Object.freeze([a,b]),ta=TWIN_TRAITS[a],tb=TWIN_TRAITS[b];
+ const synergy=Object.freeze({name:`${ta.word}·${tb.word} 공명`,window:2.6,bonus:.08+ta.bonus+tb.bonus,effects:Object.freeze([ta.effect,tb.effect])});
+ return Object.freeze({id,name,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
 };
 export const TWIN_FORMS=Object.freeze(Object.fromEntries([
  twin('lightningmirror','mirrormaze','thunderweb','번개 거울방','튕기는 거울탄과 적 사이를 뛰는 번개가 한 칸에서 함께 나갑니다.'),

@@ -41,8 +41,10 @@ assert.deepEqual(awakenOptions(new Map([['blackhole',5],['mirrormaze',5]])),[{id
 for(const t of Object.values(TWIN_FORMS)){
  assert.ok(isTwinForm(t.id)&&t.parts.every(id=>SOLO_FORMS[id])&&SIGNATURES[t.id]?.name&&t.name&&t.desc);
  assert.deepEqual(attackPartsOf(t.id),[...t.parts]);
+ assert.ok(t.synergy.name&&t.synergy.window>=2&&t.synergy.bonus>=.1&&t.synergy.bonus<=.25&&t.synergy.effects.length===2);
  assert.ok(!Object.values(FORMS).some(f=>[...f.requires].sort().join()===[...t.requires].sort().join()),`${t.id} duplicates a fusion`);
 }
+assert.equal(new Set(Object.values(TWIN_FORMS).map(t=>t.synergy.name)).size,26,'Every twin pair has a distinct resonance.');
 {
  const forms=new Map([['gravityspear',6],['blackhole',6]]);assert.deepEqual(awakenOptions(forms),[{id:'gravityspear',from:['blackhole']}]);
  assert.equal(awaken(forms,awakenOptions(forms)[0]),true);assert.deepEqual([...forms],[['gravityspear',8]]);

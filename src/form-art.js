@@ -3,13 +3,14 @@ import {SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 const TILES={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
 // Solo evolutions use their own painted 4 by 3 atlas. The last three cells stay empty.
 const LAW_TILES={reflect:0,split:1,pierce:2,orbit:3,burst:4,gravity:5,recall:6,frost:9,chain:10};
-export const SOLO_ATLAS='seed-solo-atlas-v2.png';
+export const SOLO_ATLAS='seed-solo-atlas-v3-ui.webp';
 export const FUSION_ATLAS='seed-forms-atlas-v4-ui.png';
 const SOLO_TILES={mirrormaze:0,fullbloom:1,thunderweb:2,starring:3,glassspear:4,flarebloom:5,rewind:6,blackhole:7,winterbreath:8};
 const BASE=import.meta.env?.BASE_URL||'/';
 const tileStyle=(file,tile)=>`background-image:url('${BASE}assets/${file}');background-position:${tile%4*100/3}% ${Math.floor(tile/4)*50}%`;
-// Awakened evolutions: their own atlas once it is painted (AWAKEN_ATLAS), until then the fusion's picture in a golden frame.
-export const AWAKEN_ATLAS='';
+// Awakened evolutions have their own mature relic paintings; twins combine two
+// solo relics and keep the same gold awakening frame.
+export const AWAKEN_ATLAS='seed-awaken-atlas-v1-ui.webp';
 const AWAKEN_TILES={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9};
 export function formArt(id,extra=''){
  // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).

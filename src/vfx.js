@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {LAWS} from './laws.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52};
+export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a};
 
 // The flat shock crown that spread across the floor was removed (2026-09-15): it covered the arena,
 // read as a flat colored sunburst and cost a batch. Hits and blasts now use sparks, streaks and flames only.

@@ -7,7 +7,7 @@ import {advanceFrame} from './frame-time.js';
 import {formArt} from './form-art.js';
 import {buildCoverArt} from './world-art.js';
 // FORMS here means every evolution the seed can hold: the ten fusions and the nine solo evolutions.
-import {ALL_FORMS as FORMS,SOLO_FORMS,eligibleForms,formUpgradeLine,soloReady,attackPartsOf,isTwinForm} from './forms.js';
+import {ALL_FORMS as FORMS,SOLO_FORMS,TWIN_FORMS,eligibleForms,formUpgradeLine,soloReady,attackPartsOf,isTwinForm} from './forms.js';
 import {createActiveGauge,chargeActive,killCharge,bossCharge,startActive,tickActive,cancelActive,activeState,ACTIVE,SIGNATURES} from './actives.js';
 import {ACTIVE_BUTTON_HTML,ACTIVE_EFFECT_HTML,renderActiveButton,announceActive,announceFinale} from './active-ui.js';
 import {createActiveVFX} from './active-vfx.js';
@@ -225,7 +225,7 @@ function syncForms(reset=false){
  const activeEntries=activeCombatEvolutions(heldForms,FORMS),wanted=new Map();
  for(const {id,level} of activeEntries)attackPartsOf(id).forEach((attack,i)=>wanted.set(combatKey(id,i),{id,attack,level,index:i}));
  for(const [key,combat] of formCombats)if(!wanted.has(key)){combat.dispose();formCombats.delete(key);formCooldowns.delete(key);formAttacks.delete(key);}
- for(const [key,{id,attack,level,index}] of wanted){let combat=formCombats.get(key);if(!combat){combat=createFormCombat(scene,formOptions());formCombats.set(key,combat);formCooldowns.set(key,0);}formAttacks.set(key,attack);if(reset)combat.clear();const twin=isTwinForm(id);combat.set(twin?attack:id,level,{twin,openingDelay:2+index*AWAKEN_TWIN_STAGGER});}
+ for(const [key,{id,attack,level,index}] of wanted){let combat=formCombats.get(key);if(!combat){combat=createFormCombat(scene,formOptions());formCombats.set(key,combat);formCooldowns.set(key,0);}formAttacks.set(key,attack);if(reset)combat.clear();const twin=isTwinForm(id);combat.set(twin?attack:id,level,{twin,twinId:twin?id:null,openingDelay:2+index*AWAKEN_TWIN_STAGGER});}
  player.userData.setEvolution?.(heldForms);
  updateFormLabel();
 }
@@ -266,11 +266,31 @@ function offerForm(force=false,onDone=finishChoice){
  document.querySelectorAll('[data-form]').forEach(b=>b.onclick=()=>{if(mode!=='forms')return;const id=b.dataset.form;if(!fuse(levels,heldForms,id))return;remember('forms',id);syncLaws();syncForms();growth.select(effectiveLaws(),mutated);vfx.evolution(player.position,FORMS[id].requires[0]);onDone();$('#toast').textContent=`${FORMS[id].name} Lv.${heldForms.get(id)} · 두 법칙이 한 칸으로 합쳐졌습니다`;});
  $('#keep-form').onclick=onDone;return true;
 }
+const twinMarks=new WeakMap();
+function twinResonance(e,amount,meta,scale){
+ const twin=TWIN_FORMS[meta.evolution];if(!twin)return;
+ const last=twinMarks.get(e),now=elapsed;
+ if(!last||last.id!==twin.id||last.kind===meta.kind||now-last.time>twin.synergy.window){twinMarks.set(e,{id:twin.id,kind:meta.kind,time:now});return;}
+ twinMarks.delete(e);const bonus=amount*twin.synergy.bonus*scale;if(!(bonus>0))return;
+ damageEnemy(e,bonus,false);const pos=e.g.position,direction=pos.clone().sub(player.position).setY(0).normalize();
+ vfx.burst(pos,'awaken',10,.75);
+ for(const effect of twin.synergy.effects){
+  if(effect==='frost')e.slow=Math.max(e.slow||0,1.6);
+  else if(effect==='gravity'){if(wells.length>=6)wells.shift();wells.push({pos:pos.clone(),life:.65,pulse:0});}
+  else if(effect==='burst'){vfx.explosion(pos,'burst',.9);for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(pos)<1.25)damageEnemy(other,bonus*.35,false);}
+  else if(effect==='chain'){const other=enemies.filter(o=>o!==e&&!o.dead).sort((a,b)=>a.g.position.distanceTo(pos)-b.g.position.distanceTo(pos))[0];if(other&&other.g.position.distanceTo(pos)<4){vfx.arc(pos,other.g.position);damageEnemy(other,bonus*.35,false);}}
+  else if(effect==='split'){for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(pos)<1.1)damageEnemy(other,bonus*.25,false);vfx.burst(pos,'split',8,.55);}
+  else if(effect==='reflect')vfx.reflect(pos,direction);
+  else if(effect==='orbit'&&!isBoss(e)&&e.type!=='turret'){e.g.position.addScaledVector(direction,.22);collide(e.g.position,.4);}
+  else if(effect==='pierce'&&isBoss(e))damageEnemy(e,bonus*.2,false);
+  else if(effect==='recall')vfx.trail(player.position.clone().setY(.7),pos.clone().setY(.7),'recall',false);
+ }
+}
 function formHit(e,amount,meta){
  if(DIRECT_FORMS.has(meta.kind)&&!meta.indirect&&blocksShield(e,meta.direction)){e.block=.18;vfx.pulse(e.g.position,'reflect',.65,.18);return false;}
  const consumed=FORMS[meta.kind].requires;
  const supports=id=>chosen.has(id)&&!consumed.includes(id);
- damageEnemy(e,amount*damageScale(levels)*relicFormScale(relics,consumed),false);
+ const scale=damageScale(levels)*relicFormScale(relics,consumed);damageEnemy(e,amount*scale,false);twinResonance(e,amount,meta,scale);
  if(supports('frost'))e.slow=Math.max(e.slow||0,LS.frostTime);
  if(supports('chain'))for(const other of enemies.filter(o=>o!==e&&!o.dead&&o.g.position.distanceTo(e.g.position)<4).sort((a,b)=>a.g.position.distanceTo(e.g.position)-b.g.position.distanceTo(e.g.position)).slice(0,LS.chainTargets)){line(e.g.position,other.g.position);damageEnemy(other,amount*.18,false);}
  if(supports('burst')){vfx.explosion(e.g.position,'burst',Math.max(.8,LS.burstRadius*.45));for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(e.g.position)<LS.burstRadius)damageEnemy(other,amount*.18,false);}
@@ -644,6 +664,6 @@ qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if
 // Visible local-only controls for CUA testing; absent on the public host.
 if(localInspection&&new URLSearchParams(location.search).has('bossLab')){
  const lab=document.createElement('aside');lab.id='boss-lab';lab.style.cssText='position:fixed;top:6px;left:6px;z-index:30;background:#102020dd;padding:4px;font-size:10px';
- lab.innerHTML='<span>로컬 합성 검사 · 랭킹 전송 없음</span><button id="lab-hurt">보스 다음 단계</button><button id="lab-heal">검사 생명 회복</button><button id="lab-safe">검사 보호 꺼짐</button><button id="lab-active">오버드라이브 준비</button><button id="lab-title">오스틴 칭호</button><button id="lab-solo-card">단독 선택 이미지</button><button id="lab-solo">단독 진화 외형</button><button id="lab-fusion">완성 진화 외형</button><button id="lab-orbit">공전 5종 외형</button><button id="lab-mix">진화 겹침</button><button id="lab-awaken">각성 선택</button>';
- const fusionArtIds=Object.keys(FORMS).filter(id=>!Object.hasOwn(SOLO_FORMS,id)),orbitArtIds=['base','starring','frostguard','stormcrown','mirrorguard'];let soloArtIndex=0,fusionArtIndex=0,orbitArtIndex=0;document.body.append(lab);lab.querySelector('#lab-hurt').onclick=()=>window.seedDebug.qa.hurtBoss(1);lab.querySelector('#lab-heal').onclick=()=>window.seedDebug.qa.setHp(100);lab.querySelector('#lab-safe').onclick=()=>{labSafe=!labSafe;lab.querySelector('#lab-safe').textContent=labSafe?'검사 보호 켜짐':'검사 보호 꺼짐';};lab.querySelector('#lab-active').onclick=()=>{window.seedDebug.qa.giveForm('collapse',5);window.seedDebug.qa.giveForm('prism',5);window.seedDebug.qa.fillActive();};lab.querySelector('#lab-title').onclick=()=>window.seedDebug.qa.showAustinTitle();lab.querySelector('#lab-solo-card').onclick=()=>{for(const form of Object.values(SOLO_FORMS))levels.set(form.requires[0],5);syncLaws();offerSolo(finishChoice,true);};lab.querySelector('#lab-solo').onclick=()=>{const id=Object.keys(SOLO_FORMS)[soloArtIndex++%Object.keys(SOLO_FORMS).length];heldForms.clear();heldForms.set(id,5);syncForms();$('#toast').textContent=`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-fusion').onclick=()=>{const id=fusionArtIds[fusionArtIndex++%fusionArtIds.length];heldForms.clear();heldForms.set(id,5);syncForms();$('#toast').textContent=`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-orbit').onclick=()=>{const id=orbitArtIds[orbitArtIndex++%orbitArtIds.length];heldForms.clear();syncForms();chosen.delete('orbit');if(id==='base'){levels.set('orbit',1);chosen.add('orbit');LS=lawStats(levels);}else{heldForms.set(id,5);syncForms();}$('#toast').textContent=id==='base'?'외형 검사 · 기본 공전 씨앗잎':`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-awaken').onclick=()=>{heldForms.clear();heldForms.set('collapse',5);heldForms.set('blackhole',5);heldForms.set('flarebloom',4);syncForms();promptedAwaken.clear();offerAwaken(finishChoice,true);};lab.querySelector('#lab-mix').onclick=()=>{heldForms.clear();heldForms.set('collapse',6);heldForms.set('winterbreath',7);heldForms.set('prism',7);syncForms();activeGauge.value=ACTIVE.max;$('#toast').textContent='대표 겨울 숨결 · 보조 프리즘 가시';};
+ lab.innerHTML='<span>로컬 합성 검사 · 랭킹 전송 없음</span><button id="lab-hurt">보스 다음 단계</button><button id="lab-heal">검사 생명 회복</button><button id="lab-safe">검사 보호 꺼짐</button><button id="lab-active">오버드라이브 준비</button><button id="lab-title">오스틴 칭호</button><button id="lab-solo-card">단독 선택 이미지</button><button id="lab-solo">단독 진화 외형</button><button id="lab-fusion">완성 진화 외형</button><button id="lab-orbit">공전 5종 외형</button><button id="lab-mix">진화 겹침</button><button id="lab-awaken">각성 선택</button><button id="lab-twin">쌍둥이 각성 선택</button>';
+ const fusionArtIds=Object.keys(FORMS).filter(id=>!Object.hasOwn(SOLO_FORMS,id)),orbitArtIds=['base','starring','frostguard','stormcrown','mirrorguard'];let soloArtIndex=0,fusionArtIndex=0,orbitArtIndex=0;document.body.append(lab);lab.querySelector('#lab-hurt').onclick=()=>window.seedDebug.qa.hurtBoss(1);lab.querySelector('#lab-heal').onclick=()=>window.seedDebug.qa.setHp(100);lab.querySelector('#lab-safe').onclick=()=>{labSafe=!labSafe;lab.querySelector('#lab-safe').textContent=labSafe?'검사 보호 켜짐':'검사 보호 꺼짐';};lab.querySelector('#lab-active').onclick=()=>{window.seedDebug.qa.giveForm('collapse',5);window.seedDebug.qa.giveForm('prism',5);window.seedDebug.qa.fillActive();};lab.querySelector('#lab-title').onclick=()=>window.seedDebug.qa.showAustinTitle();lab.querySelector('#lab-solo-card').onclick=()=>{for(const form of Object.values(SOLO_FORMS))levels.set(form.requires[0],5);syncLaws();offerSolo(finishChoice,true);};lab.querySelector('#lab-solo').onclick=()=>{const id=Object.keys(SOLO_FORMS)[soloArtIndex++%Object.keys(SOLO_FORMS).length];heldForms.clear();heldForms.set(id,5);syncForms();$('#toast').textContent=`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-fusion').onclick=()=>{const id=fusionArtIds[fusionArtIndex++%fusionArtIds.length];heldForms.clear();heldForms.set(id,5);syncForms();$('#toast').textContent=`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-orbit').onclick=()=>{const id=orbitArtIds[orbitArtIndex++%orbitArtIds.length];heldForms.clear();syncForms();chosen.delete('orbit');if(id==='base'){levels.set('orbit',1);chosen.add('orbit');LS=lawStats(levels);}else{heldForms.set(id,5);syncForms();}$('#toast').textContent=id==='base'?'외형 검사 · 기본 공전 씨앗잎':`외형 검사 · ${FORMS[id].name}`;};lab.querySelector('#lab-awaken').onclick=()=>{heldForms.clear();heldForms.set('collapse',5);heldForms.set('blackhole',5);heldForms.set('flarebloom',4);syncForms();promptedAwaken.clear();offerAwaken(finishChoice,true);};lab.querySelector('#lab-twin').onclick=()=>{heldForms.clear();heldForms.set('glassspear',5);heldForms.set('blackhole',5);syncForms();promptedAwaken.clear();offerAwaken(finishChoice,true);};lab.querySelector('#lab-mix').onclick=()=>{heldForms.clear();heldForms.set('collapse',6);heldForms.set('winterbreath',7);heldForms.set('prism',7);syncForms();activeGauge.value=ACTIVE.max;$('#toast').textContent='대표 겨울 숨결 · 보조 프리즘 가시';};
 }

@@ -1,21 +1,27 @@
 import * as THREE from 'three';
 import {rankedEvolutions} from './evolution-rank.js';
-import {baseFormOf} from './forms.js';
+import {baseFormOf,TWIN_FORMS} from './forms.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
 export const SEED_BODY_ART='seed-body-directions-v6.png';
-export const SEED_SOLO_BODY_ART='seed-solo-bodies-v2.png';
+export const SEED_SOLO_BODY_ART='seed-solo-bodies-v3.webp';
 export const SEED_FUSION_BODY_ART='seed-fusion-bodies-v1.png';
+export const SEED_AWAKEN_BODY_ART='seed-awaken-bodies-v1.webp';
 export const BODY_SIZE=1.18;
 export const EVOLUTION_SIZE=1.22;
 export const SOLO_BODY_TILES=Object.freeze({mirrormaze:0,fullbloom:1,thunderweb:2,starring:3,glassspear:4,flarebloom:5,rewind:6,blackhole:7,winterbreath:8});
 export const FUSION_BODY_TILES=Object.freeze({collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9});
-const ALL_BODY_TILES=Object.freeze({...FUSION_BODY_TILES,...SOLO_BODY_TILES});
+export const AWAKEN_BODY_TILES=Object.freeze({bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9});
+const ALL_BODY_TILES=Object.freeze({...FUSION_BODY_TILES,...SOLO_BODY_TILES,...AWAKEN_BODY_TILES});
 const EVOLUTION_COLORS=Object.freeze({collapse:0xa861ff,frostguard:0x81eaff,returnblade:0x8eff9d,prism:0xffd77e,thunderlance:0xffd35d,frostbloom:0x77dfff,stormcrown:0xffd15d,tidepull:0x55d9ec,seedstorm:0xff8552,mirrorguard:0xffe2a1,mirrormaze:0xc7eaff,fullbloom:0xa5ee65,thunderweb:0xffd05d,starring:0xffe18a,glassspear:0x74ddff,flarebloom:0xff694f,rewind:0xc375ff,blackhole:0x8d54ff,winterbreath:0x9fe9ff});
 
-// Awakened evolutions wear their fusion's body until their own art exists (the stronger of the two if both are held).
-const bodyForms=forms=>{const out=new Map();for(const [id,level] of forms instanceof Map?forms:Object.entries(forms||{})){const base=baseFormOf(id);out.set(base,Math.max(out.get(base)||0,level));}return out;};
+// Fusion awakenings use dedicated bodies. A twin contributes both solo bodies,
+// so the dominant half becomes the body and the other still colours its aura.
+const bodyForms=forms=>{const out=new Map();for(const [id,level] of forms instanceof Map?forms:Object.entries(forms||{})){
+ const artIds=TWIN_FORMS[id]?[...TWIN_FORMS[id].parts]:[Object.hasOwn(AWAKEN_BODY_TILES,id)?id:baseFormOf(id)];
+ for(const artId of artIds)out.set(artId,Math.max(out.get(artId)||0,level));
+ }return out;};
 export const rankedEvolutionForms=(forms,limit=2)=>rankedEvolutions(bodyForms(forms),ALL_BODY_TILES,limit).map(entry=>entry.id);
 export const dominantSoloForm=forms=>rankedEvolutions(forms,SOLO_BODY_TILES,1)[0]?.id||null;
 
@@ -41,7 +47,8 @@ export function createSeedBody(scene,{occlusion=true}={}){
  let applyEvolution=()=>{};
  const sources={
   fusion:{file:SEED_FUSION_BODY_ART,tiles:FUSION_BODY_TILES,ready:false,loading:false,texture:null},
-  solo:{file:SEED_SOLO_BODY_ART,tiles:SOLO_BODY_TILES,ready:false,loading:false,texture:null}
+  solo:{file:SEED_SOLO_BODY_ART,tiles:SOLO_BODY_TILES,ready:false,loading:false,texture:null},
+  awaken:{file:SEED_AWAKEN_BODY_ART,tiles:AWAKEN_BODY_TILES,ready:false,loading:false,texture:null}
  };
  const evolutionMaterial=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.76,highlight:1.1,rim:0xffe8ae,rimStrength:.085});
  const evolutionSprite=new THREE.Sprite(evolutionMaterial);evolutionSprite.center.set(.5,.055);evolutionSprite.scale.set(EVOLUTION_SIZE,EVOLUTION_SIZE,1);evolutionSprite.visible=false;root.add(evolutionSprite);
