@@ -12,6 +12,7 @@ tools/*
 !tools/evolution-test.mjs
 !tools/motion-test.mjs
 !tools/journey-test.mjs
+!tools/projectile-art-test.mjs
 !tools/vfx-test.mjs
 !tools/active-vfx-test.mjs
 !tools/reward-art-test.mjs
