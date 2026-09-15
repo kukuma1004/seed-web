@@ -24,3 +24,15 @@
 .book-scroll .form-cards.book{max-height:none;overflow:visible;margin:6px 0 14px}
 .book-title{margin:10px 0 2px;font-size:14px;color:#dfe9d6;text-align:left}.book-title span{color:#ffe3a0;font-weight:400;margin-left:6px}
 @media(max-height:500px) and (orientation:landscape){.book-scroll{max-height:52vh}.book-title{font-size:12px}}
+/* Codex pages (2026-09-16): press an entry to read it. */
+button.book-entry{font:inherit;color:inherit;cursor:pointer}button.book-entry:hover,button.book-entry:focus-visible{border-color:#ffe08aaa;transform:translateY(-1px)}
+.book-detail{position:fixed;inset:0;z-index:40;display:grid;place-items:center;padding:16px;background:#050f13d9}.book-detail[hidden]{display:none}
+.book-detail-card{width:min(560px,100%);max-height:88vh;overflow:auto;display:grid;grid-template-columns:132px 1fr;gap:16px;padding:20px;border:1px solid #b6a77570;border-radius:16px;background:#10252a;box-shadow:0 18px 50px #000a;text-align:left}
+.book-detail-art .form-portrait{width:132px;height:132px;max-width:none}
+.book-detail-text small{color:#a9c8bb}.book-detail-text h3{margin:4px 0 8px;font-size:22px;color:#f3f7e8}
+.book-detail-text p{margin:6px 0;font-size:13px;line-height:1.55;color:#d7e3db}
+.book-detail-text .book-desc{font-size:14px;color:#eef5ea}.book-synergy{color:#ffe3a0!important}.book-signature{padding:8px 10px;border-radius:10px;background:#ffd36a14;color:#f6e7bd!important}
+.book-recipe{color:#a9c8bb!important;font-size:12px!important}
+.book-detail-close{grid-column:1/-1;justify-self:center;min-width:120px}
+.book-detail-card.unknown .form-portrait{filter:grayscale(1) brightness(.4)}
+@media(max-width:560px),(max-height:500px) and (orientation:landscape){.book-detail-card{grid-template-columns:84px 1fr;gap:12px;padding:14px}.book-detail-art .form-portrait{width:84px;height:84px}.book-detail-text h3{font-size:18px}.book-detail-text p{font-size:12px}}
