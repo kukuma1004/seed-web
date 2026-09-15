@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 const V=THREE.Vector3;
 export function blocksShield(e,incoming){
- if(e.type!=='shield'||e.state==='recover')return false;
+ if((e.type!=='shield'&&e.type!=='catcher')||e.state==='recover')return false; // act-2 catchers block from the front too
  return incoming.x*Math.sin(e.g.rotation.y)+incoming.z*Math.cos(e.g.rotation.y)<-.5;
 }
 export function createShield(scene){

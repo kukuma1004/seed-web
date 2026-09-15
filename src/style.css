@@ -14,3 +14,8 @@ button:focus-visible{outline:2px solid #c5f5b4;outline-offset:5px}
 #overlay .intro-lead{color:#c5d6cd;margin:6px 0 2px}
 .intro-links{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px}.intro-links .discovery-link{margin:0}
 .codex-goal{color:#ffe3a0}.title-perk .title-next{color:#a9c8bb;font-size:12px}
+/* Act 2 entry on the start screen (2026-09-16). */
+.act2-entry{display:flex;flex-direction:column;align-items:center;gap:6px;margin-top:10px}
+.act2-button{border-color:#e0a24a!important;background:linear-gradient(135deg,#3a1f1a,#1b2233)!important;color:#ffe7c2!important}
+.act2-button small{display:block;color:#ffc58a;font-size:11px;margin-top:2px}
+.act2-lock{margin:8px 0 0;color:#8aa39a;font-size:12px}

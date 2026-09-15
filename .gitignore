@@ -57,3 +57,4 @@ artifacts/
 !tools/awaken-test.mjs
 !tools/titles-test.mjs
 !tools/dash-evolution-test.mjs
+!tools/act2-test.mjs

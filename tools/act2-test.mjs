@@ -1,0 +1,87 @@
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
+import {ACT2_MINIONS,ACT2_MINION_TYPES,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
+import {roomFor,ROOMS} from '../src/journey.js';
+import {arenaFor,insideArena} from '../src/arena.js';
+import {trapsFor} from '../src/traps.js';
+import {turretSpots} from '../src/turret.js';
+import {validCheckpoint,readCheckpoint,writeCheckpoint,SAVE_KEY,REGION_NAMES} from '../src/run-save.js';
+import {RANKING_KEY,readRanking,submitScore,KILL_POINTS} from '../src/score.js';
+import {blocksShield} from '../src/shield.js';
+import {contactShadowRadius} from '../src/contact-shadows.js';
+const V=THREE.Vector3;
+
+// Unlock and act marker.
+assert.equal(act2Unlocked({bosses:['austin']}),true);assert.equal(act2Unlocked({bosses:['warden']}),false);assert.equal(act2Unlocked(null),false);
+assert.equal(isAct2(ACT2_REGION),true);assert.equal(actOf('garden'),1);assert.equal(actOf('stadium'),2);assert.ok(REGION_NAMES.stadium);
+
+// Rooms: five stadium rooms, minions and covers inside their arenas, no star room, traps or turrets.
+assert.equal(STADIUM_ROOMS.length,ROOMS.length);
+STADIUM_ROOMS.forEach((room,stage)=>{
+ assert.equal(roomFor(stage,0,'stadium'),room);assert.equal(roomFor(stage,1,'stadium'),room);
+ const arena=arenaFor(stage,1,'stadium');assert.notEqual(arena.shape,'star');
+ for(const [type,x,z] of room.enemies){assert.ok(isAct2Minion(type)||type==='warden',type);assert.ok(insideArena({x,z},.5,arena),`${room.name} ${type}`);}
+ for(const c of room.covers)assert.ok(insideArena({x:c.x,z:c.z},0,arena));
+ assert.deepEqual(trapsFor(stage,0,'stadium'),[]);assert.deepEqual(turretSpots(stage,1,'stadium'),[]);
+});
+assert.ok(STADIUM_ROOMS.slice(0,4).every(room=>room.enemies.every(([type])=>isAct2Minion(type))));
+assert.equal(new Set(STADIUM_ROOMS.flatMap(r=>r.enemies.map(([t])=>t)).filter(isAct2Minion)).size,4,'every minion appears');
+assert.notEqual(roomFor(2,0,'garden'),STADIUM_ROOMS[2]);
+
+// Storage: act 2 keeps its own checkpoint and local board; the name stays shared.
+{
+ const data=new Map(),storage={getItem:k=>data.has(k)?data.get(k):null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};
+ assert.equal(actStorage(storage,1),storage);
+ const act2=actStorage(storage,2),save={version:1,cycle:0,region:'stadium',stage:1,mode:'entry',hp:90,rules:[],mutated:[],kills:3,elapsed:20};
+ assert.ok(validCheckpoint(save));assert.equal(writeCheckpoint(act2,save),true);
+ assert.equal(readCheckpoint(storage),null,'act 1 does not see the act 2 run');assert.equal(readCheckpoint(act2).region,'stadium');
+ assert.ok(data.has(ACT2_STORAGE_KEYS[SAVE_KEY]));assert.ok(!data.has(SAVE_KEY));
+ submitScore(act2,{name:'가나',score:500,cycle:0,stage:1,kills:3,time:20});
+ assert.equal(readRanking(storage).length,0);assert.equal(readRanking(act2).length,1);assert.ok(data.has(ACT2_STORAGE_KEYS[RANKING_KEY]));
+ assert.equal(data.get('seed-player-name'),'가나','names are shared');
+}
+for(const type of ACT2_MINION_TYPES){assert.ok(KILL_POINTS[type]>0,type);assert.ok(contactShadowRadius(type)!==.5||type==='runner',type);assert.ok(ACT2_MINIONS[type].name);}
+
+// Minion behaviour with a small fake world.
+function world(playerAt=new V()){
+ const bolts=[],hits=[],batted=[],shots=[];
+ const ctx={player:playerAt,collide:()=>{},hit:a=>hits.push(a),bolt:(pos,dir,spec)=>bolts.push({pos,dir,spec}),blocked:()=>false,shots:()=>shots,batShot:s=>{s.life=0;batted.push(s);},canBat:()=>true,random:()=>.3};
+ return {ctx,bolts,hits,batted,shots};
+}
+const run=(e,ctx,seconds,dt=.05,each=()=>{})=>{for(let t=0;t<seconds;t+=dt){tickAct2Minion(e,dt,t,ctx);each(t);}};
+const scene=new THREE.Scene();
+
+// Pitcher: the line fills in first, then a fast straight ball; the third pitch curves.
+{
+ const w=world(),e=createAct2Minion(scene,'pitcher',()=>.1);e.g.position.set(0,0,-7);let sawLine=false;
+ run(e,w.ctx,1.6,.05,()=>{if(e.state==='windup'&&e.line.visible)sawLine=true;});
+ assert.ok(sawLine,'windup line shows');assert.equal(w.bolts.length,1);assert.equal(w.bolts[0].spec.speed,ACT2_MINIONS.pitcher.ballSpeed);assert.ok(w.bolts[0].dir.z>.9,'aimed at the seed');
+ run(e,w.ctx,8);assert.ok(w.bolts.length>=3);assert.ok(w.bolts[2].spec.curve,'third pitch curves');
+ w.ctx.blocked=()=>true;const before=w.bolts.length;e.state='stalk';e.timer=0;run(e,w.ctx,3);assert.equal(w.bolts.length,before,'no pitch without a clear line');
+}
+// Runner: marks where the seed stood, sprints through, then rests exposed.
+{
+ const player=new V(),w=world(player),e=createAct2Minion(scene,'runner',()=>.1);e.g.position.set(0,0,-6);e.timer=0;
+ run(e,w.ctx,.1);assert.equal(e.state,'mark');assert.ok(e.base.visible);assert.ok(e.basePos.distanceTo(new V())<1e-6);
+ player.set(3,0,0);run(e,w.ctx,.9);assert.equal(e.state,'commit');
+ run(e,w.ctx,1.3);assert.equal(e.state,'recover');assert.equal(e.takenScale,ACT2_MINIONS.runner.exposed);assert.ok(e.g.position.z>-.2,'ran through the base');assert.equal(w.hits.length,0,'a seed that left the base is safe');
+}
+// Batter: sends a frontal shot back, but not a piercing one or one from behind.
+{
+ const w=world(),e=createAct2Minion(scene,'batter',()=>.1);e.g.position.set(0,0,-3);e.g.rotation.y=0;e.timer=5;
+ w.shots.push({life:1,ob:{position:new V(0,.7,-2.2)}});run(e,w.ctx,.05);
+ assert.equal(w.batted.length,1);assert.equal(w.bolts.length,1);assert.ok(w.bolts[0].dir.z>0);
+ const later=world();later.ctx.canBat=()=>false;const b=createAct2Minion(scene,'batter',()=>.1);b.g.position.set(0,0,-3);b.timer=5;later.shots.push({life:1,ob:{position:new V(0,.7,-2.2)}});run(b,later.ctx,.05);assert.equal(later.batted.length,0,'piercing shots pass');
+ const back=world();const c=createAct2Minion(scene,'batter',()=>.1);c.g.position.set(0,0,-3);c.g.rotation.y=0;c.timer=5;back.shots.push({life:1,ob:{position:new V(0,.7,-4)}});run(c,back.ctx,.05);assert.equal(back.batted.length,0,'shots from behind pass');
+}
+// Catcher: blocks from the front only, throws back at most every returnEvery seconds, drops the shield while recovering.
+{
+ const w=world(),e=createAct2Minion(scene,'catcher',()=>.1);e.g.position.set(0,0,-3);e.g.rotation.y=0;
+ assert.equal(blocksShield(e,new V(0,0,-1)),true,'shot flying at its face');assert.equal(blocksShield(e,new V(0,0,1)),false,'shot from behind');
+ assert.equal(catcherReturn(e,w.ctx),true);assert.equal(catcherReturn(e,w.ctx),false);assert.equal(w.bolts.length,1);
+ e.state='recover';assert.equal(blocksShield(e,new V(0,0,-1)),false);
+ const turning=createAct2Minion(scene,'catcher',()=>.1);turning.g.position.set(0,0,-5);turning.g.rotation.y=Math.PI;run(turning,world().ctx,.5);
+ assert.ok(Math.abs(Math.atan2(Math.sin(turning.g.rotation.y-Math.PI),Math.cos(turning.g.rotation.y-Math.PI)))<ACT2_MINIONS.catcher.turn*.6+.05,'turns slowly, so flanking works');
+}
+console.log('Act 2: Austin unlock, stadium rooms without star/traps/turrets, separate save and board, and pitcher/runner/batter/catcher rules passed.');
