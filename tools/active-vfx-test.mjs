@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {activeColors,createActiveVFX} from '../src/active-vfx.js';
+import {activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
+
+// Light, not stickers: the gradients fade to black (no light under additive blending) at their edges.
+assert.ok(glowFalloff(.5,.5)>.95&&glowFalloff(0,.5)===0&&glowFalloff(.95,.95)===0,'floor glow fades out before the rim');
+assert.ok(beamFalloff(.5,0)>.9&&beamFalloff(.5,1)===0,'beam fades out toward the top');
+assert.ok(haloBand(0,.5)>.9&&haloBand(0,0)<.1&&haloBand(0,1)<.1,'halo is a thin band');
 import {ALL_FORMS} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
 
@@ -21,8 +26,9 @@ for(const mobile of [false,true]){
   assert.equal(fx.state().instances,mobile?10:16);
   assert.equal(fx.state().drawCalls,5);
   assert.ok(root.visible);
+  assert.ok(!root.children.some(o=>/wheel|petal/.test(o.geometry.name||'')),'no flat petal wheels on the floor');
   for(const object of root.children){
-    assert.equal(object.material.depthWrite,false);
+    assert.equal(object.material.depthWrite,false);assert.equal(object.material.blending,THREE.AdditiveBlending);
     if(object.instanceMatrix)assert.ok([...object.instanceMatrix.array].every(Number.isFinite));
   }
 

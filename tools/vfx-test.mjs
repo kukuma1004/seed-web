@@ -11,9 +11,11 @@ for(const mobile of [false,true]){
   }
   fx.update(.016);
   assert.deepEqual(a,beforeA);assert.deepEqual(b,beforeB,'VFX must never move gameplay objects');
-  assert.deepEqual(root.children,meshes,'Effects must reuse five GPU batches');
-  assert.equal(meshes[1].geometry.name,'seed-vfx-broken-shock-crown');
-  assert.equal(meshes[2].geometry.name,'seed-vfx-tapered-streak');
+  assert.deepEqual(root.children,meshes,'Effects must reuse four GPU batches');
+  assert.equal(meshes.length,4);assert.equal(fx.state().batches,4);
+  assert.ok(!meshes.some(m=>m.geometry.name==='seed-vfx-broken-shock-crown'),'the floor shock crown is gone');
+  assert.equal(meshes[1].geometry.name,'seed-vfx-tapered-streak');
+  assert.ok(fx.state().events.pulse>0,'pulse calls stay valid but draw nothing');
   assert.ok(fx.state().events.flame>0&&fx.state().events.explosion>0,'Explosions add a bounded flame crown');
   assert.ok(fx.state().active<=fx.state().capacity);
   for(const mesh of meshes){
@@ -24,6 +26,6 @@ for(const mobile of [false,true]){
   assert.equal(fx.state().active,0,'All effects, including delayed evolution rays, must expire');
   fx.evolution(a,'split');fx.clear();fx.update(1);assert.equal(fx.state().active,0,'Clear cancels delayed effects across rooms/restarts');
   const disposed=[];for(const mesh of meshes){mesh.geometry.addEventListener('dispose',()=>disposed.push('geometry'));mesh.material.addEventListener('dispose',()=>disposed.push('material'));}
-  fx.dispose();assert.equal(scene.children.length,0);assert.equal(disposed.length,10);
+  fx.dispose();assert.equal(scene.children.length,0);assert.equal(disposed.length,8);
 }
 console.log('VFX capacity, flame-layer explosions, input isolation, finite transforms, expiry, reset and GPU resource disposal passed.');

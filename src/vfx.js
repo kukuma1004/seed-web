@@ -4,8 +4,9 @@ import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52};
 
-// These low-poly silhouettes keep the same five instanced draw calls while
-// replacing the old plain ring and rectangular bar placeholders.
+// The flat shock crown that spread across the floor was removed (2026-09-15): it covered the arena,
+// read as a flat colored sunburst and cost a batch. Hits and blasts now use sparks, streaks and flames only.
+// The geometry stays exported for older tools.
 export function shockCrownGeometry(segments=14){
  const positions=[];
  for(let i=0;i<segments;i++){
@@ -22,14 +23,14 @@ export function streakGeometry(){
  const geometry=new THREE.OctahedronGeometry(1,0).scale(.72,.5,.72);geometry.name='seed-vfx-tapered-streak';return geometry;
 }
 
-// Fixed GPU batches: effects cannot add lights, shadows or an unbounded mesh per spark.
+// Fixed GPU batches (four): effects cannot add lights, shadows or an unbounded mesh per spark.
 export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0),identity=new THREE.Quaternion();
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
-  const pulsePos=new THREE.Vector3(),emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
+  const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -37,7 +38,6 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion()}))};
   }
   const sparks=batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
-  const rings=batch(shockCrownGeometry(),mobile?18:32);
   const beams=batch(streakGeometry(),mobile?120:240);
   // One tapered batch gives explosions a rising flame crown without creating a
   // mesh or a light for every lick of fire.
@@ -55,16 +55,15 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const unindexed=ghostParts.map(g=>g.index?g.toNonIndexed():g.clone());
   const ghosts=batch(mergeGeometries(unindexed),mobile?4:8);
   for(const geo of [...ghostParts,...unindexed])geo.dispose();
-  const batches=[sparks,rings,beams,flames,ghosts];
+  const batches=[sparks,beams,flames,ghosts];
   function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
     p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=FX_COLORS[tint]??tint??FX_COLORS.seed;
     p.grow=grow;p.delay=delay;p.gravity=gravity;
     return p;
   }
-  function pulse(pos,id,radius=1,life=.35,delay=0){
-    pulsePos.set(pos.x,.14,pos.z);emit(rings,pulsePos,id,life,radius,1,radius,{grow:1.5,delay});
-  }
+  // Kept as a no-op so every caller (forms, bosses, items) stays valid without drawing a floor ring.
+  function pulse(){counters.pulse++;}
   function segment(a,b,id,width=.055,life=.16,delay=0){
     segDelta.copy(b).sub(a);const length=segDelta.length();if(length<.001)return;
     segMid.copy(a).add(b).multiplyScalar(.5);segRotation.setFromUnitVectors(up,segDelta.multiplyScalar(1/length));
@@ -152,7 +151,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
         if(p.delay>0){p.delay-=dt;continue;}
         p.life-=dt;if(p.life<=0)continue;
         p.vel.y-=p.gravity*dt;p.pos.addScaledVector(p.vel,dt);
-        const t=p.life/p.max,scale=pool===rings?1+(1-t)*p.grow:pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
+        const t=p.life/p.max,scale=pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
         dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);dummy.updateMatrix();
         pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4));pool.mesh.setColorAt(count,color);count++;
       }
@@ -161,7 +160,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
   return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
-    state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:5,events:{...counters}}),
+    state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

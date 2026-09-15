@@ -324,7 +324,8 @@ function useActive(){
  const colors=plan.forms.flatMap(id=>FORMS[id]?.requires||[]);for(const [i,id] of colors.entries())vfx.burst(player.position,id,10,1.1,i*.055);
  vfx.burst(player.position,colors[0]||'seed',plan.state==='OVERDRIVE'?54:38,1.65);
  cameraShake=Math.max(cameraShake,plan.state==='OVERDRIVE'?.7:.42);
- $('#toast').textContent=plan.state==='OVERDRIVE'?`오버드라이브 · ${plan.forms.map(id=>SIGNATURES[id].name).join(' + ')} · ${plan.seconds}초`:`${SIGNATURES[plan.forms[0]].name} · ${plan.seconds}초`;
+ // The activation title already names the signature(s); a second toast line only covered the arena.
+ $('#toast').textContent='';
 }
 function updateActive(dt){
  const done=tickActive(activeGauge,dt);
