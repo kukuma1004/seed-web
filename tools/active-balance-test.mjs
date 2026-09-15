@@ -27,7 +27,8 @@ for(const level of [SOLO_LEVEL-1,9]){
  assert.ok(ring>=Math.min(...passiveFusions)*.8&&ring<=Math.max(...passiveFusions)*1.2,`starring ${Math.round(ring)} vs passive fusions ${passiveFusions.map(Math.round)}`);
 }
 
-// One signature (3 seconds) is worth several seconds of that evolution's normal damage: clearly felt, not a second weapon.
+// One signature (3 seconds) is worth 12-32 seconds of that evolution's normal damage. The gauge is slow (a whole crowd plus a
+// 20 s cooldown), so the payoff must be decisive (2026-09-15: SURGE_DAMAGE 1.6 after players felt enemies survived it).
 const SIGNATURE_SECONDS=3;
 for(const id of Object.keys(ALL_FORMS)){
  const shots=ALL_FORMS[id].passive;let normal=0,boosted=0;
@@ -36,7 +37,7 @@ for(const id of Object.keys(ALL_FORMS)){
   boosted+=simulate(id,SOLO_LEVEL-1,{scene,seconds:10,shots,surgeAt:1,surgeSeconds:SIGNATURE_SECONDS}).damage;
  }
  const worth=(boosted-normal)/(normal/10);
- assert.ok(worth>=4&&worth<=16,`${id}: signature worth ${worth.toFixed(1)} seconds of normal damage`);
+ assert.ok(worth>=12&&worth<=32,`${id}: signature worth ${worth.toFixed(1)} seconds of normal damage`);
 }
 
 // Surge stat sheets are always stronger or equal, never weaker, and level one numbers are untouched.
@@ -47,4 +48,4 @@ for(const id of Object.keys(ALL_FORMS)){
  for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
  assert.deepEqual(formStats(id,1),formStats(id,1,{surge:false}));
 }
-console.log('Balance: solo evolutions sit just behind fusions at equal picks (levels 4 and 9), the ring matches orbit fusions, every signature is worth 4-16 seconds of its evolution.');
+console.log('Balance: solo evolutions sit just behind fusions at equal picks (levels 4 and 9), the ring matches orbit fusions, every signature is worth 12-32 seconds of its evolution.');

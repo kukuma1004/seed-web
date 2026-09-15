@@ -93,9 +93,13 @@ const SURGE=Object.freeze({
  blackhole:s=>({holes:s.holes+2,hold:s.hold+1}),
  winterbreath:s=>({range:s.range+1,cone:Math.min(Math.PI,s.cone*1.3)})
 });
+// While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
+export const SURGE_DAMAGE=1.6;
+const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','emberDamage'];
 function surgeStats(id,s){
  const boosted={...s,...(SURGE[id]?.(s)||{}),surge:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=.5;
+ for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=SURGE_DAMAGE;
  return boosted;
 }
 function baseStats(id,level){

@@ -12,7 +12,7 @@ export const ACTIVE=Object.freeze({
  cooldownSeconds:20,// post-use lock prevents a screen clear from paying for the next ultimate
  signatureSeconds:3,
  overdriveSeconds:4.5,
- finaleDamage:60,
+ finaleDamage:100, // raised from 60 with SURGE_DAMAGE so the closing blast finishes what the overdrive started
  finaleRadius:4.2,
  maxArcs:6,
  maxEchoes:2
