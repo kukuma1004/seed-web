@@ -4,6 +4,13 @@
 export function createTouchControls(canAct){
   const enabled=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
   document.body.classList.toggle('touch-mode',enabled);
+  if(enabled&&!document.__seedTouchGuard){
+    document.__seedTouchGuard=true;
+    const nativeTarget=target=>Boolean(target?.closest?.('input,textarea,select,[contenteditable="true"],[data-native-touch]'));
+    const blockNativeGesture=event=>{if(!nativeTarget(event.target))event.preventDefault();};
+    for(const name of ['gesturestart','gesturechange','gestureend','selectstart','contextmenu','dragstart'])document.addEventListener(name,blockNativeGesture,{passive:false});
+    document.addEventListener('touchmove',event=>{if(event.touches?.length>1&&!nativeTarget(event.target))event.preventDefault();},{passive:false});
+  }
   const panel=document.createElement('div');panel.id='touch-controls';panel.innerHTML=`<div id="move-zone" aria-hidden="true"></div><div id="move-stick" class="stick" role="group" aria-label="이동 조이스틱"><i></i><span>이동</span></div><button id="touch-dash" aria-label="회피">◇<small>회피</small></button>`;
   document.body.append(panel);
   const axes={move:{x:0,y:0},aim:{x:0,y:0}},owners=new Map();let dashUntil=0,center=null;

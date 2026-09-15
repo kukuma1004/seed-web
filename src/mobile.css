@@ -1,4 +1,7 @@
 html,body{width:100%;height:100%;overscroll-behavior:none}#game{touch-action:none}button{touch-action:manipulation}#touch-controls{display:none}
+.touch-mode,.touch-mode *{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.touch-mode input,.touch-mode textarea,.touch-mode select,.touch-mode [contenteditable="true"]{-webkit-user-select:text;user-select:text;-webkit-touch-callout:default}
+.touch-mode img{-webkit-user-drag:none;user-drag:none}
 .touch-mode #touch-controls:not([hidden]){display:block;position:fixed;inset:0;z-index:2;pointer-events:none;user-select:none;-webkit-user-select:none}
 .stick{position:absolute;bottom:max(18px,env(safe-area-inset-bottom));width:118px;height:118px;border:1px solid #a2dcbb70;border-radius:50%;background:#0c26295e;box-shadow:inset 0 0 24px #aaffc711;touch-action:none;pointer-events:auto}
 #move-stick{left:max(20px,env(safe-area-inset-left))}
