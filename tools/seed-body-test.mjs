@@ -10,9 +10,9 @@ for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw+2*Math.PI,yaw),0);
 }
 console.log('Seed atlas directions follow movement relative to the camera.');
-assert.equal(SEED_BODY_ART,'seed-body-directions-v5.png');
+assert.equal(SEED_BODY_ART,'seed-body-directions-v6.png');
 assert(BODY_SIZE<1.26&&BODY_SIZE>=1.1,'The chibi seed should be smaller without becoming hard to read.');
-console.log('The chibi seed uses the compact v5 art and a smaller presentation scale.');
+console.log('The chibi seed uses the grounded v6 locomotion art and a compact presentation scale.');
 assert.equal(SEED_SOLO_BODY_ART,'seed-solo-bodies-v1.png');
 assert.deepEqual([...new Set(Object.values(SOLO_BODY_TILES))],[0,1,2,3,4,5,6,7,8]);
 assert.equal(dominantSoloForm(new Map([['fullbloom',4],['blackhole',7]])),'blackhole');

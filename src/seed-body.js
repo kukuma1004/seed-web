@@ -3,7 +3,7 @@ import {rankedEvolutions} from './evolution-rank.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
-export const SEED_BODY_ART='seed-body-directions-v5.png';
+export const SEED_BODY_ART='seed-body-directions-v6.png';
 export const SEED_SOLO_BODY_ART='seed-solo-bodies-v1.png';
 export const SEED_FUSION_BODY_ART='seed-fusion-bodies-v1.png';
 export const BODY_SIZE=1.18;
