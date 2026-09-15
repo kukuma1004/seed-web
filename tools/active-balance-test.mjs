@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {FORMS,SOLO_FORMS,ALL_FORMS,SOLO_LEVEL,formStats} from '../src/forms.js';
+import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
 import {averageDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
@@ -48,4 +48,11 @@ for(const id of Object.keys(ALL_FORMS)){
  for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
  assert.deepEqual(formStats(id,1),formStats(id,1,{surge:false}));
 }
-console.log('Balance: solo evolutions sit just behind fusions at equal picks (levels 4 and 9), the ring matches orbit fusions, every signature is worth 12-32 seconds of its evolution.');
+// Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:
+// about as strong as the pair, never a runaway (0.7x-1.5x), and the level rule is the one progression.js uses.
+for(const a of Object.values(AWAKEN_FORMS)){
+ const L=SOLO_LEVEL-1,shots=a.passive,pair=averageDps(a.base,L,{shots})+Math.max(...a.requires.map(soloFormOf).map(id=>averageDps(id,L,{shots})));
+ const ratio=averageDps(a.id,L+Math.ceil(L/3),{shots})/pair;
+ assert.ok(ratio>=.7&&ratio<=1.5,`${a.id}: awakened is ${ratio.toFixed(2)} of fusion + solo`);
+}
+console.log('Balance: solo evolutions sit just behind fusions at equal picks (levels 4 and 9), the ring matches orbit fusions, every signature is worth 12-32 seconds of its evolution, awakened evolutions match the pair they replace.');

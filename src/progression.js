@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS,ALL_FORMS,SOLO_FORMS,soloLevel} from './forms.js';
+import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,soloLevel,soloFormOf} from './forms.js';
 
 // Laws are stacked, never swapped: five slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -125,3 +125,31 @@ export function evolveSolo(levels,forms,id){
  return true;
 }
 export function buildLevel(levels,forms=new Map()){let n=totalLevel(levels);for(const v of forms.values())n+=v;return n;}
+
+// ---------------- awakening ----------------
+// Two held evolutions of the same fusion family awaken into one slot: the fusion with the solo evolution of one of its laws,
+// or both solo evolutions of its laws. With the awakened evolution already held, one more of those parts feeds it instead.
+// Level: the stronger part plus a third of the weaker (rounded up), so both investments count. Feeding adds a third.
+export function awakenOptions(forms=new Map()){
+ const out=[];
+ for(const a of Object.values(AWAKEN_FORMS)){
+  const solos=FORMS[a.base].requires.map(soloFormOf),parts=[a.base,...solos].filter(id=>forms.has(id));
+  if(forms.has(a.id)){for(const id of parts)out.push({id:a.id,from:[id]});continue;}
+  if(forms.has(a.base))for(const solo of solos)if(forms.has(solo))out.push({id:a.id,from:[a.base,solo]});
+  if(solos.every(solo=>forms.has(solo)))out.push({id:a.id,from:solos});
+ }
+ return out;
+}
+export function awakenLevel(forms,option){
+ const parts=option.from.map(id=>forms.get(id)||0);
+ if(forms.has(option.id))return forms.get(option.id)+Math.ceil(parts[0]/3);
+ return Math.max(...parts)+Math.ceil(Math.min(...parts)/3);
+}
+const sameOption=(a,b)=>a.id===b.id&&a.from.length===b.from.length&&a.from.every(id=>b.from.includes(id));
+export function awaken(forms,option){
+ if(!option||!awakenOptions(forms).some(o=>sameOption(o,option)))return false;
+ const level=awakenLevel(forms,option);
+ for(const id of option.from)forms.delete(id);
+ forms.set(option.id,level);
+ return true;
+}

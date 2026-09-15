@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,formStats} from './forms.js';
+import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -44,9 +44,10 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
- let active=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0;
+ // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
+ let active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
- const refresh=()=>{S=active?formStats(active,level,{surge:surgeTime>0}):formStats(null);};
+ const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0}):formStats(null);};
 
  function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,mat);ob.position.set(pos.x,y,pos.z);group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
@@ -58,10 +59,11 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],mats[style.material]));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  function set(id,nextLevel=1){
   const L=Math.max(1,Math.floor(nextLevel||1));
-  if(active!==id){clear();active=id;if(id==='frostguard')pulseTimer=formStats(id,L).novaEvery;}
+  const kind=AWAKEN_FORMS[id]?.base||id;
+  if(statId!==id){clear();active=kind;statId=id;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id])awakenTimer=2;}
   if(level!==L||S.damage===0){level=L;refresh();}
   rebuildOrbit();
  }
@@ -306,6 +308,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
 
  function update(dt){
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
+  if(active&&AWAKEN_FORMS[statId])awakenOpening(dt);
   for(const [e,t] of cooldowns){if(e.dead||t<=dt)cooldowns.delete(e);else cooldowns.set(e,t-dt);}
   updateOrbit(dt);
   for(const b of bolts){
@@ -548,8 +551,18 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
+  if(AWAKEN_FORMS[statId])awakenTimer=awakenSurgeOpening(statId);
   opening(aim);
   return true;
+ }
+ // Awakened: the opening move returns on its own every AWAKEN.openingEvery seconds (every surgeOpeningEvery during the ultimate),
+ // aimed at the nearest enemy, and waits while nothing is in reach so it is not spent on an empty room.
+ function awakenOpening(dt){
+  awakenTimer-=dt;if(awakenTimer>0)return;
+  const target=nearestEnemy(player.position,AWAKEN.openingRange);
+  if(!target){awakenTimer=0;return;}
+  awakenTimer=surgeTime>0?awakenSurgeOpening(statId):AWAKEN.openingEvery;
+  opening(target.g.position.clone().sub(player.position).setY(0));
  }
  function calm(){if(surgeTime<=0)return;surgeTime=0;refresh();rebuildOrbit();}
  function opening(aim){
@@ -609,6 +622,6 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  }
 
  return {set,fire,update,clear,surge,calm,
-  state:()=>({active,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:statId,awakenIn:AWAKEN_FORMS[statId]?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of Object.values(mats))m.dispose();group.removeFromParent();}};
 }

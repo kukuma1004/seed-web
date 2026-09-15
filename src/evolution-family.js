@@ -1,4 +1,5 @@
 import {rankedEvolutions} from './evolution-rank.js';
+import {baseFormOf} from './forms.js';
 
 // Orbit evolutions all occupy the same physical ring around the seed. Keeping one
 // core active preserves their identity and prevents three independent auto-attacks
@@ -6,8 +7,9 @@ import {rankedEvolutions} from './evolution-rank.js';
 export const ORBIT_FORMS=Object.freeze(['frostguard','stormcrown','mirrorguard','starring']);
 const ORBIT_SET=new Set(ORBIT_FORMS);
 
-export const evolutionFamily=id=>ORBIT_SET.has(id)?'orbit':id;
-export const isOrbitEvolution=id=>ORBIT_SET.has(id);
+// An awakened evolution belongs to its fusion's family (and the orbit family when that fusion orbits).
+export const evolutionFamily=id=>ORBIT_SET.has(baseFormOf(id))?'orbit':baseFormOf(id);
+export const isOrbitEvolution=id=>ORBIT_SET.has(baseFormOf(id));
 
 export function activeCombatEvolutions(forms,known){
  const ranked=rankedEvolutions(forms,known);

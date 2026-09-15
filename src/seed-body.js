@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {rankedEvolutions} from './evolution-rank.js';
+import {baseFormOf} from './forms.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
@@ -13,7 +14,9 @@ export const FUSION_BODY_TILES=Object.freeze({collapse:0,frostguard:1,returnblad
 const ALL_BODY_TILES=Object.freeze({...FUSION_BODY_TILES,...SOLO_BODY_TILES});
 const EVOLUTION_COLORS=Object.freeze({collapse:0xa861ff,frostguard:0x81eaff,returnblade:0x8eff9d,prism:0xffd77e,thunderlance:0xffd35d,frostbloom:0x77dfff,stormcrown:0xffd15d,tidepull:0x55d9ec,seedstorm:0xff8552,mirrorguard:0xffe2a1,mirrormaze:0xc7eaff,fullbloom:0xa5ee65,thunderweb:0xffd05d,starring:0xffe18a,glassspear:0x74ddff,flarebloom:0xff694f,rewind:0xc375ff,blackhole:0x8d54ff,winterbreath:0x9fe9ff});
 
-export const rankedEvolutionForms=(forms,limit=2)=>rankedEvolutions(forms,ALL_BODY_TILES,limit).map(entry=>entry.id);
+// Awakened evolutions wear their fusion's body until their own art exists (the stronger of the two if both are held).
+const bodyForms=forms=>{const out=new Map();for(const [id,level] of forms instanceof Map?forms:Object.entries(forms||{})){const base=baseFormOf(id);out.set(base,Math.max(out.get(base)||0,level));}return out;};
+export const rankedEvolutionForms=(forms,limit=2)=>rankedEvolutions(bodyForms(forms),ALL_BODY_TILES,limit).map(entry=>entry.id);
 export const dominantSoloForm=forms=>rankedEvolutions(forms,SOLO_BODY_TILES,1)[0]?.id||null;
 
 // The atlas is painted from front, right, back, left; direction is camera-relative.

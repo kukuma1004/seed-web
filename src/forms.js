@@ -33,7 +33,32 @@ export const SOLO_FORMS=Object.freeze(Object.fromEntries([
  solo('winterbreath','frost','겨울 숨결','앞쪽 부채꼴에 서리를 내뿜어 얼리고, 이미 느려진 적은 더 아프게 합니다.','가까운 무리를 얼려 멈춤','사거리가 짧고 등 뒤는 비어 있음')
 ].map(f=>[f.id,f])));
 // Every evolution the seed can hold: the ten fusions and the nine solo evolutions.
-export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS});
+// Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
+// of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
+// built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
+export const AWAKEN=Object.freeze({openingEvery:10,openingRange:12,surgeOpeningEvery:1.2,damage:1.25,interval:.8});
+// The mirror's opening turns every enemy shot at once, so it does not repeat during the ultimate.
+export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
+export const awakenSurgeOpening=id=>AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
+const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:FORMS[base].requires,pair:`${FORMS[base].name} 각성`,desc,strength,weakness,passive:FORMS[base].passive,awakened:true});
+export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
+ awaken('bigcrunch','collapse','대붕괴','붕괴 씨앗과 우물이 늘고 더 넓게 무너지며, 10초마다 가까운 적 셋의 자리에 붕괴 우물을 한꺼번에 심습니다.','무리를 통째로 끌어모아 한 번에 붕괴','느린 발사는 그대로라 빠르게 파고드는 적에 주의'),
+ awaken('frostarmada','frostguard','서리 함대','위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.','근접 제압과 탄막 방어의 완성형','사거리는 여전히 짧음'),
+ awaken('thousandblades','returnblade','천 개의 칼날','칼날이 늘고 왕복마다 더 많이 베며, 10초마다 여덟 방향으로 칼날을 던집니다.','사방의 적을 왕복으로 갈아냄','씨앗이 멈춰 있으면 경로가 단조로움'),
+ awaken('infiniteprism','prism','무한 프리즘','가시가 한 번 더 갈라지고, 10초마다 열두 방향으로 수정 가시를 흩뿌립니다.','벽 많은 방을 가시로 가득 채움','트인 곳에서는 갈라질 벽이 적음'),
+ awaken('skyspear','thunderlance','하늘가르기 창','창이 더 깊이 꿰뚫고 번개가 더 멀리 뛰며, 10초마다 천둥 창 다섯 자루를 부채꼴로 던집니다.','긴 줄과 흩어진 적을 함께 정리','발사가 느리고 엄폐물에 막힘'),
+ awaken('icegarden','frostbloom','얼음 정원','봉오리가 늘고 더 빨리 부서지며, 10초마다 가까운 적 여섯에게 봉오리를 떨어뜨립니다.','몰려오는 무리를 얼려 통째로 부숨','떨어지기까지 짧은 지연'),
+ awaken('tempestcrown','stormcrown','뇌신의 왕관','구슬이 늘어 더 자주, 더 멀리 치고, 10초마다 주변 모든 적에게 번개를 내리꽂습니다.','움직이며 주변을 자동으로 쓸어버림','멀리서 버티는 포탑은 직접 다가가야 함'),
+ awaken('maelstrom','tidepull','대소용돌이','해일핵이 늘고 더 넓게 붙잡으며, 10초마다 네 방향으로 해일을 보냅니다.','전장 곳곳의 무리를 한곳으로 배달','문지기·포탑은 끌 수 없음'),
+ awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
+ awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).','탄막을 통째로 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함')
+].map(f=>[f.id,f])));
+// Every evolution the seed can hold: ten fusions, nine solo evolutions and ten awakened evolutions.
+export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS});
+export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id);
+// The attack an evolution fights with: an awakened evolution uses its fusion's attack, everything else its own.
+export const baseFormOf=id=>AWAKEN_FORMS[id]?.base||id;
+export const awakenedFormOf=fusion=>Object.values(AWAKEN_FORMS).find(f=>f.base===fusion)?.id||null;
 export const isSoloForm=id=>Object.hasOwn(SOLO_FORMS,id);
 export const soloFormOf=law=>Object.values(SOLO_FORMS).find(f=>f.requires[0]===law)?.id||null;
 // Laws still in their own slot that are high enough to evolve alone.
@@ -68,6 +93,8 @@ export function formLevel(levels,id){
 // Level one reproduces the original tuning exactly; counts are capped, damage is not.
 // {surge:true} is the stat sheet while this evolution's active (signature/overdrive) runs.
 export function formStats(id,level=1,{surge=false}={}){
+ const awakened=AWAKEN_FORMS[id];
+ if(awakened){const base=baseStats(awakened.base,level);if(!(base.damage>0))return base;const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
  const base=baseStats(id,level);
  return surge&&base.damage>0?surgeStats(id,base):base;
 }
@@ -96,6 +123,28 @@ const SURGE=Object.freeze({
 // While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
 export const SURGE_DAMAGE=1.6;
 const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','emberDamage','returnDamage'];
+// Awakened: a lasting share of the surge. Counts grow a little, attacks come a little faster and hit a little harder;
+// the ultimate still adds the full surge on top.
+const AWAKEN_BOOST=Object.freeze({
+ collapse:s=>({bolts:s.bolts+1,radius:s.radius+.3}),
+ frostguard:s=>({satellites:Math.min(8,s.satellites+1),novaEvery:s.novaEvery*.65,novaRadius:s.novaRadius+.5}),
+ returnblade:s=>({bolts:s.bolts+1,hitsPerLeg:s.hitsPerLeg+2}),
+ prism:s=>({shards:s.shards+8,generations:s.generations+1}),
+ thunderlance:s=>({jumps:s.jumps+1,pierce:s.pierce+2}),
+ frostbloom:s=>({bombs:s.bombs+1,delay:s.delay*.85}),
+ stormcrown:s=>({orbs:s.orbs+1,pulse:s.pulse*.85,range:s.range+.8}),
+ tidepull:s=>({radius:s.radius+.5}),
+ seedstorm:s=>({seeds:s.seeds+1}),
+ mirrorguard:s=>({mirrors:s.mirrors+2,radius:s.radius+.2})
+});
+// Measured against the fusion plus its best solo evolution at equal levels (tools/active-balance-test.mjs).
+const AWAKEN_DAMAGE=Object.freeze({collapse:1.05,frostguard:1.25,returnblade:1.15,prism:2.2,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
+function awakenStats(id,s){
+ const boosted={...s,...(AWAKEN_BOOST[id]?.(s)||{}),awakened:true};
+ if(Number.isFinite(boosted.interval))boosted.interval*=AWAKEN.interval;
+ for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=AWAKEN_DAMAGE[id]??AWAKEN.damage;
+ return boosted;
+}
 function surgeStats(id,s){
  const boosted={...s,...(SURGE[id]?.(s)||{}),surge:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=.5;
@@ -132,7 +181,7 @@ function baseStats(id,level){
 // What the next form level changes, for the reward screen.
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
- const count={mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경']}[id];
+ const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}
  return parts.join(' · ');

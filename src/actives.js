@@ -1,4 +1,4 @@
-import {ALL_FORMS} from './forms.js';
+import {ALL_FORMS,AWAKEN_FORMS} from './forms.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
@@ -24,7 +24,7 @@ export const STATE_NAMES=Object.freeze({LOCKED:'잠김',SIGNATURE:'시그니처'
 
 // Each evolution's signature: an opening move the moment it fires, then a few seconds of its stronger self.
 const sig=(name,desc)=>Object.freeze({name,desc});
-export const SIGNATURES=Object.freeze({
+const BASE_SIGNATURES=Object.freeze({
  collapse:sig('사건의 지평','가까운 적 셋의 자리에 붕괴 우물을 한꺼번에 심고, 붕괴 씨앗을 두 배로 쏩니다.'),
  frostguard:sig('절대 영도','넓은 냉기를 즉시 터뜨려 주변을 오래 얼리고, 위성이 늘어 냉기가 쉴 새 없이 터집니다.'),
  returnblade:sig('칼날 폭풍','여덟 방향으로 칼날을 던지고, 돌아오는 칼날 수와 타격이 늘어납니다.'),
@@ -44,6 +44,11 @@ export const SIGNATURES=Object.freeze({
  rewind:sig('되감기 폭풍','네 방향으로 잎을 날리고, 모든 잎이 한 번 더 왕복합니다.'),
  blackhole:sig('특이점','씨앗 앞에 블랙홀 셋을 한꺼번에 열고, 더 오래 붙잡습니다.'),
  winterbreath:sig('빙하기','사방으로 서리를 내뿜고, 숨결이 더 멀고 넓어집니다.')
+});
+export const SIGNATURES=Object.freeze({
+ ...BASE_SIGNATURES,
+ // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
+ ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)]))
 });
 
 // The two strongest evolutions decide the active. Ties go to the evolution gained first (map order).
