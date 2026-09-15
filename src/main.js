@@ -46,7 +46,7 @@ import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,aust
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
-import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,nextHeld,heldItems,usable} from './inventory.js';
+import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,slotsUsed,fusionLevel,canFuse,fuse,evolveSolo,effectiveLevels,buildLevel} from './progression.js';
 import {createTurret,tickTurret,turretSpots,copiedLaws,TURRET} from './turret.js';
@@ -153,7 +153,7 @@ const heldForms=new Map(),formCombats=new Map(),formCooldowns=new Map();let acti
 let labSafe=false;
 // Potion effects run on their own timers: a dodge rewrites invuln, so the shell must not rely on it.
 let hasteTime=0,shellTime=0,selectedItem=null,itemBarKey='';
-let score=0,wardensDefeated=0,austinsDefeated=0,austinRoom=false,inventory=emptyInventory(),relics=emptyRelics(),relicRewardPending=false,clockFloor=null,potionCD=0;const fallen=[];const JOURNEY_HEAL=25;
+let score=0,wardensDefeated=0,austinsDefeated=0,austinRoom=false,inventory=emptyInventory(),turretPotionDry=0,relics=emptyRelics(),relicRewardPending=false,clockFloor=null,potionCD=0;const fallen=[];const JOURNEY_HEAL=25;
 const isBoss=e=>e.type==='warden'||e.type==='austin';
 function inAustinRoom(){return austinRoom&&stage===4;}
 function austinAhead(){return !austinRoom&&Math.floor(wardensDefeated/5)>austinsDefeated;}
@@ -258,7 +258,7 @@ function updateEscorts(dt){
 }
 
 function saveBoundary(nextStage=stage,saveMode='entry',over={}){
- saveOK=writeCheckpoint(runStorage,{version:1,cycle,region,stage:nextStage,mode:saveMode,hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),choicesTaken,choiceKills,kills,elapsed,forms:Object.fromEntries(heldForms),guideTarget,rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,inventory:{...inventory},relics:normalizeRelics(relics),activeGauge:Math.floor(activeGauge.value),activeCooldown:Number((activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown).toFixed(2)),...over});
+ saveOK=writeCheckpoint(runStorage,{version:1,cycle,region,stage:nextStage,mode:saveMode,hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),choicesTaken,choiceKills,kills,elapsed,forms:Object.fromEntries(heldForms),guideTarget,rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,inventory:{...inventory},turretPotionDry,relics:normalizeRelics(relics),activeGauge:Math.floor(activeGauge.value),activeCooldown:Number((activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown).toFixed(2)),...over});
  return saveOK;
 }
 // After a warden the journey simply continues: a little health back, and every enemy a little faster.
@@ -306,11 +306,17 @@ function line(a,b){vfx.arc(a,b);}
 function damageEnemy(e,amount,chaining=true){if(e.state==='recover')amount*=1.35;if(isBoss(e)&&!e.elite&&!e.dead)chargeActive(activeGauge,bossCharge(amount,e.maxHp));if(e.type==='austin'){if(damageAustin(e,amount)<=0)return;}else e.hp-=amount;e.hit=.14;vfx.impact(e.g.position,chaining?([...chosen][0]||'seed'):'chain');if(chaining&&chosen.has('chain')){let nearby=enemies.filter(o=>o!==e&&o.hp>0&&o.g.position.distanceTo(e.g.position)<4).sort((a,b)=>a.g.position.distanceTo(e.g.position)-b.g.position.distanceTo(e.g.position)).slice(0,LS.chainTargets);for(let o of nearby){line(e.g.position,o.g.position);damageEnemy(o,amount*(isBoss(o)?.325:.5),false);}}if(e.hp<=0&&!e.dead){e.dead=true;kills++;choiceKills++;chargeActive(activeGauge,killCharge(e));vfx.impact(e.g.position,'amber',true);enemyDown(e);}}
 function enemyDown(e){
  score+=killPoints(e,cycle);
- if(!isBoss(e)){releaseEnemy(e);return;}
+ if(!isBoss(e)){
+  if(e.type==='turret'&&(inventory.tonic||0)<ITEMS.tonic.max){
+   const result=turretPotionDrop(turretPotionDry,rng);turretPotionDry=result.dryKills;
+   if(result.drop&&addItem(inventory,'tonic',1)){itemBarKey='';vfx.pulse(e.g.position,'seed',1.25,.35);vfx.burst(e.g.position,'seed',18,1.15);$('#toast').textContent=`포탑의 핵에서 ${ITEMS.tonic.name}을 찾았습니다 · 생명력 +${ITEMS.tonic.heal}`;}
+  }
+  releaseEnemy(e);return;
+ }
  // A boss falls over a short beat instead of vanishing, and the reward waits for it, so a choice screen never seems to erase the boss.
  const main=!e.elite;fallen.push({e,t:0,hold:main});
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);
- // Relics and potions come only from Austin, so they stay rare and the wardens stay a real fight.
+ // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
  if(e.type==='austin'){austinsDefeated++;remember('bosses','austin');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}`;}
  else if(main){wardensDefeated++;$('#toast').textContent=`${e.config?.name||'문지기'} 격파!${austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
@@ -476,7 +482,7 @@ function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('
   setText($('#rank-status'),'지금은 모두의 랭킹에 연결하지 못했어요 · 다음에 접속하면 자동으로 올라가요 · 아래는 이 기기 기록');
  });
 }
-function restart(saved=null){const restore=saved?.version===1?saved:null;if(!restore)clearCheckpoint(runStorage);heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dash=0;invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;region=restore?.region||'garden';score=restore?.score||0;wardensDefeated=restore?.wardens||0;austinsDefeated=restore?.austins||0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;austinRoom=false;potionCD=0;
+function restart(saved=null){const restore=saved?.version===1?saved:null;if(!restore)clearCheckpoint(runStorage);heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dash=0;invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;region=restore?.region||'garden';score=restore?.score||0;wardensDefeated=restore?.wardens||0;austinsDefeated=restore?.austins||0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;austinRoom=false;potionCD=0;
  if(restore){stage=restore.stage;hp=restore.hp;kills=restore.kills;elapsed=restore.elapsed;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
  for(const [id,lv] of Object.entries(restore?.forms||{}))if(Object.hasOwn(FORMS,id))heldForms.set(id,lv);
  activeGauge=createActiveGauge(restore?.activeGauge||0,restore?.activeCooldown||0);finaleEchoes.length=0;promptedSolo.clear();

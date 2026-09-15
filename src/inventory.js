@@ -1,8 +1,8 @@
-// Items carried through a run. Only Austin gives them, so they stay rare: no loot on the floor, none from wardens.
+// Items carried through a run. Austin gives the rare kinds; turrets can occasionally yield one small healing potion.
 // kind: heal (refused at full health) · haste · shell (short protection) · revive (used by itself when the seed falls)
 export const ITEMS=Object.freeze({
  potion:{id:'potion',name:'시간의 물약',kind:'heal',heal:50,max:9,key:'Q',desc:'마시면 생명력 50 회복',from:'오스틴'},
- tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'Q',desc:'마시면 생명력 25 회복',from:'오스틴'},
+ tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'Q',desc:'마시면 생명력 25 회복',from:'포탑 · 오스틴'},
  wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:3,key:'Q',desc:'6초 동안 이동 속도 +35%',from:'오스틴'},
  shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:3,key:'Q',desc:'3초 동안 모든 피해를 막음',from:'오스틴'},
  sprout:{id:'sprout',name:'다시 싹',kind:'revive',heal:50,guard:2,max:1,key:'',desc:'쓰러지는 순간 저절로 생명력 50으로 다시 일어남 (한 번)',from:'오스틴'}
@@ -56,7 +56,7 @@ export function tryRevive(inventory){
  return {hp:ITEMS.sprout.heal,guard:ITEMS.sprout.guard};
 }
 
-// Austin is the only source: the big potion every time, plus one more drawn from the rest.
+// Austin always gives the big potion, plus one more drawn from the remaining kinds.
 // Kinds already at their stack limit are not drawn, so the bonus is never wasted.
 export const AUSTIN_BONUS=Object.freeze([['tonic',35],['wind',25],['shell',25],['sprout',15]]);
 export function austinBonus(random=Math.random,inventory=null){
@@ -70,6 +70,15 @@ export function austinBonus(random=Math.random,inventory=null){
 export function austinDrops(random=Math.random,inventory=null){
  const bonus=austinBonus(random,inventory);
  return bonus?['potion',bonus]:['potion'];
+}
+
+// Turrets offer a small, discrete recovery chance without turning damage into passive lifesteal.
+// The tenth dry turret is guaranteed so a long run can never hide the system forever.
+export const TURRET_POTION_CHANCE=.05;
+export const TURRET_POTION_PITY=10;
+export function turretPotionDrop(dryKills=0,random=Math.random){
+ const drop=dryKills>=TURRET_POTION_PITY-1||random()<TURRET_POTION_CHANCE;
+ return {drop,dryKills:drop?0:Math.min(TURRET_POTION_PITY-1,dryKills+1)};
 }
 
 // The next usable item after `current` that the seed actually holds, for cycling on one button.
