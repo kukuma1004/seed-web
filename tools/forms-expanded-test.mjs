@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LAWS} from '../src/laws.js';
 import {FORMS,formLevel,formStats,formUpgradeLine} from '../src/forms.js';
-import {createFormCombat,FORM_COMBAT} from '../src/form-combat.js';
+import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,orbitPose} from '../src/form-combat.js';
 import {blocksShield} from '../src/shield.js';
 
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
@@ -22,6 +22,15 @@ assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
+
+// Orbit evolutions must remain visually readable without relying on colour.
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,4);
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,4);
+{
+ const styles=Object.keys(ORBIT_VISUALS),poses=styles.map(id=>orbitPose(id,1,6,.4,.8,{radius:2,inner:1.2,outer:3,period:2.4}));
+ assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,4,'each orbit family has a distinct path');
+ assert.ok(poses.every(p=>p.scale.length===3&&Number.isFinite(p.yaw)));
+}
 
 // Form level follows both ingredients, without a ceiling; stats grow and counts stay bounded.
 assert.equal(formLevel(new Map([['gravity',1],['burst',1]]),'collapse'),1);

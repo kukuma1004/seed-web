@@ -6,6 +6,31 @@ const Y=new V(0,1,0);
 
 // Level-one tuning, kept as a named export for tests and tooling.
 export const FORM_COMBAT=Object.freeze(Object.fromEntries(Object.keys(ALL_FORMS).map(id=>[id,Object.freeze(formStats(id,1))])));
+export const ORBIT_VISUALS=Object.freeze({
+ frostguard:Object.freeze({geometry:'satellite',material:'ice',motion:'snowflake'}),
+ stormcrown:Object.freeze({geometry:'orb',material:'storm',motion:'crown'}),
+ mirrorguard:Object.freeze({geometry:'mirror',material:'mirror',motion:'shield-wall'}),
+ starring:Object.freeze({geometry:'starPetal',material:'star',motion:'breathing-star'})
+});
+
+// Orbit paths are intentionally different silhouettes. They are also pure so
+// gameplay collision and the visual pose always use the same position.
+export function orbitPose(id,index,count,angle,time,S){
+ const a=angle+index*Math.PI*2/Math.max(1,count),wave=Math.sin(time*4+index*Math.PI*2/Math.max(1,count));
+ if(id==='frostguard'){
+  const radius=S.radius*(index%2?.9:1.08);
+  return {x:Math.cos(a)*radius,y:.66+wave*.1,z:Math.sin(a)*radius,pitch:-1.02,yaw:Math.PI/2-a,roll:(index%2?-1:1)*(.3+wave*.06),scale:[1.1,1.48,1.1]};
+ }
+ if(id==='stormcrown'){
+  return {x:Math.cos(a)*S.radius*1.08,y:1.35+wave*.2,z:Math.sin(a)*S.radius*.72,pitch:wave*.12,yaw:-a+time*.8,roll:.18*wave,scale:[2.05,2.05,2.05]};
+ }
+ if(id==='mirrorguard'){
+  const square=t=>Math.sign(t)*Math.pow(Math.abs(t),.68);
+  return {x:square(Math.cos(a))*S.radius,y:.76+wave*.045,z:square(Math.sin(a))*S.radius,pitch:-.38,yaw:Math.PI/2-a,roll:wave*.06,scale:[1.32,1.32,1.32]};
+ }
+ const radius=S.inner+(S.outer-S.inner)*(.5-.5*Math.cos(time*Math.PI*2/S.period));
+ return {x:Math.cos(a)*radius,y:.64+(index%2?.13:0)+wave*.055,z:Math.sin(a)*radius,pitch:-1.02,yaw:-a-time*.9,roll:wave*.12,scale:[1.55,1.55,1.55]};
+}
 
 export function segmentDistance(a,b,p){const d=b.clone().sub(a).setY(0),length=d.lengthSq();const t=length?THREE.MathUtils.clamp(p.clone().sub(a).setY(0).dot(d)/length,0,1):0;return a.clone().addScaledVector(d,t).setY(0).distanceTo(p.clone().setY(0));}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -28,9 +53,9 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:0;
-  const geo=active==='frostguard'?geos.satellite:active==='stormcrown'?geos.orb:active==='starring'?geos.mirrorBolt:geos.mirror;
-  const mat=active==='frostguard'?mats.ice:active==='stormcrown'?mats.storm:active==='starring'?mats.prism:mats.mirror;
-  for(let i=0;i<count;i++){const ob=new THREE.Mesh(geo,mat);if(active==='frostguard')ob.scale.set(.55,1.7,1);if(active==='starring')ob.scale.setScalar(1.7);orbit.add(ob);}
+  const style=ORBIT_VISUALS[active];
+  if(!style){orbit.visible=false;return;}
+  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],mats[style.material]));
   orbit.visible=count>0;
  }
  function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
@@ -208,12 +233,11 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   if(!orbit.visible)return;
   const spin=active==='frostguard'?3.4:active==='stormcrown'?2.4:active==='starring'?2.2:2.8;
   breathe+=dt;
-  const radius=active==='starring'?S.inner+(S.outer-S.inner)*(.5-.5*Math.cos(breathe*Math.PI*2/S.period)):S.radius;
   angle+=dt*spin;
   orbit.children.forEach((ob,i)=>{
-   const a=angle+i*Math.PI*2/orbit.children.length;
-   ob.position.set(player.position.x+Math.cos(a)*radius,active==='stormcrown'?1.4:.72,player.position.z+Math.sin(a)*radius);
-   ob.rotation.y=a;if(active==='frostguard')ob.rotation.z=a*.4;
+   const pose=orbitPose(active,i,orbit.children.length,angle,breathe,S);
+   ob.position.set(player.position.x+pose.x,pose.y,player.position.z+pose.z);
+   ob.rotation.set(pose.pitch,pose.yaw,pose.roll);ob.scale.set(...pose.scale);
    if(active==='frostguard'){
     // Satellites shatter ordinary enemy shots; the warden's shots pass through every orbit.
     for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'frost',8);}
