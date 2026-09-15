@@ -53,7 +53,7 @@ export function createTurret(scene,mats,laws){
  const strikeMat=new THREE.MeshBasicMaterial({color:0xffe066,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide,toneMapped:false});
  const strike=new THREE.Mesh(new THREE.RingGeometry(TURRET.strikeRadius-.12,TURRET.strikeRadius,40),strikeMat);strike.rotation.x=-Math.PI/2;strike.position.y=.13;g.add(strike);strike.visible=false;
  const orbs=[];
- if(laws.includes('orbit'))for(let i=0;i<3;i++){const o=add(new THREE.IcosahedronGeometry(.26,0),gemMat,0,.8,0,g);orbs.push(o);}
+ if(laws.includes('orbit'))for(let i=0;i<3;i++){const o=add(new THREE.IcosahedronGeometry(.26,0),gemMat,0,.8,0,g);o.castShadow=false;orbs.push(o);}
  return {g,body,head,type:'turret',hp:TURRET.hp,maxHp:TURRET.hp,state:'stalk',timer:1.2,laws:[...laws],spec:volleySpec(laws),
   dir:new V(0,0,1),target:new V(),hit:0,phase:0,orbs,orbitAngle:0,orbitCooldown:0,aimPivot,tellMat,strike,strikeMat,volleys:0};
 }

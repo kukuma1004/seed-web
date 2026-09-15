@@ -2,6 +2,9 @@ import * as THREE from 'three';
 import './seed-title.css';
 
 export const AUSTIN_TITLE='정시를 깨운 자';
+// The title's small lasting merit (2026-09-15): the seed's basic shots fly 2% faster in every later run.
+export const AUSTIN_TITLE_PERK=Object.freeze({shotSpeed:1.02,text:'기본 탄환 속도 +2%'});
+export const titleShotSpeed=unlocked=>unlocked?AUSTIN_TITLE_PERK.shotSpeed:1;
 
 // A screen-space nameplate follows the world position. Korean text stays crisp
 // on low-resolution mobile canvases and costs no WebGL texture or draw call.

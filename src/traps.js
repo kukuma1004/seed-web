@@ -46,20 +46,22 @@ export function tickTrap(trap,clock,{player,enemies,hurtPlayer,hurtEnemy}){
  return phase;
 }
 
-export function createTrapVisual(parent,trap,mats){
- const g=new THREE.Group();g.position.set(trap.x,0,trap.z);parent.add(g);
- g.name='carved-spike-mechanism';
+// Every trap in a room is drawn together: one instanced mesh per part, so four traps cost five draw calls instead of twenty
+// (2026-09-15 phone pass). Each trap keeps its own warning glow, copper brightness and spike height through instance data.
+export function createTrapVisuals(parent,traps,mats){
+ const n=traps.length;if(!n)return [];
+ const g=new THREE.Group();g.name='carved-spike-mechanism';parent.add(g);
  // The stone footprint is the same square as the hitbox. Chamfers and inlay
  // give it a readable surface instead of a detached luminous outline.
  const stoneMat=new THREE.MeshStandardMaterial({color:0x41463e,map:mats.dark?.map||null,roughness:.86,metalness:.08});
- const copperMat=new THREE.MeshStandardMaterial({color:0xa77d48,roughness:.43,metalness:.66,emissive:0xb45d18,emissiveIntensity:0});
+ const copperMat=new THREE.MeshStandardMaterial({color:0xffffff,roughness:.43,metalness:.66});
  const slotMat=new THREE.MeshStandardMaterial({color:0x161e1c,roughness:.92});
  const steelMat=new THREE.MeshStandardMaterial({color:0xc1bba4,roughness:.4,metalness:.58,flatShading:true});
+ const glowMat=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,blending:THREE.AdditiveBlending,depthWrite:false,toneMapped:false});
  const edge=TRAP_SIZE/2-.016,cut=.12,outline=new THREE.Shape();
  outline.moveTo(-edge+cut,-edge);outline.lineTo(edge-cut,-edge);outline.lineTo(edge,-edge+cut);outline.lineTo(edge,edge-cut);
  outline.lineTo(edge-cut,edge);outline.lineTo(-edge+cut,edge);outline.lineTo(-edge,edge-cut);outline.lineTo(-edge,-edge+cut);outline.closePath();
- const plate=new THREE.Mesh(new THREE.ExtrudeGeometry(outline,{depth:.12,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:.016,bevelThickness:.016,curveSegments:1}),stoneMat);
- plate.name='chamfered-stone-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.05;plate.receiveShadow=true;g.add(plate);
+ const plateGeo=new THREE.ExtrudeGeometry(outline,{depth:.12,steps:1,bevelEnabled:true,bevelSegments:1,bevelSize:.016,bevelThickness:.016,curveSegments:1}).rotateX(-Math.PI/2).translate(0,.05,0);
  const metal=[],slots=[];
  const addBox=(parts,x,y,z,w,h,d)=>parts.push(new THREE.BoxGeometry(w,h,d).translate(x,y,z));
  const flat=(geo,x,y,z)=>geo.rotateX(-Math.PI/2).translate(x,y,z);
@@ -81,9 +83,7 @@ export function createTrapVisual(parent,trap,mats){
   addBox(slots,side*.29,.189,side*.65,.22,.008,.024);
   addBox(slots,side*.66,.189,-side*.25,.022,.008,.18);
  }
- const merged=(parts,material,name)=>{const geo=mergeGeometries(parts.map(p=>p.index?p.toNonIndexed():p),false);const ob=new THREE.Mesh(geo,material);ob.name=name;ob.receiveShadow=true;g.add(ob);for(const p of parts)p.dispose();return ob;};
- merged(slots,slotMat,'recessed-sockets-and-carving');
- merged(metal,copperMat,'copper-socket-collars');
+ const mergedGeo=parts=>{const geo=mergeGeometries(parts.map(p=>p.index?p.toNonIndexed():p),false);for(const p of parts)p.dispose();return geo;};
  // A bent pentagonal fang has a broad base, a shoulder and an offset tip.
  // Flat triangle normals catch the sun without additional lights or textures.
  const vertices=[],rings=[{y:0,r:.085,x:0,z:0},{y:.28,r:.068,x:.022,z:0}];
@@ -93,15 +93,28 @@ export function createTrapVisual(parent,trap,mats){
   vertices.push(...a,...c,...b,...b,...c,...d,...c,...[.075,.5,.018],...d);
  }
  const fang=new THREE.BufferGeometry();fang.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));fang.computeVertexNormals();
- const spikes=new THREE.InstancedMesh(fang,steelMat,9),m=new THREE.Matrix4();spikes.name='rising-metal-thorns';
- for(let i=0;i<9;i++){m.makeRotationY(i*2.399);m.setPosition(((i%3)-1)*.45,.11,(Math.floor(i/3)-1)*.45);spikes.setMatrixAt(i,m);}
- spikes.position.y=-.5;spikes.castShadow=true;g.add(spikes);
- const glowMat=new THREE.MeshBasicMaterial({color:0xd88631,transparent:true,opacity:0,depthWrite:false,toneMapped:false});
- const glow=new THREE.Mesh(new THREE.PlaneGeometry(TRAP_SIZE*.96,TRAP_SIZE*.96),glowMat);glow.name='amber-pressure-warning';glow.rotation.x=-Math.PI/2;glow.position.y=.22;g.add(glow);
- return {group:g,update(phase,progress){
+ const glowGeo=new THREE.PlaneGeometry(TRAP_SIZE*.96,TRAP_SIZE*.96).rotateX(-Math.PI/2).translate(0,.22,0);
+ const batch=(geo,mat,count,name,{receive=true,cast=false}={})=>{const ob=new THREE.InstancedMesh(geo,mat,count);ob.name=name;ob.receiveShadow=receive;ob.castShadow=cast;ob.frustumCulled=false;g.add(ob);return ob;};
+ const plates=batch(plateGeo,stoneMat,n,'chamfered-stone-plate'),sockets=batch(mergedGeo(slots),slotMat,n,'recessed-sockets-and-carving');
+ const collars=batch(mergedGeo(metal),copperMat,n,'copper-socket-collars'),spikes=batch(fang,steelMat,n*9,'rising-metal-thorns',{receive:false});
+ const glows=batch(glowGeo,glowMat,n,'amber-pressure-warning',{receive:false});
+ const m=new THREE.Matrix4(),turn=new THREE.Matrix4(),color=new THREE.Color(),copper=new THREE.Color(0xa77d48),hot=new THREE.Color(0xff9a3c),amber=new THREE.Color(0xd88631);
+ const heights=new Array(n).fill(null);
+ const placeSpikes=(i,y)=>{
+  if(heights[i]===y)return;heights[i]=y;const t=traps[i];
+  for(let k=0;k<9;k++){turn.makeRotationY(k*2.399);turn.setPosition(t.x+((k%3)-1)*.45,y+.11,t.z+(Math.floor(k/3)-1)*.45);spikes.setMatrixAt(i*9+k,turn);}
+  spikes.instanceMatrix.needsUpdate=true;
+ };
+ traps.forEach((t,i)=>{
+  m.makeTranslation(t.x,0,t.z);for(const ob of [plates,sockets,collars,glows])ob.setMatrixAt(i,m);
+  collars.setColorAt(i,copper);glows.setColorAt(i,color.setRGB(0,0,0));placeSpikes(i,-.5);
+ });
+ for(const ob of [collars,glows])ob.instanceColor.needsUpdate=true;
+ return traps.map((t,i)=>({group:g,update(phase,progress){
   const pulse=Math.abs(Math.sin(progress*Math.PI*4));
-  glowMat.opacity=phase==='warn'?.16+.22*pulse:phase==='active'?.3:0;
-  copperMat.emissiveIntensity=phase==='warn'?.18+.55*pulse:phase==='active'?.55:0;
-  spikes.position.y=phase==='active'?Math.min(0,-.5+progress*6):-.5;
- }};
+  const glow=phase==='warn'?.16+.22*pulse:phase==='active'?.3:0,heat=phase==='warn'?.18+.55*pulse:phase==='active'?.55:0;
+  glows.setColorAt(i,color.copy(amber).multiplyScalar(glow*1.6));glows.instanceColor.needsUpdate=true;
+  collars.setColorAt(i,color.copy(copper).lerp(hot,Math.min(1,heat*1.2)).multiplyScalar(1+heat*1.4));collars.instanceColor.needsUpdate=true;
+  placeSpikes(i,phase==='active'?Math.min(0,-.5+progress*6):-.5);
+ }}));
 }

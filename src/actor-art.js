@@ -3,6 +3,10 @@ import {seedFrame} from './seed-body.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 const atlases=new Map();
+// The see-through silhouette costs one extra draw per actor. It is drawn only while the quality allows it and something
+// may stand between the camera and the actor (occlusionTest, set by the game from the room's cover); 2026-09-15 phone pass.
+const silhouettes={enabled:true,test:null};
+export function configureOcclusion({enabled=silhouettes.enabled,test=silhouettes.test}={}){silhouettes.enabled=enabled;silhouettes.test=test;}
 const frameGeometry=(column,row,columns=2,rows=2)=>{
  const geometry=new THREE.PlaneGeometry(1,1);
  const uv=geometry.getAttribute('uv');
@@ -67,6 +71,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
   sprite.geometry=ghost.geometry=nextGeometry;
   sprite.userData.roll=ghost.userData.roll=actorArtRotation(e.state,time,e.phase);
   mat.color.setHex(e.block>0?0xb5efff:e.hit>0?0xffd1aa:(e.tint??0xffffff));
+  ghost.visible=occlusion&&silhouettes.enabled&&(!silhouettes.test||silhouettes.test(e.g.position));
  };
  return sprite;
 }
