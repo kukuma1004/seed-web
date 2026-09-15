@@ -25,3 +25,23 @@ html,body{width:100%;height:100%;overscroll-behavior:none}#game{touch-action:non
 .stick.floating{bottom:auto;transform:translate(-50%,-50%);border-color:#c8f5d6aa;background:#0c262985}
 .stick.floating span{display:none}
 @media(orientation:portrait){.touch-mode #move-zone{top:40%;width:calc(50% - 42px)}}
+
+/* ── Phone landscape (2026-09-15): bigger world, fewer words on screen ──
+   Kept: pause, health, kill gauge, score number, ultimate, potion, dodge, move stick.
+   Hidden during play: game title, build label, room dots and names, law icons, help and install buttons
+   (the pause sheet still lists the whole build). */
+body.phone-landscape #brand,body.phone-landscape #form-label,body.phone-landscape #stages,body.phone-landscape #encounter,body.phone-landscape #rules,body.phone-landscape #help,body.phone-landscape #install-game{display:none!important}
+body.phone-landscape #status{top:max(8px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));width:150px}
+body.phone-landscape .health{height:10px}
+body.phone-landscape #growth-progress{top:max(10px,env(safe-area-inset-top));width:200px;max-width:34vw;font-size:9px;letter-spacing:0}
+body.phone-landscape #score-hud{top:max(12px,env(safe-area-inset-top));right:calc(max(14px,env(safe-area-inset-right)) + 104px)}
+body.phone-landscape #score-hud small{display:none}
+body.phone-landscape #app-actions{top:max(8px,env(safe-area-inset-top))}
+body.phone-landscape.is-fullscreen #app-actions{display:none}
+body.phone-landscape #toast{top:22%;font-size:12px}
+/* Portrait on a touch device: ask to rotate instead of squeezing the arena. */
+#rotate-hint{display:none}
+@media(orientation:portrait){.touch-mode #rotate-hint{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#071b21f2;color:#e8f5e8;text-align:center;padding:24px}
+.touch-mode #rotate-hint b{display:block;font-size:64px;line-height:1;margin-bottom:14px;animation:rotate-hint 1.8s ease-in-out infinite}
+.touch-mode #rotate-hint strong{display:block;font-size:20px;margin-bottom:6px}.touch-mode #rotate-hint span{font-size:13px;color:#a9c8bb}}
+@keyframes rotate-hint{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
