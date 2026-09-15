@@ -405,7 +405,7 @@ function beginEvolution(id){
 }
 function startGame(){if(mode==='ready')restart();}
 function showIntro(){pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
-  mode='ready';$('#overlay').classList.add('intro');$('#overlay').hidden=false;
+  mode='ready';$('#overlay').classList.remove('ranking-overlay');$('#overlay').classList.add('intro');$('#overlay').hidden=false;
   $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>잠든 정원을 깨우다</h2><p>하나의 시드로 시작해 문지기 너머의 여정을 이어가세요.<br>포탑은 당신이 가장 키운 법칙 두 개를 따라 쏩니다. 바닥의 붉은 판은 곧 가시가 솟습니다.</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">정원에 들어가기 <small>↵ ENTER</small></button>';
   if(touch.enabled){$('.intro-controls').innerHTML='<span><kbd>왼손 스틱</kbd> 이동</span><span><kbd>자동 공격</kbd> 이동과 회피에 집중하세요</span><span><kbd>◇ 버튼</kbd> 회피</span>';$('#start-game small').textContent='가로 화면 권장';}
   $('#start-game').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro');startGame();};
@@ -431,17 +431,23 @@ function rankBuild(entry,place){
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
+function rankingBoard(board,mine=null){
+ const rank=mine?board.indexOf(mine)+1:0;
+ const personal=mine&&rank>0?rankingTable([mine],mine,1,rankBuild,rank):'<p class="ranking-empty">아직 이번 시즌에 남긴 기록이 없어요</p>';
+ return `<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(board,mine,10,rankBuild)}</section><section class="ranking-self"><strong>내 최고 기록</strong>${personal}</section>`;
+}
 function showRanking(view='online'){
- mode='ranking';$('#overlay').classList.remove('intro');const serial=++rankSerial;
- $('#overlay').innerHTML=`<p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'이 기기·브라우저에 남은 기록'}</p><div id="rank-board">${view==='local'?rankingTable(readRanking(runStorage),null,10,rankBuild):''}</div><button class="primary" id="close-ranking">돌아가기</button>`;
+ mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
+ const localBoard=readRanking(runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
+ $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 내 최고 기록은 아래에 따로 표시'}</p><div id="rank-board">${view==='local'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
- online.flush().catch(()=>0).then(()=>online.top()).then(board=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 최고 기록 · 한 사람(기기+이름)당 한 줄');
-  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(board,board.find(e=>e.uid===online.uid()&&e.name===playerName),20,rankBuild);
+ online.flush().catch(()=>0).then(()=>online.top(500)).then(board=>{
+  if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 내 최고 기록은 아래에 따로 표시');
+  const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
  }).catch(()=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 랭킹에 연결하지 못했어요 · 이 기기 기록을 보여줘요');
-  const box=$('#rank-board');if(box)box.innerHTML=rankingTable(readRanking(runStorage),null,10,rankBuild);
+  const board=readRanking(runStorage),mine=board.find(e=>e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
@@ -449,14 +455,14 @@ function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
  const local=ranked?submitScore(runStorage,{name,score,cycle,stage,kills,time:elapsed,build}):null;
- $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingTable(local?.ranking||readRanking(runStorage),local?.entry,10,rankBuild)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
+ const endBoard=local?.ranking||readRanking(runStorage);$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
  $('#restart').onclick=showIntro;
  if(!ranked)return;
- online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed,build})).then(r=>{
+ online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed,build},500)).then(r=>{
   if(serial!==rankSerial)return;
   const status=$('#rank-status'),box=$('#rank-board');
-  if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 20위 밖이에요';
-  if(box)box.innerHTML=rankingTable(r.board,r.board[(r.rank||r.bestRank)-1],20,rankBuild);
+  if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 상위권 밖이에요';
+  const mine=r.board[(r.rank||r.bestRank)-1]||r.board.find(e=>e.uid===online.uid()&&e.name===name)||null;if(box)box.innerHTML=rankingBoard(r.board,mine);
  }).catch(()=>{
   if(serial!==rankSerial)return;
   setText($('#rank-status'),'지금은 모두의 랭킹에 연결하지 못했어요 · 다음에 접속하면 자동으로 올라가요 · 아래는 이 기기 기록');

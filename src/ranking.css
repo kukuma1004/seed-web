@@ -20,6 +20,14 @@
 .rank-form input:focus{outline:2px solid #f0c86a;outline-offset:1px}
 .rank-form button{min-height:44px;white-space:nowrap}
 #rank-board{width:min(440px,100%)}
+.ranking-overlay{justify-content:flex-start!important;overflow:hidden}
+.ranking-panel{display:flex;min-height:0;width:min(760px,100%);flex:1;flex-direction:column;align-items:center;overflow-y:auto;padding:4px 8px 16px;overscroll-behavior:contain;scrollbar-gutter:stable}
+.ranking-overlay #close-ranking{flex:none;margin:8px 0 max(4px,env(safe-area-inset-bottom));box-shadow:0 8px 28px #000c;background:#193d32}
+.ranking-top,.ranking-self{width:min(440px,100%)}
+.ranking-top>strong,.ranking-self>strong{display:block;margin:7px 0 2px;color:#cdbb86;font-size:11px;letter-spacing:3px}
+.ranking-self{margin-top:10px;padding-top:8px;border-top:1px solid #f0c86a55}
+.ranking-self>strong{color:#ffe3a0}
+.ranking-self .ranking{margin-top:5px}.ranking-self .ranking li{border-color:#f0c86a;background:#3a2a12cc;box-shadow:0 0 14px #f0b44a33}
 .rank-result{margin:4px 0 8px;color:#ffe3a0}.rank-result b{font-size:18px}
 .ranking{list-style:none;margin:6px auto 8px;padding:0;width:min(440px,100%);display:grid;gap:4px;text-align:left}
 .ranking li{display:grid;grid-template-columns:30px 1fr auto;grid-template-rows:auto auto;column-gap:10px;align-items:baseline;padding:6px 12px;border-radius:10px;background:#0e2328cc;border:1px solid #a4b7ab26}
@@ -30,7 +38,7 @@
 .ranking li small{grid-column:2/4;font-size:10px;color:#8fb0a2}
 .ranking li.mine{border-color:#f0c86a;background:#3a2a12cc;box-shadow:0 0 14px #f0b44a44}
 .ranking-empty{color:#9fb8ad;margin:10px 0}
-@media(max-height:480px){#rank-board{width:min(720px,100%)}.final-score strong{font-size:32px}.ranking{grid-template-columns:1fr 1fr;width:min(720px,100%)}.ranking li{padding:4px 8px}.ranking li small{display:none}}
+@media(max-height:480px){#rank-board{width:min(720px,100%)}.ranking-top,.ranking-self{width:min(720px,100%)}.final-score strong{font-size:32px}.ranking{grid-template-columns:1fr 1fr;width:min(720px,100%)}.ranking li{padding:4px 8px}.ranking li small{display:none}.ranking-self .ranking{grid-template-columns:1fr}.ranking-panel h2{font-size:26px;margin:2px}.ranking-panel>p{margin:2px!important}.ranking-overlay #close-ranking{min-height:42px;margin-top:5px}}
 
 /* Name on the title screen and the ranking tabs. */
 .name-field{display:flex;flex-direction:column;align-items:center;gap:4px;margin:6px 0 10px;width:min(320px,100%)}

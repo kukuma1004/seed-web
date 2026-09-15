@@ -35,6 +35,7 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
  assert.deepEqual(readRanking(s),[]);s.setItem(RANKING_KEY,'{bad json');assert.deepEqual(readRanking(s),[]);
  const html=rankingTable([{name:'a&b',score:1234,cycle:1,stage:4,kills:9,time:1,at:1}]);
  assert.ok(html.includes('a&amp;b')&&html.includes('1,234')&&html.includes('여정 2'));
+ assert.ok(rankingTable([{name:'내기록',score:100,cycle:0,stage:0,kills:1,time:1,at:1}],null,1,null,37).includes('<b>37</b>'),'A separate personal row keeps its real overall place.');
  const broken={getItem(){throw new Error('blocked');},setItem(){throw new Error('blocked');}};
  assert.deepEqual(readRanking(broken),[]);assert.equal(submitScore(broken,{...base,name:'x',score:1}).saved,false);
 }
