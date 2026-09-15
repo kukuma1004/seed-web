@@ -7,6 +7,10 @@ export const ACT2_NAME='2막 · 다시 심는 씨앗';
 export const isAct2=region=>region===ACT2_REGION;
 export const actOf=region=>isAct2(region)?2:1;
 export const act2Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosses.includes('austin');
+// Not released yet (2026-09-16, user decision): act 2 only appears on a local development server.
+// Flip ACT2_RELEASED to true when the user says act 2 may go public.
+export const ACT2_RELEASED=false;
+export function act2Available(where=globalThis.location){return ACT2_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
 
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
 // Rooms 1-4 teach one new minion rule each and then mix them; room 5 holds the gate.

@@ -30,7 +30,7 @@ import {readCheckpoint,writeCheckpoint,clearCheckpoint,difficulty,replaceLaw,REG
 import {createSeedBody} from './seed-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK} from './seed-title.js';
 import {codexNews} from './titles.js';
-import {ACT2_REGION,ACT2_NAME,isAct2,actOf,act2Unlocked,actStorage} from './act2.js';
+import {ACT2_REGION,ACT2_NAME,isAct2,actOf,act2Unlocked,act2Available,actStorage} from './act2.js';
 import {ACT2_ART,ACT2_GEOMETRIES,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from './act2-enemies.js';
 import {createStadium} from './stadium.js';
 import {createContactShadows} from './contact-shadows.js';
@@ -504,7 +504,8 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
   online.flush().catch(()=>0);
   $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div>`);
   // Act 2 unlocks with the first Austin victory on this device and keeps its own save.
-  if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);
+  if(!act2Available()){}
+  else if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);
    const go=saved=>{if(!requireName())return;startRegion=ACT2_REGION;$('#overlay').classList.remove('intro');restart(saved);};$('#start-act2').onclick=()=>go(s2||null);if($('#new-act2'))$('#new-act2').onclick=()=>go(null);}
   else $('.intro-links').insertAdjacentHTML('afterend','<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>');
  $('#ranking-link').onclick=()=>showRanking('online');
@@ -529,7 +530,7 @@ function rankingBoard(board,mine=null){
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
  const localBoard=readRanking(view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
- $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button>${act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}</div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view!=='online'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}</div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view!=='online'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
  online.flush().catch(()=>0).then(()=>online.top(500,playerName)).then(board=>{
