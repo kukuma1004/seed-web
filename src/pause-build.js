@@ -7,6 +7,7 @@ import {itemArt} from './item-art.js';
 import {lawArt} from './law-art.js';
 import {formArt} from './form-art.js';
 import {orbitCore,isOrbitEvolution} from './evolution-family.js';
+import {dashEvolutionSummary} from './dash-evolution.js';
 import './pause-build.css';
 
 // The bag lists what every potion does, so a player can learn them while the game is stopped.
@@ -15,7 +16,7 @@ function itemBag(inventory){
  const rows=held.map(id=>{const it=ITEMS[id];return `<li>${itemArt(id)}<div><strong>${it.name} <span>×${inventory[id]}</span></strong><p>${it.desc}${it.kind!=='revive'?' · Q 마시기 · Shift+Q 고르기':''}</p></div></li>`;}).join('');
  return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:'<p>정시파이터 오스틴을 이기면 물약을 얻어요 · 시간의 물약과 함께 작은 물약·바람 물약·껍질 물약·다시 싹 중 하나</p>'}</section>`;
 }
-export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null,titleUI=null){
+export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null,titleUI=null,dashUI=null){
  const root=document.createElement('section');root.id='pause-build';root.hidden=true;
  root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-labelledby','pause-title');
  root.innerHTML='<div class="pause-sheet"><header><small>일시 정지</small><h2 id="pause-title">지금의 시드</h2><p id="pause-slots"></p></header><div id="pause-loadout"></div><footer><button id="pause-resume" class="primary">계속하기</button></footer></div>';
@@ -38,6 +39,7 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
    root.querySelector('#pause-slots').textContent=`보유 ${levels.size+forms.size}/5칸 · 진화 ${forms.size}개`;
    root.querySelector('#pause-loadout').innerHTML=entries.join('')||'<p class="pause-empty">아직 이름 없는 씨앗이에요.<br>적을 처치하고 첫 법칙을 골라 주세요.</p>';
    if(activeUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',activeSection(forms,activeUI.get()));
+   if(dashUI){const section=dashEvolutionSummary(dashUI.get());if(section)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',section);}
    if(itemsUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',itemBag(itemsUI.get()));
    const titles=titleUI?.state();
    if(titles&&(titles.titles.length||titles.next))root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호</h3>${titles.titles.map(t=>`<p><strong>${t.name}</strong> · ${t.perk}</p>`).join('')}${titles.next?`<p class="title-next">도감 ${titles.next.need}개 더 · ${titles.next.reward}</p>`:''}</section>`);

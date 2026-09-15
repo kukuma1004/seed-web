@@ -64,12 +64,14 @@ export function createTouchControls(canAct){
   document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
   return {enabled,axes,reset,
     consumeDash(){const active=dashUntil>performance.now();dashUntil=0;return active;},
-    update(active,cooldown){
+    update(active,cooldown,dash={charges:cooldown>0?0:1,maxCharges:1,recharge:cooldown}){
       if(panel.hidden!==!active)panel.hidden=!active;
       if(!active){if(owners.size||dashUntil)reset();return;}
-      const label=cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=cooldown>0;
+      const label=dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!dash.charges||cooldown>0;
       if(dashButton.__cooling!==cooling){dashButton.classList.toggle('cooling',cooling);dashButton.__cooling=cooling;}
       if(dashLabel.textContent!==label)dashLabel.textContent=label;
+      const aria=`회피${dash.maxCharges>1?` · ${dash.charges}/${dash.maxCharges} 충전`:cooldown>0?` · ${cooldown.toFixed(1)}초 뒤 준비`:' · 준비'}`;
+      if(dashButton.__aria!==aria){dashButton.setAttribute?.('aria-label',aria);dashButton.__aria=aria;}
     },
     state(){return {enabled,move:{...axes.move},aim:{...axes.aim},pointers:owners.size,floating:Boolean(center?.floating),center:center?{x:center.x,y:center.y}:null};}
   };
