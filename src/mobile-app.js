@@ -1,4 +1,8 @@
 export function setupMobileApp(){
+ // Inside the Google Play build (Capacitor) the Android activity already runs full screen in landscape,
+ // so the web install and full screen buttons and the offline service worker are skipped there.
+ const nativeApp=Boolean(window.Capacitor?.isNativePlatform?.());
+ if(nativeApp)document.body.classList.add('native-app');
  const touch=matchMedia('(any-pointer:coarse)').matches||navigator.maxTouchPoints>0;
  document.body.insertAdjacentHTML('beforeend','<div id="app-actions"><button id="fullscreen-game" aria-label="전체화면">⛶ <span>전체화면</span></button><button id="install-game">홈 화면 설치</button></div><div id="app-notice" role="status" hidden></div>');
  const full=document.querySelector('#fullscreen-game'),install=document.querySelector('#install-game'),notice=document.querySelector('#app-notice');let prompt;
@@ -14,19 +18,19 @@ export function setupMobileApp(){
  // Starting or continuing a run on a phone goes full screen and asks for landscape. Silent if the browser refuses
  // (iPhone Safari has no full screen for pages); the rotate hint below still asks for landscape.
  async function enterFullscreen(){
-  if(!touch)return;
+  if(!touch||nativeApp)return;
   try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});}catch{}
   try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch{}
  }
  document.body.insertAdjacentHTML('beforeend','<div id="rotate-hint" role="alert"><div><b>⟳</b><strong>휴대폰을 가로로 돌려 주세요</strong><span>SEED는 가로 화면에서 플레이해요</span></div></div>');
- const markFullscreen=()=>document.body.classList.toggle('is-fullscreen',Boolean(document.fullscreenElement)||Boolean(standalone()));
+ const markFullscreen=()=>document.body.classList.toggle('is-fullscreen',nativeApp||Boolean(document.fullscreenElement)||Boolean(standalone()));
  document.addEventListener('fullscreenchange',markFullscreen);
  full.onclick=fullscreen;document.addEventListener('fullscreenchange',()=>full.querySelector('span').textContent=document.fullscreenElement?'전체화면 종료':'전체화면');
- window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();prompt=e;install.hidden=false;});
+ window.addEventListener('beforeinstallprompt',e=>{if(nativeApp)return;e.preventDefault();prompt=e;install.hidden=false;});
  const standalone=()=>matchMedia('(display-mode: standalone)').matches||matchMedia('(display-mode: fullscreen)').matches||navigator.standalone;
- install.hidden=Boolean(standalone());markFullscreen();
+ install.hidden=nativeApp||Boolean(standalone());markFullscreen();
  install.onclick=async()=>{if(prompt){await prompt.prompt();prompt=null;}else say('iPhone: Safari 공유 메뉴 → 홈 화면에 추가. Android: 브라우저 메뉴 → 앱 설치 또는 홈 화면에 추가. 설치 후 가로로 돌려 실행해 주세요.');};
  window.addEventListener('appinstalled',()=>install.hidden=true);
- if(import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js').catch(()=>{}));
- return {fullscreen,enterFullscreen};
+ if(!nativeApp&&import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js').catch(()=>{}));
+ return {fullscreen,enterFullscreen,nativeApp};
 }

@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">SEED</string>
+    <string name="title_activity_main">SEED</string>
+    <string name="package_name">io.github.kukuma1004.seed</string>
+    <string name="custom_url_scheme">io.github.kukuma1004.seed</string>
+</resources>

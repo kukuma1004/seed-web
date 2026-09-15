@@ -1,0 +1,9 @@
+{
+  "appId": "io.github.kukuma1004.seed",
+  "appName": "SEED",
+  "webDir": "dist",
+  "backgroundColor": "#10252a",
+  "android": {
+    "allowMixedContent": false
+  }
+}

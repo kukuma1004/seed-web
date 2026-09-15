@@ -45,3 +45,4 @@ body.phone-landscape #toast{top:22%;font-size:12px}
 .touch-mode #rotate-hint b{display:block;font-size:64px;line-height:1;margin-bottom:14px;animation:rotate-hint 1.8s ease-in-out infinite}
 .touch-mode #rotate-hint strong{display:block;font-size:20px;margin-bottom:6px}.touch-mode #rotate-hint span{font-size:13px;color:#a9c8bb}}
 @keyframes rotate-hint{0%,20%{transform:rotate(0)}60%,100%{transform:rotate(90deg)}}
+body.native-app #app-actions,body.native-app #install-game{display:none!important}
