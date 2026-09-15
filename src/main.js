@@ -433,18 +433,20 @@ function rankBuild(entry,place){
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
 function rankingBoard(board,mine=null){
+ // Only the top ten are listed. My line appears below only when I am outside them (inside, it is highlighted in the list).
  const rank=mine?board.indexOf(mine)+1:0;
- const personal=mine&&rank>0?rankingTable([mine],mine,1,rankBuild,rank):'<p class="ranking-empty">아직 이번 시즌에 남긴 기록이 없어요</p>';
- return `<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(board,mine,10,rankBuild)}</section><section class="ranking-self"><strong>내 최고 기록</strong>${personal}</section>`;
+ const top=`<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(board,mine,10,rankBuild)}</section>`;
+ if(rank<=10)return top;
+ return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([mine],mine,1,rankBuild,rank)}</section>`;
 }
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
  const localBoard=readRanking(runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
- $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 내 최고 기록은 아래에 따로 표시'}</p><div id="rank-board">${view==='local'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button></div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view==='local'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(view!=='online')return;
  online.flush().catch(()=>0).then(()=>online.top(500)).then(board=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 내 최고 기록은 아래에 따로 표시');
+  if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
   const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
  }).catch(()=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'모두의 랭킹에 연결하지 못했어요 · 이 기기 기록을 보여줘요');
