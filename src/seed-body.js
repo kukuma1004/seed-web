@@ -24,7 +24,7 @@ export function seedFrame(facing,cameraYaw){
  return angle>0?1:3;
 }
 
-export function createSeedBody(scene){
+export function createSeedBody(scene,{occlusion=true}={}){
  const root=new THREE.Group();scene.add(root);
  const loader=new THREE.TextureLoader();
  const texture=loader.load(import.meta.env.BASE_URL+'assets/'+SEED_BODY_ART);
@@ -58,7 +58,7 @@ export function createSeedBody(scene){
  applyEvolution=()=>{
   const source=sourceFor(currentEvolution),active=Boolean(source?.ready);
   if(active){const tile=source.tiles[currentEvolution];source.texture.offset.set((tile%4)/4,1-(Math.floor(tile/4)+1)/3);evolutionMaterial.map=evolutionGhostMaterial.map=source.texture;evolutionMaterial.needsUpdate=evolutionGhostMaterial.needsUpdate=true;}
-  sprite.visible=ghost.visible=!active;evolutionSprite.visible=evolutionGhost.visible=active;
+  sprite.visible=!active;ghost.visible=!active&&occlusion;evolutionSprite.visible=active;evolutionGhost.visible=active&&occlusion;
   secondaryAura.visible=Boolean(secondaryEvolution);if(secondaryEvolution)secondaryMaterial.color.setHex(EVOLUTION_COLORS[secondaryEvolution]||0xffffff);
  };
  // Preserve the visual rig interface used by evolution and combat.
@@ -67,6 +67,7 @@ export function createSeedBody(scene){
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
   root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
+ root.userData.setQuality=level=>{occlusion=level>0;applyEvolution();};
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
   if(!secondaryAura.visible)return;const pulse=1+Math.sin(time*4)*.055+(overdrive?.12:0);secondaryAura.scale.setScalar(pulse);secondaryAura.rotation.z=time*(overdrive?2.2:.8);secondaryMaterial.opacity=overdrive?.92:.68;
  };

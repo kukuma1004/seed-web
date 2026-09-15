@@ -26,10 +26,12 @@ assert(EVOLUTION_SIZE>=BODY_SIZE&&EVOLUTION_SIZE<1.3);
 const soloPng=readFileSync(new URL('../public/assets/'+SEED_SOLO_BODY_ART,import.meta.url));
 assert.equal(soloPng.toString('ascii',1,4),'PNG');
 assert.equal(soloPng.readUInt32BE(16)*3,soloPng.readUInt32BE(20)*4,'Solo body atlas must remain exactly 4:3.');
+assert.ok(soloPng.readUInt32BE(16)<=1024&&soloPng.readUInt32BE(20)<=768,'Solo body atlas must stay within the mobile texture budget.');
 assert.equal(soloPng[25],6,'Solo body atlas must keep RGBA transparency.');
 const fusionPng=readFileSync(new URL('../public/assets/'+SEED_FUSION_BODY_ART,import.meta.url));
 assert.equal(fusionPng.toString('ascii',1,4),'PNG');
 assert.equal(fusionPng.readUInt32BE(16)*3,fusionPng.readUInt32BE(20)*4,'Fusion body atlas must remain exactly 4:3.');
+assert.ok(fusionPng.readUInt32BE(16)<=1024&&fusionPng.readUInt32BE(20)<=768,'Fusion body atlas must stay within the mobile texture budget.');
 assert.equal(fusionPng[25],6,'Fusion body atlas must keep RGBA transparency.');
 console.log('Nineteen evolutions have unique body tiles and share strongest-first presentation.');
 for(const phase of ['normal','overtime','deadline',undefined,0,.7])for(const state of ['stalk','jabTell','jab','sweep','recover']){

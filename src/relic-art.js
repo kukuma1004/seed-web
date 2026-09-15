@@ -1,5 +1,5 @@
 const TILES=Object.freeze({mirror:0,crystal:1,coil:2,core:3});
-export const RELIC_ATLAS='relic-atlas-v1.png';
+export const RELIC_ATLAS='relic-atlas-v1-ui.png';
 const BASE=import.meta.env?.BASE_URL||'/';
 
 export function relicArt(id,extra=''){

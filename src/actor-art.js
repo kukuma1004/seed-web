@@ -52,7 +52,7 @@ function billboard(mesh,camera,size,baseline){
  };
 }
 
-export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],baseline=.04,preserveBody=false}){
+export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],baseline=.04,preserveBody=false,occlusion=true}){
  const body=e.body||e.motion?.body||e.g;
  // Turret head/orbit materials remain live gameplay references until death.
  for(const child of [...body.children])if(preserveBody)child.visible=false;else release(child);
@@ -60,7 +60,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
  const mat=applySpriteLighting(new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide}),{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065});
  const sprite=new THREE.Mesh(geometry,mat);sprite.scale.set(size,size,1);billboard(sprite,camera,size,baseline);body.add(sprite);
  const ghostMat=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.26,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xffad7a,side:THREE.DoubleSide});
- const ghost=new THREE.Mesh(geometry,ghostMat);ghost.scale.set(size,size,1);ghost.renderOrder=2;billboard(ghost,camera,size,baseline);body.add(ghost);
+ const ghost=new THREE.Mesh(geometry,ghostMat);ghost.name='quality-occlusion-ghost';ghost.visible=occlusion;ghost.scale.set(size,size,1);ghost.renderOrder=2;billboard(ghost,camera,size,baseline);body.add(ghost);
  e.updateArt=(time)=>{
   const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
   const frame=seedFrame(e.g.rotation.y,yaw),nextGeometry=directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
