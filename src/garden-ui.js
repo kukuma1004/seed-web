@@ -63,7 +63,7 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
    <h3>씨앗 상자</h3>${seedChips('pick','아직 모은 씨앗이 없어요. 여정을 다녀오면 가장 깊게 키운 법칙의 씨앗이 남습니다.')}${craft}</div>`;
  }
 
- root.innerHTML=`<aside class="garden-panel">
+ root.innerHTML=`<aside class="garden-panel${selection?'':' idle'}">
   <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
   <div class="panel-body">${body}</div>
   <footer><small>데려가는 식물 ${actives.length}/${slots}칸</small><button class="primary" id="garden-close">돌아가기</button></footer>

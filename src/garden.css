@@ -117,3 +117,39 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
 .peek-go{font-size:12px;color:#bfe6cf;letter-spacing:.5px}
 @media(max-height:520px){.garden-peek{margin-top:6px;padding:5px 11px;gap:7px}.peek-plant{width:18px;height:18px}.peek-go{font-size:11px}}
 @media(max-height:400px){body.touch-mode #overlay.intro .intro-controls{display:none}}
+
+/* 아이폰 가로처럼 낮은 화면: 메뉴가 잘리지 않게 접고, 정원 상자는 아래쪽 시트로. */
+@media(max-height:430px){
+ .menu-panel{padding:10px 12px;gap:5px;justify-content:flex-start;padding-top:14px}
+ .menu-panel .eyebrow{display:none}
+ .menu-panel h2{font-size:20px;margin:0 0 2px}
+ .menu-panel .name-field{margin:0 0 3px}
+ .menu-panel .name-field label{font-size:10px}
+ .menu-panel .name-field input{min-height:32px;font-size:14px}
+ .menu-panel .name-field small{display:none}
+ .menu-list{gap:5px}
+ .menu-panel .name-field label{display:none}
+ .menu-item{min-height:34px;padding:4px 10px;border-radius:11px;line-height:1.25}
+ .menu-item strong{font-size:12px}.menu-item small{font-size:8px}
+ .menu-item.small-item{min-height:30px;padding:4px 10px}
+ .legal-note{font-size:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+ .dungeon-hint{font-size:8px;margin-top:2px}
+ .act2-lock{font-size:9px;margin:2px 0}
+}
+@media(max-width:820px),(max-height:430px){
+ /* 오른쪽 상자가 정원을 가리지 않도록 아래쪽 시트로 내린다. */
+ .garden-panel{left:0;right:0;top:auto;bottom:0;width:100%;max-height:56%;padding:8px 12px 10px;gap:6px;
+  background:linear-gradient(0deg,#061418fa 0%,#061418ea 62%,#06141800 100%)}
+ .garden-panel header{flex-direction:row;align-items:baseline;gap:8px}
+ .garden-panel header strong{font-size:14px}
+ .panel-body{max-height:30vh}
+ .panel-head{gap:8px}.panel-art{width:34px;height:34px}
+ .branch-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+ .branch{padding:5px 7px}.branch strong{font-size:11px}.branch small{font-size:9px}
+ .chips{gap:5px}.seed-chip{font-size:11px;padding:4px 9px}
+ .garden-panel footer{padding-top:6px}
+ /* 아무것도 고르지 않았을 때는 한 줄로 접어 정원을 넓게 본다. */
+ .garden-panel.idle{max-height:none}
+ .garden-panel.idle .panel-body{display:none}
+}
+
