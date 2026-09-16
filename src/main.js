@@ -52,7 +52,7 @@ import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,aust
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
 import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo} from './garden.js';
-import {renderGarden} from './garden-ui.js';
+import {renderGarden,renderGardenPeek} from './garden-ui.js';
 import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,applyMutation,mutationOf,hasMutation,
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
@@ -535,7 +535,7 @@ function beginEvolution(id){
 function startGame(){if(mode==='ready')restart();}
 function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
   mode='ready';$('#overlay').classList.remove('ranking-overlay');$('#overlay').classList.add('intro');$('#overlay').hidden=false;
-  $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>나의 정원</h2><p class="intro-lead">여기서 씨앗을 키우고, 던전에서 새 조합을 찾는다</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">던전으로 들어가기 <small>↵ ENTER</small></button>';
+  $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>잠든 정원을 깨우다</h2><p class="intro-lead">씨앗을 키워 문지기 너머로</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">던전으로 들어가기 <small>↵ ENTER</small></button>';
   if(touch.enabled){$('.intro-controls').innerHTML='<span><kbd>왼손 스틱</kbd> 이동</span><span><kbd>자동 공격</kbd> 이동과 회피에 집중하세요</span><span><kbd>◇ 버튼</kbd> 회피</span>';$('#start-game small').textContent='가로 화면 권장';}
   $('#start-game').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro');startGame();};
   const saved=readCheckpoint(actStore());
@@ -551,13 +551,7 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
    const go=saved=>{if(!requireName())return;startRegion=ACT2_REGION;$('#overlay').classList.remove('intro');restart(saved);};$('#start-act2').onclick=()=>go(s2||null);if($('#new-act2'))$('#new-act2').onclick=()=>go(null);}
   else $('.intro-links').insertAdjacentHTML('afterend','<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>');
  refreshGardenEffects();
- if($('#garden-inline'))renderGarden($('#garden-inline'),{
-  garden,austinDefeated:austinKnown(),inline:true,
-  // 화면이 낮으면 첫 화면에는 한 줄 요약만, 손질은 전체 정원 화면에서.
-  compact:touch.enabled&&document.documentElement.clientHeight<=560,
-  onOpen:()=>showGarden(showIntro),
-  onChange:next=>{garden=next;writeGarden(runStorage,garden);refreshGardenEffects();}
- });
+ if($('#garden-inline'))renderGardenPeek($('#garden-inline'),{garden,austinDefeated:austinKnown(),onOpen:()=>showGarden(showIntro)});
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();

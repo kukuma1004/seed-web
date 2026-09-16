@@ -23,7 +23,7 @@ const growthBar=growth=>{
 };
 
 // 화면을 그리고 버튼을 연결한다. onChange(garden)으로 바뀐 정원을 돌려준다.
-export function renderGarden(root,{garden,onChange,onClose=null,onOpen=null,picking=null,austinDefeated=false,inline=false,compact=false}){
+export function renderGarden(root,{garden,onChange,onClose=null,picking=null,austinDefeated=false}){
  const slots=activeSlots(garden,{austinDefeated}),effects=gardenEffects(garden,slots),actives=activePlants(garden,slots),center=centerInfo(garden,{austinDefeated});
  const owned=Object.entries(garden.seeds).filter(([,n])=>n>0);
  const plots=garden.plots.map((plant,index)=>{
@@ -54,38 +54,22 @@ export function renderGarden(root,{garden,onChange,onClose=null,onOpen=null,pick
      : `<small>${FRAGMENTS_PER_SEED-garden.fragments}개 더 모으면 원하는 씨앗을 만들 수 있어요</small>`}</div>`
   : '';
 
- if(compact){
-  const strip=garden.plots.map(plant=>{
-   if(!plant)return `<span class="mini empty">＋</span>`;
-   const stage=stageOf(plant.growth);
-   return `<span class="mini ${plant.active?'on':''} stage-${stage}" title="${escape(plantName(plant))}">${plantArt(plant.seed,'mini-art')}<b>${escape(plantName(plant))}</b><small>${STAGE_NAMES[stage]}</small></span>`;
-  }).join('');
-  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0);
-  root.innerHTML=`<div class="garden-strip">
-   <div class="strip-heart stage-${center.id}"><em aria-hidden="true">${center.glyph}</em><span><b>${escape(center.name)}</b><small>${escape(center.hint)}</small></span></div>
-   <div class="mini-plots">${strip}</div>
-   <button class="primary small" id="open-garden">정원 손질하기${seeds?` · 씨앗 ${seeds}개`:''}${garden.fragments?` · 조각 ${garden.fragments}`:''}</button>
-   <small class="strip-note">데려가는 식물 ${actives.length}/${slots}칸${effects.actives.length?' · '+effects.actives.map(a=>escape(a.name)).join(' · '):''}</small>
-  </div>`;
-  if(onOpen)root.querySelector('#open-garden').onclick=onOpen;
-  return root;
- }
  const heart=`<div class="garden-heart stage-${center.id}">
    <em class="heart-glyph" aria-hidden="true">${center.glyph}</em>
    <div><strong>${escape(center.name)}</strong><p>${escape(center.line)}</p><small>${escape(center.hint)}</small></div>
   </div>`;
- root.innerHTML=`<div class="garden-screen${inline?' inline':''}">
-  ${inline?'':'<p>여정이 남긴 것을 키우는 곳</p><h2>나의 정원</h2>'}
+ root.innerHTML=`<div class="garden-screen">
+  <p>여정이 남긴 것을 키우는 곳</p><h2>나의 정원</h2>
   ${heart}
   <p class="garden-note">데려갈 수 있는 식물은 ${slots}칸 · 지금 ${actives.length}칸
   ${effects.actives.length?`<br>${effects.actives.map(a=>escape(a.name)+' · '+escape(a.summary)).join('<br>')}`:'<br>자란 식물의 갈래를 고르면 다음 여정의 선택지가 달라집니다.'}</p>
   ${picking!==null?`<p class="garden-pick">어떤 씨앗을 심을까요? <button class="ghost small" data-cancel="1">취소</button></p>`:''}
   <div class="plots">${plots}</div>
   <div class="seed-shelf"><h3>씨앗 보관함</h3><div class="chips">${shelf}</div>${craft}</div>
-  ${inline?'':'<button class="primary" id="garden-close">돌아가기</button>'}
+  <button class="primary" id="garden-close">돌아가기</button>
  </div>`;
 
- const options={onChange,onClose,austinDefeated,inline};
+ const options={onChange,onClose,austinDefeated};
  const update=(next,pick=null)=>{onChange(next);renderGarden(root,{...options,garden:next,picking:pick});};
  if(root.querySelector('#garden-close'))root.querySelector('#garden-close').onclick=onClose;
  for(const button of root.querySelectorAll('[data-plant-here]'))
@@ -110,6 +94,21 @@ export function renderGarden(root,{garden,onChange,onClose=null,onOpen=null,pick
   };
  }
  for(const button of root.querySelectorAll('[data-cancel]'))button.onclick=()=>renderGarden(root,{...options,garden,picking:null});
+ return root;
+}
+// 첫 화면에 얹는 미리보기. 정보를 늘어놓지 않고 '정원이 있다'는 느낌만 준다.
+export function renderGardenPeek(root,{garden,austinDefeated=false,onOpen}){
+ const center=centerInfo(garden,{austinDefeated});
+ const planted=garden.plots.filter(Boolean);
+ const icons=planted.length
+  ? planted.slice(0,6).map(p=>`<span class="peek-plant ${p.active?'on':''} stage-${stageOf(p.growth)}" title="${escape(plantName(p))}">${plantArt(p.seed,'peek-art')}</span>`).join('')
+  : '<span class="peek-empty">아직 심은 것이 없어요</span>';
+ root.innerHTML=`<button class="garden-peek stage-${center.id}" id="open-garden" aria-label="나의 정원 열기">
+  <em class="peek-heart" aria-hidden="true">${center.glyph}</em>
+  <span class="peek-row">${icons}</span>
+  <span class="peek-go">나의 정원 ›</span>
+ </button>`;
+ if(onOpen)root.querySelector('#open-garden').onclick=onOpen;
  return root;
 }
 export {harvestLine};

@@ -70,41 +70,17 @@
 .garden-screen.inline .seed-shelf{padding:8px 12px}
 .garden-screen.inline .garden-note{font-size:11px}
 @media(max-height:560px){.garden-screen.inline .garden-heart{padding:6px 10px}.garden-screen.inline .heart-glyph{font-size:24px}.garden-screen.inline .garden-heart p{font-size:11px}}
-
-/* 짧은 화면(휴대폰 가로)에서는 첫 화면이 곧 정원이므로 위쪽 안내를 접고 정원을 먼저 보여 준다. */
-@media(max-height:560px){
- body.touch-mode #overlay.intro .intro-controls{display:none}
- body.touch-mode #overlay.intro h2{font-size:22px;margin:2px 0}
- body.touch-mode #overlay.intro .intro-lead,body.touch-mode #overlay.intro .eyebrow{font-size:10px;margin:0}
- body.touch-mode #overlay.intro .name-field{margin:2px 0 4px;width:min(260px,60%)}
- body.touch-mode #overlay.intro .name-field input{min-height:34px;font-size:15px}
- .garden-screen.inline .plots{grid-template-columns:repeat(6,minmax(0,1fr));gap:5px}
- .garden-screen.inline .plot{padding:6px;min-height:0}
- .garden-screen.inline .plot-head{gap:6px}
- .garden-screen.inline .plot-art{width:28px;height:28px}
- .garden-screen.inline .plot-head strong{font-size:11px}
- .garden-screen.inline .plot small,.garden-screen.inline .branch small{font-size:8px}
- .garden-screen.inline .plot-effect{font-size:10px}
- .garden-screen.inline .branch strong{font-size:11px}
- .garden-screen.inline .seed-shelf h3{font-size:12px;margin-bottom:4px}
- .garden-screen.inline .seed-chip{font-size:11px;padding:4px 9px}
- .garden-screen.inline .chip-art{width:18px;height:18px}
-}
-@media(max-width:520px){.garden-screen.inline .plots{grid-template-columns:repeat(3,minmax(0,1fr))}}
-
-/* 좁은 화면 첫 화면용 한 줄 정원 */
-.garden-strip{display:flex;flex-direction:column;align-items:center;gap:6px;width:min(720px,100%)}
-.strip-heart{display:flex;align-items:center;gap:8px;color:#cfe9d9}
-.strip-heart em{font-style:normal;font-size:20px;color:#9ac9a8}
-.strip-heart.stage-greattree em,.strip-heart.stage-awake em{color:#ffe3a0;filter:drop-shadow(0 0 8px #f0b44a66)}
-.strip-heart b{font-size:13px}.strip-heart small{font-size:10px;color:#8fa79b;margin-left:6px}
-.mini-plots{display:flex;gap:5px;width:100%;justify-content:center;flex-wrap:wrap}
-.mini{display:flex;flex-direction:column;align-items:center;gap:1px;width:74px;padding:5px 3px;border:1px solid #a4b7ab33;border-radius:10px;background:#0f262bcc}
-.mini.empty{justify-content:center;color:#6f8a80;border-style:dashed;min-height:56px}
-.mini.on{border-color:#f0c86a;background:#16302ecc}
-.mini.stage-bloom .mini-art{filter:drop-shadow(0 0 6px #ffe08a88)}
-.mini-art{width:22px;height:22px}
-.mini b{font-size:9px;color:#e6f2e9;max-width:70px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.mini small{font-size:8px;color:#8fa79b}
-.strip-note{font-size:10px;color:#9fb8ad}
-
+/* 첫 화면 미리보기: 정원이 있다는 것만 조용히 알린다. */
+.garden-peek{display:flex;align-items:center;gap:10px;margin:10px 0 0;padding:7px 14px;border:1px solid #a4b7ab40;border-radius:999px;background:#0f262bb3;color:#cfe9d9;cursor:pointer}
+.garden-peek:hover{border-color:#8fd7b4;background:#14322fcc}
+.peek-heart{font-style:normal;font-size:18px;color:#9ac9a8;line-height:1}
+.garden-peek.stage-greattree .peek-heart,.garden-peek.stage-awake .peek-heart{color:#ffe3a0;filter:drop-shadow(0 0 8px #f0b44a66)}
+.peek-row{display:flex;align-items:center;gap:4px}
+.peek-plant{display:block;width:22px;height:22px;opacity:.85}
+.peek-art{display:block;width:100%;height:100%;border-radius:5px}
+.peek-plant.on{opacity:1;filter:drop-shadow(0 0 5px #f0c86a88)}
+.peek-plant.stage-bloom{filter:drop-shadow(0 0 6px #ffe08a88)}
+.peek-empty{font-size:11px;color:#8fa79b}
+.peek-go{font-size:12px;color:#bfe6cf;letter-spacing:.5px}
+@media(max-height:520px){.garden-peek{margin-top:6px;padding:5px 11px;gap:7px}.peek-plant{width:18px;height:18px}.peek-go{font-size:11px}}
+@media(max-height:400px){body.touch-mode #overlay.intro .intro-controls{display:none}}
