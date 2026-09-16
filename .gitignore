@@ -61,3 +61,4 @@ artifacts/
 android/keystore.properties
 *.jks
 *.keystore
+!tools/garden-test.mjs

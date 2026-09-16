@@ -18,9 +18,12 @@ export function validRelics(r){
 }
 export const normalizeRelics=r=>r&&validRelics(r)?{equipped:r.equipped,stored:[...r.stored]}:emptyRelics();
 export function ownedRelics(r){return [...(r.equipped?[r.equipped]:[]),...r.stored];}
-export function relicOffers(r,random=Math.random){
+// preferLaws는 정원의 덩굴 갈래가 넘기는 법칙 목록이다. 그 법칙의 유물이 앞쪽에 오게 한다.
+export function relicOffers(r,random=Math.random,preferLaws=[]){
  const pool=Object.keys(RELICS).filter(id=>!ownedRelics(r).includes(id));
  for(let i=pool.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+ const wanted=new Set(Array.isArray(preferLaws)?preferLaws:[]);
+ if(wanted.size)pool.sort((a,b)=>Number(wanted.has(RELICS[b].law))-Number(wanted.has(RELICS[a].law)));
  return pool.slice(0,3);
 }
 export function keepRelic(r,id,destination='equip',replace=null){

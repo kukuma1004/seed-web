@@ -35,17 +35,36 @@ export function lawStats(levels){
 
 // Three distinct offers. While a slot is free at least one fresh law is offered; once the
 // slots are full only upgrades appear: held laws, or held forms (offered as "form:<id>").
-export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map()}={}){
+// weights/freshBonus는 정원(garden.js)이 넘기는 값이다. 힘을 더하지 않고 무엇이 더 자주 보일지만 바꾼다.
+// 'form:<id>' 제안은 그 진화의 재료 법칙 가중치를 따른다.
+function lawOfOffer(id){
+ const form=offeredForm(id);
+ if(!form)return id;
+ const requires=ALL_FORMS[form]?.requires||[];
+ return requires[0]||id;
+}
+export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map(),weights={},freshBonus=0}={}){
  const used=slotsUsed(levels,forms),full=used>=SLOT_CAP;
  const fresh=full?[]:Object.keys(LAWS).filter(id=>!levels.has(id));
- const shuffle=list=>{for(let i=list.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[list[i],list[j]]=[list[j],list[i]];}return list;};
+ const weightOf=id=>Math.max(1,weights?.[lawOfOffer(id)]||1);
+ // 가중치가 큰 법칙이 앞쪽에 뽑힐 확률이 높은 섞기(가중치가 모두 1이면 보통 섞기와 같다).
+ const shuffle=list=>{
+  const pool=[...list],out=[];
+  while(pool.length){
+   let total=0;for(const id of pool)total+=weightOf(id);
+   let pick=random()*total,index=0;
+   for(;index<pool.length-1;index++){pick-=weightOf(pool[index]);if(pick<=0)break;}
+   out.push(pool.splice(index,1)[0]);
+  }
+  list.splice(0,list.length,...out);return list;
+ };
  const upgrades=shuffle([...levels.keys(),...[...forms.keys()].map(formOffer)]);
  shuffle(fresh);
  let pool;
  if(full)pool=upgrades;
  else{
   // Mostly fresh laws early, mixing in upgrades once the seed has something to deepen.
-  const freshCount=used===0?3:used<3?2:1;
+  const freshCount=Math.min(3,(used===0?3:used<3?2:1)+Math.max(0,Math.floor(freshBonus)));
   pool=[...fresh.slice(0,freshCount),...upgrades,...fresh.slice(freshCount)];
  }
  const offer=[...new Set(pool)].slice(0,3);

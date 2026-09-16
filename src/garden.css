@@ -1,0 +1,49 @@
+/* 정원 화면. 전용 그림이 나오기 전까지는 법칙 그림과 색으로 구분한다. */
+.garden-screen{display:flex;flex-direction:column;align-items:center;gap:10px;width:min(980px,100%)}
+.garden-screen h2{margin:0}
+.garden-note{margin:0;font-size:12px;color:#b6d3c2;line-height:1.7}
+.garden-pick{margin:0;font-size:13px;color:#ffe3a0;display:flex;gap:8px;align-items:center}
+.plots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%}
+.plot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #a4b7ab40;border-radius:14px;background:#0f262bd9;text-align:left}
+.plot.active{border-color:#f0c86a;box-shadow:0 0 16px #f0b44a33;background:#16302ecc}
+.plot.stage-bloom .plot-art{filter:drop-shadow(0 0 8px #ffe08a88)}
+.plot.empty{align-items:center;justify-content:center;gap:4px;color:#9fb8ad;border-style:dashed;min-height:140px;cursor:pointer}
+.plot.empty:hover{border-color:#8fd7b4;color:#d9f2e4}
+.plot-hole{font-size:26px;line-height:1}
+.plot-head{display:flex;gap:10px;align-items:center}
+.plot-head strong{display:block;font-size:15px;color:#f3f7ea}
+.plot-art{width:46px;height:46px;flex:0 0 auto}
+.plot-art img,.chip-art img{width:100%;height:100%;object-fit:contain}
+.plant-glyph{font-style:normal;font-size:30px;line-height:1;color:#f2c14e}
+.grow-bar{height:6px;border-radius:4px;background:#0a1b1f;border:1px solid #2f4d50;margin:5px 0 3px;overflow:hidden}
+.grow-bar i{display:block;height:100%;background:linear-gradient(90deg,#4f9e77,#9ee7b8)}
+.plot small{font-size:10px;color:#9fb8ad}
+.plot-effect{margin:0;font-size:12px;color:#cfe9d9}
+.plot-effect.dim,.dim{color:#8fa79b}
+.branch-row{display:grid;gap:6px}
+.branch{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border:1px solid #a4b7ab55;border-radius:10px;background:#102a30;color:#e6f2e9;text-align:left;cursor:pointer}
+.branch:hover{border-color:#8fd7b4;background:#16383a}
+.branch strong{font-size:13px}
+.branch small{font-size:10px;color:#a9c5b6}
+.plot-actions{display:flex;gap:6px;margin-top:auto}
+.plot-actions .small{padding:6px 10px;font-size:11px;min-height:34px;border-radius:9px}
+.ghost{border:1px solid #a4b7ab55;background:transparent;color:#bcd3c6}
+.ghost:hover{border-color:#ff9c8a;color:#ffd9d2}
+.seed-shelf{width:100%;padding:12px;border:1px solid #a4b7ab33;border-radius:14px;background:#0c2126cc}
+.seed-shelf h3{margin:0 0 8px;font-size:14px;color:#cfe9d9;letter-spacing:1px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.seed-chip{display:flex;align-items:center;gap:7px;padding:6px 11px;border:1px solid #a4b7ab55;border-radius:999px;background:#102a30;color:#e6f2e9;font-size:12px;cursor:pointer}
+.seed-chip:hover,.seed-chip.pickable{border-color:#8fd7b4}
+.chip-art{width:24px;height:24px}
+.fragments{margin-top:10px;font-size:12px;color:#d8c58f;display:flex;flex-direction:column;gap:6px}
+.craft-row{display:flex;flex-wrap:wrap;gap:6px}
+.garden-line{margin:6px 0 0;font-size:13px;color:#bfe6cf}
+@media(max-width:760px){.plots{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-height:520px){
+ .garden-screen{gap:6px}
+ .plots{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+ .plot{padding:8px;gap:5px}.plot-art{width:34px;height:34px}.plot-head strong{font-size:13px}
+ .branch small,.plot small{font-size:9px}
+ .garden-note{font-size:11px}
+ .seed-shelf{padding:8px}
+}

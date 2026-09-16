@@ -51,6 +51,8 @@ import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './w
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
+import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine} from './garden.js';
+import {renderGarden} from './garden-ui.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
 import './ranking.css';
@@ -182,7 +184,7 @@ let hasteTime=0,shellTime=0,selectedItem=null,itemBarKey='';
 let score=0,wardensDefeated=0,austinsDefeated=0,austinRoom=false,inventory=emptyInventory(),turretPotionDry=0,relics=emptyRelics(),relicRewardPending=false,dashRewardPending=false,clockFloor=null,potionCD=0;const fallen=[];const JOURNEY_HEAL=25;
 const isBoss=e=>e.type==='warden'||e.type==='austin';
 function inAustinRoom(){return austinRoom&&stage===4;}
-function austinAhead(){return !isAct2(region)&&!austinRoom&&Math.floor(wardensDefeated/5)>austinsDefeated;}
+function austinAhead(){return !isAct2(region)&&!austinRoom&&Math.floor(wardensDefeated/gardenFx.austinEvery)>austinsDefeated;}
 const appShell=setupMobileApp();
 const touch=createTouchControls(()=>mode==='playing'&&!paused);
 const playerMotion=createMotion(player,player.userData.legs);const growth=createSeedEvolution(player,playerMotion.body);let evolutionTime=0;const evolutionDuration=1.4;
@@ -227,6 +229,9 @@ function drawRoom(){shadowClock=SHADOW_REFRESH;const clockRoom=inAustinRoom();ar
 let runStorage;try{runStorage=window.localStorage;}catch{runStorage=null;}
 // Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
 const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage});let playerName=lastName(runStorage),rankSerial=0;
+// 정원은 런 사이에 남는다. 효과는 화면을 나올 때 다시 계산해 다음 여정에 쓴다.
+let garden=readGarden(runStorage),gardenFx=gardenEffects(garden),lastHarvest=null;
+function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))||null;}
 function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);const seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length});
 function buildRoomBoundary(){buildArenaBoundary(arenaGroup,arena,mats);}
@@ -359,7 +364,7 @@ function wave(){
  saveBoundary(stage,inAustinRoom()?'austin':'entry');spawnCrowd(8);$('#encounter').textContent=`여정 ${cycle+1} · ${inAustinRoom()?'정시의 시계탑 · '+AUSTIN.name:REGION_NAMES[region]+' · '+roomFor(stage,cycle,region).name}`;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));$('#boss-hud').hidden=stage!==4;
 }
-function openExit(){if(dashRewardPending&&offerDashEvolution(openExit))return;if(relicRewardPending){relicRewardPending=false;const offers=relicOffers(relics,rng);if(offers.length){mode='relics';touch.reset();keys.clear();keyboardDash=false;showRelicChoice($('#overlay'),relics,offers,()=>{syncLaws();mode='playing';$('#overlay').hidden=true;openExit();},relicFx);return;}}if(stage===4)saveAfterBoss();else saveBoundary(stage+1);exitOpen=true;gate.visible=true;$('#toast').textContent=stage!==4?'방을 정리했다 · 빛나는 출구로 이동하세요':austinRoom?'오스틴을 이겼다 · 빛나는 출구로 다음 여정을 떠나세요':austinAhead()?'문지기 다섯 번째 격파 · 출구 너머에서 진짜 보스가 기다립니다':'문지기가 쓰러졌다 · 빛나는 출구로 다음 여정을 떠나세요';}
+function openExit(){if(dashRewardPending&&offerDashEvolution(openExit))return;if(relicRewardPending){relicRewardPending=false;const offers=relicOffers(relics,rng,gardenFx.relicLaws);if(offers.length){mode='relics';touch.reset();keys.clear();keyboardDash=false;showRelicChoice($('#overlay'),relics,offers,()=>{syncLaws();mode='playing';$('#overlay').hidden=true;openExit();},relicFx);return;}}if(stage===4)saveAfterBoss();else saveBoundary(stage+1);exitOpen=true;gate.visible=true;$('#toast').textContent=stage!==4?'방을 정리했다 · 빛나는 출구로 이동하세요':austinRoom?'오스틴을 이겼다 · 빛나는 출구로 다음 여정을 떠나세요':austinAhead()?'문지기 다섯 번째 격파 · 출구 너머에서 진짜 보스가 기다립니다':'문지기가 쓰러졌다 · 빛나는 출구로 다음 여정을 떠나세요';}
 function useExit(){if(!canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT}))return;touch.reset();keys.clear();keyboardDash=false;exitOpen=false;gate.visible=false;$('#exit-room').hidden=true;$('#toast').textContent='';if(stage===4){if(austinAhead())enterAustin();else nextJourney();}else{stage++;wave();}}
 function enemyBolt(pos,kind,frost=false){
  const g=new THREE.Group();g.position.set(pos.x,.65,pos.z);scene.add(g);const boss=kind==='boss';
@@ -468,7 +473,7 @@ function collide(pos,r=.4){constrainToArena(pos,r,arena);for(let o of obstacles)
 function cardChoice(mid=false,fixedOffer=null){
  touch.reset();keys.clear();keyboardDash=false;mode='cards';
  const guide=guideTarget&&profile.forms.includes(guideTarget)?FORMS[guideTarget].requires.find(id=>!levels.has(id)):null;
- let offered=fixedOffer||offerChoices(levels,{guide,forms:heldForms});
+ let offered=fixedOffer||offerChoices(levels,{guide:guide||gardenGuideLaw(),forms:heldForms,weights:gardenFx.lawWeights,freshBonus:gardenFx.freshBonus});
  if(!offered.length){mode='playing';if(roomCleared)openExit();return;}
  $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>${mid?'처치 게이지 가득':inAustinRoom()?'오스틴 격파 보상':'문지기 격파 보상'} · 슬롯 ${slotsUsed(levels,heldForms)}/${SLOT_CAP}</p><h2>${slotsUsed(levels,heldForms)>=SLOT_CAP?'법칙을 더 깊게':chosen.size?'어떤 씨앗으로 자랄까요':'첫 법칙이 깨어납니다'}</h2><p>${slotsUsed(levels,heldForms)>=SLOT_CAP?'슬롯이 가득 찼습니다 · 가진 법칙과 진화를 끝없이 강화합니다':'슬롯 '+SLOT_CAP+'개를 채운 뒤에는 강화만 합니다'} · 다음 선택까지 ${killsForChoice(choicesTaken)} 처치</p><div class="build-preview">${[...chosen].map(id=>`<span class="build-law">${lawArt(id)}${LAWS[id].name} Lv.${levelOf(levels,id)}</span>`).concat([...heldForms].map(([f,l])=>`<span class="build-law build-form">${formArt(f)}${FORMS[f].name} Lv.${l}</span>`)).join('<span class="build-link">◇</span>')||'아직 이름 없는 시드'}</div><div class="cards">${offered.map(id=>{const fid=offeredForm(id);if(fid){const f=FORMS[fid],lv=heldForms.get(fid);return `<button class="card form-upgrade" data-choice="${id}" style="--law-color:#e8c26a">${formArt(fid,'card-art')}<strong>${f.name} Lv.${lv+1}</strong><p>진화 강화</p><small>${formUpgradeLine(fid,lv)}</small><span class="synergy">${f.strength}</span></button>`;}const held=chosen.has(id),v=LAWS[id];return `<button class="card" data-choice="${id}" style="--law-color:#${v.color.toString(16).padStart(6,'0')}">${lawArt(id,'card-art')}<strong>${v.name} Lv.${held?levelOf(levels,id)+1:1}</strong><p>${held?'강화 Lv.'+levelOf(levels,id)+' → '+(levelOf(levels,id)+1):'새로운 법칙'}</p><small>${held?upgradeLine(levels,id)+' · 모든 탄 피해 +10%':v.desc}</small><span class="synergy">${formLawHint(id,chosen)||synergyHint(id,[...chosen])}</span></button>`;}).join('')}</div>`;
  const goals=Object.values(FORMS).filter(f=>!f.solo&&f.requires.filter(id=>chosen.has(id)).length===1).slice(0,4).map(f=>`${f.name}까지 ${LAWS[f.requires.find(id=>!chosen.has(id))].name}`).join(' · ');
@@ -502,12 +507,13 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
   $('#player-name').oninput=()=>{$('#player-name').classList.remove('need');const n=cleanName($('#player-name').value);if(n)playerName=saveName(runStorage,n);};
   $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(actStore());$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
   online.flush().catch(()=>0);
-  $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
+  $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="garden-link" class="discovery-link">나의 정원${gardenSummaryLabel()}</button><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
   // Act 2 unlocks with the first Austin victory on this device and keeps its own save.
   if(!act2Available()){}
   else if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);
    const go=saved=>{if(!requireName())return;startRegion=ACT2_REGION;$('#overlay').classList.remove('intro');restart(saved);};$('#start-act2').onclick=()=>go(s2||null);if($('#new-act2'))$('#new-act2').onclick=()=>go(null);}
   else $('.intro-links').insertAdjacentHTML('afterend','<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>');
+ $('#garden-link').onclick=()=>showGarden(showIntro);
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
@@ -527,6 +533,21 @@ function rankingBoard(board,mine=null){
  if(rank<=10)return top;
  return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([mine],mine,1,rankBuild,rank)}</section>`;
 }
+function gardenSummaryLabel(){
+ const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),active=gardenFx.actives.length;
+ if(active)return ` · ${active}칸 사용 중`;
+ if(seeds)return ` · 심을 씨앗 ${seeds}개`;
+ return garden.fragments?` · 조각 ${garden.fragments}개`:'';
+}
+// 정원 화면. 바뀐 내용은 바로 저장하고, 다음 여정에 쓸 효과도 다시 계산한다.
+function showGarden(back=showIntro){
+ mode='garden';touch.reset();keys.clear();$('#overlay').hidden=false;$('#overlay').classList.remove('intro');
+ renderGarden($('#overlay'),{
+  garden,
+  onChange:next=>{garden=next;writeGarden(runStorage,garden);gardenFx=gardenEffects(garden);},
+  onClose:()=>back()
+ });
+}
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
  const localBoard=readRanking(view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
@@ -545,9 +566,13 @@ function showRanking(view='online'){
 function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
+ // 정원: 이번 여정이 남긴 씨앗을 넣고, 심어 둔 식물에 성장점을 준다.
+ lastHarvest=harvestFromRun({levels:Object.fromEntries(levels),wardens:wardensDefeated,austins:austinsDefeated});
+ garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);gardenFx=gardenEffects(garden);
  const local=ranked?submitScore(actStore(),{name,score,cycle,stage,kills,time:elapsed,build}):null;
- const endBoard=local?.ranking||readRanking(actStore());$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><button class="primary" id="restart">다시 시작</button>`;
+ const endBoard=local?.ranking||readRanking(actStore());$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="garden-line">${escapeHtml(harvestLine(lastHarvest))}</p><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><div class="intro-links"><button class="primary" id="restart">다시 시작</button><button class="discovery-link" id="end-garden">정원 보기</button></div>`;
  $('#restart').onclick=showIntro;
+ $('#end-garden').onclick=()=>showGarden(showEnd);
  if(!ranked)return;
  if(isAct2(region)){setText($('#rank-status'),'2막 기록은 이 기기에 저장했어요 · 2막 모두의 랭킹은 준비 중이에요');return;}
  online.flush().catch(()=>0).then(()=>online.submit({name,score,cycle,stage,kills,time:elapsed,build},500)).then(r=>{
