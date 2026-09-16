@@ -56,7 +56,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
 
  function begin(mode,plan,pos,time){
-  serial++;effect={mode,state:plan.state,forms:[...plan.forms],time,total:time,age:0,colors:activeColors(plan.forms),serial};
+  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],time,total:time,age:0,colors:activeColors(plan.forms),serial};
   group.position.set(pos.x,0,pos.z);group.visible=true;return effect;
  }
  const start=(plan,pos)=>begin('running',plan,pos,plan.seconds);
@@ -66,6 +66,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
   if(!effect){group.visible=false;return;}
   effect.age+=dt;effect.time-=dt;group.position.set(pos.x,0,pos.z);
   const running=effect.mode==='running',over=effect.state==='OVERDRIVE';
+  const rift=effect.tags.includes('RIFT');
   const intro=Math.min(1,effect.age/.3),life=Math.max(0,effect.time/effect.total);
   // Running: a quick swell, a gentle breathing hold, and a soft fade over the last half second.
   const tail=running?Math.min(1,effect.time/.5):1;
@@ -74,9 +75,9 @@ export function createActiveVFX(scene,{mobile=false}={}){
   const k=over?1:.78;
 
   if(running){
-   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar((over?2.5:2.1)*(.6+.4*intro));floor.rotation.y=-effect.age*.32;
+   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar((over?2.5:2.1)*(.6+.4*intro));floor.rotation.y=-effect.age*(rift?.68:.32);
    halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar((over?1.75:1.5)*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*1.4;
-   wave.material.opacity=over?1:0;tint(wave.material,secondary,.7*intro*tail);wave.scale.setScalar(2.35+Math.sin(effect.age*2.2)*.12);wave.rotation.y=-effect.age*.9;
+   wave.material.opacity=over||rift?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);wave.scale.set(rift?1.45:2.35,1,rift?2.65+Math.sin(effect.age*3)*.18:2.35+Math.sin(effect.age*2.2)*.12);wave.rotation.y=-effect.age*(rift?2.1:.9);
    beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(breathe,.55+.45*intro,breathe);
   }else{
    const out=1-life,fade=Math.sin(Math.PI*Math.min(1,life*1.15));

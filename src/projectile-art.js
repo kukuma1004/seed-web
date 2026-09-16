@@ -33,7 +33,8 @@ export function createProjectileGeometries(){
   frost:merge('frost',[crystal(.12,.1,.34),cone(.06,.25,4).rotateZ(Math.PI/2).translate(.12,0,-.08),cone(.06,.25,4).rotateZ(-Math.PI/2).translate(-.12,0,-.08)]),
   chain:merge('chain',[cone(.08,.28,4).rotateZ(.45).translate(-.07,0,.14),cone(.08,.28,4).rotateZ(-.45).translate(.07,0,-.08),cone(.07,.25,4).rotateZ(.45).translate(-.06,0,-.28)]),
   reflect:merge('reflect',[crystal(.15,.07,.3),fin(Math.PI/2,.25,.065),fin(-Math.PI/2,.25,.065)]),
-  orbit:merge('orbit',[new THREE.TorusGeometry(.16,.035,4,12).rotateX(Math.PI/2),crystal(.07,.07,.23)])
+  orbit:merge('orbit',[new THREE.TorusGeometry(.16,.035,4,12).rotateX(Math.PI/2),crystal(.07,.07,.23)]),
+  portal:merge('portal',[new THREE.TorusGeometry(.18,.035,5,12).rotateX(Math.PI/2),cone(.075,.42,5),cone(.055,.28,4).rotateZ(Math.PI).translate(0,0,-.2)])
  };
  return Object.freeze(geos);
 }

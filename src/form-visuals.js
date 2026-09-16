@@ -64,7 +64,7 @@ function crescent(scale=1){
 
 export function createFormVisuals(){
  const mat=(emissive,roughness=.49,metalness=.1,intensity=.08)=>new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,emissive,emissiveIntensity:intensity,roughness,metalness,side:THREE.DoubleSide});
- const mats={ice:mat(0x6aaab9,.42,.08,.3),core:mat(0x645187),blade:mat(0x398c73),prism:mat(0x52999c,.32,.22),bloom:mat(0x74b8c1),storm:mat(0xc4a250,.4,.12,.3),star:mat(0xd8a62f,.3,.16,.48),tide:mat(0x71628e),seed:mat(0x73a47a),mirror:mat(0x6babad,.29,.38,.22)};
+ const mats={ice:mat(0x6aaab9,.42,.08,.3),core:mat(0x645187),blade:mat(0x398c73),prism:mat(0x52999c,.32,.22),bloom:mat(0x74b8c1),storm:mat(0xc4a250,.4,.12,.3),star:mat(0xd8a62f,.3,.16,.48),tide:mat(0x71628e),seed:mat(0x73a47a),mirror:mat(0x6babad,.29,.38,.22),gene:mat(0x8172c8,.3,.2,.38)};
  const geos={};
  geos.collapse=bud('thorn-pod',.3,.65,4,C.violet);
  geos.blade=join('returning-leaf',[
@@ -108,6 +108,7 @@ export function createFormVisuals(){
  ]);
  geos.mirrorBolt=petal(.42,.22,{edge:C.ivory,inner:C.jade,bend:.02,depth:.065});
  geos.mirrorBolt.name='seed-form-mirror-splinter';
+ geos.gene=join('paired-law-gene',[paint(new THREE.OctahedronGeometry(.19,0).scale(.72,.72,1.45),C.violet),paint(new THREE.TorusGeometry(.22,.035,5,12),C.gold).rotateX(Math.PI/2),paint(leaf(.38,.13,.05,.03,5),C.ivory).rotateZ(-.72).translate(.08,.12,.03)]);
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
  for(let i=0;i<4;i++)star.push(petal(.5,.25,{edge:C.ivory,inner:i%2?C.gold:C.jade,bend:.025,depth:.075}).translate(0,.2,0).rotateZ(i*Math.PI/2));
  geos.starPetal=join('four-point-star-bloom',star);

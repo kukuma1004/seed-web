@@ -30,7 +30,8 @@ export function lawStats(levels){
   frostFactor:lv('frost')?Math.max(.25,.8-.2*lv('frost')):1,
   orbitPetals:lv('orbit')?Math.min(7,2+lv('orbit')):0,
   orbitRadius:lv('orbit')?Math.min(2.9,1.8+.18*lv('orbit')):0,
-  orbitDamage:lv('orbit')?14+4*(lv('orbit')-1):0
+  orbitDamage:lv('orbit')?14+4*(lv('orbit')-1):0,
+  portalDistance:lv('portal')?Math.min(5.4,2.2+.4*lv('portal')):0
  };
 }
 
@@ -114,6 +115,7 @@ export function upgradeLine(levels,id){
   case 'recall':return `귀환 피해 ×${now.recallReturn.toFixed(1)} → ×${next.recallReturn.toFixed(1)}`;
   case 'gravity':return pair('흡인 반경','gravityRadius','',1);
   case 'frost':return `둔화 ${Math.round((1-now.frostFactor)*100)}% → ${Math.round((1-next.frostFactor)*100)}% · ${now.frostTime.toFixed(1)} → ${next.frostTime.toFixed(1)}초`;
+  case 'portal':return pair('도약 거리','portalDistance','',1);
   default:return '강화';
  }
 }

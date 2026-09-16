@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
+import {ALL_FORMS,GENERATED_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -40,7 +40,7 @@ const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, enemyShots().
 export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,enemyShots=()=>[]}){
- const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
+ const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const awakenedMats=new Map();
@@ -87,6 +87,12 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   if(!active||ALL_FORMS[active].passive)return Infinity;
   const aim=dir.clone().setY(0).normalize();
   const full=(kind,cap)=>!force&&count(kind)>=cap;
+  if(GENERATED_FORMS[active]||active==='riftseed'){
+   if(full('gene',S.bolts))return S.interval;
+   const laws=[...(S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
+   bolts.push({kind:'gene',form:active,laws,ob,dir:aim,age:0,life:S.life,passed:new Set(),bounces:S.bounces||0,pierce:S.pierce||1,portaled:false,returning:false,fragment:false});
+   fx.muzzle(pos,aim,laws[0]||'portal');return S.interval;
+  }
   switch(active){
    case 'collapse':{
     if(full('collapse',S.bolts))return S.interval;
@@ -326,6 +332,35 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    b.life-=dt;
    if(b.life<=0)continue;
    const previous=b.ob.position.clone();
+   if(b.kind==='gene'){
+    b.age+=dt;
+    if(!b.returning&&b.laws.includes('recall')&&b.age>.72){b.returning=true;b.passed.clear();fx.pulse(b.ob.position,'recall',.45,.2);}
+    if(b.returning){b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();if(flat(b.ob.position,player.position)<.55){b.life=0;continue;}}
+    // A portal only opens where the whole straight segment is free. It cannot
+    // skip arena walls or cover, which keeps the hop readable and fair.
+    if(!b.portaled&&!b.returning&&b.laws.includes('portal')&&b.age>.16){
+     const entry=b.ob.position.clone(),exit=entry.clone();let travelled=0;
+     while(travelled+0.4<=S.portalDistance){const next=exit.clone().addScaledVector(b.dir,.4),probe=b.dir.clone();if(blocked(exit,next)||boundary(exit.clone(),next,probe))break;exit.copy(next);travelled+=.4;}
+     if(travelled>=.8){b.ob.position.copy(exit);fx.portal(entry,exit);b.portaled=true;b.age+=.05;}
+     else b.portaled=true;
+    }
+    const beforeMove=b.ob.position.clone();b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;
+    const probe=b.dir.clone(),wall=boundary(beforeMove,b.ob.position,probe),cover=!wall&&blocked(beforeMove,b.ob.position);
+    if(wall)b.dir.copy(probe);
+    if(cover){b.ob.position.copy(beforeMove);b.dir.negate();}
+    if(wall||cover){if(b.bounces>0&&!b.returning){b.bounces--;b.passed.clear();fx.reflect(b.ob.position,b.dir);}else if(b.laws.includes('recall')&&!b.returning){b.returning=true;b.passed.clear();}else b.life=0;}
+    if(b.life<=0)continue;
+    const direction=b.dir.clone(),targets=enemies().filter(e=>!e.dead&&!b.passed.has(e)&&segmentDistance(beforeMove,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
+    targets.sort((x,y)=>x.g.position.clone().sub(beforeMove).dot(direction)-y.g.position.clone().sub(beforeMove).dot(direction));
+    for(const e of targets){
+     b.passed.add(e);
+     const landed=support(e,S.damage*(b.fragment?.48:1),{kind:b.form,direction:direction.clone(),comboLaws:b.laws,generated:true,indirect:b.fragment});
+     if(!landed){b.life=0;break;}
+     if(!b.fragment&&S.split>0){fx.split(e.g.position,direction,Math.min(5,S.split));for(let i=0;i<S.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(S.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);ob.scale.setScalar(.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,portaled:true,returning:false,fragment:true});}}
+     b.pierce--;if(b.pierce<=0){b.life=0;break;}
+    }
+    fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
+   }
    if(b.kind==='collapse'||b.kind==='returnblade'){
     b.age+=dt;
     if(b.kind==='returnblade'&&b.age>.65&&!b.returning){b.returning=true;b.hitSet.clear();fx.pulse(b.ob.position,'recall',.4,.2);}
@@ -583,6 +618,14 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   const nearest=(n,range=10)=>enemies().filter(e=>!e.dead&&flat(e.g.position,pos)<range).sort((a,b)=>flat(a.g.position,pos)-flat(b.g.position,pos)).slice(0,n);
   if(awakened()){fx.pulse(pos,'awaken',3.2,.55);fx.burst(pos,'awaken',36,2.2);}
   fx.pulse(pos,OPENING_FX[active]||'seed',2.4,.5);fx.burst(pos,OPENING_FX[active]||'seed',30,1.8);
+  if(GENERATED_FORMS[active]||active==='riftseed'){
+   // Keep the visual burst large while capping damaging projectiles. Generated
+   // openings would otherwise outscale their low-cadence normal attack.
+   const shots=active==='riftseed'?4:2;
+   for(const d of around(shots))fire(pos,d,null,true);
+   if((S.laws||[]).includes('portal'))for(const d of around(4)){const exit=pos.clone().addScaledVector(d,Math.min(4,S.portalDistance));fx.portal(pos,exit);}
+   return;
+  }
   switch(active){
    case 'collapse':{const spots=nearest(statId==='bigcrunch'?2:3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
    case 'frostguard':{

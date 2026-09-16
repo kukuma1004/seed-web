@@ -25,7 +25,8 @@ const LAW_SEEDS={
  burst:{name:'터지는 씨앗',flower:'폭죽꽃',tree:'화약목',vine:'불씨덩굴'},
  recall:{name:'돌아오는 씨앗',flower:'회귀꽃',tree:'귀향목',vine:'되감기덩굴'},
  gravity:{name:'끌어당기는 씨앗',flower:'중력꽃',tree:'심연목',vine:'소용돌이덩굴'},
- frost:{name:'서리 씨앗',flower:'서리꽃',tree:'한설목',vine:'고드름덩굴'}
+ frost:{name:'서리 씨앗',flower:'서리꽃',tree:'한설목',vine:'고드름덩굴'},
+ portal:{name:'별문 씨앗',flower:'차원꽃',tree:'성문목',vine:'틈새덩굴'}
 };
 export const SEEDS=Object.freeze(Object.fromEntries([
  ...Object.entries(LAW_SEEDS).map(([law,v])=>[law,{id:law,law,name:v.name,branchNames:{flower:v.flower,tree:v.tree,vine:v.vine},

@@ -39,6 +39,8 @@ for(const mobile of [false,true]){
   assert.equal(fx.state().mode,'finale');
   fx.update(.6,player);
   assert.equal(fx.state().visible,false);
+  fx.start({state:'SIGNATURE',forms:['f09-reflect-portal'],tags:['BOUNCE','RIFT'],seconds:3},player);fx.update(.2,player);
+  const riftWave=root.getObjectByName('active-wave');assert.ok(riftWave.visible&&Math.abs(riftWave.scale.x-riftWave.scale.z)>1,'rift signatures open an oval gate instead of another circular blast');
   fx.clear();
   assert.equal(fx.state().instances,0);
   fx.dispose();

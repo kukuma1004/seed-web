@@ -12,7 +12,7 @@ assert.deepEqual(Object.keys(LAW_TAGS).sort(),Object.keys(LAWS).sort());
 for(const tag of Object.values(LAW_TAGS))assert.ok(TAG_NAMES[tag]);
 assert.deepEqual(Object.keys(SIGNATURES).sort(),Object.keys(ALL_FORMS).sort());
 for(const s of Object.values(SIGNATURES))assert.ok(s.name&&s.desc);
-assert.equal(new Set(Object.values(SIGNATURES).map(s=>s.name)).size,55,'signature names are unique');
+assert.equal(new Set(Object.values(SIGNATURES).map(s=>s.name)).size,Object.keys(ALL_FORMS).length,'signature names are unique');
 
 // States follow the evolutions held: none, one, two or more (the two strongest; ties keep the first gained).
 assert.equal(activeState(new Map()).state,'LOCKED');
@@ -31,8 +31,8 @@ assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'stormcrown',ALL_FO
 assert.deepEqual(overdriveTags(['collapse','tidepull']),['CONTROL','EXPLOSION','RETURN']);
 assert.deepEqual(overdriveTags(['fullbloom','prism']),['MULTI','BOUNCE']);
 const plain=overdriveFinale([],2),full=overdriveFinale(Object.values(LAW_TAGS),2);
-assert.equal(plain.hits,1);assert.equal(plain.arcs,0);assert.equal(plain.echoes,0);assert.equal(plain.pull,0);assert.equal(plain.slow,0);
-assert.ok(full.radius>plain.radius&&full.hits===2&&full.arcs===ACTIVE.maxArcs&&full.pull>0&&full.slow>0&&full.bossScale>1);
+assert.equal(plain.hits,1);assert.equal(plain.arcs,0);assert.equal(plain.echoes,0);assert.equal(plain.pull,0);assert.equal(plain.slow,0);assert.equal(plain.rifts,0);
+assert.ok(full.radius>plain.radius&&full.hits===2&&full.arcs===ACTIVE.maxArcs&&full.pull>0&&full.slow>0&&full.rifts===3&&full.bossScale>1);
 assert.ok(full.echoes<=ACTIVE.maxEchoes,'echoes are capped');
 assert.ok(overdriveFinale([],10).damage>plain.damage,'the blast grows with evolution levels');
 assert.ok(full.lines.length>=6);
@@ -93,5 +93,5 @@ for(const id of Object.keys(ALL_FORMS)){
  combat.surge(2);combat.calm();assert.equal(combat.state().surge,0);
  combat.dispose();
 }
-assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,19);
-console.log('Actives: 55 signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.');
+assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,55);
+console.log('Actives: 100 signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.');

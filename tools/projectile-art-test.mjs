@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createProjectileGeometries,projectileGeometry} from '../src/projectile-art.js';
 
-const geos=createProjectileGeometries(),ids=['seed','reflect','split','chain','orbit','pierce','burst','recall','gravity','frost'];
+const geos=createProjectileGeometries(),ids=['seed','reflect','split','chain','orbit','pierce','burst','recall','gravity','frost','portal'];
 assert.deepEqual(Object.keys(geos).sort(),ids.sort());
 for(const [id,geo] of Object.entries(geos)){
  geo.computeBoundingBox();const size={x:geo.boundingBox.max.x-geo.boundingBox.min.x,y:geo.boundingBox.max.y-geo.boundingBox.min.y,z:geo.boundingBox.max.z-geo.boundingBox.min.z};
@@ -13,4 +13,4 @@ for(const [id,geo] of Object.entries(geos)){
 }
 assert.equal(projectileGeometry(geos,'unknown'),geos.seed);
 for(const geo of Object.values(geos))geo.dispose();
-console.log('Ten one-mesh projectile silhouettes and the fallback passed.');
+console.log('Eleven one-mesh projectile silhouettes and the fallback passed.');

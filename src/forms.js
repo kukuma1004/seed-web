@@ -1,10 +1,14 @@
+import {FIRST_FUSIONS} from './combo-catalog.js';
+
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
-// Every law is an ingredient of at least two forms, so any build has somewhere to grow.
+// The ten hand-authored classics keep their bespoke attacks. The other 35 pairs
+// use the shared gene-projectile engine, which keeps 45 recipes playable without
+// loading 35 more models or particle systems.
 const form=(id,requires,name,desc,strength,weakness,passive=false)=>Object.freeze({id,name,requires:Object.freeze(requires),pair:'',desc,strength,weakness,passive});
-const LAW_KO={reflect:'반사',split:'분열',chain:'연쇄',orbit:'공전',pierce:'관통',burst:'폭발',recall:'귀환',gravity:'중력',frost:'빙결'};
+const LAW_KO={reflect:'반사',split:'분열',chain:'연쇄',orbit:'공전',pierce:'관통',burst:'폭발',recall:'귀환',gravity:'중력',frost:'빙결',portal:'차원'};
 const withPair=f=>Object.freeze({...f,pair:f.requires.map(id=>LAW_KO[id]).join(' + ')});
 
-export const FORMS=Object.freeze(Object.fromEntries([
+export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('collapse',['gravity','burst'],'붕괴의 씨앗','느린 씨앗탄이 적을 모은 뒤 한꺼번에 붕괴합니다.','밀집한 적을 모아 한 번에 처치','발사가 느려 흩어진 적과 빠른 접근에 취약'),
  form('frostguard',['orbit','frost'],'서리 위성','서리 위성이 적을 베어 얼리고 날아오는 탄환을 부수며(문지기 탄 제외), 주기적으로 주변을 얼리는 냉기를 터뜨립니다.','근접 제압과 탄막 방어를 함께','사거리가 짧아 멀리 있는 적은 직접 쫓아가야 함',true),
  form('returnblade',['recall','pierce'],'귀환의 칼날','큰 칼날이 적의 열을 관통하고 씨앗에게 돌아옵니다.','움직임으로 귀환 경로를 바꾸어 왕복 타격','적을 경로에 모으지 못하면 화력 손실'),
@@ -17,8 +21,20 @@ export const FORMS=Object.freeze(Object.fromEntries([
  form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true)
 ].map(f=>[f.id,withPair(f)])));
 
+const pairKey=requires=>[...requires].sort().join('+');
+const CURATED_PAIRS=new Set(Object.values(CURATED_FORMS).map(f=>pairKey(f.requires)));
+const generatedForm=entry=>Object.freeze({
+ id:entry.id,name:entry.name,requires:entry.laws,pair:entry.pair,
+ desc:`${entry.mechanic}. 두 법칙의 성질이 한 발 안에서 차례로 발동합니다.`,
+ strength:`${LAW_KO[entry.laws[0]]}의 진입과 ${LAW_KO[entry.laws[1]]}의 후속 효과`,
+ weakness:'한 발에 모든 효과가 몰려 빗나가면 다음 발까지 빈틈이 생김',
+ passive:false,generated:true,visual:entry.visual
+});
+export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
+export const FORMS=Object.freeze({...CURATED_FORMS,...GENERATED_FORMS});
+
 // Solo evolutions: one law raised far enough becomes an attack of its own.
-// They live beside the ten fusions (FORMS stays fusion-only) and take one slot like a fusion does.
+// They live beside the 45 first fusions (FORMS stays fusion-only) and take one slot like a fusion does.
 export const SOLO_LEVEL=5;
 const solo=(id,law,name,desc,strength,weakness,passive=false)=>Object.freeze({id,name,requires:Object.freeze([law]),pair:`${LAW_KO[law]} 단독 진화`,desc,strength,weakness,passive,solo:true});
 export const SOLO_FORMS=Object.freeze(Object.fromEntries([
@@ -30,9 +46,10 @@ export const SOLO_FORMS=Object.freeze(Object.fromEntries([
  solo('flarebloom','burst','불꽃 꽃다발','목표에 큰 폭발을 떨어뜨리고 주변에 작은 불씨 폭발이 이어집니다.','모여 있는 무리를 크게 태움','떨어지기까지 느려 빠른 적은 피함'),
  solo('rewind','recall','되감기 잎','잎이 날아갔다 돌아오기를 여러 번 되풀이합니다.','움직이며 같은 길을 여러 번 훑음','경로 밖의 적은 못 맞힘'),
  solo('blackhole','gravity','작은 블랙홀','목표에 멈춘 블랙홀이 한동안 적을 끌어당기며 계속 피해를 줍니다.','적을 한곳에 붙잡아 둠','순간 피해가 낮고 문지기는 끌려오지 않음'),
- solo('winterbreath','frost','겨울 숨결','앞쪽 부채꼴에 서리를 내뿜어 얼리고, 이미 느려진 적은 더 아프게 합니다.','가까운 무리를 얼려 멈춤','사거리가 짧고 등 뒤는 비어 있음')
+ solo('winterbreath','frost','겨울 숨결','앞쪽 부채꼴에 서리를 내뿜어 얼리고, 이미 느려진 적은 더 아프게 합니다.','가까운 무리를 얼려 멈춤','사거리가 짧고 등 뒤는 비어 있음'),
+ solo('riftseed','portal','별문 심장','탄환이 연속으로 두 문을 통과해 뒷줄을 기습하고, 도착할 때 차원 파동을 남깁니다.','벽을 넘지 않고 앞줄 뒤의 사수와 포탑을 공격','문을 펼칠 직선 공간이 짧으면 도약 거리가 줄어듦')
 ].map(f=>[f.id,f])));
-// Every evolution the seed can hold: the ten fusions and the nine solo evolutions.
+// Every first evolution the seed can hold: 45 first fusions and ten solo evolutions.
 // Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
@@ -42,7 +59,7 @@ export const awakenOpeningEvery=(id,twin=false)=>twin?AWAKEN.openingEvery:AWAKEN
 // The mirror's opening turns every enemy shot at once, so it does not repeat during the ultimate.
 export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
 export const awakenSurgeOpening=(id,twin=false)=>twin?TWIN.surgeOpeningEvery:AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
-const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:FORMS[base].requires,pair:`${FORMS[base].name} 각성`,desc,strength,weakness,passive:FORMS[base].passive,awakened:true});
+const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:CURATED_FORMS[base].requires,pair:`${CURATED_FORMS[base].name} 각성`,desc,strength,weakness,passive:CURATED_FORMS[base].passive,awakened:true});
 export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bigcrunch','collapse','대붕괴','넓은 붕괴 씨앗을 빠르게 쏘며, 14초마다 가까운 적 둘의 자리에 붕괴 우물을 심습니다.','모인 적을 강한 붕괴로 정리','우물 사이의 공백과 느린 탄을 빠른 적이 파고듦'),
  awaken('frostarmada','frostguard','서리 함대','위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.','근접 제압과 탄막 방어의 완성형','사거리는 여전히 짧음'),
@@ -55,9 +72,9 @@ export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
  awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).','탄막을 통째로 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함')
 ].map(f=>[f.id,f])));
-// Twin awakenings (2026-09-15): the 26 pairs of solo evolutions whose laws have no fusion recipe awaken too.
+// Twin awakenings: all 35 non-curated pairs of solo evolutions awaken too.
 // Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
-// Together with the ten fusion awakenings every one of the 36 solo pairs now leads somewhere.
+// Together with the curated awakenings every one of the 45 solo pairs now leads somewhere.
 export const TWIN=Object.freeze({damage:.7,surgeOpeningEvery:1.5});
 const TWIN_TRAITS=Object.freeze({
  mirrormaze:Object.freeze({word:'굴절',effect:'reflect',bonus:.03}),
@@ -68,12 +85,13 @@ const TWIN_TRAITS=Object.freeze({
  flarebloom:Object.freeze({word:'발화',effect:'burst',bonus:.055}),
  rewind:Object.freeze({word:'회귀',effect:'recall',bonus:.035}),
  blackhole:Object.freeze({word:'특이점',effect:'gravity',bonus:.03}),
- winterbreath:Object.freeze({word:'빙결',effect:'frost',bonus:.035})
+ winterbreath:Object.freeze({word:'빙결',effect:'frost',bonus:.035}),
+ riftseed:Object.freeze({word:'개문',effect:'portal',bonus:.04})
 });
 const twin=(id,a,b,name,desc)=>{
  const A=SOLO_FORMS[a],B=SOLO_FORMS[b],parts=Object.freeze([a,b]),ta=TWIN_TRAITS[a],tb=TWIN_TRAITS[b];
  const synergy=Object.freeze({name:`${ta.word}·${tb.word} 공명`,window:2.6,bonus:.08+ta.bonus+tb.bonus,effects:Object.freeze([ta.effect,tb.effect])});
- return Object.freeze({id,name,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
+ return Object.freeze({id,name:`${name} 각성`,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
 };
 export const TWIN_FORMS=Object.freeze(Object.fromEntries([
  twin('lightningmirror','mirrormaze','thunderweb','번개 거울방','튕기는 거울탄과 적 사이를 뛰는 번개가 한 칸에서 함께 나갑니다.'),
@@ -101,9 +119,19 @@ export const TWIN_FORMS=Object.freeze(Object.fromEntries([
  twin('iciclespear','glassspear','winterbreath','고드름 창','가까운 적은 숨결로 얼리고, 먼 줄은 창날로 꿰뚫습니다.'),
  twin('boomerangflare','flarebloom','rewind','되돌아오는 불꽃','왕복하는 잎이 길을 쓸고, 모인 곳엔 불꽃 다발이 떨어집니다.'),
  twin('frostrewind','rewind','winterbreath','서리 되감기','숨결로 멈춘 적 위를 잎이 여러 번 오가며 벱니다.'),
- twin('frozenhole','blackhole','winterbreath','얼어붙은 블랙홀','블랙홀로 붙잡은 무리를 숨결로 얼려 더 아프게 합니다.')
+ twin('frozenhole','blackhole','winterbreath','얼어붙은 블랙홀','블랙홀로 붙잡은 무리를 숨결로 얼려 더 아프게 합니다.'),
+ twin('portal-mirror','mirrormaze','riftseed','차원경','거울탄이 별문을 드나들며 예상 밖의 각도에서 다시 튕깁니다.'),
+ twin('portal-bloom','fullbloom','riftseed','문 너머 만개','별문 출구마다 꽃잎이 피어 뒷줄까지 번집니다.'),
+ twin('portal-web','thunderweb','riftseed','차원 번개','별문을 건넌 번개가 떨어진 적 사이를 다시 연결합니다.'),
+ twin('portal-ring','starring','riftseed','별문 성환','도약하는 별문과 숨 쉬는 고리가 안팎을 동시에 지킵니다.'),
+ twin('portal-spear','glassspear','riftseed','차원 관통자','별문을 통과한 창날이 뒷줄을 더 깊게 꿰뚫습니다.'),
+ twin('portal-flare','flarebloom','riftseed','별문 화염','문이 열리는 곳마다 불꽃 다발이 터집니다.'),
+ twin('portal-rewind','rewind','riftseed','무한 회귀문','되감기 잎이 두 문을 오가며 같은 길을 거듭 벱니다.'),
+ twin('portal-gravity','blackhole','riftseed','사건의 지평문','별문 출구가 작은 블랙홀로 변해 적을 붙잡습니다.'),
+ twin('portal-frost','winterbreath','riftseed','서리 차원문','두 문 사이로 겨울 숨결이 이어져 멀리까지 얼립니다.')
 ].map(f=>[f.id,f])));
-// Every evolution the seed can hold: ten fusions, nine solo evolutions, ten fusion awakenings and 26 twin awakenings.
+// Every evolution the seed can hold: 45 first fusions, ten solo evolutions,
+// ten curated awakenings and 35 twin awakenings.
 export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
@@ -174,7 +202,8 @@ const SURGE=Object.freeze({
  flarebloom:s=>({embers:s.embers+3,radius:s.radius+.6}),
  rewind:s=>({leaves:s.leaves+3,trips:s.trips+1}),
  blackhole:s=>({holes:s.holes+2,hold:s.hold+1}),
- winterbreath:s=>({range:s.range+1,cone:Math.min(Math.PI,s.cone*1.3)})
+ winterbreath:s=>({range:s.range+1,cone:Math.min(Math.PI,s.cone*1.3)}),
+ riftseed:s=>({bolts:s.bolts,portalDistance:s.portalDistance+1.2,pierce:s.pierce+1})
 });
 // While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
 export const SURGE_DAMAGE=1.6;
@@ -202,13 +231,24 @@ function awakenStats(id,s){
  return boosted;
 }
 function surgeStats(id,s){
- const boosted={...s,...(SURGE[id]?.(s)||{}),surge:true};
- if(Number.isFinite(boosted.interval))boosted.interval*=.5;
- for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=SURGE_DAMAGE;
+ const isGenerated=Boolean(GENERATED_FORMS[id]);
+ const generated=isGenerated?{bolts:s.bolts||4,pierce:(s.pierce||1)+1,portalDistance:(s.portalDistance||0)+(s.laws?.includes('portal')?1.2:0)}:{};
+ const boosted={...s,...generated,...(SURGE[id]?.(s)||{}),surge:true};
+ if(Number.isFinite(boosted.interval))boosted.interval*=isGenerated?.7:.5;
+ for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=isGenerated?1.4:SURGE_DAMAGE;
  return boosted;
 }
 function baseStats(id,level){
  const L=Math.max(1,Math.floor(level)),up=L-1,power=1+.25*up,faster=Math.max(.55,1-.05*up);
+ if(GENERATED_FORMS[id]){
+  const laws=GENERATED_FORMS[id].requires;
+  return {interval:.9*faster,damage:34*power,speed:12,life:2.35,bolts:4,laws,
+   pierce:laws.includes('pierce')?Math.min(7,3+Math.floor(up/2)):1,
+   bounces:laws.includes('reflect')?Math.min(7,2+Math.floor(up/3)):0,
+   split:laws.includes('split')?Math.min(5,2+Math.floor(up/4)):0,
+   portalDistance:laws.includes('portal')?Math.min(6,3.2+.18*up):0,
+   returns:laws.includes('recall')?1:0};
+ }
  switch(id){
   // Solo evolutions. They start at evolution level 4 (law level 5), so their level-one numbers are modest.
   case 'mirrormaze':return {interval:.8*faster,damage:32*power,bounces:Math.min(12,5+Math.floor(up/2)),gain:.15,bolts:3,speed:12};
@@ -220,6 +260,7 @@ function baseStats(id,level){
   case 'rewind':return {interval:.95*faster,damage:20*power,trips:Math.min(3,2+Math.floor(up/6)),leaves:Math.min(4,3+Math.floor(up/4)),hitsPerLeg:Math.min(8,4+Math.floor(up/2))};
   case 'blackhole':return {interval:1.9*faster,damage:8*power,radius:Math.min(4.4,2.6+.14*up),hold:2.2,pull:4.5,holes:2,range:8};
   case 'winterbreath':return {interval:.75*faster,damage:26*power,range:Math.min(6,4.2+.12*up),cone:.55,slow:1.8,frozenBonus:1.5};
+  case 'riftseed':return {interval:.8*faster,damage:86*power,speed:13,life:2.6,bolts:4,laws:Object.freeze(['portal']),pierce:2,bounces:0,split:0,portalDistance:Math.min(6.5,4+.2*up),returns:0};
   case 'collapse':return {interval:1.05*faster,damage:86*power,radius:Math.min(4.2,3.1+.15*up),bolts:5,wells:3};
   case 'frostguard':return {interval:Infinity,damage:40*power,satellites:Math.min(7,4+Math.floor(up/2)),radius:2.5,slow:2,cooldown:.35,nova:30*power,novaRadius:Math.min(4.2,3.2+.12*up),novaEvery:3*faster};
   case 'returnblade':return {interval:.9*faster,damage:34*power,hitsPerLeg:Math.min(9,5+up),bolts:5};
@@ -237,6 +278,7 @@ function baseStats(id,level){
 // What the next form level changes, for the reward screen.
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
+ if(GENERATED_FORMS[id])return `진화 Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}

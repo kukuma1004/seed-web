@@ -12,7 +12,8 @@ for(const form of Object.values(FORMS)){
 }
 assert.equal(isFormEligible('toString',Object.keys(LAWS)),false);
 assert.equal(isFormEligible('collapse',null),false);
-assert.deepEqual(eligibleForms(['gravity','burst','recall','pierce']).map(x=>x.id),['collapse','returnblade','tidepull']);
+const heldFour=['gravity','burst','recall','pierce'];
+assert.deepEqual(eligibleForms(heldFour).map(x=>x.id),Object.values(FORMS).filter(f=>f.requires.every(id=>heldFour.includes(id))).map(f=>f.id));
 assert.equal(eligibleForms(Object.keys(LAWS)).length,Object.keys(FORMS).length);
 
 const empty={version:1,forms:[],bosses:[]};

@@ -1,4 +1,6 @@
-import {SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {FIRST_FUSION_BY_ID} from './combo-catalog.js';
+import {comboArt} from './combo-art.js';
 // One authored illustration for each completed form, in a 4 by 3 atlas.
 const TILES={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
 // Solo evolutions use their own painted 4 by 3 atlas. The last three cells stay empty.
@@ -8,6 +10,7 @@ export const FUSION_ATLAS='seed-forms-atlas-v4-ui.png';
 const SOLO_TILES={mirrormaze:0,fullbloom:1,thunderweb:2,starring:3,glassspear:4,flarebloom:5,rewind:6,blackhole:7,winterbreath:8};
 const BASE=import.meta.env?.BASE_URL||'/';
 const tileStyle=(file,tile)=>`background-image:url('${BASE}assets/${file}');background-position:${tile%4*100/3}% ${Math.floor(tile/4)*50}%`;
+const soloStyle=id=>id==='riftseed'?tileStyle('seed-law-atlas-v4-ui.webp',7):tileStyle(SOLO_ATLAS,SOLO_TILES[id]);
 // Awakened evolutions have their own mature relic paintings; twins combine two
 // solo relics and keep the same gold awakening frame.
 export const AWAKEN_ATLAS='seed-awaken-atlas-v1-ui.webp';
@@ -16,15 +19,17 @@ export function formArt(id,extra=''){
  // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).
  if(Object.hasOwn(TWIN_FORMS,id)){
   const [a,b]=TWIN_FORMS[id].parts;
-  return `<span class="form-art awakened-art twin-art ${extra}" aria-hidden="true"><i style="${tileStyle(SOLO_ATLAS,SOLO_TILES[a])}"></i><i style="${tileStyle(SOLO_ATLAS,SOLO_TILES[b])}"></i></span>`;
+  return `<span class="form-art awakened-art twin-art ${extra}" aria-hidden="true"><i style="${soloStyle(a)}"></i><i style="${soloStyle(b)}"></i></span>`;
  }
  if(Object.hasOwn(AWAKEN_FORMS,id)){
   const style=AWAKEN_ATLAS?tileStyle(AWAKEN_ATLAS,AWAKEN_TILES[id]):tileStyle(FUSION_ATLAS,TILES[AWAKEN_FORMS[id].base]);
   return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="${style}"></span>`;
  }
+ if(Object.hasOwn(GENERATED_FORMS,id))return comboArt(FIRST_FUSION_BY_ID[id],`form-art ${extra}`);
  const tile=TILES[id];
  if(tile!==undefined)return `<span class="form-art ${extra}" aria-hidden="true" style="${tileStyle(FUSION_ATLAS,tile)}"></span>`;
  if(Object.hasOwn(SOLO_FORMS,id)){
+  if(id==='riftseed')return `<span class="form-art solo-art ${extra}" aria-hidden="true" style="${tileStyle('seed-law-atlas-v4-ui.webp',7)}"></span>`;
   if(SOLO_ATLAS)return `<span class="form-art ${extra}" aria-hidden="true" style="${tileStyle(SOLO_ATLAS,SOLO_TILES[id])}"></span>`;
   return `<span class="form-art solo-art ${extra}" aria-hidden="true" style="${tileStyle('seed-law-atlas-v3-ui.webp',LAW_TILES[SOLO_FORMS[id].requires[0]])}"></span>`;
  }

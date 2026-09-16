@@ -5,7 +5,8 @@ import {relicArt,RELIC_ATLAS} from '../src/relic-art.js';
 import {itemArt,ITEM_ATLAS} from '../src/item-art.js';
 import {formArt,SOLO_ATLAS,FUSION_ATLAS,AWAKEN_ATLAS} from '../src/form-art.js';
 import {lawArt,LAW_ATLAS} from '../src/law-art.js';
-import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,GENERATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from '../src/forms.js';
+import {COMBO_ART} from '../src/combo-art.js';
 import fs from 'node:fs';
 
 for(const id of Object.keys(RELICS)){
@@ -22,10 +23,12 @@ assert.equal(relicArt('missing'),'');
 assert.equal(itemArt('missing'),'');
 assert.equal(new Set(Object.keys(RELICS).map(relicArt)).size,4);
 assert.equal(new Set(Object.keys(ITEMS).map(itemArt)).size,5);
-for(const id of Object.keys(SOLO_FORMS))assert.match(formArt(id),new RegExp(SOLO_ATLAS));
-for(const id of Object.keys(FORMS).filter(id=>!Object.hasOwn(SOLO_FORMS,id)))assert.match(formArt(id),new RegExp(FUSION_ATLAS));
+for(const id of Object.keys(SOLO_FORMS).filter(id=>id!=='riftseed'))assert.match(formArt(id),new RegExp(SOLO_ATLAS));
+assert.match(formArt('riftseed'),/seed-law-atlas-v4-ui/);
+for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(FUSION_ATLAS));
+for(const id of Object.keys(GENERATED_FORMS))assert.match(formArt(id),new RegExp(COMBO_ART.cores));
 for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AWAKEN_ATLAS));
-for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),new RegExp(SOLO_ATLAS));assert.match(formArt(id),/twin-art/);}
+for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),/twin-art/);if(!TWIN_FORMS[id].parts.includes('riftseed'))assert.match(formArt(id),new RegExp(SOLO_ATLAS));}
 assert.equal(new Set(Object.keys(SOLO_FORMS).map(formArt)).size,Object.keys(SOLO_FORMS).length);
 for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','frost','chain','portal'])assert.match(lawArt(id),new RegExp(LAW_ATLAS));
 assert.equal(LAW_ATLAS,'seed-law-atlas-v4-ui.webp');

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,GENERATED_FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
 import {averageDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
@@ -9,7 +9,7 @@ const offensive=ids=>ids.filter(id=>!ALL_FORMS[id].passive);
 // Equal investment: a fusion of two laws with p picks between them is level p-1; a solo law at level p evolves to level p-1.
 // A solo evolution starts at law level SOLO_LEVEL, so the first comparison is at evolution level SOLO_LEVEL-1.
 for(const level of [SOLO_LEVEL-1,9]){
- const fusion=Object.fromEntries(offensive(Object.keys(FORMS)).map(id=>[id,averageDps(id,level)]));
+ const fusion=Object.fromEntries(offensive(Object.keys(CURATED_FORMS)).map(id=>[id,averageDps(id,level)]));
  const solo=Object.fromEntries(offensive(Object.keys(SOLO_FORMS)).map(id=>[id,averageDps(id,level)]));
  const fusionMedian=median(Object.values(fusion)),soloMedian=median(Object.values(solo));
  const ratio=soloMedian/fusionMedian;
@@ -20,9 +20,16 @@ for(const level of [SOLO_LEVEL-1,9]){
   assert.ok(dps<=fusionMedian*1.5,`level ${level}: ${id} too strong (${Math.round(dps)})`);
  }
 }
+// Generated pairs spend much of their power in the main-game law reactions
+// (burst, chain, pull, slow and portal), which this raw-hit simulator does not
+// reproduce. Their shared projectile still has nonzero, bounded direct damage.
+for(const id of Object.keys(GENERATED_FORMS)){
+ const dps=averageDps(id,SOLO_LEVEL-1);
+ assert.ok(dps>20&&dps<500,`${id}: bounded direct gene-shot DPS ${Math.round(dps)}`);
+}
 // The ring is passive like the three orbit fusions; it stays in their range.
 {
- const passiveFusions=Object.keys(FORMS).filter(id=>FORMS[id].passive).map(id=>averageDps(id,SOLO_LEVEL-1,{shots:true}));
+ const passiveFusions=Object.keys(CURATED_FORMS).filter(id=>CURATED_FORMS[id].passive).map(id=>averageDps(id,SOLO_LEVEL-1,{shots:true}));
  const ring=averageDps('starring',SOLO_LEVEL-1,{shots:true});
  assert.ok(ring>=Math.min(...passiveFusions)*.8&&ring<=Math.max(...passiveFusions)*1.2,`starring ${Math.round(ring)} vs passive fusions ${passiveFusions.map(Math.round)}`);
 }

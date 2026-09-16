@@ -1,4 +1,4 @@
-import {ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {ALL_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
@@ -18,8 +18,8 @@ export const ACTIVE=Object.freeze({
  maxEchoes:2
 });
 
-export const LAW_TAGS=Object.freeze({reflect:'BOUNCE',split:'MULTI',chain:'LINK',orbit:'ORBIT',pierce:'PIERCE',burst:'EXPLOSION',recall:'RETURN',gravity:'CONTROL',frost:'FROST'});
-export const TAG_NAMES=Object.freeze({BOUNCE:'튕김',MULTI:'분열',LINK:'연결',ORBIT:'공전',PIERCE:'관통',EXPLOSION:'폭발',RETURN:'귀환',CONTROL:'끌림',FROST:'서리'});
+export const LAW_TAGS=Object.freeze({reflect:'BOUNCE',split:'MULTI',chain:'LINK',orbit:'ORBIT',pierce:'PIERCE',burst:'EXPLOSION',recall:'RETURN',gravity:'CONTROL',frost:'FROST',portal:'RIFT'});
+export const TAG_NAMES=Object.freeze({BOUNCE:'튕김',MULTI:'분열',LINK:'연결',ORBIT:'공전',PIERCE:'관통',EXPLOSION:'폭발',RETURN:'귀환',CONTROL:'끌림',FROST:'서리',RIFT:'차원'});
 export const STATE_NAMES=Object.freeze({LOCKED:'잠김',SIGNATURE:'시그니처',OVERDRIVE:'오버드라이브'});
 
 // Each evolution's signature: an opening move the moment it fires, then a few seconds of its stronger self.
@@ -43,10 +43,12 @@ const BASE_SIGNATURES=Object.freeze({
  flarebloom:sig('불꽃 축제','가까운 적 넷에게 폭발을 떨어뜨리고, 불씨가 늘어납니다.'),
  rewind:sig('되감기 폭풍','네 방향으로 잎을 날리고, 모든 잎이 한 번 더 왕복합니다.'),
  blackhole:sig('특이점','씨앗 앞에 블랙홀 셋을 한꺼번에 열고, 더 오래 붙잡습니다.'),
- winterbreath:sig('빙하기','사방으로 서리를 내뿜고, 숨결이 더 멀고 넓어집니다.')
+ winterbreath:sig('빙하기','사방으로 서리를 내뿜고, 숨결이 더 멀고 넓어집니다.'),
+ riftseed:sig('별문 개방','네 방향으로 차원탄을 쏘고, 네 개의 별문이 동시에 열려 뒷줄을 덮칩니다.')
 });
 export const SIGNATURES=Object.freeze({
  ...BASE_SIGNATURES,
+ ...Object.fromEntries(Object.values(GENERATED_FORMS).map(f=>[f.id,sig(`${f.name} · 개문`,`${f.name}의 핵심 탄을 양쪽으로 펼치고, 잠시 동안 더 자주 쏘며 깊게 관통합니다.`)])),
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
@@ -73,13 +75,14 @@ export function overdriveFinale(tags=[],level=2){
  const damage=ACTIVE.finaleDamage*(1+.15*Math.max(0,level-2));
  const radius=ACTIVE.finaleRadius+(has('EXPLOSION')?1.4:0)+(has('ORBIT')?.6:0);
  const echoes=Math.min(ACTIVE.maxEchoes,(has('BOUNCE')?1:0)+(has('RETURN')?1:0));
- const out={tags:[...tags],damage,radius,hits:has('MULTI')?2:1,arcs:has('LINK')?ACTIVE.maxArcs:0,pull:has('CONTROL')?3.5:0,slow:has('FROST')?3:0,bossScale:has('PIERCE')?1.25:1,ignoreShields:has('PIERCE'),echoes,echoScale:.6};
+ const out={tags:[...tags],damage,radius,hits:has('MULTI')?2:1,arcs:has('LINK')?ACTIVE.maxArcs:0,pull:has('CONTROL')?3.5:0,slow:has('FROST')?3:0,bossScale:has('PIERCE')?1.25:1,ignoreShields:has('PIERCE'),rifts:has('RIFT')?3:0,echoes,echoScale:.6};
  const lines=[`반경 ${radius.toFixed(1)} 폭발 · 피해 ${Math.round(damage)}`];
  if(out.pull)lines.push('터지기 전에 주변 적을 끌어옴');
  if(out.hits>1)lines.push('한 번 더 갈라져 절반 피해');
  if(out.arcs)lines.push(`바깥 적 ${out.arcs}명에게 번개`);
  if(out.slow)lines.push(`${out.slow}초 동안 얼림`);
  if(out.ignoreShields)lines.push('방패를 뚫고 보스에게 +25%');
+ if(out.rifts)lines.push(`멀리 있는 적에게 별문 낙뢰 ${out.rifts}회`);
  if(echoes)lines.push(`메아리 폭발 ${echoes}번(60%)`);
  out.lines=lines;
  return out;
@@ -108,7 +111,7 @@ export function startActive(gauge,forms){
  if(!activeReady(gauge,forms))return null;
  const s=activeState(forms),overdrive=s.state==='OVERDRIVE';
  const seconds=overdrive?ACTIVE.overdriveSeconds:ACTIVE.signatureSeconds;
- const tags=overdrive?overdriveTags(s.forms):[];
+ const tags=overdriveTags(s.forms);
  gauge.value=0;
  gauge.plan={state:s.state,forms:s.forms,seconds,time:seconds,tags,finale:overdrive?overdriveFinale(tags,s.level):null};
  return gauge.plan;

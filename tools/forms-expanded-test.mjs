@@ -16,12 +16,21 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: ten forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,10);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,10);
+// Catalogue: all 45 two-law pairs, each exactly once.
+assert.equal(Object.keys(FORMS).length,45);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,45);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
+
+// A generated portal pair is real combat: it opens a gate, crosses the free
+// segment and can damage the back line while staying inside the same bolt cap.
+{
+ let gates=0;const target=enemy(5),f=fixture([target],{vfx:{portal(){gates++;}}});
+ f.combat.set('f09-reflect-portal',4);f.combat.fire(vec(),vec(1));step(f.combat,1);
+ assert.ok(gates>=1,'the generated projectile opened a portal');assert.ok(f.calls.some(c=>c.e===target&&c.generated&&c.comboLaws.includes('portal')));
+ assert.ok(f.combat.state().bolts<=formStats('f09-reflect-portal',4).bolts);f.combat.dispose();
+}
 
 // Orbit evolutions must remain visually readable without relying on colour.
 assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,4);
@@ -116,4 +125,4 @@ for(const id of Object.keys(FORMS)){
  const damages=f.calls.filter(c=>c.kind==='mirrorguard'&&!c.indirect).map(c=>c.damage).sort((a,b)=>a-b);
  assert.deepEqual(damages,[formStats('mirrorguard',1).damage]);
 }
-console.log('Forms: ten pairs covering every law twice, uncapped form levels, prism splits, lance lines, bloom delay, crown pulses, tide drag, seed fan, mirror returns passed.');
+console.log('Forms: all 45 law pairs, uncapped form levels, gene shots, prism splits, lance lines, bloom delay, crown pulses, tide drag, seed fan, mirror returns passed.');

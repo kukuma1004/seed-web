@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {rankedEvolutions} from './evolution-rank.js';
-import {baseFormOf,TWIN_FORMS} from './forms.js';
+import {ALL_FORMS,baseFormOf,TWIN_FORMS} from './forms.js';
+import {LAWS} from './laws.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
@@ -15,6 +16,13 @@ export const FUSION_BODY_TILES=Object.freeze({collapse:0,frostguard:1,returnblad
 export const AWAKEN_BODY_TILES=Object.freeze({bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9});
 const ALL_BODY_TILES=Object.freeze({...FUSION_BODY_TILES,...SOLO_BODY_TILES,...AWAKEN_BODY_TILES});
 const EVOLUTION_COLORS=Object.freeze({collapse:0xa861ff,frostguard:0x81eaff,returnblade:0x8eff9d,prism:0xffd77e,thunderlance:0xffd35d,frostbloom:0x77dfff,stormcrown:0xffd15d,tidepull:0x55d9ec,seedstorm:0xff8552,mirrorguard:0xffe2a1,mirrormaze:0xc7eaff,fullbloom:0xa5ee65,thunderweb:0xffd05d,starring:0xffe18a,glassspear:0x74ddff,flarebloom:0xff694f,rewind:0xc375ff,blackhole:0x8d54ff,winterbreath:0x9fe9ff});
+const evolutionColor=id=>{
+ if(EVOLUTION_COLORS[id])return EVOLUTION_COLORS[id];
+ const laws=ALL_FORMS[id]?.requires||[],color=new THREE.Color(0x000000);
+ if(!laws.length)return 0xffffff;
+ for(const law of laws)color.add(new THREE.Color(LAWS[law]?.color||0xffffff));
+ return color.multiplyScalar(1/laws.length).getHex();
+};
 
 // Fusion awakenings use dedicated bodies. A twin contributes both solo bodies,
 // so the dominant half becomes the body and the other still colours its aura.
@@ -69,12 +77,16 @@ export function createSeedBody(scene,{occlusion=true}={}){
   const source=sourceFor(currentEvolution),active=Boolean(source?.ready);
   if(active){const tile=source.tiles[currentEvolution];source.texture.offset.set((tile%4)/4,1-(Math.floor(tile/4)+1)/3);evolutionMaterial.map=evolutionGhostMaterial.map=source.texture;evolutionMaterial.needsUpdate=evolutionGhostMaterial.needsUpdate=true;}
   sprite.visible=!active;ghost.visible=!active&&occlusion;evolutionSprite.visible=active;evolutionGhost.visible=active&&occlusion;
-  secondaryAura.visible=Boolean(secondaryEvolution);if(secondaryEvolution)secondaryMaterial.color.setHex(EVOLUTION_COLORS[secondaryEvolution]||0xffffff);
+  secondaryAura.visible=Boolean(secondaryEvolution);if(secondaryEvolution)secondaryMaterial.color.setHex(evolutionColor(secondaryEvolution));
  };
  // Preserve the visual rig interface used by evolution and combat.
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null};
  root.userData.setEvolution=forms=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
+  // Catalogue fusions deliberately share lightweight combat geometry instead
+  // of loading 35 more body textures. A rotating two-law aura still makes the
+  // evolution visible immediately in play.
+  if(!currentEvolution)secondaryEvolution=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id||null;
   root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
  root.userData.setQuality=level=>{occlusion=level>0;applyEvolution();};

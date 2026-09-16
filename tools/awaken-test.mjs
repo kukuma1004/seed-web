@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,TWIN,ALL_FORMS,AWAKEN,awakenOpeningEvery,baseFormOf,isAwakenedForm,isTwinForm,attackPartsOf,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,TWIN,ALL_FORMS,AWAKEN,awakenOpeningEvery,baseFormOf,isAwakenedForm,isTwinForm,attackPartsOf,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
 import {awakenOptions,awakenLevel,awaken,slotsUsed,chooseLaw,formOffer} from '../src/progression.js';
 import {createFormCombat} from '../src/form-combat.js';
 import {evolutionFamily,isOrbitEvolution,activeUltimateEvolutions} from '../src/evolution-family.js';
@@ -9,7 +9,7 @@ import {buildRecord,parseBuild} from '../src/ranking-build.js';
 const V=THREE.Vector3;
 
 // One awakened evolution per fusion, named apart from every other evolution and signature.
-assert.equal(Object.keys(AWAKEN_FORMS).length,Object.keys(FORMS).length);
+assert.equal(Object.keys(AWAKEN_FORMS).length,Object.keys(CURATED_FORMS).length);
 for(const a of Object.values(AWAKEN_FORMS)){
  assert.ok(FORMS[a.base]&&awakenedFormOf(a.base)===a.id&&baseFormOf(a.id)===a.base&&isAwakenedForm(a.id));
  assert.deepEqual([...a.requires],[...FORMS[a.base].requires]);assert.equal(a.passive,FORMS[a.base].passive);
@@ -32,19 +32,19 @@ assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,Object.keys(A
 }
 assert.deepEqual(awakenOptions(new Map([['blackhole',5],['flarebloom',5]])),[{id:'bigcrunch',from:['blackhole','flarebloom']}]);
 assert.deepEqual(awakenOptions(new Map([['blackhole',5],['mirrormaze',5]])),[{id:'lensinghole',from:['mirrormaze','blackhole']}]);
-// Every one of the 36 solo pairs awakens: ten through their fusion, 26 as twins.
+// Every one of the 45 solo pairs awakens: ten classics through their authored fusion awakening, 35 as twins.
 {
  const solos=Object.keys(SOLO_FORMS);let pairs=0;
  for(let i=0;i<solos.length;i++)for(let j=i+1;j<solos.length;j++){const options=awakenOptions(new Map([[solos[i],5],[solos[j],5]]));assert.equal(options.length,1,`${solos[i]}+${solos[j]}`);pairs++;}
- assert.equal(pairs,36);assert.equal(Object.keys(TWIN_FORMS).length,26);
+ assert.equal(pairs,45);assert.equal(Object.keys(TWIN_FORMS).length,35);
 }
 for(const t of Object.values(TWIN_FORMS)){
  assert.ok(isTwinForm(t.id)&&t.parts.every(id=>SOLO_FORMS[id])&&SIGNATURES[t.id]?.name&&t.name&&t.desc);
  assert.deepEqual(attackPartsOf(t.id),[...t.parts]);
  assert.ok(t.synergy.name&&t.synergy.window>=2&&t.synergy.bonus>=.1&&t.synergy.bonus<=.25&&t.synergy.effects.length===2);
- assert.ok(!Object.values(FORMS).some(f=>[...f.requires].sort().join()===[...t.requires].sort().join()),`${t.id} duplicates a fusion`);
+ assert.ok(Object.values(FORMS).some(f=>[...f.requires].sort().join()===[...t.requires].sort().join()),`${t.id} keeps a first-fusion ancestry`);
 }
-assert.equal(new Set(Object.values(TWIN_FORMS).map(t=>t.synergy.name)).size,26,'Every twin pair has a distinct resonance.');
+assert.equal(new Set(Object.values(TWIN_FORMS).map(t=>t.synergy.name)).size,35,'Every twin pair has a distinct resonance.');
 {
  const forms=new Map([['gravityspear',6],['blackhole',6]]);assert.deepEqual(awakenOptions(forms),[{id:'gravityspear',from:['blackhole']}]);
  assert.equal(awaken(forms,awakenOptions(forms)[0]),true);assert.deepEqual([...forms],[['gravityspear',8]]);
@@ -92,4 +92,4 @@ assert.equal(activeState(new Map([['bigcrunch',9]])).state,'SIGNATURE');
 }
 // Saved builds and rankings keep awakened evolutions.
 assert.deepEqual(parseBuild(buildRecord({forms:new Map([['maelstrom',8]])})).forms,[['maelstrom',8]]);
-console.log('Awakening: ten fusion recipes and 26 twins (all 36 solo pairs), fusion+solo and solo+solo paths, feeding, level rule, lasting surge share, families, self-repeating opening move and saved builds passed.');
+console.log('Awakening: ten authored fusion awakenings and 35 twins (all 45 solo pairs), fusion+solo and solo+solo paths, feeding, level rule, lasting surge share, families, self-repeating opening move and saved builds passed.');

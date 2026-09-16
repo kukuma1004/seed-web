@@ -7,7 +7,7 @@ for(const mobile of [false,true]){
   const root=scene.children[0],meshes=[...root.children],a=new THREE.Vector3(1,0,2),b=new THREE.Vector3(4,0,3),dir=new THREE.Vector3(0,0,-1);
   const beforeA=a.clone(),beforeB=b.clone();
   for(let i=0;i<70;i++){
-    fx.impact(a,'reflect',true);fx.explosion(a,'burst',1.6,true);fx.reflect(a,dir);fx.split(a,dir,5);fx.arc(a,b);fx.dash(a,.3);fx.evolution(a,'chain');fx.trail(a,b);
+    fx.impact(a,'reflect',true);fx.explosion(a,'burst',1.6,true);fx.reflect(a,dir);fx.split(a,dir,5);fx.arc(a,b);fx.portal(a,b);fx.dash(a,.3);fx.evolution(a,'chain');fx.trail(a,b);
   }
   fx.update(.016);
   assert.deepEqual(a,beforeA);assert.deepEqual(b,beforeB,'VFX must never move gameplay objects');
@@ -17,6 +17,7 @@ for(const mobile of [false,true]){
   assert.equal(meshes[1].geometry.name,'seed-vfx-tapered-streak');
   assert.ok(fx.state().events.pulse>0,'pulse calls stay valid but draw nothing');
   assert.ok(fx.state().events.flame>0&&fx.state().events.explosion>0,'Explosions add a bounded flame crown');
+  assert.ok(fx.state().events.portal>0,'Portals reuse the fixed spark and beam batches');
   assert.ok(fx.state().active<=fx.state().capacity);
   for(const mesh of meshes){
     assert.equal(mesh.castShadow,false);assert.equal(mesh.material.depthWrite,false);

@@ -30,7 +30,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
   const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,dash:0,evolution:0,trail:0};
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -130,6 +130,22 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
     pulse(b,'chain',.28,.25);burst(b,'chain',6,.6);
   }
+  // Two compact gates and a connecting streak, drawn through the existing
+  // spark/beam batches. A portal therefore adds no draw call on low-end phones.
+  function portal(a,b){
+    counters.portal++;
+    const from=workA.set(a.x,.72,a.z),to=workB.set(b.x,.72,b.z);
+    segment(from,to,'portal',.09,.2);
+    for(const p of [a,b]){
+      burst(p,'portal',8,.55);
+      for(let i=0;i<6;i++){
+        const angle=i*Math.PI/3;
+        workC.set(p.x+Math.cos(angle)*.38,.72,p.z+Math.sin(angle)*.38);
+        workD.set(p.x+Math.cos(angle+.72)*.38,.72,p.z+Math.sin(angle+.72)*.38);
+        segment(workC,workD,'portal',.055,.24);
+      }
+    }
+  }
   function dash(pos,angle){
     counters.dash++;
     emitRotation.setFromAxisAngle(up,angle);emit(ghosts,pos,'seed',.32,1.35,1.35,1.35,{rotation:emitRotation});
@@ -159,7 +175,7 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,dash,evolution,update,clear,
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,
     state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
