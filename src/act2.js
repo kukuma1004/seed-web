@@ -11,6 +11,8 @@ export const act2Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosse
 // Flip ACT2_RELEASED to true when the user says act 2 may go public.
 export const ACT2_RELEASED=false;
 export function act2Available(where=globalThis.location){return ACT2_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
+// Public builds always send an act-2 URL or stale checkpoint back to act 1.
+export function playableRegion(region,where=globalThis.location){return isAct2(region)&&!act2Available(where)?'garden':region;}
 
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
 // Rooms 1-4 teach one new minion rule each and then mix them; room 5 holds the gate.

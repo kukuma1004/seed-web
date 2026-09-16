@@ -26,7 +26,7 @@ export function formArt(id,extra=''){
  if(tile!==undefined)return `<span class="form-art ${extra}" aria-hidden="true" style="${tileStyle(FUSION_ATLAS,tile)}"></span>`;
  if(Object.hasOwn(SOLO_FORMS,id)){
   if(SOLO_ATLAS)return `<span class="form-art ${extra}" aria-hidden="true" style="${tileStyle(SOLO_ATLAS,SOLO_TILES[id])}"></span>`;
-  return `<span class="form-art solo-art ${extra}" aria-hidden="true" style="${tileStyle('seed-law-atlas-v2-ui.png',LAW_TILES[SOLO_FORMS[id].requires[0]])}"></span>`;
+  return `<span class="form-art solo-art ${extra}" aria-hidden="true" style="${tileStyle('seed-law-atlas-v3-ui.webp',LAW_TILES[SOLO_FORMS[id].requires[0]])}"></span>`;
  }
  return '';
 }

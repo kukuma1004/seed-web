@@ -41,7 +41,7 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
 .garden-panel footer{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #a4b7ab26;padding-top:8px}
 .garden-panel footer small{font-size:11px;color:#9fb8ad}
 .garden-panel footer .primary{padding:9px 16px;min-height:42px}
-@media(max-width:900px){.menu-panel{width:min(320px,56vw);padding:18px 16px}.menu-panel h2{font-size:26px}.garden-panel{width:min(300px,56vw)}}
+@media(max-width:900px){.menu-panel{width:min(300px,46vw);padding:18px 16px}.menu-panel h2{font-size:26px}.garden-panel{width:min(290px,40vw)}}
 @media(max-height:520px){
  .menu-panel{padding:12px 14px;gap:6px}.menu-panel h2{font-size:22px;margin-bottom:2px}
  .menu-panel .name-field{margin:0 0 4px}.menu-panel .name-field input{min-height:34px;font-size:14px}.menu-panel .name-field small{display:none}

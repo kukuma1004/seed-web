@@ -2,11 +2,9 @@ import * as THREE from 'three';
 import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 
-// Ultimate stage around the seed, drawn as light rather than shapes (2026-09-15 rework).
-// The previous flat petal wheels, the solid-looking cone and the paper-like shards read as
-// stickers on the floor. Now: a soft floor glow, one thin rotating halo, a beam that fades
-// upward, and crystal motes spiralling up into the seed. Still five draw calls, no lights,
-// and the two gradient textures are generated in memory (no image files, works in tests).
+// Ultimate stage around the seed. A hand-painted botanical sigil replaces the
+// generic floor disc; halo, beam and motes remain code-driven. Still five draw
+// calls, no dynamic lights, and Node tests use the procedural fallback texture.
 
 // A tiny grayscale gradient texture. Additive blending turns black into "no light", so the
 // gradient doubles as transparency without alpha sorting.
@@ -36,9 +34,12 @@ export function createActiveVFX(scene,{mobile=false}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
  const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
- const glowTex=gradientTexture(64,glowFalloff),haloTex=gradientTexture(64,haloBand),beamTex=gradientTexture(32,beamFalloff);textures.push(glowTex,haloTex,beamTex);
+ const glowTex=gradientTexture(64,glowFalloff),haloTex=gradientTexture(64,haloBand),beamTex=gradientTexture(32,beamFalloff);
+ const sigilTex=typeof document==='undefined'?glowTex:new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/ultimate-seed-sigil-v1.webp');
+ if(sigilTex!==glowTex){sigilTex.colorSpace=THREE.SRGBColorSpace;sigilTex.minFilter=sigilTex.magFilter=THREE.LinearFilter;}
+ textures.push(glowTex,haloTex,beamTex,...(sigilTex===glowTex?[]:[sigilTex]));
 
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2),additive(glowTex));floor.position.y=.11;floor.name='active-floor-glow';group.add(floor);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2),additive(sigilTex));floor.position.y=.11;floor.name='active-botanical-sigil';group.add(floor);
  // RingGeometry UVs are planar; remap them to (angle, radius) so the band texture wraps around.
  const haloGeo=new THREE.RingGeometry(.86,1.14,96,1);
  {const pos=haloGeo.attributes.position,uv=haloGeo.attributes.uv;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);uv.setXY(i,(Math.atan2(y,x)/(Math.PI*2)+1)%1,(Math.hypot(x,y)-.86)/.28);}haloGeo.rotateX(-Math.PI/2);}
@@ -73,13 +74,13 @@ export function createActiveVFX(scene,{mobile=false}={}){
   const k=over?1:.78;
 
   if(running){
-   floor.material.opacity=1;tint(floor.material,primary,.55*k*intro*tail*breathe);floor.scale.setScalar((over?2.5:2.1)*(.6+.4*intro));
+   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar((over?2.5:2.1)*(.6+.4*intro));floor.rotation.y=-effect.age*.32;
    halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar((over?1.75:1.5)*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*1.4;
    wave.material.opacity=over?1:0;tint(wave.material,secondary,.7*intro*tail);wave.scale.setScalar(2.35+Math.sin(effect.age*2.2)*.12);wave.rotation.y=-effect.age*.9;
    beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(breathe,.55+.45*intro,breathe);
   }else{
    const out=1-life,fade=Math.sin(Math.PI*Math.min(1,life*1.15));
-   floor.material.opacity=1;tint(floor.material,primary,.8*fade);floor.scale.setScalar(2.5+3.5*out);
+   floor.material.opacity=1;tint(floor.material,primary,.58*fade);floor.scale.setScalar(2.5+3.5*out);floor.rotation.y-=dt*1.4;
    halo.material.opacity=1;tint(halo.material,primary,2*fade);halo.scale.setScalar(1.8+4.8*out);halo.rotation.y+=dt*3;
    wave.material.opacity=1;tint(wave.material,secondary,1.4*fade);wave.scale.setScalar(1.4+7*out*out);
    beam.material.opacity=1;tint(beam.material,secondary,1.3*fade);beam.scale.set(1+1.2*out,1-.6*out,1+1.2*out);

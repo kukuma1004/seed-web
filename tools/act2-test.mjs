@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
+import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 // Not public yet: only a local development server shows act 2 until ACT2_RELEASED.
 assert.equal(ACT2_RELEASED,false);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),false);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
+assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'garden');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
 import {ACT2_MINIONS,ACT2_MINION_TYPES,ACT2_ART,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
 import {roomFor,ROOMS} from '../src/journey.js';
 import {arenaFor,insideArena} from '../src/arena.js';

@@ -127,7 +127,9 @@ export function createGardenScene(){
  scene.add(fireflies);
 
  const plantGroup=new THREE.Group(),centerGroup=new THREE.Group();scene.add(plantGroup,centerGroup);
- const markerMat=new THREE.MeshBasicMaterial({color:0xc7d6bd,transparent:true,opacity:.14,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ // The painted beds already show every empty slot. The raycast meshes stay
+ // present for tapping, but draw nothing until one slot is actually selected.
+ const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
  const markers=PLOT_SPOTS.map(spot=>{
   const m=new THREE.Mesh(new THREE.RingGeometry(.49,.535,40),markerMat.clone());
   m.rotation.x=-Math.PI/2;m.position.set(spot.x,.03,spot.z);scene.add(m);return m;
@@ -167,7 +169,7 @@ export function createGardenScene(){
    const on=group.userData.plot===selected;
    group.scale.setScalar(on?1.08:1);
   }
-  markers.forEach((m,i)=>{const on=i===selected;m.material.opacity=on?.72:.14;m.material.color.setHex(on?0xffd77a:0xc7d6bd);});
+  markers.forEach((m,i)=>{const on=i===selected;m.material.opacity=on?.62:0;});
  }
  function update(dt){
   time+=dt;

@@ -6,6 +6,7 @@ import {itemArt,ITEM_ATLAS} from '../src/item-art.js';
 import {formArt,SOLO_ATLAS,FUSION_ATLAS,AWAKEN_ATLAS} from '../src/form-art.js';
 import {lawArt,LAW_ATLAS} from '../src/law-art.js';
 import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from '../src/forms.js';
+import fs from 'node:fs';
 
 for(const id of Object.keys(RELICS)){
  const html=relicArt(id);
@@ -27,4 +28,6 @@ for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AW
 for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),new RegExp(SOLO_ATLAS));assert.match(formArt(id),/twin-art/);}
 assert.equal(new Set(Object.keys(SOLO_FORMS).map(formArt)).size,Object.keys(SOLO_FORMS).length);
 for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','frost','chain'])assert.match(lawArt(id),new RegExp(LAW_ATLAS));
+assert.equal(LAW_ATLAS,'seed-law-atlas-v3-ui.webp');
+assert.ok(fs.statSync(new URL(`../public/assets/${LAW_ATLAS}`,import.meta.url)).size<300_000,'law atlas stays mobile-sized');
 console.log('Every reward, law and evolution uses its production atlas and solo choices have distinct tiles.');
