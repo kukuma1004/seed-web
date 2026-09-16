@@ -54,6 +54,7 @@ import {createOnlineRanking,SEASON} from './online-ranking.js';
 import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
+import {PATCH_NOTES,hasUnseenNotes,markNotesSeen} from './patch-notes.js';
 import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,applyMutation,mutationOf,hasMutation,
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
@@ -368,7 +369,13 @@ document.body.insertAdjacentHTML('beforeend','<button id="save-exit" hidden>저�
 // Relic numbers are measured against the build without the relic, so the screen shows before → after.
 const relicFx=id=>relicEffect(id,lawStats(levels),heldForms);
 const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>relics,effect:relicFx,canSwap:()=>roomCleared&&exitOpen,swap:id=>{if(!roomCleared||!exitOpen||!equipRelic(relics,id))return;syncLaws();if(stage===4)saveAfterBoss();else saveBoundary(stage+1);}},{get:()=>inventory},{get:()=>activeGauge},{state:()=>seedTitle.state()},{get:()=>dashState});
-$('#save-exit').onclick=()=>{if(!readCheckpoint(actStore())){$('#toast').textContent='저장 기록이 없습니다. 이 브라우저의 저장 공간을 확인해 주세요.';return;}touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;showIntro();};
+// 방을 도중에 떠날 때는 지금 체력과 가방을 그대로 저장한다.
+// (예전에는 방에 들어갈 때의 체력이 남아 있어서, 다치면 나갔다 이어하는 방법으로 회복할 수 있었다.)
+function saveLeaveState(){
+ if(!['playing','evolving','cards','forms','relics','dash','solo','awaken'].includes(mode)||roomCleared)return false;
+ return saveBoundary(stage,inAustinRoom()?'austin':'entry');
+}
+$('#save-exit').onclick=()=>{if(!readCheckpoint(actStore())){$('#toast').textContent='저장 기록이 없습니다. 이 브라우저의 저장 공간을 확인해 주세요.';return;}saveLeaveState();touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;showIntro();};
 function wave(){
  for(const f of fallen)releaseEnemy(f.e);fallen.length=0;potionCD=0;relicRewardPending=false;
  clearForms();cancelActive(activeGauge);activeVfx.clear();finaleEchoes.length=0;cachedTarget=null;targetTimer=0;clearEscorts();escortWaves=0;bossDefeated=false;vfx.clear();wells.length=0;roomStartKills=kills;midReward=false;trapClock=0;pulls.length=0;orbitHits.clear();dashLock=0;crowdLeft=CROWD_TOTALS[stage];crowdTimer=0;crowdIndex=0;orbitHitCD=0;
@@ -551,6 +558,8 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),actives=gardenFx.actives.length,shop=readShop(runStorage);
+ // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
+ const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
  const gardenLine=actives?`데려갈 식물 ${actives}칸`:seeds?`심을 씨앗 ${seeds}개`:garden.fragments?`씨앗 조각 ${garden.fragments}개`:'씨앗을 심어 보세요';
  $('#overlay').innerHTML=`<div class="menu-panel">
   <p class="eyebrow">SEED</p><h2>잠든 정원</h2>
@@ -561,6 +570,7 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
    <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 작은 물약 ${shop.tonics}/${SHOP_STOCK_MAX}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
    <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
+   <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
   </div>
   <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>
  </div>`;
@@ -569,6 +579,7 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
  $('#go-dungeon').onclick=showDungeon;
  $('#go-garden').onclick=()=>showGarden(showIntro);
  $('#go-shop').onclick=()=>showShop(showIntro);
+ $('#patch-notes').onclick=showNotes;
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
@@ -667,6 +678,15 @@ function showGarden(back=showIntro){
  $('#overlay').hidden=false;$('#overlay').classList.remove('intro','menu-screen','ranking-overlay');$('#overlay').classList.add('garden-mode');
  paintGardenPanel();
 }
+// 새 소식 화면. 읽으면 점이 사라진다.
+function showNotes(){
+ mode='notes';touch.reset();keys.clear();markNotesSeen(runStorage);
+ $('#overlay').hidden=false;$('#overlay').classList.remove('garden-mode','ranking-overlay');$('#overlay').classList.add('intro','menu-screen');
+ $('#overlay').innerHTML=`<div class="menu-panel notes-panel"><p class="eyebrow">SEED · 새 소식</p><h2>무엇이 바뀌었나요</h2>
+  <div class="notes-list">${PATCH_NOTES.map((note,index)=>`<section class="note${index?'':' newest'}"><header><strong>${escapeHtml(note.title)}</strong><small>${escapeHtml(note.date)}</small></header><ul>${note.lines.map(line=>`<li>${escapeHtml(line)}</li>`).join('')}</ul></section>`).join('')}</div>
+  <button id="notes-back" class="menu-item small-item">돌아가기</button></div>`;
+ $('#notes-back').onclick=showIntro;
+}
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
  const localBoard=readRanking(view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
@@ -718,7 +738,8 @@ function restart(saved=null){const candidate=saved?.version===1?saved:null,act2B
 
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
 window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
+window.addEventListener('pagehide',()=>{saveLeaveState();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveLeaveState();if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
 function update(dt,time){
 if(mode==='evolving'){
   if(paused)return;
@@ -756,7 +777,7 @@ if(mode==='playing'&&!roomCleared&&!bossFalling&&choiceKills>=killsForChoice(cho
 let last=performance.now(),frames=[],frameCounter=0;function animate(now){requestAnimationFrame(animate);let raw=(now-last)/1000;last=now;frames.push(raw*1000);qualityGovernor.sample(raw*1000,mode==='playing'&&!paused&&!document.hidden);if(frames.length>180)frames.shift();const dt=advanceFrame(raw,now*.001,(step,time)=>update(step,time));if(!paused)vfx.update(dt);presentFrame(now*.001);frameCounter++;
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*dt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
- look.lerp(new V(player.position.x*(phoneView?.5:.14),0,player.position.z*(phoneView?.4:.06)+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden')&&gardenScene;
+ look.lerp(new V(player.position.x*(phoneView?.5:.14),0,player.position.z*(phoneView?.4:.06)+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='notes')&&gardenScene;
  if(showGardenScene)gardenScene.update(dt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
  if(bloomPass.enabled)composer.render();else renderer.render(renderPass.scene,renderPass.camera);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
@@ -775,7 +796,7 @@ function presentFrame(time){
  const dm=dashMeter(dashState);touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm);setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
  const dashPips=$('#dash-pips'),dashPipKey=`${dm.charges}/${dm.maxCharges}`;setHidden(dashPips,dm.maxCharges<2);if(dashPips&&dashPips.__key!==dashPipKey){dashPips.innerHTML=Array.from({length:dm.maxCharges},(_,i)=>`<i class="${i<dm.charges?'ready':''}"></i>`).join('');dashPips.__key=dashPipKey;}
  // 메뉴·정원 화면에서는 전투 HUD를 감춘다(정원이 그대로 보이게).
- const menuMode=['ready','garden','ranking','discoveries'].includes(mode);
+ const menuMode=['ready','garden','ranking','discoveries','notes'].includes(mode);
  if(document.body.__menuMode!==menuMode){document.body.classList.toggle('menu-mode',menuMode);document.body.__menuMode=menuMode;}
  updateGauges();
  setText($('#score-hud b'),formatScore(score));setText($('#score-hud small'),playerName?playerName+' · 점수':'점수');setHidden($('#score-hud'),!['playing','cards','forms','evolving'].includes(mode));

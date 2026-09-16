@@ -64,3 +64,4 @@ android/keystore.properties
 !tools/garden-test.mjs
 !tools/mutations-test.mjs
 !tools/shop-test.mjs
+!tools/patch-notes-test.mjs

@@ -132,6 +132,16 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
  .menu-item{min-height:34px;padding:4px 10px;border-radius:11px;line-height:1.25}
  .menu-item strong{font-size:12px}.menu-item small{font-size:8px}
  .menu-item.small-item{min-height:30px;padding:4px 10px}
+}
+/* 아이폰 가로처럼 아주 낮은 화면. 메뉴 칸이 하나 늘어도 한 화면에 들어오게 더 줄인다. */
+@media(max-height:370px){
+ .menu-panel{gap:3px;padding-top:7px;padding-bottom:7px}
+ .menu-panel h2{font-size:17px}
+ .menu-panel .name-field input{min-height:30px}
+ .menu-list{gap:4px}
+ .menu-item{line-height:1.1}
+ .menu-item{min-height:31px;padding:3px 10px}
+ .menu-item.small-item{min-height:28px;padding:3px 10px}
  .legal-note{font-size:8px;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
  .dungeon-hint{font-size:8px;margin-top:2px}
  .act2-lock{font-size:9px;margin:2px 0}
@@ -151,5 +161,24 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
  /* 아무것도 고르지 않았을 때는 한 줄로 접어 정원을 넓게 본다. */
  .garden-panel.idle{max-height:none}
  .garden-panel.idle .panel-body{display:none}
+}
+
+/* 새 소식(패치노트) */
+.news-dot{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#ffd76a;box-shadow:0 0 8px #ffd76a99;vertical-align:middle}
+.notes-panel{width:min(520px,92vw)!important}
+.notes-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:4px}
+.note{border:1px solid #a4b7ab33;border-radius:12px;padding:10px 12px;background:#0e2328cc}
+.note.newest{border-color:#f0c86a88;background:#16302ecc}
+.note header{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:5px}
+.note header strong{font-size:15px;color:#f3f7ea}
+.note header small{font-size:11px;color:#9fb8ad}
+.note ul{margin:0;padding-left:16px;display:flex;flex-direction:column;gap:3px}
+.note li{font-size:12px;line-height:1.55;color:#cfe9d9}
+@media(max-height:430px){
+ .notes-panel{width:min(600px,94vw)!important}
+ .notes-list{gap:6px}
+ .note{padding:6px 9px;border-radius:10px}
+ .note header strong{font-size:13px}.note header small{font-size:9px}
+ .note li{font-size:10px;line-height:1.45}
 }
 
