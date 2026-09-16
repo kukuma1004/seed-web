@@ -29,42 +29,55 @@ function material(color,{rough=.75,emissive=0,intensity=.35,flat=false}={}){
 // 성장 단계와 갈래로 정해지는 식물 한 그루. 씨앗 색이 잎과 꽃에 들어간다.
 export function buildPlant(seedId,growth,branch){
  const group=new THREE.Group(),tint=seedColor(seedId),stage=stageOf(growth);
- const soil=material(0x3b2f24,{rough:1});
- const pot=new THREE.Mesh(new THREE.CylinderGeometry(.46,.36,.44,12),material(0x8a5a42,{rough:.85}));
- pot.position.y=.22;pot.castShadow=pot.receiveShadow=true;group.add(pot);
- const dirt=new THREE.Mesh(new THREE.CylinderGeometry(.4,.4,.06,12),soil);dirt.position.y=.45;group.add(dirt);
- const leaf=material(tint,{rough:.6,emissive:tint,intensity:stage==='bloom'?.5:.18});
- const stemMat=material(0x4f7a4a,{rough:.7});
+ // 잎과 줄기는 초록으로 두고, 씨앗 색은 꽃·열매에만 쓴다(색 덩어리처럼 보이지 않게).
+ const accent=new THREE.Color(tint);
+ const leafColor=new THREE.Color(tint).lerp(new THREE.Color(0x6fae74),.72);
+ const leaf=material(leafColor.getHex(),{rough:.78,flat:true});
+ const stemMat=material(new THREE.Color(0x4f7a4a).lerp(leafColor,.3).getHex(),{rough:.8,flat:true});
+ const petal=material(accent.getHex(),{rough:.55,emissive:accent.getHex(),intensity:stage==='bloom'?.45:.2,flat:true});
+ // 그림이 있는 화단 위에 바로 심는다. 뜨지 않도록 흙만 살짝.
+ const mound=new THREE.Mesh(new THREE.SphereGeometry(.34,12,8,0,Math.PI*2,0,Math.PI/2),material(0x3a2e23,{rough:1}));
+ mound.scale.set(1,.34,1);mound.receiveShadow=true;group.add(mound);
  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=true;group.add(m);return m;};
+ const leafBlade=(x,y,z,angle,scale=1)=>{
+  const l=add(new THREE.SphereGeometry(.15*scale,8,6),leaf,x,y,z);
+  l.scale.set(1.35,.32,.8);l.rotation.set(0,Math.atan2(x,z||.001),angle);return l;
+ };
  if(stage==='seed'){
-  const bead=add(new THREE.IcosahedronGeometry(.17,0),leaf,0,.57,0);bead.scale.set(1,.85,1);
+  const bead=add(new THREE.IcosahedronGeometry(.16,0),petal,0,.16,0);bead.scale.set(1,1.15,1);
+  leafBlade(.1,.24,.02,-.9,.6);
  }else if(stage==='sprout'){
-  add(new THREE.CylinderGeometry(.05,.07,.42,6),stemMat,0,.68,0);
-  for(const side of [-1,1]){const l=add(new THREE.SphereGeometry(.17,8,6),leaf,side*.16,.86,0);l.scale.set(1,.45,.7);l.rotation.z=-side*.5;}
+  add(new THREE.CylinderGeometry(.045,.06,.36,6),stemMat,0,.2,0);
+  for(const side of [-1,1])leafBlade(side*.14,.34,0,-side*.7,.85);
+  const bud=add(new THREE.SphereGeometry(.1,8,6),petal,0,.44,0);bud.scale.y=1.2;
  }else{
   const big=stage==='bloom';
   if(branch==='tree'){
-   add(new THREE.CylinderGeometry(.1,.17,big?1.5:1.05,7),stemMat,0,big?1.2:.98,0);
-   const crown=add(new THREE.IcosahedronGeometry(big?.72:.55,0),leaf,0,big?2.05:1.6,0);crown.scale.y=.8;
-   if(big){const side=add(new THREE.IcosahedronGeometry(.42,0),leaf,.5,1.75,.1);side.scale.y=.75;}
-  }else if(branch==='vine'){
-   add(new THREE.CylinderGeometry(.06,.09,.5,6),stemMat,0,.72,0);
-   const arc=add(new THREE.TorusGeometry(big?.62:.46,.05,5,16,Math.PI*1.2),stemMat,0,big?1.25:1.02,0);
-   arc.rotation.set(Math.PI/2.4,0,.4);
-   for(let i=0;i<(big?5:3);i++){
-    const a=i/(big?5:3)*Math.PI*1.1;
-    const l=add(new THREE.SphereGeometry(.14,7,5),leaf,Math.cos(a)*(big?.62:.46),(big?1.25:1.02)+Math.sin(a)*.28,.08);
-    l.scale.set(1,.4,.65);l.rotation.z=a;
+   add(new THREE.CylinderGeometry(.08,.14,big?1.15:.85,7),stemMat,0,big?.6:.45,0);
+   const crown=add(new THREE.IcosahedronGeometry(big?.56:.44,0),leaf,0,big?1.3:1,0);crown.scale.set(1.15,.75,1.15);
+   const crown2=add(new THREE.IcosahedronGeometry(big?.38:.3,0),leaf,big?.36:.28,big?1.05:.82,.1);crown2.scale.set(1.1,.7,1.1);
+   for(let i=0;i<(big?3:2);i++){
+    const a=i/(big?3:2)*Math.PI*2;
+    add(new THREE.IcosahedronGeometry(big?.1:.08,0),petal,Math.cos(a)*(big?.5:.38),big?1.34:1.02,Math.sin(a)*(big?.5:.38));
    }
-  }else{ // 꽃
-   add(new THREE.CylinderGeometry(.06,.09,big?.95:.7,6),stemMat,0,big?.95:.8,0);
-   for(const side of [-1,1]){const l=add(new THREE.SphereGeometry(.16,8,6),leaf,side*.2,.78,0);l.scale.set(1,.42,.7);l.rotation.z=-side*.6;}
-   const head=add(new THREE.SphereGeometry(big?.3:.22,10,8),leaf,0,big?1.5:1.18,0);head.scale.y=.8;
-   const petals=big?7:5;
+  }else if(branch==='vine'){
+   add(new THREE.CylinderGeometry(.05,.07,.3,6),stemMat,0,.16,0);
+   const arc=add(new THREE.TorusGeometry(big?.52:.4,.045,5,18,Math.PI*1.15),stemMat,0,big?.5:.4,0);
+   arc.rotation.set(Math.PI/2.1,0,.35);
+   for(let i=0;i<(big?5:3);i++){
+    const a=.2+i/(big?5:3)*Math.PI*1.05,r=big?.52:.4;
+    leafBlade(Math.cos(a)*r,(big?.5:.4)+Math.sin(a)*r*.6,.05,a-1.2,.8);
+    if(i%2===0)add(new THREE.SphereGeometry(big?.08:.065,7,5),petal,Math.cos(a)*r*.9,(big?.42:.34)+Math.sin(a)*r*.5,-.06);
+   }
+  }else{
+   add(new THREE.CylinderGeometry(.05,.07,big?.72:.55,6),stemMat,0,big?.36:.28,0);
+   for(const side of [-1,1])leafBlade(side*.17,big?.34:.26,0,-side*.65,1);
+   const head=add(new THREE.SphereGeometry(big?.17:.13,10,8),petal,0,big?.8:.6,0);head.scale.set(1,.85,1);
+   const petals=big?6:5;
    for(let i=0;i<petals;i++){
-    const a=i/petals*Math.PI*2;
-    const p=add(new THREE.ConeGeometry(big?.15:.11,big?.42:.3,5),leaf,Math.cos(a)*(big?.34:.25),big?1.5:1.18,Math.sin(a)*(big?.34:.25));
-    p.rotation.set(Math.PI/2.1,0,-a);
+    const a=i/petals*Math.PI*2,r=big?.2:.15;
+    const p=add(new THREE.SphereGeometry(big?.12:.095,8,6),petal,Math.cos(a)*r,big?.8:.6,Math.sin(a)*r);
+    p.scale.set(1.2,.42,.8);p.rotation.set(.2,-a,0);
    }
   }
  }
@@ -134,6 +147,8 @@ export function createGardenScene(){
   const m=new THREE.Mesh(new THREE.RingGeometry(.49,.535,40),markerMat.clone());
   m.rotation.x=-Math.PI/2;m.position.set(spot.x,.03,spot.z);scene.add(m);return m;
  });
+ // 정원에서 움직이지 않는 표시는 행렬 계산을 잠가 둔다.
+ for(const fixed of markers)if(fixed){fixed.updateMatrix();fixed.matrixAutoUpdate=false;}
  const picks=[],raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
  let plants=[],center=null,selected=-1,time=0;
 

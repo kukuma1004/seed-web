@@ -1,7 +1,9 @@
 export const SHOP_KEY='seed-shop-v1';
 export const SHOP_STOCK_MAX=10;
 export const SHOP_PRICES=Object.freeze({1:100,10:500});
-const EMPTY=()=>({version:1,coins:0,tonics:0});
+// 처음 오는 사람도 물약 하나는 살 수 있게 시작 자금을 준다(첫 판을 맨손으로 시작하지 않도록).
+export const STARTING_COINS=100;
+const EMPTY=()=>({version:1,coins:STARTING_COINS,tonics:0});
 let fallback=EMPTY();
 
 export function normalizeShop(value){
@@ -10,7 +12,11 @@ export function normalizeShop(value){
 }
 export function readShop(storage){
  if(!storage)return {...fallback};
- try{return normalizeShop(JSON.parse(storage.getItem(SHOP_KEY)||'null'));}catch{return EMPTY();}
+ try{
+  const raw=storage.getItem(SHOP_KEY);
+  if(raw===null||raw===undefined){const start=EMPTY();writeShop(storage,start);return start;}
+  return normalizeShop(JSON.parse(raw||'null'));
+ }catch{return EMPTY();}
 }
 export function writeShop(storage,value){
  const next=normalizeShop(value);
