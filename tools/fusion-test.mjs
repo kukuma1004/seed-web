@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {FORMS,formStats} from '../src/forms.js';
-import {SLOT_CAP,offerChoices,chooseLaw,fuse,canFuse,fusionLevel,slotsUsed,effectiveLevels,buildLevel,formOffer,offeredForm} from '../src/progression.js';
+import {SLOT_CAP,offerChoices,chooseLaw,fuse,canFuse,fusionLevel,slotsUsed,effectiveLevels,buildLevel,formOffer,offeredForm,offeredFusion} from '../src/progression.js';
 import {validCheckpoint} from '../src/run-save.js';
 import {createFormCombat} from '../src/form-combat.js';
 import {copiedLaws} from '../src/turret.js';
 import {formLawHint} from '../src/form-ui.js';
 
 // Fusing removes both ingredient laws and the form takes a single slot.
-const levels=new Map([['orbit',2],['frost',3],['split',1],['burst',1],['chain',1]]),forms=new Map();
+const levels=new Map([['orbit',2],['frost',3],['split',1],['burst',1],['chain',1],['recall',1]]),forms=new Map();
 assert.equal(slotsUsed(levels,forms),SLOT_CAP);
 assert.equal(canFuse(levels,'frostguard'),true);assert.equal(fusionLevel(levels,'frostguard'),4);
 assert.equal(fuse(levels,forms,'frostguard'),true);
@@ -20,7 +20,7 @@ assert.equal(canFuse(levels,'frostguard'),false);assert.equal(fuse(levels,forms,
 // The freed slot takes a fresh law again, including a former ingredient.
 assert.ok(offerChoices(levels,{forms,random:()=>.3}).some(id=>!levels.has(id)&&!offeredForm(id)));
 assert.equal(chooseLaw(levels,'orbit',forms),true);assert.equal(slotsUsed(levels,forms),SLOT_CAP);
-assert.equal(chooseLaw(levels,'reflect',forms),false,'no sixth slot');
+assert.equal(chooseLaw(levels,'reflect',forms),false,'칸을 넘는 법칙은 들어오지 않는다');
 
 // Full slots offer upgrades of laws and of forms; a form upgrade raises only the form.
 let seed=11;const random=()=>(seed=(seed*16807)%2147483647)/2147483647;
@@ -52,10 +52,11 @@ assert.equal(buildLevel(new Map([['split',2]]),new Map([['frostguard',4]])),6);
 // Law card hint names the forms a pick would open.
 assert.match(formLawHint('frost',new Set(['orbit'])),/서리 위성/);assert.equal(formLawHint('frost',new Set(['frost','orbit'])),'');
 
-// Saves carry held forms and respect the five slots.
+// Saves carry held forms and respect the slot cap.
 const base={version:1,cycle:0,stage:1,mode:'entry',region:'garden',hp:80,rules:['split'],mutated:[],kills:10,elapsed:20};
 assert.equal(validCheckpoint({...base,forms:{frostguard:4,collapse:1}}),true);
-assert.equal(validCheckpoint({...base,rules:['split','chain','reflect','pierce'],forms:{frostguard:4,collapse:1}}),false,'six slots');
+assert.equal(validCheckpoint({...base,rules:['split','chain','reflect','pierce'],forms:{frostguard:4,collapse:1}}),true,'칸 수만큼은 담긴다');
+assert.equal(validCheckpoint({...base,rules:['split','chain','reflect','pierce','orbit'],forms:{frostguard:4,collapse:1}}),false,'칸을 넘는 저장은 거절');
 assert.equal(validCheckpoint({...base,forms:{unknown:1}}),false);assert.equal(validCheckpoint({...base,forms:{collapse:0}}),false);
 assert.equal(validCheckpoint({...base,forms:['collapse']}),false);
 
@@ -75,3 +76,23 @@ assert.equal(validCheckpoint({...base,forms:['collapse']}),false);
  combat.dispose();
 }
 console.log('Fusion: two laws become one slot, freed slots refill, form upgrades and feeding, several forms at once, laws inside forms still count, saves, frost satellites block shots and pulse passed.');
+
+// 칸이 다 차면 합칠 수 있는 진화가 카드 한 장으로 나온다(단추 뒤에 숨지 않는다).
+{
+ const levels=new Map(),forms=new Map();
+ for(const id of ['reflect','split','chain','orbit','pierce','burst','recall','gravity'].slice(0,SLOT_CAP))chooseLaw(levels,id,forms);
+ assert.equal(slotsUsed(levels,forms),SLOT_CAP,'칸이 다 찼다');
+ const offer=offerChoices(levels,{random:()=>.5,forms,fusions:['prism']});
+ const fused=offer.map(offeredFusion).filter(Boolean);
+ assert.deepEqual(fused,['prism'],'조합 카드가 한 장 들어간다');
+ assert.equal(chooseLaw(levels,offer.find(id=>offeredFusion(id)),forms),false,'조합 카드는 법칙 고르기로 처리하지 않는다');
+ // 합치면 칸이 하나 비고, 다음 선택지에 새 법칙이 돌아온다.
+ assert.equal(fuse(levels,forms,'prism'),true);
+ assert.equal(slotsUsed(levels,forms),SLOT_CAP-1);
+ assert.ok(offerChoices(levels,{random:()=>.5,forms}).some(id=>!levels.has(id)&&!offeredForm(id)),'빈 칸이 생기면 새 법칙이 다시 나온다');
+ // 합칠 것이 없으면 예전처럼 강화만 나온다.
+ const solid=new Map(),none=new Map();
+ for(const id of ['reflect','chain','recall','gravity','frost','orbit'].slice(0,SLOT_CAP))chooseLaw(solid,id,none);
+ assert.ok(offerChoices(solid,{random:()=>.5,forms:none,fusions:[]}).every(id=>solid.has(id)),'조합이 없으면 강화만');
+}
+console.log('조합 카드: 칸이 찼을 때 제안·선택 처리·칸 비우기 통과');

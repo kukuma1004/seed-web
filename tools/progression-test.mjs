@@ -24,11 +24,11 @@ for(let run=0;run<300;run++){
 const guided=offerChoices(new Map([['gravity',1]]),{random:()=>0,guide:'burst'});
 assert.ok(guided.includes('burst'),'A form guide places its missing ingredient');
 
-// Levels stack without a ceiling, and a sixth law is refused.
-const levels=new Map();for(const id of ['reflect','split','chain','orbit','pierce'])chooseLaw(levels,id);
+// Levels stack without a ceiling, and a law past the last slot is refused.
+const levels=new Map();for(const id of ['reflect','split','chain','orbit','pierce','burst','recall','gravity'].slice(0,SLOT_CAP))chooseLaw(levels,id);
 assert.equal(chooseLaw(levels,'frost'),false);
 for(let i=0;i<60;i++)assert.equal(chooseLaw(levels,'split'),true);
-assert.equal(levelOf(levels,'split'),61);assert.equal(totalLevel(levels),65);
+assert.equal(levelOf(levels,'split'),61);assert.equal(totalLevel(levels),60+SLOT_CAP);
 assert.ok(damageScale(levels)>6,'Damage keeps growing past every count cap');
 
 // Stats never shrink with level and respect their caps.

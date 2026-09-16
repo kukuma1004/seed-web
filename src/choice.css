@@ -24,3 +24,29 @@ body:has(#overlay:not([hidden]) .cards) #auto-attack{display:none}
 @media(max-width:700px) and (orientation:portrait){.cards{flex-direction:column;width:100%;max-width:340px}.card{width:100%;display:grid}.card strong{font-size:17px;letter-spacing:0}.card small{font-size:11px}.card .synergy{font-size:10px}#overlay h2{font-size:23px;letter-spacing:2px}#overlay>p{font-size:11px;margin:4px}#overlay{padding:50px 16px 20px}}
 
 @media(max-width:700px) and (orientation:portrait){.cards .card{min-height:0}.cards .card:hover{transform:none}}
+
+/* 아이폰 가로처럼 낮은 화면: 카드 아래의 '합칠 수 있는 진화 보기' 단추까지 한 화면에 들어오게 한다.
+   (여기가 잘려서 아이들이 조합을 못 찾고 강화만 보인다고 했다.) */
+@media(max-height:430px) and (orientation:landscape){
+ #overlay{padding-top:10px;padding-bottom:8px}
+ #overlay h2,.touch-mode #overlay h2{font-size:17px;margin:1px;letter-spacing:1px}
+ #overlay>p,.touch-mode #overlay>p{font-size:9px;margin:1px;line-height:1.3}
+ .build-preview,.touch-mode .build-preview{margin-top:2px;font-size:10px}
+ .build-law .law-art{width:16px;height:16px}
+ .cards{margin-top:4px;gap:6px}
+ .cards .card{padding:6px 7px}
+ .cards .card .card-art{width:54px;height:54px}
+ .cards .card strong{font-size:13px;margin:1px 0}
+ .cards .card p{font-size:8px!important;line-height:1.25!important}
+ .cards .card small{font-size:9px;line-height:1.3;min-height:0}
+ .cards .card .synergy{font-size:8px;line-height:1.25;min-height:0;padding-top:3px;margin-top:2px}
+ .form-progress{font-size:9px;margin:2px 0}
+ .form-actions{gap:6px;margin-top:3px}
+ .form-actions button,.touch-mode .form-actions button,.form-actions .primary{font-size:11px;padding:5px 11px;margin:0;min-height:0}
+}
+
+/* 조합 카드: 강화 카드들 사이에서 한눈에 띄게 한다 */
+.card.fusion-card{border-color:#9ce8b0aa;background:linear-gradient(160deg,#16332c,#08181a);box-shadow:0 0 18px #9ce8b024}
+.card.fusion-card p{color:#bff0c8!important;font-weight:bold}
+.card.fusion-card strong{color:#eaffe4}
+

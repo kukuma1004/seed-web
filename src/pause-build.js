@@ -1,4 +1,5 @@
 import {relicLoadout} from './relic-ui.js';
+import {SLOT_CAP} from './progression.js';
 import {ITEMS,heldItems} from './inventory.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS as FORMS} from './forms.js';
@@ -36,7 +37,7 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
    const core=orbitCore(forms,FORMS);
    const entries=[...forms].map(([id,level])=>{const f=FORMS[id],orbitStatus=isOrbitEvolution(id)?id===core?' · 공전 코어 활성':' · 공전 코어 대기':'';return `<article class="pause-item evolved">${formArt(id)}<div><small>${f.solo?'':f.awakened?'각성 진화 · ':'완성 진화 · '}${f.pair}${orbitStatus}</small><h3>${f.name} <span>Lv.${level}</span></h3><p>${f.desc}</p></div></article>`;})
     .concat([...levels].map(([id,level])=>{const law=LAWS[id];return `<article class="pause-item">${lawArt(id)}<div><small>법칙</small><h3>${law.name} <span>Lv.${level}</span></h3><p>${law.hint}</p></div></article>`;}));
-   root.querySelector('#pause-slots').textContent=`보유 ${levels.size+forms.size}/5칸 · 진화 ${forms.size}개`;
+   root.querySelector('#pause-slots').textContent=`보유 ${levels.size+forms.size}/${SLOT_CAP}칸 · 진화 ${forms.size}개`;
    root.querySelector('#pause-loadout').innerHTML=entries.join('')||'<p class="pause-empty">아직 이름 없는 씨앗이에요.<br>적을 처치하고 첫 법칙을 골라 주세요.</p>';
    if(activeUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',activeSection(forms,activeUI.get()));
    if(dashUI){const section=dashEvolutionSummary(dashUI.get());if(section)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',section);}

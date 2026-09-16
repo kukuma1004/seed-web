@@ -5,6 +5,7 @@ import {validActiveGauge,validActiveCooldown} from './actives.js';
 import {validInventory} from './inventory.js';
 import {validMutations} from './mutations.js';
 import {validDashEvolution} from './dash-evolution.js';
+import {SLOT_CAP} from './progression.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:'야간 경기장'};
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
@@ -15,7 +16,7 @@ export function validCheckpoint(s){
   if(!s.forms||typeof s.forms!=='object'||Array.isArray(s.forms))return false;
   const entries=Object.entries(s.forms);
   if(!entries.every(([id,v])=>Object.hasOwn(ALL_FORMS,id)&&Number.isInteger(v)&&v>=1&&v<=999))return false;
-  if(!Array.isArray(s.rules)||s.rules.length+entries.length>5)return false;
+  if(!Array.isArray(s.rules)||s.rules.length+entries.length>SLOT_CAP)return false;
  }
  if(s?.form!=null&&!isFormEligible(s.form,s.rules))return false;
  if(s?.guideTarget!=null&&!Object.hasOwn(ALL_FORMS,s.guideTarget))return false;
@@ -28,7 +29,7 @@ export function validCheckpoint(s){
  if(!validMutations(s?.mutations))return false;
  if(!validInventory(s?.inventory)||!validRelics(s?.relics)||!validDashEvolution(s?.dashEvolution))return false;
  if(s?.mode==='austin'&&s.stage!==4)return false;
- return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=5&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
+ return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=SLOT_CAP&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
 }
 export function readCheckpoint(storage){try{const s=JSON.parse(storage.getItem(SAVE_KEY));return validCheckpoint(s)?s:null;}catch{return null;}}
 export function writeCheckpoint(storage,s){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}

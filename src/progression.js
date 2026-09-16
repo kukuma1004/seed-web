@@ -1,9 +1,10 @@
 import {LAWS} from './laws.js';
 import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,soloLevel,soloFormOf} from './forms.js';
 
-// Laws are stacked, never swapped: five slots, and every pick after that deepens a held law.
+// Laws are stacked, never swapped: six slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
-export const SLOT_CAP=5;
+// 칸이 다 차면 새 법칙이 끊기므로, 노리는 조합을 맞출 여유를 한 칸 더 준다(5 → 6).
+export const SLOT_CAP=6;
 
 // Kills needed for the next law choice. The gap widens with every choice so picks stay meaningful.
 export function killsForChoice(choicesTaken){return 12+choicesTaken*8;}
@@ -38,12 +39,12 @@ export function lawStats(levels){
 // weights/freshBonus는 정원(garden.js)이 넘기는 값이다. 힘을 더하지 않고 무엇이 더 자주 보일지만 바꾼다.
 // 'form:<id>' 제안은 그 진화의 재료 법칙 가중치를 따른다.
 function lawOfOffer(id){
- const form=offeredForm(id);
+ const form=offeredForm(id)||offeredFusion(id);
  if(!form)return id;
  const requires=ALL_FORMS[form]?.requires||[];
  return requires[0]||id;
 }
-export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map(),weights={},freshBonus=0}={}){
+export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map(),weights={},freshBonus=0,fusions=[]}={}){
  const used=slotsUsed(levels,forms),full=used>=SLOT_CAP;
  const fresh=full?[]:Object.keys(LAWS).filter(id=>!levels.has(id));
  const weightOf=id=>Math.max(1,weights?.[lawOfOffer(id)]||1);
@@ -61,7 +62,12 @@ export function offerChoices(levels,{random=Math.random,guide=null,forms=new Map
  const upgrades=shuffle([...levels.keys(),...[...forms.keys()].map(formOffer)]);
  shuffle(fresh);
  let pool;
- if(full)pool=upgrades;
+ // 칸이 차면 강화만 남는다. 합칠 수 있는 진화가 있으면 한 장은 조합 카드로 준다 —
+ // 합치면 두 법칙이 한 칸으로 줄어 새 법칙이 다시 나온다(단추 뒤에 숨기지 않는다).
+ if(full){
+  const ready=shuffle(fusions.filter(id=>canFuse(levels,id)).map(fuseOffer));
+  pool=ready.length?[ready[0],...upgrades]:upgrades;
+ }
  else{
   // Mostly fresh laws early, mixing in upgrades once the seed has something to deepen.
   const freshCount=Math.min(3,(used===0?3:used<3?2:1)+Math.max(0,Math.floor(freshBonus)));
@@ -117,6 +123,10 @@ export function upgradeLine(levels,id){
 // Fusing a pair again into a form already held feeds it instead of making a second copy.
 const FORM_PREFIX='form:';
 export const formOffer=id=>FORM_PREFIX+id;
+// 'fuse:<id>'는 가진 법칙 둘을 합치자는 제안이다('form:<id>' 는 이미 가진 진화의 강화).
+const FUSE_PREFIX='fuse:';
+export const fuseOffer=id=>FUSE_PREFIX+id;
+export const offeredFusion=choice=>typeof choice==='string'&&choice.startsWith(FUSE_PREFIX)&&Object.hasOwn(ALL_FORMS,choice.slice(FUSE_PREFIX.length))?choice.slice(FUSE_PREFIX.length):null;
 export const offeredForm=choice=>typeof choice==='string'&&choice.startsWith(FORM_PREFIX)&&Object.hasOwn(ALL_FORMS,choice.slice(FORM_PREFIX.length))?choice.slice(FORM_PREFIX.length):null;
 export function slotsUsed(levels,forms=new Map()){return levels.size+forms.size;}
 export function fusionLevel(levels,id){if(!Object.hasOwn(FORMS,id))return 0;const [a,b]=FORMS[id].requires.map(law=>levels.get(law)||0);return a&&b?a+b-1:0;}
