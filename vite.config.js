@@ -1,6 +1,7 @@
 import {defineConfig} from 'vite';
 import {readdirSync,statSync,writeFileSync} from 'node:fs';
 import {join,relative} from 'node:path';
+import {resolve} from 'node:path';
 import {createHash} from 'node:crypto';
 
 // After a build, list every file the game needs so the service worker can keep a full copy for offline play.
@@ -22,4 +23,8 @@ function offlineManifest(){
 }
 
 // Relative build URLs work both on GitHub project Pages and on the local server.
-export default defineConfig({base:'./',plugins:[offlineManifest()]});
+export default defineConfig({
+ base:'./',
+ plugins:[offlineManifest()],
+ build:{rollupOptions:{input:{index:resolve(import.meta.dirname,'index.html'),comboLab:resolve(import.meta.dirname,'combo-lab.html')}}}
+});

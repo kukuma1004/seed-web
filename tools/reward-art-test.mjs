@@ -27,7 +27,8 @@ for(const id of Object.keys(FORMS).filter(id=>!Object.hasOwn(SOLO_FORMS,id)))ass
 for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AWAKEN_ATLAS));
 for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),new RegExp(SOLO_ATLAS));assert.match(formArt(id),/twin-art/);}
 assert.equal(new Set(Object.keys(SOLO_FORMS).map(formArt)).size,Object.keys(SOLO_FORMS).length);
-for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','frost','chain'])assert.match(lawArt(id),new RegExp(LAW_ATLAS));
-assert.equal(LAW_ATLAS,'seed-law-atlas-v3-ui.webp');
+for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','frost','chain','portal'])assert.match(lawArt(id),new RegExp(LAW_ATLAS));
+assert.equal(LAW_ATLAS,'seed-law-atlas-v4-ui.webp');
+assert.equal(lawArt('missing'),'', 'unknown laws do not point at an invalid atlas tile');
 assert.ok(fs.statSync(new URL(`../public/assets/${LAW_ATLAS}`,import.meta.url)).size<300_000,'law atlas stays mobile-sized');
 console.log('Every reward, law and evolution uses its production atlas and solo choices have distinct tiles.');

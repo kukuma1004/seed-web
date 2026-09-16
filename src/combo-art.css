@@ -1,0 +1,9 @@
+.combo-art{position:relative;display:inline-block;width:100%;aspect-ratio:1;isolation:isolate;filter:drop-shadow(0 .28rem .45rem #06131599)}
+.combo-art>i,.combo-projectile{position:absolute;inset:0;display:block;background-size:400% 300%;background-repeat:no-repeat}
+.combo-art .combo-core{inset:14%;filter:drop-shadow(0 0 .35rem color-mix(in srgb,var(--combo-a),transparent 35%))}
+.combo-art .combo-shell{inset:2%;filter:drop-shadow(0 0 .25rem color-mix(in srgb,var(--combo-b),transparent 48%))}
+.combo-art.resonance::after{content:"";position:absolute;inset:8%;border:2px solid color-mix(in srgb,var(--combo-a),white 20%);border-radius:50%;opacity:.58;box-shadow:0 0 .45rem var(--combo-a);z-index:-1}
+.combo-art.convergence::after{content:"";position:absolute;inset:8%;background:linear-gradient(135deg,transparent 46%,color-mix(in srgb,var(--combo-a),white 18%) 48% 52%,transparent 54%);opacity:.58;z-index:-1}
+.combo-projectile{position:relative;width:2.5rem;aspect-ratio:1;background-size:400% 300%;filter:drop-shadow(0 0 .28rem currentColor)}
+@media(prefers-reduced-motion:reduce){.combo-art,.combo-projectile{filter:none}}
+

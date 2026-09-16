@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="ko">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+ <meta name="theme-color" content="#07181d">
+ <title>SEED · 조합 연구실</title>
+</head>
+<body>
+ <main>
+  <header>
+   <a href="./" aria-label="게임으로 돌아가기">‹</a>
+   <div><small>잠든 정원 기록 보관소</small><h1>조합 연구실</h1></div>
+   <b>10 → 45 → 990</b>
+  </header>
+  <section class="summary"><article><strong>10</strong><span>기본 법칙</span></article><article><strong>45</strong><span>1차 융합</span></article><article><strong>990</strong><span>재융합</span></article></section>
+  <nav><button data-mode="first" class="on">1차 융합 45</button><button data-mode="second">재융합 990</button><input id="search" inputmode="search" placeholder="이름 또는 법칙 찾기" aria-label="조합 검색"></nav>
+  <div id="family" hidden><button data-family="all" class="on">전체</button><button data-family="resonance">공명형 360</button><button data-family="convergence">교차형 630</button></div>
+  <p id="result"></p>
+  <section id="cards" class="cards"></section>
+  <footer><button id="prev">이전</button><span id="page"></span><button id="next">다음</button></footer>
+ </main>
+ <script type="module" src="/src/combo-lab.js"></script>
+</body>
+</html>
+

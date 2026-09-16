@@ -66,3 +66,4 @@ android/keystore.properties
 !tools/shop-test.mjs
 !tools/patch-notes-test.mjs
 !tools/responsive-view-test.mjs
+!tools/combo-catalog-test.mjs
