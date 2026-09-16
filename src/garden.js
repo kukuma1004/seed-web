@@ -4,7 +4,7 @@
 import {LAWS} from './laws.js';
 
 export const GARDEN_KEY='seed-garden-v1';
-export const PLOTS=6,ACTIVE_SLOTS=3,FRAGMENTS_PER_SEED=3,GUARDIAN='clocktower';
+export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,GUARDIAN='clocktower';
 export const STAGES=['seed','sprout','mature','bloom'];
 export const STAGE_NAMES=Object.freeze({seed:'심은 씨앗',sprout:'새싹',mature:'자란 풀',bloom:'개화'});
 // 성장점은 던전을 다녀와야 쌓인다(기다리는 게임이 아니라 하는 게임).
@@ -60,7 +60,7 @@ export function normalizeGarden(value){
  for(const p of g.plots){
   if(!p)continue;
   const ready=p.branch&&STAGES.indexOf(stageOf(p.growth))>=STAGES.indexOf('mature');
-  if(p.active&&ready&&active<ACTIVE_SLOTS)active++;else p.active=false;
+  if(p.active&&ready&&active<MAX_ACTIVE_SLOTS)active++;else p.active=false;
  }
  return g;
 }
@@ -117,12 +117,12 @@ export function chooseBranch(garden,index,branch){
  p.branch=branch;
  return {garden:g,ok:true};
 }
-export function setActive(garden,index,on){
+export function setActive(garden,index,on,slots=ACTIVE_SLOTS){
  const g=normalizeGarden(garden),p=g.plots[index];
  if(!p)return {garden:g,ok:false};
  if(!on){p.active=false;return {garden:g,ok:true};}
  const ready=p.branch&&STAGES.indexOf(stageOf(p.growth))>=STAGES.indexOf('mature');
- if(!ready||activePlants(g).length>=ACTIVE_SLOTS)return {garden:g,ok:false};
+ if(!ready||activePlants(g).length>=Math.min(MAX_ACTIVE_SLOTS,slots))return {garden:g,ok:false};
  p.active=true;
  return {garden:g,ok:true};
 }
@@ -132,8 +132,8 @@ export function growPlants(garden,points){
  for(const p of g.plots)if(p)p.growth=Math.min(999,p.growth+points);
  return g;
 }
-export function activePlants(garden){
- return normalizeGarden(garden).plots.map((p,index)=>({...p,index})).filter(p=>p.seed&&p.active);
+export function activePlants(garden,limit=MAX_ACTIVE_SLOTS){
+ return normalizeGarden(garden).plots.map((p,index)=>({...p,index})).filter(p=>p.seed&&p.active).slice(0,limit);
 }
 export function plantName(plant){
  const seed=SEEDS[plant?.seed];
@@ -165,10 +165,48 @@ export function branchSummary(seedId,branch,stage='mature'){
  if(branch==='tree')return `${lawName}${wayJosa(lawName)} 만드는 조합을 목표로 알려 준다`;
  return `${lawName} 유물이 ${strong?'가장 먼저':'더 자주'} 나온다`;
 }
+// 정원 한가운데에 묻힌 것. 여정을 다녀오고 식물을 피울수록 조금씩 드러난다(설계 18~19장).
+export const CENTER=Object.freeze([
+ {id:'unknown',name:'???',glyph:'◌',need:{},line:'정원 한가운데 무언가가 묻혀 있다.'},
+ {id:'sleeping',name:'잠든 씨앗',glyph:'◍',need:{harvests:3},line:'아주 오래된 씨앗이 조용히 숨 쉬고 있다.'},
+ {id:'roots',name:'뻗은 뿌리',glyph:'⑂',need:{harvests:8},line:'뿌리가 시계탑 쪽으로 뻗어 있다.'},
+ {id:'oldtree',name:'고목',glyph:'⊥',need:{harvests:14,bloomed:1},line:'오스틴은 이 나무를 지키려고 시간을 재기 시작했다고 한다.'},
+ {id:'greattree',name:'거대한 나무',glyph:'⨁',need:{harvests:20,bloomed:2},line:'나무가 깨어나 정원을 넓혔다. 데려갈 수 있는 식물이 한 칸 늘었다.',slots:1},
+ {id:'awake',name:'깨어난 나무',glyph:'✺',need:{harvests:28,bloomed:3,austin:true},line:'오스틴이 기다린 것은 이 순간이었다. 시계탑 너머에 또 다른 세계가 있다.',slots:1}
+]);
+export function bloomedCount(garden){return normalizeGarden(garden).plots.filter(p=>p&&stageOf(p.growth)==='bloom').length;}
+function centerMet(need,{harvests,bloomed,austin}){
+ return (need.harvests||0)<=harvests&&(need.bloomed||0)<=bloomed&&(!need.austin||austin);
+}
+export function centerStage(garden,{austinDefeated=false}={}){
+ const g=normalizeGarden(garden),state={harvests:g.harvests,bloomed:bloomedCount(g),austin:austinDefeated};
+ let index=0;
+ for(let i=0;i<CENTER.length;i++)if(centerMet(CENTER[i].need,state))index=i;
+ return index;
+}
+export function centerInfo(garden,options={}){
+ const g=normalizeGarden(garden),index=centerStage(g,options),here=CENTER[index],next=CENTER[index+1];
+ const bloomed=bloomedCount(g);
+ let hint='';
+ if(next){
+  const parts=[];
+  if((next.need.harvests||0)>g.harvests)parts.push(`여정 ${next.need.harvests-g.harvests}번`);
+  if((next.need.bloomed||0)>bloomed)parts.push(`개화한 식물 ${next.need.bloomed-bloomed}개`);
+  if(next.need.austin&&!options.austinDefeated)parts.push('오스틴 격파');
+  hint=parts.length?`다음까지 ${parts.join(' · ')}`:'곧 무언가 달라진다';
+ }else hint='정원이 끝까지 깨어났다';
+ return {index,...here,hint,bloomed,harvests:g.harvests};
+}
+// 거대한 나무가 자라면 데려갈 수 있는 칸이 늘어난다.
+export function activeSlots(garden,options={}){
+ let slots=ACTIVE_SLOTS;
+ for(let i=0;i<=centerStage(garden,options);i++)slots+=CENTER[i].slots||0;
+ return Math.min(MAX_ACTIVE_SLOTS,slots);
+}
 // 다음 런에 넘길 효과. 힘을 더하지 않고 무엇이 나타날지를 바꾼다.
-export function gardenEffects(garden){
- const effects={lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives:[]};
- for(const p of activePlants(garden)){
+export function gardenEffects(garden,slots=ACTIVE_SLOTS){
+ const effects={lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives:[],slots};
+ for(const p of activePlants(garden,slots)){
   const seed=SEEDS[p.seed],stage=stageOf(p.growth),strong=stage==='bloom';
   effects.actives.push({index:p.index,name:plantName(p),stage,summary:branchSummary(p.seed,p.branch,stage)});
   if(seed.id===GUARDIAN){

@@ -51,7 +51,7 @@ import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './w
 import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
-import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine} from './garden.js';
+import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo} from './garden.js';
 import {renderGarden} from './garden-ui.js';
 import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,applyMutation,mutationOf,hasMutation,
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
@@ -235,6 +235,8 @@ const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,subm
 let garden=readGarden(runStorage),gardenFx=gardenEffects(garden),lastHarvest=null;
 // 변이는 한 여정 동안만 유지된다(정원이 문을 열어 주고, 선택은 그 판에서 한다).
 const mutations=new Map(),runes=[];
+function austinKnown(){return Boolean(profile?.bosses?.includes('austin'));}
+function refreshGardenEffects(){gardenFx=gardenEffects(garden,activeSlots(garden,{austinDefeated:austinKnown()}));}
 function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))||null;}
 function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);const seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length});
@@ -533,7 +535,7 @@ function beginEvolution(id){
 function startGame(){if(mode==='ready')restart();}
 function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
   mode='ready';$('#overlay').classList.remove('ranking-overlay');$('#overlay').classList.add('intro');$('#overlay').hidden=false;
-  $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>잠든 정원을 깨우다</h2><p class="intro-lead">씨앗을 키워 문지기 너머로</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">정원에 들어가기 <small>↵ ENTER</small></button>';
+  $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>나의 정원</h2><p class="intro-lead">여기서 씨앗을 키우고, 던전에서 새 조합을 찾는다</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">던전으로 들어가기 <small>↵ ENTER</small></button>';
   if(touch.enabled){$('.intro-controls').innerHTML='<span><kbd>왼손 스틱</kbd> 이동</span><span><kbd>자동 공격</kbd> 이동과 회피에 집중하세요</span><span><kbd>◇ 버튼</kbd> 회피</span>';$('#start-game small').textContent='가로 화면 권장';}
   $('#start-game').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro');startGame();};
   const saved=readCheckpoint(actStore());
@@ -542,13 +544,20 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
   $('#player-name').oninput=()=>{$('#player-name').classList.remove('need');const n=cleanName($('#player-name').value);if(n)playerName=saveName(runStorage,n);};
   $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(actStore());$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
   online.flush().catch(()=>0);
-  $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="garden-link" class="discovery-link">나의 정원${gardenSummaryLabel()}</button><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
+  $('#overlay').insertAdjacentHTML('beforeend',`<div id="garden-inline"></div><div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
   // Act 2 unlocks with the first Austin victory on this device and keeps its own save.
   if(!act2Available()){}
   else if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);
    const go=saved=>{if(!requireName())return;startRegion=ACT2_REGION;$('#overlay').classList.remove('intro');restart(saved);};$('#start-act2').onclick=()=>go(s2||null);if($('#new-act2'))$('#new-act2').onclick=()=>go(null);}
   else $('.intro-links').insertAdjacentHTML('afterend','<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>');
- $('#garden-link').onclick=()=>showGarden(showIntro);
+ refreshGardenEffects();
+ if($('#garden-inline'))renderGarden($('#garden-inline'),{
+  garden,austinDefeated:austinKnown(),inline:true,
+  // 화면이 낮으면 첫 화면에는 한 줄 요약만, 손질은 전체 정원 화면에서.
+  compact:touch.enabled&&document.documentElement.clientHeight<=560,
+  onOpen:()=>showGarden(showIntro),
+  onChange:next=>{garden=next;writeGarden(runStorage,garden);refreshGardenEffects();}
+ });
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
@@ -568,18 +577,12 @@ function rankingBoard(board,mine=null){
  if(rank<=10)return top;
  return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([mine],mine,1,rankBuild,rank)}</section>`;
 }
-function gardenSummaryLabel(){
- const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),active=gardenFx.actives.length;
- if(active)return ` · ${active}칸 사용 중`;
- if(seeds)return ` · 심을 씨앗 ${seeds}개`;
- return garden.fragments?` · 조각 ${garden.fragments}개`:'';
-}
 // 정원 화면. 바뀐 내용은 바로 저장하고, 다음 여정에 쓸 효과도 다시 계산한다.
 function showGarden(back=showIntro){
  mode='garden';touch.reset();keys.clear();$('#overlay').hidden=false;$('#overlay').classList.remove('intro');
  renderGarden($('#overlay'),{
-  garden,
-  onChange:next=>{garden=next;writeGarden(runStorage,garden);gardenFx=gardenEffects(garden);},
+  garden,austinDefeated:austinKnown(),
+  onChange:next=>{garden=next;writeGarden(runStorage,garden);refreshGardenEffects();},
   onClose:()=>back()
  });
 }
@@ -603,7 +606,7 @@ function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
  // 정원: 이번 여정이 남긴 씨앗을 넣고, 심어 둔 식물에 성장점을 준다.
  lastHarvest=harvestFromRun({levels:Object.fromEntries(levels),wardens:wardensDefeated,austins:austinsDefeated});
- garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);gardenFx=gardenEffects(garden);
+ garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);refreshGardenEffects();
  const local=ranked?submitScore(actStore(),{name,score,cycle,stage,kills,time:elapsed,build}):null;
  const endBoard=local?.ranking||readRanking(actStore());$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="garden-line">${escapeHtml(harvestLine(lastHarvest))}</p><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><div class="intro-links"><button class="primary" id="restart">다시 시작</button><button class="discovery-link" id="end-garden">정원 보기</button></div>`;
  $('#restart').onclick=showIntro;

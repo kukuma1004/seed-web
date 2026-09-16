@@ -2,7 +2,8 @@ import assert from 'node:assert/strict';
 import {SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGE_POINTS,
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,
  harvestFromRun,addHarvest,craftSeed,plantSeed,uproot,chooseBranch,setActive,growPlants,
- activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,objectJosa,wayJosa} from '../src/garden.js';
+ activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,objectJosa,wayJosa,
+ CENTER,MAX_ACTIVE_SLOTS,centerStage,centerInfo,activeSlots,bloomedCount} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 
 const memory=()=>{const d=new Map();return {getItem:k=>d.has(k)?d.get(k):null,setItem:(k,v)=>d.set(k,String(v)),d};};
@@ -127,6 +128,42 @@ assert.equal(nextStagePoints(0),1);assert.equal(nextStagePoints(4),STAGE_POINTS.
  assert.deepEqual(readGarden(broken).plots,Array(PLOTS).fill(null));
  assert.equal(writeGarden(broken,emptyGarden()),false);
  assert.deepEqual(readGarden(null).plots,Array(PLOTS).fill(null));
+}
+
+// 정원 한가운데: 여정을 다녀오고 꽃이 피면 조금씩 드러나고, 거대한 나무가 되면 칸이 하나 는다.
+{
+ let g=emptyGarden();
+ assert.equal(centerStage(g),0);assert.equal(centerInfo(g).name,'???');assert.ok(centerInfo(g).hint.includes('여정'));
+ assert.equal(activeSlots(g),ACTIVE_SLOTS);
+ g={...g,harvests:3};assert.equal(centerInfo(g).name,'잠든 씨앗');
+ g={...g,harvests:8};assert.equal(centerInfo(g).name,'뻗은 뿌리');
+ // 개화한 식물이 있어야 다음 단계로 간다
+ g=addHarvest({...g,harvests:14},{seeds:['reflect','split','chain']});
+ g=plantSeed(g,'reflect',0).garden;
+ assert.equal(centerInfo(g).name,'뻗은 뿌리','수확만으로는 고목이 되지 않는다');
+ g=growPlants(g,STAGE_POINTS.bloom);
+ assert.equal(bloomedCount(g),1);assert.equal(centerInfo(g).name,'고목');
+ g=plantSeed({...g,harvests:20},'split',1).garden;g=growPlants(g,STAGE_POINTS.bloom);
+ assert.equal(centerInfo(g).name,'거대한 나무');
+ assert.equal(activeSlots(g),ACTIVE_SLOTS+1,'거대한 나무가 칸을 하나 늘린다');
+ // 마지막 단계는 오스틴을 이겨야 한다
+ g=plantSeed({...g,harvests:28},'chain',2).garden;g=growPlants(g,STAGE_POINTS.bloom);
+ assert.equal(centerInfo(g).name,'거대한 나무');
+ assert.equal(centerInfo(g,{austinDefeated:true}).name,'깨어난 나무');
+ assert.equal(centerInfo(g,{austinDefeated:true}).hint,'정원이 끝까지 깨어났다');
+ assert.ok(activeSlots(g,{austinDefeated:true})<=MAX_ACTIVE_SLOTS,'칸은 최대치를 넘지 않는다');
+ // 늘어난 칸만큼만 데려갈 수 있다
+ let h=addHarvest(emptyGarden(),{seeds:['reflect','split','chain','frost']});
+ for(const [i,id] of [[0,'reflect'],[1,'split'],[2,'chain'],[3,'frost']]){h=plantSeed(h,id,i).garden;}
+ h=growPlants(h,STAGE_POINTS.mature);
+ for(const i of [0,1,2,3])h=chooseBranch(h,i,'flower').garden;
+ for(const i of [0,1,2])h=setActive(h,i,true,3).garden;
+ assert.equal(setActive(h,3,true,3).ok,false,'세 칸일 때는 네 번째를 못 켠다');
+ h=setActive(h,3,true,4).garden;
+ assert.equal(activePlants(h,4).length,4,'네 칸이면 네 번째도 켤 수 있다');
+ assert.equal(gardenEffects(h,3).actives.length,3,'효과는 정해진 칸 수만 쓴다');
+ assert.equal(CENTER.length,6);
+ for(const step of CENTER)assert.ok(step.name&&step.line.length>8&&step.glyph,'중앙 단계 문구');
 }
 
 // 화면에 쓰는 문구가 비어 있지 않다.
