@@ -3,6 +3,7 @@
 // The web config below is a public project identifier, not a secret; the database rules
 // (docs/FIREBASE-RANKING.md) decide who may read and write.
 import {cleanName} from './score.js';
+import {isBadName} from './name-filter.js';
 import {validBuild} from './ranking-build.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
@@ -81,7 +82,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  async function post({name,score,cycle,stage,kills,time,build=null}){
   const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:0};
-  if(!validRun(shaped))throw new Error('invalid-run');
+  if(!validRun(shaped)||isBadName(shaped.name))throw new Error('invalid-run');
   const s=await signIn();
   const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
   // The build is extra: if it cannot be written (older rules), the run still counts.

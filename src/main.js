@@ -55,6 +55,7 @@ import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlant
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
 import {PATCH_NOTES,hasUnseenNotes,markNotesSeen} from './patch-notes.js';
+import {isBadName} from './name-filter.js';
 import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,applyMutation,mutationOf,hasMutation,
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
@@ -254,7 +255,10 @@ const mutations=new Map(),runes=[];
 function austinKnown(){return Boolean(profile?.bosses?.includes('austin'));}
 function refreshGardenEffects(){gardenFx=gardenEffects(garden,activeSlots(garden,{austinDefeated:austinKnown()}));}
 function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))||null;}
-function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
+function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);
+ // 거른 별명(name-filter.js)은 쓸 수 없다. 휴대폰에서는 안내 줄이 숨겨지므로 칸을 비우고 칸 안에 이유를 적는다.
+ if(name&&isBadName(name)){playerName='';nameRejected=true;if(input){input.value='';input.placeholder='그 별명은 쓸 수 없어요';input.classList.add('need');input.focus();setText($('#name-hint'),'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요');}return false;}
+ if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);const seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length});
 function buildRoomBoundary(){buildArenaBoundary(arenaGroup,arena,mats);}
 function remember(kind,id){const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
@@ -613,12 +617,18 @@ function showShop(back=showIntro,message=''){
  $('#buy-one').onclick=()=>buy(1);$('#buy-ten').onclick=()=>buy(10);$('#shop-back').onclick=back;
 }
 // 이름은 여러 화면에서 같은 모양으로 쓴다.
+// 거른 별명을 쳤다가 다른 화면으로 넘어가도, 새 칸에 이유가 남게 한다.
+let nameRejected=false;
 function nameFieldHtml(){
- return `<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="별명 (최대 ${NAME_MAX}자)" value="${escapeHtml(playerName)}"><small id="name-hint">이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명</small></form>`;
+ return `<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" class="${nameRejected?'need':''}" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="${nameRejected?'그 별명은 쓸 수 없어요':'별명 (최대 '+NAME_MAX+'자)'}" value="${escapeHtml(playerName)}"><small id="name-hint">${nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명'}</small></form>`;
 }
 function bindNameField(onSubmit=null){
  const input=$('#player-name');if(!input)return;
- input.oninput=()=>{input.classList.remove('need');const n=cleanName(input.value);if(n)playerName=saveName(runStorage,n);};
+ input.oninput=()=>{input.classList.remove('need');const n=cleanName(input.value);
+  if(n&&isBadName(n)){nameRejected=true;playerName=saveName(runStorage,'');input.classList.add('need');setText($('#name-hint'),'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요');return;}
+  if(n){nameRejected=false;playerName=saveName(runStorage,n);setText($('#name-hint'),'이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명');}};
+ // 칸을 벗어날 때 거른 별명이 남아 있으면 비우고 칸 안에 이유를 적는다(휴대폰에서는 안내 줄이 숨겨진다).
+ input.onchange=()=>{const n=cleanName(input.value);if(n&&isBadName(n)){input.value='';input.placeholder='그 별명은 쓸 수 없어요';}};
  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;if(onSubmit)onSubmit();else showDungeon();};
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).

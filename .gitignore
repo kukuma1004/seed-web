@@ -68,3 +68,4 @@ android/keystore.properties
 !tools/responsive-view-test.mjs
 !tools/combo-catalog-test.mjs
 !tools/ranking-audit.mjs
+!tools/name-filter-test.mjs
