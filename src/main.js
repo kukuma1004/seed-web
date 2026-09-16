@@ -52,7 +52,8 @@ import {AUSTIN,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,aust
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
 import {readGarden,writeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo} from './garden.js';
-import {renderGarden,renderGardenPeek} from './garden-ui.js';
+import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
+import {createGardenScene} from './garden-scene.js';
 import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,applyMutation,mutationOf,hasMutation,
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
@@ -103,7 +104,7 @@ const vfx=createVFX(scene,{mobile:mobileDevice});
 const playerTrailInterval=mobileDevice?.07:.045;
 const activeVfx=createActiveVFX(scene,{mobile:mobileDevice});
 const camera=new THREE.PerspectiveCamera(39,1,.1,100);const look=new V(0,0,0);camera.position.set(16,22,22);camera.lookAt(look);
-const composer=new EffectComposer(renderer);composer.addPass(new RenderPass(scene,camera));const bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),.42,.5,1.1);composer.addPass(bloomPass);composer.addPass(new OutputPass());
+const composer=new EffectComposer(renderer);const renderPass=new RenderPass(scene,camera);composer.addPass(renderPass);const bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),.42,.5,1.1);composer.addPass(bloomPass);composer.addPass(new OutputPass());
 const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
 scene.add(new THREE.HemisphereLight(0xcfe3ea,0x44564a,1.5));let sun=new THREE.DirectionalLight(0xffedcf,2.2);sun.position.set(-9,17,6);sun.castShadow=true;sun.shadow.mapSize.set(QUALITY_LEVELS[qualityLevel].shadowSize,QUALITY_LEVELS[qualityLevel].shadowSize);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,far:50});sun.shadow.normalBias=.035;scene.add(sun);
 const texloader=new THREE.TextureLoader(), stone=texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-v4.png'),normal=texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-normal.png');stone.colorSpace=THREE.SRGBColorSpace;for(let t of [stone,normal]){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.34,.34);t.anisotropy=mobileDevice?2:8;}
@@ -233,6 +234,13 @@ let runStorage;try{runStorage=window.localStorage;}catch{runStorage=null;}
 const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage});let playerName=lastName(runStorage),rankSerial=0;
 // 정원은 런 사이에 남는다. 효과는 화면을 나올 때 다시 계산해 다음 여정에 쓴다.
 let garden=readGarden(runStorage),gardenFx=gardenEffects(garden),lastHarvest=null;
+// 정원 장면은 처음 볼 때 만든다. 만든 뒤에는 정원 화면과 첫 화면에서 이 장면을 그린다.
+let gardenScene=null,gardenSelection=null;
+function ensureGardenScene(){
+ if(!gardenScene){gardenScene=createGardenScene();gardenScene.resize(canvasRect.width||1,canvasRect.height||1);}
+ gardenScene.setGarden(garden,{austinDefeated:austinKnown()});
+ return gardenScene;
+}
 // 변이는 한 여정 동안만 유지된다(정원이 문을 열어 주고, 선택은 그 판에서 한다).
 const mutations=new Map(),runes=[];
 function austinKnown(){return Boolean(profile?.bosses?.includes('austin'));}
@@ -534,27 +542,65 @@ function beginEvolution(id){
 }
 function startGame(){if(mode==='ready')restart();}
 function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
-  mode='ready';$('#overlay').classList.remove('ranking-overlay');$('#overlay').classList.add('intro');$('#overlay').hidden=false;
-  $('#overlay').innerHTML='<p class="eyebrow">SEED · 첫 발아</p><h2>잠든 정원을 깨우다</h2><p class="intro-lead">씨앗을 키워 문지기 너머로</p><div class="intro-controls"><span><kbd>W A S D</kbd> 이동</span><span><kbd>자동 공격</kbd> 가까운 적을 자동으로 공격</span><span><kbd>SPACE</kbd> 회피</span></div><button id="start-game" class="primary">던전으로 들어가기 <small>↵ ENTER</small></button>';
-  if(touch.enabled){$('.intro-controls').innerHTML='<span><kbd>왼손 스틱</kbd> 이동</span><span><kbd>자동 공격</kbd> 이동과 회피에 집중하세요</span><span><kbd>◇ 버튼</kbd> 회피</span>';$('#start-game small').textContent='가로 화면 권장';}
-  $('#start-game').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro');startGame();};
-  const saved=readCheckpoint(actStore());
-  if(saved){$('#start-game').insertAdjacentHTML('beforebegin',`<button id="continue-run" class="primary">여정 ${saved.cycle+1} · ${saved.mode==='crossroads'?'다음 여정':saved.mode==='austin'?AUSTIN.name:(saved.stage+1)+'번째 방'} 이어하기</button>`);$('#continue-run').onclick=()=>{if(requireName())restart(saved);};$('#start-game').innerHTML='새 씨앗으로 시작 <small>저장된 도전을 교체합니다</small>';}
-  ($('#continue-run')||$('#start-game')).insertAdjacentHTML('beforebegin',`<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="별명 (최대 ${NAME_MAX}자)" value="${escapeHtml(playerName)}"><small id="name-hint">이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명</small></form>`);
-  $('#player-name').oninput=()=>{$('#player-name').classList.remove('need');const n=cleanName($('#player-name').value);if(n)playerName=saveName(runStorage,n);};
-  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(actStore());$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
-  online.flush().catch(()=>0);
-  $('#overlay').insertAdjacentHTML('beforeend',`<div id="garden-inline"></div><div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
-  // Act 2 unlocks with the first Austin victory on this device and keeps its own save.
-  if(!act2Available()){}
-  else if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);
-   const go=saved=>{if(!requireName())return;startRegion=ACT2_REGION;$('#overlay').classList.remove('intro');restart(saved);};$('#start-act2').onclick=()=>go(s2||null);if($('#new-act2'))$('#new-act2').onclick=()=>go(null);}
-  else $('.intro-links').insertAdjacentHTML('afterend','<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>');
- refreshGardenEffects();
- if($('#garden-inline'))renderGardenPeek($('#garden-inline'),{garden,austinDefeated:austinKnown(),onOpen:()=>showGarden(showIntro)});
+ mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
+ $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),actives=gardenFx.actives.length;
+ const gardenLine=actives?`데려갈 식물 ${actives}칸`:seeds?`심을 씨앗 ${seeds}개`:garden.fragments?`씨앗 조각 ${garden.fragments}개`:'씨앗을 심어 보세요';
+ $('#overlay').innerHTML=`<div class="menu-panel">
+  <p class="eyebrow">SEED</p><h2>잠든 정원</h2>
+  ${nameFieldHtml()}
+  <div class="menu-list">
+   <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
+   <button id="go-garden" class="menu-item"><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></button>
+   <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
+   <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
+  </div>
+  <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>
+ </div>`;
+ bindNameField();
+ online.flush().catch(()=>0);
+ $('#go-dungeon').onclick=showDungeon;
+ $('#go-garden').onclick=()=>showGarden(showIntro);
  $('#ranking-link').onclick=()=>showRanking('online');
- $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
+ $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
+}
+// 이름은 여러 화면에서 같은 모양으로 쓴다.
+function nameFieldHtml(){
+ return `<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="별명 (최대 ${NAME_MAX}자)" value="${escapeHtml(playerName)}"><small id="name-hint">이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명</small></form>`;
+}
+function bindNameField(onSubmit=null){
+ const input=$('#player-name');if(!input)return;
+ input.oninput=()=>{input.classList.remove('need');const n=cleanName(input.value);if(n)playerName=saveName(runStorage,n);};
+ $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;if(onSubmit)onSubmit();else showDungeon();};
+}
+// 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
+function showDungeon(){
+ mode='ready';touch.reset();keys.clear();
+ $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ const saved=readCheckpoint(actStore());
+ const act2Ready=act2Available()&&act2Unlocked(profile);
+ const saved2=act2Ready?readCheckpoint(actStorage(runStorage,2)):null;
+ const where=saved?`여정 ${saved.cycle+1} · ${saved.mode==='crossroads'?'다음 여정':saved.mode==='austin'?AUSTIN.name:(saved.stage+1)+'번째 방'}`:'';
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel">
+  <p class="eyebrow">SEED · 던전</p><h2>어디로 갈까요</h2>
+  ${nameFieldHtml()}
+  <div class="menu-list">
+   ${saved?`<button id="continue-run" class="primary menu-item"><strong>이어하기</strong><small>${escapeHtml(where)}</small></button>`:''}
+   <button id="start-game" class="${saved?'':'primary '}menu-item"><strong>${saved?'새 씨앗으로 시작':'잠든 정원 · 1막'}</strong><small>${saved?'저장된 도전을 교체합니다':'첫 방부터 문지기까지'}</small></button>
+   ${act2Ready?`<button id="start-act2" class="menu-item act2-button"><strong>${ACT2_NAME}</strong><small>${saved2?`야간 경기장 · 여정 ${saved2.cycle+1} · ${saved2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${saved2?'<button id="new-act2" class="menu-item small-item">2막 새로 시작</button>':''}`
+    :'<p class="act2-lock">오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요</p>'}
+   <button id="back-menu" class="menu-item small-item">돌아가기</button>
+  </div>
+  <p class="dungeon-hint">${touch.enabled?'왼손 스틱으로 이동 · ◇ 버튼으로 회피 · 공격은 자동':'W A S D 이동 · SPACE 회피 · 공격은 자동'}</p>
+ </div>`;
+ bindNameField(()=>{const s=readCheckpoint(actStore());$('#overlay').classList.remove('intro','menu-screen');if(s)restart(s);else startGame();});
+ const enter=(run,region2=false)=>{if(!requireName())return;startRegion=region2?ACT2_REGION:'garden';$('#overlay').classList.remove('intro','menu-screen');if(run)restart(run);else startGame();};
+ if($('#continue-run'))$('#continue-run').onclick=()=>enter(saved);
+ $('#start-game').onclick=()=>enter(null);
+ if($('#start-act2'))$('#start-act2').onclick=()=>enter(saved2||null,true);
+ if($('#new-act2'))$('#new-act2').onclick=()=>enter(null,true);
+ $('#back-menu').onclick=showIntro;
 }
 // Every visible ranking line shows its build. Legacy runs explain why they cannot.
 function rankBuild(entry,place){
@@ -571,17 +617,33 @@ function rankingBoard(board,mine=null){
  if(rank<=10)return top;
  return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([mine],mine,1,rankBuild,rank)}</section>`;
 }
-// 정원 화면. 바뀐 내용은 바로 저장하고, 다음 여정에 쓸 효과도 다시 계산한다.
-function showGarden(back=showIntro){
- mode='garden';touch.reset();keys.clear();$('#overlay').hidden=false;$('#overlay').classList.remove('intro');
- renderGarden($('#overlay'),{
-  garden,austinDefeated:austinKnown(),
-  onChange:next=>{garden=next;writeGarden(runStorage,garden);refreshGardenEffects();},
-  onClose:()=>back()
+// 정원 화면: 정원은 3D 장면이 그리고, 오른쪽 상자에서 고른 대상을 다룬다.
+let gardenReturn=showIntro;
+function selectGardenSpot(hit){
+ gardenSelection=hit&&(hit.kind==='plot'||hit.kind==='empty'||hit.kind==='center')?hit:null;
+ if(gardenScene)gardenScene.select(gardenSelection&&gardenSelection.kind==='plot'?gardenSelection.index:-1);
+ if(mode==='garden')paintGardenPanel();
+}
+function paintGardenPanel(){
+ renderGardenPanel($('#overlay'),{
+  garden,selection:gardenSelection,austinDefeated:austinKnown(),
+  onChange:next=>{garden=next;writeGarden(runStorage,garden);refreshGardenEffects();ensureGardenScene();
+   if(gardenSelection?.kind==='empty'&&garden.plots[gardenSelection.index])gardenSelection={kind:'plot',index:gardenSelection.index};
+   if(gardenSelection?.kind==='plot'&&!garden.plots[gardenSelection.index])gardenSelection=null;
+   if(gardenScene)gardenScene.select(gardenSelection?.kind==='plot'?gardenSelection.index:-1);
+   paintGardenPanel();},
+  onSelect:selectGardenSpot,
+  onClose:()=>gardenReturn()
  });
 }
+function showGarden(back=showIntro){
+ gardenReturn=back;mode='garden';touch.reset();keys.clear();
+ refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
+ $('#overlay').hidden=false;$('#overlay').classList.remove('intro','menu-screen','ranking-overlay');$('#overlay').classList.add('garden-mode');
+ paintGardenPanel();
+}
 function showRanking(view='online'){
- mode='ranking';$('#overlay').classList.remove('intro');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
+ mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
  const localBoard=readRanking(view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}</div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view!=='online'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
@@ -595,7 +657,7 @@ function showRanking(view='online'){
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
-function showEnd(){touch.reset();activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
+function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-screen','garden-mode');activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
  // 정원: 이번 여정이 남긴 씨앗을 넣고, 심어 둔 식물에 성장점을 준다.
@@ -630,7 +692,7 @@ function restart(saved=null){region=(saved?.version===1&&saved.region)||startReg
  if(!restore){itemBarKey='';$('#toast').textContent=`${ITEMS.potion.name} 1개를 가지고 출발해요 · 위험할 때 Q로 마시기`;}}
 
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
-window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
+window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 document.addEventListener('visibilitychange',()=>{if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
 function update(dt,time){
 if(mode==='evolving'){
@@ -669,10 +731,16 @@ if(mode==='playing'&&!roomCleared&&!bossFalling&&choiceKills>=killsForChoice(cho
 let last=performance.now(),frames=[],frameCounter=0;function animate(now){requestAnimationFrame(animate);let raw=(now-last)/1000;last=now;frames.push(raw*1000);qualityGovernor.sample(raw*1000,mode==='playing'&&!paused&&!document.hidden);if(frames.length>180)frames.shift();const dt=advanceFrame(raw,now*.001,(step,time)=>update(step,time));if(!paused)vfx.update(dt);presentFrame(now*.001);frameCounter++;
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*dt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
- look.lerp(new V(player.position.x*(phoneView?.5:.14),0,player.position.z*(phoneView?.4:.06)+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}if(bloomPass.enabled)composer.render();else renderer.render(scene,camera);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
+ look.lerp(new V(player.position.x*(phoneView?.5:.14),0,player.position.z*(phoneView?.4:.06)+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden')&&gardenScene;
+ if(showGardenScene)gardenScene.update(dt);
+ renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
+ if(bloomPass.enabled)composer.render();else renderer.render(renderPass.scene,renderPass.camera);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
 function presentFrame(time){
  contactShadows.update(player,enemies,fallen);player.userData.updateEvolutionArt?.(time,activeGauge.plan?.state==='OVERDRIVE');
  const dm=dashMeter(dashState);touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm);setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
+ // 메뉴·정원 화면에서는 전투 HUD를 감춘다(정원이 그대로 보이게).
+ const menuMode=['ready','garden','ranking','discoveries'].includes(mode);
+ if(document.body.__menuMode!==menuMode){document.body.classList.toggle('menu-mode',menuMode);document.body.__menuMode=menuMode;}
  updateGauges();
  setText($('#score-hud b'),formatScore(score));setText($('#score-hud small'),playerName?playerName+' · 점수':'점수');setHidden($('#score-hud'),!['playing','cards','forms','evolving'].includes(mode));
  renderItemBar();renderActiveButton($('#active-skill'),{forms:heldForms,gauge:activeGauge,live:mode==='playing'&&!paused,touch:document.body.classList.contains('touch-mode')});
@@ -743,7 +811,13 @@ function mountQualityButton(){
  footer.prepend(button);
 }
 const qualityGovernor=createQualityGovernor(qualityLevel,{onChange:level=>{applyQuality(level);const qb=document.getElementById('quality-toggle');if(qb)qb.textContent=qualityButtonLabel();$('#toast').textContent=`기기가 느려 화질을 '${QUALITY_NAMES[level]}'으로 낮췄어요 · 게임 규칙은 그대로예요`;}});
-function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight,h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;phoneView=touch.enabled&&w>h&&h<=520;const tabletView=touch.enabled&&w>h&&h>520;document.body.classList.toggle('phone-landscape',phoneView);camera.zoom=Math.min(1.18,camera.aspect/(touch.enabled&&h>w?1.25:.95))*(phoneView?PHONE_ZOOM:tabletView?TABLET_ZOOM:1);camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);applyQuality(qualityLevel,{save:false});mountQualityButton();showIntro();requestAnimationFrame(animate);
+function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight,h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;phoneView=touch.enabled&&w>h&&h<=520;const tabletView=touch.enabled&&w>h&&h>520;document.body.classList.toggle('phone-landscape',phoneView);camera.zoom=Math.min(1.18,camera.aspect/(touch.enabled&&h>w?1.25:.95))*(phoneView?PHONE_ZOOM:tabletView?TABLET_ZOOM:1);camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
+// 정원에서는 화면을 눌러 식물과 빈 자리를 고른다.
+renderer.domElement.addEventListener('pointerdown',event=>{
+ if(mode!=='garden'||!gardenScene)return;
+ const rect=canvasRect,hit=gardenScene.pick((event.clientX-rect.left)/Math.max(1,rect.width),(event.clientY-rect.top)/Math.max(1,rect.height));
+ selectGardenSpot(hit);
+});applyQuality(qualityLevel,{save:false});mountQualityButton();showIntro();requestAnimationFrame(animate);
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:qualityGovernor.state()},items:{hasteTime,shellTime,selectedItem},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:killsForChoice(choicesTaken),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,vfx:vfx.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
 qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if(b)damageEnemy(b,b.maxHp*fraction,false);return b?b.hp:null;},givePotion:()=>addItem(inventory,'potion',1),fillActive:()=>{activeGauge.cooldown=0;activeGauge.value=ACTIVE.max;return activeGauge.value;},showAustinTitle:()=>{seedTitle.setUnlocked(true);return seedTitle.isUnlocked();},giveForm:(id,level=4)=>{if(!Object.hasOwn(FORMS,id))return false;heldForms.set(id,level);syncForms();return true;},setLaw:(id,level)=>{if(!Object.hasOwn(LAWS,id))return false;levels.set(id,level);syncLaws();return true;},offerSolo:()=>offerSolo(finishChoice,true),giveItem:(id,n=1)=>{const got=addItem(inventory,id,n);itemBarKey='';return got;},setHp:v=>{hp=Math.max(1,Math.min(100,v));}},census:()=>{const out={casters:{},meshes:0,shadowCasters:0,sprites:0,instanced:0,points:0,lines:0,lights:0,materials:new Set(),byParent:{}};scene.traverseVisible(o=>{if(o.isLight)out.lights++;if(o.isSprite)out.sprites++;else if(o.isInstancedMesh)out.instanced++;else if(o.isMesh){out.meshes++;if(o.castShadow){out.shadowCasters++;const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.casters[key]=(out.casters[key]||0)+1;}}else if(o.isLineSegments)out.lines++;if(o.material)out.materials.add(o.material);if(o.isMesh||o.isSprite){const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.byParent[key]=(out.byParent[key]||0)+1;}});out.materials=out.materials.size;out.behindCover=enemies.filter(e=>behindCover(e.g.position)).length;out.obstacles=obstacles.length;out.byParent=Object.fromEntries(Object.entries(out.byParent).sort((a,b)=>b[1]-a[1]).slice(0,25));out.programs=renderer.info.programs?.length;return out;},worldToScreen:(x,z)=>{let p=new V(x,.5,z).project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};}};

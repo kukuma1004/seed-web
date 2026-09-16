@@ -3,7 +3,7 @@ import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 // Not public yet: only a local development server shows act 2 until ACT2_RELEASED.
 assert.equal(ACT2_RELEASED,false);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),false);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
-import {ACT2_MINIONS,ACT2_MINION_TYPES,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
+import {ACT2_MINIONS,ACT2_MINION_TYPES,ACT2_ART,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
 import {roomFor,ROOMS} from '../src/journey.js';
 import {arenaFor,insideArena} from '../src/arena.js';
 import {trapsFor} from '../src/traps.js';
@@ -44,6 +44,8 @@ assert.notEqual(roomFor(2,0,'garden'),STADIUM_ROOMS[2]);
  assert.equal(data.get('seed-player-name'),'가나','names are shared');
 }
 for(const type of ACT2_MINION_TYPES){assert.ok(KILL_POINTS[type]>0,type);assert.ok(contactShadowRadius(type)!==.5||type==='runner',type);assert.ok(ACT2_MINIONS[type].name);}
+assert.equal(new Set(Object.values(ACT2_ART).map(art=>art.file)).size,4,'act 2 roles own four separate atlases');
+for(const art of Object.values(ACT2_ART)){assert.match(art.file,/^enemy-(catcher|pitcher|runner|batter)-v1\.webp$/);assert.equal(art.tint,0xffffff);}
 
 // Minion behaviour with a small fake world.
 function world(playerAt=new V()){

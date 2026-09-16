@@ -22,80 +22,73 @@ const growthBar=growth=>{
  return `<div class="grow-bar"><i style="width:${percent}%"></i></div><small>${STAGE_NAMES[stage]}${next?` · 다음 단계까지 여정 ${next}회`:' · 다 자랐어요'}</small>`;
 };
 
-// 화면을 그리고 버튼을 연결한다. onChange(garden)으로 바뀐 정원을 돌려준다.
-export function renderGarden(root,{garden,onChange,onClose=null,picking=null,austinDefeated=false}){
- const slots=activeSlots(garden,{austinDefeated}),effects=gardenEffects(garden,slots),actives=activePlants(garden,slots),center=centerInfo(garden,{austinDefeated});
+// 정원 화면의 오른쪽 상자. 정원 자체는 3D 장면(garden-scene.js)이 그리고,
+// 여기서는 고른 대상에 따라 할 수 있는 일만 보여 준다.
+export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClose,austinDefeated=false}){
+ const slots=activeSlots(garden,{austinDefeated}),actives=activePlants(garden,slots),center=centerInfo(garden,{austinDefeated});
  const owned=Object.entries(garden.seeds).filter(([,n])=>n>0);
- const plots=garden.plots.map((plant,index)=>{
-  if(!plant)return `<button class="plot empty" data-plant-here="${index}"><span class="plot-hole">＋</span><small>${owned.length?'씨앗 심기':'씨앗이 없어요'}</small></button>`;
-  const seed=SEEDS[plant.seed],stage=stageOf(plant.growth),grown=STAGES.indexOf(stage)>=STAGES.indexOf('mature');
-  const branchRow=plant.branch
-   ? `<p class="plot-effect">${escape(branchSummary(plant.seed,plant.branch,stage))}</p>`
-   : grown
-    ? `<div class="branch-row">${BRANCHES.map(b=>`<button class="branch" data-branch="${index}:${b}"><strong>${escape(seed.branchNames[b])}</strong><small>${escape(branchSummary(plant.seed,b,stage))}</small></button>`).join('')}</div>`
-    : `<p class="plot-effect dim">자라면 세 갈래 중 하나를 고를 수 있어요</p>`;
-  return `<div class="plot ${plant.active?'active':''} stage-${stage}">
-   <div class="plot-head">${plantArt(plant.seed,'plot-art')}<div><strong>${escape(plantName(plant))}</strong>${growthBar(plant.growth)}</div></div>
-   ${branchRow}
-   <div class="plot-actions">
-    ${plant.branch&&grown?`<button class="primary small" data-active="${index}">${plant.active?'정원에서 빼기':'데려가기'}</button>`:''}
-    <button class="ghost small" data-uproot="${index}">뽑기</button>
-   </div>
-  </div>`;
- }).join('');
-
- const shelf=owned.length
-  ? owned.map(([id,n])=>`<button class="seed-chip ${picking===null?'':'pickable'}" data-seed="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span><b>×${n}</b></button>`).join('')
-  : '<p class="dim">아직 모은 씨앗이 없어요. 여정을 다녀오면 가장 깊게 키운 법칙의 씨앗이 남습니다.</p>';
-
+ const seedChips=(action,label)=>owned.length
+  ? `<div class="chips">${owned.map(([id,n])=>`<button class="seed-chip" data-${action}="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span><b>×${n}</b></button>`).join('')}</div>`
+  : `<p class="dim">${label}</p>`;
  const craft=garden.fragments>0
   ? `<div class="fragments"><span>씨앗 조각 ${garden.fragments}개</span>${garden.fragments>=FRAGMENTS_PER_SEED
-     ? `<small>조각 ${FRAGMENTS_PER_SEED}개로 원하는 씨앗을 만들 수 있어요</small><div class="craft-row">${SEED_IDS.filter(id=>id!==GUARDIAN).map(id=>`<button class="seed-chip" data-craft="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span></button>`).join('')}</div>`
+     ? `<small>조각 ${FRAGMENTS_PER_SEED}개로 원하는 씨앗을 만들 수 있어요</small><div class="chips">${SEED_IDS.filter(id=>id!==GUARDIAN).map(id=>`<button class="seed-chip" data-craft="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span></button>`).join('')}</div>`
      : `<small>${FRAGMENTS_PER_SEED-garden.fragments}개 더 모으면 원하는 씨앗을 만들 수 있어요</small>`}</div>`
   : '';
 
- const heart=`<div class="garden-heart stage-${center.id}">
-   <em class="heart-glyph" aria-hidden="true">${center.glyph}</em>
-   <div><strong>${escape(center.name)}</strong><p>${escape(center.line)}</p><small>${escape(center.hint)}</small></div>
+ let body;
+ const plant=selection?.kind==='plot'?garden.plots[selection.index]:null;
+ if(plant){
+  const seed=SEEDS[plant.seed],stage=stageOf(plant.growth),grown=STAGES.indexOf(stage)>=STAGES.indexOf('mature'),next=nextStagePoints(plant.growth);
+  body=`<div class="panel-plant">
+   <div class="panel-head">${plantArt(plant.seed,'panel-art')}<div><strong>${escape(plantName(plant))}</strong><small>${STAGE_NAMES[stage]}${next?` · 다음 단계까지 여정 ${next}회`:' · 다 자랐어요'}</small></div></div>
+   ${plant.branch
+     ? `<p class="plot-effect">${escape(branchSummary(plant.seed,plant.branch,stage))}</p>`
+     : grown
+      ? `<p class="panel-ask">어떤 갈래로 키울까요?</p><div class="branch-row">${BRANCHES.map(b=>`<button class="branch" data-branch="${b}"><strong>${escape(seed.branchNames[b])}</strong><small>${escape(branchSummary(plant.seed,b,stage))}</small></button>`).join('')}</div>`
+      : `<p class="plot-effect dim">자라면 세 갈래 중 하나를 고를 수 있어요</p>`}
+   <div class="panel-actions">
+    ${plant.branch&&grown?`<button class="primary small" data-active="1">${plant.active?'정원에서 빼기':'다음 여정에 데려가기'}</button>`:''}
+    <button class="ghost small" data-uproot="1">뽑기</button>
+   </div>
   </div>`;
- root.innerHTML=`<div class="garden-screen">
-  <p>여정이 남긴 것을 키우는 곳</p><h2>나의 정원</h2>
-  ${heart}
-  <p class="garden-note">데려갈 수 있는 식물은 ${slots}칸 · 지금 ${actives.length}칸
-  ${effects.actives.length?`<br>${effects.actives.map(a=>escape(a.name)+' · '+escape(a.summary)).join('<br>')}`:'<br>자란 식물의 갈래를 고르면 다음 여정의 선택지가 달라집니다.'}</p>
-  ${picking!==null?`<p class="garden-pick">어떤 씨앗을 심을까요? <button class="ghost small" data-cancel="1">취소</button></p>`:''}
-  <div class="plots">${plots}</div>
-  <div class="seed-shelf"><h3>씨앗 보관함</h3><div class="chips">${shelf}</div>${craft}</div>
-  <button class="primary" id="garden-close">돌아가기</button>
- </div>`;
+ }else if(selection?.kind==='empty'){
+  body=`<div class="panel-plant"><p class="panel-ask">빈 자리예요. 어떤 씨앗을 심을까요?</p>
+   ${seedChips('plant','심을 씨앗이 없어요. 여정을 다녀오면 씨앗이 남습니다.')}${craft}</div>`;
+ }else if(selection?.kind==='center'){
+  body=`<div class="panel-plant"><div class="panel-head"><em class="panel-glyph">${center.glyph}</em><div><strong>${escape(center.name)}</strong><small>${escape(center.hint)}</small></div></div>
+   <p class="plot-effect">${escape(center.line)}</p></div>`;
+ }else{
+  body=`<div class="panel-plant"><p class="panel-ask">정원의 식물이나 빈 자리를 눌러 보세요.</p>
+   <h3>씨앗 상자</h3>${seedChips('pick','아직 모은 씨앗이 없어요. 여정을 다녀오면 가장 깊게 키운 법칙의 씨앗이 남습니다.')}${craft}</div>`;
+ }
 
- const options={onChange,onClose,austinDefeated};
- const update=(next,pick=null)=>{onChange(next);renderGarden(root,{...options,garden:next,picking:pick});};
- if(root.querySelector('#garden-close'))root.querySelector('#garden-close').onclick=onClose;
- for(const button of root.querySelectorAll('[data-plant-here]'))
-  button.onclick=()=>{if(Object.keys(garden.seeds).length)renderGarden(root,{...options,garden,picking:Number(button.dataset.plantHere)});};
- for(const button of root.querySelectorAll('[data-seed]'))
-  button.onclick=()=>{if(picking===null)return;const r=plantSeed(garden,button.dataset.seed,picking);if(r.ok)update(r.garden);};
+ root.innerHTML=`<aside class="garden-panel">
+  <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
+  <div class="panel-body">${body}</div>
+  <footer><small>데려가는 식물 ${actives.length}/${slots}칸</small><button class="primary" id="garden-close">돌아가기</button></footer>
+ </aside>`;
+
+ const update=next=>{onChange(next);};
+ root.querySelector('#garden-close').onclick=onClose;
+ for(const button of root.querySelectorAll('[data-plant]'))
+  button.onclick=()=>{const r=plantSeed(garden,button.dataset.plant,selection.index);if(r.ok)update(r.garden);};
  for(const button of root.querySelectorAll('[data-craft]'))
-  button.onclick=()=>{const r=craftSeed(garden,button.dataset.craft);if(r.ok)update(r.garden,picking);};
- for(const button of root.querySelectorAll('[data-branch]')){
-  const [index,branch]=button.dataset.branch.split(':');
-  button.onclick=()=>{const r=chooseBranch(garden,Number(index),branch);if(r.ok)update(r.garden);};
- }
- for(const button of root.querySelectorAll('[data-active]')){
-  const index=Number(button.dataset.active);
-  button.onclick=()=>{const r=setActive(garden,index,!garden.plots[index].active,slots);if(r.ok)update(r.garden);};
- }
- for(const button of root.querySelectorAll('[data-uproot]')){
-  const index=Number(button.dataset.uproot);
+  button.onclick=()=>{const r=craftSeed(garden,button.dataset.craft);if(r.ok)update(r.garden);};
+ for(const button of root.querySelectorAll('[data-pick]'))
+  button.onclick=()=>{const empty=garden.plots.findIndex(p=>!p);if(empty>=0)onSelect({kind:'empty',index:empty});};
+ for(const button of root.querySelectorAll('[data-branch]'))
+  button.onclick=()=>{const r=chooseBranch(garden,selection.index,button.dataset.branch);if(r.ok)update(r.garden);};
+ for(const button of root.querySelectorAll('[data-active]'))
+  button.onclick=()=>{const r=setActive(garden,selection.index,!plant.active,slots);if(r.ok)update(r.garden);};
+ for(const button of root.querySelectorAll('[data-uproot]'))
   button.onclick=()=>{
    if(button.dataset.sure!=='1'){button.dataset.sure='1';button.textContent='정말 뽑기';setTimeout(()=>{button.dataset.sure='';button.textContent='뽑기';},2500);return;}
-   const r=uproot(garden,index);if(r.ok)update(r.garden);
+   const r=uproot(garden,selection.index);if(r.ok){onSelect(null);update(r.garden);}
   };
- }
- for(const button of root.querySelectorAll('[data-cancel]'))button.onclick=()=>renderGarden(root,{...options,garden,picking:null});
  return root;
 }
+
 // 첫 화면에 얹는 미리보기. 정보를 늘어놓지 않고 '정원이 있다'는 느낌만 준다.
 export function renderGardenPeek(root,{garden,austinDefeated=false,onOpen}){
  const center=centerInfo(garden,{austinDefeated});

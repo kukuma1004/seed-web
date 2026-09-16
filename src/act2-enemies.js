@@ -7,7 +7,8 @@ const V=THREE.Vector3;
 //  주자 runner        · marks a base on the floor where the seed stands, sprints through it, then rests exposed
 //                      (the resting 'recover' state already takes +35% in main.js; exposed adds a little more).
 //  타자 batter        · swings at shots coming from the front and sends them back; piercing shots and evolutions get through.
-// Art is borrowed from act 1 with a tint until the painted minions arrive (ACT2_ART).
+// Act 2 owns one compressed directional atlas per role. Keeping each role in one
+// texture makes the silhouette unmistakable without adding meshes or materials.
 export const ACT2_MINIONS=Object.freeze({
  catcher:Object.freeze({name:'포수 방패병',hp:150,speed:1.15,turn:1.3,keep:3.2,tell:.45,shove:.3,shoveSpeed:5,damage:14,recover:1,returnSpeed:7.5,returnDamage:10,returnEvery:.45}),
  pitcher:Object.freeze({name:'투수 사수',hp:70,near:6,far:8.5,windup:.75,line:9,ballSpeed:13,curveSpeed:10,curve:.9,damage:15,rest:1.3,curveEvery:3}),
@@ -17,10 +18,10 @@ export const ACT2_MINIONS=Object.freeze({
 export const ACT2_MINION_TYPES=Object.freeze(Object.keys(ACT2_MINIONS));
 export const isAct2Minion=type=>Object.hasOwn(ACT2_MINIONS,type);
 export const ACT2_ART=Object.freeze({
- catcher:Object.freeze({file:'enemy-shield-v4.png',size:2.15,baseline:.06,tint:0xffa38f,ring:0xff6b55}),
- pitcher:Object.freeze({file:'enemy-caster-v4.png',size:2.1,baseline:.04,tint:0xffe08a,ring:0xfff1b8}),
- runner:Object.freeze({file:'enemy-hound-v4.png',size:1.45,baseline:.04,tint:0x8fe3ff,ring:0x7fd8ff}),
- batter:Object.freeze({file:'warden-hunter-v4.png',size:2.5,baseline:.02,tint:0xe7a6ff,ring:0xd78cff})
+ catcher:Object.freeze({file:'enemy-catcher-v1.webp',size:2.15,baseline:.06,tint:0xffffff,ring:0xff6b55}),
+ pitcher:Object.freeze({file:'enemy-pitcher-v1.webp',size:2.1,baseline:.04,tint:0xffffff,ring:0xfff1b8}),
+ runner:Object.freeze({file:'enemy-runner-v1.webp',size:1.45,baseline:.04,tint:0xffffff,ring:0x7fd8ff}),
+ batter:Object.freeze({file:'enemy-batter-v1.webp',size:2.5,baseline:.02,tint:0xffffff,ring:0xd78cff})
 });
 
 // Shared shapes; main.js adds them to its shared geometry set so releasing a minion never disposes them.

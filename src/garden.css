@@ -1,23 +1,56 @@
-/* 정원 화면. 전용 그림이 나오기 전까지는 법칙 그림과 색으로 구분한다. */
-.garden-screen{display:flex;flex-direction:column;align-items:center;gap:10px;width:min(980px,100%)}
-.garden-screen h2{margin:0}
-.garden-note{margin:0;font-size:12px;color:#b6d3c2;line-height:1.7}
-.garden-pick{margin:0;font-size:13px;color:#ffe3a0;display:flex;gap:8px;align-items:center}
-.plots{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;width:100%}
-.plot{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid #a4b7ab40;border-radius:14px;background:#0f262bd9;text-align:left}
-.plot.active{border-color:#f0c86a;box-shadow:0 0 16px #f0b44a33;background:#16302ecc}
-.plot.stage-bloom .plot-art{filter:drop-shadow(0 0 8px #ffe08a88)}
-.plot.empty{align-items:center;justify-content:center;gap:4px;color:#9fb8ad;border-style:dashed;min-height:140px;cursor:pointer}
-.plot.empty:hover{border-color:#8fd7b4;color:#d9f2e4}
-.plot-hole{font-size:26px;line-height:1}
-.plot-head{display:flex;gap:10px;align-items:center}
-.plot-head strong{display:block;font-size:15px;color:#f3f7ea}
-.plot-art{width:46px;height:46px;flex:0 0 auto}
-.plot-art img,.chip-art img{width:100%;height:100%;object-fit:contain}
-.plant-glyph{font-style:normal;font-size:30px;line-height:1;color:#f2c14e}
-.grow-bar{height:6px;border-radius:4px;background:#0a1b1f;border:1px solid #2f4d50;margin:5px 0 3px;overflow:hidden}
-.grow-bar i{display:block;height:100%;background:linear-gradient(90deg,#4f9e77,#9ee7b8)}
-.plot small{font-size:10px;color:#9fb8ad}
+/* 정원 화면 · 3D 정원 위에 얹는 왼쪽 메뉴와 오른쪽 상자. */
+body.menu-mode #brand,body.menu-mode #stages,body.menu-mode #encounter,body.menu-mode #growth-progress,
+body.menu-mode #status,body.menu-mode #rules,body.menu-mode #help,body.menu-mode #form-label,
+body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{display:none}
+#overlay.menu-screen,#overlay.garden-mode{background:transparent;backdrop-filter:none;padding:0;align-items:stretch;justify-content:flex-start;text-align:left;pointer-events:none}
+#overlay.menu-screen>*,#overlay.garden-mode>*{pointer-events:auto}
+.menu-panel{position:absolute;left:0;top:0;bottom:0;width:min(380px,44vw);padding:26px 24px;display:flex;flex-direction:column;gap:10px;justify-content:center;overflow-y:auto;
+ background:linear-gradient(90deg,#061418f5 0%,#061418e0 62%,#06141800 100%)}
+.menu-panel .eyebrow{margin:0;font-size:12px;letter-spacing:5px;color:#8fb0a2}
+.menu-panel h2{margin:0 0 6px;font-size:34px;letter-spacing:2px}
+.menu-panel .name-field{width:100%;align-items:flex-start;margin:2px 0 8px}
+.menu-panel .name-field input{text-align:left}
+.menu-list{display:flex;flex-direction:column;gap:8px;width:100%}
+.menu-item{display:flex;flex-direction:column;align-items:flex-start;gap:2px;width:100%;padding:11px 16px;min-height:56px;border:1px solid #a4b7ab55;border-radius:14px;background:#0e2328cc;color:#e6f2e9;text-align:left}
+.menu-item:hover{border-color:#8fd7b4;background:#14322fcc}
+.menu-item strong{font-size:16px}
+.menu-item small{font-size:11px;color:#9fb8ad}
+.menu-item.primary{border-color:#8fd7b4;background:#16403acc}
+.menu-item.small-item{min-height:40px;padding:8px 14px}
+.menu-item.small-item strong{font-size:13px;color:#bcd3c6}
+.act2-button{border-color:#d9a8ff88;background:#241a33cc}
+.dungeon-hint{margin:6px 0 0;font-size:11px;color:#8fa79b}
+.legal-note{margin:8px 0 0}
+/* 오른쪽 상자: 고른 식물로 할 수 있는 일 */
+.garden-panel{position:absolute;right:0;top:0;bottom:0;width:min(360px,46vw);padding:16px 16px 14px;display:flex;flex-direction:column;gap:8px;
+ background:linear-gradient(270deg,#061418f5 0%,#061418e0 68%,#06141800 100%)}
+.garden-panel header{display:flex;flex-direction:column;gap:2px}
+.garden-panel header strong{font-size:18px;color:#e8f2ea}
+.garden-panel header small{font-size:11px;color:#9fb8ad}
+.panel-body{flex:1;overflow-y:auto;display:flex;flex-direction:column;gap:8px}
+.panel-body h3{margin:6px 0 2px;font-size:13px;color:#cfe9d9;letter-spacing:1px}
+.panel-plant{display:flex;flex-direction:column;gap:8px}
+.panel-head{display:flex;align-items:center;gap:10px}
+.panel-head strong{display:block;font-size:16px;color:#f3f7ea}
+.panel-head small{font-size:11px;color:#9fb8ad}
+.panel-art{width:44px;height:44px;flex:none}
+.panel-glyph{font-style:normal;font-size:34px;color:#f2c14e;line-height:1}
+.panel-ask{margin:0;font-size:13px;color:#cfe9d9}
+.panel-actions{display:flex;gap:6px;flex-wrap:wrap}
+.panel-actions .small,.branch{font-size:12px}
+.garden-panel footer{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #a4b7ab26;padding-top:8px}
+.garden-panel footer small{font-size:11px;color:#9fb8ad}
+.garden-panel footer .primary{padding:9px 16px;min-height:42px}
+@media(max-width:900px){.menu-panel{width:min(320px,56vw);padding:18px 16px}.menu-panel h2{font-size:26px}.garden-panel{width:min(300px,56vw)}}
+@media(max-height:520px){
+ .menu-panel{padding:12px 14px;gap:6px}.menu-panel h2{font-size:22px;margin-bottom:2px}
+ .menu-panel .name-field{margin:0 0 4px}.menu-panel .name-field input{min-height:34px;font-size:14px}.menu-panel .name-field small{display:none}
+ .menu-item{min-height:44px;padding:7px 12px}.menu-item strong{font-size:14px}.menu-item small{font-size:10px}
+ .legal-note,.dungeon-hint{font-size:9px;margin-top:4px}
+ .garden-panel{padding:10px 12px;gap:6px}.garden-panel header strong{font-size:15px}
+ .panel-head strong{font-size:14px}.panel-art{width:34px;height:34px}
+}
+
 .plot-effect{margin:0;font-size:12px;color:#cfe9d9}
 .plot-effect.dim,.dim{color:#8fa79b}
 .branch-row{display:grid;gap:6px}
