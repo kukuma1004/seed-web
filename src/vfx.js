@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {LAWS} from './laws.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {THEMES,normalizeTheme,themeColor} from './themes.js';
 
 export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a};
 
@@ -24,13 +25,13 @@ export function streakGeometry(){
 }
 
 // Fixed GPU batches (four): effects cannot add lights, shadows or an unbounded mesh per spark.
-export function createVFX(scene,{mobile=false,random=Math.random}={}){
+export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical'}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0),identity=new THREE.Quaternion();
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
   const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};let themeId=normalizeTheme(theme);
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -58,20 +59,21 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
   const batches=[sparks,beams,flames,ghosts];
   function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
-    p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=FX_COLORS[tint]??tint??FX_COLORS.seed;
+    p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=themeColor(themeId,tint,FX_COLORS[tint]??tint??FX_COLORS.seed);
     p.grow=grow;p.delay=delay;p.gravity=gravity;
     return p;
   }
   // Kept as a no-op so every caller (forms, bosses, items) stays valid without drawing a floor ring.
   function pulse(){counters.pulse++;}
   function segment(a,b,id,width=.055,life=.16,delay=0){
+    const theme=THEMES[themeId];width*=theme.trailWidth;life*=theme.trailLife;
     segDelta.copy(b).sub(a);const length=segDelta.length();if(length<.001)return;
     segMid.copy(a).add(b).multiplyScalar(.5);segRotation.setFromUnitVectors(up,segDelta.multiplyScalar(1/length));
     emit(beams,segMid,id,life,width,length,width,{rotation:segRotation,delay});
   }
   function flame(pos,id='burst',n=10,spread=1,delay=0){
     counters.flame++;
-    const count=Math.ceil(n*(mobile?.62:1));
+    const count=Math.ceil(n*(mobile?.62:1)*THEMES[themeId].flame);
     for(let i=0;i<count;i++){
       const a=random()*Math.PI*2,r=random()*.55*spread,size=.045+random()*.055;
       emitPos.set(pos.x+Math.cos(a)*r,pos.y+.08,pos.z+Math.sin(a)*r);emitVelocity.set(Math.cos(a)*.18,.45+random()*1.25,Math.sin(a)*.18);emitRotation.setFromAxisAngle(up,a);
@@ -79,12 +81,18 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
   }
   function burst(pos,id='seed',n=12,spread=1,delay=0){
-    counters.burst++;
+    counters.burst++;const theme=THEMES[themeId];
     for(let i=0;i<Math.ceil(n*(mobile?.65:1));i++){
       const a=random()*Math.PI*2,speed=(1+random()*3)*spread;
       const size=.04+random()*.06;
-      emitPos.set(pos.x,pos.y+.6,pos.z);emitVelocity.set(Math.cos(a)*speed,.5+random()*2,Math.sin(a)*speed);
-      emit(sparks,emitPos,id,.25+random()*.3,size,size*2.5,size,{velocity:emitVelocity,gravity:3,delay});
+      if(theme.motion==='inward'){
+        const r=.7+random()*1.35*spread;emitPos.set(pos.x+Math.cos(a)*r,pos.y+.35+random()*.55,pos.z+Math.sin(a)*r);emitVelocity.set(-Math.cos(a)*speed*.65,.15+random()*.9,-Math.sin(a)*speed*.65);
+      }else if(theme.motion==='axis'){
+        const axis=Math.round(a/(Math.PI/2))*Math.PI/2;emitPos.set(pos.x,pos.y+.6,pos.z);emitVelocity.set(Math.cos(axis)*speed,.25+random()*1.35,Math.sin(axis)*speed);
+      }else if(theme.motion==='spiral'){
+        const r=random()*.45*spread;emitPos.set(pos.x+Math.cos(a)*r,pos.y+.35,pos.z+Math.sin(a)*r);emitVelocity.set(Math.cos(a+Math.PI/2)*speed*.72,.75+random()*1.8,Math.sin(a+Math.PI/2)*speed*.72);
+      }else{emitPos.set(pos.x,pos.y+.6,pos.z);emitVelocity.set(Math.cos(a)*speed,.5+random()*2,Math.sin(a)*speed);}
+      const flat=theme.motion==='axis';emit(sparks,emitPos,id,.25+random()*.3,size*(flat?1.7:1),size*(flat?.75:2.5),size,{velocity:emitVelocity,gravity:theme.motion==='spiral'?1.4:theme.motion==='inward'?.8:3,delay});
     }
     if(id==='burst')flame(pos,id,Math.max(5,Math.ceil(n*.55)),spread,delay);
   }
@@ -136,12 +144,13 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     counters.portal++;
     const from=workA.set(a.x,.72,a.z),to=workB.set(b.x,.72,b.z);
     segment(from,to,'portal',.09,.2);
+    const sides=THEMES[themeId].portalSides;
     for(const p of [a,b]){
       burst(p,'portal',8,.55);
-      for(let i=0;i<6;i++){
-        const angle=i*Math.PI/3;
+      for(let i=0;i<sides;i++){
+        const angle=i*Math.PI*2/sides;
         workC.set(p.x+Math.cos(angle)*.38,.72,p.z+Math.sin(angle)*.38);
-        workD.set(p.x+Math.cos(angle+.72)*.38,.72,p.z+Math.sin(angle+.72)*.38);
+        workD.set(p.x+Math.cos(angle+Math.PI*2/sides*.82)*.38,.72,p.z+Math.sin(angle+Math.PI*2/sides*.82)*.38);
         segment(workC,workD,'portal',.055,.24);
       }
     }
@@ -175,8 +184,8 @@ export function createVFX(scene,{mobile=false,random=Math.random}={}){
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,
-    state:()=>({active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},
+    state:()=>({theme:themeId,active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

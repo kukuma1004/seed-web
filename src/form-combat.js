@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
+import {normalizeTheme,themeColor} from './themes.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
 
@@ -39,17 +40,31 @@ const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[]}){
+export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const awakenedMats=new Map();
+ const originalMats=new Map(Object.entries(mats).map(([name,material])=>[name,{material,color:material.color?.clone(),emissive:material.emissive?.clone()}]));
+ let themeId=normalizeTheme(theme);
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
+
+ function applyTheme(){
+  for(const [name,base] of originalMats){
+   const {material,color,emissive}=base;if(color)material.color.copy(color);if(emissive)material.emissive.copy(emissive);
+   if(themeId!=='botanical'){
+    if(color)material.color.setHex(themeColor(themeId,`form:${name}:core`,color.getHex()));
+    if(emissive)material.emissive.setHex(themeColor(themeId,`form:${name}:glow`,emissive.getHex()));
+   }
+   const gold=awakenedMats.get(material);if(gold){if(gold.color&&material.color)gold.color.copy(material.color);if(gold.emissive)gold.emissive.setHex(themeId==='botanical'?0xffb84f:themeColor(themeId,`form:${name}:awaken`,0xffb84f));}
+  }
+ }
+ function setTheme(id){themeId=normalizeTheme(id);applyTheme();rebuildOrbit();return themeId;}
 
  function combatMaterial(mat){
   if(!awakened())return mat;
@@ -91,6 +106,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    if(full('gene',S.bolts))return S.interval;
    const second=SECOND_FORMS[active],secondRole=second?.family==='convergence'?(secondPhase++%2?'consume':'mark'):null;
    const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
+   if(themeId==='void')ob.scale.set(.82,1.22,.82);else if(themeId==='cyber')ob.scale.set(.7,.7,1.45);else if(themeId==='celestial')ob.scale.set(1.2,.8,1.2);
    // A second fusion alternates two inherited law packets, so its projectile
    // traits follow the packet being fired. Existing gene attacks keep their
    // authored stat sheet (notably riftseed's two-target pierce).
@@ -691,7 +707,8 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   }
  }
 
- return {set,fire,update,clear,surge,calm,
-  state:()=>({active,evolution:ownerId||statId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
+ applyTheme();
+ return {set,setTheme,fire,update,clear,surge,calm,
+  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
+import {THEMES,normalizeTheme,themeColor} from './themes.js';
 
 // Ultimate stage around the seed. A hand-painted botanical sigil replaces the
 // generic floor disc; halo, beam and motes remain code-driven. Still five draw
@@ -24,14 +25,14 @@ export const haloBand=(u,v)=>{const band=Math.exp(-Math.pow((v-.5)/.22,2));const
 // Beam: strongest at the bottom, gone at the top; soft at the seams of the cylinder.
 export const beamFalloff=(u,v)=>Math.pow(1-v,1.6)*(.35+.65*Math.sin(Math.PI*u));
 
-export function activeColors(forms=[]){
+export function activeColors(forms=[],theme='botanical'){
  const colors=[];
  for(const id of forms)for(const law of ALL_FORMS[id]?.requires||[]){const color=LAWS[law]?.color;if(color!=null&&!colors.includes(color))colors.push(color);}
- return colors.length?colors:[0x76ffd0];
+ const base=colors.length?colors:[0x76ffd0];return base.map((value,index)=>themeColor(theme,`${forms.join('+')}:${index}`,value));
 }
 const waveDepth=(type,age,rift)=>type==='DOMAIN'?3.15+Math.sin(age*1.8)*.16:type==='ORBIT'?2.55+Math.sin(age*4)*.22:type==='TIME_STOP'?2.8:rift?2.65+Math.sin(age*3)*.18:2.35+Math.sin(age*2.2)*.12;
 
-export function createActiveVFX(scene,{mobile=false}={}){
+export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
  const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
@@ -53,11 +54,11 @@ export function createActiveVFX(scene,{mobile=false}={}){
  const moteMat=additive();moteMat.vertexColors=false;
  const moteCount=mobile?10:16,motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
  const dummy=new THREE.Object3D(),color=new THREE.Color();
- let effect=null,serial=0;
+ let effect=null,serial=0,themeId=normalizeTheme(theme);
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
 
  function begin(mode,plan,pos,time){
-  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',time,total:time,age:0,colors:activeColors(plan.forms),serial};
+  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',theme:themeId,time,total:time,age:0,colors:activeColors(plan.forms,themeId),serial};
   group.position.set(pos.x,0,pos.z);group.visible=true;return effect;
  }
  const start=(plan,pos)=>begin('running',plan,pos,plan.seconds);
@@ -66,7 +67,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
  function update(dt,pos){
   if(!effect){group.visible=false;return;}
   effect.age+=dt;effect.time-=dt;group.position.set(pos.x,0,pos.z);
-  const running=effect.mode==='running',over=effect.state==='OVERDRIVE',type=effect.archetype;
+  const running=effect.mode==='running',over=effect.state==='OVERDRIVE',type=effect.archetype,theme=THEMES[effect.theme];
   const rift=effect.tags.includes('RIFT');
   const intro=Math.min(1,effect.age/.3),life=Math.max(0,effect.time/effect.total);
   // Running: a quick swell, a gentle breathing hold, and a soft fade over the last half second.
@@ -77,7 +78,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
 
   if(running){
    const floorScale=type==='DOMAIN'?3:type==='BLACKHOLE'?1.75:type==='BEAM'?1.6:over?2.5:2.1;
-   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar(floorScale*(.6+.4*intro));floor.rotation.y=-effect.age*(type==='TIME_STOP'?.06:rift?.68:type==='BLACKHOLE'?1.25:.32);
+   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar(floorScale*(.6+.4*intro));floor.rotation.y=-effect.age*(theme.motion==='axis'?1.5:type==='TIME_STOP'?.06:rift?.68:type==='BLACKHOLE'?1.25:.32);
    const haloBase=type==='ORBIT'?2.25:type==='DOMAIN'?2.05:type==='BLACKHOLE'?1.25:over?1.75:1.5;
    halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar(haloBase*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*(type==='TIME_STOP'?.12:type==='ORBIT'?2.8:1.4);
    wave.material.opacity=over||rift||['RAIN','ORBIT','DOMAIN','BLACKHOLE','TIME_STOP'].includes(type)?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);
@@ -99,7 +100,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
    const phase=i/moteCount;
    let x,y,z,scale,bright;
    if(running){
-    const reverse=type==='RAIN'||type==='TIME_STOP',cycle=(effect.age*(over?.9:.7)+phase)%1,flow=reverse?1-cycle:cycle,a=phase*Math.PI*2+effect.age*(type==='TIME_STOP'?.1:over?2.6:2)+cycle*2.4,r=(type==='BLACKHOLE'?2.6:over?2.1:1.7)*(1-flow*.75);
+    const reverse=theme.motion==='inward'||type==='RAIN'||type==='TIME_STOP',cycle=(effect.age*(over?.9:.7)+phase)%1,flow=reverse?1-cycle:cycle,stepped=theme.motion==='axis'?Math.floor(effect.age*8)/8:effect.age,a=phase*Math.PI*2+stepped*(type==='TIME_STOP'?.1:over?2.6:2)+cycle*(theme.motion==='spiral'?4.4:2.4),r=(type==='BLACKHOLE'||theme.motion==='inward'?2.6:over?2.1:1.7)*(1-flow*.75);
     x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+flow*(type==='BEAM'?3.5:2.3);scale=(.7+.6*Math.sin(Math.PI*cycle))*intro;bright=Math.sin(Math.PI*cycle)*tail;
    }else{
     const out=1-life,a=phase*Math.PI*2,r=1+6*out;
@@ -112,7 +113,8 @@ export function createActiveVFX(scene,{mobile=false}={}){
   if(effect.time<=0){effect=null;clear();}
  }
  function clear(){effect=null;group.visible=false;for(const ob of [floor,halo,wave,beam])ob.material.opacity=0;motes.count=0;}
- function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
+ function setTheme(id){themeId=normalizeTheme(id);if(effect){effect.theme=themeId;effect.colors=activeColors(effect.forms,themeId);}return themeId;}
+ function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,theme:effect?.theme||themeId,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
  function dispose(){group.removeFromParent();const geos=new Set([floor.geometry,haloGeo,beam.geometry,moteGeo]);for(const g of geos)g.dispose();for(const ob of [floor,halo,wave,beam,motes])ob.material.dispose();for(const t of textures)t.dispose();}
- return {start,finish,update,clear,state,dispose};
+ return {start,finish,update,clear,setTheme,state,dispose};
 }
