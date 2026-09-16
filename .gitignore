@@ -67,3 +67,4 @@ android/keystore.properties
 !tools/patch-notes-test.mjs
 !tools/responsive-view-test.mjs
 !tools/combo-catalog-test.mjs
+!tools/ranking-audit.mjs
