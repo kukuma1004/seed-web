@@ -1,0 +1,65 @@
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>SEED 개인정보 처리방침</title>
+<style>
+:root{color-scheme:dark light}
+body{margin:0;padding:32px 20px 80px;background:#0d1f24;color:#e8f2ea;font-family:"Malgun Gothic",system-ui,sans-serif;line-height:1.75}
+main{max-width:760px;margin:0 auto}
+h1{font-size:28px;margin:0 0 6px}h2{font-size:19px;margin:32px 0 8px;color:#bfe6cf}
+p,li{font-size:15px;color:#d6e6dc}small{color:#9fb8ad}
+table{border-collapse:collapse;width:100%;margin:10px 0}
+th,td{border:1px solid #2f4d50;padding:8px 10px;font-size:14px;text-align:left;vertical-align:top}
+th{background:#14313a;color:#cfe9d9}
+a{color:#8fd7b4}
+.box{border:1px solid #2f4d50;border-radius:12px;padding:14px 16px;background:#102a30;margin:16px 0}
+</style></head><body><main>
+<h1>SEED 개인정보 처리방침</h1>
+<small>최종 수정일: 2026년 9월 16일 · 적용 대상: SEED 안드로이드 앱 및 웹 게임(kukuma1004.github.io/seed-web)</small>
+
+<div class="box">
+<p><strong>요약</strong> — SEED는 이름, 이메일, 전화번호, 주소, 사진, 위치 같은 개인정보를 요구하지 않습니다. 회원가입도 없습니다.
+랭킹에 참여할 때만 <strong>플레이어가 직접 적은 별명과 점수</strong>가 서버에 저장됩니다. 광고와 결제는 없습니다.</p>
+</div>
+
+<h2>1. 수집하는 정보</h2>
+<table>
+<tr><th>항목</th><th>수집 시점</th><th>목적</th><th>보관 위치</th></tr>
+<tr><td>별명(최대 8자), 점수, 진행한 여정·방 번호, 처치 수, 플레이 시간</td><td>게임이 끝나 랭킹에 기록될 때</td><td>모두의 랭킹(명예의 전당) 표시</td><td>Google Firebase Realtime Database(싱가포르)</td></tr>
+<tr><td>익명 식별자(무작위 문자열)</td><td>랭킹에 처음 연결할 때 자동 생성</td><td>같은 기기의 기록을 하나로 묶고, 본인 기록만 수정·삭제할 수 있게 함</td><td>Google Firebase Authentication(익명 로그인)</td></tr>
+<tr><td>게임 진행 상황, 설정, 도감, 이 기기 기록</td><td>플레이 중</td><td>이어하기와 화질 설정</td><td>기기 안(브라우저 저장소). 서버로 보내지 않음</td></tr>
+</table>
+<p>익명 식별자는 구글 계정이나 실제 신원과 연결되지 않습니다. 앱을 지우거나 브라우저 저장소를 비우면 새 식별자가 만들어집니다.</p>
+
+<h2>2. 수집하지 않는 정보</h2>
+<p>이름·생년월일·이메일·전화번호·주소·연락처·사진·마이크·카메라·정확한 위치·기기 식별자(광고 ID 포함)를 수집하지 않습니다.
+앱은 카메라, 마이크, 위치, 연락처, 저장소 권한을 요구하지 않습니다.</p>
+
+<h2>3. 광고와 결제</h2>
+<p>현재 버전에는 광고와 앱 내 결제가 없습니다. 추후 추가될 경우 이 문서를 먼저 고치고, 앱 안에서도 안내합니다.</p>
+
+<h2>4. 어린이 이용</h2>
+<p>SEED는 초등학생도 즐길 수 있는 게임입니다. 그래서 별명 외에는 어떤 개인정보도 요구하지 않도록 만들었습니다.
+<strong>별명에는 실명, 학교, 학년, 반, 전화번호를 적지 않도록</strong> 게임 안에서 안내하고 있습니다.
+보호자께서 자녀의 별명 기록 삭제를 원하시면 아래 연락처로 별명과 대략적인 기록 시각을 알려 주세요. 확인 후 삭제합니다.</p>
+
+<h2>5. 보관 기간과 파기</h2>
+<p>랭킹 기록은 명예의 전당에 표시하기 위해 보관하며, 시즌 정리나 삭제 요청 시 지웁니다. 기기 안의 저장 내용은 앱 삭제 또는 브라우저 저장소 삭제로 즉시 사라집니다.</p>
+
+<h2>6. 제3자 제공과 처리 위탁</h2>
+<p>수집한 내용을 판매하거나 광고 목적으로 제공하지 않습니다. 다만 서비스 운영을 위해 아래 회사의 기능을 사용합니다.</p>
+<ul>
+<li><strong>Google Firebase</strong>(Google LLC) — 익명 로그인과 랭킹 데이터 저장. 서버 위치: 싱가포르.
+<a href="https://firebase.google.com/support/privacy" target="_blank" rel="noopener">Firebase 개인정보 안내</a></li>
+<li><strong>GitHub Pages</strong>(GitHub, Inc.) — 웹 게임 배포. 접속 시 IP 등 일반적인 웹 서버 접속 기록이 GitHub에 남을 수 있습니다.</li>
+</ul>
+
+<h2>7. 이용자의 권리</h2>
+<p>기록 열람·삭제를 원하시면 연락처로 요청해 주세요. 앱 안에서는 랭킹에 올린 본인 기록만 수정·삭제할 수 있도록 서버 규칙이 설정되어 있습니다.</p>
+
+<h2>8. 안전 조치</h2>
+<p>모든 통신은 HTTPS로 암호화됩니다. 서버 규칙으로 본인 기록 외에는 쓰기·수정·삭제를 막고 있으며, 랭킹 외의 데이터 영역에는 접근할 수 없습니다.</p>
+
+<h2>9. 문의</h2>
+<p>개발자: JP Math Lab · 이메일: <a href="mailto:kukuma1004@gmail.com">kukuma1004@gmail.com</a></p>
+
+<h2>10. 변경 안내</h2>
+<p>내용이 바뀌면 이 페이지의 최종 수정일을 갱신하고, 중요한 변경은 게임 안에서 알립니다.</p>
+</main></body></html>

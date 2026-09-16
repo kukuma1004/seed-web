@@ -1,4 +1,4 @@
-package io.github.kukuma1004.seed;
+package kr.jpmathlab.seed;
 
 import android.os.Bundle;
 import android.view.WindowManager;

@@ -98,3 +98,7 @@
 [data-choice],[data-form],[data-solo],[data-relic]{position:relative}
 .touch-mode .pick-key{display:none}
 #rank-retry{margin:10px auto 0;min-height:40px;padding:0 20px}
+/* 첫 화면 아래 작은 안내(스토어 정책용 링크). */
+.legal-note{margin:10px 0 0;font-size:11px;color:#8fa79b;letter-spacing:.5px}
+.legal-note a{color:#9fc5b4}
+@media(max-height:480px){.legal-note{font-size:10px;margin-top:6px}}

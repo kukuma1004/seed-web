@@ -502,7 +502,7 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
   $('#player-name').oninput=()=>{$('#player-name').classList.remove('need');const n=cleanName($('#player-name').value);if(n)playerName=saveName(runStorage,n);};
   $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;const s=readCheckpoint(actStore());$('#overlay').classList.remove('intro');if(s)restart(s);else startGame();};
   online.flush().catch(()=>0);
-  $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div>`);
+  $('#overlay').insertAdjacentHTML('beforeend',`<div class="intro-links"><button id="ranking-link" class="discovery-link">명예의 전당</button><button id="discoveries" class="discovery-link">도감 ${profile.forms.length}/${Object.keys(FORMS).length}</button></div><p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>`);
   // Act 2 unlocks with the first Austin victory on this device and keeps its own save.
   if(!act2Available()){}
   else if(act2Unlocked(profile)){const s2=readCheckpoint(actStorage(runStorage,2));$('.intro-links').insertAdjacentHTML('beforebegin',`<div class="act2-entry"><button id="start-act2" class="primary act2-button">${ACT2_NAME} <small>${s2?`야간 경기장 · 여정 ${s2.cycle+1} · ${s2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${s2?'<button id="new-act2" class="discovery-link">2막 새로 시작</button>':''}</div>`);

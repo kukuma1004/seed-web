@@ -58,3 +58,6 @@ artifacts/
 !tools/titles-test.mjs
 !tools/dash-evolution-test.mjs
 !tools/act2-test.mjs
+android/keystore.properties
+*.jks
+*.keystore
