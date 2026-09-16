@@ -1,4 +1,4 @@
-import {SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS} from './forms.js';
 import {FIRST_FUSION_BY_ID} from './combo-catalog.js';
 import {comboArt} from './combo-art.js';
 // One authored illustration for each completed form, in a 4 by 3 atlas.
@@ -16,6 +16,7 @@ const soloStyle=id=>id==='riftseed'?tileStyle('seed-law-atlas-v4-ui.webp',7):til
 export const AWAKEN_ATLAS='seed-awaken-atlas-v1-ui.webp';
 const AWAKEN_TILES={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9};
 export function formArt(id,extra=''){
+ if(Object.hasOwn(SECOND_FORMS,id))return comboArt(SECOND_FORMS[id],`form-art ${extra}`);
  // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).
  if(Object.hasOwn(TWIN_FORMS,id)){
   const [a,b]=TWIN_FORMS[id].parts;

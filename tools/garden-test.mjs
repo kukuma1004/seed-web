@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGE_POINTS,
+import {SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STAGE_POINTS,
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,
  harvestFromRun,addHarvest,craftSeed,plantSeed,uproot,chooseBranch,setActive,growPlants,
- activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,objectJosa,wayJosa,
+ activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,gardenRecordLine,objectJosa,wayJosa,
  CENTER,MAX_ACTIVE_SLOTS,centerStage,centerInfo,activeSlots,bloomedCount} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 
@@ -35,6 +35,9 @@ assert.equal(nextStagePoints(0),1);assert.equal(nextStagePoints(4),STAGE_POINTS.
  const boss=harvestFromRun({levels:{frost:4},wardens:5,austins:1});
  assert.deepEqual(boss.seeds,[GUARDIAN,'frost']);assert.equal(boss.growth,1+5+2);
  assert.deepEqual(harvestFromRun({levels:{},wardens:3}).seeds,[],'법칙이 없으면 씨앗도 없다');
+ const recorded=harvestFromRun({levels:{gravity:8},forms:{collapse:6,'x001-01-02':9},wardens:5,austins:1,score:12345,kills:321,journey:6});
+ assert.equal(recorded.record.law,'gravity');assert.equal(recorded.record.forms[0].id,'x001-01-02');assert.equal(recorded.record.rare,true);
+ assert.ok(gardenRecordLine(recorded.record).includes('희귀 재융합'));
 }
 
 // 조각 세 개로 원하는 씨앗을 만든다. 시계탑 씨앗은 못 만든다.
@@ -45,6 +48,15 @@ assert.equal(nextStagePoints(0),1);assert.equal(nextStagePoints(4),STAGE_POINTS.
  assert.equal(craftSeed(g,GUARDIAN).ok,false);
  const made=craftSeed(g,'chain');assert.ok(made.ok);assert.equal(made.garden.seeds.chain,1);assert.equal(made.garden.fragments,0);
  assert.equal(craftSeed(made.garden,'chain').ok,false,'조각이 모자라면 못 만든다');
+}
+
+// 최근 던전 빌드는 정원에 작은 흔적으로 남고, 저장 크기를 위해 12개까지만 보관한다.
+{
+ let g=emptyGarden();
+ for(let i=0;i<MAX_RECORDS+5;i++)g=addHarvest(g,harvestFromRun({levels:{chain:i+1},forms:{thunderlance:i+1},wardens:1,score:i*100,kills:i,journey:i+1}));
+ assert.equal(g.records.length,MAX_RECORDS);assert.equal(g.records[0].journey,MAX_RECORDS+5);assert.equal(g.records.at(-1).journey,6);
+ const back=normalizeGarden({...g,records:[{law:'nope',forms:[{id:'bad',level:2}]},...g.records]});
+ assert.equal(back.records.length,MAX_RECORDS);assert.ok(back.records.every(r=>r.law==='chain'&&r.forms[0].id==='thunderlance'));
 }
 
 // 심기 → 자라기 → 갈래 고르기 → 활성 슬롯

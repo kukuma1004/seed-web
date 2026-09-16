@@ -29,6 +29,7 @@ export function activeColors(forms=[]){
  for(const id of forms)for(const law of ALL_FORMS[id]?.requires||[]){const color=LAWS[law]?.color;if(color!=null&&!colors.includes(color))colors.push(color);}
  return colors.length?colors:[0x76ffd0];
 }
+const waveDepth=(type,age,rift)=>type==='DOMAIN'?3.15+Math.sin(age*1.8)*.16:type==='ORBIT'?2.55+Math.sin(age*4)*.22:type==='TIME_STOP'?2.8:rift?2.65+Math.sin(age*3)*.18:2.35+Math.sin(age*2.2)*.12;
 
 export function createActiveVFX(scene,{mobile=false}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
@@ -56,7 +57,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
 
  function begin(mode,plan,pos,time){
-  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],time,total:time,age:0,colors:activeColors(plan.forms),serial};
+  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',time,total:time,age:0,colors:activeColors(plan.forms),serial};
   group.position.set(pos.x,0,pos.z);group.visible=true;return effect;
  }
  const start=(plan,pos)=>begin('running',plan,pos,plan.seconds);
@@ -65,7 +66,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
  function update(dt,pos){
   if(!effect){group.visible=false;return;}
   effect.age+=dt;effect.time-=dt;group.position.set(pos.x,0,pos.z);
-  const running=effect.mode==='running',over=effect.state==='OVERDRIVE';
+  const running=effect.mode==='running',over=effect.state==='OVERDRIVE',type=effect.archetype;
   const rift=effect.tags.includes('RIFT');
   const intro=Math.min(1,effect.age/.3),life=Math.max(0,effect.time/effect.total);
   // Running: a quick swell, a gentle breathing hold, and a soft fade over the last half second.
@@ -75,10 +76,14 @@ export function createActiveVFX(scene,{mobile=false}={}){
   const k=over?1:.78;
 
   if(running){
-   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar((over?2.5:2.1)*(.6+.4*intro));floor.rotation.y=-effect.age*(rift?.68:.32);
-   halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar((over?1.75:1.5)*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*1.4;
-   wave.material.opacity=over||rift?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);wave.scale.set(rift?1.45:2.35,1,rift?2.65+Math.sin(effect.age*3)*.18:2.35+Math.sin(effect.age*2.2)*.12);wave.rotation.y=-effect.age*(rift?2.1:.9);
-   beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(breathe,.55+.45*intro,breathe);
+   const floorScale=type==='DOMAIN'?3:type==='BLACKHOLE'?1.75:type==='BEAM'?1.6:over?2.5:2.1;
+   floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar(floorScale*(.6+.4*intro));floor.rotation.y=-effect.age*(type==='TIME_STOP'?.06:rift?.68:type==='BLACKHOLE'?1.25:.32);
+   const haloBase=type==='ORBIT'?2.25:type==='DOMAIN'?2.05:type==='BLACKHOLE'?1.25:over?1.75:1.5;
+   halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar(haloBase*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*(type==='TIME_STOP'?.12:type==='ORBIT'?2.8:1.4);
+   wave.material.opacity=over||rift||['RAIN','ORBIT','DOMAIN','BLACKHOLE','TIME_STOP'].includes(type)?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);
+   if(type==='BEAM')wave.scale.set(.8,1,3.2);else if(type==='RAIN')wave.scale.set(2.8,1,1.45);else if(type==='BLACKHOLE')wave.scale.setScalar(1.15+.22*Math.sin(effect.age*5));else wave.scale.set(rift?1.45:2.35,1,waveDepth(type,effect.age,rift));wave.rotation.y=-effect.age*(type==='TIME_STOP'?.08:rift?2.1:type==='ORBIT'?2.6:.9);
+   const beamWide=type==='BEAM'?.5:type==='RAIN'?.72:type==='BLACKHOLE'?1.35:breathe,beamTall=type==='BEAM'?1.65:type==='DOMAIN'?.42:.55+.45*intro;
+   beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(beamWide,beamTall,beamWide);
   }else{
    const out=1-life,fade=Math.sin(Math.PI*Math.min(1,life*1.15));
    floor.material.opacity=1;tint(floor.material,primary,.58*fade);floor.scale.setScalar(2.5+3.5*out);floor.rotation.y-=dt*1.4;
@@ -94,8 +99,8 @@ export function createActiveVFX(scene,{mobile=false}={}){
    const phase=i/moteCount;
    let x,y,z,scale,bright;
    if(running){
-    const cycle=(effect.age*(over?.9:.7)+phase)%1,a=phase*Math.PI*2+effect.age*(over?2.6:2)+cycle*2.4,r=(over?2.1:1.7)*(1-cycle*.75);
-    x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+cycle*2.3;scale=(.7+.6*Math.sin(Math.PI*cycle))*intro;bright=Math.sin(Math.PI*cycle)*tail;
+    const reverse=type==='RAIN'||type==='TIME_STOP',cycle=(effect.age*(over?.9:.7)+phase)%1,flow=reverse?1-cycle:cycle,a=phase*Math.PI*2+effect.age*(type==='TIME_STOP'?.1:over?2.6:2)+cycle*2.4,r=(type==='BLACKHOLE'?2.6:over?2.1:1.7)*(1-flow*.75);
+    x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+flow*(type==='BEAM'?3.5:2.3);scale=(.7+.6*Math.sin(Math.PI*cycle))*intro;bright=Math.sin(Math.PI*cycle)*tail;
    }else{
     const out=1-life,a=phase*Math.PI*2,r=1+6*out;
     x=Math.cos(a)*r;z=Math.sin(a)*r;y=.6+2*out-2.4*out*out;scale=1.2*(1-out*.5);bright=life;
@@ -107,7 +112,7 @@ export function createActiveVFX(scene,{mobile=false}={}){
   if(effect.time<=0){effect=null;clear();}
  }
  function clear(){effect=null;group.visible=false;for(const ob of [floor,halo,wave,beam])ob.material.opacity=0;motes.count=0;}
- function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
+ function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
  function dispose(){group.removeFromParent();const geos=new Set([floor.geometry,haloGeo,beam.geometry,moteGeo]);for(const g of geos)g.dispose();for(const ob of [floor,halo,wave,beam,motes])ob.material.dispose();for(const t of textures)t.dispose();}
  return {start,finish,update,clear,state,dispose};
 }

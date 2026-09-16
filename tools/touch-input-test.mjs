@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {createTouchControls} from '../src/touch.js';
+import {bindPointerAction,createTouchControls} from '../src/touch.js';
 class Element {
  constructor(){this.listeners={};this.style={};this.classList={toggle(){}};this.capture=new Set();this.children={i:{style:{}},small:{textContent:''},'.dash-charges':{children:[{classList:{toggle(){}}},{classList:{toggle(){}}}]}};}
  addEventListener(name,fn){(this.listeners[name]??=[]).push(fn);}
@@ -10,6 +10,7 @@ class Element {
  hasPointerCapture(id){return this.capture.has(id);}
  releasePointerCapture(id){this.capture.delete(id);}
  querySelector(q){return this.children[q];}
+ contains(){return true;}
 }
 const move=new Element(),dash=new Element(),panel=new Element(),doc=new Element(),win=new Element(),zone=new Element();
 Object.assign(doc,{documentElement:{clientWidth:1000,clientHeight:800},body:{classList:{toggle(){}},append(){}},createElement:()=>panel,querySelector:q=>q==='#move-stick'?move:q==='#move-stick i'?move.children.i:q==='#touch-dash'?dash:q==='#move-zone'?zone:null});
@@ -32,6 +33,21 @@ assert.equal(control.axes.move.x,1);
 dash.fire('pointerdown',{pointerId:2});
 assert.equal(control.consumeDash(),true);assert.equal(control.consumeDash(),false);
 assert.equal(control.axes.move.x,1,'Dodge keeps the movement finger active');
+// Potion and ultimate fire on their own pointerdown events while move and dodge
+// pointers are still held. The later synthetic click is ignored, while keyboard
+// click (detail=0) remains available.
+let clock=100,activeUses=0,itemUses=0;
+const activeButton=new Element(),itemBar=new Element(),itemButton=new Element();
+itemButton.dataset={item:'tonic'};itemButton.closest=q=>q==='[data-item]'?itemButton:null;
+bindPointerAction(activeButton,{now:()=>clock,onPress:()=>activeUses++});
+bindPointerAction(itemBar,{selector:'[data-item]',now:()=>clock,onPress:b=>{assert.equal(b.dataset.item,'tonic');itemUses++;}});
+activeButton.fire('pointerdown',{pointerId:3,pointerType:'touch'});
+itemBar.fire('pointerdown',{pointerId:4,pointerType:'touch',target:itemButton});
+assert.equal(activeUses,1);assert.equal(itemUses,1);assert.equal(control.axes.move.x,1,'Four-finger actions keep movement active');
+activeButton.fire('click',{detail:1});itemBar.fire('click',{detail:1,target:itemButton});
+assert.equal(activeUses,1);assert.equal(itemUses,1,'Synthetic clicks do not double-use actions');
+clock+=900;activeButton.fire('click',{detail:0});assert.equal(activeUses,2,'Keyboard click remains accessible');
+win.fire('pointerup',{pointerId:3});win.fire('pointerup',{pointerId:4});
 move.fire('pointerdown',{pointerId:3,clientX:15,clientY:50});
 assert.equal(control.axes.move.x,1,'A second finger cannot steal movement');
 move.fire('pointercancel',{pointerId:1});assert.deepEqual(control.axes.move,{x:0,y:0});

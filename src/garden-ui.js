@@ -2,7 +2,7 @@
 // 그림은 아직 법칙 그림을 빌려 쓴다(전용 그림이 나오면 plantArt만 바꾸면 된다).
 import {LAWS} from './laws.js';
 import {lawArt} from './law-art.js';
-import {harvestLine,SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,
+import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,
  stageOf,nextStagePoints,plantName,branchSummary,activePlants,gardenEffects,centerInfo,activeSlots,
  plantSeed,uproot,chooseBranch,setActive,craftSeed,BRANCHES,BRANCH_KINDS} from './garden.js';
 import './garden.css';
@@ -59,8 +59,9 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
   body=`<div class="panel-plant"><div class="panel-head"><em class="panel-glyph">${center.glyph}</em><div><strong>${escape(center.name)}</strong><small>${escape(center.hint)}</small></div></div>
    <p class="plot-effect">${escape(center.line)}</p></div>`;
  }else{
+  const recent=garden.records?.[0],memory=recent?`<h3>최근 여정의 흔적</h3><p class="plot-effect garden-memory">${escape(gardenRecordLine(recent))}</p>`:'';
   body=`<div class="panel-plant"><p class="panel-ask">정원의 식물이나 빈 자리를 눌러 보세요.</p>
-   <h3>씨앗 상자</h3>${seedChips('pick','아직 모은 씨앗이 없어요. 여정을 다녀오면 가장 깊게 키운 법칙의 씨앗이 남습니다.')}${craft}</div>`;
+   ${memory}<h3>씨앗 상자</h3>${seedChips('pick','아직 모은 씨앗이 없어요. 여정을 다녀오면 가장 깊게 키운 법칙의 씨앗이 남습니다.')}${craft}</div>`;
  }
 
  root.innerHTML=`<aside class="garden-panel${selection?'':' idle'}">

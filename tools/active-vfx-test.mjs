@@ -39,6 +39,15 @@ for(const mobile of [false,true]){
   assert.equal(fx.state().mode,'finale');
   fx.update(.6,player);
   assert.equal(fx.state().visible,false);
+  const profiles=new Set();
+  for(const archetype of ['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP']){
+    fx.start({state:'SIGNATURE',forms:['flarebloom'],tags:['EXPLOSION'],archetype,seconds:3},player);fx.update(.2,player);
+    assert.equal(fx.state().archetype,archetype);
+    const floor=root.getObjectByName('active-botanical-sigil'),halo=root.getObjectByName('active-halo'),wave=root.getObjectByName('active-wave'),beam=root.getObjectByName('active-beam');
+    profiles.add([floor.scale.x,halo.scale.x,wave.scale.x,wave.scale.z,beam.scale.x,beam.scale.y].map(v=>v.toFixed(2)).join('|'));
+    fx.clear();
+  }
+  assert.equal(profiles.size,7,'all seven ultimate skeletons have distinct motion silhouettes using the same five draws');
   fx.start({state:'SIGNATURE',forms:['f09-reflect-portal'],tags:['BOUNCE','RIFT'],seconds:3},player);fx.update(.2,player);
   const riftWave=root.getObjectByName('active-wave');assert.ok(riftWave.visible&&Math.abs(riftWave.scale.x-riftWave.scale.z)>1,'rift signatures open an oval gate instead of another circular blast');
   fx.clear();

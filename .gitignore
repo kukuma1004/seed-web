@@ -20,6 +20,8 @@ tools/*
 
 !tools/seed-body-test.mjs
 !tools/touch-input-test.mjs
+!tools/audio-test.mjs
+!tools/second-fusion-test.mjs
 !tools/run-save-test.mjs
 !tools/forms-test.mjs
 !tools/arena-test.mjs

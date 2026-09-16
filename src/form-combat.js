@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,GENERATED_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
+import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -38,15 +38,15 @@ const bossReach=(e,normal,boss)=>e.type==='warden'||e.type==='austin'?boss:norma
 const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
-// Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, enemyShots().
-export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,enemyShots=()=>[]}){
+// Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
+export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[]}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const awakenedMats=new Map();
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
- let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0;
+ let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
@@ -66,7 +66,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -87,10 +87,18 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   if(!active||ALL_FORMS[active].passive)return Infinity;
   const aim=dir.clone().setY(0).normalize();
   const full=(kind,cap)=>!force&&count(kind)>=cap;
-  if(GENERATED_FORMS[active]||active==='riftseed'){
+  if(GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'){
    if(full('gene',S.bolts))return S.interval;
-   const laws=[...(S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
-   bolts.push({kind:'gene',form:active,laws,ob,dir:aim,age:0,life:S.life,passed:new Set(),bounces:S.bounces||0,pierce:S.pierce||1,portaled:false,returning:false,fragment:false});
+   const second=SECOND_FORMS[active],secondRole=second?.family==='convergence'?(secondPhase++%2?'consume':'mark'):null;
+   const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
+   // A second fusion alternates two inherited law packets, so its projectile
+   // traits follow the packet being fired. Existing gene attacks keep their
+   // authored stat sheet (notably riftseed's two-target pierce).
+   const bounces=second?(laws.includes('reflect')?Math.max(2,S.bounces||0):0):(S.bounces||0);
+   const pierce=second?(laws.includes('pierce')?Math.max(2,S.pierce||1):1):(S.pierce||1);
+   const split=second?(laws.includes('split')?Math.max(2,S.split||0):0):(S.split||0);
+   const portalDistance=second?(laws.includes('portal')?Math.max(3.2,S.portalDistance||0):0):(S.portalDistance||0);
+   bolts.push({kind:'gene',form:active,laws,secondRole,ob,dir:aim,age:0,life:S.life,passed:new Set(),bounces,pierce,split,portalDistance,portaled:false,returning:false,fragment:false});
    fx.muzzle(pos,aim,laws[0]||'portal');return S.interval;
   }
   switch(active){
@@ -324,6 +332,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  }
 
  function update(dt){
+  markClock+=dt;
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
   if(awakened())awakenOpening(dt);
   for(const [e,t] of cooldowns){if(e.dead||t<=dt)cooldowns.delete(e);else cooldowns.set(e,t-dt);}
@@ -340,15 +349,15 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     // skip arena walls or cover, which keeps the hop readable and fair.
     if(!b.portaled&&!b.returning&&b.laws.includes('portal')&&b.age>.16){
      const entry=b.ob.position.clone(),exit=entry.clone();let travelled=0;
-     while(travelled+0.4<=S.portalDistance){const next=exit.clone().addScaledVector(b.dir,.4),probe=b.dir.clone();if(blocked(exit,next)||boundary(exit.clone(),next,probe))break;exit.copy(next);travelled+=.4;}
-     if(travelled>=.8){b.ob.position.copy(exit);fx.portal(entry,exit);b.portaled=true;b.age+=.05;}
+     while(travelled+0.4<=b.portalDistance){const next=exit.clone().addScaledVector(b.dir,.4),probe=b.dir.clone();if(blocked(exit,next)||boundary(exit.clone(),next,probe))break;exit.copy(next);travelled+=.4;}
+     if(travelled>=.8){b.ob.position.copy(exit);fx.portal(entry,exit);sound('portal');b.portaled=true;b.age+=.05;}
      else b.portaled=true;
     }
     const beforeMove=b.ob.position.clone();b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;
     const probe=b.dir.clone(),wall=boundary(beforeMove,b.ob.position,probe),cover=!wall&&blocked(beforeMove,b.ob.position);
     if(wall)b.dir.copy(probe);
     if(cover){b.ob.position.copy(beforeMove);b.dir.negate();}
-    if(wall||cover){if(b.bounces>0&&!b.returning){b.bounces--;b.passed.clear();fx.reflect(b.ob.position,b.dir);}else if(b.laws.includes('recall')&&!b.returning){b.returning=true;b.passed.clear();}else b.life=0;}
+    if(wall||cover){if(b.bounces>0&&!b.returning){b.bounces--;b.passed.clear();fx.reflect(b.ob.position,b.dir);sound('reflect');}else if(b.laws.includes('recall')&&!b.returning){b.returning=true;b.passed.clear();}else b.life=0;}
     if(b.life<=0)continue;
     const direction=b.dir.clone(),targets=enemies().filter(e=>!e.dead&&!b.passed.has(e)&&segmentDistance(beforeMove,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
     targets.sort((x,y)=>x.g.position.clone().sub(beforeMove).dot(direction)-y.g.position.clone().sub(beforeMove).dot(direction));
@@ -356,7 +365,13 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      b.passed.add(e);
      const landed=support(e,S.damage*(b.fragment?.48:1),{kind:b.form,direction:direction.clone(),comboLaws:b.laws,generated:true,indirect:b.fragment});
      if(!landed){b.life=0;break;}
-     if(!b.fragment&&S.split>0){fx.split(e.g.position,direction,Math.min(5,S.split));for(let i=0;i<S.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(S.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);ob.scale.setScalar(.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,portaled:true,returning:false,fragment:true});}}
+     const second=SECOND_FORMS[b.form];
+     if(second&&!b.fragment){
+      if(second.family==='resonance'&&++secondHits%3===0){const resonant=(Math.floor(secondHits/3)%2?S.primaryLaws:S.followUpLaws)||b.laws;fx.pulse(e.g.position,second.sharedLaw||'awaken',1.15,.28);fx.burst(e.g.position,second.sharedLaw||'awaken',12,.75);sound(second.sharedLaw==='portal'?'portal':'fusion');support(e,S.damage*S.followUpScale,{kind:b.form,direction:direction.clone(),comboLaws:resonant,generated:true,indirect:true,resonance:true});}
+      else if(second.family==='convergence'&&b.secondRole==='mark'){secondMarks.set(e,markClock+S.markWindow);fx.pulse(e.g.position,b.laws[0],.62,.24);}
+      else if(second.family==='convergence'&&b.secondRole==='consume'){const expires=secondMarks.get(e)||0;if(expires>=markClock){secondMarks.delete(e);fx.explosion(e.g.position,S.followUpLaws.includes('burst')?'burst':S.followUpLaws[0],1.05);sound(S.followUpLaws.includes('portal')?'portal':'fusion');support(e,S.damage*S.followUpScale,{kind:b.form,direction:direction.clone(),comboLaws:S.followUpLaws,generated:true,indirect:true,convergence:true});}}
+     }
+     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);ob.scale.setScalar(.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
      b.pierce--;if(b.pierce<=0){b.life=0;break;}
     }
     fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
@@ -618,11 +633,11 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   const nearest=(n,range=10)=>enemies().filter(e=>!e.dead&&flat(e.g.position,pos)<range).sort((a,b)=>flat(a.g.position,pos)-flat(b.g.position,pos)).slice(0,n);
   if(awakened()){fx.pulse(pos,'awaken',3.2,.55);fx.burst(pos,'awaken',36,2.2);}
   fx.pulse(pos,OPENING_FX[active]||'seed',2.4,.5);fx.burst(pos,OPENING_FX[active]||'seed',30,1.8);
-  if(GENERATED_FORMS[active]||active==='riftseed'){
+  if(GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'){
    // Keep the visual burst large while capping damaging projectiles. Generated
    // openings would otherwise outscale their low-cadence normal attack.
    const shots=active==='riftseed'?4:2;
-   for(const d of around(shots))fire(pos,d,null,true);
+   if(SECOND_FORMS[active]?.family==='convergence'){fire(pos,dir,null,true);fire(pos,dir.clone().applyAxisAngle(Y,.08),null,true);}else for(const d of around(shots))fire(pos,d,null,true);
    if((S.laws||[]).includes('portal'))for(const d of around(4)){const exit=pos.clone().addScaledVector(d,Math.min(4,S.portalDistance));fx.portal(pos,exit);}
    return;
   }
@@ -677,6 +692,6 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  }
 
  return {set,fire,update,clear,surge,calm,
-  state:()=>({active,evolution:ownerId||statId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:ownerId||statId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

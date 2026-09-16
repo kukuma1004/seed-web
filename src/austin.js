@@ -112,6 +112,7 @@ function startPattern(e,delta,hooks){
  if(kind==='sweep'&&!sweepFits){e.queuedSweep=true;kind='jab';}
  if(kind==='sweep')e.queuedSweep=false;
  e.kind=kind;
+ hooks.sound?.('bossWarning');
  if(kind==='jab'){e.state='jabTell';e.timer=AUSTIN.jab.tell*P.tempo;e.dashes=0;e.dir.copy(delta);}
  else if(kind==='sweep'){e.state='sweepTell';e.timer=AUSTIN.sweep.tell*P.tempo;e.beamAngle=Math.atan2(delta.x,delta.z);e.beamSign=-e.beamSign;}
  else if(kind==='volley'){e.state='volleyTell';e.timer=Math.max(.42,AUSTIN.volley.tell*P.tempo);e.volleys=0;e.dir.copy(aimAhead(e,hooks.player));}
@@ -133,7 +134,7 @@ function startPattern(e,delta,hooks){
 
 // hooks: player (Vector3), collide(pos,r), bolt(pos,dir,{speed,damage}), hit(amount)->bool, burst(pos,color,n), pulse(pos,color,r,life)
 export function tickAustin(e,dt,hooks){
- const {player,collide=()=>{},bolt=()=>{},hit=()=>false,burst=()=>{},pulse=()=>{},clearBolts=()=>{}}=hooks;
+ const {player,collide=()=>{},bolt=()=>{},hit=()=>false,burst=()=>{},pulse=()=>{},clearBolts=()=>{},sound=()=>{}}=hooks;
  if(e.previousPlayer)e.velocity.copy(player).sub(e.previousPlayer).setY(0).divideScalar(Math.max(dt,.001)).clampLength(0,7);
  else e.previousPlayer=new V();
  e.previousPlayer.copy(player);
@@ -155,15 +156,15 @@ export function tickAustin(e,dt,hooks){
  while(e.clock>=beatLen){
   e.clock-=beatLen;e.beats++;
   const into=e.beats%AUSTIN.hourBeats;
-  if(into===AUSTIN.hourBeats-AUSTIN.bell.warnBeats)e.bellWarn=true;
-  if(into===0){e.bellAge=0;e.ringHour=e.hour;ring(e,e.ringHour,0,bolt,burst);e.pendingRing=AUSTIN.bell.ringDelay;e.bellWarn=false;e.hour=(e.hour+AUSTIN.hourStep)%12;}
+  if(into===AUSTIN.hourBeats-AUSTIN.bell.warnBeats){e.bellWarn=true;sound('bossWarning');}
+  if(into===0){e.bellAge=0;e.ringHour=e.hour;ring(e,e.ringHour,0,bolt,burst);sound('bossAttack');e.pendingRing=AUSTIN.bell.ringDelay;e.bellWarn=false;e.hour=(e.hour+AUSTIN.hourStep)%12;}
  }
  if(e.pendingRing>0){e.pendingRing-=dt;if(e.pendingRing<=0)ring(e,e.ringHour,Math.PI/P.bolts,bolt,burst);}
  for(let i=e.alarms.length-1;i>=0;i--){
   const a=e.alarms[i];a.time-=dt;const k=1-a.time/a.max;
   a.fill.material.opacity=.14+.42*k;a.group.scale.setScalar(1+.035*Math.sin(k*Math.PI*10));a.clock.position.y=.4+Math.abs(Math.sin(a.time*(10+20*k)))*.18;
   if(a.time<=0){
-   pulse(a.pos,'burst',AUSTIN.alarm.radius,.4);burst(a.pos,'amber',22);
+   pulse(a.pos,'burst',AUSTIN.alarm.radius,.4);burst(a.pos,'amber',22);sound('bossAttack');
    if(Math.hypot(player.x-a.pos.x,player.z-a.pos.z)<AUSTIN.alarm.radius)hit(AUSTIN.alarm.damage);
    a.group.removeFromParent();a.group.traverse(o=>{o.geometry?.dispose();o.material?.dispose();});e.alarms.splice(i,1);
   }
@@ -174,7 +175,7 @@ export function tickAustin(e,dt,hooks){
   e.g.position.addScaledVector(delta,dt*3.4*want);
   e.g.position.x+=delta.z*dt*2.3*side;e.g.position.z-=delta.x*dt*2.3*side;
   face(delta);e.timer-=dt;
-  if(e.timer<=0)startPattern(e,delta,{player,collide});
+  if(e.timer<=0)startPattern(e,delta,{player,collide,sound});
  }else if(e.state==='jabTell'){
   face(e.dir);e.timer-=dt;
   if(e.timer<=0){e.state='jab';e.timer=AUSTIN.jab.dash;e.jabHit=false;}

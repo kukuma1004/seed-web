@@ -1,4 +1,4 @@
-import {ALL_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
@@ -21,6 +21,29 @@ export const ACTIVE=Object.freeze({
 export const LAW_TAGS=Object.freeze({reflect:'BOUNCE',split:'MULTI',chain:'LINK',orbit:'ORBIT',pierce:'PIERCE',burst:'EXPLOSION',recall:'RETURN',gravity:'CONTROL',frost:'FROST',portal:'RIFT'});
 export const TAG_NAMES=Object.freeze({BOUNCE:'튕김',MULTI:'분열',LINK:'연결',ORBIT:'공전',PIERCE:'관통',EXPLOSION:'폭발',RETURN:'귀환',CONTROL:'끌림',FROST:'서리',RIFT:'차원'});
 export const STATE_NAMES=Object.freeze({LOCKED:'잠김',SIGNATURE:'시그니처',OVERDRIVE:'오버드라이브'});
+
+// A small set of reusable ultimate skeletons. The build selects one from its
+// law tags; visuals and themes can style the skeleton without 990 bespoke VFX.
+export const ULTIMATE_ARCHETYPES=Object.freeze({
+ BURST:Object.freeze({id:'BURST',name:'폭발',desc:'중심에서 힘을 모아 한 번에 터뜨립니다.'}),
+ RAIN:Object.freeze({id:'RAIN',name:'낙하',desc:'여러 표적과 경로 위로 연속 공격을 쏟아붓습니다.'}),
+ ORBIT:Object.freeze({id:'ORBIT',name:'성환',desc:'씨앗 둘레의 궤도가 넓어지며 전장을 휩씁니다.'}),
+ BEAM:Object.freeze({id:'BEAM',name:'광선',desc:'한 축에 힘을 모아 깊고 길게 관통합니다.'}),
+ DOMAIN:Object.freeze({id:'DOMAIN',name:'영역',desc:'넓은 공간을 법칙의 장으로 바꿉니다.'}),
+ BLACKHOLE:Object.freeze({id:'BLACKHOLE',name:'특이점',desc:'적을 중심으로 끌어들인 뒤 압축해 붕괴시킵니다.'}),
+ TIME_STOP:Object.freeze({id:'TIME_STOP',name:'시간 정지',desc:'주변의 움직임을 묶고 멈춘 순간을 깨뜨립니다.'})
+});
+
+export function ultimateArchetype(ids=[]){
+ const tags=overdriveTags(ids);
+ if(tags.includes('CONTROL'))return ULTIMATE_ARCHETYPES.BLACKHOLE;
+ if(tags.includes('FROST'))return ULTIMATE_ARCHETYPES.TIME_STOP;
+ if(tags.includes('RIFT'))return ULTIMATE_ARCHETYPES.DOMAIN;
+ if(tags.includes('PIERCE'))return ULTIMATE_ARCHETYPES.BEAM;
+ if(tags.includes('ORBIT'))return ULTIMATE_ARCHETYPES.ORBIT;
+ if(tags.includes('LINK')||tags.includes('MULTI'))return ULTIMATE_ARCHETYPES.RAIN;
+ return ULTIMATE_ARCHETYPES.BURST;
+}
 
 // Each evolution's signature: an opening move the moment it fires, then a few seconds of its stronger self.
 const sig=(name,desc)=>Object.freeze({name,desc});
@@ -49,6 +72,7 @@ const BASE_SIGNATURES=Object.freeze({
 export const SIGNATURES=Object.freeze({
  ...BASE_SIGNATURES,
  ...Object.fromEntries(Object.values(GENERATED_FORMS).map(f=>[f.id,sig(`${f.name} · 개문`,`${f.name}의 핵심 탄을 양쪽으로 펼치고, 잠시 동안 더 자주 쏘며 깊게 관통합니다.`)])),
+ ...Object.fromEntries(Object.values(SECOND_FORMS).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
@@ -113,7 +137,7 @@ export function startActive(gauge,forms){
  const seconds=overdrive?ACTIVE.overdriveSeconds:ACTIVE.signatureSeconds;
  const tags=overdriveTags(s.forms);
  gauge.value=0;
- gauge.plan={state:s.state,forms:s.forms,seconds,time:seconds,tags,finale:overdrive?overdriveFinale(tags,s.level):null};
+ gauge.plan={state:s.state,forms:s.forms,seconds,time:seconds,tags,archetype:ultimateArchetype(s.forms).id,finale:overdrive?overdriveFinale(tags,s.level):null};
  return gauge.plan;
 }
 // Returns the finished plan on the frame it ends, otherwise null.
@@ -129,8 +153,9 @@ export function cancelActive(gauge){if(gauge.plan)gauge.cooldown=Math.max(gauge.
 export function activeSummary(forms,gauge){
  const s=activeState(forms);
  if(s.state==='LOCKED')return {state:s.state,title:'궁극기 잠김',lines:['완성 진화나 단독 진화를 얻으면 열립니다']};
- if(s.state==='SIGNATURE'){const g=SIGNATURES[s.forms[0]];return {state:s.state,forms:s.forms,title:g.name,lines:[g.desc,`${ACTIVE.signatureSeconds}초 · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`]};}
+ if(s.state==='SIGNATURE'){const g=SIGNATURES[s.forms[0]],archetype=ultimateArchetype(s.forms);return {state:s.state,forms:s.forms,title:g.name,archetype:archetype.id,lines:[`${archetype.name}형 · ${archetype.desc}`,g.desc,`${ACTIVE.signatureSeconds}초 · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`]};}
  const tags=overdriveTags(s.forms),finale=overdriveFinale(tags,s.level);
- return {state:s.state,forms:s.forms,title:`오버드라이브 · ${s.forms.map(id=>SIGNATURES[id].name).join(' + ')}`,
-  lines:[`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`공전 진화는 가장 강한 하나만 공명`,`사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`,`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
+ const archetype=ultimateArchetype(s.forms);
+ return {state:s.state,forms:s.forms,title:`오버드라이브 · ${s.forms.map(id=>SIGNATURES[id].name).join(' + ')}`,archetype:archetype.id,
+  lines:[`${archetype.name}형 · ${archetype.desc}`,`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`공전 진화는 가장 강한 하나만 공명`,`사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`,`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
 }

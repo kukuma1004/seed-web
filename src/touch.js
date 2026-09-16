@@ -1,3 +1,39 @@
+// Pointer-driven combat buttons must fire on pointerdown, not on the synthetic click
+// some mobile browsers omit while another finger owns the movement stick. The click
+// fallback keeps mouse and keyboard activation accessible and is deduplicated.
+export function bindPointerAction(root,{selector=null,onPress,now=()=>performance.now()}={}){
+  const pointers=new Map();let lastPointerAt=-Infinity;
+  const targetOf=event=>{
+    const target=selector?event.target?.closest?.(selector):root;
+    if(!target||(selector&&root.contains&&!root.contains(target)))return null;
+    return target;
+  };
+  const finish=event=>{
+    const target=pointers.get(event.pointerId);if(!target)return;
+    pointers.delete(event.pointerId);
+    try{if(target.hasPointerCapture?.(event.pointerId))target.releasePointerCapture(event.pointerId);}catch{}
+  };
+  const reset=()=>{for(const [id,target] of pointers)try{if(target.hasPointerCapture?.(id))target.releasePointerCapture(id);}catch{}pointers.clear();};
+  root.addEventListener('pointerdown',event=>{
+    if(event.pointerType==='mouse'&&event.button!==undefined&&event.button!==0)return;
+    const target=targetOf(event);if(!target||pointers.has(event.pointerId))return;
+    event.preventDefault();pointers.set(event.pointerId,target);lastPointerAt=now();
+    try{target.setPointerCapture?.(event.pointerId);}catch{}
+    if(onPress?.(target,event)===false)finish(event);
+  });
+  root.addEventListener('click',event=>{
+    const target=targetOf(event);if(!target)return;
+    // detail=0 is keyboard activation and must never be swallowed.
+    if(event.detail!==0&&now()-lastPointerAt<800){event.preventDefault();return;}
+    onPress?.(target,event);
+  });
+  for(const name of ['pointerup','pointercancel','lostpointercapture'])root.addEventListener(name,finish);
+  globalThis.window?.addEventListener?.('pointerup',finish);
+  globalThis.window?.addEventListener?.('pointercancel',finish);
+  globalThis.window?.addEventListener?.('blur',reset);
+  return {reset,state:()=>({pointers:pointers.size})};
+}
+
 // Movement owns its pointer; the separate dodge button never releases that pointer.
 // The stick floats: a thumb pressed anywhere in the left movement zone becomes the stick's centre,
 // and dragging far past the rim pulls the stick along. Pressing the resting stick itself works as before.
@@ -20,7 +56,7 @@ export function createTouchControls(canAct){
   function float(x,y){stick.style.left=`${x}px`;stick.style.top=`${y}px`;stick.classList.toggle('floating',true);}
   function rest(){stick.style.left='';stick.style.top='';stick.classList.toggle('floating',false);center=null;}
   function clear(){axes.move.x=axes.move.y=0;knob.style.transform='translate(-50%,-50%)';rest();}
-  function reset(){for(const [id,{element}] of owners){if(element.hasPointerCapture(id))element.releasePointerCapture(id);}owners.clear();clear();dashUntil=0;}
+  function resetMovement(){for(const [id,{element}] of owners){if(element.hasPointerCapture(id))element.releasePointerCapture(id);}owners.clear();clear();dashUntil=0;}
   function move(e){
     if(owners.get(e.pointerId)?.role!=='move'||!center)return;
     let dx=e.clientX-center.x,dy=e.clientY-center.y;
@@ -59,14 +95,14 @@ export function createTouchControls(canAct){
     for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,end);
   }
   const dashButton=document.querySelector('#touch-dash'),dashLabel=dashButton.querySelector('small'),dashCharges=dashButton.querySelector('.dash-charges');
-  dashButton.addEventListener('pointerdown',e=>{e.preventDefault();if(canAct())dashUntil=performance.now()+220;});
-  window.addEventListener('blur',reset);window.addEventListener('resize',reset);
-  document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
-  return {enabled,axes,reset,
+  const dashPress=bindPointerAction(dashButton,{onPress:()=>{if(!canAct())return false;dashUntil=performance.now()+220;return true;}});
+  window.addEventListener('blur',resetMovement);window.addEventListener('resize',resetMovement);
+  document.addEventListener('visibilitychange',()=>{if(document.hidden)resetMovement();});
+  return {enabled,axes,reset(){dashPress.reset();resetMovement();},
     consumeDash(){const active=dashUntil>performance.now();dashUntil=0;return active;},
     update(active,cooldown,dash={charges:cooldown>0?0:1,maxCharges:1,recharge:cooldown}){
       if(panel.hidden!==!active)panel.hidden=!active;
-      if(!active){if(owners.size||dashUntil)reset();return;}
+      if(!active){if(owners.size||dashUntil)resetMovement();return;}
       const label=dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!dash.charges;
       if(dashButton.__cooling!==cooling){dashButton.classList.toggle('cooling',cooling);dashButton.__cooling=cooling;}
       const chargeKey=`${dash.charges}/${dash.maxCharges}`;
@@ -75,6 +111,6 @@ export function createTouchControls(canAct){
       const aria=`회피${dash.maxCharges>1?` · ${dash.charges}/${dash.maxCharges} 충전`:cooldown>0?` · ${cooldown.toFixed(1)}초 뒤 준비`:' · 준비'}`;
       if(dashButton.__aria!==aria){dashButton.setAttribute?.('aria-label',aria);dashButton.__aria=aria;}
     },
-    state(){return {enabled,move:{...axes.move},aim:{...axes.aim},pointers:owners.size,floating:Boolean(center?.floating),center:center?{x:center.x,y:center.y}:null};}
+    state(){return {enabled,move:{...axes.move},aim:{...axes.aim},pointers:owners.size+dashPress.state().pointers,floating:Boolean(center?.floating),center:center?{x:center.x,y:center.y}:null};}
   };
 }

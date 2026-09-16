@@ -2,9 +2,10 @@
 // 여기서는 규칙만 다룬다(화면은 garden-ui.js, 저장은 seed-garden-v1).
 // 설계 원칙: 공격력 같은 직접 강화가 아니라 무엇이 나타나는가를 바꾼다.
 import {LAWS} from './laws.js';
+import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
 export const GARDEN_KEY='seed-garden-v1';
-export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,GUARDIAN='clocktower';
+export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower';
 export const STAGES=['seed','sprout','mature','bloom'];
 export const STAGE_NAMES=Object.freeze({seed:'심은 씨앗',sprout:'새싹',mature:'자란 풀',bloom:'개화'});
 // 성장점은 던전을 다녀와야 쌓인다(기다리는 게임이 아니라 하는 게임).
@@ -47,7 +48,16 @@ export function nextStagePoints(growth){
 }
 const plant=p=>p&&SEEDS[p.seed]?{seed:p.seed,growth:Math.max(0,Math.min(999,Math.floor(p.growth)||0)),
  branch:BRANCHES.includes(p.branch)?p.branch:null,active:p.active===true}:null;
-export const emptyGarden=()=>({version:1,plots:Array(PLOTS).fill(null),seeds:{},fragments:0,harvests:0});
+export const emptyGarden=()=>({version:2,plots:Array(PLOTS).fill(null),seeds:{},fragments:0,harvests:0,records:[]});
+const runRecord=value=>{
+ if(!value||typeof value!=='object')return null;
+ const law=Object.hasOwn(LAWS,value.law)?value.law:null;
+ const forms=Array.isArray(value.forms)?value.forms.map(entry=>typeof entry==='string'?{id:entry,level:1}:entry).filter(entry=>entry&&Object.hasOwn(ALL_FORMS,entry.id)&&Number.isFinite(entry.level)&&entry.level>0).slice(0,2).map(entry=>({id:entry.id,level:Math.min(999,Math.floor(entry.level))})):[];
+ const score=Math.max(0,Math.min(1e9,Math.floor(value.score)||0)),kills=Math.max(0,Math.min(1e7,Math.floor(value.kills)||0)),journey=Math.max(1,Math.min(999,Math.floor(value.journey)||1));
+ const boss=value.boss==='austin'?'austin':value.boss==='warden'?'warden':null;
+ if(!law&&!forms.length&&!score&&!kills)return null;
+ return {law,forms,score,kills,journey,boss,rare:forms.some(entry=>Object.hasOwn(SECOND_FORMS,entry.id))};
+};
 export function normalizeGarden(value){
  const g=emptyGarden();
  if(!value||typeof value!=='object')return g;
@@ -56,6 +66,7 @@ export function normalizeGarden(value){
   if(SEEDS[id]&&Number.isInteger(n)&&n>0)g.seeds[id]=Math.min(99,n);
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
+ if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
  // 활성 식물은 자란 뒤 분기를 고른 것만, 그리고 정해진 칸 수까지만.
  let active=0;
  for(const p of g.plots){
@@ -77,20 +88,29 @@ export function dominantLaw(levels={}){
  }
  return best;
 }
-export function harvestFromRun({levels={},wardens=0,austins=0}={}){
+export function harvestFromRun({levels={},forms={},wardens=0,austins=0,score=0,kills=0,journey=1}={}){
  const law=dominantLaw(levels),seeds=[];
  if(austins>0)seeds.push(GUARDIAN);
  // 문지기를 한 번이라도 넘었으면 완성된 씨앗, 못 넘었으면 조각만 남는다.
  if(law&&wardens>0)seeds.push(law);
  const fragments=law&&wardens<=0?1:0;
- return {seeds,fragments,growth:1+Math.max(0,wardens)+Math.max(0,austins)*2};
+ const strongest=Object.entries(forms).filter(([id,level])=>Object.hasOwn(ALL_FORMS,id)&&Number.isFinite(level)&&level>0).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([id,level])=>({id,level}));
+ const boss=austins>0?'austin':wardens>0?'warden':null;
+ return {seeds,fragments,growth:1+Math.max(0,wardens)+Math.max(0,austins)*2,record:runRecord({law,forms:strongest,score,kills,journey,boss})};
 }
 export function addHarvest(garden,harvest){
  const g=normalizeGarden(garden);
  for(const id of harvest?.seeds||[])if(SEEDS[id])g.seeds[id]=Math.min(99,(g.seeds[id]||0)+1);
  g.fragments=Math.min(999,g.fragments+(harvest?.fragments||0));
+ const record=runRecord(harvest?.record);if(record)g.records=[record,...g.records].slice(0,MAX_RECORDS);
  g.harvests++;
  return g;
+}
+export function gardenRecordLine(record){
+ const r=runRecord(record);if(!r)return '';
+ const build=r.forms.map(entry=>`${ALL_FORMS[entry.id].name} Lv.${entry.level}`).join(' + ')||(r.law?`${LAWS[r.law].name} 법칙`:'이름 없는 씨앗');
+ const boss=r.boss==='austin'?'오스틴 격파':r.boss==='warden'?'문지기 돌파':'도전';
+ return `여정 ${r.journey} · ${build} · ${boss} · ${r.kills} 처치${r.rare?' · 희귀 재융합':''}`;
 }
 // 조각 세 개로 원하는 씨앗 하나를 만든다(실패한 여정도 쌓이면 선택이 된다).
 export function craftSeed(garden,seedId){

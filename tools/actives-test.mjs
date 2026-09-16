@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {ACTIVE,LAW_TAGS,TAG_NAMES,SIGNATURES,activeState,overdriveTags,overdriveFinale,createActiveGauge,chargeActive,killCharge,bossCharge,activeReady,startActive,tickActive,cancelActive,activeSummary,validActiveGauge,validActiveCooldown} from '../src/actives.js';
+import {ACTIVE,LAW_TAGS,TAG_NAMES,SIGNATURES,ULTIMATE_ARCHETYPES,ultimateArchetype,activeState,overdriveTags,overdriveFinale,createActiveGauge,chargeActive,killCharge,bossCharge,activeReady,startActive,tickActive,cancelActive,activeSummary,validActiveGauge,validActiveCooldown} from '../src/actives.js';
 import {activeCombatEvolutions,orbitCore,canAcquireEvolution} from '../src/evolution-family.js';
 import {ALL_FORMS,FORMS,SOLO_FORMS} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
@@ -13,6 +13,8 @@ for(const tag of Object.values(LAW_TAGS))assert.ok(TAG_NAMES[tag]);
 assert.deepEqual(Object.keys(SIGNATURES).sort(),Object.keys(ALL_FORMS).sort());
 for(const s of Object.values(SIGNATURES))assert.ok(s.name&&s.desc);
 assert.equal(new Set(Object.values(SIGNATURES).map(s=>s.name)).size,Object.keys(ALL_FORMS).length,'signature names are unique');
+assert.equal(Object.keys(ULTIMATE_ARCHETYPES).length,7);
+assert.deepEqual(['flarebloom','fullbloom','starring','glassspear','riftseed','blackhole','winterbreath'].map(id=>ultimateArchetype([id]).id),['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP']);
 
 // States follow the evolutions held: none, one, two or more (the two strongest; ties keep the first gained).
 assert.equal(activeState(new Map()).state,'LOCKED');
@@ -48,6 +50,7 @@ chargeActive(g,ACTIVE.kill);assert.equal(g.value,ACTIVE.max);chargeActive(g,50);
 assert.equal(startActive(g,new Map()),null,'locked without an evolution');assert.equal(g.value,ACTIVE.max,'a refused start spends nothing');
 const plan=startActive(g,new Map([['prism',2]]));
 assert.equal(plan.state,'SIGNATURE');assert.equal(plan.seconds,ACTIVE.signatureSeconds);assert.equal(g.value,0);assert.equal(plan.finale,null);
+assert.equal(plan.archetype,'RAIN');
 chargeActive(g,40);assert.equal(g.value,0,'no charge while the active runs (no self-refilling loop)');
 assert.equal(startActive(g,new Map([['prism',2]])),null,'no second start while running');
 assert.equal(tickActive(g,ACTIVE.signatureSeconds-.1),null);const ended=tickActive(g,.2);assert.equal(ended,plan);assert.equal(g.plan,null);
@@ -56,6 +59,7 @@ tickActive(g,ACTIVE.cooldownSeconds-.1);chargeActive(g,10);assert.equal(g.value,
 tickActive(g,.2);chargeActive(g,10);assert.equal(g.value,10,'charging resumes after stabilization');
 g.value=ACTIVE.max;const od=startActive(g,three);
 assert.equal(od.state,'OVERDRIVE');assert.equal(od.seconds,ACTIVE.overdriveSeconds);assert.deepEqual(od.tags,['CONTROL','EXPLOSION','BOUNCE','MULTI']);assert.ok(od.finale.pull>0&&od.finale.hits===2);
+assert.equal(od.archetype,'BLACKHOLE');
 cancelActive(g);assert.equal(g.plan,null);
 assert.equal(createActiveGauge(250).value,ACTIVE.max);assert.equal(createActiveGauge(NaN).value,0);
 assert.equal(createActiveGauge(0,999).cooldown,ACTIVE.cooldownSeconds);
@@ -94,4 +98,4 @@ for(const id of Object.keys(ALL_FORMS)){
  combat.dispose();
 }
 assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,55);
-console.log('Actives: 100 signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.');
+console.log(`Actives: ${Object.keys(SIGNATURES).length} signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.`);

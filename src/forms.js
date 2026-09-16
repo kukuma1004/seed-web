@@ -1,4 +1,4 @@
-import {FIRST_FUSIONS} from './combo-catalog.js';
+import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS} from './combo-catalog.js';
 
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
 // The ten hand-authored classics keep their bespoke attacks. The other 35 pairs
@@ -32,6 +32,18 @@ const generatedForm=entry=>Object.freeze({
 });
 export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
 export const FORMS=Object.freeze({...CURATED_FORMS,...GENERATED_FORMS});
+const RUNTIME_FIRST_BY_PAIR=new Map(Object.values(FORMS).map(f=>[pairKey(f.requires),f.id]));
+const secondForm=entry=>{
+ const parts=Object.freeze(entry.parts.map(id=>RUNTIME_FIRST_BY_PAIR.get(pairKey(FIRST_FUSION_BY_ID[id].laws))));
+ const desc=entry.family==='resonance'?entry.rule:`${FORMS[parts[0]].name}이 표식을 남기면 ${FORMS[parts[1]].name}이 소비해 교차 효과를 냅니다.`;
+ return Object.freeze({id:entry.id,name:parts.map(id=>FORMS[id].name).join(' × '),parts,requires:entry.laws,pair:parts.map(id=>FORMS[id].name).join(' + '),
+  desc,strength:entry.family==='resonance'?`공유 ${LAW_KO[entry.sharedLaw]} 법칙이 세 번째 적중마다 증폭`:'첫 공격의 표식을 다음 공격이 소비해 교차 폭발',
+  weakness:entry.family==='resonance'?'세 번째 적중 전에 빗나가면 공명 주기가 늦어짐':'표식이 남은 적을 후속 탄이 맞혀야 제 화력이 남',
+  passive:false,generated:true,second:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual});
+};
+export const SECOND_FORMS=Object.freeze(Object.fromEntries(SECOND_FUSIONS.map(entry=>[entry.id,secondForm(entry)])));
+const SECOND_BY_PARTS=new Map(Object.values(SECOND_FORMS).map(f=>[[...f.parts].sort().join('+'),f.id]));
+export const secondFormOf=(a,b)=>a===b?null:SECOND_BY_PARTS.get([a,b].sort().join('+'))||null;
 
 // Solo evolutions: one law raised far enough becomes an attack of its own.
 // They live beside the 45 first fusions (FORMS stays fusion-only) and take one slot like a fusion does.
@@ -132,7 +144,7 @@ export const TWIN_FORMS=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // Every evolution the seed can hold: 45 first fusions, ten solo evolutions,
 // ten curated awakenings and 35 twin awakenings.
-export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS});
+export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
 // The attacks an evolution fights with, one combat each: a twin has two, everything else one.
@@ -231,15 +243,25 @@ function awakenStats(id,s){
  return boosted;
 }
 function surgeStats(id,s){
- const isGenerated=Boolean(GENERATED_FORMS[id]);
+ const isSecond=Boolean(SECOND_FORMS[id]),isGenerated=Boolean(GENERATED_FORMS[id]||isSecond);
  const generated=isGenerated?{bolts:s.bolts||4,pierce:(s.pierce||1)+1,portalDistance:(s.portalDistance||0)+(s.laws?.includes('portal')?1.2:0)}:{};
  const boosted={...s,...generated,...(SURGE[id]?.(s)||{}),surge:true};
- if(Number.isFinite(boosted.interval))boosted.interval*=isGenerated?.7:.5;
- for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=isGenerated?1.4:SURGE_DAMAGE;
+ if(Number.isFinite(boosted.interval))boosted.interval*=isSecond?.6:isGenerated?.7:.5;
+ for(const key of DAMAGE_KEYS)if(typeof boosted[key]==='number')boosted[key]*=isSecond?2:isGenerated?1.4:SURGE_DAMAGE;
  return boosted;
 }
 function baseStats(id,level){
  const L=Math.max(1,Math.floor(level)),up=L-1,power=1+.25*up,faster=Math.max(.55,1-.05*up);
+ if(SECOND_FORMS[id]){
+  const form=SECOND_FORMS[id],primaryLaws=FORMS[form.parts[0]].requires,followUpLaws=FORMS[form.parts[1]].requires;
+  return {interval:.98*faster*form.budget.interval,damage:46*power*form.budget.damage,speed:12.5,life:2.5,bolts:3,laws:primaryLaws,primaryLaws,followUpLaws,
+   secondFamily:form.family,sharedLaw:form.sharedLaw,markWindow:2.6,followUpScale:form.family==='resonance'?.58:.72,
+   pierce:primaryLaws.includes('pierce')?Math.min(7,3+Math.floor(up/2)):1,
+   bounces:primaryLaws.includes('reflect')?Math.min(7,2+Math.floor(up/3)):0,
+   split:primaryLaws.includes('split')?Math.min(5,2+Math.floor(up/4)):0,
+   portalDistance:primaryLaws.includes('portal')?Math.min(6,3.2+.18*up):0,
+   returns:primaryLaws.includes('recall')?1:0};
+ }
  if(GENERATED_FORMS[id]){
   const laws=GENERATED_FORMS[id].requires;
   return {interval:.9*faster,damage:34*power,speed:12,life:2.35,bolts:4,laws,
@@ -278,7 +300,7 @@ function baseStats(id,level){
 // What the next form level changes, for the reward screen.
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
- if(GENERATED_FORMS[id])return `진화 Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
+ if(GENERATED_FORMS[id]||SECOND_FORMS[id])return `${SECOND_FORMS[id]?'재융합':'진화'} Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}

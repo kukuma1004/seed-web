@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,soloLevel,soloFormOf} from './forms.js';
+import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,secondFormOf,soloLevel,soloFormOf} from './forms.js';
 
 // Laws are stacked, never swapped: six slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -139,6 +139,27 @@ export function fuse(levels,forms,id){
  for(const law of FORMS[id].requires)levels.delete(law);
  forms.set(id,(forms.get(id)||0)+gained);
  return true;
+}
+// Two different first fusions can be folded into one second fusion. Only the
+// held pair is scanned (at most six slots); the 990-entry catalogue is never
+// walked in the combat loop or reward render path.
+export function secondFusionOptions(forms=new Map()){
+ const first=[...forms.keys()].filter(id=>Object.hasOwn(FORMS,id)),out=[];
+ for(let a=0;a<first.length;a++)for(let b=a+1;b<first.length;b++){
+  const id=secondFormOf(first[a],first[b]);if(id)out.push({id,from:[first[a],first[b]]});
+ }
+ return out;
+}
+export function secondFusionLevel(forms,option){
+ const parts=option?.from?.map(id=>forms.get(id)||0)||[];if(parts.length!==2||parts.some(v=>v<1))return 0;
+ return Math.max(...parts)+Math.ceil(Math.min(...parts)/3);
+}
+export function fuseSecond(forms,option){
+ if(!option||!Object.hasOwn(SECOND_FORMS,option.id))return false;
+ const valid=secondFusionOptions(forms).some(o=>o.id===option.id&&o.from.every(id=>option.from.includes(id)));
+ if(!valid)return false;
+ const gained=secondFusionLevel(forms,option);for(const id of option.from)forms.delete(id);
+ forms.set(option.id,(forms.get(option.id)||0)+gained);return true;
 }
 // Every law the seed carries, including those living inside its forms, at the strongest level seen.
 export function effectiveLevels(levels,forms=new Map()){

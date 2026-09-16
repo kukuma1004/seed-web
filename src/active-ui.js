@@ -1,4 +1,4 @@
-import {ACTIVE,SIGNATURES,STATE_NAMES,activeState,activeSummary,activeReady} from './actives.js';
+import {ACTIVE,SIGNATURES,STATE_NAMES,ULTIMATE_ARCHETYPES,activeState,activeSummary,activeReady} from './actives.js';
 import {ALL_FORMS} from './forms.js';
 import {formArt} from './form-art.js';
 import './actives.css';
@@ -10,8 +10,8 @@ export const ACTIVE_EFFECT_HTML='<div id="active-cinematic" hidden aria-live="po
 
 export function announceActive(root,plan){
  if(!root)return;
- const over=plan.state==='OVERDRIVE',names=plan.forms.map(id=>SIGNATURES[id]?.name).filter(Boolean);
- root.innerHTML=`<div class="active-cinematic-art">${activeIcon(plan.forms)}</div><div><small>${over?'두 진화가 공명합니다':'시드의 진화가 폭발합니다'}</small><strong>${over?'OVERDRIVE':names[0]}</strong><span>${over?names.join(' × '):`${plan.seconds}초 시그니처`}</span></div>`;
+ const over=plan.state==='OVERDRIVE',names=plan.forms.map(id=>SIGNATURES[id]?.name).filter(Boolean),archetype=ULTIMATE_ARCHETYPES[plan.archetype]||ULTIMATE_ARCHETYPES.BURST;
+ root.innerHTML=`<div class="active-cinematic-art">${activeIcon(plan.forms)}</div><div><small>${archetype.name}형 · ${over?'두 진화가 공명합니다':'시드의 진화가 폭발합니다'}</small><strong>${over?'OVERDRIVE':names[0]}</strong><span>${over?names.join(' × '):`${plan.seconds}초 시그니처`}</span></div>`;
  root.hidden=false;root.className='';void root.offsetWidth;root.className=`show ${over?'overdrive':'signature'}`;
 }
 

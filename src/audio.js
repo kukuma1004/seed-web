@@ -1,0 +1,72 @@
+// Allocation-light procedural combat audio. SEED deliberately starts with a
+// tiny Web Audio palette: no downloaded music or 990 per-combination files.
+// Cooldowns and a hard voice budget keep dense late-game builds readable.
+export const AUDIO_EVENTS=Object.freeze({
+ shot:{wave:'triangle',freq:430,end:250,duration:.065,gain:.025,cooldown:.085,priority:0},
+ hit:{wave:'sine',freq:180,end:95,duration:.07,gain:.035,cooldown:.05,priority:0},
+ split:{wave:'triangle',freq:520,end:760,duration:.12,gain:.045,cooldown:.12,priority:1,notes:[1,1.28]},
+ chain:{wave:'square',freq:680,end:330,duration:.11,gain:.032,cooldown:.09,priority:1,notes:[1,1.5]},
+ reflect:{wave:'triangle',freq:760,end:1120,duration:.1,gain:.04,cooldown:.09,priority:1,notes:[1,1.33]},
+ portal:{wave:'sine',freq:120,end:540,duration:.22,gain:.052,cooldown:.16,priority:1,notes:[1,.5,2]},
+ dash:{wave:'sawtooth',freq:240,end:720,duration:.12,gain:.04,cooldown:.18,priority:1},
+ pickup:{wave:'sine',freq:560,end:920,duration:.18,gain:.055,cooldown:.2,priority:2,notes:[1,1.26,1.6]},
+ hurt:{wave:'sawtooth',freq:130,end:70,duration:.18,gain:.07,cooldown:.3,priority:2,notes:[1,.76]},
+ evolve:{wave:'sine',freq:330,end:990,duration:.48,gain:.065,cooldown:.45,priority:3,notes:[1,1.25,1.5,2]},
+ fusion:{wave:'triangle',freq:220,end:880,duration:.58,gain:.075,cooldown:.5,priority:3,notes:[1,1.5,2]},
+ ultimateReady:{wave:'sine',freq:440,end:880,duration:.38,gain:.06,cooldown:1,priority:3,notes:[1,1.5,2]},
+ ultimate:{wave:'sawtooth',freq:95,end:620,duration:.72,gain:.085,cooldown:.6,priority:4,notes:[1,.5,2,3]},
+ finale:{wave:'triangle',freq:90,end:45,duration:.75,gain:.095,cooldown:.65,priority:4,notes:[1,1.5,.5]},
+ bossWarning:{wave:'square',freq:280,end:220,duration:.22,gain:.055,cooldown:.42,priority:3,notes:[1,.75]},
+ bossAttack:{wave:'sawtooth',freq:145,end:72,duration:.3,gain:.075,cooldown:.22,priority:3,notes:[1,.5]},
+ bossDefeat:{wave:'triangle',freq:180,end:720,duration:.9,gain:.09,cooldown:1,priority:4,notes:[1,1.25,1.5,2]}
+});
+
+export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
+ const last=new Map(),live=new Set();let next=1;
+ function begin(id,spec=AUDIO_EVENTS[id]){
+  if(!spec)return null;
+  const time=now(),previous=last.get(id)??-Infinity;
+  if(time-previous<(spec.cooldown||0)*1000)return null;
+  // Important cues may briefly exceed the ordinary budget, but even an
+  // ultimate cannot create an unbounded number of oscillators.
+  const ceiling=maxVoices+(spec.priority>=3?3:0);
+  if(live.size>=ceiling)return null;
+  const token=next++;live.add(token);last.set(id,time);return token;
+ }
+ return {begin,end:token=>live.delete(token),reset(){last.clear();live.clear();},state:()=>({voices:live.size,maxVoices,last:Object.fromEntries(last)})};
+}
+
+export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globalThis.webkitAudioContext,now=()=>performance.now()}={}){
+ const limiter=createAudioLimiter({maxVoices:12,now});let ctx=null,master=null,muted=false,paused=false,unlocked=false;
+ function ensure(){
+  if(ctx||!AudioContextCtor)return Boolean(ctx);
+  try{ctx=new AudioContextCtor();master=ctx.createGain();master.gain.value=.78;master.connect(ctx.destination);return true;}catch{return false;}
+ }
+ async function unlock(){
+  if(!ensure())return false;
+  try{if(ctx.state!=='running')await ctx.resume();unlocked=ctx.state==='running';return unlocked;}catch{return false;}
+ }
+ function play(id,{intensity=1,pitch=1}={}){
+  const spec=AUDIO_EVENTS[id];if(!spec||muted||paused||!unlocked||!ctx||ctx.state!=='running')return false;
+  const token=limiter.begin(id,spec);if(token===null)return false;
+  const ratios=spec.notes||[1],start=ctx.currentTime,volume=Math.max(.1,Math.min(1.4,intensity))*spec.gain/Math.sqrt(ratios.length);let left=ratios.length;
+  try{
+   ratios.forEach((ratio,index)=>{
+    const delay=index*(spec.priority>=3?.045:.018),duration=spec.duration*(1-index*.035),at=start+delay;
+    const oscillator=ctx.createOscillator(),gain=ctx.createGain();oscillator.type=spec.wave;
+    oscillator.frequency.setValueAtTime(Math.max(30,spec.freq*ratio*pitch),at);
+    oscillator.frequency.exponentialRampToValueAtTime(Math.max(30,spec.end*ratio*pitch),at+duration);
+    gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.008);
+    gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
+    oscillator.connect(gain).connect(master);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();if(--left===0)limiter.end(token);};
+    oscillator.start(at);oscillator.stop(at+duration+.015);
+   });
+  }catch{limiter.end(token);return false;}
+  return true;
+ }
+ function installUnlock(target=document){
+  const wake=()=>{unlock();};target.addEventListener('pointerdown',wake,{capture:true,passive:true});target.addEventListener('keydown',wake,{capture:true,passive:true});return wake;
+ }
+ async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){try{await ctx.suspend();}catch{}}else await unlock();}
+ return {unlock,play,installUnlock,setPaused,setMuted(value){muted=Boolean(value);if(master)master.gain.value=muted?0:.78;},reset(){limiter.reset();},state:()=>({supported:Boolean(AudioContextCtor),unlocked,muted,paused,...limiter.state()})};
+}
