@@ -182,3 +182,8 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
  .note li{font-size:10px;line-height:1.45}
 }
 
+/* 점검 중 */
+.maintenance-panel{justify-content:center}
+.maintenance-panel h2{margin-bottom:12px}
+.maintenance-line{font-size:15px;line-height:1.7;color:#d8eadf;margin:2px 0}
+@media(max-height:430px){.maintenance-line{font-size:12px;line-height:1.55}}
