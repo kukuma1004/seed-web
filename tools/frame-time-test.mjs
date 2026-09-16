@@ -25,3 +25,16 @@ advanceFrame(60,100,dt=>{calls++;total+=dt;});
 assert(calls<=MAX_SUBSTEPS);assert(Math.abs(total-.1)<1e-12);
 for(const raw of [0,-1,NaN,Infinity])assert.equal(advanceFrame(raw,0,()=>assert.fail('Invalid delta stepped')),0);
 console.log('Frame timing: real-time travel/cooldowns at 10–120 fps, bounded collision steps and long-stall protection passed.');
+
+// 속도를 바꾸는 도구: 화면 시계와 실제 시계의 비율로 알아챈다.
+{
+ const {paceTrusted,PACE_SAMPLE_SECONDS}=await import('../src/frame-time.js');
+ assert.equal(paceTrusted(120,120),true,'보통 판');
+ assert.equal(paceTrusted(118,120),true,'조금 끊기는 기기');
+ assert.equal(paceTrusted(60,120),false,'절반 속도로 느리게 돌림');
+ assert.equal(paceTrusted(240,120),false,'두 배 속도로 빠르게 돌림');
+ assert.equal(paceTrusted(5,PACE_SAMPLE_SECONDS-1),true,'너무 짧은 판은 판단하지 않는다');
+ assert.equal(paceTrusted(NaN,120),false);
+ assert.equal(paceTrusted(0,0),true);
+ console.log('속도 도구 알아채기: 보통·끊김·느리게·빠르게·짧은 판 통과');
+}

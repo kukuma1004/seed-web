@@ -12,3 +12,13 @@ export function advanceFrame(rawSeconds,endTime,step){
  for(let i=0;i<count;i++)step(dt,endTime-duration+dt*(i+1));
  return duration;
 }
+
+// 속도를 바꾸는 도구 알아채기. 화면 갱신 시각(requestAnimationFrame·performance.now)으로 잰 시간과
+// 실제 시계(Date.now)로 잰 시간은 보통 같다. 기기가 느려 끊겨도 둘 다 실제로 흐른 시간이라 같다.
+// 게임을 느리게(또는 빠르게) 돌리는 도구는 화면 쪽 시계를 바꾸므로 둘의 비율이 크게 어긋난다.
+export const PACE_MIN=.8,PACE_MAX=1.25,PACE_SAMPLE_SECONDS=30;
+export function paceTrusted(gameSeconds,realSeconds){
+ if(!(realSeconds>=PACE_SAMPLE_SECONDS))return true;
+ const pace=gameSeconds/realSeconds;
+ return pace>=PACE_MIN&&pace<=PACE_MAX;
+}
