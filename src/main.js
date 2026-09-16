@@ -300,7 +300,10 @@ function finishChoice(){mode='playing';$('#overlay').hidden=true;invuln=Math.max
 function offerDashEvolution(onDone){
  if(!dashRewardPending||dashState.id)return false;
  mode='dash-evolution';touch.reset();keys.clear();keyboardDash=false;$('#overlay').hidden=false;$('#overlay').classList.remove('intro');
- $('#overlay').innerHTML=`<p>첫 문지기의 힘이 뿌리에 스며듭니다</p><h2>회피 진화</h2><p>공격 법칙과 별도로 하나를 고릅니다 · 이 도전이 끝날 때까지 유지됩니다</p><div class="dash-evolution-cards">${dashEvolutionCards()}</div><p class="form-note">쌍싹은 순간 대응, 긴뿌리는 거리, 허물은 무적시간에 강합니다.</p>`;
+ $('#overlay').innerHTML=`<p>${wardensDefeated>1?'문지기의 힘이 다시':'첫 문지기의 힘이'} 뿌리에 스며듭니다</p><h2>회피 진화</h2><p>공격 법칙과 별도로 하나를 고릅니다 · 이 도전이 끝날 때까지 유지됩니다</p><div class="dash-evolution-cards">${dashEvolutionCards()}</div><p class="form-note">쌍싹은 순간 대응, 긴뿌리는 거리, 허물은 무적시간에 강합니다.</p>
+  <button id="keep-dash" class="primary">지금은 고르지 않기</button>`;
+ // 고르지 않고 넘어갈 수 있다. 다음 문지기를 잡으면 다시 물어본다.
+ $('#keep-dash').onclick=()=>{if(mode!=='dash-evolution')return;dashRewardPending=false;mode='playing';$('#overlay').hidden=true;onDone();$('#toast').textContent='회피 진화를 고르지 않았습니다 · 다음 문지기를 잡으면 다시 고를 수 있습니다';};
  document.querySelectorAll('[data-dash-evolution]').forEach(button=>button.onclick=()=>{if(mode!=='dash-evolution')return;const id=button.dataset.dashEvolution;if(!Object.hasOwn(DASH_EVOLUTIONS,id))return;dashState=createDashState(id);dashRewardPending=false;mode='playing';$('#overlay').hidden=true;vfx.evolution(player.position,'orbit');vfx.burst(player.position,'seed',30,1.7);onDone();$('#toast').textContent=`회피 진화 · ${DASH_EVOLUTIONS[id].name} 선택 완료`;});
  return true;
 }
@@ -452,7 +455,7 @@ function enemyDown(e){
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
  if(e.type==='austin'){austinsDefeated++;const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}
- else if(main){wardensDefeated++;const wallet=earnCoins(runStorage,50);if(wardensDefeated===1&&!dashState.id)dashRewardPending=true;$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
+ else if(main){wardensDefeated++;const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
  else $('#toast').textContent='정예 문지기 격파!';
 }
 function updateFallen(dt,time){for(let i=fallen.length-1;i>=0;i--){const f=fallen[i],e=f.e;f.t+=dt;const k=Math.min(1,f.t/1.3);e.hit=Math.floor(f.t*14)%2?.14:0;e.updateArt?.(time);e.g.position.y=-k*k*1.1;e.g.scale.setScalar(1-k*.3);if(Math.floor(f.t/.18)!==Math.floor((f.t-dt)/.18))vfx.burst(e.g.position,'amber',10,1.2);if(f.t>=1.3){releaseEnemy(e);fallen.splice(i,1);}}}

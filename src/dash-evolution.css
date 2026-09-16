@@ -7,3 +7,19 @@
 #overhead .oh-dash.double{background:linear-gradient(90deg,#ffffff1f 0 47%,#08161a 47% 53%,#ffffff1f 53%)}
 @media(max-width:780px){.dash-evolution-cards{gap:8px}.dash-evolution-card{width:min(29vw,220px);min-height:260px;padding:13px 9px}.dash-evolution-card .dash-mark{width:64px;height:64px;font-size:25px}.dash-evolution-card strong{font-size:17px}.dash-evolution-card p{min-height:50px!important;font-size:10px!important}.dash-evolution-card b,.dash-evolution-card em{font-size:9px}}
 @media(orientation:portrait){body.touch-mode .dash-evolution-cards{width:100%;max-width:350px;flex-direction:column}.touch-mode .dash-evolution-card{width:100%;min-height:120px;display:grid;grid-template-columns:70px 1fr;text-align:left;column-gap:12px}.touch-mode .dash-evolution-card .dash-mark{grid-row:1/6;margin:0}.touch-mode .dash-evolution-card strong,.touch-mode .dash-evolution-card p{margin:2px 0!important;min-height:0!important}}
+/* 고르지 않고 넘어가는 단추 */
+#keep-dash{margin-top:14px}
+/* 아이폰 가로처럼 낮은 화면. 카드 세 장과 넘기기 단추가 한 화면에 들어오게 줄인다. */
+@media(max-height:430px){
+ #keep-dash{margin-top:6px;padding:5px 14px;font-size:12px}
+ #overlay:has(.dash-evolution-cards)>p{font-size:10px;margin:1px 0}
+ #overlay:has(.dash-evolution-cards)>h2{font-size:19px;margin:2px 0}
+ #overlay:has(.dash-evolution-cards) .form-note{font-size:9px;margin:4px 0 0}
+ .dash-evolution-cards{gap:6px;margin-top:7px}
+ .dash-evolution-card{min-height:0;padding:8px 9px}
+ .dash-evolution-card .dash-mark{width:42px;height:42px;margin:0 auto 6px;font-size:18px}
+ .dash-evolution-card small{font-size:9px;letter-spacing:1px}
+ .dash-evolution-card strong{font-size:14px;margin:4px 0 5px}
+ .dash-evolution-card p{min-height:0!important;font-size:9px!important;line-height:1.4!important}
+ .dash-evolution-card b,.dash-evolution-card em{font-size:8px;line-height:1.35}
+}
