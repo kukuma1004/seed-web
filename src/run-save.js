@@ -6,6 +6,7 @@ import {validInventory} from './inventory.js';
 import {validMutations} from './mutations.js';
 import {validDashEvolution} from './dash-evolution.js';
 import {SLOT_CAP} from './progression.js';
+import {roomPoints} from './score.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:'야간 경기장'};
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
@@ -31,6 +32,22 @@ export function validCheckpoint(s){
  if(s?.mode==='austin'&&s.stage!==4)return false;
  return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=SLOT_CAP&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
 }
+// 2026-09-14 저녁 이전 저장에는 점수와 문지기 수가 없다. 그대로 이어하면 처치 수·시간만 남고
+// 점수가 0이라, 랭킹에 앞뒤가 안 맞는 기록이 올라간다(실제로 세 판이 그렇게 올라갔다).
+// 지나온 여정만큼을 게임의 점수 규칙으로, 그것도 가장 싼 잡몹 기준으로 낮춰 잡아 채운다.
+export function restoredScore(save){
+ if(Number.isInteger(save?.score))return save.score;
+ const cycle=Math.max(0,save?.cycle|0),kills=Math.max(0,save?.kills|0),perCycle=kills/(cycle+1);
+ let total=0;
+ for(let c=0;c<=cycle;c++){
+  total+=perCycle*20*(1+c*.5);
+  if(c<cycle)for(let stage=0;stage<5;stage++)total+=roomPoints(stage,c);
+ }
+ return Math.round(total);
+}
+// 여정을 넘어왔다면 그만큼 문지기를 이긴 것이고, 오스틴은 문지기 다섯마다 하나다.
+export function restoredWardens(save){return Number.isInteger(save?.wardens)?save.wardens:Math.max(0,save?.cycle|0);}
+export function restoredAustins(save){return Number.isInteger(save?.austins)?save.austins:Math.floor(restoredWardens(save)/5);}
 export function readCheckpoint(storage){try{const s=JSON.parse(storage.getItem(SAVE_KEY));return validCheckpoint(s)?s:null;}catch{return null;}}
 export function writeCheckpoint(storage,s){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
 export function clearCheckpoint(storage){try{storage.removeItem(SAVE_KEY);return true;}catch{return false;}}
