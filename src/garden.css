@@ -47,3 +47,10 @@
  .garden-note{font-size:11px}
  .seed-shelf{padding:8px}
 }
+
+/* 변이 카드: 법칙 그림 위에 작은 표식만 올린다(그림을 새로 그리지 않는다). */
+
+.card.mutation-card{position:relative;border-color:#c9a8ff99;box-shadow:0 0 18px #b98cff33}
+.mut-badge{position:absolute;top:8px;right:10px;font-style:normal;font-size:20px;line-height:1;filter:drop-shadow(0 0 6px #000)}
+.card.mutation-card strong{color:#f0e2ff}
+#rules>div.mutated{filter:drop-shadow(0 0 6px #b98cff88)}

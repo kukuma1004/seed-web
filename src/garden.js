@@ -167,7 +167,7 @@ export function branchSummary(seedId,branch,stage='mature'){
 }
 // 다음 런에 넘길 효과. 힘을 더하지 않고 무엇이 나타날지를 바꾼다.
 export function gardenEffects(garden){
- const effects={lawWeights:{},formGuides:[],relicLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives:[]};
+ const effects={lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives:[]};
  for(const p of activePlants(garden)){
   const seed=SEEDS[p.seed],stage=stageOf(p.growth),strong=stage==='bloom';
   effects.actives.push({index:p.index,name:plantName(p),stage,summary:branchSummary(p.seed,p.branch,stage)});
@@ -177,7 +177,11 @@ export function gardenEffects(garden){
    else effects.austinEvery=Math.min(effects.austinEvery,strong?4:5);
    continue;
   }
-  if(p.branch==='flower')effects.lawWeights[seed.law]=(effects.lawWeights[seed.law]||1)+(strong?4:2);
+  if(p.branch==='flower'){
+   effects.lawWeights[seed.law]=(effects.lawWeights[seed.law]||1)+(strong?4:2);
+   // 꽃이 자란 법칙은 여정 중에 변이 선택지가 열린다(mutations.js).
+   if(!effects.mutationLaws.includes(seed.law))effects.mutationLaws.push(seed.law);
+  }
   else if(p.branch==='tree'){if(!effects.formGuides.includes(seed.law))effects.formGuides.push(seed.law);}
   else if(!effects.relicLaws.includes(seed.law))effects.relicLaws.push(seed.law);
  }
