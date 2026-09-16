@@ -2,7 +2,7 @@
 // kind: heal (refused at full health) · haste · shell (short protection) · revive (used by itself when the seed falls)
 export const ITEMS=Object.freeze({
  potion:{id:'potion',name:'시간의 물약',kind:'heal',heal:50,max:9,key:'Q',desc:'마시면 생명력 50 회복',from:'오스틴'},
- tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'Q',desc:'마시면 생명력 25 회복',from:'포탑 · 오스틴'},
+ tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:10,key:'Q',desc:'마시면 생명력 25 회복',from:'상점 · 포탑 · 오스틴'},
  wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:3,key:'Q',desc:'6초 동안 이동 속도 +35%',from:'오스틴'},
  shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:3,key:'Q',desc:'3초 동안 모든 피해를 막음',from:'오스틴'},
  sprout:{id:'sprout',name:'다시 싹',kind:'revive',heal:50,guard:2,max:1,key:'',desc:'쓰러지는 순간 저절로 생명력 50으로 다시 일어남 (한 번)',from:'오스틴'}
@@ -12,9 +12,9 @@ export const ITEM_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']
 export const usable=id=>Object.hasOwn(ITEMS,id)&&ITEMS[id].kind!=='revive';
 
 export function emptyInventory(){return Object.fromEntries(ITEM_ORDER.map(id=>[id,0]));}
-// A new run starts with one healing potion (2026-09-15: students kept asking for a way to heal).
-// Continued runs keep whatever their save holds. A later idea: watch an ad for one more.
-export const STARTING_ITEMS=Object.freeze({potion:1});
+// A fresh run carries only the small potions bought in the departure shop.
+// Austin's stronger potion stays a boss reward instead of breaking the ten-potion start cap.
+export const STARTING_ITEMS=Object.freeze({});
 export function startingInventory(){const inv=emptyInventory();for(const [id,n] of Object.entries(STARTING_ITEMS))inv[id]=Math.min(ITEMS[id].max,n);return inv;}
 export function normalizeInventory(value){
  const out=emptyInventory();

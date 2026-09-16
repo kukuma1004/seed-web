@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenSurgeOpening,formStats} from './forms.js';
+import {ALL_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -74,7 +74,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   const L=Math.max(1,Math.floor(nextLevel||1));
   const kind=AWAKEN_FORMS[id]?.base||id;
   const asTwin=Boolean(opts.twin);
-  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;ownerId=opts.twinId||id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??2;S.damage=0;}
+  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;ownerId=opts.twinId||id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   rebuildOrbit();
  }
@@ -572,7 +572,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   awakenTimer-=dt;if(awakenTimer>0)return;
   const target=nearestEnemy(player.position,AWAKEN.openingRange);
   if(!target){awakenTimer=0;return;}
-  awakenTimer=surgeTime>0?awakenSurgeOpening(statId,twin):AWAKEN.openingEvery;
+  awakenTimer=surgeTime>0?awakenSurgeOpening(statId,twin):awakenOpeningEvery(statId,twin);
   opening(target.g.position.clone().sub(player.position).setY(0));
  }
  function calm(){if(surgeTime<=0)return;surgeTime=0;refresh();rebuildOrbit();}
@@ -584,7 +584,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   if(awakened()){fx.pulse(pos,'awaken',3.2,.55);fx.burst(pos,'awaken',36,2.2);}
   fx.pulse(pos,OPENING_FX[active]||'seed',2.4,.5);fx.burst(pos,OPENING_FX[active]||'seed',30,1.8);
   switch(active){
-   case 'collapse':{const spots=nearest(3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
+   case 'collapse':{const spots=nearest(statId==='bigcrunch'?2:3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
    case 'frostguard':{
     const radius=S.novaRadius+2;fx.pulse(pos,'frost',radius,.6);
     for(const e of enemies())if(!e.dead&&flat(e.g.position,pos)<radius){if(support(e,S.nova*2,{kind:'frostguard',indirect:true,direction:e.g.position.clone().sub(pos).setY(0).normalize()}))e.slow=Math.max(e.slow||0,4);}

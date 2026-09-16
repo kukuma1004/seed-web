@@ -11,7 +11,7 @@ export function createTouchControls(canAct){
     for(const name of ['gesturestart','gesturechange','gestureend','selectstart','contextmenu','dragstart'])document.addEventListener(name,blockNativeGesture,{passive:false});
     document.addEventListener('touchmove',event=>{if(event.touches?.length>1&&!nativeTarget(event.target))event.preventDefault();},{passive:false});
   }
-  const panel=document.createElement('div');panel.id='touch-controls';panel.innerHTML=`<div id="move-zone" aria-hidden="true"></div><div id="move-stick" class="stick" role="group" aria-label="이동 조이스틱"><i></i><span>이동</span></div><button id="touch-dash" aria-label="회피">◇<small>회피</small></button>`;
+  const panel=document.createElement('div');panel.id='touch-controls';panel.innerHTML=`<div id="move-zone" aria-hidden="true"></div><div id="move-stick" class="stick" role="group" aria-label="이동 조이스틱"><i></i><span>이동</span></div><button id="touch-dash" aria-label="회피">◇<span class="dash-charges" aria-hidden="true"><i></i><i></i></span><small>회피</small></button>`;
   document.body.append(panel);
   const axes={move:{x:0,y:0},aim:{x:0,y:0}},owners=new Map();let dashUntil=0,center=null;
   const stick=document.querySelector('#move-stick'),knob=document.querySelector('#move-stick i'),zone=document.querySelector('#move-zone');
@@ -58,7 +58,7 @@ export function createTouchControls(canAct){
     element.addEventListener('pointermove',move);
     for(const name of ['pointerup','pointercancel','lostpointercapture'])element.addEventListener(name,end);
   }
-  const dashButton=document.querySelector('#touch-dash'),dashLabel=dashButton.querySelector('small');
+  const dashButton=document.querySelector('#touch-dash'),dashLabel=dashButton.querySelector('small'),dashCharges=dashButton.querySelector('.dash-charges');
   dashButton.addEventListener('pointerdown',e=>{e.preventDefault();if(canAct())dashUntil=performance.now()+220;});
   window.addEventListener('blur',reset);window.addEventListener('resize',reset);
   document.addEventListener('visibilitychange',()=>{if(document.hidden)reset();});
@@ -67,8 +67,10 @@ export function createTouchControls(canAct){
     update(active,cooldown,dash={charges:cooldown>0?0:1,maxCharges:1,recharge:cooldown}){
       if(panel.hidden!==!active)panel.hidden=!active;
       if(!active){if(owners.size||dashUntil)reset();return;}
-      const label=dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!dash.charges||cooldown>0;
+      const label=dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!dash.charges;
       if(dashButton.__cooling!==cooling){dashButton.classList.toggle('cooling',cooling);dashButton.__cooling=cooling;}
+      const chargeKey=`${dash.charges}/${dash.maxCharges}`;
+      if(dashButton.__charges!==chargeKey){dashButton.classList.toggle('double',dash.maxCharges>1);dashButton.classList.toggle('recharging',dash.charges<dash.maxCharges);if(dashCharges)for(const [i,pip] of [...dashCharges.children].entries())pip.classList.toggle('ready',i<dash.charges);dashButton.__charges=chargeKey;}
       if(dashLabel.textContent!==label)dashLabel.textContent=label;
       const aria=`회피${dash.maxCharges>1?` · ${dash.charges}/${dash.maxCharges} 충전`:cooldown>0?` · ${cooldown.toFixed(1)}초 뒤 준비`:' · 준비'}`;
       if(dashButton.__aria!==aria){dashButton.setAttribute?.('aria-label',aria);dashButton.__aria=aria;}

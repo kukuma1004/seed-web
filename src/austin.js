@@ -75,19 +75,21 @@ export function createAustin(scene){
  for(const s of [-1,1]){const arm=add(new THREE.CylinderGeometry(.16,.2,.8,8),suit,s*.78,1.65,.15);arm.rotation.x=-.9;arm.rotation.z=s*.25;const gl=add(new THREE.SphereGeometry(.34,14,10),glove,s*.62,1.75,.72);gl.scale.set(1,.9,1.15);gl.castShadow=true;gloves.push(gl);}
  // Tells live in a child group that cancels the boss's own turn, so they are laid out in world directions.
  const fx=new THREE.Group();g.add(fx);
- const lane=new THREE.Group();lane.add(groundPlane(1.6,7,basic(0xff7a3d,.32)));lane.visible=false;fx.add(lane);
+ const lane=new THREE.Group(),laneMat=basic(0xff5b32,.42);lane.add(groundPlane(1.6,7,laneMat));
+ const laneRails=[];for(const x of [-.78,.78]){const mat=basic(0xffd07a,.9),rail=groundPlane(.07,7,mat);rail.position.x=x;lane.add(rail);laneRails.push(mat);}lane.visible=false;fx.add(lane);
  const fan=new THREE.Group();fx.add(fan);fan.visible=false;
- for(const i of [-2,-1,0,1,2]){const ray=new THREE.Group();ray.rotation.y=i*AUSTIN.volley.spread;ray.add(groundPlane(.16,11,basic(0xffbd65,.4)));fan.add(ray);}
- const beamMats=[basic(0xff3355,.2),basic(0xff3355,.2)];
+ const fanMats=[];for(const i of [-2,-1,0,1,2]){const ray=new THREE.Group(),mat=basic(i===0?0xffffba:0xffbd65,i===0?.7:.5);ray.rotation.y=i*AUSTIN.volley.spread;ray.add(groundPlane(i===0?.24:.18,11,mat));fan.add(ray);fanMats.push(mat);}
+ const beamMats=[basic(0xff3355,.34),basic(0xff3355,.34)];
  const beams=beamMats.map(mat=>{const b=new THREE.Group();b.add(groundPlane(AUSTIN.sweep.width,AUSTIN.sweep.length,mat));b.visible=false;fx.add(b);return b;});
- const wedgeMat=basic(0xffd66b,.28);
+ const wedgeMat=basic(0xffe38a,.4);
  const wedge=new THREE.Group();const wedgeMesh=new THREE.Mesh(new THREE.CircleGeometry(6.5,20,Math.PI/2-.5,1),wedgeMat);wedgeMesh.rotation.x=-Math.PI/2;wedgeMesh.position.y=.16;wedge.add(wedgeMesh);wedge.visible=false;fx.add(wedge);
+ const tellRingMat=basic(0xffa64d,.75),tellRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.12,40),tellRingMat);tellRing.rotation.x=-Math.PI/2;tellRing.position.y=.22;tellRing.visible=false;fx.add(tellRing);
  const world=new THREE.Group();scene.add(world);
  return {g,body,world,type:'austin',hp:AUSTIN.hp,maxHp:AUSTIN.hp,state:'stalk',timer:.9,pattern:0,phase:'normal',
   previousPlayer:null,velocity:new V(),volleys:0,phasePending:null,queuedSweep:false,bellAge:999,
   clock:0,beats:0,hour:0,ringHour:0,pendingRing:0,bellWarn:false,bells:0,
   dir:new V(0,0,1),dashes:0,jabHit:false,bumpCD:0,beamAngle:0,beamSign:1,alarms:[],hit:0,slow:0,
-  parts:{head,hourHand,minuteHand,gloves,fx,lane,fan,beams,beamMats,wedge,wedgeMesh,wedgeMat}};
+  parts:{head,hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,fan,fanMats,beams,beamMats,wedge,wedgeMesh,wedgeMat,tellRing,tellRingMat}};
 }
 
 function aimAhead(e,player){return player.clone().addScaledVector(e.velocity,AUSTIN.volley.lead).sub(e.g.position).setY(0).normalize();}
@@ -120,8 +122,8 @@ function startPattern(e,delta,hooks){
    const pos=i===0?base.clone():base.clone().add(new V(Math.cos(spin+i*TAU/(count-1)),0,Math.sin(spin+i*TAU/(count-1))).multiplyScalar(AUSTIN.alarm.spread));
    hooks.collide(pos,.5);
    const group=new THREE.Group();group.position.copy(pos);e.world.add(group);
-   const edge=new THREE.Mesh(new THREE.RingGeometry(AUSTIN.alarm.radius-.12,AUSTIN.alarm.radius,40),basic(0xff5a4a,.7));edge.rotation.x=-Math.PI/2;edge.position.y=.15;group.add(edge);
-   const fill=new THREE.Mesh(new THREE.CircleGeometry(AUSTIN.alarm.radius,32),basic(0xff5a4a,.08));fill.rotation.x=-Math.PI/2;fill.position.y=.14;group.add(fill);
+   const edge=new THREE.Mesh(new THREE.RingGeometry(AUSTIN.alarm.radius-.15,AUSTIN.alarm.radius,40),basic(0xff5a4a,.9));edge.rotation.x=-Math.PI/2;edge.position.y=.15;group.add(edge);
+   const fill=new THREE.Mesh(new THREE.CircleGeometry(AUSTIN.alarm.radius,32),basic(0xff5a4a,.14));fill.rotation.x=-Math.PI/2;fill.position.y=.14;group.add(fill);
    const clock=new THREE.Mesh(new THREE.CylinderGeometry(.28,.28,.16,16),new THREE.MeshStandardMaterial({color:0xf2c14e,emissive:0x7a3a08,emissiveIntensity:.8}));clock.position.y=.4;clock.rotation.x=Math.PI/2;group.add(clock);
    const time=Math.max(1.05,AUSTIN.alarm.countdown*P.tempo)+i*.16;
    e.alarms.push({pos,group,fill,clock,time,max:time});
@@ -159,7 +161,7 @@ export function tickAustin(e,dt,hooks){
  if(e.pendingRing>0){e.pendingRing-=dt;if(e.pendingRing<=0)ring(e,e.ringHour,Math.PI/P.bolts,bolt,burst);}
  for(let i=e.alarms.length-1;i>=0;i--){
   const a=e.alarms[i];a.time-=dt;const k=1-a.time/a.max;
-  a.fill.material.opacity=.08+.42*k;a.clock.position.y=.4+Math.abs(Math.sin(a.time*(10+20*k)))*.18;
+  a.fill.material.opacity=.14+.42*k;a.group.scale.setScalar(1+.035*Math.sin(k*Math.PI*10));a.clock.position.y=.4+Math.abs(Math.sin(a.time*(10+20*k)))*.18;
   if(a.time<=0){
    pulse(a.pos,'burst',AUSTIN.alarm.radius,.4);burst(a.pos,'amber',22);
    if(Math.hypot(player.x-a.pos.x,player.z-a.pos.z)<AUSTIN.alarm.radius)hit(AUSTIN.alarm.damage);
@@ -216,26 +218,29 @@ export function tickAustin(e,dt,hooks){
 }
 
 function poseAustin(e){
- const {hourHand,minuteHand,gloves,fx,lane,fan,beams,beamMats,wedge,wedgeMat}=e.parts,P=PHASES[e.phase];
+ const {hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,fan,fanMats,beams,beamMats,wedge,wedgeMat,tellRing,tellRingMat}=e.parts,P=PHASES[e.phase];
  const beatLen=AUSTIN.beat*P.tempo;
  minuteHand.rotation.z=-((e.beats%AUSTIN.hourBeats)+e.clock/beatLen)/AUSTIN.hourBeats*TAU;
  hourHand.rotation.z=-e.hour*Math.PI/6;
  fx.rotation.y=-e.g.rotation.y;
  lane.visible=e.state==='jabTell';lane.rotation.y=Math.atan2(e.dir.x,e.dir.z);
  fan.visible=e.state==='volleyTell';fan.rotation.y=Math.atan2(e.dir.x,e.dir.z);
+ const pulse=.5+.5*Math.abs(Math.sin((e.clock+e.timer)*14));laneMat.opacity=.4+.22*pulse;for(const m of laneRails)m.opacity=.7+.3*pulse;for(const m of fanMats)m.opacity=.4+.35*pulse;
  const sweeping=e.state==='sweepTell'||e.state==='sweep';
  beams[0].visible=sweeping;beams[0].rotation.y=e.beamAngle;
  beams[1].visible=sweeping&&e.phase!=='normal';beams[1].rotation.y=e.beamAngle+Math.PI;
- for(const m of beamMats)m.opacity=e.state==='sweep'?.85:.18;
+ for(const m of beamMats)m.opacity=e.state==='sweep'?1:.34+.22*pulse;
+ const telling=e.state==='jabTell'||e.state==='volleyTell'||e.state==='sweepTell';tellRing.visible=telling;if(telling){tellRing.scale.setScalar(.8+.42*pulse);tellRingMat.color.setHex(e.state==='sweepTell'?0xff3355:e.state==='volleyTell'?0xffcf68:0xff6a3d);tellRingMat.opacity=.55+.35*pulse;}
  const ringing=e.pendingRing>0;
  wedge.visible=e.bellWarn||ringing;
  if(wedge.visible){const hour=ringing?e.ringHour:e.hour,gap=P.gapHalf;wedge.rotation.y=-hour*Math.PI/6;
   if(e.parts.wedgeGap!==gap){e.parts.wedgeMesh.geometry.dispose();e.parts.wedgeMesh.geometry=new THREE.CircleGeometry(6.5,20,Math.PI/2-gap,gap*2);e.parts.wedgeGap=gap;}
-  wedgeMat.opacity=.2+.25*Math.abs(Math.sin(e.clock*9));}
+  wedgeMat.opacity=.4+.28*Math.abs(Math.sin(e.clock*9));}
  const punching=e.state==='jab'?1:e.state==='jabTell'?-.35:0;
  gloves.forEach((gl,i)=>{gl.position.z=.72+punching*(i===e.dashes%2?.55:.1);});
  e.body.position.y=e.state==='stalk'?Math.abs(Math.sin(e.beats*Math.PI/2+e.clock/beatLen*Math.PI/2))*.12:0;
- e.body.rotation.x=e.state==='jabTell'?-.12:e.state==='jab'?.2:0;
+ e.body.rotation.x=e.state==='jabTell'?-.16:e.state==='jab'?.24:e.state==='sweepTell'?-.08:0;
+ const phasePulse=e.state==='phaseShift'?1+.06*Math.sin(e.timer*24):1,sx=e.state==='jabTell'?1.3:e.state==='jab'?1.12:1.2,sy=e.state==='jabTell'?1.08:e.state==='jab'?1.32:1.2;e.body.scale.set(sx*phasePulse,sy*phasePulse,1.2);
 }
 
 export function austinHint(e){

@@ -54,9 +54,10 @@
 @media(max-height:480px){.name-field{margin:2px 0 6px}.name-field input{min-height:40px;font-size:16px}.name-field small{display:none}}
 
 /* Keep Austin's clock face and boxing guard clear of the boss HUD. */
-#boss-hud.austin-hud{top:auto;bottom:44px}
-.touch-mode #boss-hud.austin-hud{top:auto;bottom:max(10px,env(safe-area-inset-bottom))}
-@media(orientation:portrait){.touch-mode #boss-hud.austin-hud{bottom:166px}}
+#boss-hud.austin-hud{top:74px;bottom:auto;width:500px;max-width:76vw}
+.touch-mode #boss-hud.austin-hud{top:max(46px,env(safe-area-inset-top));bottom:auto;width:420px;max-width:72vw}
+body.phone-landscape #boss-hud.austin-hud{top:max(8px,env(safe-area-inset-top));width:410px;max-width:54vw}
+@media(orientation:portrait){.touch-mode #boss-hud.austin-hud{top:118px;bottom:auto;max-width:88vw}}
 /* Potion bag: one button per potion kind the seed holds. Sprout is passive, so it is a chip, not a button. */
 #item-bar{position:absolute;left:38px;bottom:118px;z-index:3;display:flex;align-items:center;gap:6px;flex-wrap:wrap;max-width:min(560px,calc(100vw - 90px))}
 #item-bar[hidden],#item-status[hidden]{display:none}

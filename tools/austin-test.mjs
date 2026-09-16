@@ -55,7 +55,7 @@ function run(r,seconds,step=1/60,each=()=>{}){for(let t=0;t<seconds;t+=step){tic
 {
  const inLane=rig(new V(0,0,4));inLane.e.g.position.set(0,0,-2);inLane.e.state='stalk';inLane.e.timer=0;inLane.e.pattern=0;
  tickAustin(inLane.e,1/60,inLane.hooks);
- assert.equal(inLane.e.state,'jabTell');assert.ok(inLane.e.parts.lane.visible,'lane tell is visible');
+ assert.equal(inLane.e.state,'jabTell');assert.ok(inLane.e.parts.lane.visible,'lane tell is visible');assert.ok(inLane.e.parts.tellRing.visible,'the boss flashes an attack ring');assert.ok(inLane.e.body.scale.x>inLane.e.body.scale.y,'the sprite visibly braces before the dash');
  run(inLane,AUSTIN.jab.tell+AUSTIN.jab.dash+.05);
  assert.ok(inLane.log.hits.includes(AUSTIN.jab.contact),'the jab lands on a seed that stayed in the lane');
  const aside=rig(new V(0,0,4));aside.e.g.position.set(0,0,-2);aside.e.state='stalk';aside.e.timer=0;aside.e.pattern=0;

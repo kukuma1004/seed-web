@@ -37,12 +37,14 @@ export const SOLO_FORMS=Object.freeze(Object.fromEntries([
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
 export const AWAKEN=Object.freeze({openingEvery:10,openingRange:12,surgeOpeningEvery:1.2,damage:1.25,interval:.8});
+export const AWAKEN_OPENING_EVERY=Object.freeze({bigcrunch:14});
+export const awakenOpeningEvery=(id,twin=false)=>twin?AWAKEN.openingEvery:AWAKEN_OPENING_EVERY[id]??AWAKEN.openingEvery;
 // The mirror's opening turns every enemy shot at once, so it does not repeat during the ultimate.
 export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
 export const awakenSurgeOpening=(id,twin=false)=>twin?TWIN.surgeOpeningEvery:AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
 const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:FORMS[base].requires,pair:`${FORMS[base].name} 각성`,desc,strength,weakness,passive:FORMS[base].passive,awakened:true});
 export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
- awaken('bigcrunch','collapse','대붕괴','붕괴 씨앗과 우물이 늘고 더 넓게 무너지며, 10초마다 가까운 적 셋의 자리에 붕괴 우물을 한꺼번에 심습니다.','무리를 통째로 끌어모아 한 번에 붕괴','느린 발사는 그대로라 빠르게 파고드는 적에 주의'),
+ awaken('bigcrunch','collapse','대붕괴','넓은 붕괴 씨앗을 빠르게 쏘며, 14초마다 가까운 적 둘의 자리에 붕괴 우물을 심습니다.','모인 적을 강한 붕괴로 정리','우물 사이의 공백과 느린 탄을 빠른 적이 파고듦'),
  awaken('frostarmada','frostguard','서리 함대','위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.','근접 제압과 탄막 방어의 완성형','사거리는 여전히 짧음'),
  awaken('thousandblades','returnblade','천 개의 칼날','칼날이 늘고 왕복마다 더 많이 베며, 10초마다 여덟 방향으로 칼날을 던집니다.','사방의 적을 왕복으로 갈아냄','씨앗이 멈춰 있으면 경로가 단조로움'),
  awaken('infiniteprism','prism','무한 프리즘','가시가 한 번 더 갈라지고, 10초마다 열두 방향으로 수정 가시를 흩뿌립니다.','벽 많은 방을 가시로 가득 채움','트인 곳에서는 갈라질 벽이 적음'),
@@ -180,7 +182,7 @@ const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','pe
 // Awakened: a lasting share of the surge. Counts grow a little, attacks come a little faster and hit a little harder;
 // the ultimate still adds the full surge on top.
 const AWAKEN_BOOST=Object.freeze({
- collapse:s=>({bolts:s.bolts+1,radius:s.radius+.3}),
+ collapse:s=>({radius:s.radius+.15}),
  frostguard:s=>({satellites:Math.min(8,s.satellites+1),novaEvery:s.novaEvery*.65,novaRadius:s.novaRadius+.5}),
  returnblade:s=>({bolts:s.bolts+1,hitsPerLeg:s.hitsPerLeg+2}),
  prism:s=>({shards:s.shards+8,generations:s.generations+1}),
@@ -192,7 +194,7 @@ const AWAKEN_BOOST=Object.freeze({
  mirrorguard:s=>({mirrors:s.mirrors+2,radius:s.radius+.2})
 });
 // Measured against the fusion plus its best solo evolution at equal levels (tools/active-balance-test.mjs).
-const AWAKEN_DAMAGE=Object.freeze({collapse:1.05,frostguard:1.25,returnblade:1.15,prism:2.2,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
+const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:2.2,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
 function awakenStats(id,s){
  const boosted={...s,...(AWAKEN_BOOST[id]?.(s)||{}),awakened:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=AWAKEN.interval;

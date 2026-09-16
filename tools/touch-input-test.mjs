@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createTouchControls} from '../src/touch.js';
 class Element {
- constructor(){this.listeners={};this.style={};this.classList={toggle(){}};this.capture=new Set();this.children={i:{style:{}},small:{textContent:''}};}
+ constructor(){this.listeners={};this.style={};this.classList={toggle(){}};this.capture=new Set();this.children={i:{style:{}},small:{textContent:''},'.dash-charges':{children:[{classList:{toggle(){}}},{classList:{toggle(){}}}]}};}
  addEventListener(name,fn){(this.listeners[name]??=[]).push(fn);}
  fire(name,extra={}){let prevented=false;const event={target:this,preventDefault(){prevented=true;},...extra};for(const fn of this.listeners[name]||[])fn(event);return {event,prevented};}
  getBoundingClientRect(){return {left:0,top:0,width:100,height:100};}
@@ -25,6 +25,8 @@ assert.equal(doc.fire('touchmove',{touches:[{}]}).prevented,false,'A single touc
 const editable={closest(){return this;}};
 assert.equal(doc.fire('selectstart',{target:editable}).prevented,false,'Name fields retain native editing and selection');
 assert.ok(!panel.innerHTML.includes('aim-stick'));
+assert.match(panel.innerHTML,/dash-charges/,'Double dodge owns two visible charge pips');
+control.update(true,0,{charges:1,maxCharges:2,recharge:4.4});assert.equal(dash.children.small.textContent,'회피 1/2');
 move.fire('pointerdown',{pointerId:1,clientX:85,clientY:50});
 assert.equal(control.axes.move.x,1);
 dash.fire('pointerdown',{pointerId:2});
