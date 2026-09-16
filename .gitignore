@@ -65,3 +65,4 @@ android/keystore.properties
 !tools/mutations-test.mjs
 !tools/shop-test.mjs
 !tools/patch-notes-test.mjs
+!tools/responsive-view-test.mjs

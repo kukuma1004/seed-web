@@ -70,6 +70,7 @@ import './mobile.css';
 import './choice.css';
 import {setupMobileApp} from './mobile-app.js';
 import {createTouchControls} from './touch.js';
+import {responsiveView} from './responsive-view.js';
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
 import {createMotion} from './motion.js';
 import {createVFX,FX_COLORS} from './vfx.js';
@@ -85,7 +86,7 @@ const setText=(e,v)=>{if(e&&e.textContent!==v)e.textContent=v;},setWidth=(e,v)=>
 let canvasRect={left:0,top:0,width:1,height:1};
 // Phones held sideways show the fight closer and follow the seed more (2026-09-15: the arena looked tiny on a phone).
 // World coordinates and hit sizes are unchanged; only the camera frames a smaller area.
-const PHONE_ZOOM=1.32,TABLET_ZOOM=1.1;let phoneView=false;
+let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
 let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return localStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
@@ -789,7 +790,7 @@ if(mode==='playing'&&!roomCleared&&!bossFalling&&choiceKills>=killsForChoice(cho
 let last=performance.now(),frames=[],frameCounter=0;function animate(now){requestAnimationFrame(animate);let raw=(now-last)/1000;last=now;frames.push(raw*1000);qualityGovernor.sample(raw*1000,mode==='playing'&&!paused&&!document.hidden);if(frames.length>180)frames.shift();const dt=advanceFrame(raw,now*.001,(step,time)=>update(step,time));if(!paused)vfx.update(dt);presentFrame(now*.001);frameCounter++;
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*dt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
- look.lerp(new V(player.position.x*(phoneView?.5:.14),0,player.position.z*(phoneView?.4:.06)+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='notes')&&gardenScene;
+ look.lerp(new V(player.position.x*viewLayout.followX,0,player.position.z*viewLayout.followZ+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='notes')&&gardenScene;
  if(showGardenScene)gardenScene.update(dt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
  if(bloomPass.enabled)composer.render();else renderer.render(renderPass.scene,renderPass.camera);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
@@ -880,7 +881,7 @@ function mountQualityButton(){
  footer.prepend(button);
 }
 const qualityGovernor=createQualityGovernor(qualityLevel,{onChange:level=>{applyQuality(level);const qb=document.getElementById('quality-toggle');if(qb)qb.textContent=qualityButtonLabel();$('#toast').textContent=`기기가 느려 화질을 '${QUALITY_NAMES[level]}'으로 낮췄어요 · 게임 규칙은 그대로예요`;}});
-function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight,h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;phoneView=touch.enabled&&w>h&&h<=520;const tabletView=touch.enabled&&w>h&&h>520;document.body.classList.toggle('phone-landscape',phoneView);camera.zoom=Math.min(1.18,camera.aspect/(touch.enabled&&h>w?1.25:.95))*(phoneView?PHONE_ZOOM:tabletView?TABLET_ZOOM:1);camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
+function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight,h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;viewLayout=responsiveView(w,h,touch.enabled);document.body.classList.toggle('phone-landscape',viewLayout.phone);camera.zoom=viewLayout.zoom;camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
 // 정원에서는 화면을 눌러 식물과 빈 자리를 고른다.
 renderer.domElement.addEventListener('pointerdown',event=>{
  if(mode!=='garden'||!gardenScene)return;
