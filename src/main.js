@@ -79,7 +79,8 @@ import {createCloudSync} from './cloud-sync.js';
 import {readAccountProfile,accountBadgeLine,BADGES} from './account-profile.js';
 import {claimFirstGardenPioneer,legacyRankingUid} from './legacy-honor.js';
 import {publicWebBetaLocked,BETA_NOTICE} from './beta-access.js';
-import {DEFAULT_SEASON_STATUS,isSeasonAdmin,loadSeasonStatus} from './season-access.js';
+import {BETA_TEST_URL,betaApplicationMessage,submitBetaApplication} from './beta-signup.js';
+import {DEFAULT_SEASON_STATUS,gameplayIsPaused,isSeasonAdmin,loadSeasonStatus} from './season-access.js';
 import {bindPointerAction,createTouchControls} from './touch.js';
 import {createGameAudio,ultimateAudioEvent} from './audio.js';
 import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBonusOffers,applyRunBonus,runBonusSummary,moveScale as runMoveScale,shotScale as runShotScale,powerScale as runPowerScale} from './run-bonuses.js';
@@ -109,7 +110,7 @@ let canvasRect={left:0,top:0,width:1,height:1};
 let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
 let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false;
-const gameplayPaused=()=>seasonStatus.paused&&!adminMode&&!import.meta.env.DEV;
+const gameplayPaused=()=>gameplayIsPaused({status:seasonStatus,native:account.native,admin:adminMode,dev:import.meta.env.DEV});
 const refreshAdminMode=async()=>adminMode=await isSeasonAdmin(account.user());
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
 let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return runStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
@@ -655,14 +656,28 @@ function authMessage(error){
  if(code.includes('provider')||code.includes('configuration-not-found')||code.includes('DEVELOPER_ERROR'))return '이 로그인 방식의 마지막 설정을 준비하고 있어요.';
  return '로그인을 마치지 못했어요. 잠시 뒤 다시 시도해 주세요.';
 }
-function showBetaLock(){
+function showBetaLock(message='',success=false){
  revealApp();
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p><div class="account-status"><strong>등록된 베타 테스터만 플레이할 수 있어요</strong><span>Google Play에서 설치한 앱은 정상적으로 열립니다.</span></div><p class="account-note">${BETA_NOTICE.detail}</p><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
+ const user=account.user(),linked=user&&!user.isAnonymous&&user.email;
+ $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p>
+  <div class="beta-test-path"><strong>이미 등록된 테스터인가요?</strong><span>테스트에 등록된 Google 계정으로 열어야 설치할 수 있어요.</span><a class="account-button beta-install" href="${BETA_TEST_URL}" target="_blank" rel="noopener"><span><b>Google Play 테스트 참여·설치</b><small>공식 비공개 테스트 링크</small></span></a></div>
+  <div class="beta-divider"><span>새로 신청하기</span></div>
+  ${linked?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>이 Google 계정으로 신청합니다.</span></div>`:`<button id="beta-google" class="account-button google beta-google"><b>G</b><span><b>Google 계정으로 지원하기</b><small>테스트 등록에 사용할 이메일을 확인합니다</small></span></button>`}
+  <label class="beta-check"><input id="beta-android" type="checkbox"><span><strong>사용 가능한 Android 기기가 있어요</strong><small>Android 휴대전화 또는 태블릿에서 테스트합니다.</small></span></label>
+  <label class="beta-check"><input id="beta-consent" type="checkbox"><span><strong>이메일 수집·이용에 동의해요</strong><small>비공개 테스트 등록과 안내 목적으로만 사용합니다.</small></span></label>
+  <button id="beta-submit" class="account-button beta-submit" ${linked?'':'disabled'}><span><b>베타테스터 신청 보내기</b><small>등록 완료 안내를 받은 뒤 설치할 수 있어요</small></span></button>
+  <p id="beta-message" class="account-error ${success?'success':''}" role="status">${escapeHtml(message)}</p>
+  <p class="account-note">${BETA_NOTICE.detail} <a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a></p>
+  <a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
+ const busy=state=>document.querySelectorAll('#beta-google,#beta-submit').forEach(button=>button.disabled=state);
+ if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
+ if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{await submitBetaApplication({account,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock('신청을 받았어요. 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.',true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
 }
 function showEntry(){
  revealApp();
- if((publicWebBetaLocked()&&!adminMode)||gameplayPaused()){showSeasonPause();return;}
+ if(publicWebBetaLocked()&&!adminMode){showBetaLock();return;}
+ if(gameplayPaused()){showSeasonPause();return;}
  if(account.user())showIntro();else showAccount();
 }
 function showSeasonPause(){
@@ -680,7 +695,7 @@ function showAccount(error=''){
   <div class="account-buttons">
    ${!linked?`<button id="account-google" class="account-button google"><b>G</b><span><b>Google로 계속하기</b></span></button>
    <button id="account-apple" class="account-button apple" ${appleOff?'disabled':''}><b>●</b><span><b>Apple로 계속하기</b>${appleOff?'<small>iPhone 출시 준비 중</small>':''}</span></button>`:''}
-   ${!user&&!seasonStatus.paused?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
+   ${!user&&!gameplayPaused()?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
    ${user?`<button id="account-continue" class="account-button"><span><b>${gameplayPaused()?'접속 권한 확인':'게임으로 돌아가기'}</b></span></button>`:''}
   </div>
   <p id="account-error" class="account-error" role="alert">${escapeHtml(error)}</p>

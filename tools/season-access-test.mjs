@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {ADMIN_EMAIL_HASH,DEFAULT_SEASON_STATUS,isSeasonAdmin,loadSeasonStatus,normalizeSeasonStatus} from '../src/season-access.js';
+import {ADMIN_EMAIL_HASH,DEFAULT_SEASON_STATUS,gameplayIsPaused,isSeasonAdmin,loadSeasonStatus,normalizeSeasonStatus} from '../src/season-access.js';
 
 const adminDigest=async value=>value.toLowerCase()==='kukuma1004@gmail.com'?ADMIN_EMAIL_HASH:'0'.repeat(64);
 assert.equal(await isSeasonAdmin({email:'KUKUMA1004@gmail.com',isAnonymous:false},adminDigest),true);
@@ -11,4 +11,7 @@ const open=await loadSeasonStatus({fetchImpl:async()=>({ok:true,json:async()=>({
 assert.equal(open.paused,false);assert.equal(open.season,'1.2');
 const offline=await loadSeasonStatus({fetchImpl:async()=>{throw new Error('offline');}});assert.deepEqual(offline,DEFAULT_SEASON_STATUS);
 const dev=await loadSeasonStatus({enabled:false,fetchImpl:async()=>{throw new Error('must not fetch');}});assert.equal(dev.paused,false);
+assert.equal(gameplayIsPaused({status:{paused:true}}),true);
+assert.equal(gameplayIsPaused({status:{paused:true},native:true}),false,'the installed beta app stays playable while the public web is paused');
+assert.equal(gameplayIsPaused({status:{paused:true},admin:true}),false);
 console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');

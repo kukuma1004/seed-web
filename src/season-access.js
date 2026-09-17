@@ -19,6 +19,9 @@ export async function isSeasonAdmin(user,digest=accessHash){
  if(!user||user.isAnonymous||typeof user.email!=='string'||!user.email)return false;
  return await digest(user.email)===ADMIN_EMAIL_HASH;
 }
+export function gameplayIsPaused({status=DEFAULT_SEASON_STATUS,native=false,admin=false,dev=false}={}){
+ return Boolean(status?.paused)&&!native&&!admin&&!dev;
+}
 export function normalizeSeasonStatus(value){
  const text=(key,fallback)=>typeof value?.[key]==='string'&&value[key].trim()?value[key].trim().slice(0,180):fallback;
  return Object.freeze({paused:value?.paused!==false,season:text('season',DEFAULT_SEASON_STATUS.season),title:text('title',DEFAULT_SEASON_STATUS.title),body:text('body',DEFAULT_SEASON_STATUS.body),detail:text('detail',DEFAULT_SEASON_STATUS.detail)});
