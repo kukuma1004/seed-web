@@ -5,6 +5,14 @@ import {SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,MAX_RECORD
  activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,gardenRecordLine,objectJosa,wayJosa,
  CENTER,MAX_ACTIVE_SLOTS,centerStage,centerInfo,activeSlots,bloomedCount} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
+import {GARDEN_GROWTH_ART,growthArtTile,centerArtTile} from '../src/garden-scene.js';
+
+assert.ok(GARDEN_GROWTH_ART.endsWith('.webp'));
+assert.deepEqual([
+ growthArtTile(0),growthArtTile(1),growthArtTile(4),growthArtTile(4,'flower'),growthArtTile(4,'tree'),growthArtTile(4,'vine'),
+ growthArtTile(9,'flower'),growthArtTile(9,'tree'),growthArtTile(9,'vine')
+],[0,1,3,4,6,8,5,7,9]);
+assert.deepEqual([0,1,2,3,4,5].map(centerArtTile),[null,0,2,10,7,11]);
 
 const memory=()=>{const d=new Map();return {getItem:k=>d.has(k)?d.get(k):null,setItem:(k,v)=>d.set(k,String(v)),d};};
 const grow=(g,n)=>growPlants(g,n);

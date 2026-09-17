@@ -21,6 +21,16 @@ export const AUDIO_EVENTS=Object.freeze({
  bossDefeat:{wave:'triangle',freq:180,end:720,duration:.9,gain:.09,cooldown:1,priority:4,notes:[1,1.25,1.5,2]}
 });
 
+// A tiny procedural score: two sustained voices and one occasional bell. It
+// adds no download, decode, or extra texture memory and changes harmony between
+// the garden, ordinary combat and Austin. The sound toggle controls it together
+// with effects.
+export const MUSIC_SCENES=Object.freeze({
+ garden:Object.freeze({root:146.83,ratios:[1,1.5],bell:[2,2.5,3],gain:.042,step:3.6}),
+ combat:Object.freeze({root:110,ratios:[1,1.498],bell:[2,2.245,3],gain:.036,step:2.8}),
+ boss:Object.freeze({root:82.41,ratios:[1,1.414],bell:[2,2.378,2.828],gain:.046,step:2.15})
+});
+
 export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
  const last=new Map(),live=new Set();let next=1;
  function begin(id,spec=AUDIO_EVENTS[id]){
@@ -37,14 +47,25 @@ export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
 }
 
 export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globalThis.webkitAudioContext,now=()=>performance.now()}={}){
- const limiter=createAudioLimiter({maxVoices:12,now});let ctx=null,master=null,muted=false,paused=false,unlocked=false;
+ const limiter=createAudioLimiter({maxVoices:12,now});let ctx=null,master=null,musicBus=null,muted=false,paused=false,unlocked=false,musicScene='garden',musicClock=0,musicStep=0,musicVoices=[];
  function ensure(){
   if(ctx||!AudioContextCtor)return Boolean(ctx);
-  try{ctx=new AudioContextCtor();master=ctx.createGain();master.gain.value=.78;master.connect(ctx.destination);return true;}catch{return false;}
+  try{ctx=new AudioContextCtor();master=ctx.createGain();master.gain.value=.78;master.connect(ctx.destination);musicBus=ctx.createGain();musicBus.gain.value=.0001;musicBus.connect(master);return true;}catch{return false;}
+ }
+ function tuneMusic(){
+  if(!ctx||!musicVoices.length)return;const scene=MUSIC_SCENES[musicScene],at=ctx.currentTime;
+  musicVoices.forEach((voice,index)=>voice.osc.frequency.setTargetAtTime(scene.root*scene.ratios[index],at,.8));
+  musicBus.gain.setTargetAtTime((paused||muted)?0.0001:scene.gain,at,.7);
+ }
+ function startMusic(){
+  if(!ctx||!unlocked||musicVoices.length)return;
+  const scene=MUSIC_SCENES[musicScene];
+  scene.ratios.forEach((ratio,index)=>{const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=index?'triangle':'sine';osc.frequency.value=scene.root*ratio;gain.gain.value=index?.15:.22;osc.connect(gain).connect(musicBus);osc.start();musicVoices.push({osc,gain});});
+  tuneMusic();
  }
  async function unlock(){
   if(!ensure())return false;
-  try{if(ctx.state!=='running')await ctx.resume();unlocked=ctx.state==='running';return unlocked;}catch{return false;}
+  try{if(ctx.state!=='running')await ctx.resume();unlocked=ctx.state==='running';if(unlocked)startMusic();return unlocked;}catch{return false;}
  }
  function play(id,{intensity=1,pitch=1}={}){
   const spec=AUDIO_EVENTS[id];if(!spec||muted||paused||!unlocked||!ctx||ctx.state!=='running')return false;
@@ -67,6 +88,12 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
  function installUnlock(target=document){
   const wake=()=>{unlock();};target.addEventListener('pointerdown',wake,{capture:true,passive:true});target.addEventListener('keydown',wake,{capture:true,passive:true});return wake;
  }
- async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){try{await ctx.suspend();}catch{}}else await unlock();}
- return {unlock,play,installUnlock,setPaused,setMuted(value){muted=Boolean(value);if(master)master.gain.value=muted?0:.78;},reset(){limiter.reset();},state:()=>({supported:Boolean(AudioContextCtor),unlocked,muted,paused,...limiter.state()})};
+ function setScene(id){musicScene=Object.hasOwn(MUSIC_SCENES,id)?id:'garden';musicClock=0;musicStep=0;tuneMusic();return musicScene;}
+ function tick(dt){
+  if(!unlocked||paused||muted||!ctx||ctx.state!=='running')return;
+  const scene=MUSIC_SCENES[musicScene];musicClock+=Math.max(0,Math.min(.1,dt));if(musicClock<scene.step)return;musicClock-=scene.step;
+  const ratio=scene.bell[musicStep++%scene.bell.length],at=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(scene.root*ratio,at);osc.frequency.exponentialRampToValueAtTime(scene.root*ratio*.997,at+.7);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.12,at+.012);gain.gain.exponentialRampToValueAtTime(.0001,at+.78);osc.connect(gain).connect(musicBus);osc.start(at);osc.stop(at+.82);
+ }
+ async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){try{await ctx.suspend();}catch{}}else await unlock();tuneMusic();}
+ return {unlock,play,installUnlock,setPaused,setScene,tick,setMuted(value){muted=Boolean(value);if(master)master.gain.value=muted?0:.78;tuneMusic();},reset(){limiter.reset();musicClock=0;},state:()=>({supported:Boolean(AudioContextCtor),unlocked,muted,paused,musicScene,musicVoices:musicVoices.length,...limiter.state()})};
 }

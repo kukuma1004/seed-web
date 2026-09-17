@@ -17,6 +17,8 @@ assert.equal(memory.get(THEME_KEY),'cyber');assert.equal(readTheme(storage),'cyb
 
 const poses=new Set();
 for(const theme of THEME_ORDER){
+ assert.ok(THEMES[theme].sparkScale>0&&THEMES[theme].sparkScale<1,'spark sprites stay compact');
+ assert.ok(THEMES[theme].twinkle>=0&&THEMES[theme].twinkle<=.5,'twinkle remains subtle');
  const scene=new THREE.Scene(),fx=createVFX(scene,{theme,random:()=>.3});
  fx.burst(new THREE.Vector3(),'seed',12,1);fx.portal(new THREE.Vector3(),new THREE.Vector3(2,0,0));fx.update(.05);
  const root=scene.getObjectByName('seed-vfx'),matrix=new THREE.Matrix4();root.children[0].getMatrixAt(0,matrix);

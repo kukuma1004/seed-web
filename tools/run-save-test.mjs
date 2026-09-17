@@ -1,11 +1,21 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {validCheckpoint,readCheckpoint,writeCheckpoint,clearCheckpoint,difficulty,replaceLaw,restoredScore,restoredWardens,restoredAustins,withoutHidden,SAVE_KEY} from '../src/run-save.js';
+import {validCheckpoint,readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,restoredScore,restoredWardens,restoredAustins,withoutHidden,SAVE_KEY} from '../src/run-save.js';
 import {createShield,blocksShield,tickShield} from '../src/shield.js';
 import {rewardOptions} from '../src/journey.js';
 let value=null;const storage={getItem:()=>value,setItem:(k,v)=>value=v,removeItem:()=>value=null};
 const s={version:1,cycle:2,stage:3,mode:'entry',region:'ruins',hp:70,rules:['reflect','split'],mutated:['split'],kills:200,elapsed:160};
 assert.ok(writeCheckpoint(storage,s));assert.deepEqual(readCheckpoint(storage),s);
+{
+ const entry={...s,hp:80,kills:200,score:3000,choicesTaken:4,choiceKills:7,levels:{reflect:2,split:1},forms:{},inventory:{potion:1,tonic:2,wind:0,shell:1,sprout:0}};
+ const safe=roomExitCheckpoint(entry,{hp:46,inventory:{potion:2,tonic:1,wind:1,shell:0,sprout:0}});
+ assert.equal(safe.hp,46,'damage taken in the unfinished room survives');
+ assert.deepEqual(safe.inventory,{potion:1,tonic:1,wind:0,shell:0,sprout:0},'drops are discarded and consumed items stay consumed');
+ assert.equal(safe.kills,200);assert.equal(safe.score,3000);assert.equal(safe.choicesTaken,4);assert.equal(safe.choiceKills,7);
+ assert.deepEqual(safe.levels,entry.levels);assert.deepEqual(safe.forms,entry.forms);
+ assert.equal(roomExitCheckpoint({...entry,hp:40},{hp:90,inventory:entry.inventory}).hp,40,'healing above the room-entry value cannot be banked by reloading');
+ assert.equal(roomExitCheckpoint(null,{hp:50,inventory:{}}),null);
+}
 assert.equal(validCheckpoint({...s,hp:0}),false);assert.equal(validCheckpoint({...s,stage:8}),false);
 assert.equal(validCheckpoint({...s,rules:['bad']}),false);assert.equal(validCheckpoint({...s,mutated:['frost']}),false);
 assert.equal(writeCheckpoint({setItem(){throw Error('quota');}},s),false);

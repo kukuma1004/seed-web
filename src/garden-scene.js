@@ -14,6 +14,17 @@ export const PLOT_SPOTS=Object.freeze([
  {x:-1.45,z:.7},{x:1.45,z:.7}
 ]);
 export const CENTER_SPOT=Object.freeze({x:0,z:-2.6});
+export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v2.webp';
+// 4 x 3 atlas cells. Keeping the selection in data makes it easy to test and
+// prevents the garden UI from drifting away from the saved growth stage.
+export function growthArtTile(growth,branch){
+ const stage=stageOf(growth);
+ if(stage==='seed')return 0;
+ if(stage==='sprout')return 1;
+ if(stage==='bloom')return branch==='tree'?7:branch==='vine'?9:5;
+ return branch==='tree'?6:branch==='vine'?8:branch==='flower'?4:3;
+}
+export function centerArtTile(index){return index<=0?null:index===1?0:index===2?2:index===3?10:index===4?7:11;}
 export const seedColor=id=>SEEDS[id]?.law?LAWS[SEEDS[id].law].color:0xf2c14e;
 let sleepingSeedTexture=null;
 function sleepingSeedMap(){
@@ -27,8 +38,15 @@ function material(color,{rough=.75,emissive=0,intensity=.35,flat=false}={}){
  return new THREE.MeshStandardMaterial({color,roughness:rough,metalness:.04,emissive,emissiveIntensity:intensity,flatShading:flat});
 }
 // 성장 단계와 갈래로 정해지는 식물 한 그루. 씨앗 색이 잎과 꽃에 들어간다.
-export function buildPlant(seedId,growth,branch){
+export function buildPlant(seedId,growth,branch,artKit=null){
  const group=new THREE.Group(),tint=seedColor(seedId),stage=stageOf(growth);
+ if(artKit){
+  const tile=growthArtTile(growth,branch),plane=new THREE.Mesh(artKit.geometries[tile],artKit.material);
+  const size=stage==='seed'?1.12:stage==='sprout'?1.28:branch==='tree'?(stage==='bloom'?2.18:1.82):branch==='vine'?(stage==='bloom'?1.92:1.62):(stage==='bloom'?1.86:1.55);
+  plane.scale.set(size,size,1);plane.position.y=size*.5;plane.renderOrder=3;plane.userData.sharedGardenArt=true;group.add(plane);
+  group.userData={seed:seedId,stage,branch:branch||null,sway:Math.random()*6.28,art:true};
+  return group;
+ }
  // 잎과 줄기는 초록으로 두고, 씨앗 색은 꽃·열매에만 쓴다(색 덩어리처럼 보이지 않게).
  const accent=new THREE.Color(tint);
  const leafColor=new THREE.Color(tint).lerp(new THREE.Color(0x6fae74),.72);
@@ -85,8 +103,13 @@ export function buildPlant(seedId,growth,branch){
  return group;
 }
 // 정원 한가운데: 여정을 거듭할수록 드러나는 존재.
-export function buildCenter(index){
+export function buildCenter(index,artKit=null){
  const group=new THREE.Group();
+ const tile=centerArtTile(index);
+ if(artKit&&tile!==null){
+  const plane=new THREE.Mesh(artKit.geometries[tile],artKit.material),size=index>=5?3.25:index===4?2.55:index===3?2.05:index===2?1.62:1.18;
+  plane.scale.set(size,size,1);plane.position.y=size*.5;plane.renderOrder=2;plane.userData.sharedGardenArt=true;group.add(plane);group.userData={index,art:true};return group;
+ }
  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);group.add(m);return m;};
  // At the start the painted shrine remains empty. A real seed portrait wakes in
  // stages instead of placing a low-poly brown mound over the HD background.
@@ -126,6 +149,15 @@ export function createGardenScene(){
  backdrop.colorSpace=THREE.SRGBColorSpace;
  const camera=new THREE.PerspectiveCamera(42,1,.1,120);
  camera.position.set(0,6.2,9.2);camera.lookAt(0,1.5,.2);
+ const growthTexture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+GARDEN_GROWTH_ART);
+ growthTexture.colorSpace=THREE.SRGBColorSpace;growthTexture.minFilter=THREE.LinearMipmapLinearFilter;growthTexture.magFilter=THREE.LinearFilter;
+ const growthMaterial=new THREE.MeshBasicMaterial({map:growthTexture,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const growthGeometries=Array.from({length:12},(_,tile)=>{
+  const geometry=new THREE.PlaneGeometry(1,1),uv=geometry.attributes.uv,col=tile%4,row=Math.floor(tile/4);
+  for(let i=0;i<uv.count;i++)uv.setXY(i,col/4+uv.getX(i)/4,(2-row)/3+uv.getY(i)/3);
+  uv.needsUpdate=true;return geometry;
+ });
+ const artKit={material:growthMaterial,geometries:growthGeometries};
  scene.add(new THREE.HemisphereLight(0xcde4de,0x243832,1.32));
  const moon=new THREE.DirectionalLight(0xffe9c4,1.35);moon.position.set(-6,11,7);scene.add(moon);
  const warm=new THREE.PointLight(0xffc98a,12,12,2);warm.position.set(0,3.4,-3.4);scene.add(warm);
@@ -155,7 +187,7 @@ export function createGardenScene(){
  function clearGroup(group){
   for(const child of [...group.children]){
    group.remove(child);
-   child.traverse(o=>{if(o.isMesh||o.isSprite){o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();}});
+   child.traverse(o=>{if((o.isMesh||o.isSprite)&&!o.userData.sharedGardenArt){o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();}});
   }
  }
  // 정원 상태가 바뀌면 식물을 다시 세운다(자주 일어나지 않는다).
@@ -165,13 +197,13 @@ export function createGardenScene(){
    const spot=PLOT_SPOTS[index];if(!spot)return;
    markers[index].visible=!plant;
    if(!plant)return;
-   const group=buildPlant(plant.seed,plant.growth,plant.branch);
+   const group=buildPlant(plant.seed,plant.growth,plant.branch,artKit);
    group.position.set(spot.x,0,spot.z);
    group.userData.plot=index;
    plantGroup.add(group);plants.push(group);
    group.traverse(o=>{if(o.isMesh){o.userData.plot=index;picks.push(o);}});
   });
-  center=buildCenter(centerStage(garden,{austinDefeated}));
+  center=buildCenter(centerStage(garden,{austinDefeated}),artKit);
   center.position.set(CENTER_SPOT.x,0,CENTER_SPOT.z);
   center.traverse(o=>{if(o.isMesh)o.userData.center=true;});
   centerGroup.add(center);
@@ -190,9 +222,11 @@ export function createGardenScene(){
   time+=dt;
   for(const group of plants){
    const sway=Math.sin(time*1.4+group.userData.sway)*.035;
-   group.rotation.z=sway;group.rotation.x=sway*.4;
+   if(group.userData.art){const art=group.children[0];art.quaternion.copy(camera.quaternion);art.rotateZ(sway);}
+   else{group.rotation.z=sway;group.rotation.x=sway*.4;}
   }
-  if(center)center.rotation.y=Math.sin(time*.18)*.06;
+  if(center?.userData.art)center.children[0]?.quaternion.copy(camera.quaternion);
+  else if(center)center.rotation.y=Math.sin(time*.18)*.06;
   flies.forEach((f,i)=>{
    f.a+=dt*f.speed;
    const y=f.y+Math.sin(time*1.2+f.phase)*.35;

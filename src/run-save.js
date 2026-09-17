@@ -2,9 +2,10 @@ import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS,isFormEligible} from './forms.js';
 import {validActiveGauge,validActiveCooldown} from './actives.js';
-import {validInventory} from './inventory.js';
+import {normalizeInventory,validInventory} from './inventory.js';
 import {validMutations} from './mutations.js';
 import {validDashEvolution} from './dash-evolution.js';
+import {validRunBonuses} from './run-bonuses.js';
 import {SLOT_CAP} from './progression.js';
 import {roomPoints} from './score.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
@@ -28,7 +29,7 @@ export function validCheckpoint(s){
  if(!validCount(s?.wardens)||!validCount(s?.austins)||(s?.austins||0)>Math.floor((s?.wardens||0)/5))return false;
  if(!validCount(s?.turretPotionDry))return false;
  if(!validMutations(s?.mutations))return false;
- if(!validInventory(s?.inventory)||!validRelics(s?.relics)||!validDashEvolution(s?.dashEvolution))return false;
+ if(!validInventory(s?.inventory)||!validRelics(s?.relics)||!validDashEvolution(s?.dashEvolution)||!validRunBonuses(s?.runBonuses))return false;
  if(s?.mode==='austin'&&s.stage!==4)return false;
  return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=SLOT_CAP&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
 }
@@ -63,6 +64,16 @@ export function withoutHidden(s){
 export function readCheckpoint(storage){try{const s=withoutHidden(JSON.parse(storage.getItem(SAVE_KEY)));return validCheckpoint(s)?s:null;}catch{return null;}}
 export function writeCheckpoint(storage,s){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
 export function clearCheckpoint(storage){try{storage.removeItem(SAVE_KEY);return true;}catch{return false;}}
+// A checkpoint represents the room entrance. Leaving halfway restarts the full
+// room, so gains made inside it must not survive while the enemies respawn.
+// Losses do survive: otherwise reloading heals damage and refunds drunk potions.
+export function roomExitCheckpoint(entry,{hp,inventory}={}){
+ if(!validCheckpoint(entry))return null;
+ const before=normalizeInventory(entry.inventory),after=normalizeInventory(inventory),spent={};
+ for(const id of Object.keys(before))spent[id]=Math.min(before[id],after[id]);
+ const currentHp=Number.isFinite(hp)&&hp>0?hp:entry.hp;
+ return {...entry,hp:Math.max(.01,Math.min(entry.hp,currentHp)),inventory:spent};
+}
 // Each journey after a warden is faster. The old region choice is gone; saved regions only name the place.
 export function difficulty(cycle){return {hp:1+Math.min(cycle,20)*.24,speed:Math.min(1.9,1+cycle*.08),bossHp:1+Math.min(cycle,20)*.3};}
 export function replaceLaw(rules,mutated,oldId,newId){

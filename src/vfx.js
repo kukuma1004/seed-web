@@ -36,7 +36,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled=false;mesh.count=0;group.add(mesh);
-    return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion()}))};
+    return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion(),twinkle:0}))};
   }
   const sparks=batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
   const beams=batch(streakGeometry(),mobile?120:240);
@@ -60,7 +60,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
     p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=themeColor(themeId,tint,FX_COLORS[tint]??tint??FX_COLORS.seed);
-    p.grow=grow;p.delay=delay;p.gravity=gravity;
+    p.grow=grow;p.delay=delay;p.gravity=gravity;p.twinkle=random()*Math.PI*2;
     return p;
   }
   // Kept as a no-op so every caller (forms, bosses, items) stays valid without drawing a floor ring.
@@ -176,7 +176,8 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
         if(p.delay>0){p.delay-=dt;continue;}
         p.life-=dt;if(p.life<=0)continue;
         p.vel.y-=p.gravity*dt;p.pos.addScaledVector(p.vel,dt);
-        const t=p.life/p.max,scale=pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
+        const t=p.life/p.max,theme=THEMES[themeId],base=pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
+        const scale=pool===sparks?base*theme.sparkScale*(1-theme.twinkle+theme.twinkle*Math.abs(Math.sin((1-t)*Math.PI*6+p.twinkle))):base;
         dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);dummy.updateMatrix();
         pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4));pool.mesh.setColorAt(count,color);count++;
       }
