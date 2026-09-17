@@ -620,8 +620,10 @@ function startGame(){if(mode==='ready'&&!maintenanceOn)restart();}
 function showIntro(){audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  if(maintenanceOn){showMaintenance();return;}
- // 점검으로 잠시 닫았던 미안함: 부활 물약 '다시 싹' 1개를 상점 보관함에 한 번만 넣고 알린다.
- if(grantGift(runStorage,SORRY_GIFT,'sprout',1).granted){showGift();return;}
+ // 점검으로 잠시 닫았던 미안함: 다시 싹 1개와 작은 물약 3개를 보관함에 한 번만 넣는다.
+ const sproutGift=grantGift(runStorage,SORRY_GIFT,'sprout',1);
+ const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
+ if(sproutGift.granted||tonicGift.granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),actives=gardenFx.actives.length,shop=readShop(runStorage);
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
@@ -679,12 +681,14 @@ function showShop(back=showIntro,message=''){
 }
 // 점검 사과 선물 안내. 한 번만 뜬다(grantGift가 같은 선물을 다시 주지 않는다).
 const SORRY_GIFT='sorry-20260917';
+const SORRY_TONIC_GIFT='sorry-tonics-20260917';
 function showGift(){
  mode='gift';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel gift-panel"><p class="eyebrow">SEED · 선물</p><h2>기다려 줘서 고마워요</h2>
   <div class="gift-item">${itemArt('sprout')}<div><strong>부활 물약 · ${ITEMS.sprout.name} 1개</strong><small>${escapeHtml(ITEMS.sprout.desc)}</small></div></div>
-  <p class="gift-line">점검하느라 게임을 잠시 닫아서 미안해요. 상점 보관함에 넣어 두었어요.</p>
+  <div class="gift-item">${itemArt('tonic')}<div><strong>${ITEMS.tonic.name} 3개</strong><small>${escapeHtml(ITEMS.tonic.desc)}</small></div></div>
+  <p class="gift-line">점검하느라 게임을 잠시 닫아서 미안해요. 선물 4개를 상점 보관함에 넣어 두었어요.</p>
   <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
  $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);

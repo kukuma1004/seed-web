@@ -2,7 +2,7 @@
 // 저장된 도전·정원·랭킹은 건드리지 않는다. 풀 때는 on을 false로 바꿔 다시 배포한다.
 // 개발 서버(npm run dev)에서는 작업할 수 있게 걸리지 않는다.
 export const MAINTENANCE=Object.freeze({
- on:true,
+ on:false,
  title:'업데이트 중이에요',
  lines:['조합을 더 재미있게 다듬고 있어요.','조금만 기다려 주세요! 저장된 도전과 정원은 그대로 남아 있어요.']
 });

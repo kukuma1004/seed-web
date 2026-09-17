@@ -39,12 +39,15 @@ assert.equal(SHOP_PRICES[1],100);assert.equal(SHOP_PRICES[10],500);assert.equal(
  assert.equal(setCarry(s,'nope',2).carry.nope,undefined);
 }
 
-// 부활 물약(다시 싹) 선물: 한 번만, 보관함에 들어가고, 한 판에는 1개만 가져간다.
+// 점검 선물: 다시 싹 1개와 작은 물약 3개가 각각 한 번만 보관함에 들어간다.
 {
  const s=memory();
  const first=grantGift(s,'sorry-20260917','sprout',1);
  assert.equal(first.granted,true);assert.equal(first.shop.stash.sprout,1);assert.equal(first.shop.carry.sprout,1);
  assert.equal(grantGift(s,'sorry-20260917','sprout',1).granted,false,'같은 선물은 다시 주지 않는다');
+ const tonics=grantGift(s,'sorry-tonics-20260917','tonic',3);
+ assert.equal(tonics.granted,true);assert.equal(tonics.shop.stash.tonic,3);assert.equal(tonics.shop.carry.tonic,3);
+ assert.equal(grantGift(s,'sorry-tonics-20260917','tonic',3).granted,false,'작은 물약도 한 번만 준다');
  assert.equal(readShop(s).stash.sprout,1);
  writeShop(s,{...readShop(s),stash:{tonic:0,sprout:3},carry:{tonic:0,sprout:3}});
  assert.equal(readShop(s).carry.sprout,1,'다시 싹은 한 판에 1개만');
