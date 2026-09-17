@@ -3,10 +3,10 @@
 export const THEME_KEY='seed-combat-theme-v1';
 export const THEME_ORDER=Object.freeze(['botanical','void','cyber','celestial']);
 export const THEMES=Object.freeze({
- botanical:Object.freeze({id:'botanical',name:'잠든 정원',short:'기본',motion:'outward',palette:Object.freeze([0x76ffd0,0xffd36a,0x73dfff]),trailWidth:1,trailLife:1,portalSides:6,flame:1,sparkScale:.78,twinkle:.18}),
- void:Object.freeze({id:'void',name:'VOID · 심연 균열',short:'VOID',motion:'inward',palette:Object.freeze([0x8b6cff,0x42e8ff,0xd274ff]),trailWidth:1.35,trailLife:1.3,portalSides:7,flame:.65,sparkScale:.72,twinkle:.22}),
- cyber:Object.freeze({id:'cyber',name:'CYBER · 네온 회로',short:'CYBER',motion:'axis',palette:Object.freeze([0x00f0ff,0xff3bd4,0xb6ff35]),trailWidth:.78,trailLife:.72,portalSides:4,flame:.8,sparkScale:.68,twinkle:.28}),
- celestial:Object.freeze({id:'celestial',name:'CELESTIAL · 별의 정원',short:'CELESTIAL',motion:'spiral',palette:Object.freeze([0xffe89a,0x9ec8ff,0xffffff]),trailWidth:1.12,trailLife:1.18,portalSides:5,flame:1.15,sparkScale:.62,twinkle:.36})
+ botanical:Object.freeze({id:'botanical',name:'잠든 정원',short:'기본',crest:0,motion:'outward',palette:Object.freeze([0x76ffd0,0xffd36a,0x73dfff]),projectileScale:Object.freeze([1,1,1]),trailWidth:1,trailLife:1,portalSides:6,flame:1,sparkScale:.78,twinkle:.18}),
+ void:Object.freeze({id:'void',name:'VOID · 심연 균열',short:'VOID',crest:1,motion:'inward',palette:Object.freeze([0x8b6cff,0x42e8ff,0xd274ff]),projectileScale:Object.freeze([.82,1.22,.82]),trailWidth:1.35,trailLife:1.3,portalSides:7,flame:.65,sparkScale:.72,twinkle:.22}),
+ cyber:Object.freeze({id:'cyber',name:'CYBER · 네온 회로',short:'CYBER',crest:2,motion:'axis',palette:Object.freeze([0x00f0ff,0xff3bd4,0xb6ff35]),projectileScale:Object.freeze([.72,.72,1.42]),trailWidth:.78,trailLife:.72,portalSides:4,flame:.8,sparkScale:.68,twinkle:.28}),
+ celestial:Object.freeze({id:'celestial',name:'CELESTIAL · 별의 정원',short:'CELESTIAL',crest:3,motion:'spiral',palette:Object.freeze([0xffe89a,0x9ec8ff,0xffffff]),projectileScale:Object.freeze([1.18,.84,1.18]),trailWidth:1.12,trailLife:1.18,portalSides:5,flame:1.15,sparkScale:.62,twinkle:.36})
 });
 export const normalizeTheme=id=>Object.hasOwn(THEMES,id)?id:'botanical';
 export function readTheme(storage){try{return normalizeTheme(storage?.getItem(THEME_KEY));}catch{return 'botanical';}}

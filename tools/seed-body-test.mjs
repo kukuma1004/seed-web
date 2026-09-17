@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame} from '../src/seed-body.js';
+import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,THEME_CREST_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame} from '../src/seed-body.js';
 import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry} from '../src/actor-art.js';
 for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw,yaw),0);
@@ -38,6 +38,8 @@ assert.equal(fusionPng[25],6,'Fusion body atlas must keep RGBA transparency.');
 const awakenPng=readFileSync(new URL('../public/assets/'+SEED_AWAKEN_BODY_ART,import.meta.url));
 assert.equal(awakenPng.toString('ascii',0,4),'RIFF');assert.equal(awakenPng.toString('ascii',8,12),'WEBP');
 assert.ok(awakenPng.length<500_000,'Awakened body atlas must stay within the mobile transfer budget.');
+const themeCrests=readFileSync(new URL('../public/assets/'+THEME_CREST_ART,import.meta.url));
+assert.equal(themeCrests.toString('ascii',0,4),'RIFF');assert.equal(themeCrests.toString('ascii',8,12),'WEBP');assert.ok(themeCrests.length<300_000);
 console.log('Twenty-nine base and awakened evolutions have unique body tiles; twins expose both visual halves.');
 for(const phase of ['normal','overtime','deadline',undefined,0,.7])for(const state of ['stalk','jabTell','jab','sweep','recover']){
  assert(Number.isFinite(actorArtRotation(state,2.4,phase)),`Invalid sprite rotation: ${phase}/${state}`);

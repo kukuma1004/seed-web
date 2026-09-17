@@ -93,7 +93,7 @@ const cloud=createCloudSync({storage:rawStorage,account});
 const runStorage=cloud.storage;
 import {createMotion} from './motion.js';
 import {createVFX,FX_COLORS} from './vfx.js';
-import {THEMES,readTheme,writeTheme,nextTheme} from './themes.js';
+import {THEMES,readTheme,writeTheme,nextTheme,themeColor} from './themes.js';
 import {LAWS,synergyHint,hitBudget,acquireTarget} from './laws.js';
 import {CROWD_CAP,crowdTotal,crowdInterval,safeSpawn} from './crowd.js';
 import {segmentHitsCover} from './collision.js';
@@ -592,7 +592,7 @@ function useInventoryItem(id){
  else if(r.kind==='shell'){shellTime=r.seconds;vfx.pulse(player.position,'reflect',1.4,.6);vfx.burst(player.position,'reflect',22,1.2);$('#toast').textContent=`${item.name} · ${r.seconds}초 동안 피해를 막습니다`;}
  if(exitOpen){if(stage===4)saveAfterBoss();else saveBoundary(stage+1);}
 }
-function projectile(pos,dir,fragment=false,ignoreEnemy=null){const tint=fragment?'split':([...chosen][0]||'seed'),ob=new THREE.Mesh(projectileGeometry(projectileGeos,tint),mats['shot-'+tint]);ob.position.set(pos.x,.67,pos.z);ob.castShadow=false;ob.scale.setScalar(fragment?.62:1);ob.rotation.y=Math.atan2(dir.x,dir.z);scene.add(ob);const shot={ob,dir:dir.clone(),life:2.3,bounces:0,fragment,ignoreEnemy,tint,age:0,returning:false,hitSet:new Set(),hits:0,trailTime:0,trailPos:ob.position.clone()};shots.push(shot);return shot;}
+function projectile(pos,dir,fragment=false,ignoreEnemy=null){const tint=fragment?'split':([...chosen][0]||'seed'),ob=new THREE.Mesh(projectileGeometry(projectileGeos,tint),mats['shot-'+tint]);ob.position.set(pos.x,.67,pos.z);ob.castShadow=false;const [sx,sy,sz]=THEMES[combatTheme].projectileScale,k=fragment?.62:1;ob.scale.set(sx*k,sy*k,sz*k);ob.rotation.y=Math.atan2(dir.x,dir.z);scene.add(ob);const shot={ob,dir:dir.clone(),life:2.3,bounces:0,fragment,ignoreEnemy,tint,age:0,returning:false,hitSet:new Set(),hits:0,trailTime:0,trailPos:ob.position.clone()};shots.push(shot);return shot;}
 function hitPlayer(amount){if(labSafe||invuln>0||shellTime>0||mode!=='playing')return;const before=hp;hp=Math.max(0,hp-amount);runDamageTaken+=before-hp;invuln=.65;burst(player.position,'amber',16);cameraShake=.18;audio.play('hurt');
  if(hp<=0){
   // A sprout stands the seed back up once, with a moment to breathe and no shots already in the air.
@@ -1101,7 +1101,8 @@ function mountQualityButton(){
 }
 function themeButtonLabel(){return `무료 테마 체험 · ${THEMES[combatTheme].short}`;}
 function applyCombatTheme(id,{save=true}={}){
- combatTheme=id;document.body.dataset.combatTheme=id;vfx.setTheme(id);activeVfx.setTheme(id);for(const combat of formCombats.values())combat.setTheme(id);
+ combatTheme=id;document.body.dataset.combatTheme=id;vfx.setTheme(id);activeVfx.setTheme(id);player.userData.setTheme?.(id);for(const combat of formCombats.values())combat.setTheme(id);
+ for(const law of ['seed',...Object.keys(LAWS)])mats['shot-'+law].color.setHex(themeColor(id,`shot:${law}`,FX_COLORS[law])).multiplyScalar(2);
  if(save)writeTheme(runStorage,id);
  const button=document.getElementById('theme-toggle');if(button)button.textContent=themeButtonLabel();
  return combatTheme;

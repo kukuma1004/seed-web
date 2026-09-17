@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {ARCHETYPE_VFX,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
+import {ARCHETYPE_VFX,ULTIMATE_ARCHETYPE_ART,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
 
 // Light, not stickers: the gradients fade to black (no light under additive blending) at their edges.
 assert.ok(glowFalloff(.5,.5)>.95&&glowFalloff(0,.5)===0&&glowFalloff(.95,.95)===0,'floor glow fades out before the rim');
@@ -12,6 +13,9 @@ import {LAWS} from '../src/laws.js';
 const expectedColors=[...new Set(['collapse','prism'].flatMap(id=>ALL_FORMS[id].requires).map(id=>LAWS[id].color))];
 assert.deepEqual(activeColors(['collapse','prism']),expectedColors);
 assert.equal(new Set(Object.values(ARCHETYPE_VFX).map(profile=>profile.motes)).size,7,'every ultimate skeleton has its own particle choreography');
+assert.equal(new Set(Object.values(ARCHETYPE_VFX).map(profile=>profile.glyph)).size,7,'every ultimate skeleton has its own floor glyph');
+const ultimateAtlas=readFileSync(new URL('../public/'+ULTIMATE_ARCHETYPE_ART,import.meta.url));
+assert.equal(ultimateAtlas.toString('ascii',0,4),'RIFF');assert.equal(ultimateAtlas.toString('ascii',8,12),'WEBP');assert.ok(ultimateAtlas.length<300_000,'ultimate atlas stays inside the mobile transfer budget');
 
 for(const mobile of [false,true]){
   const scene=new THREE.Scene(),fx=createActiveVFX(scene,{mobile});
@@ -44,7 +48,7 @@ for(const mobile of [false,true]){
   for(const archetype of ['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP']){
     fx.start({state:'SIGNATURE',forms:['flarebloom'],tags:['EXPLOSION'],archetype,seconds:3},player);fx.update(.2,player);
     assert.equal(fx.state().archetype,archetype);
-    const floor=root.getObjectByName('active-botanical-sigil'),halo=root.getObjectByName('active-halo'),wave=root.getObjectByName('active-wave'),beam=root.getObjectByName('active-beam');
+    const floor=root.getObjectByName('active-archetype-sigil'),halo=root.getObjectByName('active-halo'),wave=root.getObjectByName('active-wave'),beam=root.getObjectByName('active-beam');
     profiles.add([floor.scale.x,halo.scale.x,wave.scale.x,wave.scale.z,beam.scale.x,beam.scale.y].map(v=>v.toFixed(2)).join('|'));
     fx.clear();
   }

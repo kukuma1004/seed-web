@@ -7,7 +7,7 @@ import {createFormVisuals} from './form-visuals.js';
 // so its child shards conserve the parent's damage instead of multiplying it
 // by 1.4 on every split (two children at 70% each).
 export const PRISM_CHILD_FALLOFF=Object.freeze({base:.7,infinite:.5});
-import {normalizeTheme,themeColor} from './themes.js';
+import {THEMES,normalizeTheme,themeColor} from './themes.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
 
@@ -70,14 +70,17 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    const gold=awakenedMats.get(material);if(gold){if(gold.color&&material.color)gold.color.copy(material.color);if(gold.emissive)gold.emissive.setHex(themeId==='botanical'?0xffb84f:themeColor(themeId,`form:${name}:awaken`,0xffb84f));}
   }
  }
- function setTheme(id){themeId=normalizeTheme(id);applyTheme();rebuildOrbit();return themeId;}
+ function applyProjectileScale(ob,x=ob.userData.visualScale?.[0]??1,y=ob.userData.visualScale?.[1]??x,z=ob.userData.visualScale?.[2]??x){
+  ob.userData.visualScale=[x,y,z];const scale=THEMES[themeId].projectileScale;ob.scale.set(x*scale[0],y*scale[1],z*scale[2]);return ob;
+ }
+ function setTheme(id){themeId=normalizeTheme(id);applyTheme();for(const b of bolts)if(b.ob)applyProjectileScale(b.ob);rebuildOrbit();return themeId;}
 
  function combatMaterial(mat){
   if(!awakened())return mat;
   if(!awakenedMats.has(mat)){const gold=mat.clone();if(gold.emissive){gold.emissive.setHex(0xffb84f);gold.emissiveIntensity=Math.max(.38,gold.emissiveIntensity||0);}gold.roughness=Math.max(.18,(gold.roughness??.5)*.72);awakenedMats.set(mat,gold);}
   return awakenedMats.get(mat);
  }
- function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,combatMaterial(mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();group.add(ob);return ob;}
+ function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,combatMaterial(mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();applyProjectileScale(ob);group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
@@ -112,7 +115,6 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    if(full('gene',S.bolts))return S.interval;
    const second=SECOND_FORMS[active],secondRole=second?.family==='convergence'?(secondPhase++%2?'consume':'mark'):null;
    const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
-   if(themeId==='void')ob.scale.set(.82,1.22,.82);else if(themeId==='cyber')ob.scale.set(.7,.7,1.45);else if(themeId==='celestial')ob.scale.set(1.2,.8,1.2);
    // A second fusion alternates two inherited law packets, so its projectile
    // traits follow the packet being fired. Existing gene attacks keep their
    // authored stat sheet (notably riftseed's two-target pierce).
@@ -150,7 +152,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    }
    case 'tidepull':{
     if(full('tidepull',S.vortices))return S.interval;
-    const ob=spawnMesh(geos.tide,mats.tide,pos);ob.rotation.x=-Math.PI/2;ob.scale.set(1.25,.82,1);
+    const ob=spawnMesh(geos.tide,mats.tide,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,1.25,.82,1);
     bolts.push({kind:'tidepull',ob,dir:aim,age:0,returning:false,anchored:false,hold:S.hold,tick:0,returnHits:new Set(),life:4});
     fx.muzzle(pos,aim,'gravity');return S.interval;
    }
@@ -175,7 +177,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    }
    case 'rewind':{
     if(full('rewind',S.leaves))return S.interval;
-    const ob=spawnMesh(geos.blade,mats.blade,pos);ob.scale.setScalar(.72);ob.rotation.x=-Math.PI/2;
+    const ob=spawnMesh(geos.blade,mats.blade,pos);applyProjectileScale(ob,.72,.72,.72);ob.rotation.x=-Math.PI/2;
     bolts.push({kind:'rewind',ob,dir:aim.clone(),out:aim.clone(),age:0,returning:false,trips:S.trips,hitSet:new Set(),life:8});
     fx.muzzle(pos,aim,'recall');return S.interval;
    }
@@ -393,7 +395,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
       else if(second.family==='convergence'&&b.secondRole==='mark'){secondMarks.set(e,markClock+S.markWindow);fx.pulse(e.g.position,b.laws[0],.62,.24);}
       else if(second.family==='convergence'&&b.secondRole==='consume'){const expires=secondMarks.get(e)||0;if(expires>=markClock){secondMarks.delete(e);fx.explosion(e.g.position,S.followUpLaws.includes('burst')?'burst':S.followUpLaws[0],1.05);sound(S.followUpLaws.includes('portal')?'portal':'fusion');support(e,S.damage*S.followUpScale,{kind:b.form,direction:direction.clone(),comboLaws:S.followUpLaws,generated:true,indirect:true,convergence:true});}}
      }
-     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);ob.scale.setScalar(.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
+     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);applyProjectileScale(ob,.65,.65,.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
      b.pierce--;if(b.pierce<=0){b.life=0;break;}
     }
     fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
@@ -453,8 +455,9 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     continue;
    }
    if(b.kind==='frostbloom'){
-    b.t+=dt;const k=Math.min(1,b.t/S.flight);
-    b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.2);b.ob.rotation.y+=dt*6;
+   b.t+=dt;const k=Math.min(1,b.t/S.flight);
+   b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.2);b.ob.rotation.y+=dt*6;
+   fx.trail(previous,b.ob.position,'frost',false);
     if(k<1)continue;
     b.life=0;fx.pulse(b.to,'frost',S.radius,.5);fx.burst(b.to,'frost',24,1.4);
     const chilled=new Set();
@@ -537,8 +540,9 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     continue;
    }
    if(b.kind==='flarebloom'){
-    b.t+=dt;const k=Math.min(1,b.t/S.flight);
-    b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.4);b.ob.rotation.y+=dt*6;
+   b.t+=dt;const k=Math.min(1,b.t/S.flight);
+   b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.4);b.ob.rotation.y+=dt*6;
+   fx.trail(previous,b.ob.position,'burst',false);
     if(k<1)continue;
     b.life=0;fx.explosion(b.to,'burst',S.radius,true);
     for(const e of enemies())if(!e.dead&&flat(e.g.position,b.to)<S.radius+bossReach(e,0,.5))support(e,S.damage,{kind:'flarebloom',indirect:true,direction:e.g.position.clone().sub(b.to).setY(0).normalize()});
@@ -576,7 +580,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
    }
    if(b.kind==='blackhole'){
     if(b.t<.5){b.t+=dt;const k=Math.min(1,b.t/.5);b.ob.position.lerpVectors(b.from,b.to,k).setY(.6);if(k<1)continue;fx.pulse(b.to,'gravity',S.radius,.5);}
-    b.hold-=dt;b.ob.rotation.z+=dt*10;b.ob.scale.setScalar(.85+.25*Math.sin(b.hold*12));
+    b.hold-=dt;b.ob.rotation.z+=dt*10;{const scale=.85+.25*Math.sin(b.hold*12);applyProjectileScale(b.ob,scale,scale,scale);}
     for(const e of enemies()){
      if(e.dead||immovable(e))continue;
      const pull=b.to.clone().sub(e.g.position).setY(0),d=pull.length();

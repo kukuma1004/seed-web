@@ -3,9 +3,9 @@ import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
 
-// Ultimate stage around the seed. A hand-painted botanical sigil replaces the
-// generic floor disc; halo, beam and motes remain code-driven. Still five draw
-// calls, no dynamic lights, and Node tests use the procedural fallback texture.
+// Ultimate stage around the seed. Seven authored glyphs share one atlas;
+// halo, beam and motes remain code-driven. Still five draw calls.
+export const ULTIMATE_ARCHETYPE_ART='assets/ultimate-archetypes-v1.webp';
 
 // A tiny grayscale gradient texture. Additive blending turns black into "no light", so the
 // gradient doubles as transparency without alpha sorting.
@@ -37,13 +37,13 @@ const waveDepth=(type,age,rift)=>type==='DOMAIN'?3.15+Math.sin(age*1.8)*.16:type
 // therefore feel like a sellable skin without adding meshes, lights or post
 // passes on a low-end phone.
 export const ARCHETYPE_VFX=Object.freeze({
- BURST:Object.freeze({floor:2.15,halo:1.45,waveX:2.2,waveZ:2.2,beamX:.78,beamY:.68,motes:'burst'}),
- RAIN:Object.freeze({floor:2.45,halo:1.7,waveX:3.15,waveZ:1.25,beamX:.64,beamY:1.18,motes:'rain'}),
- ORBIT:Object.freeze({floor:2.35,halo:2.25,waveX:3.05,waveZ:3.05,beamX:1.02,beamY:.58,motes:'orbit'}),
- BEAM:Object.freeze({floor:1.65,halo:1.22,waveX:.8,waveZ:3.45,beamX:.46,beamY:1.72,motes:'beam'}),
- DOMAIN:Object.freeze({floor:3.05,halo:2.08,waveX:3.25,waveZ:3.25,beamX:1.2,beamY:.42,motes:'domain'}),
- BLACKHOLE:Object.freeze({floor:1.78,halo:1.22,waveX:1.18,waveZ:1.18,beamX:1.32,beamY:.62,motes:'blackhole'}),
- TIME_STOP:Object.freeze({floor:2.68,halo:2.72,waveX:2.82,waveZ:2.82,beamX:.92,beamY:.5,motes:'clock'})
+ BURST:Object.freeze({glyph:0,floor:2.15,halo:1.45,waveX:2.2,waveZ:2.2,beamX:.78,beamY:.68,motes:'burst'}),
+ RAIN:Object.freeze({glyph:1,floor:2.45,halo:1.7,waveX:3.15,waveZ:1.25,beamX:.64,beamY:1.18,motes:'rain'}),
+ ORBIT:Object.freeze({glyph:2,floor:2.35,halo:2.25,waveX:3.05,waveZ:3.05,beamX:1.02,beamY:.58,motes:'orbit'}),
+ BEAM:Object.freeze({glyph:3,floor:1.65,halo:1.22,waveX:.8,waveZ:3.45,beamX:.46,beamY:1.72,motes:'beam'}),
+ DOMAIN:Object.freeze({glyph:4,floor:3.05,halo:2.08,waveX:3.25,waveZ:3.25,beamX:1.2,beamY:.42,motes:'domain'}),
+ BLACKHOLE:Object.freeze({glyph:5,floor:1.78,halo:1.22,waveX:1.18,waveZ:1.18,beamX:1.32,beamY:.62,motes:'blackhole'}),
+ TIME_STOP:Object.freeze({glyph:6,floor:2.68,halo:2.72,waveX:2.82,waveZ:2.82,beamX:.92,beamY:.5,motes:'clock'})
 });
 
 export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
@@ -51,11 +51,11 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
  const textures=[];
  const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
  const glowTex=gradientTexture(64,glowFalloff),haloTex=gradientTexture(64,haloBand),beamTex=gradientTexture(32,beamFalloff);
- const sigilTex=typeof document==='undefined'?glowTex:new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/ultimate-seed-sigil-v1.webp');
- if(sigilTex!==glowTex){sigilTex.colorSpace=THREE.SRGBColorSpace;sigilTex.minFilter=sigilTex.magFilter=THREE.LinearFilter;}
+ const sigilTex=typeof document==='undefined'?glowTex:new THREE.TextureLoader().load(import.meta.env.BASE_URL+ULTIMATE_ARCHETYPE_ART);
+ if(sigilTex!==glowTex){sigilTex.colorSpace=THREE.SRGBColorSpace;sigilTex.minFilter=sigilTex.magFilter=THREE.LinearFilter;sigilTex.repeat.set(.25,.5);}
  textures.push(glowTex,haloTex,beamTex,...(sigilTex===glowTex?[]:[sigilTex]));
 
- const floor=new THREE.Mesh(new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2),additive(sigilTex));floor.position.y=.11;floor.name='active-botanical-sigil';group.add(floor);
+ const floor=new THREE.Mesh(new THREE.PlaneGeometry(2,2).rotateX(-Math.PI/2),additive(sigilTex));floor.position.y=.11;floor.name='active-archetype-sigil';group.add(floor);
  // RingGeometry UVs are planar; remap them to (angle, radius) so the band texture wraps around.
  const haloGeo=new THREE.RingGeometry(.86,1.14,96,1);
  {const pos=haloGeo.attributes.position,uv=haloGeo.attributes.uv;for(let i=0;i<pos.count;i++){const x=pos.getX(i),y=pos.getY(i);uv.setXY(i,(Math.atan2(y,x)/(Math.PI*2)+1)%1,(Math.hypot(x,y)-.86)/.28);}haloGeo.rotateX(-Math.PI/2);}
@@ -73,6 +73,7 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
 
  function begin(mode,plan,pos,time){
   serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',theme:themeId,time,total:time,age:0,colors:activeColors(plan.forms,themeId),serial};
+  if(sigilTex!==glowTex){const glyph=(ARCHETYPE_VFX[effect.archetype]||ARCHETYPE_VFX.BURST).glyph;sigilTex.offset.set((glyph%4)*.25,glyph<4?.5:0);}
   group.position.set(pos.x,0,pos.z);group.visible=true;return effect;
  }
  const start=(plan,pos)=>begin('running',plan,pos,plan.seconds);

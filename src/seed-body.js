@@ -3,12 +3,14 @@ import {rankedEvolutions} from './evolution-rank.js';
 import {ALL_FORMS,baseFormOf,TWIN_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 import {applySpriteLighting} from './sprite-lighting.js';
+import {THEMES,normalizeTheme} from './themes.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
 export const SEED_BODY_ART='seed-body-directions-v6.png';
 export const SEED_SOLO_BODY_ART='seed-solo-bodies-v3.webp';
 export const SEED_FUSION_BODY_ART='seed-fusion-bodies-v1.png';
 export const SEED_AWAKEN_BODY_ART='seed-awaken-bodies-v1.webp';
+export const THEME_CREST_ART='theme-crests-v1.webp';
 export const BODY_SIZE=1.18;
 export const EVOLUTION_SIZE=1.22;
 export const SOLO_BODY_TILES=Object.freeze({mirrormaze:0,fullbloom:1,thunderweb:2,starring:3,glassspear:4,flarebloom:5,rewind:6,blackhole:7,winterbreath:8});
@@ -48,6 +50,16 @@ export function createSeedBody(scene,{occlusion=true}={}){
  texture.colorSpace=THREE.SRGBColorSpace;texture.repeat.set(.5,.5);texture.offset.set(0,.5);
  const material=applySpriteLighting(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.8,highlight:1.07,rim:0xa1ffe0,rimStrength:.075});
  const sprite=new THREE.Sprite(material);sprite.center.set(.5,.055);sprite.scale.set(BODY_SIZE,BODY_SIZE,1);root.add(sprite);
+ // One atlas-backed crest sits behind the body. It gives each cosmetic theme a
+ // readable silhouette without changing collision or adding parts per law.
+ const themeMaterial=new THREE.SpriteMaterial({map:null,transparent:true,opacity:.62,depthWrite:false,toneMapped:false});
+ const themeCrest=new THREE.Sprite(themeMaterial);themeCrest.center.set(.5,.43);themeCrest.scale.set(1.62,1.62,1);themeCrest.renderOrder=-1;themeCrest.visible=false;root.add(themeCrest);
+ let themeTexture=null,themeLoading=false,themeId='botanical';
+ const applyThemeCrest=()=>{
+  if(!themeTexture)return;
+  const tile=THEMES[themeId].crest;themeTexture.offset.set(tile*.25,0);themeMaterial.map=themeTexture;themeMaterial.needsUpdate=true;themeCrest.visible=true;
+ };
+ const ensureThemeCrest=()=>{if(themeTexture||themeLoading)return;themeLoading=true;themeTexture=loader.load(import.meta.env.BASE_URL+'assets/'+THEME_CREST_ART,applyThemeCrest);themeTexture.colorSpace=THREE.SRGBColorSpace;themeTexture.repeat.set(.25,1);themeTexture.minFilter=themeTexture.magFilter=THREE.LinearFilter;};
  // A faint copy draws through walls so the seed is never lost behind cover.
  const ghostMaterial=new THREE.SpriteMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.38,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0x9ff5d2});
  const ghost=new THREE.Sprite(ghostMaterial);ghost.center.set(.5,.055);ghost.scale.set(BODY_SIZE,BODY_SIZE,1);ghost.renderOrder=2;root.add(ghost);
@@ -80,7 +92,8 @@ export function createSeedBody(scene,{occlusion=true}={}){
   secondaryAura.visible=Boolean(secondaryEvolution);if(secondaryEvolution)secondaryMaterial.color.setHex(evolutionColor(secondaryEvolution));
  };
  // Preserve the visual rig interface used by evolution and combat.
- root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null};
+ root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null,theme:themeId,themeCrest:0};
+ root.userData.setTheme=id=>{themeId=normalizeTheme(id);root.userData.theme=themeId;root.userData.themeCrest=THEMES[themeId].crest;ensureThemeCrest();applyThemeCrest();return themeId;};
  root.userData.setEvolution=forms=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
   // Catalogue fusions deliberately share lightweight combat geometry instead
@@ -99,6 +112,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
   const frame=seedFrame(facing,Math.atan2(camera.position.x-root.position.x,camera.position.z-root.position.z));
   texture.offset.set((frame%2)*.5,frame<2?.5:0);root.userData.artFrame=frame;
   const {phase=0,pace=0}=root.userData.motion||{},step=Math.sin(phase*2)*pace;
+  const crestPulse=1+Math.sin(phase*.55)*.025+pace*.018;themeCrest.scale.setScalar(1.62*crestPulse);themeMaterial.opacity=.54+pace*.12;
   material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.055;
   sprite.position.y=Math.max(0,step)*.018;sprite.scale.set(BODY_SIZE*(1+step*.03),BODY_SIZE*(1-step*.018),1);ghost.position.y=sprite.position.y;ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
   evolutionSprite.position.y=sprite.position.y;evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.03),EVOLUTION_SIZE*(1-step*.018),1);evolutionGhost.position.y=sprite.position.y;evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
