@@ -30,7 +30,7 @@ const LAW_SEEDS={
  portal:{name:'별문 씨앗',flower:'차원꽃',tree:'성문목',vine:'틈새덩굴'}
 };
 export const SEEDS=Object.freeze(Object.fromEntries([
- ...Object.entries(LAW_SEEDS).map(([law,v])=>[law,{id:law,law,name:v.name,branchNames:{flower:v.flower,tree:v.tree,vine:v.vine},
+ ...Object.entries(LAW_SEEDS).filter(([law])=>Object.hasOwn(LAWS,law)).map(([law,v])=>[law,{id:law,law,name:v.name,branchNames:{flower:v.flower,tree:v.tree,vine:v.vine},
   hint:`${LAWS[law].name} 법칙을 가장 깊게 키운 여정에서 남는다`}]),
  [GUARDIAN,{id:GUARDIAN,law:null,name:'시계탑 씨앗',branchNames:{flower:'태엽꽃',tree:'시계탑목',vine:'초침덩굴'},
   hint:'정시파이터 오스틴을 쓰러뜨린 여정에서만 남는다'}]

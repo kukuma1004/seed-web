@@ -1,4 +1,5 @@
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
+import {LAWS} from './laws.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
@@ -18,7 +19,7 @@ export const ACTIVE=Object.freeze({
  maxEchoes:2
 });
 
-export const LAW_TAGS=Object.freeze({reflect:'BOUNCE',split:'MULTI',chain:'LINK',orbit:'ORBIT',pierce:'PIERCE',burst:'EXPLOSION',recall:'RETURN',gravity:'CONTROL',frost:'FROST',portal:'RIFT'});
+const ALL_LAW_TAGS=Object.freeze({reflect:'BOUNCE',split:'MULTI',chain:'LINK',orbit:'ORBIT',pierce:'PIERCE',burst:'EXPLOSION',recall:'RETURN',gravity:'CONTROL',frost:'FROST',portal:'RIFT'});
 export const TAG_NAMES=Object.freeze({BOUNCE:'튕김',MULTI:'분열',LINK:'연결',ORBIT:'공전',PIERCE:'관통',EXPLOSION:'폭발',RETURN:'귀환',CONTROL:'끌림',FROST:'서리',RIFT:'차원'});
 export const STATE_NAMES=Object.freeze({LOCKED:'잠김',SIGNATURE:'시그니처',OVERDRIVE:'오버드라이브'});
 
@@ -69,7 +70,7 @@ const BASE_SIGNATURES=Object.freeze({
  winterbreath:sig('빙하기','사방으로 서리를 내뿜고, 숨결이 더 멀고 넓어집니다.'),
  riftseed:sig('별문 개방','네 방향으로 차원탄을 쏘고, 네 개의 별문이 동시에 열려 뒷줄을 덮칩니다.')
 });
-export const SIGNATURES=Object.freeze({
+const ALL_SIGNATURES=Object.freeze({
  ...BASE_SIGNATURES,
  ...Object.fromEntries(Object.values(GENERATED_FORMS).map(f=>[f.id,sig(`${f.name} · 개문`,`${f.name}의 핵심 탄을 양쪽으로 펼치고, 잠시 동안 더 자주 쏘며 깊게 관통합니다.`)])),
  ...Object.fromEntries(Object.values(SECOND_FORMS).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
@@ -78,6 +79,9 @@ export const SIGNATURES=Object.freeze({
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(TWIN_FORMS).map(f=>[f.id,sig(`${BASE_SIGNATURES[f.parts[0]].name} × ${BASE_SIGNATURES[f.parts[1]].name}`,`두 기술을 한꺼번에 펼칩니다. ${BASE_SIGNATURES[f.parts[0]].name}: ${BASE_SIGNATURES[f.parts[0]].desc} ${BASE_SIGNATURES[f.parts[1]].name}: ${BASE_SIGNATURES[f.parts[1]].desc} 궁극기 동안 1.5초마다 되풀이됩니다.`)]))
 });
+// 숨긴 법칙(차원)·자동 조합·재융합의 기술은 정의만 남기고, 게임에 보이는 법칙과 진화만 내보낸다.
+export const LAW_TAGS=Object.freeze(Object.fromEntries(Object.entries(ALL_LAW_TAGS).filter(([id])=>Object.hasOwn(LAWS,id))));
+export const SIGNATURES=Object.freeze(Object.fromEntries(Object.entries(ALL_SIGNATURES).filter(([id])=>Object.hasOwn(ALL_FORMS,id))));
 
 // The two strongest evolutions decide the active. Ties go to the evolution gained first (map order).
 export function activeState(forms=new Map()){

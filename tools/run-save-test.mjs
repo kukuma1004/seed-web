@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {validCheckpoint,readCheckpoint,writeCheckpoint,clearCheckpoint,difficulty,replaceLaw,restoredScore,restoredWardens,restoredAustins} from '../src/run-save.js';
+import {validCheckpoint,readCheckpoint,writeCheckpoint,clearCheckpoint,difficulty,replaceLaw,restoredScore,restoredWardens,restoredAustins,withoutHidden,SAVE_KEY} from '../src/run-save.js';
 import {createShield,blocksShield,tickShield} from '../src/shield.js';
 import {rewardOptions} from '../src/journey.js';
 let value=null;const storage={getItem:()=>value,setItem:(k,v)=>value=v,removeItem:()=>value=null};
@@ -46,3 +46,18 @@ assert.ok(rewardOptions(3,full,[],{mutation:true}).every(id=>full.includes(id)),
  assert.equal(restoredScore({cycle:0,kills:0}),0);
 }
 console.log('옛 저장 이어하기: 빠진 점수·문지기 수 채우기 통과');
+
+// 숨긴 차원 법칙·자동 조합이 든 저장: 버리지 않고 그 부분만 빼서 이어한다.
+{
+ const saved={version:1,cycle:1,stage:2,mode:'entry',region:'garden',hp:70,rules:['split','portal','orbit'],mutated:['portal'],
+  levels:{split:2,portal:3,orbit:1},forms:{'f28-orbit-gravity':3,collapse:2,'portal-ring':1},guideTarget:'f28-orbit-gravity',kills:120,elapsed:200,score:9000,wardens:1};
+ const d=new Map([[SAVE_KEY,JSON.stringify(saved)]]),storage={getItem:k=>d.has(k)?d.get(k):null,setItem:(k,v)=>d.set(k,String(v)),removeItem:k=>d.delete(k)};
+ assert.equal(validCheckpoint(saved),false,'숨긴 것이 든 채로는 저장 형식에 맞지 않는다');
+ const read=readCheckpoint(storage);
+ assert.ok(read,'판을 버리지 않는다');
+ assert.deepEqual(read.rules,['split','orbit']);assert.deepEqual(read.mutated,[]);
+ assert.deepEqual(read.levels,{split:2,orbit:1});assert.deepEqual(read.forms,{collapse:2});
+ assert.equal(read.guideTarget,null);assert.equal(read.score,9000,'점수·처치 등은 그대로');
+ assert.equal(withoutHidden(null),null);
+}
+console.log('숨긴 법칙·조합이 든 옛 저장: 그 부분만 빼고 이어하기 통과');

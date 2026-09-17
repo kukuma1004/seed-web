@@ -57,7 +57,7 @@ export function discoveryBook(profile,titles=null){
  ${section(`단독 진화 · 한 법칙을 Lv.${SOLO_LEVEL}까지`,Object.values(SOLO_FORMS))}
  ${section('각성 진화 · 완성 진화 + 재료의 단독 진화, 또는 두 재료의 단독 진화',Object.values(AWAKEN_FORMS))}
  ${section('쌍둥이 각성 · 레시피가 없는 두 단독 진화',Object.values(TWIN_FORMS))}
- ${secondSection}
+ ${Object.keys(SECOND_FORMS).length?secondSection:''}
  </div>
  <p class="form-note">찾은 진화를 누르면 자세한 설명을 볼 수 있어요 · 발견은 쓰러져도 같은 기기·브라우저에 남습니다</p><button id="close-discoveries" class="primary">돌아가기</button>
  <div id="book-detail" class="book-detail" hidden></div>`;

@@ -1,4 +1,5 @@
 import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS} from './combo-catalog.js';
+import {HIDDEN_LAWS} from './laws.js';
 
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
 // The ten hand-authored classics keep their bespoke attacks. The other 35 pairs
@@ -31,7 +32,8 @@ const generatedForm=entry=>Object.freeze({
  passive:false,generated:true,visual:entry.visual
 });
 export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
-export const FORMS=Object.freeze({...CURATED_FORMS,...GENERATED_FORMS});
+// 2026-09-17: 자동으로 찍어낸 조합 35개(GENERATED_FORMS)는 숨긴다. 손으로 만든 10개만 쓴다.
+export const FORMS=Object.freeze({...CURATED_FORMS});
 const RUNTIME_FIRST_BY_PAIR=new Map(Object.values(FORMS).map(f=>[pairKey(f.requires),f.id]));
 const secondForm=entry=>{
  const parts=Object.freeze(entry.parts.map(id=>RUNTIME_FIRST_BY_PAIR.get(pairKey(FIRST_FUSION_BY_ID[id].laws))));
@@ -41,7 +43,8 @@ const secondForm=entry=>{
   weakness:entry.family==='resonance'?'세 번째 적중 전에 빗나가면 공명 주기가 늦어짐':'표식이 남은 적을 후속 탄이 맞혀야 제 화력이 남',
   passive:false,generated:true,second:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual});
 };
-export const SECOND_FORMS=Object.freeze(Object.fromEntries(SECOND_FUSIONS.map(entry=>[entry.id,secondForm(entry)])));
+// 2026-09-17: 재융합 990개는 숨긴다(이름·효과·세기를 자동으로 찍어낸 것). 세밀하게 다시 만들 때 되살린다.
+export const SECOND_FORMS=Object.freeze({});
 const SECOND_BY_PARTS=new Map(Object.values(SECOND_FORMS).map(f=>[[...f.parts].sort().join('+'),f.id]));
 export const secondFormOf=(a,b)=>a===b?null:SECOND_BY_PARTS.get([a,b].sort().join('+'))||null;
 
@@ -49,7 +52,7 @@ export const secondFormOf=(a,b)=>a===b?null:SECOND_BY_PARTS.get([a,b].sort().joi
 // They live beside the 45 first fusions (FORMS stays fusion-only) and take one slot like a fusion does.
 export const SOLO_LEVEL=5;
 const solo=(id,law,name,desc,strength,weakness,passive=false)=>Object.freeze({id,name,requires:Object.freeze([law]),pair:`${LAW_KO[law]} 단독 진화`,desc,strength,weakness,passive,solo:true});
-export const SOLO_FORMS=Object.freeze(Object.fromEntries([
+const SOLO_ALL=Object.freeze(Object.fromEntries([
  solo('mirrormaze','reflect','거울 미궁','벽을 여러 번 튕기는 거울탄을 쏩니다. 튕길 때마다 빨라지고 피해가 커집니다.','벽이 많은 방에서 튕길수록 강해짐','처음 한 방은 약하고, 트인 곳에서는 튕길 벽이 없음'),
  solo('fullbloom','split','만개한 꽃','맞은 적에게서 꽃잎이 둥글게 퍼지고, 꽃잎이 다시 한 번 갈라집니다.','무리 한가운데에서 연쇄로 퍼짐','혼자 있는 적에게는 퍼질 곳이 없음'),
  solo('thunderweb','chain','천둥 그물','가장 가까운 적에게서 시작한 번개가 여러 적 사이를 뛰어다닙니다.','흩어진 무리를 한 번에 훑음','뛸수록 약해지고 벽 너머로는 못 뜀'),
@@ -61,7 +64,9 @@ export const SOLO_FORMS=Object.freeze(Object.fromEntries([
  solo('winterbreath','frost','겨울 숨결','앞쪽 부채꼴에 서리를 내뿜어 얼리고, 이미 느려진 적은 더 아프게 합니다.','가까운 무리를 얼려 멈춤','사거리가 짧고 등 뒤는 비어 있음'),
  solo('riftseed','portal','별문 심장','탄환이 연속으로 두 문을 통과해 뒷줄을 기습하고, 도착할 때 차원 파동을 남깁니다.','벽을 넘지 않고 앞줄 뒤의 사수와 포탑을 공격','문을 펼칠 직선 공간이 짧으면 도약 거리가 줄어듦')
 ].map(f=>[f.id,f])));
-// Every first evolution the seed can hold: 45 first fusions and ten solo evolutions.
+// 숨긴 법칙(차원)의 단독 진화는 뺀다.
+export const SOLO_FORMS=Object.freeze(Object.fromEntries(Object.entries(SOLO_ALL).filter(([,f])=>!HIDDEN_LAWS.includes(f.requires[0]))));
+// Every first evolution the seed can hold: ten first fusions and nine solo evolutions.
 // Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
@@ -101,11 +106,11 @@ const TWIN_TRAITS=Object.freeze({
  riftseed:Object.freeze({word:'개문',effect:'portal',bonus:.04})
 });
 const twin=(id,a,b,name,desc)=>{
- const A=SOLO_FORMS[a],B=SOLO_FORMS[b],parts=Object.freeze([a,b]),ta=TWIN_TRAITS[a],tb=TWIN_TRAITS[b];
+ const A=SOLO_ALL[a],B=SOLO_ALL[b],parts=Object.freeze([a,b]),ta=TWIN_TRAITS[a],tb=TWIN_TRAITS[b];
  const synergy=Object.freeze({name:`${ta.word}·${tb.word} 공명`,window:2.6,bonus:.08+ta.bonus+tb.bonus,effects:Object.freeze([ta.effect,tb.effect])});
  return Object.freeze({id,name:`${name} 각성`,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
 };
-export const TWIN_FORMS=Object.freeze(Object.fromEntries([
+const TWIN_ALL=Object.freeze(Object.fromEntries([
  twin('lightningmirror','mirrormaze','thunderweb','번개 거울방','튕기는 거울탄과 적 사이를 뛰는 번개가 한 칸에서 함께 나갑니다.'),
  twin('glassmaze','mirrormaze','glassspear','유리 미궁','벽을 튕기는 거울탄과 한 줄을 꿰뚫는 유리 창날을 함께 씁니다.'),
  twin('flaremirror','mirrormaze','flarebloom','불꽃 거울','거울탄이 방을 누비는 사이 목표에 불꽃 다발이 떨어집니다.'),
@@ -142,8 +147,10 @@ export const TWIN_FORMS=Object.freeze(Object.fromEntries([
  twin('portal-gravity','blackhole','riftseed','사건의 지평문','별문 출구가 작은 블랙홀로 변해 적을 붙잡습니다.'),
  twin('portal-frost','winterbreath','riftseed','서리 차원문','두 문 사이로 겨울 숨결이 이어져 멀리까지 얼립니다.')
 ].map(f=>[f.id,f])));
-// Every evolution the seed can hold: 45 first fusions, ten solo evolutions,
-// ten curated awakenings and 35 twin awakenings.
+// 숨긴 법칙(차원)이 들어간 쌍둥이 각성은 뺀다.
+export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
+// Every evolution the seed can hold: ten first fusions, nine solo evolutions,
+// ten curated awakenings and 26 twin awakenings (55).
 export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);

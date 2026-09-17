@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,ALL_FORMS,SOLO_LEVEL,isSoloForm,soloFormOf,soloReady,soloLevel,formStats,formUpgradeLine,eligibleForms,isFormEligible} from '../src/forms.js';
+import {FORMS,SOLO_FORMS,ALL_FORMS,SOLO_LEVEL,isSoloForm,soloFormOf,soloReady,soloLevel,formStats,formUpgradeLine,eligibleForms,isFormEligible} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
 import {canEvolveSolo,evolveSolo,effectiveLevels,offerChoices,chooseLaw,formOffer,offeredForm,slotsUsed,canFuse} from '../src/progression.js';
 import {createFormCombat,FORM_COMBAT} from '../src/form-combat.js';
@@ -12,9 +12,8 @@ const V=THREE.Vector3;
 assert.equal(Object.keys(SOLO_FORMS).length,Object.keys(LAWS).length);
 for(const law of Object.keys(LAWS)){const id=soloFormOf(law);assert.ok(id&&isSoloForm(id),law);assert.deepEqual([...SOLO_FORMS[id].requires],[law]);}
 for(const f of Object.values(SOLO_FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.solo===true&&f.pair.includes('단독'));assert.ok(!Object.hasOwn(FORMS,f.id));}
-const expectedFormTotal=Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length+Object.keys(AWAKEN_FORMS).length+Object.keys(TWIN_FORMS).length+Object.keys(SECOND_FORMS).length;
-assert.equal(Object.keys(ALL_FORMS).length,expectedFormTotal);assert.equal(expectedFormTotal,1090);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,expectedFormTotal);
-assert.equal(eligibleForms(Object.keys(LAWS)).length,45,'fusion offers never include solo evolutions');
+assert.equal(Object.keys(ALL_FORMS).length,55);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,55);
+assert.equal(eligibleForms(Object.keys(LAWS)).length,10,'fusion offers never include solo evolutions');
 assert.equal(isFormEligible('fullbloom',['split']),false);assert.equal(canFuse(new Map([['split',9]]),'fullbloom'),false);
 assert.deepEqual(Object.keys(FORM_COMBAT).sort(),Object.keys(ALL_FORMS).sort());
 
@@ -107,4 +106,4 @@ for(const id of Object.keys(SOLO_FORMS)){
 assert.equal(relicEffect('crystal',{splitCount:0},new Map([['fullbloom',4]])).state,'active');
 const storage=new Map();const mem={getItem:k=>storage.get(k)??null,setItem:(k,v)=>storage.set(k,v)};
 const rec=recordDiscovery(mem,normalizeDiscoveries({}),'forms','blackhole');assert.ok(rec.profile.forms.includes('blackhole'));
-console.log('Solo evolutions: ten laws, readiness at level 5, slot swap and feeding, upgrades, bounded real attacks, frost bonus, spear ramp, web decay, pull immunity, rewind trips, relics and discoveries passed.');
+console.log('Solo evolutions: nine laws, readiness at level 5, slot swap and feeding, upgrades, bounded real attacks, frost bonus, spear ramp, web decay, pull immunity, rewind trips, relics and discoveries passed.');

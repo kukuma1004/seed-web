@@ -48,7 +48,19 @@ export function restoredScore(save){
 // 여정을 넘어왔다면 그만큼 문지기를 이긴 것이고, 오스틴은 문지기 다섯마다 하나다.
 export function restoredWardens(save){return Number.isInteger(save?.wardens)?save.wardens:Math.max(0,save?.cycle|0);}
 export function restoredAustins(save){return Number.isInteger(save?.austins)?save.austins:Math.floor(restoredWardens(save)/5);}
-export function readCheckpoint(storage){try{const s=JSON.parse(storage.getItem(SAVE_KEY));return validCheckpoint(s)?s:null;}catch{return null;}}
+// 2026-09-17에 숨긴 차원 법칙이나 자동 조합이 든 저장은 버리지 않는다. 그 법칙·조합만 빼고 나머지로 이어한다.
+export function withoutHidden(s){
+ if(!s||typeof s!=='object'||!Array.isArray(s.rules))return s;
+ const law=id=>Object.hasOwn(LAWS,id),form=id=>Object.hasOwn(ALL_FORMS,id),map=v=>v&&typeof v==='object'&&!Array.isArray(v);
+ const next={...s,rules:s.rules.filter(law)};
+ if(Array.isArray(s.mutated))next.mutated=s.mutated.filter(law);
+ if(map(s.levels))next.levels=Object.fromEntries(Object.entries(s.levels).filter(([id])=>law(id)));
+ if(map(s.forms))next.forms=Object.fromEntries(Object.entries(s.forms).filter(([id])=>form(id)));
+ if(s.guideTarget!=null&&!form(s.guideTarget))next.guideTarget=null;
+ if(s.form!=null&&!form(s.form))next.form=null;
+ return next;
+}
+export function readCheckpoint(storage){try{const s=withoutHidden(JSON.parse(storage.getItem(SAVE_KEY)));return validCheckpoint(s)?s:null;}catch{return null;}}
 export function writeCheckpoint(storage,s){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
 export function clearCheckpoint(storage){try{storage.removeItem(SAVE_KEY);return true;}catch{return false;}}
 // Each journey after a warden is faster. The old region choice is gone; saved regions only name the place.

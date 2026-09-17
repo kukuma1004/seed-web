@@ -35,9 +35,9 @@ assert.equal(nextStagePoints(0),1);assert.equal(nextStagePoints(4),STAGE_POINTS.
  const boss=harvestFromRun({levels:{frost:4},wardens:5,austins:1});
  assert.deepEqual(boss.seeds,[GUARDIAN,'frost']);assert.equal(boss.growth,1+5+2);
  assert.deepEqual(harvestFromRun({levels:{},wardens:3}).seeds,[],'법칙이 없으면 씨앗도 없다');
- const recorded=harvestFromRun({levels:{gravity:8},forms:{collapse:6,'x001-01-02':9},wardens:5,austins:1,score:12345,kills:321,journey:6});
- assert.equal(recorded.record.law,'gravity');assert.equal(recorded.record.forms[0].id,'x001-01-02');assert.equal(recorded.record.rare,true);
- assert.ok(gardenRecordLine(recorded.record).includes('희귀 재융합'));
+ const recorded=harvestFromRun({levels:{gravity:8},forms:{collapse:6,thunderlance:9},wardens:5,austins:1,score:12345,kills:321,journey:6});
+ assert.equal(recorded.record.law,'gravity');assert.ok(recorded.record.forms.some(f=>f.id==='thunderlance'));assert.equal(recorded.record.rare,false);
+ assert.ok(!gardenRecordLine(recorded.record).includes('희귀 재융합'),'재융합을 숨긴 동안에는 희귀 표시가 없다');
 }
 
 // 조각 세 개로 원하는 씨앗을 만든다. 시계탑 씨앗은 못 만든다.

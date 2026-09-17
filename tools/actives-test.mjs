@@ -14,7 +14,8 @@ assert.deepEqual(Object.keys(SIGNATURES).sort(),Object.keys(ALL_FORMS).sort());
 for(const s of Object.values(SIGNATURES))assert.ok(s.name&&s.desc);
 assert.equal(new Set(Object.values(SIGNATURES).map(s=>s.name)).size,Object.keys(ALL_FORMS).length,'signature names are unique');
 assert.equal(Object.keys(ULTIMATE_ARCHETYPES).length,7);
-assert.deepEqual(['flarebloom','fullbloom','starring','glassspear','riftseed','blackhole','winterbreath'].map(id=>ultimateArchetype([id]).id),['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP']);
+// 차원(별문 심장)을 숨긴 동안 DOMAIN 궁극기는 나오지 않는다.
+assert.deepEqual(['flarebloom','fullbloom','starring','glassspear','blackhole','winterbreath'].map(id=>ultimateArchetype([id]).id),['BURST','RAIN','ORBIT','BEAM','BLACKHOLE','TIME_STOP']);
 
 // States follow the evolutions held: none, one, two or more (the two strongest; ties keep the first gained).
 assert.equal(activeState(new Map()).state,'LOCKED');
@@ -34,7 +35,7 @@ assert.deepEqual(overdriveTags(['collapse','tidepull']),['CONTROL','EXPLOSION','
 assert.deepEqual(overdriveTags(['fullbloom','prism']),['MULTI','BOUNCE']);
 const plain=overdriveFinale([],2),full=overdriveFinale(Object.values(LAW_TAGS),2);
 assert.equal(plain.hits,1);assert.equal(plain.arcs,0);assert.equal(plain.echoes,0);assert.equal(plain.pull,0);assert.equal(plain.slow,0);assert.equal(plain.rifts,0);
-assert.ok(full.radius>plain.radius&&full.hits===2&&full.arcs===ACTIVE.maxArcs&&full.pull>0&&full.slow>0&&full.rifts===3&&full.bossScale>1);
+assert.ok(full.radius>plain.radius&&full.hits===2&&full.arcs===ACTIVE.maxArcs&&full.pull>0&&full.slow>0&&full.rifts===(Object.values(LAW_TAGS).includes('RIFT')?3:0)&&full.bossScale>1,'차원을 숨긴 동안은 틈이 열리지 않는다');
 assert.ok(full.echoes<=ACTIVE.maxEchoes,'echoes are capped');
 assert.ok(overdriveFinale([],10).damage>plain.damage,'the blast grows with evolution levels');
 assert.ok(full.lines.length>=6);
@@ -97,5 +98,5 @@ for(const id of Object.keys(ALL_FORMS)){
  combat.surge(2);combat.calm();assert.equal(combat.state().surge,0);
  combat.dispose();
 }
-assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,55);
+assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,19,'조합 10 + 단독 진화 9');
 console.log(`Actives: ${Object.keys(SIGNATURES).length} signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.`);

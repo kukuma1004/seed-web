@@ -20,9 +20,9 @@ assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
 
 // Themes are cosmetic: switching one never changes the immutable combat stats.
 {
- const f=fixture();f.combat.set('riftseed');const before=FORM_COMBAT.riftseed.damage;
+ const f=fixture();f.combat.set('collapse');const before=FORM_COMBAT.collapse.damage;
  for(const theme of ['void','cyber','celestial','botanical']){assert.equal(f.combat.setTheme(theme),theme);assert.equal(f.combat.state().theme,theme);}
- assert.equal(FORM_COMBAT.riftseed.damage,before);f.combat.dispose();
+ assert.equal(FORM_COMBAT.collapse.damage,before);f.combat.dispose();
 }
 
 // Collapse has a visible gathering delay, limited projectile/well counts,
