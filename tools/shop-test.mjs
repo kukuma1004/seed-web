@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashTotal,carryTotal} from '../src/shop.js';
+import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashTotal,carryTotal} from '../src/shop.js';
 
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};};
 const empty={tonic:0,sprout:0};
@@ -16,12 +16,12 @@ const empty={tonic:0,sprout:0};
 }
 
 // 값과 한계
-assert.equal(SHOP_PRICES[1],100);assert.equal(SHOP_PRICES[10],500);assert.equal(SHOP_STOCK_MAX,10);
+assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1000);assert.equal(SHOP_STOCK_MAX,10);assert.equal(TONIC_CARRY_MAX,5);
 {
  const s=memory();writeShop(s,{coins:0,stash:empty,carry:empty});
  assert.equal(earnCoins(s,50).coins,50);assert.equal(buyTonics(s,1).reason,'coins');
- earnCoins(s,450);const bundle=buyTonics(s,10);assert.equal(bundle.ok,true);assert.equal(bundle.shop.coins,0);assert.equal(bundle.shop.stash.tonic,10);
- earnCoins(s,100);assert.equal(buyTonics(s,1).reason,'full','작은 물약은 10개까지 보관');
+ earnCoins(s,950);const bundle=buyTonics(s,10);assert.equal(bundle.ok,true);assert.equal(bundle.shop.coins,0);assert.equal(bundle.shop.stash.tonic,10);assert.equal(bundle.shop.carry.tonic,5,'10개를 사도 출발 상한은 5개');
+ earnCoins(s,200);assert.equal(buyTonics(s,1).reason,'full','작은 물약은 10개까지 보관');
 }
 
 // 많이 있어도 안 가져갈 수 있다: 가져갈 개수를 고르고, 새 여정을 시작할 때 그만큼만 꺼낸다.

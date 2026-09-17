@@ -49,10 +49,10 @@ import './style.css';
 import './journey.css';
 import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit,roomFor} from './journey.js';
 import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from './warden.js';
-import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,createClockFloor} from './austin.js';
+import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,austinPatternName,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON} from './online-ranking.js';
-import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo} from './garden.js';
+import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
 import {PATCH_NOTES,hasUnseenNotes,markNotesSeen} from './patch-notes.js';
@@ -63,7 +63,7 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
-import {SHOP_STOCK_MAX,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift} from './shop.js';
+import {SHOP_STOCK_MAX,SHOP_PRICES,TONIC_CARRY_MAX,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift} from './shop.js';
 import './shop.css';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,offeredFusion,slotsUsed,fusionLevel,canFuse,fuse,secondFusionOptions,secondFusionLevel,fuseSecond,evolveSolo,effectiveLevels,buildLevel,awakenOptions,awakenLevel,awaken} from './progression.js';
@@ -72,13 +72,23 @@ import {trapsFor,tickTrap,createTrapVisuals,trapPhase} from './traps.js';
 import './feedback.css';
 import './mobile.css';
 import './choice.css';
+import './account.css';
 import {setupMobileApp} from './mobile-app.js';
+import {createAccountAuth} from './account-auth.js';
+import {createCloudSync} from './cloud-sync.js';
+import {readAccountProfile,accountBadgeLine,BADGES} from './account-profile.js';
+import {publicWebBetaLocked,BETA_NOTICE} from './beta-access.js';
 import {bindPointerAction,createTouchControls} from './touch.js';
-import {createGameAudio} from './audio.js';
+import {createGameAudio,ultimateAudioEvent} from './audio.js';
 import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBonusOffers,applyRunBonus,runBonusSummary,moveScale as runMoveScale,shotScale as runShotScale,powerScale as runPowerScale} from './run-bonuses.js';
 import {rankingTermsAccepted,setRankingTermsAccepted,blockRankingUser,visibleRanking,rankingReportMailto} from './ranking-safety.js';
 import {responsiveView} from './responsive-view.js';
+const revealApp=()=>document.documentElement.classList.add('seed-loaded');
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
+let rawStorage;try{rawStorage=window.localStorage;}catch{rawStorage=null;}
+const account=createAccountAuth({storage:rawStorage});
+const cloud=createCloudSync({storage:rawStorage,account});
+const runStorage=cloud.storage;
 import {createMotion} from './motion.js';
 import {createVFX,FX_COLORS} from './vfx.js';
 import {THEMES,readTheme,writeTheme,nextTheme} from './themes.js';
@@ -97,8 +107,8 @@ let canvasRect={left:0,top:0,width:1,height:1};
 let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
-let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return localStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
-let combatTheme=readTheme(localStorage);
+let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return runStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
+let combatTheme=readTheme(runStorage);
 // Mobile pixels are already softened by DPR and post-processing. Context MSAA cost more fill-rate than it returns there.
 const renderer=new THREE.WebGLRenderer({canvas:$('#game'),antialias:qualityLevel>1&&!mobileDevice,powerPreference:'high-performance'});renderer.setPixelRatio(Math.min(devicePixelRatio,QUALITY_LEVELS[qualityLevel].pixelRatio));renderer.shadowMap.enabled=true;renderer.shadowMap.type=qualityLevel<2?THREE.PCFShadowMap:THREE.PCFSoftShadowMap;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.12;
 // Shadows come from the fixed sun onto a mostly static room; actors use contact shadows. The shadow map is redrawn a few times a
@@ -108,7 +118,7 @@ const SHADOW_REFRESH=.25,OCCLUSION_REACH=3;let shadowClock=SHADOW_REFRESH;render
 // Stop the run, remember one step lower quality, and reload once the browser gives the context back (or on a tap).
 // The run continues from the saved room entrance, so only the current room is replayed.
 renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDefault();if(mode==='playing'&&!paused)paused=true;
- try{localStorage.setItem(QUALITY_KEY,String(Math.max(0,qualityLevel-1)));}catch{}
+ try{runStorage.setItem(QUALITY_KEY,String(Math.max(0,qualityLevel-1)));}catch{}
  const box=document.createElement('div');box.id='context-lost';box.innerHTML='<div><strong>그래픽 메모리가 부족해서 화면이 멈췄어요</strong><span>화질을 한 단계 낮춰서 다시 불러와요 · 방 입구부터 이어서 할 수 있어요</span><button class="primary">다시 불러오기</button></div>';
  box.querySelector('button').onclick=()=>location.reload();document.body.append(box);},false);
 renderer.domElement.addEventListener('webglcontextrestored',()=>location.reload(),false);
@@ -229,7 +239,7 @@ function applyLawHit(e,amount,secondary=false){
 }
 const gate=new THREE.Group();gate.position.set(EXIT.x,0,EXIT.z);scene.add(gate);
 const gateRing=ring(gate,1,0xa9ffda);const gateHalo=mesh(new THREE.TorusGeometry(.7,.08,6,40),mats.jade,gate,0,1.1,0);gate.visible=false;
-document.body.insertAdjacentHTML('beforeend','<button id="exit-room" hidden>다음 방으로 · E</button><div id="boss-hud" hidden><strong>기억의 문지기</strong><div><i></i></div><small></small></div><div id="score-hud" hidden><small>점수</small><b>0</b></div><div id="item-bar" hidden role="group" aria-label="물약 가방"></div>'+ACTIVE_BUTTON_HTML+ACTIVE_EFFECT_HTML+'<div id="item-status" hidden aria-live="polite"></div>');
+document.body.insertAdjacentHTML('beforeend','<button id="exit-room" hidden>다음 방으로 · E</button><div id="boss-hud" hidden><strong>기억의 문지기</strong><div><i></i></div><em class="boss-move" hidden></em><small></small></div><div id="score-hud" hidden><small>점수</small><b>0</b></div><div id="item-bar" hidden role="group" aria-label="물약 가방"></div>'+ACTIVE_BUTTON_HTML+ACTIVE_EFFECT_HTML+'<div id="item-status" hidden aria-live="polite"></div>');
 bindPointerAction($('#active-skill'),{onPress:button=>{useActive();button.blur();}});
 bindPointerAction($('#item-bar'),{selector:'[data-item]',onPress:button=>{useInventoryItem(button.dataset.item);button.blur();}});
 $('#rules').innerHTML=Object.entries(LAWS).map(([id,v])=>`<div data-rule="${id}" title="${v.name}">${lawArt(id)}<span>${v.name}</span></div>`).join('');
@@ -247,9 +257,8 @@ function spawnAct2(type,x,z){const e=createAct2Minion(scene,type,rng);e.g.positi
 function drawRoom(){shadowClock=SHADOW_REFRESH;const clockRoom=inAustinRoom();arena=clockRoom?AUSTIN_ARENA:arenaFor(stage,cycle,region);for(const child of [...arenaGroup.children])release(child);buildRoomBoundary();clockFloor=clockRoom?createClockFloor(arenaGroup):null;for(const child of [...roomCover.children])release(child);obstacles.splice(0,obstacles.length,...(clockRoom?[]:roomFor(stage,cycle,region).covers).map(o=>({...o})));const exitSpot=arena.exit||EXIT;gate.position.set(exitSpot.x,0,exitSpot.z);buildCoverArt(roomCover,obstacles,mats);for(const child of [...trapGroup.children])release(child);traps=clockRoom?[]:trapsFor(stage,cycle,region);createTrapVisuals(trapGroup,traps,mats).forEach((visual,i)=>traps[i].visual=visual);stadium.setActive(isAct2(region)&&!clockRoom,arena);freezeStatic(arenaGroup);freezeStatic(roomCover);}
 // 방 안에서 움직이지 않는 것들의 행렬을 잠근다(함정과 배우는 제외).
 function freezeStatic(group){group.updateMatrixWorld(true);group.traverse(o=>{o.matrixAutoUpdate=false;});}
-let runStorage;try{runStorage=window.localStorage;}catch{runStorage=null;}
 // Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
-const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage});let playerName=lastName(runStorage),rankSerial=0;
+const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage,authProvider:()=>account.tokenSession()});let playerName=lastName(runStorage),rankSerial=0;
 // 정원은 런 사이에 남는다. 효과는 화면을 나올 때 다시 계산해 다음 여정에 쓴다.
 let garden=readGarden(runStorage);
 // A read-only-looking local art board assembled from in-memory data. It never
@@ -512,7 +521,7 @@ function useActive(){
  const aim=cachedTarget&&!cachedTarget.dead?cachedTarget.g.position.clone().sub(player.position).setY(0).normalize():lastMove.clone();
  for(const id of plan.forms)for(const combat of combatsOf(id))combat.surge(plan.seconds,{aim});
  activeVfx.start(plan,player.position);announceActive($('#active-cinematic'),plan);
- audio.play('ultimate',{intensity:plan.state==='OVERDRIVE'?1.25:1});
+ audio.play(ultimateAudioEvent(plan.archetype),{intensity:plan.state==='OVERDRIVE'?1.25:1});
  const colors=plan.forms.flatMap(id=>FORMS[id]?.requires||[]);for(const [i,id] of colors.entries())vfx.burst(player.position,id,10,1.1,i*.055);
  vfx.burst(player.position,colors[0]||'seed',plan.state==='OVERDRIVE'?54:38,1.65);
  cameraShake=Math.max(cameraShake,plan.state==='OVERDRIVE'?.7:.42);
@@ -620,12 +629,54 @@ function beginEvolution(id){
   growth.select(effectiveLaws(),mutated);updateFormLabel();vfx.clear();vfx.evolution(player.position,id);audio.play('evolve');
 }
 function startGame(){if(mode==='ready'&&!maintenanceOn)restart();}
+function authMessage(error){
+ const code=String(error?.code||error?.message||'');
+ if(code.includes('popup-closed')||code.includes('canceled')||code.includes('cancelled'))return '로그인이 취소되었어요.';
+ if(code.includes('credential-already-in-use')||code.includes('account-exists'))return '이미 다른 방식으로 연결된 계정이에요. 먼저 그 계정으로 로그인해 주세요.';
+ if(code.includes('network'))return '인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+ if(code.includes('provider')||code.includes('configuration-not-found')||code.includes('DEVELOPER_ERROR'))return '이 로그인 방식의 마지막 설정을 준비하고 있어요.';
+ return '로그인을 마치지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+}
+function showBetaLock(){
+ revealApp();
+ mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p><div class="account-status"><strong>등록된 베타 테스터만 플레이할 수 있어요</strong><span>Google Play에서 설치한 앱은 정상적으로 열립니다.</span></div><p class="account-note">${BETA_NOTICE.detail}</p><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
+}
+function showEntry(){
+ revealApp();
+ if(publicWebBetaLocked()){showBetaLock();return;}
+ if(account.user())showIntro();else showAccount();
+}
+function showAccount(error=''){
+ mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile);
+ $('#overlay').innerHTML=`<div class="menu-panel account-panel"><p class="eyebrow">SEED · ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 씨앗':'어떻게 시작할까요'}</h2>
+  <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
+  ${user?`<div class="account-status"><strong>${escapeHtml(account.label())}</strong><span>${user.isAnonymous?'나중에 Google 또는 Apple 계정에 연결하면 현재 기록을 그대로 지킬 수 있어요.':'이 UID로 여러 기기의 기록을 이어갑니다.'}</span>${badgeLine?`<em class="account-badge">✦ ${escapeHtml(badgeLine)}</em>`:''}<small>UID ${escapeHtml(user.uid)}</small></div>`:''}
+  <div class="account-buttons">
+   ${!linked?`<button id="account-google" class="account-button google"><b>G</b><span><b>Google로 계속하기</b></span></button>
+   <button id="account-apple" class="account-button apple" ${appleOff?'disabled':''}><b>●</b><span><b>Apple로 계속하기</b>${appleOff?'<small>iPhone 출시 준비 중</small>':''}</span></button>`:''}
+   ${!user?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
+   ${user?'<button id="account-continue" class="account-button"><span><b>게임으로 돌아가기</b></span></button>':''}
+  </div>
+  <p id="account-error" class="account-error" role="alert">${escapeHtml(error)}</p>
+  <p class="account-note">계정 로그인은 랭킹의 플레이어를 구분하고 앞으로 여러 기기에서 이어하기 위한 기반으로 사용합니다. 실명은 랭킹에 표시하지 않아요.</p>
+  ${linked?'<button id="account-signout" class="menu-item small-item">로그아웃</button>':''}</div>`;
+ const busy=async action=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();const result=await cloud.retry();if(result?.changed){location.reload();return;}showIntro();}catch(err){showAccount(authMessage(err));}};
+ if($('#account-google'))$('#account-google').onclick=()=>busy(account.signInWithGoogle);
+ if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple);
+ if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest);
+ if($('#account-continue'))$('#account-continue').onclick=showIntro;
+ if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
+}
 function showIntro(){audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  if(maintenanceOn){showMaintenance();return;}
  // 점검으로 잠시 닫았던 미안함: 다시 싹 1개와 작은 물약 3개를 보관함에 한 번만 넣는다.
+ const cloudRewards=cloud.consumeRewardNotice();
  const sproutGift=grantGift(runStorage,SORRY_GIFT,'sprout',1);
  const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
+ if(cloudRewards.length){showCloudGift(cloudRewards);return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),actives=gardenFx.actives.length,shop=readShop(runStorage);
@@ -641,6 +692,7 @@ function showIntro(){audio.setScene('garden');region='garden';startRegion='garde
    <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 보관함 ${itemCounts(shop.stash)||'비어 있음'}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
    <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
+   <button id="account-link" class="menu-item"><strong>계정</strong><small>${escapeHtml(account.label())}</small></button>
    <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
   </div>
   <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · <a href="https://kukuma1004.github.io/seed-web/terms.html" target="_blank" rel="noopener">랭킹 이용규칙</a> · 광고와 결제가 없는 게임입니다</p>
@@ -652,6 +704,7 @@ function showIntro(){audio.setScene('garden');region='garden';startRegion='garde
  $('#go-shop').onclick=()=>showShop(showIntro);
  $('#patch-notes').onclick=showNotes;
  $('#ranking-link').onclick=()=>showRanking('online');
+ $('#account-link').onclick=()=>showAccount();
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
 }
@@ -660,18 +713,18 @@ const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[i
 function showShop(back=showIntro,message=''){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const shop=readShop(runStorage),oneDisabled=shop.coins<100||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<500||shop.stash.tonic!==0;
+ const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic!==0;
  // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.
  const stashRows=STASH_ORDER.filter(id=>id==='tonic'||shop.stash[id]).map(id=>{
-  const most=Math.min(shop.stash[id],ITEMS[id].max);
-  return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개${id==='sprout'?' · 한 판에 1개':''}</small></div>`
+  const most=Math.min(shop.stash[id],id==='tonic'?TONIC_CARRY_MAX:ITEMS[id].max);
+  return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개${id==='tonic'?` · 출발 최대 ${TONIC_CARRY_MAX}개`:id==='sprout'?' · 한 판에 1개':''}</small></div>`
    +`<div class="stash-carry" role="group" aria-label="${ITEMS[id].name} 가져갈 개수"><button type="button" data-carry="${id}" data-step="-1" ${shop.carry[id]<=0?'disabled':''} aria-label="하나 덜">−</button><b>${shop.carry[id]}</b><button type="button" data-carry="${id}" data-step="1" ${shop.carry[id]>=most?'disabled':''} aria-label="하나 더">+</button></div></li>`;
  }).join('');
  $('#overlay').innerHTML=`<div class="menu-panel shop-panel"><p class="eyebrow">SEED · 출발 준비</p><h2>물약 상점</h2>
   <div class="shop-wallet"><span>보유 게임 머니</span><strong>${shop.coins.toLocaleString('ko-KR')}원</strong></div>
   <div class="shop-columns">
   <section class="shop-product"><div class="shop-product-art">${itemArt('tonic')}<div><h3>${ITEMS.tonic.name}</h3><p>생명력 +${ITEMS.tonic.heal} · 보관 최대 ${SHOP_STOCK_MAX}개</p></div></div>
-   <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · 100원</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · 500원</strong><small>묶음 할인</small></button></div>
+   <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · ${SHOP_PRICES[1].toLocaleString('ko-KR')}원</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · ${SHOP_PRICES[10].toLocaleString('ko-KR')}원</strong><small>묶음 구매</small></button></div>
    <p class="shop-message" aria-live="polite">${escapeHtml(message)}</p></section>
   <section class="shop-stash"><h3>보관함 · 새 여정에 가져갈 개수</h3><ul>${stashRows}</ul>
    <p class="stash-note">새 여정을 시작할 때만 가방에 들어가요 · 이어하기에는 안 들어가요</p></section>
@@ -695,6 +748,21 @@ function showGift(){
   <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
  $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
+}
+function showCloudGift(grants){
+ mode='gift';touch.reset();keys.clear();
+ $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ const rewards=grants.flatMap(grant=>{
+  const r=grant.rewards||{},lines=[];
+  if(r.jp)lines.push(`<li><strong>${Number(r.jp).toLocaleString('ko-KR')} JP</strong><small>상점에서 사용할 수 있어요</small></li>`);
+  for(const id of r.badges||[])lines.push(`<li><strong>✦ ${escapeHtml(BADGES[id]?.name||id)}</strong><small>${escapeHtml(BADGES[id]?.description||'계정에 남는 특별 배지')}</small></li>`);
+  for(const [id,n] of Object.entries(r.seeds||{}))lines.push(`<li><strong>${escapeHtml(SEEDS[id]?.name||id)} ×${n}</strong><small>나의 정원 씨앗 상자에 들어갔어요</small></li>`);
+  for(const id of r.skins||[])lines.push(`<li><strong>스킨 · ${escapeHtml(id)}</strong><small>계정 보관함에 등록되었어요</small></li>`);
+  for(const [id,n] of Object.entries(r.items||{}))lines.push(`<li><strong>${escapeHtml(ITEMS[id]?.name||id)} ×${n}</strong><small>출발 상점 보관함에 들어갔어요</small></li>`);
+  return lines;
+ }).join('');
+ $('#overlay').innerHTML=`<div class="menu-panel gift-panel cloud-gift"><p class="eyebrow">SEED · 계정 선물</p><div class="account-mark">✦</div><h2>${escapeHtml(grants[0]?.label||'새 선물이 도착했어요')}</h2><ul class="cloud-reward-list">${rewards}</ul><p class="gift-line">이 선물은 계정 UID에 한 번만 지급되고 다른 기기에서도 이어집니다.</p><div class="gift-actions"><button id="gift-garden" class="menu-item"><strong>정원 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
+ $('#gift-ok').onclick=showIntro;$('#gift-garden').onclick=()=>showGarden(showIntro);
 }
 // 이름은 여러 화면에서 같은 모양으로 쓴다.
 // 거른 별명을 쳤다가 다른 화면으로 넘어가도, 새 칸에 이유가 남게 한다.
@@ -910,9 +978,9 @@ function renderBossHud(boss){
  const hud=$('#boss-hud'),pct=Math.max(0,boss.hp/boss.maxHp*100);setHidden(hud,false);setWidth(hud.querySelector('i'),pct.toFixed(1)+'%');
  if(boss.type==='austin'){
   const phase=PHASES[boss.phase];if(hud.dataset.phase!==boss.phase)hud.dataset.phase=boss.phase;
-  setText(hud.querySelector('strong'),`${AUSTIN.name} · ${phase.label} · ${Math.ceil(pct)}%`);setText(hud.querySelector('small'),austinHint(boss));
+  setText(hud.querySelector('strong'),`${AUSTIN.name} · ${phase.label} · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),austinPatternName(boss));setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),austinHint(boss));
  }else{
-  delete hud.dataset.phase;setText(hud.querySelector('strong'),boss.config?.name||'기억의 문지기');
+  delete hud.dataset.phase;setHidden(hud.querySelector('.boss-move'),true);setText(hud.querySelector('strong'),boss.config?.name||'기억의 문지기');
   setText(hud.querySelector('small'),pendingEscorts.length?'호위 등장 예고 · 주황 원에서 떨어지세요':boss.variant==='seal'?'보라 원이 닫힐 때 안에 있으면 회피가 봉인됩니다':boss.variant==='hunter'?'돌진 뒤 곧바로 한 번 더 돌진합니다':boss.learned.length?'습득: '+boss.learned.map(id=>LAW_NAMES[id]).join(' · '):'생명 67% · 34%에서 당신의 법칙을 배웁니다');
  }
 }
@@ -981,7 +1049,7 @@ function applyQuality(level,{save=true}={}){
  player.userData.setQuality?.(level);
  if(sun.castShadow!==q.shadows){sun.castShadow=q.shadows;}shadowClock=SHADOW_REFRESH;
  if(q.shadows&&sun.shadow.mapSize.x!==q.shadowSize){sun.shadow.mapSize.set(q.shadowSize,q.shadowSize);sun.shadow.map?.dispose();sun.shadow.map=null;}
- if(save){try{localStorage.setItem(QUALITY_KEY,String(level));}catch{}}
+ if(save){try{runStorage.setItem(QUALITY_KEY,String(level));}catch{}}
  resize();
 }
 // Manual choice in the pause sheet: cycles high → medium → low → high and is remembered on this device.
@@ -1006,8 +1074,8 @@ function mountQualityButton(){
 }
 function themeButtonLabel(){return `무료 테마 체험 · ${THEMES[combatTheme].short}`;}
 function applyCombatTheme(id,{save=true}={}){
- combatTheme=id;vfx.setTheme(id);activeVfx.setTheme(id);for(const combat of formCombats.values())combat.setTheme(id);
- if(save)writeTheme(localStorage,id);
+ combatTheme=id;document.body.dataset.combatTheme=id;vfx.setTheme(id);activeVfx.setTheme(id);for(const combat of formCombats.values())combat.setTheme(id);
+ if(save)writeTheme(runStorage,id);
  const button=document.getElementById('theme-toggle');if(button)button.textContent=themeButtonLabel();
  return combatTheme;
 }
@@ -1025,7 +1093,7 @@ renderer.domElement.addEventListener('pointerdown',event=>{
  if(mode!=='garden'||!gardenScene)return;
  const rect=canvasRect,hit=gardenScene.pick((event.clientX-rect.left)/Math.max(1,rect.width),(event.clientY-rect.top)/Math.max(1,rect.height));
  selectGardenSpot(hit);
-});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();showIntro();requestAnimationFrame(animate);
+});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();if(publicWebBetaLocked())showBetaLock();else cloud.start().then(result=>{if(result?.changed){location.reload();return;}showEntry();}).catch(()=>showEntry());requestAnimationFrame(animate);
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({pace:{game:+paceGame.toFixed(1),real:+paceReal.toFixed(1),trusted:paceTrusted(paceGame,paceReal)},mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,theme:{id:combatTheme,...THEMES[combatTheme]},quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:qualityGovernor.state()},items:{hasteTime,shellTime,selectedItem},runBonuses:{...runBonuses},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags,archetype:activeGauge.plan.archetype},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:killsForChoice(choicesTaken),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,vfx:vfx.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
 qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if(b)damageEnemy(b,b.maxHp*fraction,false);return b?b.hp:null;},givePotion:()=>addItem(inventory,'potion',1),fillActive:()=>{activeGauge.cooldown=0;activeGauge.value=ACTIVE.max;return activeGauge.value;},showAustinTitle:()=>{seedTitle.setUnlocked(true);return seedTitle.isUnlocked();},giveForm:(id,level=4)=>{if(!Object.hasOwn(FORMS,id))return false;heldForms.set(id,level);syncForms();return true;},setLaw:(id,level)=>{if(!Object.hasOwn(LAWS,id))return false;levels.set(id,level);syncLaws();return true;},offerSolo:()=>offerSolo(finishChoice,true),giveItem:(id,n=1)=>{const got=addItem(inventory,id,n);itemBarKey='';return got;},setHp:v=>{hp=Math.max(1,Math.min(100,v));},giveCoins:(n=500)=>earnCoins(runStorage,Math.max(0,Math.floor(n))).coins,startAustin:()=>{restart();stage=4;wardensDefeated=Math.max(5,wardensDefeated);austinRoom=true;wave();return true;}},census:()=>{const out={casters:{},meshes:0,shadowCasters:0,sprites:0,instanced:0,points:0,lines:0,lights:0,materials:new Set(),byParent:{}};scene.traverseVisible(o=>{if(o.isLight)out.lights++;if(o.isSprite)out.sprites++;else if(o.isInstancedMesh)out.instanced++;else if(o.isMesh){out.meshes++;if(o.castShadow){out.shadowCasters++;const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.casters[key]=(out.casters[key]||0)+1;}}else if(o.isLineSegments)out.lines++;if(o.material)out.materials.add(o.material);if(o.isMesh||o.isSprite){const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.byParent[key]=(out.byParent[key]||0)+1;}});out.materials=out.materials.size;out.behindCover=enemies.filter(e=>behindCover(e.g.position)).length;out.obstacles=obstacles.length;out.byParent=Object.fromEntries(Object.entries(out.byParent).sort((a,b)=>b[1]-a[1]).slice(0,25));out.programs=renderer.info.programs?.length;return out;},worldToScreen:(x,z)=>{let p=new V(x,.5,z).project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};}};

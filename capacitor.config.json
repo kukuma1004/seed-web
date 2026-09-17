@@ -1,9 +1,15 @@
 {
-  "appId": "kr.jpmathlab.seed",
+  "appId": "com.jpmathlab.seed",
   "appName": "SEED",
   "webDir": "dist",
   "backgroundColor": "#10252a",
   "android": {
     "allowMixedContent": false
+  },
+  "plugins": {
+    "FirebaseAuthentication": {
+      "skipNativeAuth": false,
+      "providers": ["google.com", "apple.com"]
+    }
   }
 }

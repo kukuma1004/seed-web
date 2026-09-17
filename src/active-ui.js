@@ -7,18 +7,20 @@ import './actives.css';
 // and the diagonally composed twin portrait, so the skill and the build always share one identity.
 export const ACTIVE_BUTTON_HTML='<button id="active-skill" hidden aria-live="off"><span class="active-fill" aria-hidden="true"></span><span class="active-icon" aria-hidden="true"></span><b class="active-name"></b><small class="active-key">F</small></button>';
 export const ACTIVE_EFFECT_HTML='<div id="active-cinematic" hidden aria-live="polite"></div>';
+export const ARCHETYPE_FINALES=Object.freeze({BURST:'씨앗 초신성',RAIN:'천화 낙하',ORBIT:'성환 개화',BEAM:'법칙 관통',DOMAIN:'정원 전개',BLACKHOLE:'특이점 붕괴',TIME_STOP:'영원의 파쇄'});
 
 export function announceActive(root,plan){
  if(!root)return;
  const over=plan.state==='OVERDRIVE',names=plan.forms.map(id=>SIGNATURES[id]?.name).filter(Boolean),archetype=ULTIMATE_ARCHETYPES[plan.archetype]||ULTIMATE_ARCHETYPES.BURST;
  root.innerHTML=`<div class="active-cinematic-art">${activeIcon(plan.forms)}</div><div><small>${archetype.name}형 · ${over?'두 진화가 공명합니다':'시드의 진화가 폭발합니다'}</small><strong>${over?'OVERDRIVE':names[0]}</strong><span>${over?names.join(' × '):`${plan.seconds}초 시그니처`}</span></div>`;
- root.hidden=false;root.className='';void root.offsetWidth;root.className=`show ${over?'overdrive':'signature'}`;
+ root.dataset.archetype=archetype.id;root.hidden=false;root.className='';void root.offsetWidth;root.className=`show ${over?'overdrive':'signature'}`;
 }
 
 export function announceFinale(root,plan){
  if(!root||plan.state!=='OVERDRIVE')return;
- root.innerHTML='<div class="active-finale-mark">✦</div><div><small>법칙 공명 완성</small><strong>융합 폭발</strong><span>두 진화의 성질이 한 번에 터집니다</span></div>';
- root.hidden=false;root.className='';void root.offsetWidth;root.className='show finale';
+ const archetype=ULTIMATE_ARCHETYPES[plan.archetype]||ULTIMATE_ARCHETYPES.BURST,finale=ARCHETYPE_FINALES[archetype.id]||ARCHETYPE_FINALES.BURST;
+ root.innerHTML=`<div class="active-finale-mark">✦</div><div><small>${archetype.name}형 · 법칙 공명 완성</small><strong>${finale}</strong><span>두 진화의 성질이 한 번에 터집니다</span></div>`;
+ root.dataset.archetype=archetype.id;root.hidden=false;root.className='';void root.offsetWidth;root.className='show finale';
 }
 
 export function activeIcon(forms){

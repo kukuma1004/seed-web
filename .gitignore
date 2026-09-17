@@ -3,7 +3,16 @@ dist/
 .dream-loop/
 *.log
 .env*
+# Local tester rosters and Firebase Admin credentials must never reach the
+# public repository. The Android client google-services.json is intentionally
+# kept because it contains public client configuration, not an Admin key.
+store/*testers*.csv
+*service-account*.json
+*serviceAccount*.json
 docs/
+!docs/
+docs/*
+!docs/firebase-rules-with-seed.json
 AGENTS.md
 BRIEF.md
 Play*.cmd
@@ -73,4 +82,7 @@ android/keystore.properties
 !tools/ranking-audit.mjs
 !tools/name-filter-test.mjs
 !tools/ranking-safety-test.mjs
+!tools/cloud-save-test.mjs
+!tools/seed-admin-grant.mjs
+!tools/grant-founding-testers.mjs
 release/

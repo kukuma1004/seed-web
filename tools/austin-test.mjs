@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {AUSTIN,PHASES,austinPhase,hourDirection,bellDirections,beatsToHour,sweepTime,createAustin,tickAustin,damageAustin,volleyDirections,austinHint,createClockFloor} from '../src/austin.js';
+import {AUSTIN,PHASES,austinPhase,hourDirection,bellDirections,beatsToHour,sweepTime,createAustin,tickAustin,damageAustin,volleyDirections,austinHint,austinPatternName,createClockFloor} from '../src/austin.js';
 const V=THREE.Vector3;
 const angleTo=(a,b)=>Math.acos(Math.max(-1,Math.min(1,a.dot(b))));
 
 // Phases follow health, and each one is faster than the last.
 assert.equal(austinPhase(7000,7000),'normal');assert.equal(austinPhase(3500,7000),'overtime');assert.equal(austinPhase(1400,7000),'deadline');
+assert.equal(austinPatternName({state:'jabTell',bellWarn:false,pendingRing:0,alarms:[]}),'연속 스트레이트');
 assert.ok(PHASES.normal.tempo>PHASES.overtime.tempo&&PHASES.overtime.tempo>PHASES.deadline.tempo);
 
 // Twelve o'clock is the top of the screen, three o'clock is right.

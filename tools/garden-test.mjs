@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STAGE_POINTS,
+import {SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STAGE_POINTS,
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,
  harvestFromRun,addHarvest,craftSeed,plantSeed,uproot,chooseBranch,setActive,growPlants,
  activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,harvestLine,gardenRecordLine,objectJosa,wayJosa,
@@ -17,14 +17,14 @@ assert.deepEqual([0,1,2,3,4,5].map(centerArtTile),[null,0,2,10,7,11]);
 const memory=()=>{const d=new Map();return {getItem:k=>d.has(k)?d.get(k):null,setItem:(k,v)=>d.set(k,String(v)),d};};
 const grow=(g,n)=>growPlants(g,n);
 
-// 씨앗 목록: 법칙 아홉 + 시계탑, 모두 이름과 세 갈래를 갖는다.
-assert.equal(SEED_IDS.length,Object.keys(LAWS).length+1);
+// 씨앗 목록: 법칙 씨앗 + 시계탑 + 전투 강화가 없는 창립 테스터 기념 씨앗.
+assert.equal(SEED_IDS.length,Object.keys(LAWS).length+2);
 for(const id of SEED_IDS){
  const s=SEEDS[id];
  assert.ok(s.name&&s.hint,`${id} 이름/설명`);
  assert.deepEqual(Object.keys(s.branchNames).sort(),['flower','tree','vine']);
  for(const b of ['flower','tree','vine'])assert.ok(s.branchNames[b].length>=2,`${id}/${b} 갈래 이름`);
- assert.ok(id===GUARDIAN?s.law===null:Object.hasOwn(LAWS,s.law));
+ assert.ok(id===GUARDIAN||id===FOUNDER?s.law===null:Object.hasOwn(LAWS,s.law));
 }
 
 // 성장 단계는 성장점으로만 결정된다.
@@ -53,7 +53,7 @@ assert.equal(nextStagePoints(0),1);assert.equal(nextStagePoints(4),STAGE_POINTS.
  let g=emptyGarden();
  for(let i=0;i<FRAGMENTS_PER_SEED;i++)g=addHarvest(g,{fragments:1});
  assert.equal(g.fragments,FRAGMENTS_PER_SEED);assert.equal(g.harvests,FRAGMENTS_PER_SEED);
- assert.equal(craftSeed(g,GUARDIAN).ok,false);
+ assert.equal(craftSeed(g,GUARDIAN).ok,false);assert.equal(craftSeed(g,FOUNDER).ok,false,'한정 씨앗은 조각으로 만들 수 없다');
  const made=craftSeed(g,'chain');assert.ok(made.ok);assert.equal(made.garden.seeds.chain,1);assert.equal(made.garden.fragments,0);
  assert.equal(craftSeed(made.garden,'chain').ok,false,'조각이 모자라면 못 만든다');
 }

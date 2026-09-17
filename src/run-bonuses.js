@@ -3,7 +3,7 @@
 // the combination identity while giving an injured or speed-focused player a
 // meaningful alternative.
 export const RUN_BONUS_MAX=5;
-export const RUN_BONUS_CHANCE=.05;
+export const RUN_BONUS_CHANCE=.02;
 export const RUN_BONUSES=Object.freeze({
  heal:Object.freeze({id:'heal',icon:'✦',name:'새잎 회복',desc:'생명력을 즉시 20 회복합니다.',color:'#9dffb7'}),
  move:Object.freeze({id:'move',icon:'➶',name:'가벼운 뿌리',desc:'이동 속도 +3%',color:'#8fe9ff'}),
@@ -23,7 +23,7 @@ export function runBonusOffers(value,{hp=100,choicesTaken=0}={}){
  return hp<100?['heal',rotated[0]]:rotated.slice(0,2);
 }
 // This is an extra blessing, never a replacement for the build-defining law
-// card. Five percent keeps it memorable without flattening run variety.
+// card. Two percent keeps it truly hidden without flattening run variety.
 export function rareRunBonusOffers(value,{hp=100,choicesTaken=0,random=Math.random,chance=RUN_BONUS_CHANCE}={}){
  const offers=runBonusOffers(value,{hp,choicesTaken});
  return offers.length&&random()<chance?offers:[];

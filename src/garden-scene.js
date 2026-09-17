@@ -14,7 +14,7 @@ export const PLOT_SPOTS=Object.freeze([
  {x:-1.45,z:.7},{x:1.45,z:.7}
 ]);
 export const CENTER_SPOT=Object.freeze({x:0,z:-2.6});
-export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v2.webp';
+export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v3.webp';
 // 4 x 3 atlas cells. Keeping the selection in data makes it easy to test and
 // prevents the garden UI from drifting away from the saved growth stage.
 export function growthArtTile(growth,branch){
@@ -43,7 +43,9 @@ export function buildPlant(seedId,growth,branch,artKit=null){
  if(artKit){
   const tile=growthArtTile(growth,branch),plane=new THREE.Mesh(artKit.geometries[tile],artKit.material);
   const size=stage==='seed'?1.12:stage==='sprout'?1.28:branch==='tree'?(stage==='bloom'?2.18:1.82):branch==='vine'?(stage==='bloom'?1.92:1.62):(stage==='bloom'?1.86:1.55);
-  plane.scale.set(size,size,1);plane.position.y=size*.5;plane.renderOrder=3;plane.userData.sharedGardenArt=true;group.add(plane);
+   // Root-pivoted billboard: the plant stays seated in its painted bed while
+   // turning toward the pitched garden camera.
+   plane.scale.set(size,size,1);plane.position.y=.025;plane.renderOrder=3;plane.userData.sharedGardenArt=true;group.add(plane);
   group.userData={seed:seedId,stage,branch:branch||null,sway:Math.random()*6.28,art:true};
   return group;
  }
@@ -108,7 +110,7 @@ export function buildCenter(index,artKit=null){
  const tile=centerArtTile(index);
  if(artKit&&tile!==null){
   const plane=new THREE.Mesh(artKit.geometries[tile],artKit.material),size=index>=5?3.25:index===4?2.55:index===3?2.05:index===2?1.62:1.18;
-  plane.scale.set(size,size,1);plane.position.y=size*.5;plane.renderOrder=2;plane.userData.sharedGardenArt=true;group.add(plane);group.userData={index,art:true};return group;
+   plane.scale.set(size,size,1);plane.position.y=.025;plane.renderOrder=2;plane.userData.sharedGardenArt=true;group.add(plane);group.userData={index,art:true};return group;
  }
  const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);group.add(m);return m;};
  // At the start the painted shrine remains empty. A real seed portrait wakes in
@@ -153,7 +155,8 @@ export function createGardenScene(){
  growthTexture.colorSpace=THREE.SRGBColorSpace;growthTexture.minFilter=THREE.LinearMipmapLinearFilter;growthTexture.magFilter=THREE.LinearFilter;
  const growthMaterial=new THREE.MeshBasicMaterial({map:growthTexture,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
  const growthGeometries=Array.from({length:12},(_,tile)=>{
-  const geometry=new THREE.PlaneGeometry(1,1),uv=geometry.attributes.uv,col=tile%4,row=Math.floor(tile/4);
+   const geometry=new THREE.PlaneGeometry(1,1);geometry.translate(0,.5,0);
+   const uv=geometry.attributes.uv,col=tile%4,row=Math.floor(tile/4);
   for(let i=0;i<uv.count;i++)uv.setXY(i,col/4+uv.getX(i)/4,(2-row)/3+uv.getY(i)/3);
   uv.needsUpdate=true;return geometry;
  });

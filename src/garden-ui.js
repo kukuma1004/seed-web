@@ -2,7 +2,7 @@
 // 그림은 아직 법칙 그림을 빌려 쓴다(전용 그림이 나오면 plantArt만 바꾸면 된다).
 import {LAWS} from './laws.js';
 import {lawArt} from './law-art.js';
-import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,
+import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,ACTIVE_SLOTS,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,
  stageOf,nextStagePoints,plantName,branchSummary,activePlants,gardenEffects,centerInfo,activeSlots,
  plantSeed,uproot,chooseBranch,setActive,craftSeed,BRANCHES,BRANCH_KINDS} from './garden.js';
 import './garden.css';
@@ -13,7 +13,7 @@ export function plantArt(seedId,extra=''){
  const seed=SEEDS[seedId];
  if(!seed)return '';
  if(seed.law)return lawArt(seed.law,extra);
- return `<em class="plant-glyph ${extra}" aria-hidden="true">◷</em>`;
+ return `<em class="plant-glyph ${extra}" aria-hidden="true">${seedId===FOUNDER?'✦':'◷'}</em>`;
 }
 const growthBar=growth=>{
  const stage=stageOf(growth),next=nextStagePoints(growth);
@@ -32,7 +32,7 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
   : `<p class="dim">${label}</p>`;
  const craft=garden.fragments>0
   ? `<div class="fragments"><span>씨앗 조각 ${garden.fragments}개</span>${garden.fragments>=FRAGMENTS_PER_SEED
-     ? `<small>조각 ${FRAGMENTS_PER_SEED}개로 원하는 씨앗을 만들 수 있어요</small><div class="chips">${SEED_IDS.filter(id=>id!==GUARDIAN).map(id=>`<button class="seed-chip" data-craft="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span></button>`).join('')}</div>`
+     ? `<small>조각 ${FRAGMENTS_PER_SEED}개로 원하는 씨앗을 만들 수 있어요</small><div class="chips">${SEED_IDS.filter(id=>id!==GUARDIAN&&!SEEDS[id].exclusive).map(id=>`<button class="seed-chip" data-craft="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span></button>`).join('')}</div>`
      : `<small>${FRAGMENTS_PER_SEED-garden.fragments}개 더 모으면 원하는 씨앗을 만들 수 있어요</small>`}</div>`
   : '';
 

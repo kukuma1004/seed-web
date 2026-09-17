@@ -15,20 +15,30 @@ export const AUDIO_EVENTS=Object.freeze({
  fusion:{wave:'triangle',freq:220,end:880,duration:.58,gain:.075,cooldown:.5,priority:3,notes:[1,1.5,2]},
  ultimateReady:{wave:'sine',freq:440,end:880,duration:.38,gain:.06,cooldown:1,priority:3,notes:[1,1.5,2]},
  ultimate:{wave:'sawtooth',freq:95,end:620,duration:.72,gain:.085,cooldown:.6,priority:4,notes:[1,.5,2,3]},
+ ultimateBurst:{wave:'sawtooth',freq:82,end:760,duration:.62,gain:.082,cooldown:.55,priority:4,notes:[.5,1,1.5,2]},
+ ultimateRain:{wave:'triangle',freq:880,end:170,duration:.78,gain:.072,cooldown:.55,priority:4,notes:[1,1.19,1.5]},
+ ultimateOrbit:{wave:'sine',freq:170,end:690,duration:.86,gain:.08,cooldown:.55,priority:4,notes:[1,1.5,2.02]},
+ ultimateBeam:{wave:'sawtooth',freq:58,end:1180,duration:.74,gain:.078,cooldown:.55,priority:4,notes:[1,2,3]},
+ ultimateDomain:{wave:'sine',freq:138,end:415,duration:.92,gain:.085,cooldown:.55,priority:4,notes:[1,.667,1.5,2]},
+ ultimateBlackhole:{wave:'sine',freq:68,end:32,duration:1.05,gain:.1,cooldown:.55,priority:4,notes:[1,1.414,2]},
+ ultimateTimeStop:{wave:'square',freq:960,end:120,duration:.58,gain:.055,cooldown:.55,priority:4,notes:[1,.75,.5]},
  finale:{wave:'triangle',freq:90,end:45,duration:.75,gain:.095,cooldown:.65,priority:4,notes:[1,1.5,.5]},
  bossWarning:{wave:'square',freq:280,end:220,duration:.22,gain:.055,cooldown:.42,priority:3,notes:[1,.75]},
  bossAttack:{wave:'sawtooth',freq:145,end:72,duration:.3,gain:.075,cooldown:.22,priority:3,notes:[1,.5]},
  bossDefeat:{wave:'triangle',freq:180,end:720,duration:.9,gain:.09,cooldown:1,priority:4,notes:[1,1.25,1.5,2]}
 });
 
+const ULTIMATE_AUDIO=Object.freeze({BURST:'ultimateBurst',RAIN:'ultimateRain',ORBIT:'ultimateOrbit',BEAM:'ultimateBeam',DOMAIN:'ultimateDomain',BLACKHOLE:'ultimateBlackhole',TIME_STOP:'ultimateTimeStop'});
+export const ultimateAudioEvent=archetype=>ULTIMATE_AUDIO[archetype]||'ultimate';
+
 // A tiny procedural score: two sustained voices and one occasional bell. It
 // adds no download, decode, or extra texture memory and changes harmony between
 // the garden, ordinary combat and Austin. The sound toggle controls it together
 // with effects.
 export const MUSIC_SCENES=Object.freeze({
- garden:Object.freeze({root:146.83,ratios:[1,1.5],bell:[2,2.5,3],gain:.042,step:3.6}),
- combat:Object.freeze({root:110,ratios:[1,1.498],bell:[2,2.245,3],gain:.036,step:2.8}),
- boss:Object.freeze({root:82.41,ratios:[1,1.414],bell:[2,2.378,2.828],gain:.046,step:2.15})
+ garden:Object.freeze({root:146.83,ratios:[1,1.5],chords:Object.freeze([[1,1.5],[1.122,1.682],[.89,1.335],[1,1.498]]),bell:[2,2.5,3,2.245],gain:.042,step:3.6}),
+ combat:Object.freeze({root:110,ratios:[1,1.498],chords:Object.freeze([[1,1.498],[1.059,1.587],[.89,1.335],[.944,1.414]]),bell:[2,2.245,3,2.67],gain:.036,step:2.8}),
+ boss:Object.freeze({root:82.41,ratios:[1,1.414],chords:Object.freeze([[1,1.414],[1.059,1.498],[.944,1.335],[.89,1.26]]),bell:[2,2.378,2.828,1.782],gain:.046,step:2.15})
 });
 
 export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
@@ -54,7 +64,8 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
  }
  function tuneMusic(){
   if(!ctx||!musicVoices.length)return;const scene=MUSIC_SCENES[musicScene],at=ctx.currentTime;
-  musicVoices.forEach((voice,index)=>voice.osc.frequency.setTargetAtTime(scene.root*scene.ratios[index],at,.8));
+  const chord=scene.chords?.[musicStep%scene.chords.length]||scene.ratios;
+  musicVoices.forEach((voice,index)=>voice.osc.frequency.setTargetAtTime(scene.root*chord[index],at,.8));
   musicBus.gain.setTargetAtTime((paused||muted)?0.0001:scene.gain,at,.7);
  }
  function startMusic(){
@@ -92,7 +103,7 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
  function tick(dt){
   if(!unlocked||paused||muted||!ctx||ctx.state!=='running')return;
   const scene=MUSIC_SCENES[musicScene];musicClock+=Math.max(0,Math.min(.1,dt));if(musicClock<scene.step)return;musicClock-=scene.step;
-  const ratio=scene.bell[musicStep++%scene.bell.length],at=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();osc.type='sine';osc.frequency.setValueAtTime(scene.root*ratio,at);osc.frequency.exponentialRampToValueAtTime(scene.root*ratio*.997,at+.7);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.12,at+.012);gain.gain.exponentialRampToValueAtTime(.0001,at+.78);osc.connect(gain).connect(musicBus);osc.start(at);osc.stop(at+.82);
+  const ratio=scene.bell[musicStep%scene.bell.length],at=ctx.currentTime,osc=ctx.createOscillator(),gain=ctx.createGain();musicStep++;tuneMusic();osc.type='sine';osc.frequency.setValueAtTime(scene.root*ratio,at);osc.frequency.exponentialRampToValueAtTime(scene.root*ratio*.997,at+.7);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(.12,at+.012);gain.gain.exponentialRampToValueAtTime(.0001,at+.78);osc.connect(gain).connect(musicBus);osc.start(at);osc.stop(at+.82);
  }
  async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){try{await ctx.suspend();}catch{}}else await unlock();tuneMusic();}
  return {unlock,play,installUnlock,setPaused,setScene,tick,setMuted(value){muted=Boolean(value);if(master)master.gain.value=muted?0:.78;tuneMusic();},reset(){limiter.reset();musicClock=0;},state:()=>({supported:Boolean(AudioContextCtor),unlocked,muted,paused,musicScene,musicVoices:musicVoices.length,...limiter.state()})};

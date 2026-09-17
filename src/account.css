@@ -1,0 +1,16 @@
+.account-panel{width:min(520px,94vw)}
+.account-mark{width:76px;height:76px;margin:4px auto 12px;display:grid;place-items:center;border:1px solid #d8efbd88;border-radius:50%;font:42px Georgia;color:#d8efbd;background:radial-gradient(circle at 38% 34%,#537a61,#17372f 55%,#091c20);box-shadow:0 0 34px #89e2aa2e,inset 0 0 22px #d8efbd18}
+.account-copy{margin:4px auto 15px!important;max-width:430px}
+.account-buttons{display:grid;gap:9px;margin:14px auto;width:min(360px,100%)}
+.account-button{min-height:51px;border:1px solid #738a80;background:#112a2b;color:#eef5df;padding:10px 16px;display:flex;align-items:center;justify-content:center;gap:10px}
+.account-button b{font-size:17px}.account-button small{display:block;color:#a9bbb1}
+.account-button.google{background:#f3f5ef;color:#172522;border-color:#fff}.account-button.google small{color:#53645e}
+.account-button.apple{background:#050707;color:#fff;border-color:#555}
+.account-button[disabled]{opacity:.46;cursor:not-allowed}
+.account-status{padding:12px;border:1px solid #65807566;background:#0a1d21aa;margin:12px 0}.account-status strong,.account-status span{display:block}.account-status span{margin-top:4px;color:#a9bbb1;font-size:12px}
+.account-status small{display:block;margin-top:7px;color:#708b80;font-size:9px;overflow-wrap:anywhere}.account-badge{display:inline-flex!important;margin-top:9px;padding:5px 9px;border:1px solid #d6b75f77;border-radius:999px;color:#ffe6a0!important;background:#5a43172e;font:700 11px "Malgun Gothic",sans-serif;letter-spacing:.2px}
+.cloud-reward-list{list-style:none;margin:15px auto;padding:0;display:grid;gap:8px;width:min(400px,100%)}.cloud-reward-list li{padding:10px 12px;border:1px solid #cdb66e55;background:linear-gradient(110deg,#18372fdd,#47351580);text-align:left}.cloud-reward-list strong,.cloud-reward-list small{display:block}.cloud-reward-list strong{color:#ffe7a6}.cloud-reward-list small{margin-top:3px;color:#b9c9bd}.cloud-gift .account-mark{color:#ffe396}
+.account-note{font-size:11px!important;line-height:1.7!important;color:#91a69c!important}
+.account-error{min-height:19px;color:#ffb5a6!important;margin:6px 0!important;font-size:12px!important}
+.beta-lock-panel{width:min(580px,94vw)}.beta-lock-panel h2{font-family:"Malgun Gothic",sans-serif!important;letter-spacing:1px!important}.beta-lock-panel .account-mark{font-size:34px}
+@media(max-height:480px){.account-panel{display:grid;grid-template-columns:120px 1fr;column-gap:20px;align-items:center}.account-panel .eyebrow,.account-panel h2,.account-panel .account-copy,.account-panel .account-mark{grid-column:1}.account-panel .account-buttons,.account-panel .account-status,.account-panel .account-error,.account-panel .account-note,.account-panel>.small-item{grid-column:2}.account-panel h2{font-size:23px!important;margin:2px}.account-panel .account-mark{width:62px;height:62px;font-size:34px;margin:3px auto}.account-panel .account-copy{font-size:11px;margin:2px!important}.account-buttons{gap:5px;margin:4px auto}.account-button{min-height:42px;padding:6px 10px}.account-note{margin:2px!important}}

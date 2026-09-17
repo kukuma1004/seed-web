@@ -1,0 +1,64 @@
+{
+  "project_info": {
+    "project_number": "1061208248935",
+    "firebase_url": "https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "jpmathlab",
+    "storage_bucket": "jpmathlab.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1061208248935:android:17286b033d2af67ecebac2",
+        "android_client_info": {
+          "package_name": "com.jpmathlab.seed"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "1061208248935-06l7f06h1m5a0c1lj70vaimqrbajd30e.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jpmathlab.seed",
+            "certificate_hash": "adec0162b9a667e8f3e54505d51ecedf99157c69"
+          }
+        },
+        {
+          "client_id": "1061208248935-onjhuvdce7qt9qph85c0irt40e3cqcru.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jpmathlab.seed",
+            "certificate_hash": "c85eb85beb835099ded1185274994a103cb61993"
+          }
+        },
+        {
+          "client_id": "1061208248935-r9difql0lg20mdrve1nsdk07ghh3k2oh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jpmathlab.seed",
+            "certificate_hash": "3ad40555e693ec4c9ec0858b12b093da463c2661"
+          }
+        },
+        {
+          "client_id": "1061208248935-dlrhg344k43124nq7b61r296pt4fueh7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCua9PNilEvrdm10OfVu8RxCE7gvtMrZDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "1061208248935-dlrhg344k43124nq7b61r296pt4fueh7.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

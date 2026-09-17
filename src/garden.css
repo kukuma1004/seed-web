@@ -3,8 +3,13 @@ body.menu-mode #brand,body.menu-mode #stages,body.menu-mode #encounter,body.menu
 body.menu-mode #status,body.menu-mode #rules,body.menu-mode #help,body.menu-mode #form-label,
 body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{display:none}
 #overlay.menu-screen,#overlay.garden-mode{background:transparent;backdrop-filter:none;padding:0;align-items:stretch;justify-content:flex-start;text-align:left;pointer-events:none}
+#overlay.menu-screen:before{content:"♧";position:absolute;right:10%;bottom:17%;z-index:0;color:#f0e2a8;font:clamp(92px,17vw,220px)/1 Georgia,serif;opacity:.13;filter:drop-shadow(0 0 28px #d8ffbf44);transform:rotate(-8deg);mix-blend-mode:screen;pointer-events:none}
+#overlay.menu-screen:after{content:"S E E D";position:absolute;right:4%;bottom:8%;z-index:0;color:#ecf5d80d;-webkit-text-stroke:1px #f4e7b92d;font:700 clamp(38px,7.5vw,104px)/1 Georgia,serif;letter-spacing:.22em;text-shadow:0 0 24px #baffd31f;opacity:.72;mix-blend-mode:screen;white-space:nowrap;pointer-events:none}
+/* 저사양 모드는 전투 블러만 끈다. 정원까지 불투명 막으로 가리면 배경과
+   씨앗 위치를 볼 수 없으므로 메뉴 장면은 항상 투명하게 유지한다. */
+body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.garden-mode{background:transparent;backdrop-filter:none}
 #overlay.menu-screen>*,#overlay.garden-mode>*{pointer-events:auto}
-.menu-panel{position:absolute;left:0;top:0;bottom:0;width:calc(min(380px,44vw) + env(safe-area-inset-left));padding:26px 24px 26px max(24px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:10px;justify-content:center;overflow-y:auto;
+.menu-panel{position:absolute;left:0;top:0;bottom:0;z-index:1;width:calc(min(380px,44vw) + env(safe-area-inset-left));padding:26px 24px 26px max(24px,env(safe-area-inset-left));display:flex;flex-direction:column;gap:10px;justify-content:center;overflow-y:auto;
  background:linear-gradient(90deg,#061418f5 0%,#061418e0 62%,#06141800 100%)}
 .menu-panel .eyebrow{margin:0;font-size:12px;letter-spacing:5px;color:#8fb0a2}
 .menu-panel h2{margin:0 0 6px;font-size:34px;letter-spacing:2px}
@@ -42,6 +47,7 @@ body.menu-mode #pause,body.menu-mode #overhead,body.menu-mode #seed-title{displa
 .garden-panel footer small{font-size:11px;color:#9fb8ad}
 .garden-panel footer .primary{padding:9px 16px;min-height:42px}
 @media(max-width:900px){.menu-panel{width:min(300px,46vw);padding:18px 16px}.menu-panel h2{font-size:26px}.garden-panel{width:min(290px,40vw)}}
+@media(max-width:700px) and (orientation:portrait){#overlay.menu-screen:before{right:-6%;bottom:22%;font-size:128px;opacity:.075}#overlay.menu-screen:after{right:-12%;bottom:16%;font-size:48px;opacity:.48}}
 @media(max-height:520px){
  .menu-panel{padding:12px 14px;gap:6px}.menu-panel h2{font-size:22px;margin-bottom:2px}
  .menu-panel .name-field{margin:0 0 4px}.menu-panel .name-field input{min-height:34px;font-size:14px}.menu-panel .name-field small{display:none}

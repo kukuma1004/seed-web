@@ -32,6 +32,20 @@ export function activeColors(forms=[],theme='botanical'){
 }
 const waveDepth=(type,age,rift)=>type==='DOMAIN'?3.15+Math.sin(age*1.8)*.16:type==='ORBIT'?2.55+Math.sin(age*4)*.22:type==='TIME_STOP'?2.8:rift?2.65+Math.sin(age*3)*.18:2.35+Math.sin(age*2.2)*.12;
 
+// Seven ultimate silhouettes, authored once and drawn through the same five
+// batches. The values only steer transforms and particle paths: a theme can
+// therefore feel like a sellable skin without adding meshes, lights or post
+// passes on a low-end phone.
+export const ARCHETYPE_VFX=Object.freeze({
+ BURST:Object.freeze({floor:2.15,halo:1.45,waveX:2.2,waveZ:2.2,beamX:.78,beamY:.68,motes:'burst'}),
+ RAIN:Object.freeze({floor:2.45,halo:1.7,waveX:3.15,waveZ:1.25,beamX:.64,beamY:1.18,motes:'rain'}),
+ ORBIT:Object.freeze({floor:2.35,halo:2.25,waveX:3.05,waveZ:3.05,beamX:1.02,beamY:.58,motes:'orbit'}),
+ BEAM:Object.freeze({floor:1.65,halo:1.22,waveX:.8,waveZ:3.45,beamX:.46,beamY:1.72,motes:'beam'}),
+ DOMAIN:Object.freeze({floor:3.05,halo:2.08,waveX:3.25,waveZ:3.25,beamX:1.2,beamY:.42,motes:'domain'}),
+ BLACKHOLE:Object.freeze({floor:1.78,halo:1.22,waveX:1.18,waveZ:1.18,beamX:1.32,beamY:.62,motes:'blackhole'}),
+ TIME_STOP:Object.freeze({floor:2.68,halo:2.72,waveX:2.82,waveZ:2.82,beamX:.92,beamY:.5,motes:'clock'})
+});
+
 export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
@@ -74,23 +88,26 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
   const tail=running?Math.min(1,effect.time/.5):1;
   const breathe=1+Math.sin(effect.age*5.5)*.08;
   const primary=effect.colors[0],secondary=effect.colors[1]??primary;
-  const k=over?1:.78;
+  const k=over?1:.78,profile=ARCHETYPE_VFX[type]||ARCHETYPE_VFX.BURST,progress=1-life;
+  const beat=Math.pow(Math.max(0,Math.sin(effect.age*(type==='TIME_STOP'?Math.PI*2:Math.PI*1.45))),8);
 
   if(running){
-   const floorScale=type==='DOMAIN'?3:type==='BLACKHOLE'?1.75:type==='BEAM'?1.6:over?2.5:2.1;
+   const floorScale=profile.floor*(over?1.08:1)*(type==='BLACKHOLE'?1-.16*progress:type==='DOMAIN'?1+.04*Math.sin(effect.age*1.7):1);
    floor.material.opacity=1;tint(floor.material,primary,.38*k*intro*tail*breathe);floor.scale.setScalar(floorScale*(.6+.4*intro));floor.rotation.y=-effect.age*(theme.motion==='axis'?1.5:type==='TIME_STOP'?.06:rift?.68:type==='BLACKHOLE'?1.25:.32);
-   const haloBase=type==='ORBIT'?2.25:type==='DOMAIN'?2.05:type==='BLACKHOLE'?1.25:over?1.75:1.5;
-   halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar(haloBase*(.7+.3*intro)*breathe);halo.rotation.y=effect.age*(type==='TIME_STOP'?.12:type==='ORBIT'?2.8:1.4);
+   const haloBase=profile.halo*(1+(type==='BURST'||type==='BLACKHOLE'?beat*.1:0));
+   halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar(haloBase*(.7+.3*intro)*(type==='TIME_STOP'?1+beat*.045:breathe));halo.rotation.y=effect.age*(type==='TIME_STOP'?.12:type==='ORBIT'?2.8:1.4);
    wave.material.opacity=over||rift||['RAIN','ORBIT','DOMAIN','BLACKHOLE','TIME_STOP'].includes(type)?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);
-   if(type==='BEAM')wave.scale.set(.8,1,3.2);else if(type==='RAIN')wave.scale.set(2.8,1,1.45);else if(type==='BLACKHOLE')wave.scale.setScalar(1.15+.22*Math.sin(effect.age*5));else wave.scale.set(rift?1.45:2.35,1,waveDepth(type,effect.age,rift));wave.rotation.y=-effect.age*(type==='TIME_STOP'?.08:rift?2.1:type==='ORBIT'?2.6:.9);
-   const beamWide=type==='BEAM'?.5:type==='RAIN'?.72:type==='BLACKHOLE'?1.35:breathe,beamTall=type==='BEAM'?1.65:type==='DOMAIN'?.42:.55+.45*intro;
+   const wavePulse=type==='BLACKHOLE'?.9+.12*Math.cos(effect.age*4):type==='TIME_STOP'?1+beat*.06:1+.035*Math.sin(effect.age*3);
+   wave.scale.set((rift&&type!=='DOMAIN'?1.35:profile.waveX)*wavePulse,1,(rift&&type!=='DOMAIN'?waveDepth(type,effect.age,true):profile.waveZ)*wavePulse);wave.rotation.y=-effect.age*(type==='TIME_STOP'?.08:rift?2.1:type==='ORBIT'?2.6:.9);
+   const beamWide=profile.beamX*(type==='BLACKHOLE'?1+.12*Math.sin(effect.age*4):1),beamTall=profile.beamY*(.72+.28*intro)*(type==='BEAM'?1+beat*.16:1);
    beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(beamWide,beamTall,beamWide);
   }else{
    const out=1-life,fade=Math.sin(Math.PI*Math.min(1,life*1.15));
-   floor.material.opacity=1;tint(floor.material,primary,.58*fade);floor.scale.setScalar(2.5+3.5*out);floor.rotation.y-=dt*1.4;
-   halo.material.opacity=1;tint(halo.material,primary,2*fade);halo.scale.setScalar(1.8+4.8*out);halo.rotation.y+=dt*3;
-   wave.material.opacity=1;tint(wave.material,secondary,1.4*fade);wave.scale.setScalar(1.4+7*out*out);
-   beam.material.opacity=1;tint(beam.material,secondary,1.3*fade);beam.scale.set(1+1.2*out,1-.6*out,1+1.2*out);
+   const snap=type==='TIME_STOP'?Math.floor(out*8)/8:out,collapse=type==='BLACKHOLE'?Math.max(.18,1-snap*1.35):1;
+   floor.material.opacity=1;tint(floor.material,primary,.58*fade);floor.scale.setScalar(profile.floor*(1+1.65*snap)*collapse);floor.rotation.y-=dt*(type==='TIME_STOP'?.15:1.4);
+   halo.material.opacity=1;tint(halo.material,primary,2*fade);halo.scale.setScalar(profile.halo*(1+2.5*snap)*collapse);halo.rotation.y+=dt*(type==='ORBIT'?5:3);
+   wave.material.opacity=1;tint(wave.material,secondary,1.4*fade);wave.scale.set(profile.waveX*(1+2.25*snap)*collapse,1,profile.waveZ*(1+2.25*snap)*collapse);
+   beam.material.opacity=1;tint(beam.material,secondary,1.3*fade);beam.scale.set(profile.beamX*(1+.9*snap),Math.max(.16,profile.beamY*(1-.58*snap)),profile.beamX*(1+.9*snap));
   }
 
   // Motes: running, they spiral up and inward into the seed and respawn at the bottom;
@@ -100,11 +117,27 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
    const phase=i/moteCount;
    let x,y,z,scale,bright;
    if(running){
-    const reverse=theme.motion==='inward'||type==='RAIN'||type==='TIME_STOP',cycle=(effect.age*(over?.9:.7)+phase)%1,flow=reverse?1-cycle:cycle,stepped=theme.motion==='axis'?Math.floor(effect.age*8)/8:effect.age,a=phase*Math.PI*2+stepped*(type==='TIME_STOP'?.1:over?2.6:2)+cycle*(theme.motion==='spiral'?4.4:2.4),r=(type==='BLACKHOLE'||theme.motion==='inward'?2.6:over?2.1:1.7)*(1-flow*.75);
-    x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+flow*(type==='BEAM'?3.5:2.3);scale=(.7+.6*Math.sin(Math.PI*cycle))*intro;bright=Math.sin(Math.PI*cycle)*tail;
+    const speed=over?.95:.72,cycle=(effect.age*speed+phase)%1,themeSpin=theme.motion==='spiral'?1.35:theme.motion==='axis'?.35:theme.motion==='inward'?-1:1;
+    let a=phase*Math.PI*2+effect.age*themeSpin,r=1;
+    if(profile.motes==='rain'){
+     a=phase*Math.PI*2+(theme.motion==='axis'?Math.floor(effect.age*4)*Math.PI/2:effect.age*.22);r=.55+(i%4)*.48;x=Math.cos(a)*r;z=Math.sin(a)*r;y=.35+(1-cycle)*3.35;scale=.55+cycle*.75;bright=Math.sin(Math.PI*cycle)*tail;
+    }else if(profile.motes==='beam'){
+     a=phase*Math.PI*2+effect.age*(theme.motion==='axis'?.8:3.4);r=.38+.12*Math.sin(effect.age*5+i);x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+cycle*3.85;scale=.55+.5*Math.sin(Math.PI*cycle);bright=Math.sin(Math.PI*cycle)*tail;
+    }else if(profile.motes==='orbit'){
+     const outer=i%2===0;r=outer?2.2:1.45;a=phase*Math.PI*2+effect.age*(outer?2.4:-3.1);x=Math.cos(a)*r;z=Math.sin(a)*r;y=.42+(outer?.22:.76)+Math.sin(a*2)*.12;scale=.62+(outer?.25:.5);bright=(.7+.3*Math.sin(effect.age*6+i))*tail;
+    }else if(profile.motes==='domain'){
+     a=phase*Math.PI*2+(theme.motion==='axis'?0:effect.age*.18);r=2.45+.22*Math.sin(effect.age*2+i);x=Math.cos(a)*r;z=Math.sin(a)*r;y=.18+.72*Math.pow(Math.max(0,Math.sin(effect.age*2.4+phase*Math.PI*2)),2);scale=.58+.46*beat;bright=(.56+.44*beat)*tail;
+    }else if(profile.motes==='blackhole'){
+     a=phase*Math.PI*2+effect.age*(theme.motion==='inward'?-4.2:4.2)+cycle*3.2;r=.2+2.65*(1-cycle);x=Math.cos(a)*r;z=Math.sin(a)*r;y=.22+(1-cycle)*1.4;scale=.42+.9*(1-cycle);bright=Math.sin(Math.PI*cycle)*tail;
+    }else if(profile.motes==='clock'){
+     const tick=Math.floor(effect.age*8)/8;a=phase*Math.PI*2+tick*.16;r=1.75+(i%3)*.32;x=Math.cos(a)*r;z=Math.sin(a)*r;y=.26+(i%4)*.24;scale=.48+(i%3)*.18+beat*.36;bright=(.55+.45*beat)*tail;
+    }else{
+     a=phase*Math.PI*2+effect.age*(over?2.4:1.8)+cycle*(theme.motion==='spiral'?4.2:1.8);r=(over?2.15:1.75)*(.28+.72*cycle);x=Math.cos(a)*r;z=Math.sin(a)*r;y=.2+cycle*2.45;scale=.55+.8*Math.sin(Math.PI*cycle);bright=Math.sin(Math.PI*cycle)*tail;
+    }
+    scale*=intro;
    }else{
-    const out=1-life,a=phase*Math.PI*2,r=1+6*out;
-    x=Math.cos(a)*r;z=Math.sin(a)*r;y=.6+2*out-2.4*out*out;scale=1.2*(1-out*.5);bright=life;
+    const out=1-life,a=phase*Math.PI*2+(type==='ORBIT'?effect.age*3:0),r=(type==='BLACKHOLE'?2.4*(1-out)+.15:1+6*out);
+    x=Math.cos(a)*r;z=Math.sin(a)*r;y=.6+(type==='RAIN'?(i%4)*.5:2*out-2.4*out*out);scale=1.2*(1-out*.5);bright=life;
    }
    dummy.position.set(x,Math.max(.1,y),z);dummy.rotation.set(0,-phase*Math.PI*2,0);dummy.scale.setScalar(Math.max(.01,scale));dummy.updateMatrix();
    motes.setMatrixAt(i,dummy.matrix);color.setHex(effect.colors[i%effect.colors.length]??primary).multiplyScalar(2.4*Math.max(0,bright));motes.setColorAt(i,color);

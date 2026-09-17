@@ -1,4 +1,4 @@
-package kr.jpmathlab.seed;
+package com.jpmathlab.seed;
 
 import android.os.Bundle;
 import android.view.WindowManager;

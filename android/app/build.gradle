@@ -6,14 +6,14 @@ def keystoreProps = new Properties()
 if (keystorePropsFile.exists()) keystoreProps.load(new FileInputStream(keystorePropsFile))
 
 android {
-    namespace = "kr.jpmathlab.seed"
+    namespace = "com.jpmathlab.seed"
     compileSdk = rootProject.ext.compileSdkVersion
     defaultConfig {
-        applicationId "kr.jpmathlab.seed"
+        applicationId "com.jpmathlab.seed"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
-        versionName "1.0.0"
+        versionCode 3
+        versionName "1.0.2"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
              // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.

@@ -77,6 +77,7 @@ export function createAustin(scene){
  const fx=new THREE.Group();g.add(fx);
  const lane=new THREE.Group(),laneMat=basic(0xff5b32,.42);lane.add(groundPlane(1.6,7,laneMat));
  const laneRails=[];for(const x of [-.78,.78]){const mat=basic(0xffd07a,.9),rail=groundPlane(.07,7,mat);rail.position.x=x;lane.add(rail);laneRails.push(mat);}lane.visible=false;fx.add(lane);
+ const laneArrows=[];for(const z of [1.45,2.8,4.15,5.5]){const mat=basic(0xfff1b8,.82),arrow=new THREE.Mesh(new THREE.CircleGeometry(.25,3),mat);arrow.rotation.x=-Math.PI/2;arrow.rotation.z=Math.PI;arrow.position.set(0,.19,z);lane.add(arrow);laneArrows.push(mat);}
  const fan=new THREE.Group();fx.add(fan);fan.visible=false;
  const fanMats=[];for(const i of [-2,-1,0,1,2]){const ray=new THREE.Group(),mat=basic(i===0?0xffffba:0xffbd65,i===0?.7:.5);ray.rotation.y=i*AUSTIN.volley.spread;ray.add(groundPlane(i===0?.24:.18,11,mat));fan.add(ray);fanMats.push(mat);}
  const beamMats=[basic(0xff3355,.34),basic(0xff3355,.34)];
@@ -89,7 +90,7 @@ export function createAustin(scene){
   previousPlayer:null,velocity:new V(),volleys:0,phasePending:null,queuedSweep:false,bellAge:999,
   clock:0,beats:0,hour:0,ringHour:0,pendingRing:0,bellWarn:false,bells:0,
   dir:new V(0,0,1),dashes:0,jabHit:false,bumpCD:0,beamAngle:0,beamSign:1,alarms:[],hit:0,slow:0,
-  parts:{head,hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,fan,fanMats,beams,beamMats,wedge,wedgeMesh,wedgeMat,tellRing,tellRingMat}};
+   parts:{head,hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,laneArrows,fan,fanMats,beams,beamMats,wedge,wedgeMesh,wedgeMat,tellRing,tellRingMat}};
 }
 
 function aimAhead(e,player){return player.clone().addScaledVector(e.velocity,AUSTIN.volley.lead).sub(e.g.position).setY(0).normalize();}
@@ -219,14 +220,14 @@ export function tickAustin(e,dt,hooks){
 }
 
 function poseAustin(e){
- const {hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,fan,fanMats,beams,beamMats,wedge,wedgeMat,tellRing,tellRingMat}=e.parts,P=PHASES[e.phase];
+ const {hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,laneArrows,fan,fanMats,beams,beamMats,wedge,wedgeMat,tellRing,tellRingMat}=e.parts,P=PHASES[e.phase];
  const beatLen=AUSTIN.beat*P.tempo;
  minuteHand.rotation.z=-((e.beats%AUSTIN.hourBeats)+e.clock/beatLen)/AUSTIN.hourBeats*TAU;
  hourHand.rotation.z=-e.hour*Math.PI/6;
  fx.rotation.y=-e.g.rotation.y;
  lane.visible=e.state==='jabTell';lane.rotation.y=Math.atan2(e.dir.x,e.dir.z);
  fan.visible=e.state==='volleyTell';fan.rotation.y=Math.atan2(e.dir.x,e.dir.z);
- const pulse=.5+.5*Math.abs(Math.sin((e.clock+e.timer)*14));laneMat.opacity=.4+.22*pulse;for(const m of laneRails)m.opacity=.7+.3*pulse;for(const m of fanMats)m.opacity=.4+.35*pulse;
+ const pulse=.5+.5*Math.abs(Math.sin((e.clock+e.timer)*14));laneMat.opacity=.4+.22*pulse;for(const m of laneRails)m.opacity=.7+.3*pulse;for(const m of laneArrows)m.opacity=.55+.4*pulse;for(const m of fanMats)m.opacity=.4+.35*pulse;
  const sweeping=e.state==='sweepTell'||e.state==='sweep';
  beams[0].visible=sweeping;beams[0].rotation.y=e.beamAngle;
  beams[1].visible=sweeping&&e.phase!=='normal';beams[1].rotation.y=e.beamAngle+Math.PI;
@@ -252,6 +253,16 @@ export function austinHint(e){
  if(e.state==='jabTell'||e.state==='jab')return `${PHASES[e.phase].jabs}연속 스트레이트 · 옆으로 꺾으세요`;
  if(e.alarms.length)return '알람 시계 · 붉은 원 밖으로';
  return `${PHASES[e.phase].label} · 다음 정시까지 ${beatsToHour(e)}박`;
+}
+
+export function austinPatternName(e){
+ if(e.state==='phaseShift')return '단계 전환';
+ if(e.bellWarn||e.pendingRing>0)return '정시 종';
+ if(e.state==='volleyTell'||e.state==='volley')return '분침 난사';
+ if(e.state==='sweepTell'||e.state==='sweep')return '초침 휩쓸기';
+ if(e.state==='jabTell'||e.state==='jab')return '연속 스트레이트';
+ if(e.alarms.length)return '알람 폭발';
+ return '다음 공격 준비';
 }
 
 // The arena floor is his clock face. Its hand points at the gap of the next bell.

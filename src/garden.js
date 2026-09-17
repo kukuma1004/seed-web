@@ -5,7 +5,7 @@ import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
 export const GARDEN_KEY='seed-garden-v1';
-export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower';
+export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower',FOUNDER='founder';
 export const STAGES=['seed','sprout','mature','bloom'];
 export const STAGE_NAMES=Object.freeze({seed:'심은 씨앗',sprout:'새싹',mature:'자란 풀',bloom:'개화'});
 // 성장점은 던전을 다녀와야 쌓인다(기다리는 게임이 아니라 하는 게임).
@@ -33,7 +33,9 @@ export const SEEDS=Object.freeze(Object.fromEntries([
  ...Object.entries(LAW_SEEDS).filter(([law])=>Object.hasOwn(LAWS,law)).map(([law,v])=>[law,{id:law,law,name:v.name,branchNames:{flower:v.flower,tree:v.tree,vine:v.vine},
   hint:`${LAWS[law].name} 법칙을 가장 깊게 키운 여정에서 남는다`}]),
  [GUARDIAN,{id:GUARDIAN,law:null,name:'시계탑 씨앗',branchNames:{flower:'태엽꽃',tree:'시계탑목',vine:'초침덩굴'},
-  hint:'정시파이터 오스틴을 쓰러뜨린 여정에서만 남는다'}]
+  hint:'정시파이터 오스틴을 쓰러뜨린 여정에서만 남는다'}],
+ [FOUNDER,{id:FOUNDER,law:null,exclusive:true,name:'개척자의 별씨앗',branchNames:{flower:'첫빛꽃',tree:'개척자의 나무',vine:'별길덩굴'},
+  hint:'SEED의 첫 비공개 테스트에 함께한 정원에만 남는다'}]
 ]));
 export const SEED_IDS=Object.keys(SEEDS);
 
@@ -115,7 +117,7 @@ export function gardenRecordLine(record){
 // 조각 세 개로 원하는 씨앗 하나를 만든다(실패한 여정도 쌓이면 선택이 된다).
 export function craftSeed(garden,seedId){
  const g=normalizeGarden(garden);
- if(!SEEDS[seedId]||seedId===GUARDIAN||g.fragments<FRAGMENTS_PER_SEED)return {garden:g,ok:false};
+ if(!SEEDS[seedId]||seedId===GUARDIAN||SEEDS[seedId].exclusive||g.fragments<FRAGMENTS_PER_SEED)return {garden:g,ok:false};
  g.fragments-=FRAGMENTS_PER_SEED;g.seeds[seedId]=Math.min(99,(g.seeds[seedId]||0)+1);
  return {garden:g,ok:true};
 }
@@ -177,6 +179,11 @@ export function wayJosa(word){
 export function branchSummary(seedId,branch,stage='mature'){
  const seed=SEEDS[seedId];if(!seed||!BRANCHES.includes(branch))return '';
  const strong=stage==='bloom',lawName=seed.law?LAWS[seed.law].name:null;
+ if(seed.id===FOUNDER){
+  if(branch==='flower')return `첫 베타의 별빛이 ${strong?'찬란하게':'은은하게'} 반짝인다 · 전투 능력은 바뀌지 않는다`;
+  if(branch==='tree')return `함께 만든 첫 정원이 ${strong?'깊게':'조용히'} 기억된다 · 전투 능력은 바뀌지 않는다`;
+  return `개척자의 발자국이 ${strong?'선명하게':'가만히'} 이어진다 · 전투 능력은 바뀌지 않는다`;
+ }
  if(seed.id===GUARDIAN){
   if(branch==='flower')return `새 법칙 선택지가 ${strong?'두 번':'한 번'} 더 자주 열린다`;
   if(branch==='tree')return `여정을 시작할 때 조합 목표를 ${strong?'두 개':'한 개'} 알려 준다`;
@@ -230,6 +237,7 @@ export function gardenEffects(garden,slots=ACTIVE_SLOTS){
  for(const p of activePlants(garden,slots)){
   const seed=SEEDS[p.seed],stage=stageOf(p.growth),strong=stage==='bloom';
   effects.actives.push({index:p.index,name:plantName(p),stage,summary:branchSummary(p.seed,p.branch,stage)});
+  if(seed.id===FOUNDER)continue;
   if(seed.id===GUARDIAN){
    if(p.branch==='flower')effects.freshBonus+=strong?2:1;
    else if(p.branch==='tree')effects.guideCount+=strong?2:1;

@@ -28,7 +28,7 @@ export function bestPerPlayer(data,limit=20,season=SEASON){
  for(const run of runs){const key=run.uid+'\n'+run.name;if(seen.has(key))continue;seen.add(key);out.push(run);if(out.length>=limit)break;}
  return out;
 }
-export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...a)=>fetch(...a),now=()=>Date.now(),timeoutMs=12000}={}){
+export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...a)=>fetch(...a),now=()=>Date.now(),timeoutMs=12000,authProvider=null}={}){
  let session=null;
  async function request(url,options={}){
   const controller=typeof AbortController==='function'?new AbortController():null;
@@ -47,6 +47,11 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  function saved(){try{const s=JSON.parse(storage?.getItem(AUTH_KEY));return s?.refreshToken?s:null;}catch{return null;}}
  // Keeps the same anonymous player on this browser by refreshing the stored token; signs up once otherwise.
  async function signIn(){
+  // Once the player chooses Google, Apple or the new guest account, rankings use that same Firebase uid.
+  // The old REST-only anonymous session remains as a fallback so existing published builds and offline QA keep working.
+  if(authProvider){
+   try{const external=await authProvider();if(external?.uid&&external?.idToken){session=external;return external;}if(session?.account)session=null;}catch{}
+  }
   if(session&&session.expiresAt-now()>60000)return session;
   const previous=session||saved();
   if(previous?.refreshToken){

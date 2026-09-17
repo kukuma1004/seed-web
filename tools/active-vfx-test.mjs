@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
+import {ARCHETYPE_VFX,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
 
 // Light, not stickers: the gradients fade to black (no light under additive blending) at their edges.
 assert.ok(glowFalloff(.5,.5)>.95&&glowFalloff(0,.5)===0&&glowFalloff(.95,.95)===0,'floor glow fades out before the rim');
@@ -11,6 +11,7 @@ import {LAWS} from '../src/laws.js';
 
 const expectedColors=[...new Set(['collapse','prism'].flatMap(id=>ALL_FORMS[id].requires).map(id=>LAWS[id].color))];
 assert.deepEqual(activeColors(['collapse','prism']),expectedColors);
+assert.equal(new Set(Object.values(ARCHETYPE_VFX).map(profile=>profile.motes)).size,7,'every ultimate skeleton has its own particle choreography');
 
 for(const mobile of [false,true]){
   const scene=new THREE.Scene(),fx=createActiveVFX(scene,{mobile});
