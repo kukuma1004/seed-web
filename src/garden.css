@@ -47,7 +47,13 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 .garden-panel footer small{font-size:11px;color:#9fb8ad}
 .garden-panel footer .primary{padding:9px 16px;min-height:42px}
 @media(max-width:900px){.menu-panel{width:min(300px,46vw);padding:18px 16px}.menu-panel h2{font-size:26px}.garden-panel{width:min(290px,40vw)}}
-@media(max-width:700px) and (orientation:portrait){#overlay.menu-screen:before{right:-6%;bottom:22%;font-size:128px;opacity:.075}#overlay.menu-screen:after{right:-12%;bottom:16%;font-size:48px;opacity:.48}}
+@media(max-width:700px) and (orientation:portrait){
+ #overlay.menu-screen{overflow-x:hidden}
+ #overlay.menu-screen:before{right:-6%;bottom:22%;font-size:128px;opacity:.075}
+ #overlay.menu-screen:after{right:-12%;bottom:16%;font-size:48px;opacity:.48}
+ .menu-panel{left:0;right:0;width:100%;max-width:none;padding:max(72px,calc(env(safe-area-inset-top) + 58px)) max(18px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(18px,env(safe-area-inset-left));justify-content:flex-start;background:linear-gradient(90deg,#07181df2 0%,#07181dd9 66%,#07181d91 100%);border-right:0}
+ .menu-panel h2{font-size:30px}
+}
 @media(max-height:520px){
  .menu-panel{padding:12px 14px;gap:6px}.menu-panel h2{font-size:22px;margin-bottom:2px}
  .menu-panel .name-field{margin:0 0 4px}.menu-panel .name-field input{min-height:34px;font-size:14px}.menu-panel .name-field small{display:none}
