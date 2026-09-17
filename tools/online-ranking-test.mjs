@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
@@ -26,7 +26,7 @@ function fakeFirebase({clock}){
   }
   if(path==='seedRanking/runs'&&(!opts.method||opts.method==='GET')){
    const orderBy=u.searchParams.get('orderBy'),limit=Number(u.searchParams.get('limitToLast'));
-   if(orderBy==='"$key"'){const from=JSON.parse(u.searchParams.get('startAt'));const kept=Object.entries(runs).filter(([k])=>k>=from).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
+   if(orderBy==='"$key"'){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null;const kept=Object.entries(runs).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
    assert.equal(orderBy,'"score"');
    const kept=Object.entries(runs).sort((a,b)=>a[1].score-b[1].score).slice(-limit);return json(200,Object.fromEntries(kept));
   }
@@ -34,7 +34,7 @@ function fakeFirebase({clock}){
   const bm=path.match(/^seedRanking\/builds\/(.+)$/);
   if(path==='seedRanking/builds'||bm){
    if(!buildRulesPublished)return json(401,{error:'Permission denied'});
-   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt')),limit=Number(u.searchParams.get('limitToLast'));const kept=Object.entries(builds).filter(([k])=>k>=from).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
+   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null,limit=Number(u.searchParams.get('limitToLast'));const kept=Object.entries(builds).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
    const id=bm[1];
    if(!opts.method||opts.method==='GET')return json(200,builds[id]||null);
    if(opts.method==='PUT'){
@@ -113,8 +113,9 @@ function fakeFirebase({clock}){
  clock.t=T0+1000;
  const fresh=await ranking.submit({name:'새시즌',score:120,cycle:0,stage:1,kills:12,time:60});
  assert.deepEqual(fresh.board.map(e=>e.name),['새시즌'],'only this season is on the board');assert.equal(fresh.rank,1);
+ const archive=await ranking.top(20,'',ARCHIVE_SEASON);assert.deepEqual(new Set(archive.map(e=>e.name)),new Set(['옛기록0','옛기록1','옛기록2']),'the closed season remains readable without new-season runs');
  assert.equal(Object.keys(fb.runs).length,121,'nothing was deleted');
- assert.ok(!inSeason({at:T0-1})&&inSeason({at:T0}));
+ assert.ok(!inSeason({at:T0-1})&&inSeason({at:T0}));assert.ok(inSeason({at:T0-1},ARCHIVE_SEASON)&&!inSeason({at:T0},ARCHIVE_SEASON));
  assert.ok(pushKeyPrefix(T0)<pushKeyPrefix(T0+1)&&pushKeyPrefix(T0-1)<pushKeyPrefix(T0),'key prefixes follow time');
  assert.equal(pushKeyPrefix(0),'--------');
 }

@@ -13,7 +13,8 @@ export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 export const SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000});
-export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start;
+export const ARCHIVE_SEASON=Object.freeze({id:'1.0',name:'베타 시즌 1.0 · 첫 정원',start:0,end:SEASON.start});
+export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start&&(!Number.isFinite(season.end)||run.at<season.end);
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 export function pushKeyPrefix(ms){let n=Math.floor(ms),out='';for(let i=0;i<8;i++){out=PUSH_CHARS[n%64]+out;n=Math.floor(n/64);}return out;}
@@ -71,17 +72,22 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  const runsURL=(s,query='')=>`${config.databaseURL}/${RUNS_PATH}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
  // Two reads merged: the highest scores overall (old seasons are filtered out) and every recent run since the season began,
  // so new runs are found even while old high scores fill the score query.
- async function top(limit=20,playerName=''){
+ const keyRange=season=>{
+  const start=pushKeyPrefix(Math.max(0,Number(season?.start)||0));
+  const end=Number.isFinite(season?.end)?`${pushKeyPrefix(Math.max(0,season.end-1))}\uf8ff`:'';
+  return `orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(start))}&${end?`endAt=${encodeURIComponent(JSON.stringify(end))}&`:''}limitToLast=${FETCH_RECENT}&`;
+ };
+ async function top(limit=20,playerName='',season=SEASON){
   const s=await signIn();
   const [best,recent]=await Promise.all([
    read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
-   read(runsURL(s,`orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&`))
+   read(runsURL(s,keyRange(season)))
   ]);
-  const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit);
+  const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit,season);
   // Builds live beside the runs under the same push id. Load the recent batch first, then recover any
   // displayed old high score (and this player's line) that has fallen outside that moving window.
   try{
-   const builds=await request(`${config.databaseURL}/${BUILDS_PATH}.json?orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(pushKeyPrefix(SEASON.start)))}&limitToLast=${FETCH_RECENT}&auth=${encodeURIComponent(s.idToken)}`);
+   const builds=await request(`${config.databaseURL}/${BUILDS_PATH}.json?${keyRange(season)}auth=${encodeURIComponent(s.idToken)}`);
    for(const run of board)if(builds&&validBuild(builds[run.id])&&builds[run.id].uid===run.uid)run.build=builds[run.id];
    const cleanPlayer=cleanName(playerName),wanted=[...board.slice(0,10),...board.filter(run=>cleanPlayer&&run.uid===s.uid&&run.name===cleanPlayer)];
    const missing=[...new Map(wanted.filter(run=>!run.build).map(run=>[run.id,run])).values()];

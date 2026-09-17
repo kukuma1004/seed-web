@@ -8,6 +8,7 @@ assert.ok(sw.includes("offline-manifest.json"),'reads the build file list');
 assert.ok(sw.includes('ignoreVary:true'),'matches stored files regardless of Vary');
 assert.ok(/cache\.delete\(request\)/.test(sw),'forgets files from older builds');
 assert.ok(/catch\(\(\)=>caches\.match\(ROOT\)\)/.test(sw),'offline navigation falls back to the stored page');
+assert.ok(sw.includes("endsWith('/season-status.json')")&&sw.includes("cache:'no-store'"),'the season pause bypasses stale cache while retaining an offline fallback');
 const config=readFileSync(new URL('../vite.config.js',import.meta.url),'utf8');
 assert.ok(config.includes('offline-manifest.json')&&config.includes('closeBundle'),'the build writes the file list');
 const manifestPath=new URL('../dist/offline-manifest.json',import.meta.url);

@@ -1,6 +1,6 @@
 // Offline play: after one visit with internet, the whole game (code, images, icons) is kept on the device.
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
-const CACHE='seed-play-v3';
+const CACHE='seed-play-v4';
 const ROOT=new URL('./',self.location).href;
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-192.png',ROOT+'icons/seed-512.png'];
 let lastSync=0,syncing=null;
@@ -31,6 +31,12 @@ self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(c
 self.addEventListener('activate',event=>event.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('seed-play-')&&k!==CACHE).map(k=>caches.delete(k))))));
 self.addEventListener('fetch',event=>{
  const request=event.request;if(request.method!=='GET'||!request.url.startsWith(ROOT))return;
+ // The season gate must update immediately. The cached copy is only an offline
+ // fallback, so reopening a season never waits for a service-worker refresh.
+ if(new URL(request.url).pathname.endsWith('/season-status.json')){
+  event.respondWith(fetch(request,{cache:'no-store'}).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));}return response;}).catch(()=>caches.match(request,{ignoreSearch:true,ignoreVary:true})));
+  return;
+ }
  if(request.mode==='navigate'){
   // Online: always the newest page, and top up the offline copy. Offline: the stored page.
   event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(ROOT,copy)).then(()=>syncOfflineCopy()));}return response;}).catch(()=>caches.match(ROOT)));

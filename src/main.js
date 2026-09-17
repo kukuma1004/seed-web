@@ -51,7 +51,7 @@ import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit,roomFor} from './journey.j
 import {createWarden,tickWarden,wardenVariantFor,wardenEncounter,DUO_WARDEN,WARDEN_VARIANTS,SEAL} from './warden.js';
 import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,austinPatternName,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
-import {createOnlineRanking,SEASON} from './online-ranking.js';
+import {createOnlineRanking,SEASON,ARCHIVE_SEASON} from './online-ranking.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
@@ -79,6 +79,7 @@ import {createCloudSync} from './cloud-sync.js';
 import {readAccountProfile,accountBadgeLine,BADGES} from './account-profile.js';
 import {claimFirstGardenPioneer,legacyRankingUid} from './legacy-honor.js';
 import {publicWebBetaLocked,BETA_NOTICE} from './beta-access.js';
+import {DEFAULT_SEASON_STATUS,isSeasonAdmin,loadSeasonStatus} from './season-access.js';
 import {bindPointerAction,createTouchControls} from './touch.js';
 import {createGameAudio,ultimateAudioEvent} from './audio.js';
 import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBonusOffers,applyRunBonus,runBonusSummary,moveScale as runMoveScale,shotScale as runShotScale,powerScale as runPowerScale} from './run-bonuses.js';
@@ -107,6 +108,9 @@ let canvasRect={left:0,top:0,width:1,height:1};
 // World coordinates and hit sizes are unchanged; only the camera frames a smaller area.
 let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
+let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false;
+const gameplayPaused=()=>seasonStatus.paused&&!adminMode&&!import.meta.env.DEV;
+const refreshAdminMode=async()=>adminMode=await isSeasonAdmin(account.user());
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
 let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return runStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
 let combatTheme=readTheme(runStorage);
@@ -642,7 +646,7 @@ function beginEvolution(id){
   $('#evolution-hint').textContent=LAW_PRESENTATION[id].hint;
   growth.select(effectiveLaws(),mutated);updateFormLabel();vfx.clear();vfx.evolution(player.position,id);audio.play('evolve');
 }
-function startGame(){if(mode==='ready'&&!maintenanceOn)restart();}
+function startGame(){if(gameplayPaused()){showSeasonPause();return;}if(mode==='ready'&&!maintenanceOn)restart();}
 function authMessage(error){
  const code=String(error?.code||error?.message||'');
  if(code.includes('popup-closed')||code.includes('canceled')||code.includes('cancelled'))return '로그인이 취소되었어요.';
@@ -658,8 +662,14 @@ function showBetaLock(){
 }
 function showEntry(){
  revealApp();
- if(publicWebBetaLocked()){showBetaLock();return;}
+ if((publicWebBetaLocked()&&!adminMode)||gameplayPaused()){showSeasonPause();return;}
  if(account.user())showIntro();else showAccount();
+}
+function showSeasonPause(){
+ revealApp();mode='season-pause';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ const user=account.user(),accountLine=user&&!user.isAnonymous?`현재 계정 · ${escapeHtml(account.label())}`:'관리자만 계정 로그인 후 플레이할 수 있어요';
+ $('#overlay').innerHTML=`<div class="menu-panel season-pause-panel"><p class="eyebrow">SEED · BETA SEASON ${escapeHtml(seasonStatus.season)}</p><div class="season-seal" aria-hidden="true">♧</div><h2>${escapeHtml(seasonStatus.title)}</h2><p class="season-pause-copy">${escapeHtml(seasonStatus.body)}</p><div class="season-pause-status"><strong>플레이 일시 중지</strong><span>${escapeHtml(seasonStatus.detail)}</span></div><div class="menu-list"><button id="season-archive" class="primary menu-item"><strong>시즌 1.0 최종 기록</strong><small>첫 정원 명예의 전당 보기</small></button><button id="season-account" class="menu-item"><strong>관리자 로그인</strong><small>${accountLine}</small></button><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div><p class="account-note">시즌 1.0 기록과 각자의 저장 데이터는 지워지지 않습니다.</p></div>`;
+ $('#season-archive').onclick=()=>showRanking('archive');$('#season-account').onclick=()=>showAccount();
 }
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
@@ -670,20 +680,20 @@ function showAccount(error=''){
   <div class="account-buttons">
    ${!linked?`<button id="account-google" class="account-button google"><b>G</b><span><b>Google로 계속하기</b></span></button>
    <button id="account-apple" class="account-button apple" ${appleOff?'disabled':''}><b>●</b><span><b>Apple로 계속하기</b>${appleOff?'<small>iPhone 출시 준비 중</small>':''}</span></button>`:''}
-   ${!user?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
-   ${user?'<button id="account-continue" class="account-button"><span><b>게임으로 돌아가기</b></span></button>':''}
+   ${!user&&!seasonStatus.paused?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
+   ${user?`<button id="account-continue" class="account-button"><span><b>${gameplayPaused()?'접속 권한 확인':'게임으로 돌아가기'}</b></span></button>`:''}
   </div>
   <p id="account-error" class="account-error" role="alert">${escapeHtml(error)}</p>
   <p class="account-note">계정 로그인은 랭킹의 플레이어를 구분하고 앞으로 여러 기기에서 이어하기 위한 기반으로 사용합니다. 실명은 랭킹에 표시하지 않아요.</p>
   ${linked?'<button id="account-signout" class="menu-item small-item">로그아웃</button>':''}</div>`;
- const busy=async action=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();const result=await cloud.retry();if(result?.changed){location.reload();return;}showIntro();}catch(err){showAccount(authMessage(err));}};
+ const busy=async action=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();const result=await cloud.retry();await refreshAdminMode();if(result?.changed){location.reload();return;}showEntry();}catch(err){showAccount(authMessage(err));}};
  if($('#account-google'))$('#account-google').onclick=()=>busy(account.signInWithGoogle);
  if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple);
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest);
- if($('#account-continue'))$('#account-continue').onclick=showIntro;
+ if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAdminMode();showEntry();};
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
-function showIntro(){audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
+function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  if(maintenanceOn){showMaintenance();return;}
  // 점검으로 잠시 닫았던 미안함: 다시 싹 1개와 작은 물약 3개를 보관함에 한 번만 넣는다.
@@ -705,7 +715,7 @@ function showIntro(){audio.setScene('garden');region='garden';startRegion='garde
    <button id="go-garden" class="menu-item"><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></button>
    <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 보관함 ${itemCounts(shop.stash)||'비어 있음'}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
-   <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
+   <button id="discoveries" class="menu-item"><strong>도감</strong><small>${adminMode?'관리자 전체 공개 · '+Object.keys(FORMS).length+'/'+Object.keys(FORMS).length:profile.forms.length+'/'+Object.keys(FORMS).length+' 발견'}</small></button>
    <button id="account-link" class="menu-item"><strong>계정</strong><small>${escapeHtml(account.label())}</small></button>
    <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
   </div>
@@ -719,7 +729,7 @@ function showIntro(){audio.setScene('garden');region='garden';startRegion='garde
  $('#patch-notes').onclick=showNotes;
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#account-link').onclick=()=>showAccount();
- $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
+ $('#discoveries').onclick=()=>{mode='discoveries';const bookProfile=adminMode?{...profile,forms:Object.keys(FORMS)}:profile;$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(bookProfile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
 }
 // 보관함·가져가기를 한 줄로("작은 물약 3 · 다시 싹 1"). 비어 있으면 빈 문자열.
@@ -882,16 +892,19 @@ function showNotes(){
 }
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
+ const remote=view==='online'||view==='archive',archive=view==='archive',locked=gameplayPaused();
  const localBoard=readRanking(view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
- $('#overlay').innerHTML=`<div class="ranking-panel"><p>가장 멀리 간 씨앗들</p><h2>명예의 전당</h2><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">모두의 랭킹 · ${SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}</div><p id="rank-status" class="form-note">${view==='online'?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${view!=='online'?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
- $('#close-ranking').onclick=showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
- if(view!=='online')return;
- online.flush().catch(()=>0).then(()=>online.top(500,playerName)).then(board=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
+ const tabs=locked?`<button class="primary" data-board="archive" aria-pressed="true">${ARCHIVE_SEASON.name}</button>`:`<button class="primary" data-board="online" aria-pressed="${view==='online'}">${SEASON.name}</button><button class="primary" data-board="archive" aria-pressed="${archive}">${ARCHIVE_SEASON.name}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}`;
+ $('#overlay').innerHTML=`<div class="ranking-panel"><p>${archive?'첫 정원에 남은 기록':'가장 멀리 간 씨앗들'}</p><h2>명예의 전당</h2><div class="rank-tabs">${tabs}</div><p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
+ $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
+ if(!remote)return;
+ const readBoard=()=>online.top(500,playerName,archive?ARCHIVE_SEASON:SEASON);
+ (archive?Promise.resolve():online.flush().catch(()=>0)).then(readBoard).then(board=>{
+  if(serial!==rankSerial)return;setText($('#rank-status'),archive?'시즌 1.0 최종 상위 10명 · 기록은 그대로 보관됩니다':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
   const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true);bindRankSafety();}
  }).catch(()=>{
   if(serial!==rankSerial)return;const status=$('#rank-status');if(status)status.innerHTML='랭킹 서버에 잠깐 연결하지 못했어요 · <b>모두의 기록은 서버에 그대로 있어요</b><br><button class="primary" id="rank-retry">다시 불러오기</button>';
-  const retry=$('#rank-retry');if(retry)retry.onclick=()=>showRanking('online');
+  const retry=$('#rank-retry');if(retry)retry.onclick=()=>showRanking(view);
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
@@ -928,7 +941,7 @@ function showMaintenance(){
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel maintenance-panel"><p class="eyebrow">SEED</p><h2>${escapeHtml(MAINTENANCE.title)}</h2>${MAINTENANCE.lines.map(line=>`<p class="maintenance-line">${escapeHtml(line)}</p>`).join('')}</div>`;
 }
-function restart(saved=null){if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
+function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
  if(restore){stage=restore.stage;hp=restore.hp;kills=restore.kills;elapsed=restore.elapsed;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
  for(const [id,lv] of Object.entries(restore?.forms||{}))if(Object.hasOwn(FORMS,id))heldForms.set(id,lv);
  // 변이는 이어하기에서만 돌아온다. 새 여정은 빈 상태로 시작한다.
@@ -1107,7 +1120,7 @@ renderer.domElement.addEventListener('pointerdown',event=>{
  if(mode!=='garden'||!gardenScene)return;
  const rect=canvasRect,hit=gardenScene.pick((event.clientX-rect.left)/Math.max(1,rect.width),(event.clientY-rect.top)/Math.max(1,rect.height));
  selectGardenSpot(hit);
-});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();if(publicWebBetaLocked())showBetaLock();else cloud.start().then(async result=>{const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();}).catch(()=>showEntry());requestAnimationFrame(animate);
+});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();Promise.all([cloud.start(),loadSeasonStatus({enabled:!import.meta.env.DEV})]).then(async([result,status])=>{seasonStatus=status;await refreshAdminMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();}).catch(async()=>{seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAdminMode();showEntry();});requestAnimationFrame(animate);
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({pace:{game:+paceGame.toFixed(1),real:+paceReal.toFixed(1),trusted:paceTrusted(paceGame,paceReal)},mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,theme:{id:combatTheme,...THEMES[combatTheme]},quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:qualityGovernor.state()},items:{hasteTime,shellTime,selectedItem},runBonuses:{...runBonuses},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags,archetype:activeGauge.plan.archetype},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:killsForChoice(choicesTaken),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,vfx:vfx.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
 qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if(b)damageEnemy(b,b.maxHp*fraction,false);return b?b.hp:null;},givePotion:()=>addItem(inventory,'potion',1),fillActive:()=>{activeGauge.cooldown=0;activeGauge.value=ACTIVE.max;return activeGauge.value;},showAustinTitle:()=>{seedTitle.setUnlocked(true);return seedTitle.isUnlocked();},giveForm:(id,level=4)=>{if(!Object.hasOwn(FORMS,id))return false;heldForms.set(id,level);syncForms();return true;},setLaw:(id,level)=>{if(!Object.hasOwn(LAWS,id))return false;levels.set(id,level);syncLaws();return true;},offerSolo:()=>offerSolo(finishChoice,true),giveItem:(id,n=1)=>{const got=addItem(inventory,id,n);itemBarKey='';return got;},setHp:v=>{hp=Math.max(1,Math.min(100,v));},giveCoins:(n=500)=>earnCoins(runStorage,Math.max(0,Math.floor(n))).coins,startAustin:()=>{restart();stage=4;wardensDefeated=Math.max(5,wardensDefeated);austinRoom=true;wave();return true;}},census:()=>{const out={casters:{},meshes:0,shadowCasters:0,sprites:0,instanced:0,points:0,lines:0,lights:0,materials:new Set(),byParent:{}};scene.traverseVisible(o=>{if(o.isLight)out.lights++;if(o.isSprite)out.sprites++;else if(o.isInstancedMesh)out.instanced++;else if(o.isMesh){out.meshes++;if(o.castShadow){out.shadowCasters++;const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.casters[key]=(out.casters[key]||0)+1;}}else if(o.isLineSegments)out.lines++;if(o.material)out.materials.add(o.material);if(o.isMesh||o.isSprite){const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.byParent[key]=(out.byParent[key]||0)+1;}});out.materials=out.materials.size;out.behindCover=enemies.filter(e=>behindCover(e.g.position)).length;out.obstacles=obstacles.length;out.byParent=Object.fromEntries(Object.entries(out.byParent).sort((a,b)=>b[1]-a[1]).slice(0,25));out.programs=renderer.info.programs?.length;return out;},worldToScreen:(x,z)=>{let p=new V(x,.5,z).project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};}};
