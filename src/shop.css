@@ -17,3 +17,40 @@
  .shop-note{font-size:8px;line-height:1.4;margin:3px 0!important}
 }
 
+/* 보관함 · 새 여정에 가져갈 개수 */
+.shop-columns{display:flex;flex-direction:column;gap:8px}
+.shop-stash{padding:10px 12px;border:1px solid #9ce8b055;border-radius:12px;background:#0d2224cc}
+.shop-stash h3{margin:0 0 6px;font-size:13px;color:#d7f3dc}
+.shop-stash ul{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.stash-row{display:flex;align-items:center;gap:10px}
+.stash-row .potion-icon{width:40px;height:40px;flex:none}
+.stash-name{display:flex;flex-direction:column;flex:1;min-width:0}
+.stash-name strong{font-size:13px;color:#f0f6e4}.stash-name small{font-size:11px;color:#a9c3b6}
+.stash-carry{display:flex;align-items:center;gap:6px}
+.stash-carry button{width:34px;height:34px;border-radius:50%;border:1px solid #b3cead;background:#133030;color:#f0f6e4;font-size:18px;line-height:1;cursor:pointer;padding:0}
+.stash-carry button:disabled{opacity:.35;cursor:default}
+.stash-carry b{min-width:20px;text-align:center;font-size:16px;color:#ffe29a}
+.stash-note{margin:6px 0 0;font-size:11px;color:#a9c3b6}
+/* 선물 안내 */
+.gift-panel{justify-content:center}
+.gift-item{display:flex;align-items:center;gap:12px;padding:10px 12px;margin:4px 0 8px;border:1px solid #f0c86a88;border-radius:12px;background:#1b2f2acc}
+.gift-item .potion-icon{width:56px;height:56px;flex:none}
+.gift-item strong{display:block;font-size:15px;color:#ffe7a8}.gift-item small{display:block;font-size:12px;line-height:1.5;color:#cfe3d6}
+.gift-line{margin:3px 0;font-size:13px;line-height:1.6;color:#d8eadf}
+.gift-actions{display:flex;align-items:stretch;gap:8px;margin-top:10px}.gift-actions .menu-item{flex:1;margin:0;min-height:0;align-items:center;justify-content:center;text-align:center;padding:10px 12px}
+@media(max-height:500px) and (orientation:landscape){
+ .shop-columns{flex-direction:row;align-items:stretch}.shop-columns>section{flex:1;min-width:0}
+}
+@media(max-height:430px){
+ .shop-stash{padding:6px 8px}.shop-stash h3{font-size:11px;margin:0 0 3px}
+ .stash-row{gap:6px}.stash-row .potion-icon{width:30px;height:30px}
+ .stash-name strong{font-size:11px}.stash-name small{font-size:9px}
+ .stash-carry{gap:3px}.stash-carry button{width:26px;height:26px;font-size:15px}.stash-carry b{font-size:13px;min-width:16px}
+ .stash-note{font-size:8px;margin:3px 0 0}
+ .gift-item{padding:6px 8px;margin:2px 0 4px;gap:8px}.gift-item .potion-icon{width:40px;height:40px}
+ .gift-item strong{font-size:12px}.gift-item small{font-size:9px}
+ .gift-line{font-size:10px;line-height:1.45;margin:1px 0}
+ .gift-actions{margin-top:5px;gap:6px}.gift-actions .menu-item{padding:6px 10px}.gift-actions .menu-item strong{font-size:12px}
+}
+/* 확인(primary) 단추에 붙는 여백·최소 높이를 걷어 두 단추 높이를 맞춘다. */
+.gift-actions .menu-item.primary,.touch-mode .gift-actions .menu-item{margin:0;min-height:40px}

@@ -63,7 +63,7 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
-import {SHOP_STOCK_MAX,readShop,earnCoins,buyTonics,claimTonics} from './shop.js';
+import {SHOP_STOCK_MAX,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift} from './shop.js';
 import './shop.css';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,offeredFusion,slotsUsed,fusionLevel,canFuse,fuse,secondFusionOptions,secondFusionLevel,fuseSecond,evolveSolo,effectiveLevels,buildLevel,awakenOptions,awakenLevel,awaken} from './progression.js';
@@ -604,6 +604,8 @@ function startGame(){if(mode==='ready'&&!maintenanceOn)restart();}
 function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  if(maintenanceOn){showMaintenance();return;}
+ // 점검으로 잠시 닫았던 미안함: 부활 물약 '다시 싹' 1개를 상점 보관함에 한 번만 넣고 알린다.
+ if(grantGift(runStorage,SORRY_GIFT,'sprout',1).granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),actives=gardenFx.actives.length,shop=readShop(runStorage);
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
@@ -615,7 +617,7 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
   <div class="menu-list">
    <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
    <button id="go-garden" class="menu-item"><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></button>
-   <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 작은 물약 ${shop.tonics}/${SHOP_STOCK_MAX}</small></button>
+   <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 보관함 ${itemCounts(shop.stash)||'비어 있음'}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
    <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
    <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
@@ -632,20 +634,44 @@ function showIntro(){region='garden';startRegion='garden';pauseBuild.hide();acti
  $('#discoveries').onclick=()=>{mode='discoveries';$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(profile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
 }
+// 보관함·가져가기를 한 줄로("작은 물약 3 · 다시 싹 1"). 비어 있으면 빈 문자열.
+const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[id].name} ${counts[id]}`).join(' · ');
 function showShop(back=showIntro,message=''){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const shop=readShop(runStorage),oneDisabled=shop.coins<100||shop.tonics>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<500||shop.tonics!==0;
+ const shop=readShop(runStorage),oneDisabled=shop.coins<100||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<500||shop.stash.tonic!==0;
+ // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.
+ const stashRows=STASH_ORDER.filter(id=>id==='tonic'||shop.stash[id]).map(id=>{
+  const most=Math.min(shop.stash[id],ITEMS[id].max);
+  return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개${id==='sprout'?' · 한 판에 1개':''}</small></div>`
+   +`<div class="stash-carry" role="group" aria-label="${ITEMS[id].name} 가져갈 개수"><button type="button" data-carry="${id}" data-step="-1" ${shop.carry[id]<=0?'disabled':''} aria-label="하나 덜">−</button><b>${shop.carry[id]}</b><button type="button" data-carry="${id}" data-step="1" ${shop.carry[id]>=most?'disabled':''} aria-label="하나 더">+</button></div></li>`;
+ }).join('');
  $('#overlay').innerHTML=`<div class="menu-panel shop-panel"><p class="eyebrow">SEED · 출발 준비</p><h2>물약 상점</h2>
   <div class="shop-wallet"><span>보유 게임 머니</span><strong>${shop.coins.toLocaleString('ko-KR')}원</strong></div>
-  <section class="shop-product"><div class="shop-product-art">${itemArt('tonic')}<div><h3>${ITEMS.tonic.name}</h3><p>생명력 +${ITEMS.tonic.heal} · 출발 보관 최대 ${SHOP_STOCK_MAX}개</p></div></div>
-   <div class="shop-stock">다음 출발 물약 <b>${shop.tonics}/${SHOP_STOCK_MAX}</b></div>
+  <div class="shop-columns">
+  <section class="shop-product"><div class="shop-product-art">${itemArt('tonic')}<div><h3>${ITEMS.tonic.name}</h3><p>생명력 +${ITEMS.tonic.heal} · 보관 최대 ${SHOP_STOCK_MAX}개</p></div></div>
    <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · 100원</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · 500원</strong><small>묶음 할인</small></button></div>
    <p class="shop-message" aria-live="polite">${escapeHtml(message)}</p></section>
-  <p class="shop-note">문지기 +50원 · 오스틴 +200원 · 지금은 게임 안에서 얻는 재화이며 실제 결제가 아닙니다.<br>구매분은 다음 ‘새 씨앗으로 시작’ 때 한 번만 가방으로 옮겨지고, 진행 중인 이어하기에는 추가되지 않습니다.</p>
+  <section class="shop-stash"><h3>보관함 · 새 여정에 가져갈 개수</h3><ul>${stashRows}</ul>
+   <p class="stash-note">새 여정을 시작할 때만 가방에 들어가요 · 이어하기에는 안 들어가요</p></section>
+  </div>
+  <p class="shop-note">문지기 +50원 · 오스틴 +200원 · 게임 안에서 얻는 재화이며 실제 결제가 아닙니다.</p>
   <button id="shop-back" class="menu-item small-item">돌아가기</button></div>`;
- const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 출발 가방에 담았습니다 · ${result.price}원 사용`:result.reason==='full'?'출발 물약은 10개까지 담을 수 있어요':'게임 머니가 부족해요');};
+ const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 보관함에 담았어요 · ${result.price}원 사용`:result.reason==='full'?'작은 물약은 10개까지 보관할 수 있어요':'게임 머니가 부족해요');};
  $('#buy-one').onclick=()=>buy(1);$('#buy-ten').onclick=()=>buy(10);$('#shop-back').onclick=back;
+ document.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
+}
+// 점검 사과 선물 안내. 한 번만 뜬다(grantGift가 같은 선물을 다시 주지 않는다).
+const SORRY_GIFT='sorry-20260917';
+function showGift(){
+ mode='gift';touch.reset();keys.clear();
+ $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ $('#overlay').innerHTML=`<div class="menu-panel gift-panel"><p class="eyebrow">SEED · 선물</p><h2>기다려 줘서 고마워요</h2>
+  <div class="gift-item">${itemArt('sprout')}<div><strong>부활 물약 · ${ITEMS.sprout.name} 1개</strong><small>${escapeHtml(ITEMS.sprout.desc)}</small></div></div>
+  <p class="gift-line">점검하느라 게임을 잠시 닫아서 미안해요. 상점 보관함에 넣어 두었어요.</p>
+  <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
+  <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
+ $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
 }
 // 이름은 여러 화면에서 같은 모양으로 쓴다.
 // 거른 별명을 쳤다가 다른 화면으로 넘어가도, 새 칸에 이유가 남게 한다.
@@ -676,7 +702,7 @@ function showDungeon(){
   <div class="menu-list">
    ${saved?`<button id="continue-run" class="primary menu-item"><strong>이어하기</strong><small>${escapeHtml(where)}</small></button>`:''}
    <button id="start-game" class="${saved?'':'primary '}menu-item"><strong>${saved?'새 씨앗으로 시작':'잠든 정원 · 1막'}</strong><small>${saved?'저장된 도전을 교체합니다':'첫 방부터 문지기까지'}</small></button>
-   <button id="open-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 다음 출발 물약 ${shop.tonics}/${SHOP_STOCK_MAX}</small></button>
+   <button id="open-shop" class="menu-item"><strong>출발 상점</strong><small>새 여정에 가져갈 물약 · ${itemCounts(shop.carry)||'없음'}</small></button>
    ${act2Ready?`<button id="start-act2" class="menu-item act2-button"><strong>${ACT2_NAME}</strong><small>${saved2?`야간 경기장 · 여정 ${saved2.cycle+1} · ${saved2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${saved2?'<button id="new-act2" class="menu-item small-item">2막 새로 시작</button>':''}`
     :`<p class="act2-lock">${act2Available()?'오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요':'2막 · 야간 경기장은 준비 중이에요'}</p>`}
    <button id="back-menu" class="menu-item small-item">돌아가기</button>
@@ -789,7 +815,7 @@ function showMaintenance(){
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel maintenance-panel"><p class="eyebrow">SEED</p><h2>${escapeHtml(MAINTENANCE.title)}</h2>${MAINTENANCE.lines.map(line=>`<p class="maintenance-line">${escapeHtml(line)}</p>`).join('')}</div>`;
 }
-function restart(saved=null){if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();if(!restore)addItem(inventory,'tonic',claimTonics(runStorage));turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
+function restart(saved=null){if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();if(!restore)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
  if(restore){stage=restore.stage;hp=restore.hp;kills=restore.kills;elapsed=restore.elapsed;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
  for(const [id,lv] of Object.entries(restore?.forms||{}))if(Object.hasOwn(FORMS,id))heldForms.set(id,lv);
  // 변이는 이어하기에서만 돌아온다. 새 여정은 빈 상태로 시작한다.
@@ -845,7 +871,7 @@ let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],f
  {const realNow=Date.now();const realDelta=(realNow-realLast)/1000;realLast=realNow;if(mode==='playing'&&!paused&&realDelta>0&&realDelta<2){elapsed+=realDelta;paceReal+=realDelta;paceGame+=Math.min(2,Math.max(0,raw));}}frames.push(raw*1000);qualityGovernor.sample(raw*1000,mode==='playing'&&!paused&&!document.hidden);if(frames.length>180)frames.shift();const dt=advanceFrame(raw,now*.001,(step,time)=>update(step,time));if(!paused)vfx.update(dt);presentFrame(now*.001);frameCounter++;
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*dt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
- look.lerp(new V(player.position.x*viewLayout.followX,0,player.position.z*viewLayout.followZ+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='notes'||mode==='maintenance')&&gardenScene;
+ look.lerp(new V(player.position.x*viewLayout.followX,0,player.position.z*viewLayout.followZ+.4),1-Math.exp(-3.713*dt));camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-dt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);stadium.update(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='notes'||mode==='maintenance'||mode==='gift')&&gardenScene;
  if(showGardenScene)gardenScene.update(dt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
  if(bloomPass.enabled)composer.render();else renderer.render(renderPass.scene,renderPass.camera);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
@@ -864,7 +890,7 @@ function presentFrame(time){
  const dm=dashMeter(dashState);touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm);setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
  const dashPips=$('#dash-pips'),dashPipKey=`${dm.charges}/${dm.maxCharges}`;setHidden(dashPips,dm.maxCharges<2);if(dashPips&&dashPips.__key!==dashPipKey){dashPips.innerHTML=Array.from({length:dm.maxCharges},(_,i)=>`<i class="${i<dm.charges?'ready':''}"></i>`).join('');dashPips.__key=dashPipKey;}
  // 메뉴·정원 화면에서는 전투 HUD를 감춘다(정원이 그대로 보이게).
- const menuMode=['ready','garden','ranking','discoveries','notes','maintenance'].includes(mode);
+ const menuMode=['ready','garden','ranking','discoveries','notes','maintenance','gift'].includes(mode);
  if(document.body.__menuMode!==menuMode){document.body.classList.toggle('menu-mode',menuMode);document.body.__menuMode=menuMode;}
  updateGauges();
  setText($('#score-hud b'),formatScore(score));setText($('#score-hud small'),playerName?playerName+' · 점수':'점수');setHidden($('#score-hud'),!['playing','cards','forms','evolving'].includes(mode));
@@ -929,6 +955,17 @@ function applyQuality(level,{save=true}={}){
 }
 // Manual choice in the pause sheet: cycles high → medium → low → high and is remembered on this device.
 function qualityButtonLabel(){return `화질 · ${QUALITY_NAMES[qualityLevel]}`;}
+// 효과음 켜기·끄기. 교실이나 밤에 조용히 하고 싶을 때. 이 기기에 기억한다.
+const SOUND_KEY='seed-sound-v1';
+function mountSoundButton(){
+ let on=true;try{on=runStorage.getItem(SOUND_KEY)!=='off';}catch{}
+ audio.setMuted(!on);
+ const footer=document.querySelector('#pause-build footer');if(!footer||footer.querySelector('#sound-toggle'))return;
+ const button=document.createElement('button');button.id='sound-toggle';button.type='button';
+ const label=()=>on?'소리 · 켜짐':'소리 · 꺼짐';button.textContent=label();
+ button.onclick=()=>{on=!on;audio.setMuted(!on);try{runStorage.setItem(SOUND_KEY,on?'on':'off');}catch{}button.textContent=label();};
+ footer.prepend(button);
+}
 function mountQualityButton(){
  const footer=document.querySelector('#pause-build footer');if(!footer||footer.querySelector('#quality-toggle'))return;
  const button=document.createElement('button');button.id='quality-toggle';button.type='button';button.textContent=qualityButtonLabel();
@@ -957,7 +994,7 @@ renderer.domElement.addEventListener('pointerdown',event=>{
  if(mode!=='garden'||!gardenScene)return;
  const rect=canvasRect,hit=gardenScene.pick((event.clientX-rect.left)/Math.max(1,rect.width),(event.clientY-rect.top)/Math.max(1,rect.height));
  selectGardenSpot(hit);
-});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();showIntro();requestAnimationFrame(animate);
+});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();showIntro();requestAnimationFrame(animate);
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({pace:{game:+paceGame.toFixed(1),real:+paceReal.toFixed(1),trusted:paceTrusted(paceGame,paceReal)},mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,theme:{id:combatTheme,...THEMES[combatTheme]},quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:qualityGovernor.state()},items:{hasteTime,shellTime,selectedItem},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags,archetype:activeGauge.plan.archetype},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:killsForChoice(choicesTaken),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,vfx:vfx.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
 qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if(b)damageEnemy(b,b.maxHp*fraction,false);return b?b.hp:null;},givePotion:()=>addItem(inventory,'potion',1),fillActive:()=>{activeGauge.cooldown=0;activeGauge.value=ACTIVE.max;return activeGauge.value;},showAustinTitle:()=>{seedTitle.setUnlocked(true);return seedTitle.isUnlocked();},giveForm:(id,level=4)=>{if(!Object.hasOwn(FORMS,id))return false;heldForms.set(id,level);syncForms();return true;},setLaw:(id,level)=>{if(!Object.hasOwn(LAWS,id))return false;levels.set(id,level);syncLaws();return true;},offerSolo:()=>offerSolo(finishChoice,true),giveItem:(id,n=1)=>{const got=addItem(inventory,id,n);itemBarKey='';return got;},setHp:v=>{hp=Math.max(1,Math.min(100,v));},giveCoins:(n=500)=>earnCoins(runStorage,Math.max(0,Math.floor(n))).coins,startAustin:()=>{restart();stage=4;wardensDefeated=Math.max(5,wardensDefeated);austinRoom=true;wave();return true;}},census:()=>{const out={casters:{},meshes:0,shadowCasters:0,sprites:0,instanced:0,points:0,lines:0,lights:0,materials:new Set(),byParent:{}};scene.traverseVisible(o=>{if(o.isLight)out.lights++;if(o.isSprite)out.sprites++;else if(o.isInstancedMesh)out.instanced++;else if(o.isMesh){out.meshes++;if(o.castShadow){out.shadowCasters++;const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.casters[key]=(out.casters[key]||0)+1;}}else if(o.isLineSegments)out.lines++;if(o.material)out.materials.add(o.material);if(o.isMesh||o.isSprite){const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.byParent[key]=(out.byParent[key]||0)+1;}});out.materials=out.materials.size;out.behindCover=enemies.filter(e=>behindCover(e.g.position)).length;out.obstacles=obstacles.length;out.byParent=Object.fromEntries(Object.entries(out.byParent).sort((a,b)=>b[1]-a[1]).slice(0,25));out.programs=renderer.info.programs?.length;return out;},worldToScreen:(x,z)=>{let p=new V(x,.5,z).project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};}};
