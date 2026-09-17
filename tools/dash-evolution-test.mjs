@@ -8,10 +8,11 @@ tickDash(base,BASE_DASH.recharge-.01);assert.equal(base.charges,0);tickDash(base
 
 const twin=createDashState('twinsprout');
 assert.equal(dashMeter(twin).charges,2);assert.ok(spendDash(twin));assert.ok(spendDash(twin));assert.equal(spendDash(twin),null);
-tickDash(twin,4.39);assert.equal(twin.charges,0);tickDash(twin,.02);assert.equal(twin.charges,1);assert.ok(twin.recharge>4.3);
-tickDash(twin,4.4);assert.deepEqual(dashMeter(twin),{id:'twinsprout',charges:2,maxCharges:2,recharge:0,rechargeSeconds:4.4,fill:1,ready:true});
+tickDash(twin,2.39);assert.equal(twin.charges,0);tickDash(twin,.02);assert.equal(twin.charges,1);assert.ok(twin.recharge>2.3);
+tickDash(twin,2.4);assert.deepEqual(dashMeter(twin),{id:'twinsprout',charges:2,maxCharges:2,recharge:0,rechargeSeconds:2.4,fill:1,ready:true});
 
 const long=DASH_EVOLUTIONS.longroot,molt=DASH_EVOLUTIONS.molt;
+for(const d of Object.values(DASH_EVOLUTIONS)){assert.equal(d.recharge,BASE_DASH.recharge,`${d.name} has no recharge penalty`);assert.equal('tradeoff' in d,false,`${d.name} has no written downside`);}
 assert.ok(long.duration*long.speed>BASE_DASH.duration*BASE_DASH.speed*1.35,'long root travels at least 35% farther');
 assert.ok(molt.invuln>BASE_DASH.invuln+.15,'molt leaves a meaningful guard after the dash');
 assert.match(dashEvolutionCards(),/data-dash-evolution="twinsprout"/);assert.match(dashEvolutionCards(),/긴뿌리 도약/);assert.match(dashEvolutionCards(),/허물 벗기/);
@@ -21,4 +22,4 @@ assert.ok(validCheckpoint(save),'old saves without a dash evolution remain valid
 for(const id of Object.keys(DASH_EVOLUTIONS))assert.ok(validCheckpoint({...save,dashEvolution:id}),id);
 assert.equal(validCheckpoint({...save,dashEvolution:'infinite-dash'}),false);
 
-console.log('Dash evolutions: separate first-warden choice, two sequential charges, distance/guard tradeoffs and save compatibility passed.');
+console.log('Dash evolutions: three pure upgrades, base recharge, two sequential charges, distance/guard strengths and save compatibility passed.');
