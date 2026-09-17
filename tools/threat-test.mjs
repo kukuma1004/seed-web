@@ -5,7 +5,7 @@ import {arenaFor,insideArena} from '../src/arena.js';
 import {segmentHitsCover} from '../src/collision.js';
 import {createTurret,tickTurret,turretSpots,copiedLaws,volleySpec,TURRET} from '../src/turret.js';
 import {trapsFor,trapPhase,tickTrap,insideTrap,TRAP_TIMING,TRAP_DAMAGE,TRAP_SIZE} from '../src/traps.js';
-import {createWarden,tickWarden,wardenVariantFor,WARDEN_VARIANTS,SEAL} from '../src/warden.js';
+import {createWarden,tickWarden,wardenVariantFor,wardenEncounter,evolutionEcho,DUO_WARDEN,WARDEN_VARIANTS,SEAL} from '../src/warden.js';
 const V=THREE.Vector3;
 const mat=new THREE.MeshBasicMaterial(),mats={enemy:mat,black:mat,armor:mat,amber:mat,dark:mat};
 const EXIT_DEFAULT=EXIT;
@@ -73,4 +73,13 @@ let charges=0,previous=hunter.state;
 for(let i=0;i<150;i++){tickWarden(hunter,.02,i*.02,new V(0,0,6),[],{collide(){},bolt(){},hit(){},burst(){}});if(hunter.state==='commit'&&previous!=='commit')charges++;if(hunter.state==='stalk'&&charges)break;previous=hunter.state;}
 assert.equal(charges,2,'The hunter charges twice before recovering');
 assert.ok(WARDEN_VARIANTS.hunter.chargeSpeed>WARDEN_VARIANTS.memory.chargeSpeed);
+// Austin unlocks stable one-or-two warden encounters. Reloading the same journey cannot reroll it.
+assert.equal(wardenEncounter(8,0).count,1);assert.deepEqual(wardenEncounter(5,1),wardenEncounter(5,1));
+assert.ok(Array.from({length:20},(_,i)=>wardenEncounter(5+i,1).count).includes(2));
+assert.ok(Array.from({length:100},(_,i)=>wardenEncounter(i,9).count).every(n=>n===1||n===2));assert.ok(DUO_WARDEN.hp<1&&DUO_WARDEN.damage<1);
+// An evolved form becomes one clearly named, telegraphed echo instead of silently adding stats.
+const copied=evolutionEcho({name:'무한 프리즘',requires:['reflect','split']});assert.equal(copied.name,'모방 · 무한 프리즘');assert.equal(copied.shots,7);assert.equal(copied.bounces,1);
+const echoBoss=createWarden(new THREE.Scene(),mats,'memory');echoBoss.copiedForm={name:'작은 블랙홀',requires:['gravity']};echoBoss.attacks=3;echoBoss.state='stalk';echoBoss.timer=0;
+let echoBolts=0;for(let i=0;i<100&&echoBoss.attacks<4;i++)tickWarden(echoBoss,.02,i*.02,new V(0,0,5),[],{collide(){},bolt(){echoBolts++;},hit(){},burst(){}});
+assert.equal(echoBoss.attacks,4);assert.equal(echoBolts,8);assert.ok(echoBoss.moveName.includes('작은 블랙홀'));
 console.log('Threats: turret/trap placement, copied-law volleys, dodgeable strikes, trap immunity, seal and hunter wardens passed.');

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LAWS,offerLaws,hitBudget,acquireTarget,synergyHint} from '../src/laws.js';
 import {createSeedEvolution} from '../src/evolution.js';
-import {safeSpawn,CROWD_TOTALS,CROWD_CAP} from '../src/crowd.js';
+import {safeSpawn,CROWD_TOTALS,CROWD_CAP,crowdTotal,crowdInterval} from '../src/crowd.js';
 import {ROOMS} from '../src/journey.js';
 import {segmentHitsCover} from '../src/collision.js';
 assert.equal(Object.keys(LAWS).length,9);
@@ -18,6 +18,8 @@ assert.equal(acquireTarget(player,enemies,[{x:.5,z:0,w:.2,d:1}],segmentHitsCover
 enemies[1].dead=true;assert.equal(acquireTarget(player,enemies,[{x:.5,z:0,w:.2,d:1}],segmentHitsCover),null);
 for(const room of ROOMS)for(let i=0;i<20;i++){const p=safeSpawn({x:0,z:5},room.covers,i);assert.ok(p);assert.ok(Math.hypot(p.x,p.z-5)>4);assert.equal(segmentHitsCover(p,p,room.covers,.65),false);}
 assert.equal(CROWD_TOTALS.reduce((a,b)=>a+b,0),90);assert.equal(CROWD_CAP,14);
+assert.equal(crowdTotal(0,0),14);assert.equal(crowdTotal(4,99),0);assert.ok(crowdTotal(2,9)>crowdTotal(2,0));assert.equal(crowdTotal(2,999),38);
+assert.ok(crowdInterval(8)<crowdInterval(0));assert.equal(crowdInterval(999),.68);
 const actor=new THREE.Group(),growth=createSeedEvolution(actor),initial=actor.children.length;
 for(const id of Object.keys(LAWS)){growth.reset();growth.select([id]);growth.update(.02,1,true,.5);assert.deepEqual(growth.state().visible,[id]);assert.equal(actor.children.length,initial);}
 console.log('Nine law offers, build capacity, mutations, synergies, visible forms, automatic target occlusion and safe crowd spawns passed.');

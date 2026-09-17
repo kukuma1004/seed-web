@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,FETCH_RECENT,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
@@ -60,6 +60,7 @@ function fakeFirebase({clock}){
  assert.ok(!validRun({...data.a,stage:5})&&!validRun({...data.a,score:0}));
  assert.ok(!validRun({...data.a,cycle:2,kills:1000,time:90}),'impossible old kill counts are hidden even if they predate the database rules');
  assert.ok(!validRun({...data.a,cycle:2,kills:20,time:2}),'impossible kill speed is hidden');
+ assert.equal(MAX_KILLS_PER_JOURNEY,180);assert.ok(validRun({...data.a,cycle:100,kills:16200,time:3000,score:10000}),'long legitimate dense journeys remain rankable');
 }
 
 // Sign-in, submit, board and rank; the anonymous player is reused across page loads.

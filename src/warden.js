@@ -12,7 +12,21 @@ export const WARDEN_VARIANTS=Object.freeze({
 // shift slightly, so reading the gap and stepping into it is the answer rather than luck.
 export const FAN_SPACING=.32,FAN_SHIFT=.06;
 export const SEAL=Object.freeze({radius:2.6,tell:1.05,lock:3.5,damage:12});
+export const DUO_WARDEN=Object.freeze({firstChance:.35,maxChance:.5,hp:.68,damage:.72});
 export function wardenVariantFor(cycle){return ['memory','seal','hunter'][((cycle%3)+3)%3];}
+// Stable per journey: leaving and resuming the room cannot reroll a single warden
+// into a duo or vice versa. Austin must have fallen once, and the cap is always two.
+export function wardenEncounter(cycle,austins=0){
+ const c=Math.max(0,Math.floor(Number(cycle)||0)),a=Math.max(0,Math.floor(Number(austins)||0));
+ const chance=a?Math.min(DUO_WARDEN.maxChance,DUO_WARDEN.firstChance+(a-1)*.05):0;
+ const roll=((c*37+a*17+11)%100)/100;
+ return Object.freeze({count:a>0&&roll<chance?2:1,chance,roll});
+}
+export function evolutionEcho(form){
+ if(!form?.name||!Array.isArray(form.requires)||!form.requires.length)return null;
+ const laws=[...form.requires],radial=laws.some(id=>['orbit','chain','gravity','burst'].includes(id));
+ return Object.freeze({name:`모방 · ${form.name}`,laws:Object.freeze(laws),radial,shots:radial?8:7,bounces:laws.includes('reflect')?1:0});
+}
 export function createWarden(scene,mats,variant='memory'){
  const shell=new THREE.MeshStandardMaterial({color:0x8b9f94,roughness:.65,emissive:0x23413e,emissiveIntensity:.65});
  const armor=new THREE.MeshStandardMaterial({color:0xd6cdb0,roughness:.55,emissive:0x29362a,emissiveIntensity:.5});
@@ -41,16 +55,17 @@ export function createWarden(scene,mats,variant='memory'){
  const sealRing=new THREE.Mesh(new THREE.RingGeometry(SEAL.radius-.16,SEAL.radius,64),sealMat);sealRing.rotation.x=-Math.PI/2;sealRing.position.y=.12;sealTell.add(sealRing);
  const sealFill=new THREE.Mesh(new THREE.CircleGeometry(SEAL.radius,48),sealMat);sealFill.rotation.x=-Math.PI/2;sealFill.position.y=.11;sealTell.add(sealFill);
  const config=WARDEN_VARIANTS[variant]||WARDEN_VARIANTS.memory;
- const e={g,body,type:'warden',variant:WARDEN_VARIANTS[variant]?variant:'memory',config,hp:1150,maxHp:1150,state:'stalk',timer:1.2,pattern:0,dir:new V(0,0,1),target:new V(),learned:[],hit:0,legs:[],tells,nova,sealTell,sealFill,attacks:0,chained:0};
+ const e={g,body,type:'warden',variant:WARDEN_VARIANTS[variant]?variant:'memory',config,hp:1150,maxHp:1150,state:'stalk',timer:1.2,pattern:0,dir:new V(0,0,1),target:new V(),learned:[],copiedForm:null,copying:false,moveName:'',hit:0,legs:[],tells,nova,sealTell,sealFill,attacks:0,chained:0};
  return e;
 }
 export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()=>{}}){
  const config=e.config||WARDEN_VARIANTS.memory;
  e.learned=learnedLaws(e.hp,e.maxHp,laws);e.hit=Math.max(0,e.hit-dt);e.timer-=dt;
  const delta=player.clone().sub(e.g.position).setY(0),distance=delta.length();delta.normalize();
- const type=config.patterns[e.pattern%config.patterns.length], radius=e.learned.some(id=>['chain','gravity','burst'].includes(id))?3.4:2.5;
+ const type=config.patterns[e.pattern%config.patterns.length],echo=e.copying?evolutionEcho(e.copiedForm):null,radius=e.learned.some(id=>['chain','gravity','burst'].includes(id))?3.4:2.5;
  e.nova.scale.setScalar(radius/2.5);
- e.tells.forEach((t,i)=>t.visible=e.state==='tell'&&i===type);
+ const tellType=echo?(echo.radial?2:0):type;
+ e.tells.forEach((t,i)=>t.visible=e.state==='tell'&&i===tellType);
  e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,e.state==='tell'?-.13:e.state==='commit'?.18:0,12,dt);
  e.body.position.y=e.hit>0?.07:0;
  if(e.state==='stalk'){
@@ -58,7 +73,7 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()
   e.g.position.addScaledVector(delta,dt*config.stalk*(distance>5?2.9:distance<3?-2.2:.35));
   e.g.position.x+=delta.z*dt*2.25*sign*config.stalk;e.g.position.z-=delta.x*dt*2.25*sign*config.stalk;
   e.g.rotation.y=Math.atan2(delta.x,delta.z);
-  if(e.timer<=0){e.state='tell';e.timer=(type===3?SEAL.tell:type===1?.44:type===0?.55:.6)*config.tell;e.dir.copy(delta);e.target.copy(player).setY(0);}
+  if(e.timer<=0){e.copying=Boolean(e.copiedForm)&&e.attacks>0&&e.attacks%4===3;const nextEcho=e.copying?evolutionEcho(e.copiedForm):null;e.moveName=nextEcho?.name||'';e.state='tell';e.timer=(nextEcho?(nextEcho.radial ? .72 : .6):type===3?SEAL.tell:type===1?.44:type===0?.55:.6)*config.tell;e.dir.copy(delta);e.target.copy(player).setY(0);}
  }else if(e.state==='tell'){
   e.g.rotation.y=Math.atan2(e.dir.x,e.dir.z);
   if(type===3){
@@ -69,26 +84,33 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()
   if(e.timer<=0){
    e.state='commit';e.timer=type===1?.42:type===0?.48:.2;e.salvos=1;e.attacks++;
    e.tells.forEach(t=>t.visible=false);
-   if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
-   if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
-   if(type===3){e.timer=.25;seal(e.target.clone(),SEAL.radius);}
+   if(echo){
+    burst(e.g.position,echo.laws[0]||'amber',echo.radial?34:24);
+    if(echo.radial)for(let i=0;i<echo.shots;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI*2/echo.shots),0,Math.sin(i*Math.PI*2/echo.shots)),echo.bounces,echo.laws);
+    else for(let i=0;i<echo.shots;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(echo.shots-1)/2)*.26),echo.bounces,echo.laws);
+    if(echo.laws.some(id=>id==='gravity'||id==='burst')&&distance<3)hit(18);
+   }else{
+    if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
+    if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
+    if(type===3){e.timer=.25;seal(e.target.clone(),SEAL.radius);}
+   }
   }
  }else if(e.state==='commit'){
-  if(type===0&&e.salvos<3&&e.timer<=.48-e.salvos*.16){
+  if(!e.copying&&type===0&&e.salvos<3&&e.timer<=.48-e.salvos*.16){
    const n=e.learned.includes('split')?7:5;
    for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING+(e.salvos%2?FAN_SHIFT:-FAN_SHIFT)),e.learned.includes('reflect')?1:0,e.learned);
    e.salvos++;
   }
-  if(type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*config.chargeSpeed);collide(e.g.position,1);
+  if(!e.copying&&type===1){const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*config.chargeSpeed);collide(e.g.position,1);
    const segment=e.g.position.clone().sub(before),length=segment.lengthSq();
    const t=length?THREE.MathUtils.clamp(player.clone().sub(before).dot(segment)/length,0,1):0;
    if(before.addScaledVector(segment,t).distanceTo(player)<1.35)hit(24);
   }
   if(e.timer<=0){
    // The hunter turns and charges again straight away, once.
-   if(type===1&&e.variant==='hunter'&&e.chained<1){e.chained++;e.state='tell';e.timer=.3;e.dir.copy(delta);}
+   if(!e.copying&&type===1&&e.variant==='hunter'&&e.chained<1){e.chained++;e.state='tell';e.timer=.3;e.dir.copy(delta);}
    else{e.chained=0;e.state='recover';e.timer=.6;}
   }
- }else if(e.timer<=0){e.pattern++;e.state='stalk';e.timer=.65;}
+ }else if(e.timer<=0){e.pattern++;e.state='stalk';e.copying=false;e.moveName='';e.timer=.65+(e.duoSupport?.35:0);}
  collide(e.g.position,1);
 }
