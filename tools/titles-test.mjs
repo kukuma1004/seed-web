@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
-import {titleState,codexNews,codexSteps,CODEX,AUSTIN_SHOT_SPEED} from '../src/titles.js';
+import {titleState,codexNews,codexSteps,CODEX,AUSTIN_SHOT_SPEED,FIRST_GARDEN_TITLE} from '../src/titles.js';
 import {ALL_FORMS} from '../src/forms.js';
+import {FIRST_GARDEN_BADGE} from '../src/account-profile.js';
 
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 // No titles: plain speed, the next goal is the codex title at 20.
@@ -12,6 +13,8 @@ for(const [n,steps] of [[19,0],[20,0],[29,0],[30,1],[39,1],[40,2],[55,3]]){asser
 assert.equal(titleState({discovered:20}).titles[0].id,'codex');assert.equal(titleState({discovered:34}).next.need,6);
 // Both titles add up, Austin is the one shown above the seed.
 {const s=titleState({austin:true,discovered:41});assert.equal(s.titles.length,2);assert.equal(s.shown,s.titles[0].name);close(s.shotSpeed,1+AUSTIN_SHOT_SPEED+2*CODEX.shotSpeedPerStep);}
+// The old-board honor is shown first but never changes combat power.
+{const s=titleState({austin:true,discovered:41,badges:[FIRST_GARDEN_BADGE]});assert.equal(s.shown,FIRST_GARDEN_TITLE);assert.equal(s.titles.length,3);close(s.shotSpeed,1+AUSTIN_SHOT_SPEED+2*CODEX.shotSpeedPerStep);}
 // No goal past what the codex holds.
 {const total=Object.keys(ALL_FORMS).length;assert.equal(titleState({discovered:total,total}).next,null);assert.ok(titleState({discovered:20,total}).next);}
 // News only when a threshold is crossed.

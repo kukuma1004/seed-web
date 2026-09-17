@@ -1,9 +1,11 @@
 export const ACCOUNT_PROFILE_KEY='seed-account-profile-v1';
 export const FOUNDING_BADGE='founding-tester';
 export const FOUNDING_SEED='founder';
+export const FIRST_GARDEN_BADGE='first-garden-pioneer';
 
 export const BADGES=Object.freeze({
- [FOUNDING_BADGE]:Object.freeze({id:FOUNDING_BADGE,name:'SEED Founding Tester',label:'창립 테스터',description:'SEED의 첫 비공개 테스트에 함께한 기록'})
+ [FOUNDING_BADGE]:Object.freeze({id:FOUNDING_BADGE,name:'SEED Founding Tester',label:'창립 테스터',description:'SEED의 첫 비공개 테스트에 함께한 기록'}),
+ [FIRST_GARDEN_BADGE]:Object.freeze({id:FIRST_GARDEN_BADGE,name:'첫 정원의 선구자',label:'첫 정원의 선구자',description:'베타 시즌 1.1 이전 명예의 전당 TOP 10 기록'})
 });
 
 const ids=(value,known=null,limit=100)=>[...new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'&&id.length<=48&&(!known||known.has(id))):[])].slice(0,limit);
