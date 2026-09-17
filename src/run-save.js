@@ -27,6 +27,7 @@ export function validCheckpoint(s){
  // Score, boss counts and potions arrived later; older saves simply do not have them.
  if(s?.score!==undefined&&!(Number.isInteger(s.score)&&s.score>=0&&s.score<1e12))return false;
  if(!validCount(s?.wardens)||!validCount(s?.austins)||(s?.austins||0)>Math.floor((s?.wardens||0)/5))return false;
+ if(!validCount(s?.playDashes)||!validCount(s?.playDamage))return false;
  if(!validCount(s?.turretPotionDry))return false;
  if(!validMutations(s?.mutations))return false;
  if(!validInventory(s?.inventory)||!validRelics(s?.relics)||!validDashEvolution(s?.dashEvolution)||!validRunBonuses(s?.runBonuses))return false;

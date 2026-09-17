@@ -42,6 +42,8 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 .panel-glyph{font-style:normal;font-size:34px;color:#f2c14e;line-height:1}
 .panel-ask{margin:0;font-size:13px;color:#cfe9d9}
 .panel-actions{display:flex;gap:6px;flex-wrap:wrap}
+.garden-style{display:flex;flex-direction:column;gap:2px;margin:7px 0;padding:8px 10px;border:1px solid #9ed8b02b;border-radius:10px;background:#10271f99}
+.garden-style strong{font-size:12px;color:#d7f2c8}.garden-style small{font-size:11px;color:#9fb8ad}
 .panel-actions .small,.branch{font-size:12px}
 .garden-panel footer{display:flex;align-items:center;justify-content:space-between;gap:8px;border-top:1px solid #a4b7ab26;padding-top:8px}
 .garden-panel footer small{font-size:11px;color:#9fb8ad}

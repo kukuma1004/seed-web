@@ -1,6 +1,5 @@
-// 정원 · 런이 끝나면 씨앗이 남고, 심어 키우면 다음 런의 "가능성"이 바뀐다.
-// 여기서는 규칙만 다룬다(화면은 garden-ui.js, 저장은 seed-garden-v1).
-// 설계 원칙: 공격력 같은 직접 강화가 아니라 무엇이 나타나는가를 바꾼다.
+// 정원 · 플레이 방식이 식물의 모습으로 남는 개인 기록 공간.
+// 정원은 전투 수치, 선택 확률, 보스 주기와 연결하지 않는다.
 import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
@@ -12,9 +11,15 @@ export const STAGE_NAMES=Object.freeze({seed:'심은 씨앗',sprout:'새싹',mat
 export const STAGE_POINTS=Object.freeze({seed:0,sprout:1,mature:4,bloom:9});
 export const BRANCHES=Object.freeze(['flower','tree','vine']);
 export const BRANCH_KINDS=Object.freeze({
- flower:{label:'꽃',effect:'lawWeight'},
- tree:{label:'나무',effect:'formGuide'},
- vine:{label:'덩굴',effect:'relicBias'}
+ flower:{label:'꽃',effect:'rush'},
+ tree:{label:'나무',effect:'endure'},
+ vine:{label:'덩굴',effect:'agile'}
+});
+export const PLAY_STYLES=Object.freeze({
+ rush:{label:'맹공의 흔적',branch:'flower',hint:'빠르게 적을 몰아붙인 여정'},
+ endure:{label:'끈기의 흔적',branch:'tree',hint:'깊이 나아가 끝까지 버틴 여정'},
+ agile:{label:'민첩의 흔적',branch:'vine',hint:'회피를 자주 사용하며 움직인 여정'},
+ balanced:{label:'고른 흔적',branch:'tree',hint:'한쪽에 치우치지 않은 여정'}
 });
 // 법칙마다 씨앗 하나. 분기 이름은 같은 법칙의 세 갈래다.
 const LAW_SEEDS={
@@ -48,17 +53,24 @@ export function nextStagePoints(growth){
  for(const s of STAGES)if((growth||0)<STAGE_POINTS[s])return STAGE_POINTS[s]-(growth||0);
  return 0;
 }
-const plant=p=>p&&SEEDS[p.seed]?{seed:p.seed,growth:Math.max(0,Math.min(999,Math.floor(p.growth)||0)),
- branch:BRANCHES.includes(p.branch)?p.branch:null,active:p.active===true}:null;
-export const emptyGarden=()=>({version:2,plots:Array(PLOTS).fill(null),seeds:{},fragments:0,harvests:0,records:[]});
+const validStyle=style=>Object.hasOwn(PLAY_STYLES,style)?style:'balanced';
+const plant=p=>{
+ if(!p||!SEEDS[p.seed])return null;
+ const inferred=p.branch==='flower'?'rush':p.branch==='vine'?'agile':p.branch==='tree'?'endure':'balanced';
+ const style=Object.hasOwn(PLAY_STYLES,p.style)?p.style:inferred;
+ return {seed:p.seed,growth:Math.max(0,Math.min(999,Math.floor(p.growth)||0)),style,
+  branch:BRANCHES.includes(p.branch)?p.branch:PLAY_STYLES[style].branch,active:false};
+};
+export const emptyGarden=()=>({version:3,plots:Array(PLOTS).fill(null),seeds:{},traits:{},fragments:0,harvests:0,records:[]});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
  const forms=Array.isArray(value.forms)?value.forms.map(entry=>typeof entry==='string'?{id:entry,level:1}:entry).filter(entry=>entry&&Object.hasOwn(ALL_FORMS,entry.id)&&Number.isFinite(entry.level)&&entry.level>0).slice(0,2).map(entry=>({id:entry.id,level:Math.min(999,Math.floor(entry.level))})):[];
  const score=Math.max(0,Math.min(1e9,Math.floor(value.score)||0)),kills=Math.max(0,Math.min(1e7,Math.floor(value.kills)||0)),journey=Math.max(1,Math.min(999,Math.floor(value.journey)||1));
+ const elapsed=Math.max(0,Math.min(1e7,Number(value.elapsed)||0)),dashes=Math.max(0,Math.min(1e6,Math.floor(value.dashes)||0)),damageTaken=Math.max(0,Math.min(1e7,Number(value.damageTaken)||0));
  const boss=value.boss==='austin'?'austin':value.boss==='warden'?'warden':null;
  if(!law&&!forms.length&&!score&&!kills)return null;
- return {law,forms,score,kills,journey,boss,rare:forms.some(entry=>Object.hasOwn(SECOND_FORMS,entry.id))};
+ return {law,forms,score,kills,journey,boss,elapsed,dashes,damageTaken,style:validStyle(value.style),rare:forms.some(entry=>Object.hasOwn(SECOND_FORMS,entry.id))};
 };
 export function normalizeGarden(value){
  const g=emptyGarden();
@@ -66,16 +78,11 @@ export function normalizeGarden(value){
  if(Array.isArray(value.plots))for(let i=0;i<PLOTS;i++)g.plots[i]=plant(value.plots[i]);
  if(value.seeds&&typeof value.seeds==='object')for(const [id,n] of Object.entries(value.seeds))
   if(SEEDS[id]&&Number.isInteger(n)&&n>0)g.seeds[id]=Math.min(99,n);
+ if(value.traits&&typeof value.traits==='object')for(const [id,styles] of Object.entries(value.traits))
+  if(SEEDS[id]&&Array.isArray(styles))g.traits[id]=styles.slice(0,g.seeds[id]||0).map(validStyle);
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
- // 활성 식물은 자란 뒤 분기를 고른 것만, 그리고 정해진 칸 수까지만.
- let active=0;
- for(const p of g.plots){
-  if(!p)continue;
-  const ready=p.branch&&STAGES.indexOf(stageOf(p.growth))>=STAGES.indexOf('mature');
-  if(p.active&&ready&&active<MAX_ACTIVE_SLOTS)active++;else p.active=false;
- }
  return g;
 }
 export function readGarden(storage){try{return normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY)));}catch{return emptyGarden();}}
@@ -90,19 +97,32 @@ export function dominantLaw(levels={}){
  }
  return best;
 }
-export function harvestFromRun({levels={},forms={},wardens=0,austins=0,score=0,kills=0,journey=1}={}){
+export function playStyleFromRun({kills=0,elapsed=0,dashes=0,damageTaken=0,wardens=0,austins=0}={}){
+ const minutes=Math.max(.5,(Number(elapsed)||0)/60),dashRate=(Number(dashes)||0)/minutes,killRate=(Number(kills)||0)/minutes;
+ if(dashes>=8&&dashRate>=4)return 'agile';
+ if(austins>0||wardens>=3)return 'endure';
+ if(kills>=25&&killRate>=12)return 'rush';
+ if(elapsed>=180&&damageTaken<=55)return 'endure';
+ return 'balanced';
+}
+export function harvestFromRun({levels={},forms={},wardens=0,austins=0,score=0,kills=0,journey=1,elapsed=0,dashes=0,damageTaken=0}={}){
  const law=dominantLaw(levels),seeds=[];
+ const style=playStyleFromRun({kills,elapsed,dashes,damageTaken,wardens,austins});
  if(austins>0)seeds.push(GUARDIAN);
  // 문지기를 한 번이라도 넘었으면 완성된 씨앗, 못 넘었으면 조각만 남는다.
  if(law&&wardens>0)seeds.push(law);
  const fragments=law&&wardens<=0?1:0;
  const strongest=Object.entries(forms).filter(([id,level])=>Object.hasOwn(ALL_FORMS,id)&&Number.isFinite(level)&&level>0).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([id,level])=>({id,level}));
  const boss=austins>0?'austin':wardens>0?'warden':null;
- return {seeds,fragments,growth:1+Math.max(0,wardens)+Math.max(0,austins)*2,record:runRecord({law,forms:strongest,score,kills,journey,boss})};
+ return {seeds,fragments,style,growth:1+Math.max(0,wardens)+Math.max(0,austins)*2,record:runRecord({law,forms:strongest,score,kills,journey,boss,elapsed,dashes,damageTaken,style})};
 }
 export function addHarvest(garden,harvest){
  const g=normalizeGarden(garden);
- for(const id of harvest?.seeds||[])if(SEEDS[id])g.seeds[id]=Math.min(99,(g.seeds[id]||0)+1);
+ for(const id of harvest?.seeds||[])if(SEEDS[id]){
+  g.seeds[id]=Math.min(99,(g.seeds[id]||0)+1);
+  (g.traits[id]||(g.traits[id]=[])).push(validStyle(harvest?.style||harvest?.record?.style));
+  g.traits[id]=g.traits[id].slice(-g.seeds[id]);
+ }
  g.fragments=Math.min(999,g.fragments+(harvest?.fragments||0));
  const record=runRecord(harvest?.record);if(record)g.records=[record,...g.records].slice(0,MAX_RECORDS);
  g.harvests++;
@@ -112,20 +132,23 @@ export function gardenRecordLine(record){
  const r=runRecord(record);if(!r)return '';
  const build=r.forms.map(entry=>`${ALL_FORMS[entry.id].name} Lv.${entry.level}`).join(' + ')||(r.law?`${LAWS[r.law].name} 법칙`:'이름 없는 씨앗');
  const boss=r.boss==='austin'?'오스틴 격파':r.boss==='warden'?'문지기 돌파':'도전';
- return `여정 ${r.journey} · ${build} · ${boss} · ${r.kills} 처치${r.rare?' · 희귀 재융합':''}`;
+ return `여정 ${r.journey} · ${build} · ${boss} · ${r.kills} 처치 · ${PLAY_STYLES[r.style].label}${r.rare?' · 희귀 재융합':''}`;
 }
 // 조각 세 개로 원하는 씨앗 하나를 만든다(실패한 여정도 쌓이면 선택이 된다).
 export function craftSeed(garden,seedId){
  const g=normalizeGarden(garden);
  if(!SEEDS[seedId]||seedId===GUARDIAN||SEEDS[seedId].exclusive||g.fragments<FRAGMENTS_PER_SEED)return {garden:g,ok:false};
  g.fragments-=FRAGMENTS_PER_SEED;g.seeds[seedId]=Math.min(99,(g.seeds[seedId]||0)+1);
+ (g.traits[seedId]||(g.traits[seedId]=[])).push(g.records[0]?.style||'balanced');
  return {garden:g,ok:true};
 }
 export function plantSeed(garden,seedId,index){
  const g=normalizeGarden(garden);
  if(!SEEDS[seedId]||!(g.seeds[seedId]>0)||!(index>=0&&index<PLOTS)||g.plots[index])return {garden:g,ok:false};
  g.seeds[seedId]--;if(!g.seeds[seedId])delete g.seeds[seedId];
- g.plots[index]={seed:seedId,growth:0,branch:null,active:false};
+ const style=validStyle(g.traits[seedId]?.shift()||g.records.find(r=>r.law===seedId)?.style);
+ if(!g.traits[seedId]?.length)delete g.traits[seedId];
+ g.plots[index]={seed:seedId,growth:0,style,branch:PLAY_STYLES[style].branch,active:false};
  return {garden:g,ok:true};
 }
 export function uproot(garden,index){
@@ -136,18 +159,14 @@ export function uproot(garden,index){
 }
 export function chooseBranch(garden,index,branch){
  const g=normalizeGarden(garden),p=g.plots[index];
- if(!p||p.branch||!BRANCHES.includes(branch)||STAGES.indexOf(stageOf(p.growth))<STAGES.indexOf('mature'))return {garden:g,ok:false};
- p.branch=branch;
- return {garden:g,ok:true};
+ if(!p||!BRANCHES.includes(branch))return {garden:g,ok:false};
+ return {garden:g,ok:false,reason:'play-style'};
 }
 export function setActive(garden,index,on,slots=ACTIVE_SLOTS){
  const g=normalizeGarden(garden),p=g.plots[index];
  if(!p)return {garden:g,ok:false};
- if(!on){p.active=false;return {garden:g,ok:true};}
- const ready=p.branch&&STAGES.indexOf(stageOf(p.growth))>=STAGES.indexOf('mature');
- if(!ready||activePlants(g).length>=Math.min(MAX_ACTIVE_SLOTS,slots))return {garden:g,ok:false};
- p.active=true;
- return {garden:g,ok:true};
+ p.active=false;
+ return {garden:g,ok:false,reason:'cosmetic-only'};
 }
 export function growPlants(garden,points){
  const g=normalizeGarden(garden);
@@ -156,7 +175,7 @@ export function growPlants(garden,points){
  return g;
 }
 export function activePlants(garden,limit=MAX_ACTIVE_SLOTS){
- return normalizeGarden(garden).plots.map((p,index)=>({...p,index})).filter(p=>p.seed&&p.active).slice(0,limit);
+ return normalizeGarden(garden).plots.map((p,index)=>p?({...p,index}):null).filter(Boolean).slice(0,limit);
 }
 export function plantName(plant){
  const seed=SEEDS[plant?.seed];
@@ -166,7 +185,6 @@ export function plantName(plant){
 export function plantSummary(plant){
  const seed=SEEDS[plant?.seed];
  if(!seed)return '';
- if(!plant.branch)return STAGES.indexOf(stageOf(plant.growth))>=STAGES.indexOf('mature')?'갈래를 고를 수 있어요':`${STAGE_NAMES[stageOf(plant.growth)]} · 다음 단계까지 ${nextStagePoints(plant.growth)}`;
  return branchSummary(plant.seed,plant.branch,stageOf(plant.growth));
 }
 // '으로/로'를 받침에 맞춰 고른다(ㄹ 받침은 '로').
@@ -178,20 +196,9 @@ export function wayJosa(word){
 }
 export function branchSummary(seedId,branch,stage='mature'){
  const seed=SEEDS[seedId];if(!seed||!BRANCHES.includes(branch))return '';
- const strong=stage==='bloom',lawName=seed.law?LAWS[seed.law].name:null;
- if(seed.id===FOUNDER){
-  if(branch==='flower')return `첫 베타의 별빛이 ${strong?'찬란하게':'은은하게'} 반짝인다 · 전투 능력은 바뀌지 않는다`;
-  if(branch==='tree')return `함께 만든 첫 정원이 ${strong?'깊게':'조용히'} 기억된다 · 전투 능력은 바뀌지 않는다`;
-  return `개척자의 발자국이 ${strong?'선명하게':'가만히'} 이어진다 · 전투 능력은 바뀌지 않는다`;
- }
- if(seed.id===GUARDIAN){
-  if(branch==='flower')return `새 법칙 선택지가 ${strong?'두 번':'한 번'} 더 자주 열린다`;
-  if(branch==='tree')return `여정을 시작할 때 조합 목표를 ${strong?'두 개':'한 개'} 알려 준다`;
-  return `문지기 ${strong?4:5}번이면 오스틴이 나타난다`;
- }
- if(branch==='flower')return `${lawName} 법칙이 선택지에 ${strong?'훨씬':'더'} 자주 나온다`;
- if(branch==='tree')return `${lawName}${wayJosa(lawName)} 만드는 조합을 목표로 알려 준다`;
- return `${lawName} 유물이 ${strong?'가장 먼저':'더 자주'} 나온다`;
+ const strong=stage==='bloom',kind=branch==='flower'?'맹공':branch==='vine'?'민첩':'끈기';
+ const ending=strong?'선명하게 피어났다':'천천히 자라고 있다';
+ return `${kind}로 플레이한 여정의 기억이 ${ending} · 전투 능력에는 영향을 주지 않는다`;
 }
 // 정원 한가운데에 묻힌 것. 여정을 다녀오고 식물을 피울수록 조금씩 드러난다(설계 18~19장).
 export const CENTER=Object.freeze([
@@ -199,8 +206,8 @@ export const CENTER=Object.freeze([
  {id:'sleeping',name:'잠든 씨앗',glyph:'◍',need:{harvests:3},line:'아주 오래된 씨앗이 조용히 숨 쉬고 있다.'},
  {id:'roots',name:'뻗은 뿌리',glyph:'⑂',need:{harvests:8},line:'뿌리가 시계탑 쪽으로 뻗어 있다.'},
  {id:'oldtree',name:'고목',glyph:'⊥',need:{harvests:14,bloomed:1},line:'오스틴은 이 나무를 지키려고 시간을 재기 시작했다고 한다.'},
- {id:'greattree',name:'거대한 나무',glyph:'⨁',need:{harvests:20,bloomed:2},line:'나무가 깨어나 정원을 넓혔다. 데려갈 수 있는 식물이 한 칸 늘었다.',slots:1},
- {id:'awake',name:'깨어난 나무',glyph:'✺',need:{harvests:28,bloomed:3,austin:true},line:'오스틴이 기다린 것은 이 순간이었다. 시계탑 너머에 또 다른 세계가 있다.',slots:1}
+ {id:'greattree',name:'거대한 나무',glyph:'⨁',need:{harvests:20,bloomed:2},line:'여러 여정의 기억이 모여 정원의 중심 나무를 깨웠다.'},
+ {id:'awake',name:'깨어난 나무',glyph:'✺',need:{harvests:28,bloomed:3,austin:true},line:'오스틴이 지켜 온 기억이 정원 한가운데에서 꽃을 피웠다.'}
 ]);
 export function bloomedCount(garden){return normalizeGarden(garden).plots.filter(p=>p&&stageOf(p.growth)==='bloom').length;}
 function centerMet(need,{harvests,bloomed,austin}){
@@ -225,34 +232,12 @@ export function centerInfo(garden,options={}){
  }else hint='정원이 끝까지 깨어났다';
  return {index,...here,hint,bloomed,harvests:g.harvests};
 }
-// 거대한 나무가 자라면 데려갈 수 있는 칸이 늘어난다.
-export function activeSlots(garden,options={}){
- let slots=ACTIVE_SLOTS;
- for(let i=0;i<=centerStage(garden,options);i++)slots+=CENTER[i].slots||0;
- return Math.min(MAX_ACTIVE_SLOTS,slots);
-}
-// 다음 런에 넘길 효과. 힘을 더하지 않고 무엇이 나타날지를 바꾼다.
-export function gardenEffects(garden,slots=ACTIVE_SLOTS){
- const effects={lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives:[],slots};
- for(const p of activePlants(garden,slots)){
-  const seed=SEEDS[p.seed],stage=stageOf(p.growth),strong=stage==='bloom';
-  effects.actives.push({index:p.index,name:plantName(p),stage,summary:branchSummary(p.seed,p.branch,stage)});
-  if(seed.id===FOUNDER)continue;
-  if(seed.id===GUARDIAN){
-   if(p.branch==='flower')effects.freshBonus+=strong?2:1;
-   else if(p.branch==='tree')effects.guideCount+=strong?2:1;
-   else effects.austinEvery=Math.min(effects.austinEvery,strong?4:5);
-   continue;
-  }
-  if(p.branch==='flower'){
-   effects.lawWeights[seed.law]=(effects.lawWeights[seed.law]||1)+(strong?4:2);
-   // 꽃이 자란 법칙은 여정 중에 변이 선택지가 열린다(mutations.js).
-   if(!effects.mutationLaws.includes(seed.law))effects.mutationLaws.push(seed.law);
-  }
-  else if(p.branch==='tree'){if(!effects.formGuides.includes(seed.law))effects.formGuides.push(seed.law);}
-  else if(!effects.relicLaws.includes(seed.law))effects.relicLaws.push(seed.law);
- }
- return effects;
+// 예전 호출부 호환용. 정원에는 전투에 가져가는 활성 슬롯이 없다.
+export function activeSlots(){return PLOTS;}
+// 이전 저장과 호출부를 깨지 않기 위한 모양만 유지한다. 전투 효과는 항상 0이다.
+export function gardenEffects(garden){
+ const actives=activePlants(garden,PLOTS).map(p=>({index:p.index,name:plantName(p),stage:stageOf(p.growth),summary:branchSummary(p.seed,p.branch,stageOf(p.growth))}));
+ return {lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives,slots:PLOTS};
 }
 // 정원이 아무것도 바꾸지 않을 때와 같은 모양의 빈 효과.
 export const NO_EFFECTS=Object.freeze(gardenEffects(emptyGarden()));

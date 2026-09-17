@@ -82,16 +82,14 @@ assert.equal(parseMutationChoice('reflect'),null);assert.equal(parseMutationChoi
  assert.ok(RUNE.max<=8&&RUNE.life<=4&&MAX_SHOTS<=200,'화면에 남는 물건 수를 묶어 둔다');
 }
 
-// 정원의 꽃 갈래가 변이를 열어 준다(정원 → 런 연결).
+// 정원은 이제 플레이 기록 전용이다. 어떤 식물을 길러도 변이를 열지 않는다.
 {
  let g=addHarvest(emptyGarden(),{seeds:['reflect','chain']});
  g=plantSeed(g,'reflect',0).garden;g=plantSeed(g,'chain',1).garden;g=growPlants(g,STAGE_POINTS.mature);
- g=chooseBranch(g,0,'flower').garden;g=chooseBranch(g,1,'tree').garden;
- g=setActive(g,0,true).garden;g=setActive(g,1,true).garden;
  const fx=gardenEffects(g);
- assert.deepEqual(fx.mutationLaws,['reflect'],'꽃만 변이를 연다');
+ assert.deepEqual(fx.mutationLaws,[],'정원은 변이를 열지 않는다');
  const levels=new Map([['reflect',2],['chain',5]]);
- assert.deepEqual(eligibleMutationLaws({levels,mutations:new Map(),gardenLaws:fx.mutationLaws}),['reflect']);
+ assert.deepEqual(eligibleMutationLaws({levels,mutations:new Map(),gardenLaws:fx.mutationLaws}),[]);
 }
 
-console.log('변이: 아홉 종·조건·선택지 한 장·저장·전투 수치·정원 연결 통과');
+console.log('변이: 아홉 종·조건·선택지 한 장·저장·전투 수치·정원 분리 통과');

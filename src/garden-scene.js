@@ -41,11 +41,15 @@ function material(color,{rough=.75,emissive=0,intensity=.35,flat=false}={}){
 export function buildPlant(seedId,growth,branch,artKit=null){
  const group=new THREE.Group(),tint=seedColor(seedId),stage=stageOf(growth);
  if(artKit){
-  const tile=growthArtTile(growth,branch),plane=new THREE.Mesh(artKit.geometries[tile],artKit.material);
+  // 하나의 아틀라스와 지오메트리는 공유하고 재질의 색만 아주 작게 복제한다.
+  // 식물 여섯 그루의 드로우콜은 그대로이며, 법칙마다 다른 꽃빛을 읽을 수 있다.
+  const tile=growthArtTile(growth,branch),tinted=artKit.material.clone();
+  tinted.color.copy(new THREE.Color(tint).lerp(new THREE.Color(0xffffff),stage==='seed'?.7:.5));
+  const plane=new THREE.Mesh(artKit.geometries[tile],tinted);
   const size=stage==='seed'?1.12:stage==='sprout'?1.28:branch==='tree'?(stage==='bloom'?2.18:1.82):branch==='vine'?(stage==='bloom'?1.92:1.62):(stage==='bloom'?1.86:1.55);
    // Root-pivoted billboard: the plant stays seated in its painted bed while
    // turning toward the pitched garden camera.
-   plane.scale.set(size,size,1);plane.position.y=.025;plane.renderOrder=3;plane.userData.sharedGardenArt=true;group.add(plane);
+   plane.scale.set(size,size,1);plane.position.y=.025;plane.renderOrder=3;plane.userData.sharedGardenArt=true;plane.userData.gardenTint=true;group.add(plane);
   group.userData={seed:seedId,stage,branch:branch||null,sway:Math.random()*6.28,art:true};
   return group;
  }
@@ -190,7 +194,7 @@ export function createGardenScene(){
  function clearGroup(group){
   for(const child of [...group.children]){
    group.remove(child);
-   child.traverse(o=>{if((o.isMesh||o.isSprite)&&!o.userData.sharedGardenArt){o.geometry?.dispose();if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();}});
+   child.traverse(o=>{if(!(o.isMesh||o.isSprite))return;if(!o.userData.sharedGardenArt)o.geometry?.dispose();if(o.userData.gardenTint||!o.userData.sharedGardenArt){if(Array.isArray(o.material))o.material.forEach(m=>m.dispose());else o.material?.dispose();}});
   }
  }
  // 정원 상태가 바뀌면 식물을 다시 세운다(자주 일어나지 않는다).

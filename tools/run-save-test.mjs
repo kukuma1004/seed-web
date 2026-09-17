@@ -18,6 +18,8 @@ assert.ok(writeCheckpoint(storage,s));assert.deepEqual(readCheckpoint(storage),s
 }
 assert.equal(validCheckpoint({...s,hp:0}),false);assert.equal(validCheckpoint({...s,stage:8}),false);
 assert.equal(validCheckpoint({...s,rules:['bad']}),false);assert.equal(validCheckpoint({...s,mutated:['frost']}),false);
+assert.equal(validCheckpoint({...s,playDashes:24,playDamage:53}),true);
+assert.equal(validCheckpoint({...s,playDashes:-1}),false);assert.equal(validCheckpoint({...s,playDamage:1.5}),false);
 assert.equal(writeCheckpoint({setItem(){throw Error('quota');}},s),false);
 value='{broken';assert.equal(readCheckpoint(storage),null);assert.ok(clearCheckpoint(storage));assert.equal(readCheckpoint(storage),null);
 assert.deepEqual(replaceLaw(['reflect','split'],['reflect'],'reflect','frost'),{rules:['frost','split'],mutated:[]});
