@@ -76,6 +76,7 @@ import {setupMobileApp} from './mobile-app.js';
 import {bindPointerAction,createTouchControls} from './touch.js';
 import {createGameAudio} from './audio.js';
 import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBonusOffers,applyRunBonus,runBonusSummary,moveScale as runMoveScale,shotScale as runShotScale,powerScale as runPowerScale} from './run-bonuses.js';
+import {rankingTermsAccepted,setRankingTermsAccepted,blockRankingUser,visibleRanking,rankingReportMailto} from './ranking-safety.js';
 import {responsiveView} from './responsive-view.js';
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
 import {createMotion} from './motion.js';
@@ -274,7 +275,9 @@ function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))
 function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);
  // 거른 별명(name-filter.js)은 쓸 수 없다. 휴대폰에서는 안내 줄이 숨겨지므로 칸을 비우고 칸 안에 이유를 적는다.
  if(name&&isBadName(name)){playerName='';nameRejected=true;if(input){input.value='';input.placeholder='그 별명은 쓸 수 없어요';input.classList.add('need');input.focus();setText($('#name-hint'),'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요');}return false;}
- if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}playerName=saveName(runStorage,name);return true;}
+ if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}
+ const consent=$('#ranking-terms');if(!rankingTermsAccepted(runStorage)&&!consent?.checked){if(consent)consent.focus();setText($('#name-hint'),'명예의 전당 이용규칙을 읽고 동의해 주세요');return false;}
+ setRankingTermsAccepted(runStorage,true);playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);const seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length});
 function buildRoomBoundary(){buildArenaBoundary(arenaGroup,arena,mats);}
 function remember(kind,id){const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
@@ -640,7 +643,7 @@ function showIntro(){audio.setScene('garden');region='garden';startRegion='garde
    <button id="discoveries" class="menu-item"><strong>도감</strong><small>${profile.forms.length}/${Object.keys(FORMS).length} 발견</small></button>
    <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
   </div>
-  <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · 광고와 결제가 없는 게임입니다</p>
+  <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · <a href="https://kukuma1004.github.io/seed-web/terms.html" target="_blank" rel="noopener">랭킹 이용규칙</a> · 광고와 결제가 없는 게임입니다</p>
  </div>`;
  bindNameField();
  online.flush().catch(()=>0);
@@ -697,7 +700,7 @@ function showGift(){
 // 거른 별명을 쳤다가 다른 화면으로 넘어가도, 새 칸에 이유가 남게 한다.
 let nameRejected=false;
 function nameFieldHtml(){
- return `<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" class="${nameRejected?'need':''}" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="${nameRejected?'그 별명은 쓸 수 없어요':'별명 (최대 '+NAME_MAX+'자)'}" value="${escapeHtml(playerName)}"><small id="name-hint">${nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명'}</small></form>`;
+ return `<form id="name-form" class="name-field"><label for="player-name">내 이름</label><input id="player-name" class="${nameRejected?'need':''}" maxlength="${NAME_MAX}" autocomplete="off" enterkeyhint="go" placeholder="${nameRejected?'그 별명은 쓸 수 없어요':'별명 (최대 '+NAME_MAX+'자)'}" value="${escapeHtml(playerName)}"><small id="name-hint">${nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명'}</small><label class="ranking-consent"><input id="ranking-terms" type="checkbox" ${rankingTermsAccepted(runStorage)?'checked':''}><span><a href="${import.meta.env.BASE_URL}terms.html" target="_blank" rel="noopener">명예의 전당 이용규칙</a>에 동의</span></label></form>`;
 }
 function bindNameField(onSubmit=null){
  const input=$('#player-name');if(!input)return;
@@ -706,6 +709,7 @@ function bindNameField(onSubmit=null){
   if(n){nameRejected=false;playerName=saveName(runStorage,n);setText($('#name-hint'),'이 이름으로 모두의 랭킹에 올라가요 · 실명 대신 별명');}};
  // 칸을 벗어날 때 거른 별명이 남아 있으면 비우고 칸 안에 이유를 적는다(휴대폰에서는 안내 줄이 숨겨진다).
  input.onchange=()=>{const n=cleanName(input.value);if(n&&isBadName(n)){input.value='';input.placeholder='그 별명은 쓸 수 없어요';}};
+ const consent=$('#ranking-terms');if(consent)consent.onchange=()=>setRankingTermsAccepted(runStorage,consent.checked);
  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;if(onSubmit)onSubmit();else showDungeon();};
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
@@ -746,12 +750,18 @@ function rankBuild(entry,place){
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
-function rankingBoard(board,mine=null){
+function rankSafety(entry){
+ if(!entry?.uid||entry.uid===online.uid())return '';
+ return `<div class="rank-actions"><a href="${escapeHtml(rankingReportMailto(entry))}">신고</a><button type="button" data-block-ranker="${escapeHtml(entry.uid)}">이 사용자 숨기기</button></div>`;
+}
+function bindRankSafety(){document.querySelectorAll('[data-block-ranker]').forEach(button=>button.onclick=()=>{blockRankingUser(runStorage,button.dataset.blockRanker);button.closest('li')?.remove();$('#toast').textContent='이 사용자의 기록을 내 화면에서 숨겼어요';});}
+function rankingBoard(board,mine=null,onlineView=false){
  // Only the top ten are listed. My line appears below only when I am outside them (inside, it is highlighted in the list).
- const rank=mine?board.indexOf(mine)+1:0;
- const top=`<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(board,mine,10,rankBuild)}</section>`;
+ const shown=onlineView?visibleRanking(board,runStorage):board,shownMine=mine&&shown.includes(mine)?mine:null;
+ const rank=shownMine?shown.indexOf(shownMine)+1:0,details=onlineView?(entry,place)=>rankBuild(entry,place)+rankSafety(entry):rankBuild;
+ const top=`<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(shown,shownMine,10,details)}</section>`;
  if(rank<=10)return top;
- return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([mine],mine,1,rankBuild,rank)}</section>`;
+ return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([shownMine],shownMine,1,rankBuild,rank)}</section>`;
 }
 // 정원 화면: 정원은 3D 장면이 그리고, 오른쪽 상자에서 고른 대상을 다룬다.
 let gardenReturn=showIntro;
@@ -796,7 +806,7 @@ function showRanking(view='online'){
  if(view!=='online')return;
  online.flush().catch(()=>0).then(()=>online.top(500,playerName)).then(board=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),'상위 10명 · 10위 밖이면 내 순위를 아래에 표시');
-  const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box)box.innerHTML=rankingBoard(board,mine);
+  const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true);bindRankSafety();}
  }).catch(()=>{
   if(serial!==rankSerial)return;const status=$('#rank-status');if(status)status.innerHTML='랭킹 서버에 잠깐 연결하지 못했어요 · <b>모두의 기록은 서버에 그대로 있어요</b><br><button class="primary" id="rank-retry">다시 불러오기</button>';
   const retry=$('#rank-retry');if(retry)retry.onclick=()=>showRanking('online');
@@ -824,7 +834,7 @@ function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-sc
   if(serial!==rankSerial)return;
   const status=$('#rank-status'),box=$('#rank-board');
   if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 상위권 밖이에요';
-  const mine=r.board[(r.rank||r.bestRank)-1]||r.board.find(e=>e.uid===online.uid()&&e.name===name)||null;if(box)box.innerHTML=rankingBoard(r.board,mine);
+  const mine=r.board[(r.rank||r.bestRank)-1]||r.board.find(e=>e.uid===online.uid()&&e.name===name)||null;if(box){box.innerHTML=rankingBoard(r.board,mine,true);bindRankSafety();}
  }).catch(()=>{
   if(serial!==rankSerial)return;
   const status=$('#rank-status');if(status)status.innerHTML='지금은 랭킹 서버에 연결하지 못했어요 · 이 기록은 기기에 보관했다가 다음에 자동으로 올라가요<br>아래는 <b>이 기기</b> 기록이에요 · 모두의 기록은 서버에 그대로 있어요';
