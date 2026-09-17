@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LAWS} from '../src/laws.js';
 import {FORMS,formLevel,formStats,formUpgradeLine} from '../src/forms.js';
-import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,orbitPose} from '../src/form-combat.js';
+import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,PRISM_CHILD_FALLOFF,orbitPose} from '../src/form-combat.js';
 import {blocksShield} from '../src/shield.js';
 
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
@@ -51,6 +51,8 @@ for(const id of Object.keys(FORMS)){
 
 // Prism: shards split on walls, the first shard passes its first enemy, and the swarm is finite.
 {
+ assert.equal(PRISM_CHILD_FALLOFF.base*2,1.4,'ordinary prism keeps its lively wall growth');
+ assert.equal(PRISM_CHILD_FALLOFF.infinite*2,1,'Infinite Prism conserves total damage when one shard becomes two');
  const target=enemy(2),f=fixture([target],{boundary:walls});f.combat.set('prism');
  f.combat.fire(vec(),vec(1));let peak=0;
  for(let i=0;i<400;i++){f.combat.update(.01);peak=Math.max(peak,f.combat.state().bolts);}

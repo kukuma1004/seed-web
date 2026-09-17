@@ -74,8 +74,14 @@ export function roomExitCheckpoint(entry,{hp,inventory}={}){
  const currentHp=Number.isFinite(hp)&&hp>0?hp:entry.hp;
  return {...entry,hp:Math.max(.01,Math.min(entry.hp,currentHp)),inventory:spent};
 }
-// Each journey after a warden is faster. The old region choice is gone; saved regions only name the place.
-export function difficulty(cycle){return {hp:1+Math.min(cycle,20)*.24,speed:Math.min(1.9,1+cycle*.08),bossHp:1+Math.min(cycle,20)*.3};}
+// Each journey after a warden is faster. Speed reaches its readable cap, while
+// health keeps growing gently after journey 20. Player evolution levels never
+// stop growing, so capping enemy health made very long runs progressively
+// easier and let the score multiplier rise without resistance.
+export function difficulty(cycle){
+ const c=Math.max(0,Number(cycle)||0),early=Math.min(c,20),late=Math.max(0,c-20);
+ return {hp:1+early*.24+late*.16,speed:Math.min(1.9,1+c*.08),bossHp:1+early*.3+late*.2};
+}
 export function replaceLaw(rules,mutated,oldId,newId){
  if(!rules.includes(oldId)||rules.includes(newId)||!Object.hasOwn(LAWS,newId))throw new Error('Invalid law replacement');
  return {rules:rules.map(id=>id===oldId?newId:id),mutated:mutated.filter(id=>id!==oldId)};

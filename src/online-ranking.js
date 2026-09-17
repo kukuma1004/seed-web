@@ -12,14 +12,16 @@ export const FIREBASE=Object.freeze({
 export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v2',RUNS_PATH='seedRanking/runs',BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
-export const SEASON=Object.freeze({id:1,name:'시즌 1 · 정시파이터 오스틴',start:1789396500000});
+export const SEASON=Object.freeze({id:2,name:'시즌 2 · 균형의 정원',start:1789662000000});
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start;
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
 export function pushKeyPrefix(ms){let n=Math.floor(ms),out='';for(let i=0;i<8;i++){out=PUSH_CHARS[n%64]+out;n=Math.floor(n/64);}return out;}
 const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 export function validRun(e){
- return Boolean(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at));
+ if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)))return false;
+ const multiplier=1+e.cycle*.5;
+ return e.kills<=(e.cycle+1)*160&&e.score<=(e.kills+12)*50*multiplier&&e.time>=e.cycle*15&&e.time>=e.kills/6;
 }
 // One line per player (same device and same name keep only their best), highest first, earliest wins ties.
 export function bestPerPlayer(data,limit=20,season=SEASON){

@@ -58,6 +58,8 @@ function fakeFirebase({clock}){
  assert.deepEqual(board.map(e=>e.id),['d','b','c'],'best per device+name, ties go to the earlier run, invalid rows dropped');
  assert.equal(bestPerPlayer(null).length,0);assert.equal(bestPerPlayer(data,1,null).length,1);
  assert.ok(!validRun({...data.a,stage:5})&&!validRun({...data.a,score:0}));
+ assert.ok(!validRun({...data.a,cycle:2,kills:1000,time:90}),'impossible old kill counts are hidden even if they predate the database rules');
+ assert.ok(!validRun({...data.a,cycle:2,kills:20,time:2}),'impossible kill speed is hidden');
 }
 
 // Sign-in, submit, board and rank; the anonymous player is reused across page loads.
@@ -65,27 +67,27 @@ function fakeFirebase({clock}){
  const clock={t:T0+1_000_000},fb=fakeFirebase({clock}),storage=memory();
  const ranking=createOnlineRanking({storage,fetchImpl:fb.fetchImpl,now:()=>clock.t});
  const base={cycle:1,stage:3,kills:40,time:300};
- const first=await ranking.submit({...base,name:'  민준 ',score:4200});
+ const first=await ranking.submit({...base,name:'  민준 ',score:1800});
  assert.equal(first.rank,1);assert.equal(first.bestRank,1);assert.equal(first.board[0].name,'민준');assert.equal(fb.signUps,1);
  assert.ok(JSON.parse(storage.getItem(AUTH_KEY)).refreshToken,'the refresh token is kept so the same player returns');
- const lower=await ranking.submit({...base,name:'민준',score:3000});
+ const lower=await ranking.submit({...base,name:'민준',score:1200});
  assert.equal(lower.rank,0,'a lower run of the same player is not a new line');assert.equal(lower.bestRank,1);
  // Another device.
  const other=createOnlineRanking({storage:memory(),fetchImpl:fb.fetchImpl,now:()=>clock.t});
- const second=await other.submit({...base,name:'서연',score:9000});
+ const second=await other.submit({...base,name:'서연',score:3600});
  assert.equal(second.rank,1);assert.deepEqual(second.board.map(e=>e.name),['서연','민준']);
  // A sibling on the first device keeps a separate line.
- const sibling=await ranking.submit({...base,name:'하준',score:5000});
+ const sibling=await ranking.submit({...base,name:'하준',score:2400});
  assert.equal(sibling.rank,2);assert.deepEqual(sibling.board.map(e=>e.name),['서연','하준','민준']);
  // Page reload after the token expired: refresh, not a new anonymous user.
  clock.t+=2*3600e3;
  const reloaded=createOnlineRanking({storage,fetchImpl:fb.fetchImpl,now:()=>clock.t});
- const again=await reloaded.submit({...base,name:'민준',score:12000});
+ const again=await reloaded.submit({...base,name:'민준',score:3800});
  assert.equal(fb.signUps,2,'no extra sign-up after reload');assert.ok(fb.refreshes>=1);assert.equal(again.rank,1);assert.equal(reloaded.uid(),ranking.uid());
  // Cleanup works for the writer only.
  await assert.rejects(other.remove(again.id),e=>e.status===401);
  assert.ok(await reloaded.remove(again.id));assert.ok(!fb.runs[again.id]);
- assert.equal((await reloaded.top()).find(e=>e.name==='민준').score,4200,'the older best shows again after removal');
+ assert.equal((await reloaded.top()).find(e=>e.name==='민준').score,1800,'the older best shows again after removal');
 }
 
 // Failures surface as errors so the game can fall back to this device's board.
@@ -106,7 +108,7 @@ function fakeFirebase({clock}){
 // and fill the whole score query; push keys find every run of this season.
 {
  const clock={t:T0-50_000},fb=fakeFirebase({clock}),ranking=createOnlineRanking({storage:memory(),fetchImpl:fb.fetchImpl,now:()=>clock.t});
- for(let i=0;i<120;i++)await ranking.submit({name:'옛기록'+(i%3),score:900000+i,cycle:9,stage:4,kills:999,time:999});
+ for(let i=0;i<120;i++)await ranking.submit({name:'옛기록'+(i%3),score:250000+i,cycle:9,stage:4,kills:999,time:999});
  clock.t=T0+1000;
  const fresh=await ranking.submit({name:'새시즌',score:120,cycle:0,stage:1,kills:12,time:60});
  assert.deepEqual(fresh.board.map(e=>e.name),['새시즌'],'only this season is on the board');assert.equal(fresh.rank,1);

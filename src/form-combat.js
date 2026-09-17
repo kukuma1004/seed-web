@@ -1,6 +1,12 @@
 import * as THREE from 'three';
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
+
+// Ordinary prism is allowed to grow as it finds walls. Infinite Prism already
+// adds another generation, a larger shard pool and a permanent damage boost,
+// so its child shards conserve the parent's damage instead of multiplying it
+// by 1.4 on every split (two children at 70% each).
+export const PRISM_CHILD_FALLOFF=Object.freeze({base:.7,infinite:.5});
 import {normalizeTheme,themeColor} from './themes.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -438,7 +444,8 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     const direction=b.dir.clone();
     const e=enemies().find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
     if(e){
-     const landed=support(e,S.damage*Math.pow(.7,b.gen),{kind:'prism',direction});
+     const falloff=statId==='infiniteprism'?PRISM_CHILD_FALLOFF.infinite:PRISM_CHILD_FALLOFF.base;
+     const landed=support(e,S.damage*Math.pow(falloff,b.gen),{kind:'prism',direction});
      // The first shard passes through one enemy so it can still reach a wall and multiply.
      if(landed&&b.gen===0&&b.passed.size===0)b.passed.add(e);else b.life=0;
     }

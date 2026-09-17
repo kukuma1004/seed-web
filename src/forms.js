@@ -242,7 +242,7 @@ const AWAKEN_BOOST=Object.freeze({
  mirrorguard:s=>({mirrors:s.mirrors+2,radius:s.radius+.2})
 });
 // Measured against the fusion plus its best solo evolution at equal levels (tools/active-balance-test.mjs).
-const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:2.2,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
+const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:1.8,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
 function awakenStats(id,s){
  const boosted={...s,...(AWAKEN_BOOST[id]?.(s)||{}),awakened:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=AWAKEN.interval;
