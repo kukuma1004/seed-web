@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
-import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,baseSlideFor} from '../src/stadium.js';
+import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,baseSlideFor} from '../src/stadium.js';
 // Act 2 is open to the closed beta on both the hosted web build and Android app.
 assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
 assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
@@ -26,6 +26,7 @@ assert.equal(isAct2(ACT2_REGION),true);assert.equal(actOf('garden'),1);assert.eq
 // Rooms: five stadium rooms, minions and covers inside their arenas, no star room, traps or turrets.
 assert.equal(STADIUM_ROOMS.length,ROOMS.length);
 {const clay=fs.statSync(new URL('../public/'+STADIUM_CLAY_ART,import.meta.url));assert.ok(clay.size>20000&&clay.size<65536,'shared clay texture stays detailed and mobile-light');}
+{const trim=fs.statSync(new URL('../public/'+STADIUM_TRIM_ART,import.meta.url));assert.ok(trim.size>20000&&trim.size<65536,'one stadium trim atlas stays detailed and mobile-light');}
 STADIUM_ROOMS.forEach((room,stage)=>{
  assert.equal(roomFor(stage,0,'stadium'),room);assert.equal(roomFor(stage,1,'stadium'),room);
  const arena=arenaFor(stage,1,'stadium');assert.notEqual(arena.shape,'star');

@@ -47,5 +47,5 @@ assert.match(auth,/browserLocalPersistence[\s\S]*browserSessionPersistence/,'웹
 assert.match(auth,/onAuthStateChanged\(webAuth/,'다른 탭이나 팝업에서 바뀐 로그인 상태를 즉시 반영해야 합니다.');
 assert.match(auth,/prompt:'select_account'/,'관리자와 학생 계정이 함께 있는 브라우저에서 계정을 다시 고를 수 있어야 합니다.');
 const worker=fs.readFileSync(new URL('../public/sw.js',import.meta.url),'utf8');
-assert.match(worker,/seed-play-v13/,'오래 열린 설치형 웹앱도 최신 경기장 질감과 전투 빌드로 교체되어야 합니다.');
+assert.match(worker,/seed-play-v14/,'오래 열린 설치형 웹앱도 최신 경기장 질감과 전투 분석 빌드로 교체되어야 합니다.');
 console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');

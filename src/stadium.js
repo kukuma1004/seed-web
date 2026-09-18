@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
 export const STADIUM_CLAY_ART='assets/stadium-clay-hd-v1.webp';
+export const STADIUM_TRIM_ART='assets/stadium-trim-atlas-v1.webp';
 export const STADIUM_BASES=Object.freeze([
  Object.freeze({x:0,z:4.2,next:1}),Object.freeze({x:3.6,z:.6,next:2}),
  Object.freeze({x:0,z:-3,next:3}),Object.freeze({x:-3.6,z:.6,next:0})
@@ -22,6 +23,9 @@ function clayTexture(mobile=false){
  const t=new THREE.TextureLoader().load(import.meta.env.BASE_URL+STADIUM_CLAY_ART);
  t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.center.set(.5,.5);t.repeat.set(2.35,2.35);t.anisotropy=mobile?2:6;return t;
 }
+function trimTexture(mobile=false){const t=new THREE.TextureLoader().load(import.meta.env.BASE_URL+STADIUM_TRIM_ART);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=mobile?2:6;return t;}
+const ATLAS_QUADS={fence:[0,.5,.5,.5],dugout:[.5,.5,.5,.5],crate:[0,0,.5,.5],rail:[.5,0,.5,.5]};
+function atlasUV(geometry,id){const uv=geometry.attributes.uv,q=ATLAS_QUADS[id];for(let i=0;i<uv.count;i++)uv.setXY(i,q[0]+uv.getX(i)*q[2],q[1]+uv.getY(i)*q[3]);uv.needsUpdate=true;return geometry;}
 // One merged chalk mesh changes with the room. It makes every silhouette readable without
 // adding textures or draw calls: plate lanes, an infield diamond, ball seams, glove webbing
 // and the outfield arcs of the final ballpark.
@@ -70,6 +74,7 @@ function stadiumMarkings(arena){
 export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const group=new THREE.Group();group.name='act2-stadium';group.visible=false;scene.add(group);
  const floorMat=new THREE.MeshStandardMaterial({map:clayTexture(mobile),color:0xffffff,roughness:.9,metalness:0});
+ const trimMat=new THREE.MeshStandardMaterial({map:trimTexture(mobile),color:0xffffff,roughness:.72,metalness:.12});
  const track=new THREE.Mesh(new THREE.PlaneGeometry(23.2,19.2).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x172537,roughness:.92,metalness:.04}));track.position.y=.107;track.receiveShadow=true;group.add(track);
  const floor=new THREE.Mesh(stadiumFloorGeometry(null),floorMat);floor.receiveShadow=true;group.add(floor);
  const chalk=new THREE.Mesh(stadiumMarkings(null),new THREE.MeshBasicMaterial({color:0xf4efe4,transparent:true,opacity:.82,depthWrite:false,forceSinglePass:true}));group.add(chalk);
@@ -83,10 +88,10 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const lampMesh=new THREE.Mesh(mergeParts(lamps),new THREE.MeshBasicMaterial({color:new THREE.Color(0xfff6dc).multiplyScalar(2.4),toneMapped:false}));group.add(lampMesh);
  // A merged low stand and fence hide the old garden rim while staying cheap on low-end phones.
  const stadiumShell=[];
- for(const x of [-9,-6,-3,0,3,6,9])for(let row=0;row<3;row++)stadiumShell.push(new THREE.BoxGeometry(2.65,.38,1.05).translate(x,.38+row*.42,-9.45-row*.42));
- for(const x of [-10.65,10.65])for(const z of [-6,-2,2,6])stadiumShell.push(new THREE.BoxGeometry(.22,1.35,3.75).translate(x,.7,z));
- stadiumShell.push(new THREE.BoxGeometry(21.6,.16,.18).translate(0,1.35,-8.85));
- const shell=new THREE.Mesh(mergeParts(stadiumShell),new THREE.MeshStandardMaterial({color:0x263442,roughness:.82,metalness:.18}));shell.castShadow=shell.receiveShadow=true;group.add(shell);
+ for(const x of [-9,-6,-3,0,3,6,9])for(let row=0;row<3;row++)stadiumShell.push(atlasUV(new THREE.BoxGeometry(2.65,.38,1.05),'dugout').translate(x,.38+row*.42,-9.45-row*.42));
+ for(const x of [-10.65,10.65])for(const z of [-6,-2,2,6])stadiumShell.push(atlasUV(new THREE.BoxGeometry(.22,1.35,3.75),'fence').translate(x,.7,z));
+ stadiumShell.push(atlasUV(new THREE.BoxGeometry(21.6,.16,.18),'rail').translate(0,1.35,-8.85));
+ const shell=new THREE.Mesh(mergeParts(stadiumShell),trimMat);shell.castShadow=shell.receiveShadow=true;group.add(shell);
  const flagGeo=new THREE.PlaneGeometry(.9,.55).translate(.45,0,0),flagMat=new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,roughness:.8});
  const flagXs=[-8,-4.8,-1.6,1.6,4.8,8],flags=new THREE.InstancedMesh(flagGeo,flagMat,flagXs.length),pole=new THREE.Mesh(mergeParts(flagXs.map(x=>new THREE.CylinderGeometry(.03,.03,2.2,5).translate(x,1.1,-8.9))),towerMesh.material);
  flagXs.forEach((x,i)=>flags.setColorAt(i,new THREE.Color(i%2?0xd8a63a:0xc2352b)));flags.instanceColor.needsUpdate=true;group.add(flags,pole);
@@ -116,7 +121,7 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const night={background:new THREE.Color('#0d1a2a'),fog:new THREE.Color('#122236'),fogDensity:.014};
  let active=false,baseEnabled=false,relayEnabled=false,relayClock=0,relayHitPass=-1,relayWarnPass=-1;
  return {
-  group,
+  group,coverMaterial:trimMat,boundaryMaterials:{dark:track.material,armor:trimMat,stone:trimMat},
   setActive(on,arena=null,{stage=0,bossRoom=false}={}){
    if(on&&arena){
     floor.geometry=stadiumFloorGeometry(arena);chalk.geometry=stadiumMarkings(arena);chalk.scale.setScalar(1);

@@ -23,7 +23,7 @@ const growthBar=growth=>{
 
 // 정원 화면의 오른쪽 상자. 정원 자체는 3D 장면(garden-scene.js)이 그리고,
 // 여기서는 고른 대상에 따라 할 수 있는 일만 보여 준다.
-export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClose,austinDefeated=false}){
+export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClose,onTraining,austinDefeated=false}){
  const planted=garden.plots.filter(Boolean).length,center=centerInfo(garden,{austinDefeated});
  const mastery=gardenMastery(garden),masteryRows=MASTERY_KEYS.map(id=>`<span><b>${escape(MASTERY[id].name)}</b><em>+${(mastery.points[id]/10).toFixed(1)}%</em></span>`).join('');
  const owned=Object.entries(garden.seeds).filter(([,n])=>n>0);
@@ -64,11 +64,12 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
   <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
   <section class="garden-mastery"><div><strong>오스틴의 기억</strong><small>격파할 때마다 무작위 능력 +0.1%</small></div><p>${masteryRows}</p><small>누적 ${mastery.total}/${MASTERY_TOTAL_CAP} · 능력별 최대 3%</small></section>
   <div class="panel-body">${body}</div>
-  <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><button class="primary" id="garden-close">돌아가기</button></footer>
+  <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><div><button class="ghost small" id="garden-training">훈련장</button><button class="primary" id="garden-close">돌아가기</button></div></footer>
  </aside>`;
 
  const update=next=>{onChange(next);};
  root.querySelector('#garden-close').onclick=onClose;
+ root.querySelector('#garden-training').onclick=()=>onTraining?.();
  for(const button of root.querySelectorAll('[data-plant]'))
   button.onclick=()=>{const r=plantSeed(garden,button.dataset.plant,selection.index);if(r.ok)update(r.garden);};
  for(const button of root.querySelectorAll('[data-craft]'))

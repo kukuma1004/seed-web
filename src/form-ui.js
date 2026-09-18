@@ -44,7 +44,7 @@ export function secondFusionCard(option,forms,level,discovered=false,index=0){
 export function discoveryBook(profile,titles=null){
  const total=Object.keys(ALL_FORMS).length;
  // Every entry opens its page: a found evolution shows its whole description, an unfound one only its recipe.
- const entry=f=>{const known=profile.forms.includes(f.id);return `<button type="button" class="form-card book-entry ${known?'':'unknown'}" data-book="${f.id}" data-known="${known?1:0}" aria-label="${known?f.name:'아직 발견하지 못한 진화'} 자세히 보기">${formArt(f.id,'form-portrait')}<strong>${known?f.name:'？？？'}</strong><p>${f.pair}</p></button>`;};
+ const entry=f=>{const known=profile.forms.includes(f.id),best=profile.records?.[f.id];return `<button type="button" class="form-card book-entry ${known?'':'unknown'}" data-book="${f.id}" data-known="${known?1:0}" data-best="${best?.dps||0}" data-peak="${best?.peak||0}" data-duration="${best?.duration||0}" aria-label="${known?f.name:'아직 발견하지 못한 진화'} 자세히 보기">${formArt(f.id,'form-portrait')}<strong>${known?f.name:'？？？'}</strong><p>${f.pair}</p>${best?`<small class="book-best">개인 최고 ${Math.round(best.dps)} DPS</small>`:''}</button>`;};
  const goal=titles?.next?`<p class="codex-goal">도감 ${titles.next.need}개 더 발견하면 ${titles.next.reward}</p>`:'';
  const held=titles?.titles?.length?`<p class="codex-goal">${titles.titles.map(t=>`${t.name} · ${t.perk}`).join('<br>')}</p>`:'';
  const section=(title,list)=>`<h3 class="book-title">${title} <span>${list.filter(f=>profile.forms.includes(f.id)).length}/${list.length}</span></h3><div class="form-cards book">${list.map(entry).join('')}</div>`;
@@ -73,7 +73,7 @@ const RECIPES={
  second:f=>`${f.parts.map(id=>ALL_FORMS[id].name).join(' + ')} (두 완성 진화를 다시 한 칸으로 합치기)`
 };
 // The page for one codex entry.
-export function bookPage(id,known=true){
+export function bookPage(id,known=true,best=null){
  const f=ALL_FORMS[id];if(!f)return '';
  const kind=kindOf(f),recipe=RECIPES[kind](f),sig=SIGNATURES[id];
  if(!known)return `<div class="book-detail-card unknown" role="dialog" aria-modal="true" aria-label="아직 발견하지 못한 진화"><div class="book-detail-art">${formArt(id,'form-portrait')}</div><div class="book-detail-text"><small>${KIND_NAMES[kind]}</small><h3>？？？</h3><p class="book-recipe">얻는 법 · ${recipe}</p><p>아직 발견하지 못했어요. 한 번 얻으면 설명이 열립니다.</p></div><button type="button" class="primary book-detail-close">닫기</button></div>`;
@@ -84,7 +84,8 @@ export function bookPage(id,known=true){
   f.awakened?`<p>10초마다 여는 기술을 스스로 씁니다${f.twin?' (두 진화가 번갈아)':''}.</p>`:'',
   f.synergy?`<p class="book-synergy">${f.synergy.name} · 두 공격이 ${f.synergy.window}초 안에 같은 적을 맞히면 추가 피해 +${Math.round(f.synergy.bonus*100)}%</p>`:'',
   f.passive?'<p>공격 버튼 없이 씨앗 곁에서 스스로 싸웁니다.</p>':'',
-  sig?`<p class="book-signature">궁극기 · <strong>${sig.name}</strong><br>${sig.desc}</p>`:''
+  sig?`<p class="book-signature">궁극기 · <strong>${sig.name}</strong><br>${sig.desc}</p>`:'',
+  best?.dps?`<p class="book-personal"><strong>개인 최고 ${Math.round(best.dps)} DPS</strong><br>최고 1초 ${Math.round(best.peak)} · 측정 ${best.duration.toFixed(1)}초</p>`:'<p class="book-personal empty">전투에서 사용하면 개인 최고기록이 열립니다.</p>'
  ].filter(Boolean).join('');
  return `<div class="book-detail-card" role="dialog" aria-modal="true" aria-label="${f.name}"><div class="book-detail-art">${formArt(id,'form-portrait')}</div><div class="book-detail-text"><small>${KIND_NAMES[kind]} · ${f.pair}</small><h3>${f.name}</h3>${lines}<p class="book-recipe">얻는 법 · ${recipe}</p></div><button type="button" class="primary book-detail-close">닫기</button></div>`;
 }
@@ -96,7 +97,8 @@ if(typeof document!=='undefined'&&!document.__seedBookPages){
   const panel=document.querySelector('#book-detail');if(!panel)return;
   if(event.target.closest?.('.book-detail-close')||event.target===panel){close(panel);return;}
   const entry=event.target.closest?.('[data-book]');if(!entry)return;
-  panel.innerHTML=bookPage(entry.dataset.book,entry.dataset.known==='1');panel.hidden=false;panel.querySelector('.book-detail-close')?.focus({preventScroll:true});
+  const best={dps:Number(entry.dataset.best)||0,peak:Number(entry.dataset.peak)||0,duration:Number(entry.dataset.duration)||0};
+  panel.innerHTML=bookPage(entry.dataset.book,entry.dataset.known==='1',best);panel.hidden=false;panel.querySelector('.book-detail-close')?.focus({preventScroll:true});
  });
  document.addEventListener('keydown',event=>{const panel=document.querySelector('#book-detail');if(event.key==='Escape'&&panel&&!panel.hidden){event.stopPropagation();close(panel);}},true);
 }

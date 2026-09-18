@@ -218,13 +218,15 @@ export function safeArenaSpawn(player,covers,index,arena=RECT) {
 
 // Four draw calls, shared materials and no added textures. The inside edge of
 // every raised wedge is the exact playable radius; square courtyard stays outside.
-export function buildArenaBoundary(group,arena,materials) {
-  if(arena.shape==='poly'){buildPolygonBoundary(group,arena,materials);return;}
+const STADIUM_ATLAS={fence:[0,.5,.5,.5],rail:[.5,0,.5,.5]};
+function stadiumUV(geometry,id){const uv=geometry.attributes.uv,q=STADIUM_ATLAS[id];if(!uv||!q)return geometry;for(let i=0;i<uv.count;i++)uv.setXY(i,q[0]+uv.getX(i)*q[2],q[1]+uv.getY(i)*q[3]);uv.needsUpdate=true;return geometry;}
+export function buildArenaBoundary(group,arena,materials,stadium=false) {
+  if(arena.shape==='poly'){buildPolygonBoundary(group,arena,materials,stadium);return;}
   if(arena.shape!=='circle')return;
   const radius=arena.radius;
   const floor=new THREE.Mesh(new THREE.CircleGeometry(radius,96),materials.dark);
   floor.rotation.x=-Math.PI/2;floor.position.y=.105;floor.receiveShadow=true;group.add(floor);
-  const band=new THREE.Mesh(new THREE.RingGeometry(radius-.19,radius,96),materials.armor);
+  const band=new THREE.Mesh(stadiumUV(new THREE.RingGeometry(radius-.19,radius,96),stadium?'rail':null),materials.armor);
   band.rotation.x=-Math.PI/2;band.position.y=.12;band.receiveShadow=true;group.add(band);
   const wedges=[];
   for(let i=0;i<48;i++) {
@@ -235,9 +237,9 @@ export function buildArenaBoundary(group,arena,materials) {
     s.lineTo(Math.cos(b)*radius,Math.sin(b)*radius);
     s.absarc(0,0,radius,b,a,true);s.closePath();wedges.push(s);
   }
-  const rim=new THREE.Mesh(new THREE.ExtrudeGeometry(wedges,{depth:.46,bevelEnabled:false,curveSegments:3,steps:1}),materials.stone);
+  const rim=new THREE.Mesh(stadiumUV(new THREE.ExtrudeGeometry(wedges,{depth:.46,bevelEnabled:false,curveSegments:3,steps:1}),stadium?'fence':null),materials.stone);
   rim.rotation.x=-Math.PI/2;rim.position.y=.12;rim.castShadow=rim.receiveShadow=true;group.add(rim);
-  const marks=new THREE.InstancedMesh(new THREE.BoxGeometry(.055,.015,.6),materials.armor,12),matrix=new THREE.Matrix4();
+  const marks=new THREE.InstancedMesh(stadiumUV(new THREE.BoxGeometry(.055,.015,.6),stadium?'rail':null),materials.armor,12),matrix=new THREE.Matrix4();
   for(let i=0;i<12;i++) {
     const a=i*Math.PI/6;matrix.makeRotationY(a);matrix.setPosition(Math.sin(a)*(radius-.7),.125,Math.cos(a)*(radius-.7));marks.setMatrixAt(i,matrix);
   }
@@ -247,22 +249,22 @@ export function buildArenaBoundary(group,arena,materials) {
 // Drawn entirely in code, four draw calls like the round room: dark floor in the star's outline,
 // a thin brass inlay just inside the wall, a raised stone wall outside it, and a stud on every corner.
 // The inside face of the wall is exactly the playable edge.
-function buildPolygonBoundary(group,arena,materials) {
+function buildPolygonBoundary(group,arena,materials,stadium=false) {
   const points=arena.points,edges=polygonEdges(points),v=(x,z)=>new THREE.Vector2(x,-z);
   const outline=new THREE.Shape(points.map(([x,z])=>v(x,z)));
   const floor=new THREE.Mesh(new THREE.ShapeGeometry(outline),materials.dark);
   floor.rotation.x=-Math.PI/2;floor.position.y=.105;floor.receiveShadow=true;group.add(floor);
   const quads=(depth,inward)=>edges.map(e=>{const k=inward?1:-1,ox=e.nx*depth*k,oz=e.nz*depth*k;
     return new THREE.Shape([v(e.ax,e.az),v(e.bx,e.bz),v(e.bx+ox,e.bz+oz),v(e.ax+ox,e.az+oz)]);});
-  const band=new THREE.Mesh(new THREE.ShapeGeometry(quads(.19,true)),materials.armor);
+  const band=new THREE.Mesh(stadiumUV(new THREE.ShapeGeometry(quads(.19,true)),stadium?'rail':null),materials.armor);
   band.rotation.x=-Math.PI/2;band.position.y=.12;band.receiveShadow=true;group.add(band);
   // Outward wall pieces leave a wedge gap at every outward corner; a triangle fills it.
   const wall=quads(.55,false);
   edges.forEach((e,i)=>{const prev=edges[(i+edges.length-1)%edges.length],turn=prev.dx*e.dz-prev.dz*e.dx,convex=(prev.nx*e.dx+prev.nz*e.dz)<0;
     if(convex&&Math.abs(turn)>1e-9)wall.push(new THREE.Shape([v(e.ax,e.az),v(e.ax-prev.nx*.55,e.az-prev.nz*.55),v(e.ax-e.nx*.55,e.az-e.nz*.55)]));});
-  const rim=new THREE.Mesh(new THREE.ExtrudeGeometry(wall,{depth:.46,bevelEnabled:false,curveSegments:1,steps:1}),materials.stone);
+  const rim=new THREE.Mesh(stadiumUV(new THREE.ExtrudeGeometry(wall,{depth:.46,bevelEnabled:false,curveSegments:1,steps:1}),stadium?'fence':null),materials.stone);
   rim.rotation.x=-Math.PI/2;rim.position.y=.12;rim.castShadow=rim.receiveShadow=true;group.add(rim);
-  const studs=new THREE.InstancedMesh(new THREE.CylinderGeometry(.13,.16,.08,10),materials.armor,points.length),matrix=new THREE.Matrix4();
+  const studs=new THREE.InstancedMesh(stadiumUV(new THREE.CylinderGeometry(.13,.16,.08,10),stadium?'rail':null),materials.armor,points.length),matrix=new THREE.Matrix4();
   edges.forEach((e,i)=>{const prev=edges[(i+edges.length-1)%edges.length],nx=e.nx+prev.nx,nz=e.nz+prev.nz,length=Math.hypot(nx,nz)||1;
     matrix.makeTranslation(e.ax+nx/length*.32,.15,e.az+nz/length*.32);studs.setMatrixAt(i,matrix);});
   studs.receiveShadow=true;group.add(studs);

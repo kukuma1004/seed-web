@@ -59,10 +59,12 @@ const union=(a,b,limit=100)=>[...new Set([...(a||[]),...(b||[])])].slice(0,limit
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);
  const winner=prefer==='local'?local:remote;
+ const recordIds=new Set([...Object.keys(local.discoveries.records||{}),...Object.keys(remote.discoveries.records||{})]),records={};
+ for(const id of recordIds){const a=local.discoveries.records?.[id],b=remote.discoveries.records?.[id];records[id]=!a?b:!b?a:a.dps>=b.dps?a:b;}
  return normalizeCloudSnapshot({
   ...winner,
   revision:Math.max(local.revision,remote.revision),updatedAt:Math.max(local.updatedAt,remote.updatedAt),
-  discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20)},
+  discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
   account:{...winner.account,badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt)}
  });
 }

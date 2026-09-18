@@ -2,14 +2,21 @@ import {LAWS} from './laws.js';
 import {ALL_FORMS as FORMS} from './forms.js';
 
 export const DISCOVERIES_KEY='seed-discoveries-v1';
-const BOSS_IDS=new Set(['warden','austin']);
-const emptyProfile=()=>({version:1,forms:[],bosses:[]});
+const BOSS_IDS=new Set(['warden','austin','alwaysbeginner']);
+const emptyProfile=()=>({version:1,forms:[],bosses:[],records:{}});
 const uniqueKnown=(items,known)=>Array.isArray(items)?[...new Set(items.filter(id=>typeof id==='string'&&known(id)))]:[];
+const recordsOf=value=>{
+ const records={};if(!value||typeof value!=='object'||Array.isArray(value))return records;
+ for(const [id,row] of Object.entries(value))if(Object.hasOwn(FORMS,id)&&row&&Number.isFinite(row.dps)&&row.dps>0)records[id]={dps:Math.min(1e9,Math.round(row.dps*10)/10),peak:Math.min(1e9,Math.max(0,Math.round((row.peak||0)*10)/10)),total:Math.min(1e12,Math.max(0,Math.round(row.total||0))),duration:Math.min(3600,Math.max(.1,Math.round((row.duration||0)*10)/10)),at:Number.isFinite(row.at)?Math.max(0,Math.floor(row.at)):0};
+ return records;
+};
 
 export function normalizeDiscoveries(profile){
  if(!profile||profile.version!==1)return emptyProfile();
- return {version:1,forms:uniqueKnown(profile.forms,id=>Object.hasOwn(FORMS,id)),bosses:uniqueKnown(profile.bosses,id=>BOSS_IDS.has(id))};
+ return {version:1,forms:uniqueKnown(profile.forms,id=>Object.hasOwn(FORMS,id)),bosses:uniqueKnown(profile.bosses,id=>BOSS_IDS.has(id)),records:recordsOf(profile.records)};
 }
+
+export function writeDiscoveries(storage,profile){const next=normalizeDiscoveries(profile);try{storage.setItem(DISCOVERIES_KEY,JSON.stringify(next));return next;}catch{return next;}}
 
 export function readDiscoveries(storage){
  try{return normalizeDiscoveries(JSON.parse(storage.getItem(DISCOVERIES_KEY)));}catch{return emptyProfile();}

@@ -16,18 +16,18 @@ const heldFour=['gravity','burst','recall','pierce'];
 assert.deepEqual(eligibleForms(heldFour).map(x=>x.id),Object.values(FORMS).filter(f=>f.requires.every(id=>heldFour.includes(id))).map(f=>f.id));
 assert.equal(eligibleForms(Object.keys(LAWS)).length,Object.keys(FORMS).length);
 
-const empty={version:1,forms:[],bosses:[]};
+const empty={version:1,forms:[],bosses:[],records:{}};
 const values=new Map();const storage={getItem:key=>values.get(key)??null,setItem:(key,value)=>values.set(key,value)};
 assert.deepEqual(readDiscoveries(storage),empty);
 for(const corrupt of ['{bad','null','[]','{"version":2,"forms":["collapse"]}']){
  values.set(DISCOVERIES_KEY,corrupt);assert.deepEqual(readDiscoveries(storage),empty);
 }
-assert.deepEqual(normalizeDiscoveries({version:1,forms:['collapse','collapse','__proto__',null,'frostguard'],bosses:['warden','invalid','warden']}),{version:1,forms:['collapse','frostguard'],bosses:['warden']});
+assert.deepEqual(normalizeDiscoveries({version:1,forms:['collapse','collapse','__proto__',null,'frostguard'],bosses:['warden','invalid','warden']}),{version:1,forms:['collapse','frostguard'],bosses:['warden'],records:{}});
 assert.deepEqual(readDiscoveries({getItem(){throw Error('blocked');}}),empty);
 assert.equal(growthGuide(empty),false);assert.equal(rerollUnlocked(empty),false);
 let result=recordDiscovery(storage,empty,'forms','collapse');
 assert.ok(result.saved&&result.newlyDiscovered);
-assert.deepEqual(empty,{version:1,forms:[],bosses:[]},'Discovery does not mutate its input profile');
+assert.deepEqual(empty,{version:1,forms:[],bosses:[],records:{}},'Discovery does not mutate its input profile');
 assert.deepEqual(readDiscoveries(storage),result.profile);
 assert.ok(growthGuide(result.profile));assert.equal(rerollUnlocked(result.profile),false);
 const duplicate=recordDiscovery(storage,result.profile,'forms','collapse');
