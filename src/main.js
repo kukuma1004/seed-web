@@ -669,10 +669,12 @@ function showBetaLock(message='',success=false){
   <button id="beta-submit" class="account-button beta-submit" ${linked?'':'disabled'}><span><b>베타테스터 신청 보내기</b><small>등록 완료 안내를 받은 뒤 설치할 수 있어요</small></span></button>
   <p id="beta-message" class="account-error ${success?'success':''}" role="status">${escapeHtml(message)}</p>
   <p class="account-note">${BETA_NOTICE.detail} <a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a></p>
+  <button id="beta-admin" class="menu-item small-item"><strong>개발자 로그인</strong><small>관리자 Google 계정으로 웹 테스트</small></button>
   <a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
  const busy=state=>document.querySelectorAll('#beta-google,#beta-submit').forEach(button=>button.disabled=state);
- if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
+ if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();await refreshAdminMode();if(adminMode){showEntry();return;}showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
  if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{await submitBetaApplication({account,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock('신청을 받았어요. 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.',true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
+ $('#beta-admin').onclick=()=>showAccount();
 }
 function showEntry(){
  revealApp();

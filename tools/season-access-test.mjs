@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {ADMIN_EMAIL_HASH,DEFAULT_SEASON_STATUS,gameplayIsPaused,isSeasonAdmin,loadSeasonStatus,normalizeSeasonStatus} from '../src/season-access.js';
 
 const adminDigest=async value=>value.toLowerCase()==='kukuma1004@gmail.com'?ADMIN_EMAIL_HASH:'0'.repeat(64);
@@ -14,4 +15,7 @@ const dev=await loadSeasonStatus({enabled:false,fetchImpl:async()=>{throw new Er
 assert.equal(gameplayIsPaused({status:{paused:true}}),true);
 assert.equal(gameplayIsPaused({status:{paused:true},native:true}),false,'the installed beta app stays playable while the public web is paused');
 assert.equal(gameplayIsPaused({status:{paused:true},admin:true}),false);
+const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+assert.match(main,/id="beta-admin"[\s\S]*개발자 로그인/,'잠긴 공개 웹에 개발자 로그인 진입점이 있어야 합니다.');
+assert.match(main,/await account\.signInWithGoogle\(\);await refreshAdminMode\(\);if\(adminMode\)\{showEntry\(\);return;\}/,'공개 화면에서 관리자 로그인 직후 권한을 다시 확인해야 합니다.');
 console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');
