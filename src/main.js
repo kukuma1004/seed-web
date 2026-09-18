@@ -291,7 +291,7 @@ $('#exit-room').onclick=useExit;$('#stages').innerHTML=ROOMS.map(()=>'<span>♧<
 // ---------------- act 2 ----------------
 // The run's region decides the act; act-2 saves and local records live under their own keys (act2.js).
 let startRegion='garden';const actStore=()=>actStorage(runStorage,actOf(region));const AXIS_Y=new V(0,1,0);
-const stadium=createStadium(scene,{lights:scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalLight||o.isAmbientLight),hide:[terrain,...scene.children.filter(o=>o.name?.startsWith('garden-'))]});
+const stadium=createStadium(scene,{lights:scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalLight||o.isAmbientLight),hide:[terrain,...scene.children.filter(o=>o.name?.startsWith('garden-'))],mobile:mobileDevice});
 const act2Ctx={get player(){return player.position;},collide:(p,r)=>collide(p,r),hit:a=>hitPlayer(a),
  bolt:(pos,dir,spec)=>stadiumBolt(pos,dir,{...spec,speed:spec.speed*difficulty(cycle,region).projectileSpeed}),
  blocked:(a,b)=>segmentHitsCover({x:a.x,z:a.z},{x:b.x,z:b.z},obstacles,.1),shots:()=>shots,

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
+export const STADIUM_CLAY_ART='assets/stadium-clay-hd-v1.webp';
 export const STADIUM_BASES=Object.freeze([
  Object.freeze({x:0,z:4.2,next:1}),Object.freeze({x:3.6,z:.6,next:2}),
  Object.freeze({x:0,z:-3,next:3}),Object.freeze({x:-3.6,z:.6,next:0})
@@ -14,19 +15,24 @@ export function baseSlideFor(position,cooldown=0,enabled=true){
  return {index,dx:(to.x-from.x)/length,dz:(to.z-from.z)/length,speed:BASE_SLIDE.speed,duration:BASE_SLIDE.duration,cooldown:BASE_SLIDE.cooldown};
 }
 
-// The act-2 night stadium, drawn over the act-1 garden (2026-09-16 first slice): red clay floor with white chalk lines,
-// four light towers, team flags on the far wall and a cooler night light. Everything is a handful of draw calls:
-// one floor, one merged tower mesh, one merged lamp mesh and one instanced flag row.
-function clayTexture(){
- const size=512,c=document.createElement('canvas');c.width=c.height=size;const x=c.getContext('2d');
- x.fillStyle='#8a3f2a';x.fillRect(0,0,size,size);
- for(let i=0;i<5200;i++){const v=Math.random();x.fillStyle=v<.5?`rgba(60,24,14,${.06+Math.random()*.1})`:`rgba(196,110,72,${.05+Math.random()*.09})`;const r=Math.random()*2.4+.4;x.beginPath();x.arc(Math.random()*size,Math.random()*size,r,0,Math.PI*2);x.fill();}
- const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t;
+// The act-2 night stadium, drawn over the act-1 garden: a single 512 px hand-painted clay tile
+// replaces thousands of startup canvas dots. Every room shares this 49 KB texture and changes
+// only its UV angle/tint, preserving one floor draw call and one GPU texture on low-end phones.
+function clayTexture(mobile=false){
+ const t=new THREE.TextureLoader().load(import.meta.env.BASE_URL+STADIUM_CLAY_ART);
+ t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.MirroredRepeatWrapping;t.center.set(.5,.5);t.repeat.set(2.35,2.35);t.anisotropy=mobile?2:6;return t;
 }
 // One merged chalk mesh changes with the room. It makes every silhouette readable without
 // adding textures or draw calls: plate lanes, an infield diamond, ball seams, glove webbing
 // and the outfield arcs of the final ballpark.
 const floorGeometryCache=new Map(),markingGeometryCache=new Map();
+const FIELD_SURFACES=Object.freeze({
+ 'home-plate':Object.freeze({color:0xffd8c8,repeat:2.25,rotation:.05,offset:[.08,.04]}),
+ diamond:Object.freeze({color:0xf8d0bd,repeat:2.45,rotation:-.1,offset:[.31,.17]}),
+ baseball:Object.freeze({color:0xebc5b8,repeat:2.15,rotation:.38,offset:[.12,.36]}),
+ glove:Object.freeze({color:0xf4c7ad,repeat:2.5,rotation:-.3,offset:[.42,.09]}),
+ ballpark:Object.freeze({color:0xf0bca5,repeat:2.7,rotation:.14,offset:[.26,.28]})
+});
 function arenaKey(arena){return arena?.id||arena?.shape||'rect';}
 function stadiumFloorGeometry(arena){
  const key=arenaKey(arena);if(floorGeometryCache.has(key))return floorGeometryCache.get(key);
@@ -61,9 +67,9 @@ function stadiumMarkings(arena){
  }else baseDiamond();
  const geometry=mergeParts(parts);markingGeometryCache.set(key,geometry);return geometry;
 }
-export function createStadium(scene,{lights=[],hide=[]}={}){
+export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const group=new THREE.Group();group.name='act2-stadium';group.visible=false;scene.add(group);
- const floorMat=new THREE.MeshStandardMaterial({map:clayTexture(),color:0xffffff,roughness:.95,metalness:0});
+ const floorMat=new THREE.MeshStandardMaterial({map:clayTexture(mobile),color:0xffffff,roughness:.9,metalness:0});
  const track=new THREE.Mesh(new THREE.PlaneGeometry(23.2,19.2).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x172537,roughness:.92,metalness:.04}));track.position.y=.107;track.receiveShadow=true;group.add(track);
  const floor=new THREE.Mesh(stadiumFloorGeometry(null),floorMat);floor.receiveShadow=true;group.add(floor);
  const chalk=new THREE.Mesh(stadiumMarkings(null),new THREE.MeshBasicMaterial({color:0xf4efe4,transparent:true,opacity:.82,depthWrite:false,forceSinglePass:true}));group.add(chalk);
@@ -112,7 +118,11 @@ export function createStadium(scene,{lights=[],hide=[]}={}){
  return {
   group,
   setActive(on,arena=null,{stage=0,bossRoom=false}={}){
-   if(on&&arena){floor.geometry=stadiumFloorGeometry(arena);chalk.geometry=stadiumMarkings(arena);chalk.scale.setScalar(1);}
+   if(on&&arena){
+    floor.geometry=stadiumFloorGeometry(arena);chalk.geometry=stadiumMarkings(arena);chalk.scale.setScalar(1);
+    const surface=FIELD_SURFACES[arenaKey(arena)]||{color:0xffffff,repeat:2.35,rotation:0,offset:[0,0]};
+    floorMat.color.setHex(surface.color);floorMat.map.repeat.setScalar(surface.repeat);floorMat.map.rotation=surface.rotation;floorMat.map.offset.set(...surface.offset);
+   }
    baseEnabled=Boolean(on);relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
    if(!relayEnabled){relayClock=0;relayHitPass=relayWarnPass=-1;relayLine.visible=false;relayBall.visible=false;}
    if(on===active)return;active=on;group.visible=on;
