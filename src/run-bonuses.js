@@ -5,10 +5,10 @@
 export const RUN_BONUS_MAX=5;
 export const RUN_BONUS_CHANCE=.02;
 export const RUN_BONUSES=Object.freeze({
- heal:Object.freeze({id:'heal',icon:'✦',name:'새잎 회복',desc:'생명력을 즉시 20 회복합니다.',color:'#9dffb7'}),
- move:Object.freeze({id:'move',icon:'➶',name:'가벼운 뿌리',desc:'이동 속도 +3%',color:'#8fe9ff'}),
- shot:Object.freeze({id:'shot',icon:'◇',name:'바람결 씨앗',desc:'탄환 속도 +4%',color:'#d2c4ff'}),
- power:Object.freeze({id:'power',icon:'✹',name:'단단한 심',desc:'씨앗의 모든 공격 피해 +3%',color:'#ffd384'})
+ heal:Object.freeze({id:'heal',icon:'♥',name:'생명력 즉시 +20',desc:'지금 잃은 생명력을 20 회복',color:'#9dffb7'}),
+ move:Object.freeze({id:'move',icon:'➶',name:'이동 속도 +3%',desc:'이번 여정 동안 더 빠르게 이동',color:'#8fe9ff'}),
+ shot:Object.freeze({id:'shot',icon:'➤',name:'탄환 속도 +4%',desc:'이번 여정 동안 탄환이 더 빠르게 이동',color:'#d2c4ff'}),
+ power:Object.freeze({id:'power',icon:'✹',name:'공격력 +3%',desc:'이번 여정 동안 모든 공격 피해 증가',color:'#ffd384'})
 });
 export const emptyRunBonuses=()=>({move:0,shot:0,power:0});
 export function normalizeRunBonuses(value){const out=emptyRunBonuses();for(const id of Object.keys(out)){const n=value?.[id];if(Number.isInteger(n))out[id]=Math.max(0,Math.min(RUN_BONUS_MAX,n));}return out;}

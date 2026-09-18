@@ -237,14 +237,14 @@ const AWAKEN_BOOST=Object.freeze({
  thunderlance:s=>({jumps:s.jumps+1,pierce:s.pierce+2}),
  frostbloom:s=>({bombs:s.bombs+1,delay:s.delay*.85}),
  stormcrown:s=>({orbs:s.orbs+1,pulse:s.pulse*.85,range:s.range+.8}),
- // Normal Tidepull deliberately owns one core: its strength is steering one
- // return lane, not blanketing the arena. Maelstrom earns the second core.
+ // Tidepull keeps the spectacle of several travelling cores. Maelstrom earns
+ // one more core, while damage is budgeted across the whole formation below.
  tidepull:s=>({vortices:s.vortices+1,radius:s.radius+.5}),
  seedstorm:s=>({seeds:s.seeds+1}),
  mirrorguard:s=>({mirrors:s.mirrors+2,radius:s.radius+.2})
 });
 // Measured against the fusion plus its best solo evolution at equal levels (tools/active-balance-test.mjs).
-const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:1.8,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:.68,seedstorm:.85,mirrorguard:1.8});
+const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:1.8,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
 function awakenStats(id,s){
  const boosted={...s,...(AWAKEN_BOOST[id]?.(s)||{}),awakened:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=AWAKEN.interval;
@@ -299,7 +299,7 @@ function baseStats(id,level){
   case 'thunderlance':return {interval:1.25*faster,damage:46*power,length:Math.min(15,11+.8*up),pierce:Math.min(14,8+up),jumps:Math.min(5,1+Math.floor(L/2)),jumpDamage:22*power};
   case 'frostbloom':return {interval:1.4*faster,damage:30*power,shatter:45*power,radius:Math.min(3.4,2.4+.15*up),range:9,flight:.55,delay:.8,bombs:3};
   case 'stormcrown':return {interval:Infinity,damage:26*power,orbs:Math.min(5,2+Math.floor(L/2)),range:4.2,pulse:.75*faster,radius:1.6};
-  case 'tidepull':return {interval:1.45*faster,damage:50*power,tick:13*power,returnDamage:34*power,radius:Math.min(4,3+.12*up),vortices:1,hold:.18,pull:7.5,safeRadius:2.55,slow:.8};
+  case 'tidepull':return {interval:1.45*faster,damage:28*power,tick:7*power,returnDamage:18*power,radius:Math.min(4,3+.12*up),vortices:2,hold:.18,pull:7.5,safeRadius:2.55,slow:.8};
   case 'seedstorm':return {interval:.95*faster,damage:14*power,pop:12*power,seeds:Math.min(12,6+L),spread:.55,life:.42};
   case 'mirrorguard':return {interval:Infinity,damage:30*power,mirrors:Math.min(5,2+Math.floor(L/2)),ram:10*power,radius:1.9};
   default:return {interval:Infinity,damage:0};

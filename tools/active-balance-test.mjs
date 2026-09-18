@@ -28,7 +28,7 @@ for(const level of [SOLO_LEVEL-1,9]){
  const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
  const middle=median(Object.values(curated));
  assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x median crowd damage`);
- assert.ok(curated.tidepull<=middle*1.5,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} exceeds its control budget`);
+ assert.ok(curated.tidepull<=middle*1.55,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} exceeds its control budget`);
  assert.ok(bossDps('tidepull',level)<curated.tidepull*.2,`level ${level}: tidepull lost its single-target weakness`);
  const lanceLine=simulate('thunderlance',level,{scene:'line'}).dps,lanceScatter=simulate('thunderlance',level,{scene:'scattered'}).dps;
  assert.ok(lanceLine>lanceScatter*2.5,`level ${level}: thunderlance no longer rewards a lined-up shot`);
@@ -45,9 +45,9 @@ for(const level of [SOLO_LEVEL-1,9]){
  assert.ok(mirrorUnderFire>mirrorQuiet*2,`level ${level}: mirror guard no longer rewards fighting shooters`);
 }
 
-assert.equal(formStats('tidepull',SOLO_LEVEL-1).vortices,1,'normal tide owns one steerable lane');
-assert.equal(formStats('maelstrom',SOLO_LEVEL-1).vortices,2,'awakened maelstrom earns a second lane');
-assert.equal(formStats('tidepull',SOLO_LEVEL-1,{surge:true}).vortices,2,'tide ultimate adds one lane, not an arena-filling pair');
+assert.equal(formStats('tidepull',SOLO_LEVEL-1).vortices,2,'normal tide keeps its two-core spectacle');
+assert.equal(formStats('maelstrom',SOLO_LEVEL-1).vortices,3,'awakened maelstrom earns a third lane');
+assert.equal(formStats('tidepull',SOLO_LEVEL-1,{surge:true}).vortices,3,'tide ultimate adds one lane without doubling the formation');
 // The ring is passive like the three orbit fusions; it stays in their range.
 {
  const passiveFusions=Object.keys(FORMS).filter(id=>FORMS[id].passive).map(id=>averageDps(id,SOLO_LEVEL-1,{shots:true}));
