@@ -4,9 +4,9 @@ import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playab
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
 import {BASE_SLIDE,STADIUM_BASES,baseSlideFor} from '../src/stadium.js';
-// Not public yet: only a local development server shows act 2 until ACT2_RELEASED.
-assert.equal(ACT2_RELEASED,false);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),false);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
-assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'garden');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
+// Act 2 is open to the closed beta on both the hosted web build and Android app.
+assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
+assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
 import {ACT2_MINIONS,ACT2_MINION_TYPES,ACT2_ART,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
 import {roomFor,ROOMS} from '../src/journey.js';
 import {arenaFor,insideArena} from '../src/arena.js';
