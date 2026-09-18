@@ -29,27 +29,28 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
 
  async function perform({startup=false}={}){
   const session=await account.tokenSession();if(!session?.uid)return {ok:false,reason:'signed-out',changed:false,rewards:[]};
-  const uid=session.uid,previousOwner=owner(),m=meta();
+  const uid=session.uid,previousOwner=owner(),m=meta(),migration=account.pendingMigration?.(),migrating=Boolean(migration?.fromUid&&migration?.toUid===uid&&(!previousOwner||previousOwner===migration.fromUid));
   let remote=null,rewards=null;
   try{[remote,rewards]=await Promise.all([firebase(`seedUsers/${uid}/save`),firebase(`seedUserRewards/${uid}`)]);}catch(error){return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
   const local=collectCloudSnapshot(raw,{revision:m.localRevision,updatedAt:m.updatedAt||now()});
   const sameOwner=!previousOwner||previousOwner===uid;
   const localDirty=sameOwner&&m.localRevision>m.syncedRevision;
   let merged;
-  if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:localDirty?'local':'remote'});
-  else if(sameOwner)merged=local;
+  if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:migrating||localDirty?'local':'remote'});
+  else if(sameOwner||migrating)merged=local;
   else merged=normalizeCloudSnapshot({version:1,updatedAt:now()});
   const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=rewardResult.applied;
-  const shouldUpload=!remote||localDirty||lastRewards.length>0;
+  const shouldUpload=!remote||migrating||localDirty||lastRewards.length>0;
   const nextRevision=shouldUpload?Math.max(Number(remote?.revision)||0,m.localRevision,merged.revision)+1:Math.max(Number(remote?.revision)||0,merged.revision);
   merged={...merged,revision:nextRevision,updatedAt:shouldUpload?now():(Number(remote?.updatedAt)||merged.updatedAt)};
   active=false;const changed=applyCloudSnapshot(raw,merged);active=true;
   if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged});}
   catch(error){dirty=true;return {ok:false,reason:'upload',error,changed,rewards:lastRewards};}
   setOwner(uid);writeMeta({ownerUid:uid,localRevision:nextRevision,syncedRevision:nextRevision,updatedAt:merged.updatedAt});dirty=false;
+  if(migrating)account.finishMigration?.();
   if(lastRewards.length)try{globalThis.sessionStorage?.setItem('seed-cloud-reward-notice-v1',JSON.stringify(lastRewards));}catch{}
   try{raw?.setItem('seed-cloud-last-sync-v1',String(now()));}catch{}
-  return {ok:true,changed,rewards:lastRewards,startup};
+  return {ok:true,changed,rewards:lastRewards,startup,migrated:migrating};
  }
 
  async function syncNow(options={}){if(running)return running;clearTimeout(timer);timer=null;running=perform(options).finally(()=>{running=null;});return running;}

@@ -14,8 +14,12 @@ export const FIREBASE_APP=Object.freeze({
 });
 
 export const ACCOUNT_CHOICE_KEY='seed-account-choice-v1';
+export const ACCOUNT_MIGRATION_KEY='seed-account-migration-v1';
 const native=Capacitor.isNativePlatform();
 const platform=Capacitor.getPlatform();
+const errorText=error=>String(error?.code||error?.message||error||'').toLowerCase().replace(/[_\s]+/g,'-');
+const credentialConflict=error=>{const value=errorText(error);return value.includes('credential-already-in-use')||value.includes('account-exists-with-different-credential')||value.includes('already been linked');};
+const userCanceled=error=>{const value=errorText(error);return value.includes('cancel')||value.includes('12501')||value.includes('user-canceled');};
 
 const safeUser=user=>user?Object.freeze({
  uid:user.uid,
@@ -39,6 +43,9 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
  const emit=next=>{user=safeUser(next);for(const listener of listeners)listener(user);return user;};
  const chosen=()=>{try{return storage?.getItem(ACCOUNT_CHOICE_KEY)==='yes';}catch{return false;}};
  const rememberChoice=()=>{try{storage?.setItem(ACCOUNT_CHOICE_KEY,'yes');}catch{}};
+ const readMigration=()=>{try{const value=JSON.parse(storage?.getItem(ACCOUNT_MIGRATION_KEY)||'null');return value&&typeof value.fromUid==='string'?value:null;}catch{return null;}};
+ const writeMigration=value=>{try{storage?.setItem(ACCOUNT_MIGRATION_KEY,JSON.stringify(value));}catch{}};
+ const clearMigration=()=>{try{storage?.removeItem(ACCOUNT_MIGRATION_KEY);}catch{}};
 
  async function ready(){
   if(readyPromise)return readyPromise;
@@ -73,12 +80,28 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
    const link=Boolean(user?.isAnonymous);
    if(kind==='apple')result=link?await FirebaseAuthentication.linkWithApple():await FirebaseAuthentication.signInWithApple();
    else{
-    // Credential Manager is the plugin default, but it fails on some otherwise
-    // supported Android devices when Play services expose no credential provider.
-    // The plugin's maintained legacy flow uses the same Firebase/OAuth setup and
-    // is more reliable for the older, lower-end phones SEED explicitly supports.
-    const options=platform==='android'?{useCredentialManager:false}:undefined;
-    result=link?await FirebaseAuthentication.linkWithGoogle(options):await FirebaseAuthentication.signInWithGoogle(options);
+    const google=async shouldLink=>{
+     const method=shouldLink?'linkWithGoogle':'signInWithGoogle';
+     if(platform!=='android')return FirebaseAuthentication[method]();
+     // Credential Manager is the maintained path, while the legacy picker still
+     // supports older/low-end devices. Try both unless the player canceled or the
+     // selected Google credential already belongs to an existing Firebase UID.
+     try{return await FirebaseAuthentication[method]();}
+     catch(error){if(userCanceled(error)||credentialConflict(error))throw error;return FirebaseAuthentication[method]({useCredentialManager:false});}
+    };
+    try{result=await google(link);}
+    catch(error){
+     if(!link||!credentialConflict(error))throw error;
+     // Beta applicants may already own a Google Firebase UID from the web form.
+     // Keep a durable marker before switching away from the anonymous UID; cloud
+     // sync uses it to upload this device's progress into that existing account.
+     const fromUid=user.uid;writeMigration({version:1,fromUid,provider:'google.com',startedAt:Date.now()});
+     await FirebaseAuthentication.signOut();emit(null);
+     result=await google(false);
+     writeMigration({version:1,fromUid,toUid:result.user?.uid||'',provider:'google.com',startedAt:Date.now()});
+    }
+    const unfinished=readMigration();
+    if(!link&&unfinished?.fromUid&&!unfinished.toUid&&result?.user?.uid)writeMigration({...unfinished,toUid:result.user.uid});
    }
   }else{
    const authProvider=kind==='apple'?new webSdk.OAuthProvider('apple.com'):new webSdk.GoogleAuthProvider();
@@ -102,13 +125,14 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
  async function signOut(){
   await ready();
   if(native)await FirebaseAuthentication.signOut();else await webSdk.signOut(webAuth);
-  try{storage?.removeItem(ACCOUNT_CHOICE_KEY);}catch{}
+  try{storage?.removeItem(ACCOUNT_CHOICE_KEY);storage?.removeItem(ACCOUNT_MIGRATION_KEY);}catch{}
   return emit(null);
  }
 
  return {
   ready,guest,signInWithGoogle:()=>provider('google'),signInWithApple:()=>provider('apple'),signOut,tokenSession,
   user:()=>user,chosen,label:()=>accountLabel(user),native,platform,
+  pendingMigration:readMigration,finishMigration:clearMigration,
   appleConfigured:platform==='ios'||import.meta.env.VITE_APPLE_SIGN_IN_READY==='true',
   onChange(listener){listeners.add(listener);return()=>listeners.delete(listener);}
  };

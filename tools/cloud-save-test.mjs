@@ -79,4 +79,28 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const again=await cloud.syncNow();assert.equal(again.rewards.length,0);assert.equal(JSON.parse(storage.getItem(SHOP_KEY)).coins,3150);
 }
 
+// A beta applicant can already own a Google UID from the web form. If an Android
+// guest then selects that account, the durable auth marker must claim the local
+// save for the existing Google UID instead of replacing it with an empty save.
+{
+ const storage=memory({
+  [SHOP_KEY]:JSON.stringify({version:2,coins:875,stash:{tonic:3,sprout:0},carry:{tonic:2,sprout:0},gifts:[]}),
+  'seed-cloud-owner-v1':'guest-uid',
+  'seed-cloud-meta-v1':JSON.stringify({version:1,ownerUid:'guest-uid',localRevision:4,syncedRevision:4,updatedAt:900})
+ });
+ const state={save:null,finished:false},account={
+  ready:async()=>({uid:'google-uid'}),user:()=>({uid:'google-uid'}),tokenSession:async()=>({uid:'google-uid',idToken:'token'}),
+  pendingMigration:()=>({fromUid:'guest-uid',toUid:'google-uid'}),finishMigration:()=>{state.finished=true;}
+ };
+ const fetchImpl=async(url,options={})=>{
+  if(!url.includes('seedUsers/google-uid/save'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){state.save=JSON.parse(options.body);return {ok:true,status:200,json:async()=>state.save};}
+  return {ok:true,status:200,json:async()=>state.save};
+ };
+ const cloud=createCloudSync({storage,account,fetchImpl,now:()=>1000,debounceMs:60_000});
+ const migrated=await cloud.start();
+ assert.equal(migrated.ok,true);assert.equal(migrated.migrated,true);assert.equal(state.finished,true);
+ assert.equal(state.save.shop.coins,875);assert.equal(state.save.shop.stash.tonic,3);assert.equal(storage.getItem('seed-cloud-owner-v1'),'google-uid');
+}
+
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');
