@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {ADMIN_EMAIL_HASH,BETA_TESTER_EMAIL_HASHES,DEFAULT_SEASON_STATUS,gameplayIsPaused,isBetaTester,isSeasonAdmin,loadSeasonStatus,normalizeSeasonStatus} from '../src/season-access.js';
+import {ADMIN_EMAIL_HASH,BETA_TESTER_EMAIL_HASHES,DEFAULT_SEASON_STATUS,accessHash,gameplayIsPaused,isBetaTester,isSeasonAdmin,loadSeasonStatus,normalizeSeasonStatus} from '../src/season-access.js';
 
 const adminDigest=async value=>value.toLowerCase()==='kukuma1004@gmail.com'?ADMIN_EMAIL_HASH:'0'.repeat(64);
 assert.equal(await isSeasonAdmin({email:'KUKUMA1004@gmail.com',isAnonymous:false},adminDigest),true);
@@ -10,6 +10,7 @@ const testerDigest=async value=>value.toLowerCase()==='student@example.com'?BETA
 assert.equal(await isBetaTester({email:'student@example.com',isAnonymous:false},testerDigest),true);
 assert.equal(await isBetaTester({email:'outsider@example.com',isAnonymous:false},testerDigest),false);
 assert.equal(await isBetaTester({email:'student@example.com',isAnonymous:true},testerDigest),false);
+assert.ok(BETA_TESTER_EMAIL_HASHES.includes(await accessHash('iseungjun5618@gmail.com')),'corrected tester Google account is recognized');
 assert.equal(normalizeSeasonStatus({paused:false,title:' 열림 '}).paused,false);
 assert.equal(normalizeSeasonStatus({}).paused,true,'missing or malformed remote values fail closed');
 const open=await loadSeasonStatus({fetchImpl:async()=>({ok:true,json:async()=>({paused:false,season:'1.2'})})});
@@ -33,6 +34,7 @@ assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에�
 assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAccessMode=async\(\)=>\{const user=account\.user\(\);adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');
 assert.match(main,/publicWebBetaLocked\(\)&&!adminMode&&!betaTesterMode/,'등록된 테스터만 잠긴 PC 웹을 통과해야 합니다.');
 assert.match(main,/account\.native\|\|betaTesterMode/,'등록된 PC 웹 테스터도 베타 랭킹에 참여할 수 있어야 합니다.');
+assert.match(main,/betaTesterMode\?grantGift\(runStorage,BETA_BOOSTER_GIFT,'sprout',1\)/,'베타테스터는 계정마다 다시 싹 부스터를 한 번 받아야 합니다.');
 assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
 assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 55종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화 55종을 모두 제공해야 합니다.');
 assert.match(main,/developerRun\)return true;[\s\S]*writeCheckpoint/,'개발자 실험은 기존 이어하기 저장을 덮어쓰지 않아야 합니다.');
@@ -42,5 +44,5 @@ assert.match(auth,/browserLocalPersistence[\s\S]*browserSessionPersistence/,'웹
 assert.match(auth,/onAuthStateChanged\(webAuth/,'다른 탭이나 팝업에서 바뀐 로그인 상태를 즉시 반영해야 합니다.');
 assert.match(auth,/prompt:'select_account'/,'관리자와 학생 계정이 함께 있는 브라우저에서 계정을 다시 고를 수 있어야 합니다.');
 const worker=fs.readFileSync(new URL('../public/sw.js',import.meta.url),'utf8');
-assert.match(worker,/seed-play-v9/,'오래 열린 설치형 웹앱도 최신 로그인 화면으로 교체되어야 합니다.');
+assert.match(worker,/seed-play-v10/,'오래 열린 설치형 웹앱도 최신 테스터 권한과 부스터 화면으로 교체되어야 합니다.');
 console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');

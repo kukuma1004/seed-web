@@ -770,9 +770,11 @@ function showIntro(){developerRun=false;labSafe=false;const labButton=$('#develo
  if(maintenanceOn){showMaintenance();return;}
  // 점검으로 잠시 닫았던 미안함: 다시 싹 1개와 작은 물약 3개를 보관함에 한 번만 넣는다.
  const cloudRewards=cloud.consumeRewardNotice();
+ const betaBoosterGift=betaTesterMode?grantGift(runStorage,BETA_BOOSTER_GIFT,'sprout',1):{granted:false};
  const sproutGift=grantGift(runStorage,SORRY_GIFT,'sprout',1);
  const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
+ if(betaBoosterGift.granted){showBetaBoosterGift();return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),planted=garden.plots.filter(Boolean).length,shop=readShop(runStorage);
@@ -863,8 +865,19 @@ function showShop(back=showIntro,message=''){
  document.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
 }
 // 점검 사과 선물 안내. 한 번만 뜬다(grantGift가 같은 선물을 다시 주지 않는다).
+const BETA_BOOSTER_GIFT='beta-booster-sprout-20260918';
 const SORRY_GIFT='sorry-20260917';
 const SORRY_TONIC_GIFT='sorry-tonics-20260917';
+function showBetaBoosterGift(){
+ mode='gift';touch.reset();keys.clear();
+ $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ $('#overlay').innerHTML=`<div class="menu-panel gift-panel"><p class="eyebrow">SEED · BETA BOOSTER</p><h2>함께 시험해 줘서 고마워요</h2>
+  <div class="gift-item">${itemArt('sprout')}<div><strong>부활 물약 · ${ITEMS.sprout.name} 1개</strong><small>${escapeHtml(ITEMS.sprout.desc)}</small></div></div>
+  <p class="gift-line">베타테스터 전용 부스터를 상점 보관함에 넣어 두었어요. 계정마다 한 번만 받을 수 있습니다.</p>
+  <p class="gift-line">새 여정을 시작할 때 가져가며, 쓰러지는 순간 자동으로 사용됩니다.</p>
+  <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
+ $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
+}
 function showGift(){
  mode='gift';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
