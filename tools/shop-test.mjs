@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashTotal,carryTotal} from '../src/shop.js';
 
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};};
@@ -52,7 +53,7 @@ assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1500);assert.equal
  writeShop(s,{...readShop(s),stash:{tonic:0,sprout:3},carry:{tonic:0,sprout:3}});
  assert.equal(readShop(s).carry.sprout,1,'다시 싹은 한 판에 1개만');
  assert.deepEqual(claimCarry(s),{sprout:1});assert.equal(readShop(s).stash.sprout,2);
- assert.equal(STASH_ITEMS.sprout.max,3);
+assert.equal(STASH_ITEMS.sprout.max,3);
  assert.equal(stashTotal(readShop(s)),2);assert.equal(carryTotal(readShop(s)),1);
 }
 
@@ -64,6 +65,13 @@ assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1500);assert.equal
  assert.deepEqual(normalizeShop(null).stash,empty);
  const broken={getItem(){throw new Error('막힘');},setItem(){throw new Error('막힘');}};
  assert.equal(readShop(broken).coins,STARTING_COINS);
+}
+
+// 시작 안내는 예전의 존재하지 않는 시간의 물약을 약속하지 않고 실제 반입 가방을 읽는다.
+{
+ const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ assert.doesNotMatch(main,/ITEMS\.potion\.name[^\n]*1개를 가지고 출발/);
+ assert.match(main,/const departure=itemCounts\(inventory\)[\s\S]*가져온 물약 없이 출발해요/);
 }
 
 console.log('상점 보관함: 구매·가져갈 개수 고르기·새 여정에서만 꺼내기·다시 싹 선물 한 번·예전 저장 옮기기 통과');

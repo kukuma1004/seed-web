@@ -1109,7 +1109,13 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
  if(restore?.form&&!heldForms.size&&canFuse(levels,restore.form))fuse(levels,heldForms,restore.form);
  syncLaws();syncForms(true);growth.select(effectiveLaws(),mutated);
  if(restore?.mode==='crossroads')nextJourney();else{austinRoom=restore?.mode==='austin';wave();}
- if(!restore){itemBarKey='';$('#toast').textContent=`${ITEMS.potion.name} 1개를 가지고 출발해요 · 위험할 때 Q로 마시기`;}}
+ if(!restore){
+  itemBarKey='';
+  const departure=itemCounts(inventory);
+  $('#toast').textContent=departure
+   ?`${departure} 가지고 출발해요${inventory.sprout?' · 다시 싹은 쓰러지면 자동 사용':' · Q로 사용'}`
+   :'가져온 물약 없이 출발해요 · 출발 상점에서 준비할 수 있어요';
+ }}
 
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
 window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
