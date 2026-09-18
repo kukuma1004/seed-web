@@ -12,9 +12,9 @@ export const SCENES=Object.freeze({
  scattered:()=>Array.from({length:10},(_,i)=>{const a=i*Math.PI*2/10+.3,r=3.5+(i%3)*2;return [Math.cos(a)*r,Math.sin(a)*r];})
 });
 
-export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=null,surgeSeconds=0,shots=false}={}){
+export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=null,surgeSeconds=0,shots=false,positions=null,enemyType='swarm'}={}){
  const arena=arenaFor(0);
- const enemies=SCENES[scene]().map(([x,z],i)=>({type:'swarm',hp:1e9,maxHp:1e9,g:{position:new V(x,0,z)},slow:0,i}));
+ const enemies=(positions||SCENES[scene]()).map(([x,z],i)=>({type:enemyType,hp:1e9,maxHp:1e9,g:{position:new V(x,0,z)},slow:0,i}));
  const player={position:new V(0,0,0)};
  let damage=0;const shotList=[];
  // A twin awakening fights with two combats, like the game (one per attack, openings staggered by five seconds).
@@ -27,7 +27,7 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
  const steps=Math.round(seconds/dt);
  for(let step=0;step<steps;step++,t+=dt){
   // Enemy shots fly in from 6 units away, three at a time, twice a second.
-  if(shots&&step%25===0)for(let k=0;k<3;k++){const a=k*2.1+step*.01;shotList.push({life:1.5,boss:false,dir:new V(-Math.cos(a),0,-Math.sin(a)),ob:{position:new V(Math.cos(a)*6,.7,Math.sin(a)*6)}});}
+  if(shots&&step%25===0)for(let k=0;k<3;k++){const a=k*2.1+step*.01;shotList.push({life:1.5,boss:enemyType==='austin',dir:new V(-Math.cos(a),0,-Math.sin(a)),ob:{position:new V(Math.cos(a)*6,.7,Math.sin(a)*6)}});}
   for(const q of shotList){q.life-=dt;if(q.life>0)q.ob.position.addScaledVector(q.dir,dt*4.5);}
   for(let i=shotList.length-1;i>=0;i--)if(shotList[i].life<=0)shotList.splice(i,1);
   if(surgeAt!==null&&!surged&&t>=surgeAt){
@@ -55,4 +55,10 @@ const nearest=(enemies,p)=>enemies.slice().sort((a,b)=>a.g.position.distanceToSq
 export function averageDps(id,level,options={}){
  const names=Object.keys(SCENES);
  return names.reduce((sum,scene)=>sum+simulate(id,level,{...options,scene}).dps,0)/names.length;
+}
+
+// One durable boss walking in from mid range. This exposes attacks that score
+// huge crowd numbers but do little to the target that ends a journey.
+export function bossDps(id,level,options={}){
+ return simulate(id,level,{...options,positions:[[0,-5]],enemyType:'austin'}).dps;
 }

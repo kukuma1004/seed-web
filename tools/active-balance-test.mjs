@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
-import {averageDps,simulate,SCENES} from './balance-sim.mjs';
+import {averageDps,bossDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
 const median=list=>{const s=[...list].sort((a,b)=>a-b),m=s.length/2;return s.length%2?s[Math.floor(m)]:(s[m-1]+s[m])/2;};
@@ -20,6 +20,34 @@ for(const level of [SOLO_LEVEL-1,9]){
   assert.ok(dps<=fusionMedian*1.5,`level ${level}: ${id} too strong (${Math.round(dps)})`);
  }
 }
+
+// Curated weapons keep a real weakness. Crowd controllers cannot also own
+// runaway damage, and the two aim-dependent weapons must retain their intended
+// reward for lining enemies up or accepting point-blank danger.
+for(const level of [SOLO_LEVEL-1,9]){
+ const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
+ const middle=median(Object.values(curated));
+ assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x median crowd damage`);
+ assert.ok(curated.tidepull<=middle*1.5,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} exceeds its control budget`);
+ assert.ok(bossDps('tidepull',level)<curated.tidepull*.2,`level ${level}: tidepull lost its single-target weakness`);
+ const lanceLine=simulate('thunderlance',level,{scene:'line'}).dps,lanceScatter=simulate('thunderlance',level,{scene:'scattered'}).dps;
+ assert.ok(lanceLine>lanceScatter*2.5,`level ${level}: thunderlance no longer rewards a lined-up shot`);
+ const stormCluster=simulate('seedstorm',level,{scene:'cluster'}).dps,stormScatter=simulate('seedstorm',level,{scene:'scattered'}).dps;
+ assert.ok(stormCluster>stormScatter*3,`level ${level}: seedstorm no longer trades range for point-blank damage`);
+}
+
+// Orbit family roles: only the crown spends its whole budget on automatic
+// damage; the mirror is deliberately weak until it can turn enemy shots back.
+for(const level of [SOLO_LEVEL-1,9]){
+ const crown=averageDps('stormcrown',level),guard=averageDps('frostguard',level),ring=averageDps('starring',level);
+ assert.ok(crown>=Math.max(guard,ring)*.98,`level ${level}: offensive storm crown fell behind defensive orbit forms`);
+ const mirrorQuiet=averageDps('mirrorguard',level),mirrorUnderFire=averageDps('mirrorguard',level,{shots:true});
+ assert.ok(mirrorUnderFire>mirrorQuiet*2,`level ${level}: mirror guard no longer rewards fighting shooters`);
+}
+
+assert.equal(formStats('tidepull',SOLO_LEVEL-1).vortices,1,'normal tide owns one steerable lane');
+assert.equal(formStats('maelstrom',SOLO_LEVEL-1).vortices,2,'awakened maelstrom earns a second lane');
+assert.equal(formStats('tidepull',SOLO_LEVEL-1,{surge:true}).vortices,2,'tide ultimate adds one lane, not an arena-filling pair');
 // The ring is passive like the three orbit fusions; it stays in their range.
 {
  const passiveFusions=Object.keys(FORMS).filter(id=>FORMS[id].passive).map(id=>averageDps(id,SOLO_LEVEL-1,{shots:true}));

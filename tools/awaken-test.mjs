@@ -69,7 +69,12 @@ assert.deepEqual(awakenOptions(new Map([['collapse',5],['prism',5]])),[]);
 // Stats: a lasting part of the surge, and the ultimate still adds more.
 for(const a of Object.values(AWAKEN_FORMS)){
  const fusion=formStats(a.base,5),awake=formStats(a.id,5),surged=formStats(a.id,5,{surge:true});
- assert.equal(awake.awakened,true);assert.ok(awake.damage>=fusion.damage*.85,a.id);
+  assert.equal(awake.awakened,true);
+  // Some awakenings spread their power across more simultaneous bodies (the
+  // maelstrom's second tide core), so compare the complete volley rather than
+  // requiring every individual body to keep the old per-hit damage.
+  const volley=s=>s.damage*(s.vortices||1);
+  assert.ok(volley(awake)>=volley(fusion)*.85,a.id);
  if(Number.isFinite(fusion.interval))assert.ok(awake.interval<fusion.interval&&surged.interval<awake.interval,a.id);
  assert.ok(surged.damage>awake.damage,a.id);assert.match(formUpgradeLine(a.id,5),/진화 Lv\.5 → 6/);
 }

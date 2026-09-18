@@ -210,7 +210,7 @@ const SURGE=Object.freeze({
  thunderlance:s=>({jumps:s.jumps+2,pierce:s.pierce+4}),
  frostbloom:s=>({bombs:s.bombs+3,delay:s.delay*.5}),
  stormcrown:s=>({orbs:s.orbs+2,pulse:s.pulse*.55,range:s.range+1.5}),
- tidepull:s=>({vortices:s.vortices+2,radius:s.radius+1,hold:s.hold+.5}),
+ tidepull:s=>({vortices:s.vortices+1,radius:s.radius+1,hold:s.hold+.5}),
  seedstorm:s=>({seeds:s.seeds+3}),
  mirrorguard:s=>({mirrors:s.mirrors+3,radius:s.radius+.4}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
@@ -237,12 +237,14 @@ const AWAKEN_BOOST=Object.freeze({
  thunderlance:s=>({jumps:s.jumps+1,pierce:s.pierce+2}),
  frostbloom:s=>({bombs:s.bombs+1,delay:s.delay*.85}),
  stormcrown:s=>({orbs:s.orbs+1,pulse:s.pulse*.85,range:s.range+.8}),
- tidepull:s=>({radius:s.radius+.5}),
+ // Normal Tidepull deliberately owns one core: its strength is steering one
+ // return lane, not blanketing the arena. Maelstrom earns the second core.
+ tidepull:s=>({vortices:s.vortices+1,radius:s.radius+.5}),
  seedstorm:s=>({seeds:s.seeds+1}),
  mirrorguard:s=>({mirrors:s.mirrors+2,radius:s.radius+.2})
 });
 // Measured against the fusion plus its best solo evolution at equal levels (tools/active-balance-test.mjs).
-const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:1.8,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:1,seedstorm:.85,mirrorguard:1.8});
+const AWAKEN_DAMAGE=Object.freeze({collapse:.88,frostguard:1.25,returnblade:1.15,prism:1.8,thunderlance:1.2,frostbloom:1,stormcrown:1.1,tidepull:.68,seedstorm:.85,mirrorguard:1.8});
 function awakenStats(id,s){
  const boosted={...s,...(AWAKEN_BOOST[id]?.(s)||{}),awakened:true};
  if(Number.isFinite(boosted.interval))boosted.interval*=AWAKEN.interval;
@@ -283,7 +285,7 @@ function baseStats(id,level){
   case 'mirrormaze':return {interval:.8*faster,damage:32*power,bounces:Math.min(12,5+Math.floor(up/2)),gain:.15,bolts:3,speed:12};
   case 'fullbloom':return {interval:.85*faster,damage:28*power,petals:Math.min(8,5+Math.floor(up/3)),petalDamage:14*power,bolts:4,speed:12};
   case 'thunderweb':return {interval:.85*faster,damage:36*power,jumps:Math.min(10,4+Math.floor(up/2)),range:4.5,decay:.88,reach:9};
-  case 'starring':return {interval:Infinity,damage:20*power,petals:Math.min(9,5+Math.floor(up/2)),inner:1.5,outer:Math.min(4.2,3.2+.1*up),period:2.4,cooldown:.4};
+  case 'starring':return {interval:Infinity,damage:21*power,petals:Math.min(9,5+Math.floor(up/2)),inner:1.5,outer:Math.min(4.2,3.2+.1*up),period:2.4,cooldown:.4};
   case 'glassspear':return {interval:1.1*faster,damage:42*power,length:Math.min(18,13+.8*up),pierce:Math.min(16,8+up),ramp:.12};
   case 'flarebloom':return {interval:1.3*faster,damage:48*power,radius:Math.min(3.2,2+.12*up),embers:Math.min(6,3+Math.floor(up/3)),emberDamage:22*power,emberRadius:1,range:9,flight:.5,bombs:3};
   case 'rewind':return {interval:.95*faster,damage:20*power,trips:Math.min(3,2+Math.floor(up/6)),leaves:Math.min(4,3+Math.floor(up/4)),hitsPerLeg:Math.min(8,4+Math.floor(up/2))};
@@ -294,10 +296,10 @@ function baseStats(id,level){
   case 'frostguard':return {interval:Infinity,damage:40*power,satellites:Math.min(7,4+Math.floor(up/2)),radius:2.5,slow:2,cooldown:.35,nova:30*power,novaRadius:Math.min(4.2,3.2+.12*up),novaEvery:3*faster};
   case 'returnblade':return {interval:.9*faster,damage:34*power,hitsPerLeg:Math.min(9,5+up),bolts:5};
   case 'prism':return {interval:.7*faster,damage:26*power,generations:Math.min(4,2+Math.floor(up/2)),shards:18,speed:11};
-  case 'thunderlance':return {interval:1.25*faster,damage:40*power,length:Math.min(15,11+.8*up),pierce:Math.min(14,8+up),jumps:Math.min(5,1+Math.floor(L/2)),jumpDamage:18*power};
+  case 'thunderlance':return {interval:1.25*faster,damage:46*power,length:Math.min(15,11+.8*up),pierce:Math.min(14,8+up),jumps:Math.min(5,1+Math.floor(L/2)),jumpDamage:22*power};
   case 'frostbloom':return {interval:1.4*faster,damage:30*power,shatter:45*power,radius:Math.min(3.4,2.4+.15*up),range:9,flight:.55,delay:.8,bombs:3};
-  case 'stormcrown':return {interval:Infinity,damage:22*power,orbs:Math.min(5,2+Math.floor(L/2)),range:4.2,pulse:.75*faster,radius:1.6};
-  case 'tidepull':return {interval:1.45*faster,damage:50*power,tick:13*power,returnDamage:34*power,radius:Math.min(4,3+.12*up),vortices:2,hold:.18,pull:7.5,safeRadius:2.55,slow:.8};
+  case 'stormcrown':return {interval:Infinity,damage:26*power,orbs:Math.min(5,2+Math.floor(L/2)),range:4.2,pulse:.75*faster,radius:1.6};
+  case 'tidepull':return {interval:1.45*faster,damage:50*power,tick:13*power,returnDamage:34*power,radius:Math.min(4,3+.12*up),vortices:1,hold:.18,pull:7.5,safeRadius:2.55,slow:.8};
   case 'seedstorm':return {interval:.95*faster,damage:14*power,pop:12*power,seeds:Math.min(12,6+L),spread:.55,life:.42};
   case 'mirrorguard':return {interval:Infinity,damage:30*power,mirrors:Math.min(5,2+Math.floor(L/2)),ram:10*power,radius:1.9};
   default:return {interval:Infinity,damage:0};
