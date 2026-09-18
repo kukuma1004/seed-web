@@ -10,4 +10,5 @@ let request;
 const result=await submitBetaApplication({account:{user:()=>user,tokenSession:async()=>({uid:'tester-1',idToken:'token'})},android:true,consent:true,now:()=>4321,fetchImpl:async(url,options)=>{request={url,options};return {ok:true};}});
 assert.equal(result.appliedAt,4321);assert.match(request.url,/seedBetaApplicants\/tester-1\.json\?auth=token$/);assert.equal(request.options.method,'PUT');
 assert.match(betaApplicationMessage(new Error('ANDROID_REQUIRED')),/Android/);
+assert.match(betaApplicationMessage({code:'auth/unauthorized-domain'}),/AUTH-DOMAIN/);
 console.log('Beta signup: Google account record, Android eligibility, consent and authenticated Firebase write passed.');

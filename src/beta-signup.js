@@ -37,6 +37,7 @@ export function betaApplicationMessage(error){
  if(code.includes('CONSENT_REQUIRED'))return '이메일 수집·이용 동의가 필요해요.';
  if(code.includes('popup-closed'))return 'Google 로그인 창이 닫혔어요. 다시 눌러 주세요.';
  if(code.includes('popup-blocked'))return '팝업이 차단됐어요. 브라우저에서 팝업을 허용해 주세요.';
+ if(code.includes('unauthorized-domain'))return '이 웹 주소가 Firebase 로그인 허용 목록에 없어요. 관리자에게 알려 주세요. (AUTH-DOMAIN)';
  if(code.includes('GOOGLE_ACCOUNT_REQUIRED'))return '테스트에 사용할 Google 계정으로 먼저 로그인해 주세요.';
  return '신청을 저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.';
 }

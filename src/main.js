@@ -650,11 +650,15 @@ function beginEvolution(id){
 function startGame(){if(gameplayPaused()){showSeasonPause();return;}if(mode==='ready'&&!maintenanceOn)restart();}
 function authMessage(error){
  const code=String(error?.code||error?.message||'');
- if(code.includes('popup-closed')||code.includes('canceled')||code.includes('cancelled'))return '로그인이 취소되었어요.';
+ const tag=code.replace(/^auth\//,'').replace(/[^a-zA-Z0-9_/-]+/g,'-').slice(0,56);
+ if(code.includes('UNREGISTERED_ON_API_CONSOLE')||code.includes('DEVELOPER_ERROR'))return '앱 서명과 Google 로그인 연결을 확인해야 해요. 관리자에게 이 화면을 보여 주세요. (AUTH-ANDROID)';
+ if(code.includes('popup-closed')||code.includes('canceled')||code.includes('cancelled'))return '로그인이 취소되었어요. 계정을 고른 직후 이 문구가 나왔다면 화면을 캡처해 주세요. (AUTH-CANCELED)';
  if(code.includes('credential-already-in-use')||code.includes('account-exists'))return '이미 다른 방식으로 연결된 계정이에요. 먼저 그 계정으로 로그인해 주세요.';
  if(code.includes('network'))return '인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
+ if(code.includes('unauthorized-domain'))return '이 웹 주소가 Firebase 로그인 허용 목록에 없어요. 관리자에게 알려 주세요. (AUTH-DOMAIN)';
+ if(code.includes('NO_CREDENTIAL')||code.includes('NoCredential'))return '이 기기에서 사용할 Google 계정을 찾지 못했어요. Play 스토어에 로그인한 계정을 확인해 주세요. (AUTH-NO-ACCOUNT)';
  if(code.includes('provider')||code.includes('configuration-not-found')||code.includes('DEVELOPER_ERROR'))return '이 로그인 방식의 마지막 설정을 준비하고 있어요.';
- return '로그인을 마치지 못했어요. 잠시 뒤 다시 시도해 주세요.';
+ return `로그인을 마치지 못했어요. 화면을 캡처해 관리자에게 보내 주세요.${tag?` (AUTH ${tag})`:''}`;
 }
 function showBetaLock(message='',success=false){
  revealApp();
