@@ -73,6 +73,7 @@ import './feedback.css';
 import './mobile.css';
 import './choice.css';
 import './account.css';
+import './developer-lab.css';
 import {setupMobileApp} from './mobile-app.js';
 import {createAccountAuth} from './account-auth.js';
 import {createCloudSync} from './cloud-sync.js';
@@ -109,9 +110,10 @@ let canvasRect={left:0,top:0,width:1,height:1};
 // World coordinates and hit sizes are unchanged; only the camera frames a smaller area.
 let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
-let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false;
+const localAdminLab=localInspection&&new URLSearchParams(location.search).has('adminLab');
+let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false,developerRun=false,developerForm='';
 const gameplayPaused=()=>gameplayIsPaused({status:seasonStatus,native:account.native,admin:adminMode,dev:import.meta.env.DEV});
-const refreshAdminMode=async()=>adminMode=await isSeasonAdmin(account.user());
+const refreshAdminMode=async()=>adminMode=localAdminLab||await isSeasonAdmin(account.user());
 const WEB_ACCESS_POLL_MS=15_000;
 let webAccessCheck=null;
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
@@ -307,7 +309,7 @@ function requireName(){const input=$('#player-name'),name=cleanName(input?input.
  setRankingTermsAccepted(runStorage,true);playerName=saveName(runStorage,name);return true;}
 let saveOK=false,profile=readDiscoveries(runStorage);const titleAccount=readAccountProfile(runStorage),seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length,badges:titleAccount.badges,equipped:titleAccount.equippedTitle});
 function buildRoomBoundary(){buildArenaBoundary(arenaGroup,arena,mats);}
-function remember(kind,id){const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
+function remember(kind,id){if(developerRun)return {profile,saved:true};const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}LS=relicLawStats(lawStats(levels),relics);document.querySelectorAll('#rules>div').forEach(n=>{const lv=levelOf(levels,n.dataset.rule),mark=mutationOf(mutations,n.dataset.rule);n.classList.toggle('active',lv>0);n.classList.toggle('mutated',Boolean(mark));n.querySelector('span:not(.law-art)').textContent=LAWS[n.dataset.rule].name+(lv?' Lv.'+lv:'')+(mark?' '+mark.badge:'');});}
 function levelPressure(){return 1+.07*Math.max(0,buildLevel(levels,heldForms)-1);}
 function effectiveLaws(){return [...effectiveLevels(levels,heldForms).keys()];}
@@ -440,6 +442,7 @@ function spawnWardenAt(x,z,variant,{support=false,delay=0}={}){
 }
 
 function saveBoundary(nextStage=stage,saveMode='entry',over={}){
+ if(developerRun)return true;
  saveOK=writeCheckpoint(actStore(),{version:1,cycle,region,stage:nextStage,mode:saveMode,hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),guideTarget,rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,inventory:{...inventory},runBonuses:{...runBonuses},turretPotionDry,relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:Number((activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown).toFixed(2)),...over});
  return saveOK;
 }
@@ -448,6 +451,8 @@ function nextJourney(){austinRoom=false;cycle++;rerollUsed=false;stage=0;const b
 function enterAustin(){austinRoom=true;wave();$('#toast').textContent=`${AUSTIN.name} 등장 · 바닥 시계의 침이 다음 종소리의 빈틈을 가리킵니다`;}
 function saveAfterBoss(){if(austinAhead())return saveBoundary(4,'austin');return saveBoundary(0,'entry',{cycle:cycle+1,hp:Math.min(100,hp+JOURNEY_HEAL),rerollUsed:false});}
 document.body.insertAdjacentHTML('beforeend','<button id="save-exit" hidden>저장된 방 입구부터 나중에 이어하기</button>');
+document.body.insertAdjacentHTML('beforeend','<button id="developer-lab-fab" hidden>실험실</button>');
+$('#developer-lab-fab').onclick=showDeveloperLab;
 // Relic numbers are measured against the build without the relic, so the screen shows before → after.
 const relicFx=id=>relicEffect(id,lawStats(levels),heldForms);
 const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>relics,effect:relicFx,canSwap:()=>roomCleared&&exitOpen,swap:id=>{if(!roomCleared||!exitOpen||!equipRelic(relics,id))return;syncLaws();if(stage===4)saveAfterBoss();else saveBoundary(stage+1);}},{get:()=>inventory},{get:()=>activeGauge},{state:()=>seedTitle.state()},{get:()=>dashState},{summary:()=>runBonusSummary(runBonuses),shotScale:()=>runShotScale(runBonuses)});
@@ -455,6 +460,7 @@ const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>rel
 // the unfinished attempt; saving its rewards as well would respawn the same
 // enemies while preserving their kills, score, choice gauge and drops.
 function saveLeaveState(){
+ if(developerRun)return false;
  if(!['playing','evolving','cards','forms','relics','dash','solo','awaken'].includes(mode)||roomCleared)return false;
  const entry=readCheckpoint(actStore()),safe=roomExitCheckpoint(entry,{hp,inventory});
  return safe?writeCheckpoint(actStore(),safe):false;
@@ -538,8 +544,8 @@ function enemyDown(e){
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);audio.play('bossDefeat');
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
- if(e.type==='austin'){austinsDefeated++;const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}
- else if(main){wardensDefeated++;remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}
+ if(e.type==='austin'){austinsDefeated++;if(developerRun){$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}}
+ else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}}
  else $('#toast').textContent=stageWarden?'쌍문지기 한 명 격파 · 남은 문지기를 쓰러뜨리세요':'정예 문지기 격파!';
 }
 function updateFallen(dt,time){for(let i=fallen.length-1;i>=0;i--){const f=fallen[i],e=f.e;f.t+=dt;const k=Math.min(1,f.t/1.3);e.hit=Math.floor(f.t*14)%2?.14:0;e.updateArt?.(time);e.g.position.y=-k*k*1.1;e.g.scale.setScalar(1-k*.3);if(Math.floor(f.t/.18)!==Math.floor((f.t-dt)/.18))vfx.burst(e.g.position,'amber',10,1.2);if(f.t>=1.3){releaseEnemy(e);fallen.splice(i,1);}}}
@@ -611,7 +617,7 @@ function hitPlayer(amount){if(labSafe||invuln>0||shellTime>0||mode!=='playing')r
   // A sprout stands the seed back up once, with a moment to breathe and no shots already in the air.
   const revive=tryRevive(inventory);
   if(revive){hp=revive.hp;invuln=Math.max(invuln,revive.guard);for(const p of enemyShots)release(p.ob);enemyShots=[];itemBarKey='';cameraShake=.32;vfx.pulse(player.position,'seed',2.8,.8);vfx.burst(player.position,'seed',44,2.2);$('#toast').textContent=`${ITEMS.sprout.name}이 돋았다 · 생명력 ${revive.hp}으로 다시 일어났습니다`;return;}
-  clearCheckpoint(actStore());mode='dead';showEnd(false);
+  if(!developerRun)clearCheckpoint(actStore());mode='dead';showEnd(false);
  }
 }
 let cameraShake=0;const aimRing=ring(scene,.22,0xa4f8db);aimRing.material.opacity=.5;aimRing.visible=false;
@@ -751,7 +757,7 @@ function showAccount(error=''){
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
-function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
+function showIntro(){developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  if(maintenanceOn){showMaintenance();return;}
  // 점검으로 잠시 닫았던 미안함: 다시 싹 1개와 작은 물약 3개를 보관함에 한 번만 넣는다.
@@ -760,7 +766,7 @@ function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setSce
  const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
- $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),planted=garden.plots.filter(Boolean).length,shop=readShop(runStorage);
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
  const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
@@ -770,6 +776,7 @@ function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setSce
   ${nameFieldHtml()}
   <div class="menu-list">
    <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
+   ${adminMode?'<button id="developer-lab" class="menu-item developer-entry"><strong>개발자 실험실</strong><small>조합 선택 · 문지기 · 오스틴 바로 확인</small></button>':''}
    <button id="go-garden" class="menu-item"><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></button>
    <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 보관함 ${itemCounts(shop.stash)||'비어 있음'}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
@@ -782,6 +789,7 @@ function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setSce
  bindNameField();
  online.flush().catch(()=>0);
  $('#go-dungeon').onclick=showDungeon;
+ if($('#developer-lab'))$('#developer-lab').onclick=showDeveloperLab;
  $('#go-garden').onclick=()=>showGarden(showIntro);
  $('#go-shop').onclick=()=>showShop(showIntro);
  $('#patch-notes').onclick=showNotes;
@@ -789,6 +797,35 @@ function showIntro(){if(gameplayPaused()){showSeasonPause();return;}audio.setSce
  $('#account-link').onclick=()=>showAccount();
  $('#discoveries').onclick=()=>{mode='discoveries';const bookProfile=adminMode?{...profile,forms:Object.keys(FORMS)}:profile;$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(bookProfile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
+}
+function startDeveloperEncounter(target){
+ if(!adminMode)return showIntro();
+ developerRun=true;startRegion='garden';restart();
+ if(developerForm&&Object.hasOwn(FORMS,developerForm)){heldForms.set(developerForm,5);syncForms(true);growth.select(effectiveLaws(),mutated);}
+ if(target==='warden'){stage=4;cycle=0;wardensDefeated=0;austinsDefeated=0;austinRoom=false;wave();}
+ else if(target==='duo'){stage=4;cycle=5;wardensDefeated=5;austinsDefeated=1;austinRoom=false;wave();}
+ else if(target==='austin'){stage=4;cycle=4;wardensDefeated=5;austinsDefeated=0;austinRoom=true;wave();}
+ if($('#developer-active')?.checked){activeGauge.value=ACTIVE.max;activeGauge.cooldown=0;}
+ labSafe=Boolean($('#developer-safe')?.checked);const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=false;
+ $('#toast').textContent=`개발자 실험 · ${developerForm?FORMS[developerForm].name:'기본 씨앗'} · 기록과 보상은 저장되지 않습니다`;
+}
+function showDeveloperLab(){
+ if(!adminMode)return showIntro();
+ mode='developer-lab';touch.reset();keys.clear();keyboardDash=false;paused=false;
+ $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen','developer-mode');$('#overlay').hidden=false;
+ const groups=[
+  ['기본 · 융합', [['','기본 씨앗'],...Object.entries(FORMS).filter(([,form])=>!form.solo&&!form.awakened).map(([id,form])=>[id,form.name])]],
+  ['단독 진화',Object.entries(FORMS).filter(([,form])=>form.solo).map(([id,form])=>[id,form.name])],
+  ['완성 진화',Object.entries(FORMS).filter(([,form])=>form.awakened&&!form.twin).map(([id,form])=>[id,form.name])],
+  ['쌍둥이 각성',Object.entries(FORMS).filter(([,form])=>form.twin).map(([id,form])=>[id,form.name])]
+ ];
+ const buildButton=([id,name])=>`<button type="button" data-developer-form="${id}" aria-pressed="${developerForm===id}">${id?formArt(id,'developer-form-art'):'<span class="developer-seed-mark">♧</span>'}<strong>${escapeHtml(name)}</strong></button>`;
+ $('#overlay').innerHTML=`<div class="menu-panel developer-panel"><p class="eyebrow">SEED · ADMIN ONLY</p><h2>전투 실험실</h2><p class="developer-note">현재 공개된 진화 55종을 골라 원하는 전투에 바로 들어갑니다. 실험 중 점수·보상·도감·정원·저장은 남지 않아요.</p><h3>확인할 진화</h3><div class="developer-form-groups">${groups.map(([label,options],index)=>`<details ${options.some(([id])=>id===developerForm)||(!developerForm&&index===0)?'open':''}><summary>${label} <small>${options.length}</small></summary><div class="developer-builds">${options.map(buildButton).join('')}</div></details>`).join('')}</div><div class="developer-toggles"><label><input id="developer-active" type="checkbox" checked> 궁극기 즉시 충전</label><label><input id="developer-safe" type="checkbox"> 피해 받지 않기</label></div><h3>바로 이동</h3><div class="developer-actions"><button data-developer-target="room"><strong>일반 방</strong><small>움직임과 탄환 확인</small></button><button data-developer-target="warden"><strong>문지기</strong><small>단독 문지기 전투</small></button><button data-developer-target="duo"><strong>쌍문지기</strong><small>두 종류 동시 전투</small></button><button data-developer-target="austin"><strong>오스틴</strong><small>진짜 보스 바로 시작</small></button></div><div class="developer-footer"><button id="developer-choice">법칙 선택 카드 바로 보기</button><button id="developer-back">메인으로</button></div></div>`;
+ const select=id=>{developerForm=id;document.querySelectorAll('[data-developer-form]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.developerForm===id)));};
+ document.querySelectorAll('[data-developer-form]').forEach(button=>button.onclick=()=>select(button.dataset.developerForm));
+ document.querySelectorAll('[data-developer-target]').forEach(button=>button.onclick=()=>startDeveloperEncounter(button.dataset.developerTarget));
+ $('#developer-choice').onclick=()=>{developerForm='';startDeveloperEncounter('room');cardChoice(false,['reflect','split','chain']);};
+ $('#developer-back').onclick=showIntro;
 }
 // 보관함·가져가기를 한 줄로("작은 물약 3 · 다시 싹 1"). 비어 있으면 빈 문자열.
 const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[id].name} ${counts[id]}`).join(' · ');
@@ -967,7 +1004,8 @@ function showRanking(view='online'){
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
 function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-screen','garden-mode');activeVfx.clear();cancelActive(activeGauge);$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
- const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&score>0&&Boolean(name);
+ if(developerRun){$('#overlay').hidden=false;$('#overlay').classList.add('intro','menu-screen','developer-mode');$('#overlay').innerHTML='<div class="menu-panel developer-panel developer-end"><p class="eyebrow">SEED · ADMIN ONLY</p><h2>실험 종료</h2><p>점수·보상·도감·정원·저장에는 아무것도 남지 않았습니다.</p><div class="developer-footer"><button id="developer-retry">실험실로</button><button id="developer-end-main">메인으로</button></div></div>';$('#developer-retry').onclick=showDeveloperLab;$('#developer-end-main').onclick=showIntro;return;}
+ const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&!developerRun&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
  // 정원: 이번 여정이 남긴 씨앗을 넣고, 심어 둔 식물에 성장점을 준다.
  lastHarvest=harvestFromRun({levels:Object.fromEntries(effectiveLevels(levels,heldForms)),forms:Object.fromEntries(heldForms),wardens:wardensDefeated,austins:austinsDefeated,score,kills,journey:cycle+1,elapsed,dashes:runDashes,damageTaken:runDamageTaken});
@@ -1000,7 +1038,7 @@ function showMaintenance(){
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel maintenance-panel"><p class="eyebrow">SEED</p><h2>${escapeHtml(MAINTENANCE.title)}</h2>${MAINTENANCE.lines.map(line=>`<p class="maintenance-line">${escapeHtml(line)}</p>`).join('')}</div>`;
 }
-function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
+function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,act2Blocked=candidate&&playableRegion(candidate.region)!==candidate.region,restore=act2Blocked?null:candidate;region=playableRegion(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();if(!restore&&!developerRun)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=100;playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore&&!developerRun)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
  if(restore){stage=restore.stage;hp=restore.hp;kills=restore.kills;elapsed=restore.elapsed;runDashes=restore.playDashes||0;runDamageTaken=restore.playDamage||0;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
  for(const [id,lv] of Object.entries(restore?.forms||{}))if(Object.hasOwn(FORMS,id))heldForms.set(id,lv);
  // 변이는 이어하기에서만 돌아온다. 새 여정은 빈 상태로 시작한다.

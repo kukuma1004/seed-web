@@ -24,6 +24,12 @@ assert.match(main,/await account\.signInWithGoogle\(\);await refreshAdminMode\(\
 assert.match(main,/WEB_ACCESS_POLL_MS=15_000/,'이미 열린 웹 게임도 짧은 주기로 차단 상태를 다시 확인해야 합니다.');
 assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운드에서 돌아온 웹 게임은 즉시 차단 상태를 확인해야 합니다.');
 assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차단되면 안전한 진행 지점을 저장한 뒤 클라우드 동기화를 시도해야 합니다.');
+assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에만 전투 실험실 진입점이 보여야 합니다.');
+assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAdminMode=async\(\)=>adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');
+assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
+assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 55종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화 55종을 모두 제공해야 합니다.');
+assert.match(main,/developerRun\)return true;[\s\S]*writeCheckpoint/,'개발자 실험은 기존 이어하기 저장을 덮어쓰지 않아야 합니다.');
+assert.match(main,/if\(developerRun\)\{\$\('#overlay'\)[\s\S]*점수·보상·도감·정원·저장/,'개발자 실험 종료는 랭킹과 정원 기록을 만들지 않아야 합니다.');
 const auth=fs.readFileSync(new URL('../src/account-auth.js',import.meta.url),'utf8');
 assert.match(auth,/browserLocalPersistence[\s\S]*browserSessionPersistence/,'웹 로그인은 로컬 저장이 막힌 브라우저에서도 세션 동안 유지되어야 합니다.');
 assert.match(auth,/onAuthStateChanged\(webAuth/,'다른 탭이나 팝업에서 바뀐 로그인 상태를 즉시 반영해야 합니다.');
