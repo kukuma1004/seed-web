@@ -88,11 +88,12 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
     const google=async shouldLink=>{
      const method=shouldLink?'linkWithGoogle':'signInWithGoogle';
      if(platform!=='android')return FirebaseAuthentication[method]();
-     // Credential Manager is the maintained path, while the legacy picker still
-     // supports older/low-end devices. Try both unless the player canceled or the
-     // selected Google credential already belongs to an existing Firebase UID.
-     try{return await FirebaseAuthentication[method]();}
-     catch(error){if(userCanceled(error)||credentialConflict(error))throw error;return FirebaseAuthentication[method]({useCredentialManager:false});}
+     // Several Android/Google Play Services combinations still fail inside the
+     // newer Credential Manager flow. The classic native account picker has been
+     // more reliable for the closed beta, so use it first and keep Credential
+     // Manager as a compatibility fallback for devices where the picker fails.
+     try{return await FirebaseAuthentication[method]({useCredentialManager:false});}
+     catch(error){if(userCanceled(error)||credentialConflict(error))throw error;return FirebaseAuthentication[method]({useCredentialManager:true});}
     };
     try{result=await google(link);}
     catch(error){

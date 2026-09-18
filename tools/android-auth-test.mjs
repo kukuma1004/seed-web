@@ -12,8 +12,8 @@ assert.equal(config.plugins?.FirebaseAuthentication?.skipNativeAuth,false,'Andro
 assert.ok(config.plugins?.FirebaseAuthentication?.providers?.includes('google.com'),'Google provider must be included.');
 assert.match(variables,/rgcfaIncludeGoogle\s*=\s*true/,'Google native dependencies must be packaged.');
 assert.match(variables,/androidxCredentialsVersion\s*=\s*'1\.([3-9]|\d{2,})\./,'Credential libraries must meet the plugin setup minimum.');
-assert.match(source,/try\{return await FirebaseAuthentication\[method\]\(\);\}/,'Android sign-in must try Credential Manager first.');
-assert.match(source,/FirebaseAuthentication\[method\]\(\{useCredentialManager:false\}\)/,'Android sign-in must fall back to the legacy picker on compatible errors.');
+assert.match(source,/try\{return await FirebaseAuthentication\[method\]\(\{useCredentialManager:false\}\);\}/,'Android sign-in must try the reliable native account picker first.');
+assert.match(source,/FirebaseAuthentication\[method\]\(\{useCredentialManager:true\}\)/,'Android sign-in must retain Credential Manager as a compatibility fallback.');
 assert.match(source,/credentialConflict\(error\)[\s\S]*writeMigration[\s\S]*FirebaseAuthentication\.signOut\(\)[\s\S]*google\(false\)/,'An anonymous device must recover when Google already belongs to the web-created Firebase UID.');
 assert.match(source,/linkWithPopup[\s\S]*credentialConflict\(error\)[\s\S]*webSdk\.signOut\(webAuth\)[\s\S]*signInWithPopup/,'An installed web app must recover when its anonymous UID cannot link to an existing Google UID.');
 assert.match(source,/pendingMigration:readMigration,finishMigration:clearMigration/,'Cloud sync must receive a durable guest-to-Google migration marker.');
