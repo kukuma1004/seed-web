@@ -30,6 +30,7 @@ const accountScreen=main.slice(main.indexOf('function showAccount'),main.indexOf
 assert.match(accountScreen,/await action\(\);[\s\S]*await refreshAccessMode\(\);[\s\S]*showEntry\(\)/,'공개 화면에서 로그인 직후 관리자와 테스터 권한을 다시 확인해야 합니다.');
 assert.match(main,/WEB_ACCESS_POLL_MS=15_000/,'이미 열린 웹 게임도 짧은 주기로 차단 상태를 다시 확인해야 합니다.');
 assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운드에서 돌아온 웹 게임은 즉시 차단 상태를 확인해야 합니다.');
+assert.match(main,/if\(adminMode\|\|betaTesterMode\)\{[\s\S]*mode==='beta-lock'[\s\S]*showEntry\(\)/,'새로 승인된 테스터는 기존 잠금 화면에서 즉시 게임 메뉴로 이동해야 합니다.');
 assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차단되면 안전한 진행 지점을 저장한 뒤 클라우드 동기화를 시도해야 합니다.');
 assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에만 전투 실험실 진입점이 보여야 합니다.');
 assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAccessMode=async\(\)=>\{const user=account\.user\(\);adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');

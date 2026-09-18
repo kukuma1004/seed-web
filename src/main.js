@@ -748,7 +748,13 @@ async function enforceCurrentWebAccess(){
  webAccessCheck=(async()=>{
   seasonStatus=await loadSeasonStatus({enabled:true});
   await refreshAccessMode();
-  if(adminMode||betaTesterMode)return false;
+  if(adminMode||betaTesterMode){
+   // A tester can be added while this installed/web tab is already showing the
+   // closed-beta gate. Permission was refreshed correctly, but the old gate
+   // stayed on screen until another manual navigation. Leave it immediately.
+   if(mode==='beta-lock'||mode==='season-pause')showEntry();
+   return false;
+  }
   const betaLocked=publicWebBetaLocked(),seasonPaused=gameplayPaused();
   if(!betaLocked&&!seasonPaused)return false;
   saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
