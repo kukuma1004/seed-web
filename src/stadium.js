@@ -23,23 +23,50 @@ function clayTexture(){
  for(let i=0;i<5200;i++){const v=Math.random();x.fillStyle=v<.5?`rgba(60,24,14,${.06+Math.random()*.1})`:`rgba(196,110,72,${.05+Math.random()*.09})`;const r=Math.random()*2.4+.4;x.beginPath();x.arc(Math.random()*size,Math.random()*size,r,0,Math.PI*2);x.fill();}
  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(4,4);return t;
 }
-// Chalk lines are geometry, so they stay crisp at any resolution: an infield diamond, the batter's box near the start and foul lines.
-function chalkLines(){
- const parts=[],line=(x1,z1,x2,z2,w=.09)=>{const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);const g=new THREE.PlaneGeometry(w,len).rotateX(-Math.PI/2);g.rotateY(Math.atan2(dx,dz));g.translate((x1+x2)/2,.12,(z1+z2)/2);parts.push(g);};
- const home=[0,4.2],first=[3.6,.6],second=[0,-3],third=[-3.6,.6];
- line(...home,...first);line(...first,...second);line(...second,...third);line(...third,...home);
- line(...home,8.6,-4.2);line(...home,-8.6,-4.2);
- line(-.9,3.5,.9,3.5,.06);line(-.9,4.9,.9,4.9,.06);line(-.9,3.5,-.9,4.9,.06);line(.9,3.5,.9,4.9,.06);
- for(const [x,z] of [first,second,third]){const b=new THREE.PlaneGeometry(.42,.42).rotateX(-Math.PI/2);b.rotateY(Math.PI/4);b.translate(x,.122,z);parts.push(b);}
- return parts;
+// One merged chalk mesh changes with the room. It makes every silhouette readable without
+// adding textures or draw calls: plate lanes, an infield diamond, ball seams, glove webbing
+// and the outfield arcs of the final ballpark.
+const floorGeometryCache=new Map(),markingGeometryCache=new Map();
+function arenaKey(arena){return arena?.id||arena?.shape||'rect';}
+function stadiumFloorGeometry(arena){
+ const key=arenaKey(arena);if(floorGeometryCache.has(key))return floorGeometryCache.get(key);
+ let geometry;
+ if(arena?.shape==='circle')geometry=new THREE.CircleGeometry(arena.radius+.1,64);
+ else if(arena?.shape==='poly')geometry=new THREE.ShapeGeometry(new THREE.Shape(arena.points.map(([x,z])=>new THREE.Vector2(x,-z))));
+ else geometry=new THREE.PlaneGeometry(20.2,16.2);
+ geometry.rotateX(-Math.PI/2);geometry.translate(0,.112,0);floorGeometryCache.set(key,geometry);return geometry;
+}
+function stadiumMarkings(arena){
+ const key=arenaKey(arena);if(markingGeometryCache.has(key))return markingGeometryCache.get(key);
+ const parts=[];
+ const line=(x1,z1,x2,z2,w=.09)=>{const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<.001)return;const g=new THREE.PlaneGeometry(w,len).rotateX(-Math.PI/2);g.rotateY(Math.atan2(dx,dz));g.translate((x1+x2)/2,.12,(z1+z2)/2);parts.push(g);};
+ const path=(points,w=.09)=>{for(let i=1;i<points.length;i++)line(...points[i-1],...points[i],w);};
+ const arc=(cx,cz,rx,rz,a0,a1,steps=18,w=.08)=>{const points=[];for(let i=0;i<=steps;i++){const a=a0+(a1-a0)*i/steps;points.push([cx+Math.sin(a)*rx,cz-Math.cos(a)*rz]);}path(points,w);};
+ const baseDiamond=()=>{const home=[0,4.2],first=[3.6,.6],second=[0,-3],third=[-3.6,.6];path([home,first,second,third,home]);for(const [x,z] of [first,second,third]){const b=new THREE.PlaneGeometry(.42,.42).rotateX(-Math.PI/2);b.rotateY(Math.PI/4);b.translate(x,.122,z);parts.push(b);}};
+ const batterBox=()=>{path([[-.9,3.5],[.9,3.5],[.9,4.9],[-.9,4.9],[-.9,3.5]],.06);};
+ if(key==='home-plate'){
+  batterBox();path([[-5.9,5.85],[0,-6.6],[5.9,5.85]],.1);path([[-4.35,1],[0,-5.1],[4.35,1]],.06);
+ }else if(key==='diamond'){
+  baseDiamond();batterBox();line(0,4.2,7.5,-2.9);line(0,4.2,-7.5,-2.9);
+ }else if(key==='baseball'){
+  for(const side of [-1,1]){const seam=[];for(let i=0;i<=18;i++){const z=-6.7+i*13.4/18,x=side*(2.75-.036*z*z);seam.push([x,z]);}path(seam,.115);for(let i=2;i<17;i+=2){const [x,z]=seam[i],tilt=side*(i<9?1:-1);line(x-.32,z-.16*tilt,x+.32,z+.16*tilt,.055);}}
+  arc(0,0,7.45,7.45,-Math.PI,Math.PI,42,.055);
+ }else if(key==='glove'){
+  arc(0,.5,4.65,3.8,-1.35,1.35,24,.11);arc(0,-.15,2.7,2.15,-1.45,1.45,18,.065);
+  for(const [x,z] of [[-4.9,-6],[-2.2,-6.65],[.1,-7],[2.8,-6.55],[5.25,-5.8]])path([[0,-1.25],[x,z]],.075);
+  path([[-3.15,-1.85],[-1.6,-3.15],[0,-1.85],[1.6,-3.15],[3.15,-1.85]],.07);
+ }else if(key==='ballpark'){
+  baseDiamond();batterBox();line(0,4.2,8,-2.8,.105);line(0,4.2,-8,-2.8,.105);
+  arc(0,4.2,5.5,5.5,-1.02,1.02,20,.075);arc(0,4.2,8.5,8.5,-1.02,1.02,28,.12);
+ }else baseDiamond();
+ const geometry=mergeParts(parts);markingGeometryCache.set(key,geometry);return geometry;
 }
 export function createStadium(scene,{lights=[],hide=[]}={}){
  const group=new THREE.Group();group.name='act2-stadium';group.visible=false;scene.add(group);
  const floorMat=new THREE.MeshStandardMaterial({map:clayTexture(),color:0xffffff,roughness:.95,metalness:0});
- const rectFloor=new THREE.PlaneGeometry(20.2,16.2).rotateX(-Math.PI/2).translate(0,.112,0),circleFloor=new THREE.CircleGeometry(7.7,48).rotateX(-Math.PI/2).translate(0,.112,0); // just above the arena floor (.105)
  const track=new THREE.Mesh(new THREE.PlaneGeometry(23.2,19.2).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x172537,roughness:.92,metalness:.04}));track.position.y=.107;track.receiveShadow=true;group.add(track);
- const floor=new THREE.Mesh(rectFloor,floorMat);floor.receiveShadow=true;group.add(floor);
- const chalk=new THREE.Mesh(mergeParts(chalkLines()),new THREE.MeshBasicMaterial({color:0xf4efe4,transparent:true,opacity:.82,depthWrite:false,forceSinglePass:true}));group.add(chalk);
+ const floor=new THREE.Mesh(stadiumFloorGeometry(null),floorMat);floor.receiveShadow=true;group.add(floor);
+ const chalk=new THREE.Mesh(stadiumMarkings(null),new THREE.MeshBasicMaterial({color:0xf4efe4,transparent:true,opacity:.82,depthWrite:false,forceSinglePass:true}));group.add(chalk);
  const towers=[],lamps=[];
  for(const [x,z] of [[-12.5,-10],[12.5,-10],[-12.5,9.5],[12.5,9.5]]){
   towers.push(new THREE.CylinderGeometry(.14,.2,9,6).translate(x,4.5,z));
@@ -85,7 +112,7 @@ export function createStadium(scene,{lights=[],hide=[]}={}){
  return {
   group,
   setActive(on,arena=null,{stage=0,bossRoom=false}={}){
-   if(on&&arena){const circle=arena.shape==='circle';floor.geometry=circle?circleFloor:rectFloor;chalk.scale.setScalar(circle?.78:1);}
+   if(on&&arena){floor.geometry=stadiumFloorGeometry(arena);chalk.geometry=stadiumMarkings(arena);chalk.scale.setScalar(1);}
    baseEnabled=Boolean(on);relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
    if(!relayEnabled){relayClock=0;relayHitPass=relayWarnPass=-1;relayLine.visible=false;relayBall.visible=false;}
    if(on===active)return;active=on;group.visible=on;

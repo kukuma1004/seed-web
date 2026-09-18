@@ -6,6 +6,35 @@ const RECT=Object.freeze({shape:'rect',halfWidth:10,halfDepth:8});
 const CIRCLE=Object.freeze({shape:'circle',radius:7.6});
 const EPS=1e-6;
 
+const point=(x,z)=>Object.freeze([x,z]);
+const spot=(x,z)=>Object.freeze({x,z});
+const polygonArena=(id,points,{start=spot(0,5),exit=Object.freeze({x:0,z:-6.25,radius:1.65}),spawns=[]}={})=>Object.freeze({
+  shape:'poly',id,points:Object.freeze(points.map(([x,z])=>point(x,z))),start,exit,spawns:Object.freeze(spawns.map(([x,z])=>spot(x,z)))
+});
+
+// Act 2 is a tour through baseball silhouettes. These are real movement boundaries rather
+// than decoration, so the narrow plate, rotating ball, glove bays and broad outfield each
+// produce a different dodge route. Every outline is deliberately broad enough for the
+// four base-slide points and the relay pitch down the centre.
+export const HOME_PLATE_ARENA=polygonArena('home-plate',[
+  [-7.8,7.3],[7.8,7.3],[7.8,-2.3],[0,-8.1],[-7.8,-2.3]
+],{start:spot(0,5.25),spawns:[[-6.8,5.6],[6.8,5.6],[-6.6,-1],[6.6,-1],[-3.7,-4.4],[3.7,-4.4],[0,-6.7]]});
+export const DIAMOND_ARENA=polygonArena('diamond',[
+  [0,-8.6],[9,0],[0,7.7],[-9,0]
+],{spawns:[[-6.7,-.1],[6.7,-.1],[-4.1,-4.5],[4.1,-4.5],[-4.1,3.4],[4.1,3.4],[0,-7.2]]});
+export const BASEBALL_ARENA=Object.freeze({shape:'circle',id:'baseball',radius:8.2,start:spot(0,5.3),exit:Object.freeze({x:0,z:-6.5,radius:1.65})});
+export const GLOVE_ARENA=polygonArena('glove',[
+  [-4.8,7.4],[4.8,7.4],[6.15,5],[7.1,2.2],[7.25,-1.1],[6.55,-3.7],[7.05,-6.7],
+  [5.15,-7.65],[4.25,-5.05],[3.25,-8.05],[1.35,-8.35],[1,-5.25],[0,-8.65],[-1,-5.25],
+  [-2.95,-8.05],[-2.45,-4.95],[-4.2,-7.55],[-6.45,-6.3],[-5.9,-3.65],[-8.45,-3.85],
+  [-9,-1.2],[-7.25,1.6],[-6.3,4.8]
+],{spawns:[[-5.3,4.1],[5.3,4.1],[-7,-1.8],[6,-2.2],[-5.2,-5.5],[5.25,-5.7],[-1.2,-6.8],[2.3,-6.8]]});
+export const BALLPARK_ARENA=polygonArena('ballpark',[
+  [-4.6,7.35],[4.6,7.35],[6.45,5],[7.9,2.5],[8.9,-.5],[8.55,-3.7],[6.4,-6.65],
+  [3.25,-8.15],[0,-8.75],[-3.25,-8.15],[-6.4,-6.65],[-8.55,-3.7],[-8.9,-.5],[-7.9,2.5],[-6.45,5]
+],{start:spot(0,5.35),exit:Object.freeze({x:0,z:-6.75,radius:1.75}),spawns:[[-5.3,4.3],[5.3,4.3],[-7.3,0],[7.3,0],[-6.1,-5],[6.1,-5],[-3,-7],[3,-7],[0,-7.6]]});
+export const ACT2_ARENAS=Object.freeze([HOME_PLATE_ARENA,DIAMOND_ARENA,BASEBALL_ARENA,GLOVE_ARENA,BALLPARK_ARENA]);
+
 // Five-pointed star garden. One tip points to the top of the screen and holds the exit;
 // the seed starts in the open middle, because the bottom of a star is a notch, not floor.
 // Tips are dead ends, so the star is kept wide: a fat inner ring (6) and stretched sideways (x1.15), where the screen has room.
@@ -26,8 +55,7 @@ export const STAR=Object.freeze({
 
 // A room's visible rim, movement and projectiles share this definition.
 export function arenaFor(stage,cycle=0,region='garden') {
-  // Act 2 stadium: no star garden; the diamond room is round.
-  if(isAct2(region))return stage===2?CIRCLE:RECT;
+  if(isAct2(region))return ACT2_ARENAS[Math.max(0,Math.min(ACT2_ARENAS.length-1,stage))];
   if(isStarRoom(stage,cycle))return STAR;
   return stage===2?CIRCLE:RECT;
 }

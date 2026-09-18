@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {arenaFor,insideArena,constrainToArena,reflectArenaBoundary,safeArenaSpawn,buildArenaBoundary} from '../src/arena.js';
+import {arenaFor,insideArena,constrainToArena,reflectArenaBoundary,safeArenaSpawn,buildArenaBoundary,ACT2_ARENAS} from '../src/arena.js';
 
 const circle=arenaFor(2),rect=arenaFor(0),near=(a,b)=>assert.ok(Math.abs(a-b)<1e-4,`${a} ≈ ${b}`);
 assert.equal(circle.shape,'circle');
@@ -37,4 +37,13 @@ const rim=group.children[2],positions=rim.geometry.attributes.position;
 let minimumRadius=Infinity;for(let i=0;i<positions.count;i++)minimumRadius=Math.min(minimumRadius,Math.hypot(positions.getX(i),positions.getY(i)));
 near(minimumRadius,circle.radius);
 const square=new THREE.Group();buildArenaBoundary(square,rect,mats);assert.equal(square.children.length,0);
-console.log('Arena: circular movement/sliding, swept ricochets, safe spawns, unchanged rectangle and four-draw-call rim passed.');
+// Act 2's five silhouettes all use their visible outline as the physical wall.
+assert.deepEqual(ACT2_ARENAS.map(a=>a.id),['home-plate','diamond','baseball','glove','ballpark']);
+for(const act2 of ACT2_ARENAS){
+ assert.ok(insideArena(act2.start,.5,act2),`${act2.id} start`);assert.ok(insideArena(act2.exit,.4,act2),`${act2.id} exit`);
+ for(let i=0;i<(act2.shape==='poly'?act2.spawns.length:16);i++){const spawn=safeArenaSpawn(act2.start,[],i,act2);assert.ok(spawn&&insideArena(spawn,.7,act2),`${act2.id} spawn ${i}`);}
+ const escaped={x:30,z:-30};constrainToArena(escaped,.4,act2);assert.ok(insideArena(escaped,.4,act2),`${act2.id} constrain`);
+ const roomGroup=new THREE.Group();buildArenaBoundary(roomGroup,act2,mats);assert.equal(roomGroup.children.length,4,`${act2.id} remains four draw calls`);
+ assert.equal(roomGroup.children.at(-1).count,act2.shape==='poly'?act2.points.length:12);
+}
+console.log('Arena: circular and five Act-2 silhouette rooms, swept ricochets, safe spawns and bounded draw calls passed.');

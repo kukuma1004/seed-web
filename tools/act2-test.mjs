@@ -9,7 +9,7 @@ assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma100
 assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
 import {ACT2_MINIONS,ACT2_MINION_TYPES,ACT2_ART,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from '../src/act2-enemies.js';
 import {roomFor,ROOMS} from '../src/journey.js';
-import {arenaFor,insideArena} from '../src/arena.js';
+import {arenaFor,insideArena,ACT2_ARENAS} from '../src/arena.js';
 import {trapsFor} from '../src/traps.js';
 import {turretSpots} from '../src/turret.js';
 import {validCheckpoint,readCheckpoint,writeCheckpoint,SAVE_KEY,REGION_NAMES} from '../src/run-save.js';
@@ -29,8 +29,12 @@ STADIUM_ROOMS.forEach((room,stage)=>{
  const arena=arenaFor(stage,1,'stadium');assert.notEqual(arena.shape,'star');
  for(const [type,x,z] of room.enemies){assert.ok(isAct2Minion(type)||type==='act2warden',type);assert.ok(insideArena({x,z},.5,arena),`${room.name} ${type}`);}
  for(const c of room.covers)assert.ok(insideArena({x:c.x,z:c.z},0,arena));
+ for(const base of STADIUM_BASES)assert.ok(insideArena(base,BASE_SLIDE.radius,arena),`${room.name} base loop`);
+ assert.ok(insideArena(arena.start,.5,arena),`${room.name} start`);assert.ok(insideArena(arena.exit,.4,arena),`${room.name} exit`);
+ if(stage===1||stage===3)assert.ok(insideArena({x:0,z:-6.35},.4,arena),`${room.name} relay target`);
  assert.deepEqual(trapsFor(stage,0,'stadium'),[]);assert.deepEqual(turretSpots(stage,1,'stadium'),[]);
 });
+assert.deepEqual(ACT2_ARENAS.map(a=>a.id),['home-plate','diamond','baseball','glove','ballpark']);
 assert.ok(STADIUM_ROOMS.slice(0,4).every(room=>room.enemies.every(([type])=>isAct2Minion(type))));
 assert.equal(new Set(STADIUM_ROOMS.flatMap(r=>r.enemies.map(([t])=>t)).filter(isAct2Minion)).size,4,'every minion appears');
 assert.notEqual(roomFor(2,0,'garden'),STADIUM_ROOMS[2]);
