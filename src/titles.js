@@ -7,25 +7,29 @@ export const FIRST_GARDEN_TITLE='첫 정원의 선구자';
 export const AUSTIN_SHOT_SPEED=.02;
 // The codex title arrives at 20 discovered evolutions; every further 10 discoveries add 0.5% basic shot speed.
 // The codex keeps growing with new evolutions, so the bonus keeps a reason to come back.
-export const CODEX=Object.freeze({titleAt:20,step:10,shotSpeedPerStep:.005});
+export const CODEX=Object.freeze({titleAt:20,step:10,shotSpeedPerStep:.005,maxShotSpeed:.03});
 
 const percent=v=>`${Math.round(v*1000)/10}%`;
 export function codexSteps(discovered=0){return discovered>=CODEX.titleAt?Math.floor((discovered-CODEX.titleAt)/CODEX.step):0;}
 
-export function titleState({austin=false,discovered=0,total=Infinity,badges=[]}={}){
- const n=Math.max(0,Math.floor(Number(discovered)||0)),codex=n>=CODEX.titleAt,codexSpeed=codexSteps(n)*CODEX.shotSpeedPerStep;
+export function titleState({austin=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
+ const n=Math.max(0,Math.floor(Number(discovered)||0)),codex=n>=CODEX.titleAt,codexSpeed=Math.min(CODEX.maxShotSpeed,codexSteps(n)*CODEX.shotSpeedPerStep);
  const titles=[];
- if(Array.isArray(badges)&&badges.includes(FIRST_GARDEN_BADGE))titles.push({id:FIRST_GARDEN_BADGE,name:FIRST_GARDEN_TITLE,perk:'초대 명예의 전당 TOP 10'});
- if(austin)titles.push({id:'austin',name:AUSTIN_TITLE,perk:`기본 탄환 속도 +${percent(AUSTIN_SHOT_SPEED)}`});
- if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:codexSpeed>0?`도감 ${n}개 · 기본 탄환 속도 +${percent(codexSpeed)}`:`도감 ${n}개 발견`});
- const goal=codex?CODEX.titleAt+(codexSteps(n)+1)*CODEX.step:CODEX.titleAt;
- const next=goal<=total?{at:goal,need:goal-n,reward:codex?`기본 탄환 속도 +${percent(CODEX.shotSpeedPerStep)}`:`칭호 '${CODEX_TITLE}'`}:null;
- return {titles,shown:titles[0]?.name||null,shotSpeed:1+(austin?AUSTIN_SHOT_SPEED:0)+codexSpeed,next};
+ if(Array.isArray(badges)&&badges.includes(FIRST_GARDEN_BADGE))titles.push({id:FIRST_GARDEN_BADGE,name:FIRST_GARDEN_TITLE,perk:'초대 명예의 전당 TOP 10',shotSpeed:0});
+ if(austin)titles.push({id:'austin',name:AUSTIN_TITLE,perk:`기본 탄환 속도 +${percent(AUSTIN_SHOT_SPEED)}`,shotSpeed:AUSTIN_SHOT_SPEED});
+ if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:codexSpeed>0?`도감 ${n}개 · 기본 탄환 속도 +${percent(codexSpeed)}`:`도감 ${n}개 발견`,shotSpeed:codexSpeed});
+ const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
+ const goal=!codex?CODEX.titleAt:codexSpeed<CODEX.maxShotSpeed?CODEX.titleAt+(codexSteps(n)+1)*CODEX.step:null;
+ const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:codex?`기본 탄환 속도 +${percent(CODEX.shotSpeedPerStep)}`:`칭호 '${CODEX_TITLE}'`}:null;
+ const sources=titles.filter(title=>title.shotSpeed>0).map(({id,name,shotSpeed})=>({id,name,shotSpeed}));
+ const shotSpeedBonus=(austin?AUSTIN_SHOT_SPEED:0)+codexSpeed;
+ return {titles,equipped:selected?.id||null,shown:selected?.name||null,shotSpeed:1+shotSpeedBonus,shotSpeedBonus,shotSpeedSources:sources,next};
 }
 
 // What changed when the discovery count went from `before` to `after`, as one line for the toast (null if nothing).
 export function codexNews(before,after){
  if(before<CODEX.titleAt&&after>=CODEX.titleAt)return `도감 ${CODEX.titleAt}개 달성 · 칭호 '${CODEX_TITLE}'`;
- if(codexSteps(after)>codexSteps(before))return `도감 ${after}개 달성 · 기본 탄환 속도 +${percent(codexSteps(after)*CODEX.shotSpeedPerStep)}`;
+ const previous=Math.min(CODEX.maxShotSpeed,codexSteps(before)*CODEX.shotSpeedPerStep),next=Math.min(CODEX.maxShotSpeed,codexSteps(after)*CODEX.shotSpeedPerStep);
+ if(next>previous)return `도감 ${after}개 달성 · 기본 탄환 속도 +${percent(next)}`;
  return null;
 }

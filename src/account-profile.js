@@ -9,13 +9,15 @@ export const BADGES=Object.freeze({
 });
 
 const ids=(value,known=null,limit=100)=>[...new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'&&id.length<=48&&(!known||known.has(id))):[])].slice(0,limit);
-const EMPTY=()=>({version:1,badges:[],skins:[],appliedGrants:[],lastRewardAt:0});
+const title=value=>typeof value==='string'&&value.length<=48?value:'';
+const EMPTY=()=>({version:1,badges:[],skins:[],equippedTitle:'',appliedGrants:[],lastRewardAt:0});
 
 export function normalizeAccountProfile(value){
  return {
   version:1,
   badges:ids(value?.badges,null,40),
   skins:ids(value?.skins,null,80),
+  equippedTitle:title(value?.equippedTitle),
   appliedGrants:ids(value?.appliedGrants,null,100),
   lastRewardAt:Number.isFinite(value?.lastRewardAt)?Math.max(0,Math.floor(value.lastRewardAt)):0
  };

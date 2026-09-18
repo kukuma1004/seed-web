@@ -26,10 +26,11 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 
 // A remote save wins ordinary conflicting state, while discoveries and entitlements are unioned.
 {
- const local=normalizeCloudSnapshot({discoveries:{version:1,forms:['prism'],bosses:[]},shop:{coins:100},account:{badges:['local'],skins:[]}});
- const remote=normalizeCloudSnapshot({discoveries:{version:1,forms:['collapse'],bosses:['austin']},shop:{coins:900},account:{badges:['remote'],skins:['jade']}});
+ const local=normalizeCloudSnapshot({discoveries:{version:1,forms:['prism'],bosses:[]},shop:{coins:100},account:{badges:['local'],skins:[],equippedTitle:'codex'}});
+ const remote=normalizeCloudSnapshot({discoveries:{version:1,forms:['collapse'],bosses:['austin']},shop:{coins:900},account:{badges:['remote'],skins:['jade'],equippedTitle:'austin'}});
  const merged=mergeCloudSnapshots(local,remote,{prefer:'remote'});
  assert.equal(merged.shop.coins,900);assert.deepEqual(new Set(merged.discoveries.forms),new Set(['prism','collapse']));assert.deepEqual(new Set(merged.account.badges),new Set(['local','remote']));
+ assert.equal(merged.account.equippedTitle,'austin');
 }
 
 // Founding rewards apply once even if the same grant is downloaded repeatedly.
