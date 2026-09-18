@@ -42,6 +42,17 @@ export function seedFrame(facing,cameraYaw){
  if(Math.abs(angle)>=Math.PI*3/4)return 2;
  return angle>0?1:3;
 }
+const FRAME_ANGLES=Object.freeze([0,Math.PI/2,Math.PI,-Math.PI/2]);
+export function stableSeedFrame(facing,cameraYaw,current=0,margin=.13){
+ const angle=Math.atan2(Math.sin(facing-cameraYaw),Math.cos(facing-cameraYaw));
+ const centre=FRAME_ANGLES[current]??0;
+ const fromCurrent=Math.abs(Math.atan2(Math.sin(angle-centre),Math.cos(angle-centre)));
+ return fromCurrent<=Math.PI/4+margin?current:seedFrame(facing,cameraYaw);
+}
+// The four painted cells do not share an identical transparent baseline.
+// Correct that in the sprite transform so turning never makes the feet hop.
+const FRAME_BASELINE_GAP=Object.freeze([0,1,48,42]);
+const FRAME_CENTRE_X=Object.freeze([206.5,213.6,205.2,206.3]);
 
 export function createSeedBody(scene,{occlusion=true}={}){
  const root=new THREE.Group();scene.add(root);
@@ -106,16 +117,18 @@ export function createSeedBody(scene,{occlusion=true}={}){
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
   if(!secondaryAura.visible)return;const pulse=1+Math.sin(time*4)*.055+(overdrive?.12:0);secondaryAura.scale.setScalar(pulse);secondaryAura.rotation.z=time*(overdrive?2.2:.8);secondaryMaterial.opacity=overdrive?.92:.68;
  };
- let facing=0;
+ let facing=0,displayFrame=0;
  root.userData.updateArt=(camera,dx=0,dz=0)=>{
   if(Math.hypot(dx,dz)>.001)facing=Math.atan2(dx,dz);
-  const frame=seedFrame(facing,Math.atan2(camera.position.x-root.position.x,camera.position.z-root.position.z));
+  const cameraYaw=Math.atan2(camera.position.x-root.position.x,camera.position.z-root.position.z);
+  const frame=displayFrame=stableSeedFrame(facing,cameraYaw,displayFrame);
   texture.offset.set((frame%2)*.5,frame<2?.5:0);root.userData.artFrame=frame;
-  const {phase=0,pace=0}=root.userData.motion||{},step=Math.sin(phase*2)*pace;
+  const {phase=0,pace=0}=root.userData.motion||{},step=Math.sin(phase)*pace;
   const crestPulse=1+Math.sin(phase*.55)*.025+pace*.018;themeCrest.scale.setScalar(1.62*crestPulse);themeMaterial.opacity=.54+pace*.12;
-  material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.055;
-  sprite.position.y=Math.max(0,step)*.018;sprite.scale.set(BODY_SIZE*(1+step*.03),BODY_SIZE*(1-step*.018),1);ghost.position.y=sprite.position.y;ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
-  evolutionSprite.position.y=sprite.position.y;evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.03),EVOLUTION_SIZE*(1-step*.018),1);evolutionGhost.position.y=sprite.position.y;evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
+  material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.032;
+  const bob=Math.max(0,step)*.01,baseY=-FRAME_BASELINE_GAP[frame]/384*BODY_SIZE,baseX=(206.5-FRAME_CENTRE_X[frame])/384*BODY_SIZE;
+  sprite.position.set(baseX,baseY+bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018),BODY_SIZE*(1-step*.011),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
+  evolutionSprite.position.set(0,bob,0);evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.018),EVOLUTION_SIZE*(1-step*.011),1);evolutionGhost.position.copy(evolutionSprite.position);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
  };
  return root;
 }

@@ -12,7 +12,10 @@ export function createMotion(root, legs=[], arms=[]){
     reset(){phase=0;pace=0;body.position.set(0,0,0);body.rotation.set(0,0,0);body.scale.set(1,1,1);for(const limb of [...legs,...arms])limb.rotation.set(0,0,0);},
     update(dt,dx,dz,{type='seed',state='stalk',timer=0,dashing=false,hit=0}={}){
       const distance=Math.hypot(dx,dz),speed=distance/Math.max(dt,.001);
-      phase+=distance*(type==='hound'?7:9);
+      // The seed has no articulated legs, so a fast enemy gait made its whole
+      // painted body buzz instead of read as a step. Keep enemies brisk while
+      // giving the player a slower, distance-driven walk cycle.
+      phase+=distance*(type==='seed'?3.6:type==='hound'?7:9);
       pace=settle(pace,Math.min(1,speed/(type==='seed'?4.5:1.2)),dt);
       const yaw=root.rotation.y;
       const forward=(Math.sin(yaw)*dx+Math.cos(yaw)*dz)/Math.max(distance,.001);

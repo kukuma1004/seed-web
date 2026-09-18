@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
-import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,THEME_CREST_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame} from '../src/seed-body.js';
+import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,THEME_CREST_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame,stableSeedFrame} from '../src/seed-body.js';
 import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry} from '../src/actor-art.js';
 for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw,yaw),0);
@@ -9,6 +9,8 @@ for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw-Math.PI/2,yaw),3);
  assert.equal(seedFrame(yaw+2*Math.PI,yaw),0);
 }
+assert.equal(stableSeedFrame(Math.PI/4+.05,0,0),0,'Small joystick noise at a diagonal must not flip the body frame');
+assert.equal(stableSeedFrame(Math.PI/4+.2,0,0),1,'A deliberate turn must still change the body frame');
 console.log('Seed atlas directions follow movement relative to the camera.');
 assert.equal(SEED_BODY_ART,'seed-body-directions-v6.png');
 assert(BODY_SIZE<1.26&&BODY_SIZE>=1.1,'The chibi seed should be smaller without becoming hard to read.');

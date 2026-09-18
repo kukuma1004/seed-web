@@ -7,6 +7,7 @@ root.position.set(3,0,4);root.rotation.y=.7;
 const before=root.position.clone(),facing=root.rotation.y,count=root.children.length;
 for(let i=0;i<60;i++)rig.update(1/60,.025,.025);
 assert.ok(root.userData.motion.phase>0);
+assert.ok(root.userData.motion.phase<8,'Seed gait must remain a calm walk rather than a high-frequency buzz');
 const phase=root.userData.motion.phase;
 for(let i=0;i<60;i++)rig.update(1/60,0,0);
 assert.equal(root.userData.motion.phase,phase,'No traveling gait while stationary');
