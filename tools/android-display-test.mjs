@@ -13,6 +13,7 @@ for(const change of ['orientation','screenSize','smallestScreenSize','screenLayo
 }
 assert.match(activity,/WindowCompat\.enableEdgeToEdge\(getWindow\(\)\)/,'Android 15 전체 화면 API를 사용해야 합니다.');
 assert.match(activity,/BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE/,'몰입형 시스템 바 동작을 유지해야 합니다.');
+assert.match(activity,/SCREEN_ORIENTATION_SENSOR_LANDSCAPE/,'Android 앱은 실행 즉시 센서 기반 가로 화면을 요청해야 합니다.');
 assert.match(mobile,/nativeApp\)[\s\S]*screen\.orientation\?\.lock[\s\S]*'landscape'/,'앱에서 플레이를 시작할 때 가로 화면을 요청해야 합니다.');
 
 console.log('Android adaptive display checks passed.');

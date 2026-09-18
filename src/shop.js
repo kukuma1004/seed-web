@@ -1,14 +1,17 @@
 import {ITEMS} from './inventory.js';
 
 export const SHOP_KEY='seed-shop-v1';
-export const SHOP_STOCK_MAX=10;
+// The departure locker is intentionally larger than the in-run bag. Players can
+// buy the ten-pack even when a few gift potions are already stored, while only
+// five can enter a run at once.
+export const SHOP_STOCK_MAX=50;
 export const TONIC_CARRY_MAX=5;
-export const SHOP_PRICES=Object.freeze({1:200,10:1000});
+export const SHOP_PRICES=Object.freeze({1:200,10:1500});
 // 처음 오는 사람도 물약 하나는 살 수 있게 시작 자금을 준다(첫 판을 맨손으로 시작하지 않도록).
 export const STARTING_COINS=200;
 // 상점 보관함: 산 물약과 선물을 모아 두는 곳. 가져갈 개수(carry)는 아이가 고르고,
 // 새 여정을 시작할 때만 그만큼 가방으로 옮긴다. 많이 갖고 있어도 안 가져갈 수 있다.
-// 보관함에는 10개까지 둘 수 있지만, 한 여정에 가져가는 작은 물약은 최대 5개다.
+// 보관함에는 넉넉히 모아 둘 수 있지만, 한 여정에 가져가는 작은 물약은 최대 5개다.
 export const STASH_ITEMS=Object.freeze({tonic:Object.freeze({max:SHOP_STOCK_MAX,carryMax:TONIC_CARRY_MAX}),sprout:Object.freeze({max:3})});
 export const STASH_ORDER=Object.freeze(['tonic','sprout']);
 const carryMax=id=>Math.min(STASH_ITEMS[id].carryMax??STASH_ITEMS[id].max,ITEMS[id]?.max??STASH_ITEMS[id].max);

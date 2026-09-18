@@ -39,6 +39,14 @@
           }
         },
         {
+          "client_id": "1061208248935-rovr94tibp7oc9cat1g2i1856bob6l5t.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.jpmathlab.seed",
+            "certificate_hash": "b97c9dcb9e0532ad739e3bba8f3da2f4fffd4c71"
+          }
+        },
+        {
           "client_id": "1061208248935-dlrhg344k43124nq7b61r296pt4fueh7.apps.googleusercontent.com",
           "client_type": 3
         }

@@ -58,6 +58,7 @@ export function withoutHidden(s){
  if(Array.isArray(s.mutated))next.mutated=s.mutated.filter(law);
  if(map(s.levels))next.levels=Object.fromEntries(Object.entries(s.levels).filter(([id])=>law(id)));
  if(map(s.forms))next.forms=Object.fromEntries(Object.entries(s.forms).filter(([id])=>form(id)));
+ if(map(s.inventory))next.inventory=normalizeInventory(s.inventory);
  if(s.guideTarget!=null&&!form(s.guideTarget))next.guideTarget=null;
  if(s.form!=null&&!form(s.form))next.form=null;
  return next;

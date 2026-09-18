@@ -663,7 +663,7 @@ function startGame(){if(gameplayPaused()){showSeasonPause();return;}if(mode==='r
 function authMessage(error){
  const code=String(error?.code||error?.message||'');
  const tag=code.replace(/^auth\//,'').replace(/[^a-zA-Z0-9_/-]+/g,'-').slice(0,56);
- if(code.includes('UNREGISTERED_ON_API_CONSOLE')||code.includes('DEVELOPER_ERROR'))return '앱 서명과 Google 로그인 연결을 확인해야 해요. 관리자에게 이 화면을 보여 주세요. (AUTH-ANDROID)';
+ if(code.includes('UNREGISTERED_ON_API_CONSOLE')||code.includes('DEVELOPER_ERROR')||(account.native&&/(^|[^0-9])10([^0-9]|$)/.test(code)))return '앱 서명과 Google 로그인 연결을 확인해야 해요. 관리자에게 이 화면을 보여 주세요. (AUTH-ANDROID)';
  if(code.includes('popup-closed')||code.includes('canceled')||code.includes('cancelled'))return '로그인이 취소되었어요. 계정을 고른 직후 이 문구가 나왔다면 화면을 캡처해 주세요. (AUTH-CANCELED)';
  if(code.includes('credential-already-in-use')||code.includes('account-exists'))return '이미 다른 방식으로 연결된 계정이에요. 먼저 그 계정으로 로그인해 주세요.';
  if(code.includes('network'))return '인터넷 연결을 확인한 뒤 다시 시도해 주세요.';
@@ -795,7 +795,7 @@ const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[i
 function showShop(back=showIntro,message=''){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic!==0;
+ const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic+10>SHOP_STOCK_MAX;
  // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.
  const stashRows=STASH_ORDER.filter(id=>id==='tonic'||shop.stash[id]).map(id=>{
   const most=Math.min(shop.stash[id],id==='tonic'?TONIC_CARRY_MAX:ITEMS[id].max);
@@ -806,14 +806,14 @@ function showShop(back=showIntro,message=''){
   <div class="shop-wallet"><span>보유 게임 머니</span><strong>${shop.coins.toLocaleString('ko-KR')}원</strong></div>
   <div class="shop-columns">
   <section class="shop-product"><div class="shop-product-art">${itemArt('tonic')}<div><h3>${ITEMS.tonic.name}</h3><p>생명력 +${ITEMS.tonic.heal} · 보관 최대 ${SHOP_STOCK_MAX}개</p></div></div>
-   <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · ${SHOP_PRICES[1].toLocaleString('ko-KR')}원</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · ${SHOP_PRICES[10].toLocaleString('ko-KR')}원</strong><small>묶음 구매</small></button></div>
+   <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · ${SHOP_PRICES[1].toLocaleString('ko-KR')}원</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · ${SHOP_PRICES[10].toLocaleString('ko-KR')}원</strong><small>25% 할인 묶음</small></button></div>
    <p class="shop-message" aria-live="polite">${escapeHtml(message)}</p></section>
   <section class="shop-stash"><h3>보관함 · 새 여정에 가져갈 개수</h3><ul>${stashRows}</ul>
    <p class="stash-note">새 여정을 시작할 때만 가방에 들어가요 · 이어하기에는 안 들어가요</p></section>
   </div>
   <p class="shop-note">문지기 +50원 · 오스틴 +200원 · 게임 안에서 얻는 재화이며 실제 결제가 아닙니다.</p>
   <button id="shop-back" class="menu-item small-item">돌아가기</button></div>`;
- const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 보관함에 담았어요 · ${result.price}원 사용`:result.reason==='full'?'작은 물약은 10개까지 보관할 수 있어요':'게임 머니가 부족해요');};
+ const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 보관함에 담았어요 · ${result.price.toLocaleString('ko-KR')}원 사용`:result.reason==='full'?`보관함에는 작은 물약을 ${SHOP_STOCK_MAX}개까지 둘 수 있어요`:'게임 머니가 부족해요');};
  $('#buy-one').onclick=()=>buy(1);$('#buy-ten').onclick=()=>buy(10);$('#shop-back').onclick=back;
  document.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
 }

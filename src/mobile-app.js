@@ -1,6 +1,6 @@
 export function setupMobileApp(){
- // The Google Play build is immersive, but it stays resizable for tablets and foldables.
- // Gameplay asks for landscape after a player gesture instead of fixing every device in the manifest.
+ // The native Android activity enters sensor-landscape immediately and remains resizable.
+ // Browser/PWA play still asks for fullscreen and landscape after a player gesture.
  const nativeApp=Boolean(window.Capacitor?.isNativePlatform?.());
  if(nativeApp)document.body.classList.add('native-app');
  const touch=matchMedia('(any-pointer:coarse)').matches||navigator.maxTouchPoints>0;

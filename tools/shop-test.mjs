@@ -16,12 +16,12 @@ const empty={tonic:0,sprout:0};
 }
 
 // 값과 한계
-assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1000);assert.equal(SHOP_STOCK_MAX,10);assert.equal(TONIC_CARRY_MAX,5);
+assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1500);assert.equal(SHOP_STOCK_MAX,50);assert.equal(TONIC_CARRY_MAX,5);
 {
  const s=memory();writeShop(s,{coins:0,stash:empty,carry:empty});
  assert.equal(earnCoins(s,50).coins,50);assert.equal(buyTonics(s,1).reason,'coins');
- earnCoins(s,950);const bundle=buyTonics(s,10);assert.equal(bundle.ok,true);assert.equal(bundle.shop.coins,0);assert.equal(bundle.shop.stash.tonic,10);assert.equal(bundle.shop.carry.tonic,5,'10개를 사도 출발 상한은 5개');
- earnCoins(s,200);assert.equal(buyTonics(s,1).reason,'full','작은 물약은 10개까지 보관');
+ earnCoins(s,1450);const bundle=buyTonics(s,10);assert.equal(bundle.ok,true);assert.equal(bundle.shop.coins,0);assert.equal(bundle.shop.stash.tonic,10);assert.equal(bundle.shop.carry.tonic,5,'10개를 사도 출발 상한은 5개');
+ earnCoins(s,1500);assert.equal(buyTonics(s,10).ok,true,'보관함에 남아 있어도 10개 묶음을 다시 살 수 있다');
 }
 
 // 많이 있어도 안 가져갈 수 있다: 가져갈 개수를 고르고, 새 여정을 시작할 때 그만큼만 꺼낸다.

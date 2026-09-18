@@ -73,3 +73,12 @@ console.log('옛 저장 이어하기: 빠진 점수·문지기 수 채우기 통
  assert.equal(withoutHidden(null),null);
 }
 console.log('숨긴 법칙·조합이 든 옛 저장: 그 부분만 빼고 이어하기 통과');
+
+// 1.0.8까지의 가방은 일부 물약을 5개보다 많이 저장할 수 있었다. 새 상한 때문에
+// 이어하기 자체가 사라지지 않도록 읽을 때 5개로 옮긴다.
+{
+ const oldBag={...s,inventory:{potion:9,tonic:10,wind:3,shell:3,sprout:1}};
+ const d=new Map([[SAVE_KEY,JSON.stringify(oldBag)]]),legacy={getItem:k=>d.get(k)??null,setItem:(k,v)=>d.set(k,String(v)),removeItem:k=>d.delete(k)};
+ assert.deepEqual(readCheckpoint(legacy).inventory,{potion:5,tonic:5,wind:3,shell:3,sprout:1});
+}
+console.log('옛 물약 가방: 종류별 5개 상한으로 안전하게 옮기기 통과');
