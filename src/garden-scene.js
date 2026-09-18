@@ -6,14 +6,23 @@ import {LAWS} from './laws.js';
 import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN} from './garden.js';
 
 const V=THREE.Vector3;
-// The painted terrace has two beds in each of three depth rows. Keeping the
-// interaction spots on the same perspective makes planting feel part of the art.
+// The painted terrace has two beds in each of three depth rows. These fallback
+// world positions match the 16:9 source painting; resize() reprojects the exact
+// image anchors so wide phone screens and narrow windows stay aligned too.
 export const PLOT_SPOTS=Object.freeze([
- {x:-2,z:-5},{x:2,z:-5},
- {x:-2.45,z:-2.2},{x:2.45,z:-2.2},
- {x:-1.45,z:.7},{x:1.45,z:.7}
+ {x:-2.518,z:-6.167},{x:2.898,z:-6.167},
+ {x:-2.909,z:-1.811},{x:2.952,z:-1.811},
+ {x:-1.327,z:.581},{x:1.345,z:.581}
 ]);
 export const CENTER_SPOT=Object.freeze({x:0,z:-2.6});
+// Normalized pixel positions in garden-sanctuary-v1.webp (1600 x 900).
+// Plants are rooted at the visual centre of the soil, not at the stone rim.
+const PLOT_ANCHORS=Object.freeze([
+ {u:621/1600,v:335/900},{u:1006/1600,v:335/900},
+ {u:530/1600,v:487/900},{u:1074/1600,v:487/900},
+ {u:652/1600,v:618/900},{u:950/1600,v:618/900}
+]);
+const CENTER_ANCHOR=Object.freeze({u:.5,v:453/900});
 export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v3.webp';
 // 4 x 3 atlas cells. Keeping the selection in data makes it easy to test and
 // prevents the garden UI from drifting away from the saved growth stage.
@@ -136,7 +145,9 @@ export function buildCenter(index,artKit=null){
 export function createGardenScene(){
  const scene=new THREE.Scene();
  scene.background=new THREE.Color('#0d2429');
+ const plotSpots=PLOT_SPOTS.map(spot=>({...spot})),centerSpot={...CENTER_SPOT};
  let viewAspect=16/9;
+ let syncAnchors=()=>{};
  const fitBackdrop=texture=>{
   if(!texture?.image)return;
   const imageAspect=texture.image.width/texture.image.height;
@@ -144,6 +155,7 @@ export function createGardenScene(){
   if(viewAspect<imageAspect){texture.repeat.x=viewAspect/imageAspect;texture.offset.x=(1-texture.repeat.x)/2;}
   else{texture.repeat.y=imageAspect/viewAspect;texture.offset.y=(1-texture.repeat.y)/2;}
   texture.needsUpdate=true;
+  syncAnchors();
  };
  const backdrop=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/garden-sanctuary-v1.webp',texture=>{
   texture.colorSpace=THREE.SRGBColorSpace;
@@ -182,14 +194,38 @@ export function createGardenScene(){
  // The painted beds already show every empty slot. The raycast meshes stay
  // present for tapping, but draw nothing until one slot is actually selected.
  const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
- const markers=PLOT_SPOTS.map(spot=>{
+ const markers=plotSpots.map(spot=>{
   const m=new THREE.Mesh(new THREE.RingGeometry(.49,.535,40),markerMat.clone());
   m.rotation.x=-Math.PI/2;m.position.set(spot.x,.03,spot.z);scene.add(m);return m;
  });
+ // The centre artwork is a large transparent billboard. Raycasting that whole
+ // rectangle steals taps from the nearby beds, so its hit area is a small disc
+ // on the actual centre medallion instead.
+ const centerPick=new THREE.Mesh(new THREE.CircleGeometry(1.05,32),markerMat.clone());
+ centerPick.rotation.x=-Math.PI/2;centerPick.position.set(centerSpot.x,.035,centerSpot.z);centerPick.userData.center=true;scene.add(centerPick);
  // 정원에서 움직이지 않는 표시는 행렬 계산을 잠가 둔다.
- for(const fixed of markers)if(fixed){fixed.updateMatrix();fixed.matrixAutoUpdate=false;}
+ for(const fixed of [...markers,centerPick])if(fixed){fixed.updateMatrix();fixed.matrixAutoUpdate=false;}
  const picks=[],raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
  let plants=[],center=null,selected=-1,time=0;
+ const anchorRay=new THREE.Raycaster(),anchorNdc=new THREE.Vector2(),groundPlane=new THREE.Plane(new V(0,1,0),0),anchorPoint=new V();
+ const anchorWorld=(anchor,target)=>{
+  // The background uses a centred cover crop. Undo that crop first, then cast
+  // the painted pixel onto the same ground plane used by the garden objects.
+  const u=(anchor.u-backdrop.offset.x)/Math.max(.0001,backdrop.repeat.x);
+  const v=(anchor.v-backdrop.offset.y)/Math.max(.0001,backdrop.repeat.y);
+  anchorNdc.set(u*2-1,1-v*2);anchorRay.setFromCamera(anchorNdc,camera);
+  if(anchorRay.ray.intersectPlane(groundPlane,anchorPoint))target.set(anchorPoint.x,0,anchorPoint.z);
+ };
+ syncAnchors=()=>{
+  PLOT_ANCHORS.forEach((anchor,index)=>{
+   const spot=plotSpots[index];anchorWorld(anchor,anchorPoint);spot.x=anchorPoint.x;spot.z=anchorPoint.z;
+   const marker=markers[index];if(marker){marker.position.set(spot.x,.03,spot.z);marker.updateMatrix();}
+  });
+  anchorWorld(CENTER_ANCHOR,anchorPoint);centerSpot.x=anchorPoint.x;centerSpot.z=anchorPoint.z;
+  centerPick.position.set(centerSpot.x,.035,centerSpot.z);centerPick.updateMatrix();
+  for(const plant of plants){const spot=plotSpots[plant.userData.plot];if(spot)plant.position.set(spot.x,0,spot.z);}
+  if(center)center.position.set(centerSpot.x,0,centerSpot.z);
+ };
 
  function clearGroup(group){
   for(const child of [...group.children]){
@@ -201,7 +237,7 @@ export function createGardenScene(){
  function setGarden(garden,{austinDefeated=false}={}){
   clearGroup(plantGroup);clearGroup(centerGroup);plants=[];picks.length=0;
   garden.plots.forEach((plant,index)=>{
-   const spot=PLOT_SPOTS[index];if(!spot)return;
+   const spot=plotSpots[index];if(!spot)return;
    markers[index].visible=!plant;
    if(!plant)return;
    const group=buildPlant(plant.seed,plant.growth,plant.branch,artKit);
@@ -211,10 +247,9 @@ export function createGardenScene(){
    group.traverse(o=>{if(o.isMesh){o.userData.plot=index;picks.push(o);}});
   });
   center=buildCenter(centerStage(garden,{austinDefeated}),artKit);
-  center.position.set(CENTER_SPOT.x,0,CENTER_SPOT.z);
-  center.traverse(o=>{if(o.isMesh)o.userData.center=true;});
+  center.position.set(centerSpot.x,0,centerSpot.z);
   centerGroup.add(center);
-  center.traverse(o=>{if(o.isMesh)picks.push(o);});
+  picks.push(centerPick);
   select(selected);
  }
  function select(index){
@@ -243,7 +278,7 @@ export function createGardenScene(){
   fireflies.instanceMatrix.needsUpdate=true;
   fireflyMat.opacity=.55+Math.sin(time*2.2)*.25;
  }
- function resize(width,height){camera.aspect=width/Math.max(1,height);viewAspect=camera.aspect;camera.updateProjectionMatrix();fitBackdrop(backdrop);}
+ function resize(width,height){camera.aspect=width/Math.max(1,height);viewAspect=camera.aspect;camera.updateProjectionMatrix();fitBackdrop(backdrop);syncAnchors();}
  // 화면 좌표(0~1)로 무엇을 눌렀는지 알려 준다.
  function pick(nx,ny){
   pointer.set(nx*2-1,-(ny*2-1));
