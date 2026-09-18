@@ -1,6 +1,6 @@
 export function setupMobileApp(){
- // Inside the Google Play build (Capacitor) the Android activity already runs full screen in landscape,
- // so the web install and full screen buttons and the offline service worker are skipped there.
+ // The Google Play build is immersive, but it stays resizable for tablets and foldables.
+ // Gameplay asks for landscape after a player gesture instead of fixing every device in the manifest.
  const nativeApp=Boolean(window.Capacitor?.isNativePlatform?.());
  if(nativeApp)document.body.classList.add('native-app');
  const touch=matchMedia('(any-pointer:coarse)').matches||navigator.maxTouchPoints>0;
@@ -18,7 +18,8 @@ export function setupMobileApp(){
  // Starting or continuing a run on a phone goes full screen and asks for landscape. Silent if the browser refuses
  // (iPhone Safari has no full screen for pages); the rotate hint below still asks for landscape.
  async function enterFullscreen(){
-  if(!touch||nativeApp)return;
+  if(!touch)return;
+  if(nativeApp){try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch{}return;}
   try{if(!document.fullscreenElement&&document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen({navigationUI:'hide'});}catch{}
   try{if(screen.orientation?.lock)await screen.orientation.lock('landscape');}catch{}
  }
