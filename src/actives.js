@@ -145,8 +145,8 @@ export function startActive(gauge,forms){
  return gauge.plan;
 }
 // Returns the finished plan on the frame it ends, otherwise null.
-export function tickActive(gauge,dt){
- if(!gauge.plan){gauge.cooldown=Math.max(0,gauge.cooldown-dt);return null;}
+export function tickActive(gauge,dt,cooldownRate=1){
+ if(!gauge.plan){gauge.cooldown=Math.max(0,gauge.cooldown-dt*Math.max(1,Number(cooldownRate)||1));return null;}
  gauge.plan.time-=dt;
  if(gauge.plan.time>0)return null;
  const done=gauge.plan;gauge.plan=null;gauge.cooldown=ACTIVE.cooldownSeconds;return done;

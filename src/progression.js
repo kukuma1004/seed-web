@@ -23,6 +23,8 @@ export function lawStats(levels){
   splitCount:lv('split')?Math.min(9,1+2*lv('split')):0,
   chainTargets:lv('chain')?Math.min(6,1+lv('chain')):0,
   pierceHits:lv('pierce')?Math.min(9,1+2*lv('pierce')):1,
+  critChance:lv('pierce')?Math.min(.15,.03+.015*(lv('pierce')-1)):0,
+  critDamage:1.5,
   burstRadius:lv('burst')?Math.min(3.3,1.2+.3*lv('burst')):0,
   recallReturn:lv('recall')?1+.5*(lv('recall')-1):0,
   gravityRadius:lv('gravity')?Math.min(4.2,1.4+.8*lv('gravity')):0,
@@ -110,7 +112,7 @@ export function upgradeLine(levels,id){
   case 'split':return pair('파편','splitCount','개');
   case 'chain':return pair('연쇄','chainTargets','명');
   case 'orbit':return `${pair('꽃잎','orbitPetals','개')} · 피해 ${now.orbitDamage} → ${next.orbitDamage}`;
-  case 'pierce':return pair('관통','pierceHits','명');
+  case 'pierce':return `${pair('관통','pierceHits','명')} · 치명타 ${Math.round(now.critChance*1000)/10}% → ${Math.round(next.critChance*1000)/10}%`;
   case 'burst':return pair('폭발 반경','burstRadius','',1);
   case 'recall':return `귀환 피해 ×${now.recallReturn.toFixed(1)} → ×${next.recallReturn.toFixed(1)}`;
   case 'gravity':return pair('흡인 반경','gravityRadius','',1);

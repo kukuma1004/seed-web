@@ -16,21 +16,21 @@ export function validRunBonuses(value){if(value===undefined)return true;const ne
 export const moveScale=value=>1+normalizeRunBonuses(value).move*.03;
 export const shotScale=value=>1+normalizeRunBonuses(value).shot*.04;
 export const powerScale=value=>1+normalizeRunBonuses(value).power*.03;
-export function runBonusOffers(value,{hp=100,choicesTaken=0}={}){
+export function runBonusOffers(value,{hp=100,maxHp=100,choicesTaken=0}={}){
  const state=normalizeRunBonuses(value),stats=['move','shot','power'].filter(id=>state[id]<RUN_BONUS_MAX);
- if(!stats.length)return hp<100?['heal']:[];
+ if(!stats.length)return hp<maxHp?['heal']:[];
  const start=Math.max(0,choicesTaken)%stats.length,rotated=stats.slice(start).concat(stats.slice(0,start));
- return hp<100?['heal',rotated[0]]:rotated.slice(0,2);
+ return hp<maxHp?['heal',rotated[0]]:rotated.slice(0,2);
 }
 // This is an extra blessing, never a replacement for the build-defining law
 // card. Two percent keeps it truly hidden without flattening run variety.
-export function rareRunBonusOffers(value,{hp=100,choicesTaken=0,random=Math.random,chance=RUN_BONUS_CHANCE}={}){
- const offers=runBonusOffers(value,{hp,choicesTaken});
+export function rareRunBonusOffers(value,{hp=100,maxHp=100,choicesTaken=0,random=Math.random,chance=RUN_BONUS_CHANCE}={}){
+ const offers=runBonusOffers(value,{hp,maxHp,choicesTaken});
  return offers.length&&random()<chance?offers:[];
 }
-export function applyRunBonus(value,id,{hp=100}={}){
+export function applyRunBonus(value,id,{hp=100,maxHp=100}={}){
  const state=normalizeRunBonuses(value),bonus=RUN_BONUSES[id];if(!bonus)return {ok:false,state,hp};
- if(id==='heal'){const next=Math.min(100,hp+20);return next===hp?{ok:false,state,hp}:{ok:true,state,hp:next,healed:next-hp};}
+ if(id==='heal'){const next=Math.min(maxHp,hp+20);return next===hp?{ok:false,state,hp}:{ok:true,state,hp:next,healed:next-hp};}
  if(state[id]>=RUN_BONUS_MAX)return {ok:false,state,hp};
  state[id]++;return {ok:true,state,hp,level:state[id]};
 }

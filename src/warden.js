@@ -4,7 +4,7 @@ const V=THREE.Vector3;
 // Three kinds of warden. Each variant changes its attack rotation, not just its health.
 // memory learns the seed's laws; seal locks the dodge inside a ring; hunter charges twice in a row.
 export const WARDEN_VARIANTS=Object.freeze({
- memory:{name:'기억의 문지기',patterns:[0,1,2],stalk:1,tell:1,chargeSpeed:10.5,tint:0xffffff},
+ memory:{name:'기억의 문지기',patterns:[0,1,2,0],stalk:1.12,tell:.95,chargeSpeed:11,echoEvery:3,tint:0xffffff},
  seal:{name:'봉인의 문지기',patterns:[0,3,2],stalk:1,tell:1,chargeSpeed:10.5,tint:0xc9a8ff},
  hunter:{name:'추격의 문지기',patterns:[1,0,1],stalk:1.3,tell:.72,chargeSpeed:13,tint:0xff9c8a}
 });
@@ -73,7 +73,7 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()
   e.g.position.addScaledVector(delta,dt*config.stalk*(distance>5?2.9:distance<3?-2.2:.35));
   e.g.position.x+=delta.z*dt*2.25*sign*config.stalk;e.g.position.z-=delta.x*dt*2.25*sign*config.stalk;
   e.g.rotation.y=Math.atan2(delta.x,delta.z);
-  if(e.timer<=0){e.copying=Boolean(e.copiedForm)&&e.attacks>0&&e.attacks%4===3;const nextEcho=e.copying?evolutionEcho(e.copiedForm):null;e.moveName=nextEcho?.name||'';e.state='tell';e.timer=(nextEcho?(nextEcho.radial ? .72 : .6):type===3?SEAL.tell:type===1?.44:type===0?.55:.6)*config.tell;e.dir.copy(delta);e.target.copy(player).setY(0);}
+  if(e.timer<=0){const echoEvery=config.echoEvery||4;e.copying=Boolean(e.copiedForm)&&e.attacks>0&&e.attacks%echoEvery===echoEvery-1;const nextEcho=e.copying?evolutionEcho(e.copiedForm):null;e.moveName=nextEcho?.name||'';e.state='tell';e.timer=(nextEcho?(nextEcho.radial ? .72 : .6):type===3?SEAL.tell:type===1?.44:type===0?.55:.6)*config.tell;e.dir.copy(delta);e.target.copy(player).setY(0);}
  }else if(e.state==='tell'){
   e.g.rotation.y=Math.atan2(e.dir.x,e.dir.z);
   if(type===3){
@@ -91,12 +91,13 @@ export function tickWarden(e,dt,time,player,laws,{collide,bolt,hit,burst,seal=()
     if(echo.laws.some(id=>id==='gravity'||id==='burst')&&distance<3)hit(18);
    }else{
     if(type===0){const n=e.learned.includes('split')?7:5;for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING),e.learned.includes('reflect')?1:0,e.learned);if(e.learned.includes('orbit'))for(let i=0;i<6;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/3),0,Math.sin(i*Math.PI/3)),0,e.learned);}
-    if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);}
+    if(type===2){burst(e.g.position,'amber',28);if(distance<radius)hit(e.learned.includes('burst')?28:22);if(e.variant==='memory'&&e.learned.length>=2)for(let i=0;i<8;i++)bolt(e.g.position,new V(Math.cos(i*Math.PI/4),0,Math.sin(i*Math.PI/4)),e.learned.includes('reflect')?1:0,e.learned);}
     if(type===3){e.timer=.25;seal(e.target.clone(),SEAL.radius);}
    }
   }
  }else if(e.state==='commit'){
-  if(!e.copying&&type===0&&e.salvos<3&&e.timer<=.48-e.salvos*.16){
+  const maxSalvos=e.variant==='memory'&&e.learned.length>=2?4:3;
+  if(!e.copying&&type===0&&e.salvos<maxSalvos&&e.timer<=.48-e.salvos*(maxSalvos===4?.12:.16)){
    const n=e.learned.includes('split')?7:5;
    for(let i=0;i<n;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),(i-(n-1)/2)*FAN_SPACING+(e.salvos%2?FAN_SHIFT:-FAN_SHIFT)),e.learned.includes('reflect')?1:0,e.learned);
    e.salvos++;

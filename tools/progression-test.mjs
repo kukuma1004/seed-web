@@ -50,6 +50,9 @@ assert.match(upgradeLine(new Map([['split',50]]),'split'),/최대치/);
 assert.match(upgradeLine(new Map([['reflect',1]]),'reflect'),/2 → 3/);
 // Orbit was reported as useless: it now starts with more petals and real damage.
 const orbit=lawStats(new Map([['orbit',1]]));assert.ok(orbit.orbitPetals>=3&&orbit.orbitDamage>=14);
+const pierce1=lawStats(new Map([['pierce',1]])),pierce9=lawStats(new Map([['pierce',9]]));
+assert.equal(pierce1.critChance,.03);assert.ok(pierce9.critChance>pierce1.critChance&&pierce9.critChance<=.15);assert.equal(pierce1.critDamage,1.5);
+assert.match(upgradeLine(new Map([['pierce',1]]),'pierce'),/치명타/);
 
 // Saves: old mutated lists become level two, new level maps round-trip.
 assert.deepEqual([...levelsFromSave({rules:['reflect','split'],mutated:['split']})],[['reflect',1],['split',2]]);
@@ -62,4 +65,5 @@ assert.equal(validCheckpoint({...base,levels:{frost:2}}),false,'A level for a la
 assert.equal(validCheckpoint({...base,levels:{reflect:1.5}}),false);
 assert.equal(validCheckpoint({...base,levels:[1,2]}),false);
 assert.equal(validCheckpoint({...base,choicesTaken:-1}),false);
+assert.equal(validCheckpoint({...base,hp:103}),true,'garden max-health growth remains resumable');
 console.log('Progression: widening choice gauge, stacked uncapped levels, full-slot upgrades, capped counts, save migration passed.');

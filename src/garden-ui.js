@@ -2,8 +2,8 @@
 // 그림은 아직 법칙 그림을 빌려 쓴다(전용 그림이 나오면 plantArt만 바꾸면 된다).
 import {LAWS} from './laws.js';
 import {lawArt} from './law-art.js';
-import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,FOUNDER,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,PLAY_STYLES,
- stageOf,nextStagePoints,plantName,branchSummary,centerInfo,plantSeed,uproot,craftSeed} from './garden.js';
+import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,FOUNDER,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,PLAY_STYLES,MASTERY,MASTERY_KEYS,MASTERY_TOTAL_CAP,
+ stageOf,nextStagePoints,plantName,branchSummary,centerInfo,plantSeed,uproot,craftSeed,gardenMastery} from './garden.js';
 import './garden.css';
 
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -25,6 +25,7 @@ const growthBar=growth=>{
 // 여기서는 고른 대상에 따라 할 수 있는 일만 보여 준다.
 export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClose,austinDefeated=false}){
  const planted=garden.plots.filter(Boolean).length,center=centerInfo(garden,{austinDefeated});
+ const mastery=gardenMastery(garden),masteryRows=MASTERY_KEYS.map(id=>`<span><b>${escape(MASTERY[id].name)}</b><em>+${(mastery.points[id]/10).toFixed(1)}%</em></span>`).join('');
  const owned=Object.entries(garden.seeds).filter(([,n])=>n>0);
  const seedChips=(action,label)=>owned.length
   ? `<div class="chips">${owned.map(([id,n])=>`<button class="seed-chip" data-${action}="${id}">${plantArt(id,'chip-art')}<span>${escape(SEEDS[id].name)}</span><b>×${n}</b></button>`).join('')}</div>`
@@ -61,8 +62,9 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
 
  root.innerHTML=`<aside class="garden-panel${selection?'':' idle'}">
   <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
+  <section class="garden-mastery"><div><strong>오스틴의 기억</strong><small>격파할 때마다 무작위 능력 +0.1%</small></div><p>${masteryRows}</p><small>누적 ${mastery.total}/${MASTERY_TOTAL_CAP} · 능력별 최대 3%</small></section>
   <div class="panel-body">${body}</div>
-  <footer><small>자라고 있는 식물 ${planted}/6 · 전투 효과 없음</small><button class="primary" id="garden-close">돌아가기</button></footer>
+  <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><button class="primary" id="garden-close">돌아가기</button></footer>
  </aside>`;
 
  const update=next=>{onChange(next);};

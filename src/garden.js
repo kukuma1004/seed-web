@@ -1,10 +1,19 @@
 // 정원 · 플레이 방식이 식물의 모습으로 남는 개인 기록 공간.
-// 정원은 전투 수치, 선택 확률, 보스 주기와 연결하지 않는다.
+// 식물은 그대로 장식이며, 오스틴 격파로만 아주 작은 영구 성장점이 남는다.
 import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
 export const GARDEN_KEY='seed-garden-v1';
 export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower',FOUNDER='founder';
+export const MASTERY_STEP=.001,MASTERY_STAT_CAP=30,MASTERY_TOTAL_CAP=100;
+export const MASTERY=Object.freeze({
+ power:{name:'공격력',desc:'모든 공격 피해'},
+ move:{name:'이동 속도',desc:'씨앗 이동 속도'},
+ critical:{name:'치명타',desc:'치명타 확률'},
+ cooldown:{name:'순환',desc:'자동 공격·회피·궁극기 재사용'},
+ maxHp:{name:'최대 생명력',desc:'출발 최대 생명력'}
+});
+export const MASTERY_KEYS=Object.freeze(Object.keys(MASTERY));
 export const STAGES=['seed','sprout','mature','bloom'];
 export const STAGE_NAMES=Object.freeze({seed:'심은 씨앗',sprout:'새싹',mature:'자란 풀',bloom:'개화'});
 // 성장점은 던전을 다녀와야 쌓인다(기다리는 게임이 아니라 하는 게임).
@@ -61,7 +70,8 @@ const plant=p=>{
  return {seed:p.seed,growth:Math.max(0,Math.min(999,Math.floor(p.growth)||0)),style,
   branch:BRANCHES.includes(p.branch)?p.branch:PLAY_STYLES[style].branch,active:false};
 };
-export const emptyGarden=()=>({version:3,plots:Array(PLOTS).fill(null),seeds:{},traits:{},fragments:0,harvests:0,records:[]});
+const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
+export const emptyGarden=()=>({version:4,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),fragments:0,harvests:0,records:[]});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
@@ -80,6 +90,10 @@ export function normalizeGarden(value){
   if(SEEDS[id]&&Number.isInteger(n)&&n>0)g.seeds[id]=Math.min(99,n);
  if(value.traits&&typeof value.traits==='object')for(const [id,styles] of Object.entries(value.traits))
   if(SEEDS[id]&&Array.isArray(styles))g.traits[id]=styles.slice(0,g.seeds[id]||0).map(validStyle);
+ if(value.mastery&&typeof value.mastery==='object'){
+  let remaining=MASTERY_TOTAL_CAP;
+  for(const id of MASTERY_KEYS){const points=Math.max(0,Math.min(MASTERY_STAT_CAP,Math.floor(Number(value.mastery[id])||0),remaining));g.mastery[id]=points;remaining-=points;}
+ }
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
@@ -87,6 +101,24 @@ export function normalizeGarden(value){
 }
 export function readGarden(storage){try{return normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY)));}catch{return emptyGarden();}}
 export function writeGarden(storage,garden){try{storage?.setItem(GARDEN_KEY,JSON.stringify(normalizeGarden(garden)));return true;}catch{return false;}}
+
+// 오스틴 한 번 격파 = 아직 상한에 닿지 않은 능력 하나에 0.1%.
+// 정수 포인트로 저장해서 장기간 플레이해도 0.1+0.1의 소수 오차가 쌓이지 않는다.
+export function grantAustinMastery(garden,random=Math.random){
+ const g=normalizeGarden(garden),total=MASTERY_KEYS.reduce((n,id)=>n+g.mastery[id],0);
+ const open=MASTERY_KEYS.filter(id=>g.mastery[id]<MASTERY_STAT_CAP);
+ if(total>=MASTERY_TOTAL_CAP||!open.length)return {garden:g,granted:false,id:null,points:0};
+ const roll=Math.max(0,Math.min(.999999,Number(random?.())||0)),id=open[Math.floor(roll*open.length)];
+ g.mastery[id]++;return {garden:g,granted:true,id,points:g.mastery[id]};
+}
+export function gardenMastery(garden){
+ const points=normalizeGarden(garden).mastery,rate=id=>points[id]*MASTERY_STEP;
+ return Object.freeze({points:Object.freeze({...points}),power:1+rate('power'),move:1+rate('move'),critical:rate('critical'),cooldownRate:1+rate('cooldown'),maxHp:100*(1+rate('maxHp')),total:MASTERY_KEYS.reduce((n,id)=>n+points[id],0)});
+}
+export function masteryLine(result){
+ if(!result?.granted||!MASTERY[result.id])return '정원 성장이 최대치에 도달했습니다';
+ return `정원 성장 · ${MASTERY[result.id].name} +0.1% (현재 ${(result.points/10).toFixed(1)}%)`;
+}
 
 // 어떤 씨앗이 남는가: 가장 깊게 키운 법칙이 결정한다. 오스틴을 이기면 시계탑 씨앗이 함께 남는다.
 export function dominantLaw(levels={}){
@@ -198,7 +230,7 @@ export function branchSummary(seedId,branch,stage='mature'){
  const seed=SEEDS[seedId];if(!seed||!BRANCHES.includes(branch))return '';
  const strong=stage==='bloom',kind=branch==='flower'?'맹공':branch==='vine'?'민첩':'끈기';
  const ending=strong?'선명하게 피어났다':'천천히 자라고 있다';
- return `${kind}로 플레이한 여정의 기억이 ${ending} · 전투 능력에는 영향을 주지 않는다`;
+ return `${kind}로 플레이한 여정의 기억이 ${ending} · 식물 자체는 전투 능력에 영향을 주지 않는다`;
 }
 // 정원 한가운데에 묻힌 것. 여정을 다녀오고 식물을 피울수록 조금씩 드러난다(설계 18~19장).
 export const CENTER=Object.freeze([
@@ -237,7 +269,7 @@ export function activeSlots(){return PLOTS;}
 // 이전 저장과 호출부를 깨지 않기 위한 모양만 유지한다. 전투 효과는 항상 0이다.
 export function gardenEffects(garden){
  const actives=activePlants(garden,PLOTS).map(p=>({index:p.index,name:plantName(p),stage:stageOf(p.growth),summary:branchSummary(p.seed,p.branch,stageOf(p.growth))}));
- return {lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives,slots:PLOTS};
+ return {lawWeights:{},formGuides:[],relicLaws:[],mutationLaws:[],freshBonus:0,guideCount:0,austinEvery:5,actives,slots:PLOTS,mastery:gardenMastery(garden)};
 }
 // 정원이 아무것도 바꾸지 않을 때와 같은 모양의 빈 효과.
 export const NO_EFFECTS=Object.freeze(gardenEffects(emptyGarden()));

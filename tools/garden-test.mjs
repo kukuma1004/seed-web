@@ -3,7 +3,7 @@ import {SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STA
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,harvestFromRun,addHarvest,craftSeed,
  plantSeed,uproot,growPlants,activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,
  harvestLine,gardenRecordLine,objectJosa,wayJosa,CENTER,centerStage,centerInfo,activeSlots,bloomedCount,
- playStyleFromRun} from '../src/garden.js';
+ playStyleFromRun,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 import {GARDEN_GROWTH_ART,growthArtTile,centerArtTile} from '../src/garden-scene.js';
 
@@ -50,7 +50,7 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
  assert.equal(g.traits.reflect,undefined);assert.equal(g.seeds.reflect,undefined);
  g=growPlants(g,STAGE_POINTS.bloom);assert.equal(stageOf(g.plots[0].growth),'bloom');
  assert.equal(plantName(g.plots[0]),SEEDS.reflect.branchNames.flower);
- assert.ok(plantSummary(g.plots[0]).includes('전투 능력에는 영향을 주지 않는다'));
+ assert.ok(plantSummary(g.plots[0]).includes('식물 자체는 전투 능력에 영향을 주지 않는다'));
  assert.equal(activePlants(g,6).length,2);
  g=uproot(g,1).garden;assert.equal(g.plots[1],null);
 }
@@ -74,7 +74,7 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
 
 {
  const old=normalizeGarden({version:2,plots:[{seed:'split',growth:9,branch:'vine',active:true}],seeds:{reflect:1},harvests:5});
- assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,3);
+ assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,4);
  const s=memory();assert.ok(writeGarden(s,old));assert.equal(readGarden(s).plots[0].style,'agile');
  s.setItem('seed-garden-v1','{깨진 json');assert.deepEqual(readGarden(s).plots,Array(PLOTS).fill(null));
 }
@@ -92,4 +92,16 @@ assert.equal(objectJosa('메아리 씨앗'),'을');assert.deepEqual([wayJosa('�
 assert.ok(harvestLine({seeds:['reflect'],fragments:0}).includes('메아리 씨앗을 얻었어요'));
 assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
 
-console.log('정원: 플레이 흔적 자동 성장·옛 저장 이관·전투 영향 0·저장 통과');
+// 오스틴 성장점은 매번 정확히 0.1%, 능력별 3%와 전체 10%에서 멈춘다.
+{
+ let g=emptyGarden();const first=grantAustinMastery(g,()=>0);g=first.garden;
+ assert.equal(first.id,'power');assert.equal(gardenMastery(g).power,1.001);assert.ok(masteryLine(first).includes('+0.1%'));
+ for(let i=1;i<MASTERY_STAT_CAP;i++)g=grantAustinMastery(g,()=>0).garden;
+ assert.equal(g.mastery.power,MASTERY_STAT_CAP);
+ // 가득 찬 공격력은 후보에서 빠지고 다음 능력으로 넘어간다.
+ g=grantAustinMastery(g,()=>0).garden;assert.equal(g.mastery.move,1);
+ for(let i=31;i<MASTERY_TOTAL_CAP;i++)g=grantAustinMastery(g,()=>.999999).garden;
+ assert.ok(gardenMastery(g).total<=MASTERY_TOTAL_CAP);
+}
+
+console.log('정원: 플레이 흔적·오스틴 0.1% 성장·옛 저장 이관·저장 통과');

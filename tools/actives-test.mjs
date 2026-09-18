@@ -58,6 +58,7 @@ assert.equal(tickActive(g,ACTIVE.signatureSeconds-.1),null);const ended=tickActi
 assert.equal(g.cooldown,ACTIVE.cooldownSeconds);chargeActive(g,10);assert.equal(g.value,0,'post-use stabilization blocks immediate refill');
 tickActive(g,ACTIVE.cooldownSeconds-.1);chargeActive(g,10);assert.equal(g.value,0,'cooldown must fully finish');
 tickActive(g,.2);chargeActive(g,10);assert.equal(g.value,10,'charging resumes after stabilization');
+const fast=createActiveGauge(0,10);tickActive(fast,1,1.02);assert.ok(Math.abs(fast.cooldown-8.98)<1e-9,'garden circulation speeds cooldown without shortening the active itself');
 g.value=ACTIVE.max;const od=startActive(g,three);
 assert.equal(od.state,'OVERDRIVE');assert.equal(od.seconds,ACTIVE.overdriveSeconds);assert.deepEqual(od.tags,['CONTROL','EXPLOSION','BOUNCE','MULTI']);assert.ok(od.finale.pull>0&&od.finale.hits===2);
 assert.equal(od.archetype,'BLACKHOLE');

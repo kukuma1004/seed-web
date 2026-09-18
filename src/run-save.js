@@ -32,7 +32,7 @@ export function validCheckpoint(s){
  if(!validMutations(s?.mutations))return false;
  if(!validInventory(s?.inventory)||!validRelics(s?.relics)||!validDashEvolution(s?.dashEvolution)||!validRunBonuses(s?.runBonuses))return false;
  if(s?.mode==='austin'&&s.stage!==4)return false;
- return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=100&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=SLOT_CAP&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
+ return Boolean(s&&s.version===1&&Number.isInteger(s.cycle)&&s.cycle>=0&&s.cycle<1000000&&Number.isInteger(s.stage)&&s.stage>=0&&s.stage<=4&&['entry','crossroads','austin'].includes(s.mode)&&Object.hasOwn(REGION_NAMES,s.region)&&Number.isFinite(s.hp)&&s.hp>0&&s.hp<=110&&Number.isInteger(s.kills)&&s.kills>=0&&Number.isFinite(s.elapsed)&&s.elapsed>=0&&Array.isArray(s.rules)&&s.rules.length<=SLOT_CAP&&new Set(s.rules).size===s.rules.length&&s.rules.every(id=>Object.hasOwn(LAWS,id))&&Array.isArray(s.mutated)&&new Set(s.mutated).size===s.mutated.length&&s.mutated.every(id=>s.rules.includes(id)));
 }
 // 2026-09-14 저녁 이전 저장에는 점수와 문지기 수가 없다. 그대로 이어하면 처치 수·시간만 남고
 // 점수가 0이라, 랭킹에 앞뒤가 안 맞는 기록이 올라간다(실제로 세 판이 그렇게 올라갔다).

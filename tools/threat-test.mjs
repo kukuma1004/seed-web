@@ -79,7 +79,7 @@ assert.ok(Array.from({length:20},(_,i)=>wardenEncounter(5+i,1).count).includes(2
 assert.ok(Array.from({length:100},(_,i)=>wardenEncounter(i,9).count).every(n=>n===1||n===2));assert.ok(DUO_WARDEN.hp<1&&DUO_WARDEN.damage<1);
 // An evolved form becomes one clearly named, telegraphed echo instead of silently adding stats.
 const copied=evolutionEcho({name:'무한 프리즘',requires:['reflect','split']});assert.equal(copied.name,'모방 · 무한 프리즘');assert.equal(copied.shots,7);assert.equal(copied.bounces,1);
-const echoBoss=createWarden(new THREE.Scene(),mats,'memory');echoBoss.copiedForm={name:'작은 블랙홀',requires:['gravity']};echoBoss.attacks=3;echoBoss.state='stalk';echoBoss.timer=0;
-let echoBolts=0;for(let i=0;i<100&&echoBoss.attacks<4;i++)tickWarden(echoBoss,.02,i*.02,new V(0,0,5),[],{collide(){},bolt(){echoBolts++;},hit(){},burst(){}});
-assert.equal(echoBoss.attacks,4);assert.equal(echoBolts,8);assert.ok(echoBoss.moveName.includes('작은 블랙홀'));
+const echoBoss=createWarden(new THREE.Scene(),mats,'memory');echoBoss.copiedForm={name:'작은 블랙홀',requires:['gravity']};echoBoss.attacks=2;echoBoss.state='stalk';echoBoss.timer=0;
+let echoBolts=0;for(let i=0;i<100&&echoBoss.attacks<3;i++)tickWarden(echoBoss,.02,i*.02,new V(0,0,5),[],{collide(){},bolt(){echoBolts++;},hit(){},burst(){}});
+assert.equal(echoBoss.attacks,3);assert.equal(echoBolts,8);assert.ok(echoBoss.moveName.includes('작은 블랙홀'));
 console.log('Threats: turret/trap placement, copied-law volleys, dodgeable strikes, trap immunity, seal and hunter wardens passed.');

@@ -8,24 +8,24 @@ const V=THREE.Vector3,TAU=Math.PI*2;
 // health raised 7800 → 8600 so the fight stays long while each mistake costs less.
 export const AUSTIN=Object.freeze({
  name:'정시파이터 오스틴',hp:8600,
- beat:.6,hourBeats:10,hourStep:4,
+ beat:.58,hourBeats:10,hourStep:4,
  overtime:.5,deadline:.2,
  bump:{radius:1.35,damage:11,every:.8},
  jab:{tell:.48,retell:.36,dash:.34,speed:20,contact:24,reach:1.3,shock:1.9,shockDamage:19},
  sweep:{tell:.8,turn:2.7,halfTurn:1.65,length:11,width:.55,damage:22},
- alarm:{countdown:1.5,radius:2.2,damage:21,spread:2.9},
- volley:{tell:.6,retell:.48,spread:.32,speed:9,damage:18,lead:.28},
+ alarm:{countdown:1.4,radius:2.2,damage:21,spread:2.9},
+ volley:{tell:.58,retell:.46,spread:.32,speed:9.6,damage:18,lead:.3},
  transition:.95,
- bell:{warnBeats:3,ringDelay:.3,speed:6,damage:19},
+ bell:{warnBeats:3,ringDelay:.28,speed:6.4,damage:19},
  damage:{burst:.06,perSecond:.03}
 });
 export const AUSTIN_ARENA=Object.freeze({shape:'circle',radius:7.6});
 // GPT art hook: set to e.g. 'boss-austin-v1.png' (2x2 directional atlas, like warden-*-v4.png) once the art exists.
 export const AUSTIN_ART='boss-austin-v1.png';
 export const PHASES=Object.freeze({
- normal:{tempo:1,label:'정시 근무',jabs:3,alarms:3,volleys:3,bolts:24,gapHalf:.58,rest:.65,order:['jab','sweep','alarm','volley']},
- overtime:{tempo:.8,label:'야근 모드',jabs:3,alarms:4,volleys:4,bolts:30,gapHalf:.48,rest:.45,order:['volley','alarm','sweep','jab','volley','jab']},
- deadline:{tempo:.7,label:'마감 직전',jabs:4,alarms:5,volleys:5,bolts:36,gapHalf:.48,rest:.3,order:['alarm','volley','jab','sweep','volley','jab']}
+ normal:{tempo:1,label:'정시 근무',jabs:3,alarms:3,volleys:3,bolts:24,gapHalf:.58,rest:.58,order:['jab','sweep','alarm','volley']},
+ overtime:{tempo:.8,label:'야근 모드',jabs:3,alarms:4,volleys:4,bolts:30,gapHalf:.48,rest:.4,order:['volley','alarm','sweep','jab','volley','jab']},
+ deadline:{tempo:.7,label:'마감 직전',jabs:4,alarms:5,volleys:5,bolts:36,gapHalf:.46,rest:.26,order:['alarm','volley','jab','sweep','volley','jab']}
 });
 // Burst damage may reach a phase boundary, but cannot erase an unseen phase.
 // A short, visible wind-up clears the old hazards before the faster phase begins.

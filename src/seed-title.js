@@ -1,10 +1,10 @@
 import * as THREE from 'three';
 import './seed-title.css';
-import {AUSTIN_TITLE,AUSTIN_SHOT_SPEED,titleState} from './titles.js';
+import {AUSTIN_TITLE,AUSTIN_MOVE_SPEED,titleState} from './titles.js';
 
 export {AUSTIN_TITLE};
 // Kept for the Austin victory toast; every title's rules live in titles.js.
-export const AUSTIN_TITLE_PERK=Object.freeze({shotSpeed:1+AUSTIN_SHOT_SPEED,text:`기본 탄환 속도 +${AUSTIN_SHOT_SPEED*100}%`});
+export const AUSTIN_TITLE_PERK=Object.freeze({moveSpeed:1+AUSTIN_MOVE_SPEED,text:`이동 속도 +${AUSTIN_MOVE_SPEED*100}%`});
 
 // A screen-space nameplate follows the world position. Korean text stays crisp
 // on low-resolution mobile canvases and costs no WebGL texture or draw call.
