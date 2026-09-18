@@ -45,10 +45,10 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
    if(itemsUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',itemBag(itemsUI.get()));
    const titles=titleUI?.state();
    if(titles&&(titles.titles.length||titles.next)){
-    const runShot=bonusUI?.shotScale?.()||1,totalShot=titles.shotSpeed*runShot;
+    const cadence=bonusUI?.cadenceScale?.()||1,totalShot=titles.shotSpeed;
     const percent=value=>`${Math.round(value*1000)/10}%`;
-    const sources=[titles.shotSpeedBonus>0?`영구 칭호 +${percent(titles.shotSpeedBonus)}`:'',runShot>1?`이번 여정 +${percent(runShot-1)}`:''].filter(Boolean).join(' · ');
-    root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호와 현재 능력치</h3><p class="title-total"><strong>탄환 속도 ${percent(totalShot)}</strong>${sources?`<small>${sources}</small>`:''}</p>${titles.titles.map(t=>`<p class="${t.id===titles.equipped?'equipped':''}"><strong>${t.id===titles.equipped?'장착 · ':''}${t.name}</strong> · ${t.perk}</p>`).join('')}${titles.next?`<p class="title-next">도감 ${titles.next.need}개 더 · ${titles.next.reward}</p>`:''}</section>`);
+    const sources=titles.shotSpeedBonus>0?`영구 칭호 +${percent(titles.shotSpeedBonus)}`:'';
+    root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호와 현재 능력치</h3><p class="title-total"><strong>탄환 속도 ${percent(totalShot)}</strong>${sources?`<small>${sources}</small>`:''}</p>${cadence>1?`<p class="title-total"><strong>공격 빈도 ${percent(cadence)}</strong><small>이번 여정 희귀 보너스 +${percent(cadence-1)}</small></p>`:''}${titles.titles.map(t=>`<p class="${t.id===titles.equipped?'equipped':''}"><strong>${t.id===titles.equipped?'장착 · ':''}${t.name}</strong> · ${t.perk}</p>`).join('')}${titles.next?`<p class="title-next">도감 ${titles.next.need}개 더 · ${titles.next.reward}</p>`:''}</section>`);
    }
    if(relicUI){root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',relicLoadout(relicUI.get(),relicUI.canSwap(),relicUI.effect));root.querySelectorAll('[data-equip-relic]').forEach(b=>b.onclick=()=>{relicUI.swap(b.dataset.equipRelic);api.show(shownLevels,shownForms);});}
    root.hidden=false;continueButton.focus({preventScroll:true});
