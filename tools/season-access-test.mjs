@@ -35,10 +35,11 @@ assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차
 assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에만 전투 실험실 진입점이 보여야 합니다.');
 assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAccessMode=async\(\)=>\{const user=account\.user\(\);adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');
 assert.match(main,/publicWebBetaLocked\(\)&&!adminMode&&!betaTesterMode/,'등록된 테스터만 잠긴 PC 웹을 통과해야 합니다.');
+assert.match(main,/if\(localAdminLab\|\|account\.user\(\)\)showIntro\(\);else showAccount\(\)/,'로컬 관리자 UI 검사는 외부 계정을 만들지 않고 바로 시작해야 합니다.');
 assert.match(main,/account\.native\|\|betaTesterMode/,'등록된 PC 웹 테스터도 베타 랭킹에 참여할 수 있어야 합니다.');
 assert.match(main,/betaTesterMode\?grantGift\(runStorage,BETA_BOOSTER_GIFT,'sprout',1\)/,'베타테스터는 계정마다 다시 싹 부스터를 한 번 받아야 합니다.');
 assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
-assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 55종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화 55종을 모두 제공해야 합니다.');
+assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 \$\{Object\.keys\(FORMS\)\.length\}종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화를 하드코딩된 개수 없이 모두 제공해야 합니다.');
 assert.match(main,/developerRun\)return true;[\s\S]*writeCheckpoint/,'개발자 실험은 기존 이어하기 저장을 덮어쓰지 않아야 합니다.');
 assert.match(main,/if\(developerRun\)\{\$\('#overlay'\)[\s\S]*점수·보상·도감·정원·저장/,'개발자 실험 종료는 랭킹과 정원 기록을 만들지 않아야 합니다.');
 const auth=fs.readFileSync(new URL('../src/account-auth.js',import.meta.url),'utf8');
@@ -46,5 +47,5 @@ assert.match(auth,/browserLocalPersistence[\s\S]*browserSessionPersistence/,'웹
 assert.match(auth,/onAuthStateChanged\(webAuth/,'다른 탭이나 팝업에서 바뀐 로그인 상태를 즉시 반영해야 합니다.');
 assert.match(auth,/prompt:'select_account'/,'관리자와 학생 계정이 함께 있는 브라우저에서 계정을 다시 고를 수 있어야 합니다.');
 const worker=fs.readFileSync(new URL('../public/sw.js',import.meta.url),'utf8');
-assert.match(worker,/seed-play-v10/,'오래 열린 설치형 웹앱도 최신 테스터 권한과 부스터 화면으로 교체되어야 합니다.');
+assert.match(worker,/seed-play-v11/,'오래 열린 설치형 웹앱도 최신 전투 조합과 카메라 빌드로 교체되어야 합니다.');
 console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');

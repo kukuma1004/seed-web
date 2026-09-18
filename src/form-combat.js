@@ -44,8 +44,8 @@ export function orbitPose(id,index,count,angle,time,S){
 // frequent mobile garbage-collection pauses once split forms filled the room.
 export function segmentDistance(a,b,p){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz,t=length?THREE.MathUtils.clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/length,0,1):0,ox=a.x+dx*t-p.x,oz=a.z+dz*t-p.z;return Math.hypot(ox,oz);}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const bossReach=(e,normal,boss)=>e.type==='warden'||e.type==='austin'?boss:normal;
-const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
+const bossReach=(e,normal,boss)=>['warden','austin','act2warden','alwaysbeginner'].includes(e.type)?boss:normal;
+const immovable=e=>['warden','austin','act2warden','alwaysbeginner','turret'].includes(e.type);
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
@@ -199,9 +199,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
      const spread=S.seeds===1?0:-S.spread+2*S.spread*i/(S.seeds-1);
      bolts.push({kind:'seedstorm',ob:spawnMesh(geos.seed,mats.seed,pos),dir:aim.clone().applyAxisAngle(Y,spread),life:S.life});
     }
-    fx.split(pos,aim,Math.min(5,S.seeds));return S.interval;
+     fx.split(pos,aim,Math.min(5,S.seeds));return S.interval;
+    }
+    case 'gravitymirror':{
+     if(full('gravitymirror',S.bolts))return S.interval;
+     const ob=spawnMesh(geos.lens,mats.lens,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,1.08,1.08,1.08);
+     bolts.push({kind:'gravitymirror',ob,dir:aim,life:S.life,bounces:0,passed:new Set()});
+     fx.muzzle(pos,aim,'gravity');return S.interval;
+    }
+    case 'chainburst':{chainBurst(pos);return S.interval;}
+    case 'blastlance':{blastLance(pos,aim);return S.interval;}
    }
-  }
   return Infinity;
  }
 
@@ -265,6 +273,44 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   }
   for(let d=0;d<flat(start,end);d+=1.6)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.6)).setY(.7),'pierce',false);
   fx.pulse(end,'pierce',.5,.2);
+ }
+ // Reflect + gravity: the wall is part of the weapon. Every rebound tugs
+ // ordinary enemies toward the lens; the last one compresses into a blast.
+ function gravityPulse(pos){
+  fx.pulse(pos,'gravity',S.pullRadius,.32);sound('gravityHit');
+  for(const e of near(pos,S.pullRadius)){
+   if(e.dead||immovable(e))continue;
+   const pull=pos.clone().sub(e.g.position).setY(0),distance=pull.length();
+   if(distance>.08){e.g.position.addScaledVector(pull.normalize(),Math.min(distance,Math.max(.25,S.pull*.12)));constrain(e.g.position,.65);}
+  }
+ }
+ function gravityDetonate(pos,multiplier=1){
+  fx.explosion(pos,'gravity',S.blastRadius,true);sound('burstHit');
+  for(const e of near(pos,S.blastRadius+.8))if(!e.dead&&flat(e.g.position,pos)<S.blastRadius+bossReach(e,0,.55))support(e,S.blast*multiplier,{kind:'gravitymirror',indirect:true,direction:e.g.position.clone().sub(pos).setY(0).normalize()});
+ }
+ // Chain + burst: unlike ordinary chain support, the route is deliberate and
+ // only the final node explodes. Spacing therefore changes the best target.
+ function chainBurst(pos,first=null){
+  let target=first||nearestEnemy(pos,S.reach,new Set(),true);if(!target)return;
+  const touched=new Set();let from={g:{position:pos}},damage=S.damage,last=null;
+  for(let jump=0;target&&jump<=S.jumps;jump++){
+   touched.add(target);fx.arc(from.g.position,target.g.position);support(target,damage,{kind:'chainburst',indirect:true,direction:target.g.position.clone().sub(from.g.position).setY(0).normalize()});
+   last=target;from=target;damage*=S.decay;target=nearestEnemy(from.g.position,S.range,touched,true);
+  }
+  if(!last)return;fx.explosion(last.g.position,'burst',S.finishRadius,true);sound('burstHit');
+  for(const e of near(last.g.position,S.finishRadius+.8))if(!e.dead&&flat(e.g.position,last.g.position)<S.finishRadius+bossReach(e,0,.5))support(e,S.finish,{kind:'chainburst',indirect:true,direction:e.g.position.clone().sub(last.g.position).setY(0).normalize()});
+ }
+ // Pierce + burst: every body crossed adds charge to the endpoint explosion.
+ // It is hitscan and allocation bounded, so the spectacle does not add a new
+ // late-game projectile swarm.
+ function blastLance(pos,dir){
+  const start=pos.clone().setY(0),end=start.clone();
+  for(let travelled=0;travelled<S.length;travelled+=.4){const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();if(blocked(end,next)||boundary(end.clone(),next,probe))break;end.copy(next);}
+  const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2)).sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
+  let struck=0;for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.damage*(1+S.ramp*struck),{kind:'blastlance',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;}
+  for(let d=0;d<flat(start,end);d+=1.25)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.25)).setY(.7),d%2.5<1.25?'pierce':'burst',false);
+  const radius=Math.min(S.blastRadius+.9,S.blastRadius+struck*.12),power=S.blast*(1+Math.min(1,struck*.12));fx.explosion(end,'burst',radius,true);sound('burstHit');
+  for(const e of near(end,radius+.8))if(!e.dead&&flat(e.g.position,end)<radius+bossReach(e,0,.55))support(e,power,{kind:'blastlance',indirect:true,direction:e.g.position.clone().sub(end).setY(0).normalize()});
  }
  // Frost in a cone in front of the seed (cone = half angle; PI is all around). Slowed enemies take more.
  function breath(pos,dir,cone){
@@ -433,18 +479,27 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     fx.trail(previous,b.ob.position,b.kind==='collapse'?'gravity':'recall',false);
     continue;
    }
-   if(b.kind==='prism'){
-    b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
-    const wall=boundary(previous,b.ob.position,b.dir);
-    const cover=!wall&&blocked(previous,b.ob.position);
-    if(cover){b.ob.position.copy(previous);b.dir.negate();}
-    if(wall||cover){
-     fx.reflect(b.ob.position,b.dir);
-     if(b.gen<S.generations){
-      b.life=0;
-      for(const turn of [-.45,.45])if(count('prism')<S.shards)bolts.push({kind:'prism',ob:spawnMesh(geos.shard,mats.prism,b.ob.position),dir:b.dir.clone().applyAxisAngle(Y,turn),gen:b.gen+1,life:1.6,passed:new Set()});
-      continue;
-     }
+    if(b.kind==='gravitymirror'){
+     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*9;b.ob.rotation.z+=dt*5;
+     const wall=boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     if(cover){b.ob.position.copy(previous);b.dir.negate();}
+     if(wall||cover){gravityPulse(b.ob.position);b.passed.clear();if(++b.bounces>=S.bounces){gravityDetonate(b.ob.position);b.life=0;continue;}fx.reflect(b.ob.position,b.dir);sound('reflect');}
+     const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+     if(e){b.passed.add(e);if(!support(e,S.damage,{kind:'gravitymirror',direction}))b.life=0;}
+     fx.trail(previous,b.ob.position,'gravity',b.bounces>0);continue;
+    }
+    if(b.kind==='prism'){
+     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
+     const wall=boundary(previous,b.ob.position,b.dir);
+     const cover=!wall&&blocked(previous,b.ob.position);
+     if(cover){b.ob.position.copy(previous);b.dir.negate();}
+     if(wall||cover){
+      fx.reflect(b.ob.position,b.dir);
+      if(b.gen<S.generations){
+       b.life=0;
+       for(const turn of [-.45,.45])if(count('prism')<S.shards)bolts.push({kind:'prism',ob:spawnMesh(geos.shard,mats.prism,b.ob.position),dir:b.dir.clone().applyAxisAngle(Y,turn),gen:b.gen+1,life:1.6,passed:new Set()});
+       continue;
+      }
      b.life=0;continue;
     }
     const direction=b.dir.clone();
@@ -639,7 +694,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  // ---------------- active (signature / overdrive) ----------------
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
- const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
+  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
@@ -694,7 +749,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     for(const d of around(16))if(count('seedstorm')<60)bolts.push({kind:'seedstorm',ob:spawnMesh(geos.seed,mats.seed,pos),dir:d,life:S.life*1.4});
     fx.split(pos,dir,5);break;
    }
-   case 'mirrorguard':{
+    case 'mirrorguard':{
     let turned=0;
     for(const q of enemyShots()){
      if(!(q.life>0)||q.boss||turned>=30)continue;
@@ -704,8 +759,18 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
      bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,q.ob.position),dir:d,life:1.6,damage:S.damage*1.5});
      fx.reflect(q.ob.position,d);
     }
-    break;
-   }
+     break;
+    }
+    case 'gravitymirror':{
+     // The ordinary shot needs a wall to earn its finish. Its signature instead
+     // unfolds the kaleidoscope at once, so it still feels decisive in an open
+     // arena without creating an unbounded projectile swarm.
+     const spokes=around(6);for(const d of spokes)fire(pos,d,null,true);
+     gravityDetonate(pos,2.7);for(const d of spokes){const focus=pos.clone().addScaledVector(d,3.1);gravityPulse(focus);gravityDetonate(focus,2.7);}
+     break;
+    }
+    case 'chainburst':for(const e of nearest(4,S.reach))chainBurst(pos,e);break;
+    case 'blastlance':for(const a of [-.52,-.26,0,.26,.52])blastLance(pos,dir.clone().applyAxisAngle(Y,a));break;
    case 'mirrormaze':for(const d of around(8))fire(pos,d,null,true);break;
    case 'fullbloom':for(const d of around(4))fire(pos,d,null,true);break;
    case 'glassspear':for(const d of around(6))fire(pos,d,null,true);break;

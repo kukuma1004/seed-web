@@ -24,7 +24,7 @@ assert.equal(itemArt('missing'),'');
 assert.equal(new Set(Object.keys(RELICS).map(relicArt)).size,4);
 assert.equal(new Set(Object.keys(ITEMS).map(itemArt)).size,5);
 for(const id of Object.keys(SOLO_FORMS))assert.match(formArt(id),new RegExp(SOLO_ATLAS));
-for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(FUSION_ATLAS));
+for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(`${FUSION_ATLAS}|${COMBO_ART.cores}`));
 for(const id of Object.keys(GENERATED_FORMS))assert.match(formArt(id),new RegExp(COMBO_ART.cores));
 for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AWAKEN_ATLAS));
 for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),/twin-art/);if(!TWIN_FORMS[id].parts.includes('riftseed'))assert.match(formArt(id),new RegExp(SOLO_ATLAS));}

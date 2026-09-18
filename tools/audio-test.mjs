@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {AUDIO_EVENTS,MUSIC_SCENES,createAudioLimiter,createGameAudio,ultimateAudioEvent} from '../src/audio.js';
 
-for(const id of ['shot','hit','split','chain','reflect','portal','evolve','fusion','ultimateReady','ultimate','finale','bossWarning','bossAttack','bossDefeat']){
+for(const id of ['shot','hit','gravityHit','burstHit','pierceHit','frostHit','split','chain','reflect','portal','evolve','fusion','ultimateReady','ultimate','finale','bossWarning','bossAttack','bossDefeat']){
  const e=AUDIO_EVENTS[id];assert.ok(e,`${id} exists`);assert.ok(e.duration>0&&e.gain>0&&e.cooldown>=0);assert.ok(e.priority>=0);
 }
 const ultimateEvents=['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP'].map(ultimateAudioEvent);

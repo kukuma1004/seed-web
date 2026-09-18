@@ -9,7 +9,8 @@ import {buildRecord,parseBuild} from '../src/ranking-build.js';
 const V=THREE.Vector3;
 
 // One awakened evolution per fusion, named apart from every other evolution and signature.
-assert.equal(Object.keys(AWAKEN_FORMS).length,Object.keys(FORMS).length);
+assert.equal(Object.keys(AWAKEN_FORMS).length,10,'기존 각성 10종은 그대로 유지');
+assert.ok(Object.values(AWAKEN_FORMS).every(a=>Object.hasOwn(FORMS,a.base)),'모든 각성의 기반 조합은 실제 선택에 남아 있음');
 for(const a of Object.values(AWAKEN_FORMS)){
  assert.ok(FORMS[a.base]&&awakenedFormOf(a.base)===a.id&&baseFormOf(a.id)===a.base&&isAwakenedForm(a.id));
  assert.deepEqual([...a.requires],[...FORMS[a.base].requires]);assert.equal(a.passive,FORMS[a.base].passive);
@@ -42,7 +43,8 @@ for(const t of Object.values(TWIN_FORMS)){
  assert.ok(isTwinForm(t.id)&&t.parts.every(id=>SOLO_FORMS[id])&&SIGNATURES[t.id]?.name&&t.name&&t.desc);
  assert.deepEqual(attackPartsOf(t.id),[...t.parts]);
  assert.ok(t.synergy.name&&t.synergy.window>=2&&t.synergy.bonus>=.1&&t.synergy.bonus<=.25&&t.synergy.effects.length===2);
- assert.ok(!Object.values(FORMS).some(f=>[...f.requires].sort().join()===[...t.requires].sort().join()),`${t.id} duplicates a fusion`);
+ const first=Object.values(FORMS).find(f=>[...f.requires].sort().join()===[...t.requires].sort().join());
+ if(first){assert.ok(['gravitymirror','chainburst','blastlance'].includes(first.id),`${t.id} unexpected duplicate path`);assert.notEqual(first.desc,t.desc,'a direct fusion and a twin awakening must fight differently');}
 }
 assert.equal(new Set(Object.values(TWIN_FORMS).map(t=>t.synergy.name)).size,26,'Every twin pair has a distinct resonance.');
 {

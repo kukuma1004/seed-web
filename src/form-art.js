@@ -1,5 +1,5 @@
-import {SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS} from './forms.js';
-import {FIRST_FUSION_BY_ID} from './combo-catalog.js';
+import {CURATED_FORMS,SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS} from './forms.js';
+import {FIRST_FUSIONS,FIRST_FUSION_BY_ID} from './combo-catalog.js';
 import {comboArt} from './combo-art.js';
 // One authored illustration for each completed form, in a 4 by 3 atlas.
 const TILES={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
@@ -15,6 +15,8 @@ const soloStyle=id=>id==='riftseed'?tileStyle('seed-law-atlas-v4-ui.webp',7):til
 // solo relics and keep the same gold awakening frame.
 export const AWAKEN_ATLAS='seed-awaken-atlas-v1-ui.webp';
 const AWAKEN_TILES={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9};
+const pairKey=ids=>[...ids].sort().join('+');
+const CURATED_COMBO_ART=Object.freeze(Object.fromEntries(Object.values(CURATED_FORMS).filter(f=>TILES[f.id]===undefined).map(f=>[f.id,FIRST_FUSIONS.find(entry=>pairKey(entry.laws)===pairKey(f.requires))]).filter(([,entry])=>entry)));
 export function formArt(id,extra=''){
  if(Object.hasOwn(SECOND_FORMS,id))return comboArt(SECOND_FORMS[id],`form-art ${extra}`);
  // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).
@@ -27,6 +29,7 @@ export function formArt(id,extra=''){
   return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="${style}"></span>`;
  }
  if(Object.hasOwn(GENERATED_FORMS,id))return comboArt(FIRST_FUSION_BY_ID[id],`form-art ${extra}`);
+ if(Object.hasOwn(CURATED_COMBO_ART,id))return comboArt(CURATED_COMBO_ART[id],`form-art curated-art ${extra}`);
  const tile=TILES[id];
  if(tile!==undefined)return `<span class="form-art ${extra}" aria-hidden="true" style="${tileStyle(FUSION_ATLAS,tile)}"></span>`;
  if(Object.hasOwn(SOLO_FORMS,id)){

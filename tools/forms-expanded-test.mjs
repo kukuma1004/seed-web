@@ -16,9 +16,9 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: ten forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,10);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,10);
+// Catalogue: thirteen hand-authored forms, unique pairs, every law feeds at least two forms.
+assert.equal(Object.keys(FORMS).length,13);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,13);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
@@ -118,4 +118,21 @@ for(const id of Object.keys(FORMS)){
  const damages=f.calls.filter(c=>c.kind==='mirrorguard'&&!c.indirect).map(c=>c.damage).sort((a,b)=>a-b);
  assert.deepEqual(damages,[formStats('mirrorguard',1).damage]);
 }
-console.log('Forms: ten pairs covering every law twice, uncapped form levels, prism splits, lance lines, bloom delay, crown pulses, tide drag, seed fan, mirror returns passed.');
+
+// The three newly curated pairs are true interactions, not two generic law
+// flags: bounce pulls, a chain detonates its endpoint, and pierce charges range.
+{
+ const foe=enemy(2),f=fixture([foe],{boundary:walls});f.combat.set('gravitymirror');f.combat.fire(vec(),vec(1));step(f.combat,2.5);
+ assert.ok(f.calls.some(c=>c.kind==='gravitymirror'),'the lens damages on its route or final compression');
+ assert.ok(foe.g.position.x>2,'a wall rebound pulls an ordinary enemy toward the lens');f.combat.dispose();
+}
+{
+ const foes=[enemy(2),enemy(5),enemy(8)],f=fixture(foes);f.combat.set('chainburst');f.combat.fire(vec(),vec(1));
+ assert.ok(foes.every(e=>f.calls.some(c=>c.e===e&&c.kind==='chainburst')),'lightning crosses the spaced route');
+ assert.ok(f.calls.some(c=>c.damage===formStats('chainburst',1).finish),'the final node owns a separate explosion');f.combat.dispose();
+}
+{
+ const end=enemy(12),f=fixture([enemy(2),enemy(5),enemy(8),end]);f.combat.set('blastlance');f.combat.fire(vec(),vec(1));
+ assert.ok(f.calls.filter(c=>c.e===end&&c.kind==='blastlance').length>=2,'the far target receives the charged line and endpoint blast');f.combat.dispose();
+}
+console.log('Forms: thirteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

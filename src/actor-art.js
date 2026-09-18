@@ -85,7 +85,9 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
   const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
   const frame=seedFrame(e.g.rotation.y,yaw),nextGeometry=directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
   sprite.geometry=ghost.geometry=nextGeometry;
-  sprite.userData.roll=ghost.userData.roll=actorArtRotation(e.state,time,e.phase);
+  const impact=THREE.MathUtils.clamp((e.hit||0)/.14,0,1),reaction=(e.impactSide||1)*impact*.105;
+  sprite.userData.roll=ghost.userData.roll=actorArtRotation(e.state,time,e.phase)+reaction;
+  sprite.scale.set(size*(1+impact*.045),size*(1-impact*.035),1);ghost.scale.copy(sprite.scale);
   mat.color.setHex(e.block>0?0xb5efff:e.hit>0?0xffd1aa:(e.tint??0xffffff));
   ghost.visible=occlusion&&silhouettes.enabled&&(!silhouettes.test||silhouettes.test(e.g.position));
  };

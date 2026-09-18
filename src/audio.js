@@ -4,6 +4,10 @@
 export const AUDIO_EVENTS=Object.freeze({
  shot:{wave:'triangle',freq:430,end:250,duration:.065,gain:.025,cooldown:.085,priority:0},
  hit:{wave:'sine',freq:180,end:95,duration:.07,gain:.035,cooldown:.05,priority:0},
+ gravityHit:{wave:'sine',freq:92,end:48,duration:.16,gain:.052,cooldown:.11,priority:1,notes:[1,.5]},
+ burstHit:{wave:'sawtooth',freq:138,end:58,duration:.14,gain:.058,cooldown:.1,priority:1,notes:[1,.67]},
+ pierceHit:{wave:'triangle',freq:720,end:260,duration:.1,gain:.043,cooldown:.09,priority:1},
+ frostHit:{wave:'sine',freq:880,end:430,duration:.13,gain:.036,cooldown:.11,priority:1,notes:[1,1.5]},
  split:{wave:'triangle',freq:520,end:760,duration:.12,gain:.045,cooldown:.12,priority:1,notes:[1,1.28]},
  chain:{wave:'square',freq:680,end:330,duration:.11,gain:.032,cooldown:.09,priority:1,notes:[1,1.5]},
  reflect:{wave:'triangle',freq:760,end:1120,duration:.1,gain:.04,cooldown:.09,priority:1,notes:[1,1.33]},

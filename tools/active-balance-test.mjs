@@ -26,8 +26,13 @@ for(const level of [SOLO_LEVEL-1,9]){
 // reward for lining enemies up or accepting point-blank danger.
 for(const level of [SOLO_LEVEL-1,9]){
  const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
- const middle=median(Object.values(curated));
- assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x median crowd damage`);
+ const newForms=['gravitymirror','chainburst','blastlance'];
+ const established=Object.entries(curated).filter(([id])=>!newForms.includes(id)).map(([,damage])=>damage);
+ const middle=median(established);
+ // Adding a deliberately tactical weapon must not move the historical balance
+ // yardstick and make an unchanged weapon fail merely by lowering the median.
+ assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x the established median crowd damage`);
+ for(const id of newForms)assert.ok(curated[id]>=middle*.55&&curated[id]<=middle*1.55,`level ${level}: ${id} misses the authored fusion damage band`);
  assert.ok(curated.tidepull<=middle*1.55,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} exceeds its control budget`);
  assert.ok(bossDps('tidepull',level)<curated.tidepull*.2,`level ${level}: tidepull lost its single-target weakness`);
  const lanceLine=simulate('thunderlance',level,{scene:'line'}).dps,lanceScatter=simulate('thunderlance',level,{scene:'scattered'}).dps;

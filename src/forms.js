@@ -2,9 +2,8 @@ import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS} from './combo-catalog.j
 import {HIDDEN_LAWS} from './laws.js';
 
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
-// The ten hand-authored classics keep their bespoke attacks. The other 35 pairs
-// use the shared gene-projectile engine, which keeps 45 recipes playable without
-// loading 35 more models or particle systems.
+// Hand-authored fusions keep bespoke attacks. Unreleased pairs stay in the
+// generated catalogue as design references, but never enter a run automatically.
 const form=(id,requires,name,desc,strength,weakness,passive=false)=>Object.freeze({id,name,requires:Object.freeze(requires),pair:'',desc,strength,weakness,passive});
 const LAW_KO={reflect:'반사',split:'분열',chain:'연쇄',orbit:'공전',pierce:'관통',burst:'폭발',recall:'귀환',gravity:'중력',frost:'빙결',portal:'차원'};
 const withPair=f=>Object.freeze({...f,pair:f.requires.map(id=>LAW_KO[id]).join(' + ')});
@@ -19,7 +18,10 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('stormcrown',['orbit','chain'],'폭풍 왕관','주위를 도는 번개 구슬이 가까운 적에게 스스로 번개를 떨어뜨립니다.','움직이며 주변을 자동으로 정리','사거리가 짧아 멀리 있는 사수·포탑을 못 맞힘',true),
  form('tidepull',['gravity','recall'],'귀환 해일','해일핵이 전장을 왕복하며 적을 쓸어 모아 씨앗의 안전거리 앞까지 데려옵니다.','먼 무리를 왕복 경로로 긁어 한곳에 배달','좌우로 흩어진 적과 문지기·포탑은 끌 수 없음'),
  form('seedstorm',['split','burst'],'씨앗 폭풍','짧은 거리에 터지는 씨앗을 부채꼴로 흩뿌립니다.','가까이 붙은 무리를 순식간에 정리','사거리가 짧아 멀리서 쏘는 적에게 약함'),
- form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true)
+ form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true),
+ form('gravitymirror',['reflect','gravity'],'중력 거울','거울핵이 벽을 튕길 때마다 짧은 중력장을 남겨 적을 끌어모으고, 마지막 충돌에서 압축해 터뜨립니다.','벽을 이용해 적의 위치를 바꾸고 마지막 폭발까지 연결','트인 공간에서는 튕김과 끌림을 충분히 만들기 어려움'),
+ form('chainburst',['chain','burst'],'연쇄 폭발','번개가 적 사이를 차례로 건너간 뒤 마지막 표적에서 폭발합니다.','흩어진 무리를 이어 마지막 밀집 지점을 폭파','적이 한두 마리뿐이면 연쇄 거리와 마무리 폭발을 낭비'),
+ form('blastlance',['pierce','burst'],'폭발 창','긴 창이 적을 관통할수록 폭발력을 모으고, 사거리 끝에서 모은 힘을 터뜨립니다.','일렬로 선 적을 꿰뚫을수록 마지막 폭발이 강해짐','옆으로 흩어진 적과 코앞의 적에게는 충전할 거리가 부족')
 ].map(f=>[f.id,withPair(f)])));
 
 const pairKey=requires=>[...requires].sort().join('+');
@@ -32,7 +34,7 @@ const generatedForm=entry=>Object.freeze({
  passive:false,generated:true,visual:entry.visual
 });
 export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
-// 2026-09-17: 자동으로 찍어낸 조합 35개(GENERATED_FORMS)는 숨긴다. 손으로 만든 10개만 쓴다.
+// 2026-09-18: 자동 조합은 계속 숨기고, 검증한 손제작 조합만 FORMS에 넣는다.
 export const FORMS=Object.freeze({...CURATED_FORMS});
 const RUNTIME_FIRST_BY_PAIR=new Map(Object.values(FORMS).map(f=>[pairKey(f.requires),f.id]));
 const secondForm=entry=>{
@@ -66,7 +68,7 @@ const SOLO_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)의 단독 진화는 뺀다.
 export const SOLO_FORMS=Object.freeze(Object.fromEntries(Object.entries(SOLO_ALL).filter(([,f])=>!HIDDEN_LAWS.includes(f.requires[0]))));
-// Every first evolution the seed can hold: ten first fusions and nine solo evolutions.
+// Every first evolution the seed can hold: thirteen authored first fusions and nine solo evolutions.
 // Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
@@ -149,8 +151,8 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)이 들어간 쌍둥이 각성은 뺀다.
 export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
-// Every evolution the seed can hold: ten first fusions, nine solo evolutions,
-// ten curated awakenings and 26 twin awakenings (55).
+// Every evolution the seed can hold: thirteen authored first fusions, nine solo evolutions,
+// ten curated awakenings and 26 twin awakenings (58).
 export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
@@ -213,6 +215,9 @@ const SURGE=Object.freeze({
  tidepull:s=>({vortices:s.vortices+1,radius:s.radius+1,hold:s.hold+.5}),
  seedstorm:s=>({seeds:s.seeds+3}),
  mirrorguard:s=>({mirrors:s.mirrors+3,radius:s.radius+.4}),
+ gravitymirror:s=>({bounces:s.bounces+3,pullRadius:s.pullRadius+.7,blastRadius:s.blastRadius+.45}),
+ chainburst:s=>({jumps:s.jumps+3,range:s.range+.8,finishRadius:s.finishRadius+.45}),
+ blastlance:s=>({pierce:s.pierce+5,length:s.length+3,blastRadius:s.blastRadius+.5}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
  thunderweb:s=>({jumps:s.jumps+1,decay:Math.min(.93,s.decay+.02)}),
@@ -226,7 +231,7 @@ const SURGE=Object.freeze({
 });
 // While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
 export const SURGE_DAMAGE=1.6;
-const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','emberDamage','returnDamage'];
+const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','emberDamage','returnDamage','blast','finish'];
 // Awakened: a lasting share of the surge. Counts grow a little, attacks come a little faster and hit a little harder;
 // the ultimate still adds the full surge on top.
 const AWAKEN_BOOST=Object.freeze({
@@ -302,6 +307,9 @@ function baseStats(id,level){
   case 'tidepull':return {interval:1.45*faster,damage:28*power,tick:7*power,returnDamage:18*power,radius:Math.min(4,3+.12*up),vortices:2,hold:.18,pull:7.5,safeRadius:2.55,slow:.8};
   case 'seedstorm':return {interval:.95*faster,damage:14*power,pop:12*power,seeds:Math.min(12,6+L),spread:.55,life:.42};
   case 'mirrorguard':return {interval:Infinity,damage:30*power,mirrors:Math.min(5,2+Math.floor(L/2)),ram:10*power,radius:1.9};
+  case 'gravitymirror':return {interval:1.05*faster,damage:28*power,speed:10.5,life:3,bounces:Math.min(7,3+Math.floor(up/2)),pullRadius:Math.min(3.2,2.15+.12*up),pull:4.4,blast:48*power,blastRadius:Math.min(2.5,1.65+.1*up),bolts:4};
+  case 'chainburst':return {interval:1.18*faster,damage:31*power,jumps:Math.min(7,3+Math.floor(up/2)),range:Math.min(5.2,4.1+.1*up),decay:.88,reach:10,finish:52*power,finishRadius:Math.min(2.6,1.7+.1*up)};
+  case 'blastlance':return {interval:1.3*faster,damage:37*power,length:Math.min(17,12+.7*up),pierce:Math.min(13,7+up),ramp:.08,blast:42*power,blastRadius:Math.min(3,1.65+.1*up)};
   default:return {interval:Infinity,damage:0};
  }
 }
@@ -310,7 +318,7 @@ function baseStats(id,level){
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
  if(GENERATED_FORMS[id]||SECOND_FORMS[id])return `${SECOND_FORMS[id]?'재융합':'진화'} Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
- const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경']})[baseFormOf(id)];
+  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}
  return parts.join(' · ');
