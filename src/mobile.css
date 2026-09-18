@@ -39,6 +39,7 @@ body.phone-landscape #score-hud small{display:none}
 body.phone-landscape #app-actions{top:max(8px,env(safe-area-inset-top))}
 body.phone-landscape.is-fullscreen #app-actions{display:none}
 body.phone-landscape #toast{top:22%;font-size:12px}
+body.phone-landscape #boss-hud:not(.austin-hud){top:max(44px,calc(env(safe-area-inset-top) + 36px));width:310px;max-width:44vw}
 /* Portrait on a touch device: ask to rotate instead of squeezing the arena. */
 #rotate-hint{display:none}
 @media(orientation:portrait){.touch-mode #rotate-hint{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#071b21f2;color:#e8f5e8;text-align:center;padding:24px}
