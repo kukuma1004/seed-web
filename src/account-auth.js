@@ -72,7 +72,14 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
   if(native){
    const link=Boolean(user?.isAnonymous);
    if(kind==='apple')result=link?await FirebaseAuthentication.linkWithApple():await FirebaseAuthentication.signInWithApple();
-   else result=link?await FirebaseAuthentication.linkWithGoogle():await FirebaseAuthentication.signInWithGoogle();
+   else{
+    // Credential Manager is the plugin default, but it fails on some otherwise
+    // supported Android devices when Play services expose no credential provider.
+    // The plugin's maintained legacy flow uses the same Firebase/OAuth setup and
+    // is more reliable for the older, lower-end phones SEED explicitly supports.
+    const options=platform==='android'?{useCredentialManager:false}:undefined;
+    result=link?await FirebaseAuthentication.linkWithGoogle(options):await FirebaseAuthentication.signInWithGoogle(options);
+   }
   }else{
    const authProvider=kind==='apple'?new webSdk.OAuthProvider('apple.com'):new webSdk.GoogleAuthProvider();
    result=user?.isAnonymous?await webSdk.linkWithPopup(webAuth.currentUser,authProvider):await webSdk.signInWithPopup(webAuth,authProvider);

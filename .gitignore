@@ -85,6 +85,7 @@ android/keystore.properties
 !tools/cloud-save-test.mjs
 !tools/beta-signup-test.mjs
 !tools/android-display-test.mjs
+!tools/android-auth-test.mjs
 !tools/seed-admin-grant.mjs
 !tools/grant-founding-testers.mjs
 release/
