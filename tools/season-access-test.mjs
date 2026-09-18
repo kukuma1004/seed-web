@@ -11,6 +11,7 @@ assert.equal(await isBetaTester({email:'student@example.com',isAnonymous:false},
 assert.equal(await isBetaTester({email:'outsider@example.com',isAnonymous:false},testerDigest),false);
 assert.equal(await isBetaTester({email:'student@example.com',isAnonymous:true},testerDigest),false);
 assert.ok(BETA_TESTER_EMAIL_HASHES.includes(await accessHash('iseungjun5618@gmail.com')),'corrected tester Google account is recognized');
+assert.ok(BETA_TESTER_EMAIL_HASHES.includes(await accessHash('huryohanh@gmail.com')),'new Play tester can also enter the PC web beta');
 assert.equal(normalizeSeasonStatus({paused:false,title:' 열림 '}).paused,false);
 assert.equal(normalizeSeasonStatus({}).paused,true,'missing or malformed remote values fail closed');
 const open=await loadSeasonStatus({fetchImpl:async()=>({ok:true,json:async()=>({paused:false,season:'1.2'})})});
