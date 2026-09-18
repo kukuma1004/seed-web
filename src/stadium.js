@@ -1,6 +1,19 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
+export const STADIUM_BASES=Object.freeze([
+ Object.freeze({x:0,z:4.2,next:1}),Object.freeze({x:3.6,z:.6,next:2}),
+ Object.freeze({x:0,z:-3,next:3}),Object.freeze({x:-3.6,z:.6,next:0})
+]);
+export const BASE_SLIDE=Object.freeze({radius:.82,speed:11.2,duration:.46,cooldown:.82});
+export function baseSlideFor(position,cooldown=0,enabled=true){
+ if(!enabled||cooldown>0)return null;
+ const index=STADIUM_BASES.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=BASE_SLIDE.radius);
+ if(index<0)return null;
+ const from=STADIUM_BASES[index],to=STADIUM_BASES[from.next],length=Math.hypot(to.x-from.x,to.z-from.z)||1;
+ return {index,dx:(to.x-from.x)/length,dz:(to.z-from.z)/length,speed:BASE_SLIDE.speed,duration:BASE_SLIDE.duration,cooldown:BASE_SLIDE.cooldown};
+}
+
 // The act-2 night stadium, drawn over the act-1 garden (2026-09-16 first slice): red clay floor with white chalk lines,
 // four light towers, team flags on the far wall and a cooler night light. Everything is a handful of draw calls:
 // one floor, one merged tower mesh, one merged lamp mesh and one instanced flag row.
@@ -20,10 +33,11 @@ function chalkLines(){
  for(const [x,z] of [first,second,third]){const b=new THREE.PlaneGeometry(.42,.42).rotateX(-Math.PI/2);b.rotateY(Math.PI/4);b.translate(x,.122,z);parts.push(b);}
  return parts;
 }
-export function createStadium(scene,{lights=[]}={}){
+export function createStadium(scene,{lights=[],hide=[]}={}){
  const group=new THREE.Group();group.name='act2-stadium';group.visible=false;scene.add(group);
  const floorMat=new THREE.MeshStandardMaterial({map:clayTexture(),color:0xffffff,roughness:.95,metalness:0});
  const rectFloor=new THREE.PlaneGeometry(20.2,16.2).rotateX(-Math.PI/2).translate(0,.112,0),circleFloor=new THREE.CircleGeometry(7.7,48).rotateX(-Math.PI/2).translate(0,.112,0); // just above the arena floor (.105)
+ const track=new THREE.Mesh(new THREE.PlaneGeometry(23.2,19.2).rotateX(-Math.PI/2),new THREE.MeshStandardMaterial({color:0x172537,roughness:.92,metalness:.04}));track.position.y=.107;track.receiveShadow=true;group.add(track);
  const floor=new THREE.Mesh(rectFloor,floorMat);floor.receiveShadow=true;group.add(floor);
  const chalk=new THREE.Mesh(mergeParts(chalkLines()),new THREE.MeshBasicMaterial({color:0xf4efe4,transparent:true,opacity:.82,depthWrite:false,forceSinglePass:true}));group.add(chalk);
  const towers=[],lamps=[];
@@ -34,36 +48,78 @@ export function createStadium(scene,{lights=[]}={}){
  }
  const towerMesh=new THREE.Mesh(mergeParts(towers),new THREE.MeshStandardMaterial({color:0x3b4448,roughness:.6,metalness:.5}));group.add(towerMesh);
  const lampMesh=new THREE.Mesh(mergeParts(lamps),new THREE.MeshBasicMaterial({color:new THREE.Color(0xfff6dc).multiplyScalar(2.4),toneMapped:false}));group.add(lampMesh);
+ // A merged low stand and fence hide the old garden rim while staying cheap on low-end phones.
+ const stadiumShell=[];
+ for(const x of [-9,-6,-3,0,3,6,9])for(let row=0;row<3;row++)stadiumShell.push(new THREE.BoxGeometry(2.65,.38,1.05).translate(x,.38+row*.42,-9.45-row*.42));
+ for(const x of [-10.65,10.65])for(const z of [-6,-2,2,6])stadiumShell.push(new THREE.BoxGeometry(.22,1.35,3.75).translate(x,.7,z));
+ stadiumShell.push(new THREE.BoxGeometry(21.6,.16,.18).translate(0,1.35,-8.85));
+ const shell=new THREE.Mesh(mergeParts(stadiumShell),new THREE.MeshStandardMaterial({color:0x263442,roughness:.82,metalness:.18}));shell.castShadow=shell.receiveShadow=true;group.add(shell);
  const flagGeo=new THREE.PlaneGeometry(.9,.55).translate(.45,0,0),flagMat=new THREE.MeshStandardMaterial({color:0xffffff,side:THREE.DoubleSide,roughness:.8});
  const flagXs=[-8,-4.8,-1.6,1.6,4.8,8],flags=new THREE.InstancedMesh(flagGeo,flagMat,flagXs.length),pole=new THREE.Mesh(mergeParts(flagXs.map(x=>new THREE.CylinderGeometry(.03,.03,2.2,5).translate(x,1.1,-8.9))),towerMesh.material);
  flagXs.forEach((x,i)=>flags.setColorAt(i,new THREE.Color(i%2?0xd8a63a:0xc2352b)));flags.instanceColor.needsUpdate=true;group.add(flags,pole);
  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(1,1,1),p=new THREE.Vector3(),yAxis=new THREE.Vector3(0,1,0);
+ // Four luminous bases create a clockwise risk/reward movement loop.
+ const baseMaterial=new THREE.MeshBasicMaterial({color:0x9cf5ff,transparent:true,opacity:.42,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const bases=new THREE.InstancedMesh(new THREE.RingGeometry(.5,.8,4).rotateX(-Math.PI/2).rotateZ(Math.PI/4),baseMaterial,STADIUM_BASES.length),baseMatrix=new THREE.Matrix4();
+ STADIUM_BASES.forEach((base,i)=>{baseMatrix.makeTranslation(base.x,.15,base.z);bases.setMatrixAt(i,baseMatrix);});bases.instanceMatrix.needsUpdate=true;group.add(bases);
+ const baseCoreMaterial=new THREE.MeshBasicMaterial({color:0x5fe9ff,transparent:true,opacity:.13,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const baseCores=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.12,1.12).rotateX(-Math.PI/2).rotateZ(Math.PI/4),baseCoreMaterial,STADIUM_BASES.length);
+ STADIUM_BASES.forEach((base,i)=>{baseMatrix.makeTranslation(base.x,.145,base.z);baseCores.setMatrixAt(i,baseMatrix);});baseCores.instanceMatrix.needsUpdate=true;group.add(baseCores);
+ // Passing turret: a compact pitcher machine in the middle and a mitt target across the field.
+ const relay=new THREE.Group();relay.name='stadium-pass-turret';group.add(relay);
+ const relayDark=new THREE.MeshStandardMaterial({color:0x1c2838,roughness:.55,metalness:.5}),relayRed=new THREE.MeshStandardMaterial({color:0x9f2831,roughness:.62,metalness:.18}),relayGold=new THREE.MeshStandardMaterial({color:0xd6a945,emissive:0x5a2d06,emissiveIntensity:.55,roughness:.45,metalness:.22});
+ const machine=new THREE.Group();machine.position.set(0,0,0);relay.add(machine);
+ const machineParts=[new THREE.CylinderGeometry(.62,.82,1.05,8).translate(0,.58,0),new THREE.CylinderGeometry(.42,.42,.36,12).rotateZ(Math.PI/2).translate(0,1.25,0),new THREE.ConeGeometry(.24,.95,8).rotateX(Math.PI/2).translate(0,1.25,-.55)];
+ machine.add(new THREE.Mesh(mergeParts(machineParts),relayRed));
+ const wheel=new THREE.Mesh(new THREE.TorusGeometry(.5,.1,6,18),relayGold);wheel.position.y=1.25;wheel.rotation.y=Math.PI/2;machine.add(wheel);
+ const mitt=new THREE.Group();mitt.position.set(0,0,-6.35);relay.add(mitt);
+ const mittPalm=new THREE.Mesh(new THREE.SphereGeometry(.6,9,6),relayGold);mittPalm.scale.set(1.25,1,.35);mittPalm.position.y=.9;mitt.add(mittPalm);
+ const mittStand=new THREE.Mesh(new THREE.CylinderGeometry(.12,.22,1.3,7),relayDark);mittStand.position.y=.35;mitt.add(mittStand);
+ const relayLine=new THREE.Mesh(new THREE.PlaneGeometry(.34,6.35).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xfff4c7,transparent:true,opacity:.18,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}));relayLine.position.set(0,.16,-3.175);relay.add(relayLine);
+ const relayBall=new THREE.Mesh(new THREE.IcosahedronGeometry(.27,1),new THREE.MeshBasicMaterial({color:new THREE.Color(0xfff2d5).multiplyScalar(1.7),toneMapped:false}));relayBall.position.set(0,.8,0);relay.add(relayBall);
+ relay.visible=false;
  // Night light: the act-1 values are remembered and restored when the stadium is left.
- const saved=new Map();
+ const saved=new Map(),hidden=new Map();
  const night={background:new THREE.Color('#0d1a2a'),fog:new THREE.Color('#122236'),fogDensity:.014};
- let active=false;
+ let active=false,baseEnabled=false,relayEnabled=false,relayClock=0,relayHitPass=-1,relayWarnPass=-1;
  return {
   group,
-  setActive(on,arena=null){
+  setActive(on,arena=null,{stage=0,bossRoom=false}={}){
    if(on&&arena){const circle=arena.shape==='circle';floor.geometry=circle?circleFloor:rectFloor;chalk.scale.setScalar(circle?.78:1);}
+   baseEnabled=Boolean(on);relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
+   if(!relayEnabled){relayClock=0;relayHitPass=relayWarnPass=-1;relayLine.visible=false;relayBall.visible=false;}
    if(on===active)return;active=on;group.visible=on;
    if(on){
     saved.set('background',scene.background?.clone());saved.set('fog',scene.fog?.color.clone());saved.set('density',scene.fog?.density);
     for(const light of lights)saved.set(light,{intensity:light.intensity,color:light.color.clone()});
     if(scene.background)scene.background.copy(night.background);if(scene.fog){scene.fog.color.copy(night.fog);scene.fog.density=night.fogDensity;}
     for(const light of lights){light.intensity*=light.isHemisphereLight?.72:1.08;light.color.lerp(new THREE.Color(0xdfeaff),.45);}
+    for(const object of hide){hidden.set(object,object.visible);object.visible=false;}
    }else{
     if(scene.background&&saved.get('background'))scene.background.copy(saved.get('background'));
     if(scene.fog&&saved.get('fog')){scene.fog.color.copy(saved.get('fog'));scene.fog.density=saved.get('density');}
     for(const light of lights){const v=saved.get(light);if(v){light.intensity=v.intensity;light.color.copy(v.color);}}
+    for(const object of hide)if(hidden.has(object))object.visible=hidden.get(object);hidden.clear();
    }
   },
   isActive:()=>active,
+  tryBaseSlide(position,cooldown=0){return baseSlideFor(position,cooldown,active&&baseEnabled);},
+  tick(dt,player,{hit=()=>false,sound=()=>{}}={}){
+   if(!active||!relayEnabled)return;
+   relayClock+=dt;const period=2.7,pass=Math.floor(relayClock/period),phase=relayClock-pass*period,reverse=pass%2===1;
+   relayLine.visible=phase<1.25;relayLine.material.opacity=phase<.68?.12+.5*(phase/.68):.22;
+   relayBall.visible=phase>=.68&&phase<1.25;
+   if(relayBall.visible){const t=Math.min(1,(phase-.68)/.57),from=reverse?-6.35:0,to=reverse?0:-6.35;relayBall.position.set(0,.82,THREE.MathUtils.lerp(from,to,t));relayBall.rotation.x+=dt*12;relayBall.rotation.z+=dt*8;if(relayHitPass!==pass&&Math.hypot(player.x-relayBall.position.x,player.z-relayBall.position.z)<.72){relayHitPass=pass;hit(16);sound('bossAttack');}}
+   if(phase<.08&&relayWarnPass!==pass){relayWarnPass=pass;sound('bossWarning');}
+  },
   update(time){
    if(!active)return;
    flagXs.forEach((x,i)=>{q.setFromAxisAngle(yAxis,Math.sin(time*2.2+i*.9)*.35-.2);p.set(x,2.05,-8.9);m.compose(p,q,s);flags.setMatrixAt(i,m);});
    flags.instanceMatrix.needsUpdate=true;
-  }
+   const pulse=Math.abs(Math.sin(time*3.4));baseMaterial.opacity=.38+.34*pulse;baseCoreMaterial.opacity=.12+.18*pulse;bases.rotation.y=baseCores.rotation.y=Math.sin(time*1.7)*.018;
+   if(relayEnabled){machine.rotation.y=Math.sin(time*1.8)*.08;wheel.rotation.z=time*3;mitt.rotation.y=Math.sin(time*2.1)*.06;}
+  },
+  state:()=>({active,baseEnabled,relayEnabled,relayClock})
  };
 }
 function mergeParts(parts){

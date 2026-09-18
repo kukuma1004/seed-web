@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
 export const CONTACT_SHADOW_CAPACITY=192;
-const RADII=Object.freeze({player:.46,swarm:.3,hound:.52,caster:.56,shield:.72,turret:.68,warden:1.18,austin:1.35,catcher:.72,pitcher:.56,runner:.45,batter:.7});
+const RADII=Object.freeze({player:.46,swarm:.3,hound:.52,caster:.56,shield:.72,turret:.68,warden:1.18,act2warden:1.12,austin:1.35,alwaysbeginner:1.42,catcher:.72,pitcher:.56,runner:.45,batter:.7});
 export const contactShadowRadius=type=>RADII[type]||.5;
 
 export function createContactShadows(scene,capacity=CONTACT_SHADOW_CAPACITY){

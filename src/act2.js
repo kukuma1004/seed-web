@@ -15,14 +15,13 @@ export function act2Available(where=globalThis.location){return ACT2_RELEASED||[
 export function playableRegion(region,where=globalThis.location){return isAct2(region)&&!act2Available(where)?'garden':region;}
 
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
-// Rooms 1-4 teach one new minion rule each and then mix them; room 5 holds the gate.
-// The act-2 wardens A/B/C are the next slice; until then the familiar warden stands in (said so in the hint).
+// Rooms 1-4 teach one new minion rule each and then mix them; room 5 holds the act-2 guardian.
 export const STADIUM_ROOMS=Object.freeze([
- Object.freeze({name:'연습 구장',hint:'투수 앞의 흰 선이 차오르면 옆으로 비키세요',covers:[wall(-4,1,2.2,1),wall(4,1,2.2,1)],enemies:[['pitcher',-5,-5],['pitcher',5,-5],['runner',0,-4]]}),
- Object.freeze({name:'불펜 통로',hint:'포수는 앞만 막고 맞은 탄을 되던집니다 · 옆이나 뒤로 돌아가세요',covers:[wall(-3.4,-.5,1,3.6),wall(3.4,-.5,1,3.6)],enemies:[['catcher',0,-3],['pitcher',0,-6],['runner',-6,-2],['runner',6,-2]]}),
+ Object.freeze({name:'연습 구장',hint:'빛나는 베이스를 밟으면 다음 베이스까지 미끄러집니다 · 투구선을 건너지 않게 방향을 고르세요',covers:[wall(-4,1,2.2,1),wall(4,1,2.2,1)],enemies:[['pitcher',-5,-5],['pitcher',5,-5],['runner',0,-4]]}),
+ Object.freeze({name:'불펜 통로',hint:'가운데 패스 포탑과 반대편 포수가 공을 주고받습니다 · 흰 선을 보고 베이스 활주로 가로지르세요',covers:[wall(-3.4,-.5,1,3.6),wall(3.4,-.5,1,3.6),wall(0,0,1.35,1.35)],enemies:[['catcher',0,-3],['pitcher',0,-6],['runner',-6,-2],['runner',6,-2]]}),
  Object.freeze({name:'다이아몬드',hint:'주자는 바닥의 베이스로 전력 질주합니다 · 표시에서 벗어나고, 멈춘 주자를 노리세요',covers:[wall(0,.2,1.4,1.4)],enemies:[['runner',-4.4,-3],['runner',4.4,-3],['batter',0,-5],['pitcher',0,-6.2]]}),
- Object.freeze({name:'야간 조명 아래',hint:'타자는 날아오는 탄을 되받아칩니다 · 관통하거나 진화 공격으로 상대하세요',covers:[wall(-5,0,3,.9),wall(5,0,3,.9)],enemies:[['batter',-4,-4],['batter',4,-4],['catcher',0,-2.4],['pitcher',-6.5,-6],['pitcher',6.5,-6]]}),
- Object.freeze({name:'경기장의 문지기',hint:'2막 전용 문지기는 준비 중이에요 · 지금은 기억의 문지기가 대신 지킵니다',covers:[wall(-5,1,2,1),wall(5,1,2,1)],enemies:[['warden',0,-3]]})
+ Object.freeze({name:'야간 조명 아래',hint:'타자와 패스 포탑이 함께 압박합니다 · 베이스 활주를 쓰되 돌아오는 공의 길에 멈추지 마세요',covers:[wall(-5,0,3,.9),wall(5,0,3,.9),wall(0,0,1.35,1.35)],enemies:[['batter',-4,-4],['batter',4,-4],['catcher',0,-2.4],['pitcher',-6.5,-6],['pitcher',6.5,-6]]}),
+ Object.freeze({name:'경기장의 문지기',hint:'투구선·베이스·부채꼴을 읽고 문지기의 빈틈을 노리세요',covers:[wall(-5,1,2,1),wall(5,1,2,1)],enemies:[['act2warden',0,-3]]})
 ]);
 
 // Act 2 keeps its checkpoint and local board apart from act 1 (names, discoveries, titles and settings are shared).
