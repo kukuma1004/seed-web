@@ -81,7 +81,7 @@ import {readAccountProfile,writeAccountProfile,accountBadgeLine,BADGES} from './
 import {claimFirstGardenPioneer,legacyRankingUid} from './legacy-honor.js';
 import {publicWebBetaLocked,BETA_NOTICE} from './beta-access.js';
 import {BETA_TEST_URL,betaApplicationMessage,submitBetaApplication} from './beta-signup.js';
-import {DEFAULT_SEASON_STATUS,gameplayIsPaused,isSeasonAdmin,loadSeasonStatus} from './season-access.js';
+import {DEFAULT_SEASON_STATUS,gameplayIsPaused,isSeasonAdmin,isBetaTester,loadSeasonStatus} from './season-access.js';
 import {bindPointerAction,createTouchControls} from './touch.js';
 import {createGameAudio,ultimateAudioEvent} from './audio.js';
 import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBonusOffers,applyRunBonus,runBonusSummary,moveScale as runMoveScale,shotScale as runShotScale,powerScale as runPowerScale} from './run-bonuses.js';
@@ -114,9 +114,9 @@ let canvasRect={left:0,top:0,width:1,height:1};
 let viewLayout=responsiveView(document.documentElement.clientWidth,document.documentElement.clientHeight,mobileDevice);
 const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
 const localAdminLab=localInspection&&new URLSearchParams(location.search).has('adminLab');
-let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false,developerRun=false,developerForm='';
-const gameplayPaused=()=>gameplayIsPaused({status:seasonStatus,native:account.native,admin:adminMode,dev:import.meta.env.DEV});
-const refreshAdminMode=async()=>adminMode=localAdminLab||await isSeasonAdmin(account.user());
+let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false,betaTesterMode=false,developerRun=false,developerForm='';
+const gameplayPaused=()=>gameplayIsPaused({status:seasonStatus,native:account.native,admin:adminMode||betaTesterMode,dev:import.meta.env.DEV});
+const refreshAccessMode=async()=>{const user=account.user();adminMode=localAdminLab||await isSeasonAdmin(user);betaTesterMode=!adminMode&&await isBetaTester(user);return adminMode||betaTesterMode;};
 const WEB_ACCESS_POLL_MS=15_000;
 let webAccessCheck=null;
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
@@ -281,7 +281,7 @@ function drawRoom(){shadowClock=SHADOW_REFRESH;const clockRoom=inAustinRoom();ar
 function freezeStatic(group){group.updateMatrixWorld(true);group.traverse(o=>{o.matrixAutoUpdate=false;});}
 // Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
 const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage,authProvider:()=>account.tokenSession()});let playerName=lastName(runStorage),rankSerial=0;
-const betaRankingEligible=()=>account.native&&Boolean(account.user()&&!account.user().isAnonymous);
+const betaRankingEligible=()=>Boolean((account.native||betaTesterMode)&&account.user()&&!account.user().isAnonymous);
 // 정원은 런 사이에 남는 시각 기록이다. 아래 호환 객체의 전투 효과는 항상 비어 있다.
 let garden=readGarden(runStorage);
 // A read-only-looking local art board assembled from in-memory data. It never
@@ -686,10 +686,10 @@ function showBetaLock(message='',success=false){
  mode='beta-lock';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous&&user.email;
  const accountHint=linked
-  ?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>${adminMode?'관리자 계정 확인 완료':'현재 로그인된 계정 · 관리자가 아니면 다른 계정으로 바꿔 주세요.'}</span></div>`
+  ?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>${adminMode?'관리자 계정 확인 완료':betaTesterMode?'베타테스터 계정 확인 완료':'등록된 베타테스터 계정이 아니에요. 다른 계정으로 바꿔 주세요.'}</span></div>`
   :'';
  $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p>
-  ${accountHint}<button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>${linked?'관리자 계정으로 바꾸기':'개발자 계정으로 들어가기'}</strong><small>${linked?'현재 계정에서 로그아웃한 뒤 Google 계정을 다시 선택합니다':'관리자 Google 계정으로 웹 테스트'}</small></span></button>
+  ${accountHint}<button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>${linked?'다른 Google 계정으로 바꾸기':'베타테스터·개발자 로그인'}</strong><small>${linked?'현재 계정에서 로그아웃한 뒤 계정을 다시 선택합니다':'등록된 Google 계정으로 PC 웹 플레이'}</small></span></button>
   <div class="beta-test-path"><strong>이미 등록된 테스터인가요?</strong><span>테스트에 등록된 Google 계정으로 열어야 설치할 수 있어요.</span><a class="account-button beta-install" href="${BETA_TEST_URL}" target="_blank" rel="noopener"><span><b>Google Play 테스트 참여·설치</b><small>공식 비공개 테스트 링크</small></span></a></div>
   <div class="beta-divider"><span>새로 신청하기</span></div>
   <label class="beta-email"><strong>Google Play 계정 이메일</strong><input id="beta-email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="example@gmail.com" value="${escapeHtml(linked?user.email:'')}"><small>Android 기기의 Play 스토어에서 사용하는 계정을 적어 주세요.</small></label>
@@ -711,8 +711,8 @@ async function enforceCurrentWebAccess(){
  if(webAccessCheck)return webAccessCheck;
  webAccessCheck=(async()=>{
   seasonStatus=await loadSeasonStatus({enabled:true});
-  await refreshAdminMode();
-  if(adminMode)return false;
+  await refreshAccessMode();
+  if(adminMode||betaTesterMode)return false;
   const betaLocked=publicWebBetaLocked(),seasonPaused=gameplayPaused();
   if(!betaLocked&&!seasonPaused)return false;
   saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
@@ -724,7 +724,7 @@ async function enforceCurrentWebAccess(){
 }
 function showEntry(){
  revealApp();
- if(publicWebBetaLocked()&&!adminMode){showBetaLock();return;}
+ if(publicWebBetaLocked()&&!adminMode&&!betaTesterMode){showBetaLock();return;}
  if(gameplayPaused()){showSeasonPause();return;}
  if(account.user())showIntro();else showAccount();
 }
@@ -751,11 +751,11 @@ function showAccount(error=''){
   <p id="account-error" class="account-error" role="alert">${escapeHtml(error)}</p>
   <p class="account-note">계정 로그인은 랭킹의 플레이어를 구분하고 앞으로 여러 기기에서 이어하기 위한 기반으로 사용합니다. 실명은 랭킹에 표시하지 않아요.</p>
   ${linked?'<button id="account-signout" class="menu-item small-item">로그아웃</button>':''}</div>`;
- const busy=async action=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();const result=await cloud.retry();await refreshAdminMode();if(result?.changed){location.reload();return;}showEntry();}catch(err){showAccount(authMessage(err));}};
+ const busy=async action=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();const result=await cloud.retry();await refreshAccessMode();if(result?.changed){location.reload();return;}showEntry();}catch(err){showAccount(authMessage(err));}};
  if($('#account-google'))$('#account-google').onclick=()=>busy(account.signInWithGoogle);
  if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple);
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest);
- if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAdminMode();showEntry();};
+ if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAccessMode();showEntry();};
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
@@ -1021,7 +1021,7 @@ function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-sc
  $('#end-garden').onclick=()=>showGarden(showEnd);
  if(!ranked)return;
  if(isAct2(region)){setText($('#rank-status'),'2막 기록은 이 기기에 저장했어요 · 2막 모두의 랭킹은 준비 중이에요');return;}
- if(!betaRankingEligible()){setText($('#rank-status'),'이 기기 기록에는 남았어요 · 베타 시즌 1.1 모두의 랭킹은 Android 테스트 앱에서 Google 계정을 연결한 테스터 기록만 받아요');return;}
+ if(!betaRankingEligible()){setText($('#rank-status'),'이 기기 기록에는 남았어요 · 베타 시즌 1.1 랭킹은 Android 앱 또는 등록된 PC 웹 테스터의 Google 계정 기록만 받아요');return;}
  // 화면 시계와 실제 시계가 크게 어긋난 판(게임 속도를 바꾸는 도구)은 모두의 랭킹에 올리지 않는다.
  if(!paceTrusted(paceGame,paceReal)){setText($('#rank-status'),'게임 속도가 평소와 달라서 이 판은 모두의 랭킹에 올리지 않았어요 · 이 기기 기록에는 남아요');return;}
  online.flush().catch(()=>0).then(()=>online.submit(entry,500)).then(r=>{
@@ -1228,7 +1228,7 @@ renderer.domElement.addEventListener('pointerdown',event=>{
  if(mode!=='garden'||!gardenScene)return;
  const rect=canvasRect,hit=gardenScene.pick((event.clientX-rect.left)/Math.max(1,rect.width),(event.clientY-rect.top)/Math.max(1,rect.height));
  selectGardenSpot(hit);
-});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();Promise.all([cloud.start(),loadSeasonStatus({enabled:!import.meta.env.DEV})]).then(async([result,status])=>{seasonStatus=status;await refreshAdminMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();}).catch(async()=>{seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAdminMode();showEntry();});requestAnimationFrame(animate);
+});applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();Promise.all([cloud.start(),loadSeasonStatus({enabled:!import.meta.env.DEV})]).then(async([result,status])=>{seasonStatus=status;await refreshAccessMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();}).catch(async()=>{seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAccessMode();showEntry();});requestAnimationFrame(animate);
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({pace:{game:+paceGame.toFixed(1),real:+paceReal.toFixed(1),trusted:paceTrusted(paceGame,paceReal)},mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,theme:{id:combatTheme,...THEMES[combatTheme]},quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:qualityGovernor.state()},items:{hasteTime,shellTime,selectedItem},runBonuses:{...runBonuses},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags,archetype:activeGauge.plan.archetype},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:killsForChoice(choicesTaken),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,vfx:vfx.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
 qa:{hurtBoss:fraction=>{const b=enemies.find(e=>isBoss(e)&&!e.elite&&!e.dead);if(b)damageEnemy(b,b.maxHp*fraction,false);return b?b.hp:null;},givePotion:()=>addItem(inventory,'potion',1),fillActive:()=>{activeGauge.cooldown=0;activeGauge.value=ACTIVE.max;return activeGauge.value;},showAustinTitle:()=>{seedTitle.setUnlocked(true);return seedTitle.isUnlocked();},giveForm:(id,level=4)=>{if(!Object.hasOwn(FORMS,id))return false;heldForms.set(id,level);syncForms();return true;},setLaw:(id,level)=>{if(!Object.hasOwn(LAWS,id))return false;levels.set(id,level);syncLaws();return true;},offerSolo:()=>offerSolo(finishChoice,true),giveItem:(id,n=1)=>{const got=addItem(inventory,id,n);itemBarKey='';return got;},setHp:v=>{hp=Math.max(1,Math.min(100,v));},giveCoins:(n=500)=>earnCoins(runStorage,Math.max(0,Math.floor(n))).coins,startAustin:()=>{restart();stage=4;wardensDefeated=Math.max(5,wardensDefeated);austinRoom=true;wave();return true;}},census:()=>{const out={casters:{},meshes:0,shadowCasters:0,sprites:0,instanced:0,points:0,lines:0,lights:0,materials:new Set(),byParent:{}};scene.traverseVisible(o=>{if(o.isLight)out.lights++;if(o.isSprite)out.sprites++;else if(o.isInstancedMesh)out.instanced++;else if(o.isMesh){out.meshes++;if(o.castShadow){out.shadowCasters++;const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.casters[key]=(out.casters[key]||0)+1;}}else if(o.isLineSegments)out.lines++;if(o.material)out.materials.add(o.material);if(o.isMesh||o.isSprite){const key=(o.parent?.name||o.parent?.type||'?')+'/'+(o.name||o.geometry?.type||o.type);out.byParent[key]=(out.byParent[key]||0)+1;}});out.materials=out.materials.size;out.behindCover=enemies.filter(e=>behindCover(e.g.position)).length;out.obstacles=obstacles.length;out.byParent=Object.fromEntries(Object.entries(out.byParent).sort((a,b)=>b[1]-a[1]).slice(0,25));out.programs=renderer.info.programs?.length;return out;},worldToScreen:(x,z)=>{let p=new V(x,.5,z).project(camera);const r=renderer.domElement.getBoundingClientRect();return {x:r.left+(p.x+1)*r.width/2,y:r.top+(1-p.y)*r.height/2};}};
