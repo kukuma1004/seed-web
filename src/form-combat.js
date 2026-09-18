@@ -48,8 +48,8 @@ const bossReach=(e,normal,boss)=>e.type==='warden'||e.type==='austin'?boss:norma
 const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
-// Options: player, enemies(), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
+// Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
@@ -60,6 +60,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
  let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
+ const nearbyList=[],previousPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
 
@@ -367,7 +368,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
   for(const b of bolts){
    b.life-=dt;
    if(b.life<=0)continue;
-   const previous=b.ob.position.clone();
+   const previous=previousPosition.copy(b.ob.position);
    if(b.kind==='gene'){
     b.age+=dt;
     if(!b.returning&&b.laws.includes('recall')&&b.age>.72){b.returning=true;b.passed.clear();fx.pulse(b.ob.position,'recall',.45,.2);}
@@ -386,7 +387,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     if(cover){b.ob.position.copy(beforeMove);b.dir.negate();}
     if(wall||cover){if(b.bounces>0&&!b.returning){b.bounces--;b.passed.clear();fx.reflect(b.ob.position,b.dir);sound('reflect');}else if(b.laws.includes('recall')&&!b.returning){b.returning=true;b.passed.clear();}else b.life=0;}
     if(b.life<=0)continue;
-    const direction=b.dir.clone(),targets=enemies().filter(e=>!e.dead&&!b.passed.has(e)&&segmentDistance(beforeMove,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
+    const direction=b.dir.clone(),targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.passed.has(e)&&segmentDistance(beforeMove,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
     targets.sort((x,y)=>x.g.position.clone().sub(beforeMove).dot(direction)-y.g.position.clone().sub(beforeMove).dot(direction));
     for(const e of targets){
      b.passed.add(e);
@@ -419,7 +420,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      // Resolve in travel order so an intercepting shield cannot be processed
      // after an enemy behind it merely because of spawn-array order.
      if(b.life>0){
-      const targets=enemies().filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.72,1.25));
+      const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.72,1.25));
       targets.sort((x,y)=>x.g.position.clone().sub(previous).dot(direction)-y.g.position.clone().sub(previous).dot(direction));
       for(const e of targets){
        if(e.dead)continue;
@@ -447,7 +448,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      b.life=0;continue;
     }
     const direction=b.dir.clone();
-    const e=enemies().find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
     if(e){
      const falloff=statId==='infiniteprism'?PRISM_CHILD_FALLOFF.infinite:PRISM_CHILD_FALLOFF.base;
      const landed=support(e,S.damage*Math.pow(falloff,b.gen),{kind:'prism',direction});
@@ -517,7 +518,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
      if(b.bounces>=S.bounces){b.life=0;continue;}
      b.bounces++;b.speed=Math.min(24,b.speed*1.08);b.passed.clear();fx.reflect(b.ob.position,b.dir);
     }
-    const e=enemies().find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
     if(e){b.passed.add(e);if(!support(e,S.damage*(1+S.gain*b.bounces),{kind:'mirrormaze',direction:b.dir.clone()}))b.life=0;}
     fx.trail(previous,b.ob.position,'reflect',b.bounces>0);
     continue;
@@ -526,7 +527,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     const petalKind=b.kind==='petal';
     b.ob.position.addScaledVector(b.dir,dt*(petalKind?10:S.speed));b.ob.rotation.y+=dt*8;
     if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.life=0;continue;}
-    const e=enemies().find(x=>!x.dead&&x!==b.skip&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.62,1.15));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&x!==b.skip&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.62,1.15));
     if(e){
      b.life=0;
      const landed=support(e,petalKind?S.petalDamage:S.damage,{kind:'fullbloom',indirect:petalKind,direction:b.dir.clone()});
@@ -571,7 +572,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     // Going out it stops at walls; coming back it flies over them so it always finds the seed.
     if(!b.returning&&(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position))){b.ob.position.copy(previous);b.returning=true;b.hitSet.clear();}
     const direction=b.dir.clone();
-    const targets=enemies().filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.7,1.2));
+    const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.7,1.2));
     targets.sort((x,y)=>x.g.position.clone().sub(previous).dot(direction)-y.g.position.clone().sub(previous).dot(direction));
     for(const e of targets){
      if(b.hitSet.size>=S.hitsPerLeg)break;
@@ -604,7 +605,7 @@ export function createFormCombat(scene,{player,enemies,hit,blocked,boundary,cons
     const seed=b.kind==='seedstorm';
     b.ob.position.addScaledVector(b.dir,dt*(seed?13:14));
     if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.life=0;continue;}
-    const e=enemies().find(x=>!x.dead&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,seed?.6:.7,1.2));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,seed?.6:.7,1.2));
     if(e){
      b.life=0;
      if(support(e,seed?S.damage:b.damage,{kind:b.kind,direction:b.dir.clone()})&&seed){

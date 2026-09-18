@@ -3,6 +3,19 @@ import {seedFrame} from './seed-body.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 const atlases=new Map();
+const reducedAtlases=Object.freeze({
+ 'enemy-hound-v4.png':'mobile/enemy-hound-v4.webp','enemy-caster-v4.png':'mobile/enemy-caster-v4.webp',
+ 'enemy-shield-v4.png':'mobile/enemy-shield-v4.webp','enemy-turret-v4.png':'mobile/enemy-turret-v4.webp',
+ 'warden-memory-v4.png':'mobile/warden-memory-v4.webp','warden-seal-v4.png':'mobile/warden-seal-v4.webp','warden-hunter-v4.png':'mobile/warden-hunter-v4.webp',
+ 'boss-austin-v1.png':'mobile/boss-austin-v1.webp','enemy-catcher-v1.webp':'mobile/enemy-catcher-v1.webp',
+ 'enemy-pitcher-v1.webp':'mobile/enemy-pitcher-v1.webp','enemy-runner-v1.webp':'mobile/enemy-runner-v1.webp',
+ 'enemy-batter-v1.webp':'mobile/enemy-batter-v1.webp','warden-act2-ace-v1.webp':'mobile/warden-act2-ace-v1.webp',
+ 'warden-act2-diamond-v1.webp':'mobile/warden-act2-diamond-v1.webp','warden-act2-slugger-v1.webp':'mobile/warden-act2-slugger-v1.webp',
+ 'boss-always-beginner-v1.webp':'mobile/boss-always-beginner-v1.webp'
+});
+let reduced=false;
+export function configureActorArt({reducedTextures=false}={}){reduced=Boolean(reducedTextures);}
+export function actorArtFile(file,{reducedTextures=reduced}={}){return reducedTextures?(reducedAtlases[file]||file):file;}
 // The see-through silhouette costs one extra draw per actor. It is drawn only while the quality allows it and something
 // may stand between the camera and the actor (occlusionTest, set by the game from the room's cover); 2026-09-15 phone pass.
 const silhouettes={enabled:true,test:null};
@@ -41,10 +54,11 @@ export function actorArtRotation(state,time,phase){
 export function actorFrameGeometry(frame=0){return directionGeometries[((frame%4)+4)%4];}
 
 function atlas(file){
- if(atlases.has(file))return atlases.get(file);
- const texture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+file);
+ const selected=actorArtFile(file);
+ if(atlases.has(selected))return atlases.get(selected);
+ const texture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+selected);
  texture.colorSpace=THREE.SRGBColorSpace;
- atlases.set(file,texture);return texture;
+ atlases.set(selected,texture);return texture;
 }
 
 function billboard(mesh,camera,size,baseline){
