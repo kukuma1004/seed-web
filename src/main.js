@@ -689,16 +689,15 @@ function showBetaLock(message='',success=false){
   ${accountHint}<button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>${linked?'관리자 계정으로 바꾸기':'개발자 계정으로 들어가기'}</strong><small>${linked?'현재 계정에서 로그아웃한 뒤 Google 계정을 다시 선택합니다':'관리자 Google 계정으로 웹 테스트'}</small></span></button>
   <div class="beta-test-path"><strong>이미 등록된 테스터인가요?</strong><span>테스트에 등록된 Google 계정으로 열어야 설치할 수 있어요.</span><a class="account-button beta-install" href="${BETA_TEST_URL}" target="_blank" rel="noopener"><span><b>Google Play 테스트 참여·설치</b><small>공식 비공개 테스트 링크</small></span></a></div>
   <div class="beta-divider"><span>새로 신청하기</span></div>
-  ${linked?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>이 Google 계정으로 신청합니다.</span></div>`:`<button id="beta-google" class="account-button google beta-google"><b>G</b><span><b>Google 계정으로 지원하기</b><small>테스트 등록에 사용할 이메일을 확인합니다</small></span></button>`}
+  <label class="beta-email"><strong>Google Play 계정 이메일</strong><input id="beta-email" type="email" inputmode="email" autocomplete="email" maxlength="254" placeholder="example@gmail.com" value="${escapeHtml(linked?user.email:'')}"><small>Android 기기의 Play 스토어에서 사용하는 계정을 적어 주세요.</small></label>
   <label class="beta-check"><input id="beta-android" type="checkbox"><span><strong>사용 가능한 Android 기기가 있어요</strong><small>Android 휴대전화 또는 태블릿에서 테스트합니다.</small></span></label>
   <label class="beta-check"><input id="beta-consent" type="checkbox"><span><strong>이메일 수집·이용에 동의해요</strong><small>비공개 테스트 등록과 안내 목적으로만 사용합니다.</small></span></label>
-  <button id="beta-submit" class="account-button beta-submit" ${linked?'':'disabled'}><span><b>베타테스터 신청 보내기</b><small>등록 완료 안내를 받은 뒤 설치할 수 있어요</small></span></button>
+  <button id="beta-submit" class="account-button beta-submit"><span><b>베타테스터 신청 보내기</b><small>관리자 등록 완료 안내를 받은 뒤 설치할 수 있어요</small></span></button>
   <p id="beta-message" class="account-error ${success?'success':''}" role="status">${escapeHtml(message)}</p>
   <p class="account-note">${BETA_NOTICE.detail} <a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a></p>
   <a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
- const busy=state=>document.querySelectorAll('#beta-google,#beta-submit').forEach(button=>button.disabled=state);
- if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();await refreshAdminMode();if(adminMode){showEntry();return;}showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
- if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{await submitBetaApplication({account,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock('신청을 받았어요. 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.',true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
+ const busy=state=>document.querySelectorAll('#beta-email,#beta-submit').forEach(control=>control.disabled=state);
+ if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{const email=$('#beta-email').value;await submitBetaApplication({account,email,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock(`${email.trim().toLowerCase()} 신청을 받았어요. 관리자 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.`,true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
  $('#beta-admin').onclick=async()=>{if(linked){await account.signOut();cloud.signOutCleanup();}showAccount();};
 }
 // A tab can stay open for hours without reloading. Recheck the live gate while it

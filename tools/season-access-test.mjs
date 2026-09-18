@@ -20,7 +20,8 @@ assert.match(main,/id="beta-admin"[\s\S]*개발자 계정으로 들어가기/,'�
 assert.match(main,/관리자 계정으로 바꾸기/,'이미 다른 Google 계정으로 로그인했다면 관리자 계정으로 전환할 수 있어야 합니다.');
 const betaScreen=main.slice(main.indexOf('function showBetaLock'),main.indexOf('function showEntry'));
 assert.ok(betaScreen.indexOf('id="beta-admin"')<betaScreen.indexOf('class="beta-test-path"'),'설치형 웹앱의 짧은 화면에서도 개발자 로그인이 먼저 보여야 합니다.');
-assert.match(main,/await account\.signInWithGoogle\(\);await refreshAdminMode\(\);if\(adminMode\)\{showEntry\(\);return;\}/,'공개 화면에서 관리자 로그인 직후 권한을 다시 확인해야 합니다.');
+const accountScreen=main.slice(main.indexOf('function showAccount'),main.indexOf('function showIntro'));
+assert.match(accountScreen,/await action\(\);[\s\S]*await refreshAdminMode\(\);[\s\S]*showEntry\(\)/,'공개 화면에서 관리자 로그인 직후 권한을 다시 확인해야 합니다.');
 assert.match(main,/WEB_ACCESS_POLL_MS=15_000/,'이미 열린 웹 게임도 짧은 주기로 차단 상태를 다시 확인해야 합니다.');
 assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운드에서 돌아온 웹 게임은 즉시 차단 상태를 확인해야 합니다.');
 assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차단되면 안전한 진행 지점을 저장한 뒤 클라우드 동기화를 시도해야 합니다.');
