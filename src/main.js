@@ -112,6 +112,8 @@ const localInspection=['127.0.0.1','localhost'].includes(location.hostname)&&new
 let seasonStatus=DEFAULT_SEASON_STATUS,adminMode=false;
 const gameplayPaused=()=>gameplayIsPaused({status:seasonStatus,native:account.native,admin:adminMode,dev:import.meta.env.DEV});
 const refreshAdminMode=async()=>adminMode=await isSeasonAdmin(account.user());
+const WEB_ACCESS_POLL_MS=15_000;
+let webAccessCheck=null;
 const inspection=localInspection?document.createElement('pre'):null;if(inspection){inspection.id='seed-inspection';inspection.hidden=true;document.body.append(inspection);}
 let qualityLevel=initialQuality({search:location.search,stored:(()=>{try{return runStorage.getItem(QUALITY_KEY);}catch{return null;}})(),mobile:mobileDevice});
 let combatTheme=readTheme(runStorage);
@@ -662,7 +664,7 @@ function authMessage(error){
 }
 function showBetaLock(message='',success=false){
  revealApp();
- mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ mode='beta-lock';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous&&user.email;
  $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p>
   <button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>개발자 계정으로 들어가기</strong><small>관리자 Google 계정으로 웹 테스트</small></span></button>
@@ -679,6 +681,25 @@ function showBetaLock(message='',success=false){
  if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();await refreshAdminMode();if(adminMode){showEntry();return;}showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
  if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{await submitBetaApplication({account,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock('신청을 받았어요. 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.',true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
  $('#beta-admin').onclick=()=>showAccount();
+}
+// A tab can stay open for hours without reloading. Recheck the live gate while it
+// is running so an already-open game cannot keep playing after the web closes.
+// Native closed-beta builds and the administrator account remain available.
+async function enforceCurrentWebAccess(){
+ if(account.native||import.meta.env.DEV)return false;
+ if(webAccessCheck)return webAccessCheck;
+ webAccessCheck=(async()=>{
+  seasonStatus=await loadSeasonStatus({enabled:true});
+  await refreshAdminMode();
+  if(adminMode)return false;
+  const betaLocked=publicWebBetaLocked(),seasonPaused=gameplayPaused();
+  if(!betaLocked&&!seasonPaused)return false;
+  saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
+  if(betaLocked){if(mode!=='beta-lock')showBetaLock();}
+  else if(mode!=='season-pause')showSeasonPause();
+  return true;
+ })().finally(()=>{webAccessCheck=null;});
+ return webAccessCheck;
 }
 function showEntry(){
  revealApp();
@@ -980,7 +1001,12 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
 function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
 window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
-document.addEventListener('visibilitychange',()=>{if(document.hidden)saveLeaveState();if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden)saveLeaveState();if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();if(!document.hidden)enforceCurrentWebAccess().catch(()=>{});});
+if(!account.native&&!import.meta.env.DEV){
+ setInterval(()=>enforceCurrentWebAccess().catch(()=>{}),WEB_ACCESS_POLL_MS);
+ window.addEventListener('focus',()=>enforceCurrentWebAccess().catch(()=>{}));
+ window.addEventListener('online',()=>enforceCurrentWebAccess().catch(()=>{}));
+}
 function update(dt,time){
 if(mode==='evolving'){
   if(paused)return;

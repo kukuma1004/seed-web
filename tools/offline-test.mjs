@@ -9,6 +9,8 @@ assert.ok(sw.includes('ignoreVary:true'),'matches stored files regardless of Var
 assert.ok(/cache\.delete\(request\)/.test(sw),'forgets files from older builds');
 assert.ok(/catch\(\(\)=>caches\.match\(ROOT\)\)/.test(sw),'offline navigation falls back to the stored page');
 assert.ok(sw.includes("endsWith('/season-status.json')")&&sw.includes("cache:'no-store'"),'the season pause bypasses stale cache while retaining an offline fallback');
+assert.ok(sw.includes('self.skipWaiting()')&&sw.includes('self.clients.claim()'),'a gate release activates without waiting for old tabs to close');
+assert.ok(sw.includes('client.navigate(`${ROOT}?gate=${FORCE_GATE_REFRESH}`)'),'a newly activated gate redirects already-open web tabs');
 const config=readFileSync(new URL('../vite.config.js',import.meta.url),'utf8');
 assert.ok(config.includes('offline-manifest.json')&&config.includes('closeBundle'),'the build writes the file list');
 const manifestPath=new URL('../dist/offline-manifest.json',import.meta.url);

@@ -32,6 +32,9 @@ export function setupMobileApp(){
  install.hidden=nativeApp||Boolean(standalone());markFullscreen();
  install.onclick=async()=>{if(prompt){await prompt.prompt();prompt=null;}else say('iPhone: Safari 공유 메뉴 → 홈 화면에 추가. Android: 브라우저 메뉴 → 앱 설치 또는 홈 화면에 추가. 설치 후 가로로 돌려 실행해 주세요.');};
  window.addEventListener('appinstalled',()=>install.hidden=true);
- if(!nativeApp&&import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js').catch(()=>{}));
+ if(!nativeApp&&import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{updateViaCache:'none'}).then(registration=>{
+  registration.update().catch(()=>{});
+  setInterval(()=>registration.update().catch(()=>{}),60_000);
+ }).catch(()=>{}));
  return {fullscreen,enterFullscreen,nativeApp};
 }
