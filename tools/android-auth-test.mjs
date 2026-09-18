@@ -15,6 +15,7 @@ assert.match(variables,/androidxCredentialsVersion\s*=\s*'1\.([3-9]|\d{2,})\./,'
 assert.match(source,/try\{return await FirebaseAuthentication\[method\]\(\);\}/,'Android sign-in must try Credential Manager first.');
 assert.match(source,/FirebaseAuthentication\[method\]\(\{useCredentialManager:false\}\)/,'Android sign-in must fall back to the legacy picker on compatible errors.');
 assert.match(source,/credentialConflict\(error\)[\s\S]*writeMigration[\s\S]*FirebaseAuthentication\.signOut\(\)[\s\S]*google\(false\)/,'An anonymous device must recover when Google already belongs to the web-created Firebase UID.');
+assert.match(source,/linkWithPopup[\s\S]*credentialConflict\(error\)[\s\S]*webSdk\.signOut\(webAuth\)[\s\S]*signInWithPopup/,'An installed web app must recover when its anonymous UID cannot link to an existing Google UID.');
 assert.match(source,/pendingMigration:readMigration,finishMigration:clearMigration/,'Cloud sync must receive a durable guest-to-Google migration marker.');
 assert.ok(client.oauth_client.some(item=>item.client_type===3),'A web OAuth client ID is required for the Google ID token.');
 assert.ok(client.oauth_client.filter(item=>item.client_type===1).length>=2,'Play app-signing SHA-1 OAuth clients must be present.');

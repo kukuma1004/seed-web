@@ -111,7 +111,19 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
   }else{
    const authProvider=kind==='apple'?new webSdk.OAuthProvider('apple.com'):new webSdk.GoogleAuthProvider();
    if(kind==='google')authProvider.setCustomParameters({prompt:'select_account'});
-   result=user?.isAnonymous?await webSdk.linkWithPopup(webAuth.currentUser,authProvider):await webSdk.signInWithPopup(webAuth,authProvider);
+   const link=Boolean(user?.isAnonymous);
+   try{result=link?await webSdk.linkWithPopup(webAuth.currentUser,authProvider):await webSdk.signInWithPopup(webAuth,authProvider);}
+   catch(error){
+    if(!link||!credentialConflict(error))throw error;
+    // An installed web app often still has its old anonymous UID. If this
+    // Google account already owns a Firebase UID, linking cannot succeed.
+    // Keep the migration marker, leave the guest UID, then enter the existing
+    // Google UID so cloud sync can merge this device's progress into it.
+    const fromUid=user.uid;writeMigration({version:1,fromUid,provider:kind+'.com',startedAt:Date.now()});
+    await webSdk.signOut(webAuth);emit(null);
+    result=await webSdk.signInWithPopup(webAuth,authProvider);
+    writeMigration({version:1,fromUid,toUid:result.user?.uid||'',provider:kind+'.com',startedAt:Date.now()});
+   }
   }
   rememberChoice();
   return emit(result.user);
