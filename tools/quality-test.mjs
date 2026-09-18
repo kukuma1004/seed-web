@@ -5,7 +5,7 @@ import {QUALITY_LEVELS,QUALITY_NAMES,initialQuality,createQualityGovernor,GOVERN
 assert.equal(QUALITY_LEVELS.length,3);assert.equal(QUALITY_NAMES.length,3);
 assert.ok(QUALITY_LEVELS[0].pixelRatio<QUALITY_LEVELS[1].pixelRatio&&QUALITY_LEVELS[1].pixelRatio<QUALITY_LEVELS[2].pixelRatio);
 assert.deepEqual(QUALITY_LEVELS.map(q=>q.bloom),['off','half','full']);
-assert.deepEqual(QUALITY_LEVELS.map(q=>q.shadows),[false,true,true]);
+assert.deepEqual(QUALITY_LEVELS.map(q=>q.shadows),[false,false,true],'mobile default uses contact shadows without a periodic sun-shadow pass');
 assert.deepEqual(QUALITY_LEVELS.map(q=>q.lanternLights),[false,false,true]);
 
 // Start level: URL override > saved device level > phone 1 / computer 2.
@@ -36,11 +36,15 @@ assert.equal(initialQuality({stored:'junk',mobile:false}),2);assert.equal(clampL
  for(let t=0;t<GOVERNOR.windowSeconds*1000+50;t+=16)g.sample(16);
  for(let t=0;t<GOVERNOR.windowSeconds*1000+50;t+=40)g.sample(40);
  assert.equal(g.state().level,2,'isolated slow windows do not drop');
- for(let i=0;i<500;i++){g.sample(50,false);g.sample(900);}
- assert.equal(g.state().level,2,'paused frames and long stalls are ignored');
+ for(let i=0;i<500;i++){g.sample(50,false);g.sample(1500);}
+ assert.equal(g.state().level,2,'paused frames and true app suspensions are ignored');
 }
 // Very slow device (~20 fps): goes straight to low instead of waiting through medium.
 {const g=createQualityGovernor(2);for(let t=0;t<(GOVERNOR.settleSeconds+GOVERNOR.windowSeconds*2+.5)*1000;t+=50)g.sample(50);assert.equal(g.state().level,0);assert.equal(g.state().drops,1);}
+// Short freezes must count. Three severe frames in a live window drop immediately;
+// a true app/tab suspension over the cap remains ignored.
+{const g=createQualityGovernor(2);for(let t=0;t<GOVERNOR.settleSeconds*1000+20;t+=16)g.sample(16);for(let i=0;i<3;i++)g.sample(90);for(let t=0;t<GOVERNOR.windowSeconds*1000;t+=16)g.sample(16);assert.equal(g.state().level,1,'repeated visible freezes drop quality');}
+{const g=createQualityGovernor(2);for(let i=0;i<10;i++)g.sample(1500);assert.equal(g.state().level,2,'app suspension is ignored');}
 // Around 55 fps stays on high.
 {const g=createQualityGovernor(2);for(let t=0;t<30000;t+=18)g.sample(18);assert.equal(g.state().level,2);}
 // Pixel ratio: computers and tablets keep the level floor; a sideways phone draws a sharper frame up to the level budget.

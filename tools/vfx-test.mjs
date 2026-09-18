@@ -19,6 +19,8 @@ for(const mobile of [false,true]){
   assert.ok(fx.state().events.flame>0&&fx.state().events.explosion>0,'Explosions add a bounded flame crown');
   assert.ok(fx.state().events.portal>0,'Portals reuse the fixed spark and beam batches');
   assert.ok(fx.state().active<=fx.state().capacity);
+  fx.clear();fx.setQuality(0);fx.explosion(a,'burst',1.6,true);fx.update(.016);const lowCount=fx.state().active;
+  fx.clear();fx.setQuality(2);fx.explosion(a,'burst',1.6,true);fx.update(.016);assert.ok(lowCount<fx.state().active,'low quality emits fewer particles from the same effect');
   for(const mesh of meshes){
     assert.equal(mesh.castShadow,false);assert.equal(mesh.material.depthWrite,false);
     assert.ok([...mesh.instanceMatrix.array].every(Number.isFinite));

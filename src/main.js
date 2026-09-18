@@ -131,9 +131,9 @@ renderer.domElement.addEventListener('webglcontextlost',event=>{event.preventDef
  box.querySelector('button').onclick=()=>location.reload();document.body.append(box);},false);
 renderer.domElement.addEventListener('webglcontextrestored',()=>location.reload(),false);
 const scene=new THREE.Scene();scene.background=new THREE.Color('#2a4550');scene.fog=new THREE.FogExp2('#2d4a55',.011);
-const vfx=createVFX(scene,{mobile:mobileDevice,theme:combatTheme});
-const playerTrailInterval=mobileDevice?.07:.045;
-const activeVfx=createActiveVFX(scene,{mobile:mobileDevice,theme:combatTheme});
+const vfx=createVFX(scene,{mobile:mobileDevice,theme:combatTheme,quality:qualityLevel});
+let playerTrailInterval=mobileDevice?.075:.045;
+const activeVfx=createActiveVFX(scene,{mobile:mobileDevice,theme:combatTheme,quality:qualityLevel});
 const camera=new THREE.PerspectiveCamera(39,1,.1,100);const look=new V(0,0,0);camera.position.set(16,22,22);camera.lookAt(look);
 const composer=new EffectComposer(renderer);const renderPass=new RenderPass(scene,camera);composer.addPass(renderPass);const bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),.42,.5,1.1);composer.addPass(bloomPass);composer.addPass(new OutputPass());
 const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
@@ -164,7 +164,14 @@ const terrain=new THREE.Group();scene.add(terrain);box(terrain,0,-.7,0,22,1.4,18
 for(let x=-10.5;x<11;x+=1.5)for(let z=-8.5;z<9;z+=1.5){let t=box(terrain,x,-.035+rng()*.025,z,1.47,.2,1.47);t.rotation.y=(rng()-.5)*.035;}
 const watermat=new THREE.MeshStandardMaterial({color:0x59777f,roughness:.08,metalness:.82,transparent:true,opacity:.42});for(let i=0;i<45;i++){let p=mesh(new THREE.CircleGeometry(.3+rng()*1.2,16),watermat,terrain,(rng()-.5)*20,.08,(rng()-.5)*16);p.rotation.x=-Math.PI/2;p.scale.y=.35+rng()*.6;}
 const leafShape=new THREE.Shape();leafShape.moveTo(0,0);leafShape.bezierCurveTo(-.17,.2,-.16,.42,0,.62);leafShape.bezierCurveTo(.16,.42,.17,.2,0,0);const leafGeo=new THREE.ShapeGeometry(leafShape,5);const leafMats=[0x183f31,0x395b36,0x17372c,0x516443].map(color=>new THREE.MeshStandardMaterial({color,roughness:.87,side:THREE.DoubleSide}));const petalMat=new THREE.MeshStandardMaterial({color:0xe7e9d5,roughness:.65});
-function foliage(x,z,scale=1){let g=new THREE.Group();g.position.set(x,.16,z);terrain.add(g);for(let i=0;i<9;i++){let a=i*2.4+rng()*.4;let l=mesh(leafGeo,leafMats[i%4],g,0,.02,0);l.rotation.set(-1.05-rng()*.45,a,(rng()-.5)*.8);l.scale.setScalar(.45+rng()*.6);if(i===0&&rng()>.55){for(let j=0;j<5;j++){let a=j*6.28/5;let petal=mesh(new THREE.SphereGeometry(.065,5,3),petalMat,g,Math.cos(a)*.065,.3,Math.sin(a)*.065);petal.scale.set(.6,.25,1);}orb(g,0,.3,0,.025,mats.armor);}}g.scale.setScalar(scale);return g;}
+// The old garden built more than three thousand leaf Mesh objects, cloned every
+// geometry during the static merge, then discarded them. On phones that caused
+// a long cold-start pause and a large garbage-collection spike. Record transforms
+// directly and upload six fixed instanced batches instead.
+const leafMatrices=leafMats.map(()=>[]),petalMatrices=[],flowerCoreMatrices=[],staticInstanceDummy=new THREE.Object3D();
+function staticTransform(list,x,y,z,rx,ry,rz,sx,sy=sx,sz=sx){staticInstanceDummy.position.set(x,y,z);staticInstanceDummy.rotation.set(rx,ry,rz);staticInstanceDummy.scale.set(sx,sy,sz);staticInstanceDummy.updateMatrix();list.push(staticInstanceDummy.matrix.clone());}
+function leafInstance(kind,x,y,z,rx,ry,rz,sx,sy=sx,sz=sx){staticTransform(leafMatrices[kind%leafMatrices.length],x,y,z,rx,ry,rz,sx,sy,sz);}
+function foliage(x,z,scale=1){for(let i=0;i<9;i++){const a=i*2.4+rng()*.4,rx=-1.05-rng()*.45,rz=(rng()-.5)*.8,size=(.45+rng()*.6)*scale;leafInstance(i,x,.16+.02*scale,z,rx,a,rz,size);if(i===0&&rng()>.55){for(let j=0;j<5;j++){const angle=j*6.28/5;staticTransform(petalMatrices,x+Math.cos(angle)*.065*scale,.16+.3*scale,z+Math.sin(angle)*.065*scale,0,0,0,.039*scale,.01625*scale,.065*scale);}staticTransform(flowerCoreMatrices,x,.16+.3*scale,z,0,0,0,.025*scale);}}}
 for(let i=0;i<660;i++){let x=(rng()-.5)*23,z=(rng()-.5)*19;if(Math.abs(x)>9||Math.abs(z)>7||rng()<.07)foliage(x,z,.6+rng()*.75);}
 function wall(x,z,axis,count,height=1){for(let row=0;row<height;row++)for(let i=0;i<count;i++){let xx=x+(axis==='x'?i*1.05:0),zz=z+(axis==='z'?i*1.05:0);let b=box(terrain,xx,row*.56+.35,zz,axis==='x'?1:.67,.53,axis==='z'?1:.67);b.rotation.y=(rng()-.5)*.09;}}
 wall(-11,-9,'x',22,3);wall(-11,-8,'z',17,2);wall(11,-8,'z',17,2);wall(-10,9,'x',21,1);
@@ -183,7 +190,7 @@ for(let x=3;x<22;x+=3.4){box(terrain,x,-.8,-18,1,8,1,mats.dark);box(terrain,x,3.
 for(let i=0;i<190;i++){let x=(rng()-.5)*22,z=(rng()-.5)*18;if(Math.abs(x)>9.3||Math.abs(z)>7.5){let rock=orb(terrain,x,.14,z,.1+rng()*.2,mats.stone);rock.scale.set(1,.6,1.3);rock.rotation.set(rng(),rng(),rng());}}
 for(let radius of [.52,.63,.82,1.06]){let seal=mesh(new THREE.TorusGeometry(radius,.016,4,64),mats.armor,terrain,0,.09,.5);seal.rotation.x=Math.PI/2;}
 for(let i=0;i<12;i++){let a=i*Math.PI/6;limb(terrain,[Math.cos(a)*.85,.09,.5+Math.sin(a)*.85],[Math.cos(a)*1.02,.09,.5+Math.sin(a)*1.02],.012,mats.armor);}
-for(let x of [-10,-5,0,5,10]){for(let j=0;j<3;j++){let z=-9.4+j*.22;path([[x-.3,-.8,z],[x+.3,.5,z],[x-.2,1.2,z],[x+.3,2.5,z]],.035+j*.015,mats.root);for(let k=0;k<5;k++){let leaf=mesh(leafGeo,leafMats[k%4],terrain,x+Math.sin(k*2)*.3,k*.42,z+.45);leaf.rotation.set(.1,k,1);leaf.scale.setScalar(.6);}}}
+for(let x of [-10,-5,0,5,10]){for(let j=0;j<3;j++){let z=-9.4+j*.22;path([[x-.3,-.8,z],[x+.3,.5,z],[x-.2,1.2,z],[x+.3,2.5,z]],.035+j*.015,mats.root);for(let k=0;k<5;k++)leafInstance(k,x+Math.sin(k*2)*.3,k*.42,z+.45,.1,k,1,.6);}}
 // Terrace foundation continues down into the ravine rather than ending as a floating slab.
 for(let x=-11;x<11;x+=1.4){box(terrain,x,-1.7,9,1.3,2.8,.8);if(Math.round(x)%3===0)path([[x,.6,9.4],[x+.3,-1,9.6],[x-.4,-3.1,9.3]],.12,mats.root);}
 for(let z=-9;z<9;z+=1.4)for(let x of [-11,11])box(terrain,x,-1.7,z,.8,2.8,1.3);
@@ -193,16 +200,18 @@ for(let side of [-1,1])for(let j=0;j<8;j++){
  let x=side*(11.6+rng()*1.8),z=-8+j*2.7;
  path([[x,-3,z],[x-.35*side,.4,z],[x-side*.9,2.3,z+.4],[x-side*1.3,3.6,z+.8]],.10+rng()*.08,mats.root,terrain);
  for(let k=0;k<22;k++){
-  let l=mesh(leafGeo,leafMats[k%4],terrain,x+(rng()-.5)*2,1.3+rng()*2.4,z+(rng()-.5)*2.4);
-  l.rotation.set(-.5-rng(),rng()*6.28,rng()*2);l.scale.set(1.1+rng()*.9,1+rng()*1.6,1);
+   leafInstance(k,x+(rng()-.5)*2,1.3+rng()*2.4,z+(rng()-.5)*2.4,-.5-rng(),rng()*6.28,rng()*2,1.1+rng()*.9,1+rng()*1.6,1);
  }
 }
 for(let j=0;j<17;j++){
  let x=-11+rng()*22,z=-9-rng()*1.4;
- for(let k=0;k<12;k++){let l=mesh(leafGeo,leafMats[k%4],terrain,x+(rng()-.5),.5+rng()*2.7,z+(rng()-.5));l.rotation.set(rng()*2,rng()*6.28,rng());l.scale.setScalar(.7+rng());}
+  for(let k=0;k<12;k++){const size=.7+rng();leafInstance(k,x+(rng()-.5),.5+rng()*2.7,z+(rng()-.5),rng()*2,rng()*6.28,rng(),size);}
 }
 const bannerMat=new THREE.MeshStandardMaterial({color:0x193e3b,roughness:1,side:THREE.DoubleSide});
 for(let x of [-8.5,-3.8]){let cloth=new THREE.PlaneGeometry(.95,2.1,5,10);let a=cloth.attributes.position;for(let i=0;i<a.count;i++)a.setZ(i,Math.sin(a.getY(i)*5+a.getX(i)*2)*.07);cloth.computeVertexNormals();mesh(cloth,bannerMat,terrain,x,2,-9.05);limb(terrain,[x-.6,3.05,-9],[x+.6,3.05,-9],.035,mats.armor);let sigil=mesh(new THREE.TorusGeometry(.22,.025,4,20),mats.armor,terrain,x,2,-8.94);for(let side of [-1,1])limb(terrain,[x,1.5,-8.94],[x+side*.26,2.3,-8.94],.018,mats.armor);}
+function staticInstances(geo,mat,matrices,name){if(!matrices.length)return;const ob=new THREE.InstancedMesh(geo,mat,matrices.length);ob.name=name;ob.castShadow=ob.receiveShadow=true;for(let i=0;i<matrices.length;i++)ob.setMatrixAt(i,matrices[i]);ob.instanceMatrix.needsUpdate=true;ob.matrixAutoUpdate=false;ob.updateMatrix();scene.add(ob);}
+leafMatrices.forEach((matrices,i)=>staticInstances(leafGeo,leafMats[i],matrices,`garden-leaves-${i}`));
+staticInstances(new THREE.SphereGeometry(1,5,3),petalMat,petalMatrices,'garden-petals');staticInstances(new THREE.IcosahedronGeometry(1,1),mats.armor,flowerCoreMatrices,'garden-flower-cores');
 // Batch immovable masonry and plants by material, retaining lantern lights.
 terrain.updateMatrixWorld(true);const batches=new Map(),staticMeshes=[];terrain.traverse(o=>{if(o.isMesh){staticMeshes.push(o);let geo=o.geometry.clone();if(geo.index)geo=geo.toNonIndexed();geo.applyMatrix4(o.matrixWorld);if(!batches.has(o.material))batches.set(o.material,[]);batches.get(o.material).push(geo);}});for(let o of staticMeshes)o.removeFromParent();for(let [mat,geos]of batches){let merged=mergeGeometries(geos,false);if(merged){let ob=new THREE.Mesh(merged,mat);ob.castShadow=ob.receiveShadow=true;
  // 합친 지형은 다시 움직이지 않는다. 프레임마다 행렬을 다시 계산하지 않게 잠근다.
@@ -1061,8 +1070,10 @@ function renderBossHud(boss,group=[boss]){
   setText(hud.querySelector('small'),boss.moveName?'진화의 성질을 흉내 냅니다 · 예고된 틈으로 피하세요':pendingEscorts.length?'호위 등장 예고 · 주황 원에서 떨어지세요':boss.variant==='seal'?'보라 원이 닫힐 때 안에 있으면 회피가 봉인됩니다':boss.variant==='hunter'?'돌진 뒤 곧바로 한 번 더 돌진합니다':boss.learned.length?'습득: '+boss.learned.map(id=>LAW_NAMES[id]).join(' · '):boss.copiedForm?`네 번째 공격마다 ${boss.copiedForm.name} 모방`:'생명 67% · 34%에서 당신의 법칙을 배웁니다');
  }
 }
+let hudLast=-Infinity,hudMode='',hudPaused=false;
 function presentFrame(time){
  contactShadows.update(player,enemies,fallen);player.userData.updateEvolutionArt?.(time,activeGauge.plan?.state==='OVERDRIVE');
+ const hudInterval=1/(mobileDevice?20:30),hudDue=time-hudLast>=hudInterval||mode!==hudMode||paused!==hudPaused;if(!hudDue)return;hudLast=time;hudMode=mode;hudPaused=paused;
  const dm=dashMeter(dashState);touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm);setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
  const dashPips=$('#dash-pips'),dashPipKey=`${dm.charges}/${dm.maxCharges}`;setHidden(dashPips,dm.maxCharges<2);if(dashPips&&dashPips.__key!==dashPipKey){dashPips.innerHTML=Array.from({length:dm.maxCharges},(_,i)=>`<i class="${i<dm.charges?'ready':''}"></i>`).join('');dashPips.__key=dashPipKey;}
  // 메뉴·정원 화면에서는 전투 HUD를 감춘다(정원이 그대로 보이게).
@@ -1124,6 +1135,7 @@ function applyQuality(level,{save=true}={}){
  // silhouette's own depth test still hides it when nothing is really in front).
  configureOcclusion({enabled:level>0,test:behindCover});
  player.userData.setQuality?.(level);
+ vfx.setQuality(level);activeVfx.setQuality(level);playerTrailInterval=mobileDevice?[.12,.075,.055][level]:[.075,.055,.045][level];
  if(sun.castShadow!==q.shadows){sun.castShadow=q.shadows;}shadowClock=SHADOW_REFRESH;
  if(q.shadows&&sun.shadow.mapSize.x!==q.shadowSize){sun.shadow.mapSize.set(q.shadowSize,q.shadowSize);sun.shadow.map?.dispose();sun.shadow.map=null;}
  if(save){try{runStorage.setItem(QUALITY_KEY,String(level));}catch{}}

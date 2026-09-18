@@ -39,7 +39,10 @@ export function orbitPose(id,index,count,angle,time,S){
  return {x:Math.cos(a)*radius,y:.64+(index%2?.13:0)+wave*.055,z:Math.sin(a)*radius,pitch:-1.02,yaw:-a-time*.9,roll:wave*.12,scale:[1.55,1.55,1.55]};
 }
 
-export function segmentDistance(a,b,p){const d=b.clone().sub(a).setY(0),length=d.lengthSq();const t=length?THREE.MathUtils.clamp(p.clone().sub(a).setY(0).dot(d)/length,0,1):0;return a.clone().addScaledVector(d,t).setY(0).distanceTo(p.clone().setY(0));}
+// Hot collision path for generated projectiles. The old Vector3 expression
+// allocated four temporary objects for every projectile/enemy pair, producing
+// frequent mobile garbage-collection pauses once split forms filled the room.
+export function segmentDistance(a,b,p){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz,t=length?THREE.MathUtils.clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/length,0,1):0,ox=a.x+dx*t-p.x,oz=a.z+dz*t-p.z;return Math.hypot(ox,oz);}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const bossReach=(e,normal,boss)=>e.type==='warden'||e.type==='austin'?boss:normal;
 const immovable=e=>e.type==='warden'||e.type==='austin'||e.type==='turret';

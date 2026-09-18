@@ -25,13 +25,14 @@ export function streakGeometry(){
 }
 
 // Fixed GPU batches (four): effects cannot add lights, shadows or an unbounded mesh per spark.
-export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical'}={}){
+export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical',quality=2}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0),identity=new THREE.Quaternion();
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
   const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};let themeId=normalizeTheme(theme);
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
+  const density=()=>[.42,.68,1][qualityLevel]*(mobile?.68:1);
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
@@ -73,7 +74,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   }
   function flame(pos,id='burst',n=10,spread=1,delay=0){
     counters.flame++;
-    const count=Math.ceil(n*(mobile?.62:1)*THEMES[themeId].flame);
+    const count=Math.max(qualityLevel===0?2:3,Math.ceil(n*density()*THEMES[themeId].flame));
     for(let i=0;i<count;i++){
       const a=random()*Math.PI*2,r=random()*.55*spread,size=.045+random()*.055;
       emitPos.set(pos.x+Math.cos(a)*r,pos.y+.08,pos.z+Math.sin(a)*r);emitVelocity.set(Math.cos(a)*.18,.45+random()*1.25,Math.sin(a)*.18);emitRotation.setFromAxisAngle(up,a);
@@ -82,7 +83,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   }
   function burst(pos,id='seed',n=12,spread=1,delay=0){
     counters.burst++;const theme=THEMES[themeId];
-    for(let i=0;i<Math.ceil(n*(mobile?.65:1));i++){
+    for(let i=0,count=Math.max(qualityLevel===0?2:3,Math.ceil(n*density()));i<count;i++){
       const a=random()*Math.PI*2,speed=(1+random()*3)*spread;
       const size=.04+random()*.06;
       if(theme.motion==='inward'){
@@ -113,7 +114,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     workA.set(pos.x,.7,pos.z);workB.copy(workA).addScaledVector(dir,.65);segment(workA,workB,id,.09,.1);burst(pos,id,3,.4);
   }
   function trail(from,to,id='seed',fragment=false){
-    counters.trail++;segment(from,to,id,fragment?.025:.055,fragment?.12:.22);
+    counters.trail++;if(qualityLevel===0&&fragment)return;segment(from,to,id,fragment?.025:.055,fragment?.12:.22);
   }
   function reflect(pos,dir){
     counters.reflect++;pulse(pos,'reflect',.42,.3);burst(pos,'reflect',12);
@@ -185,8 +186,8 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},
-    state:()=>({theme:themeId,active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
+    state:()=>({theme:themeId,quality:qualityLevel,active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

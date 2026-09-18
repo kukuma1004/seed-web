@@ -46,7 +46,7 @@ export const ARCHETYPE_VFX=Object.freeze({
  TIME_STOP:Object.freeze({glyph:6,floor:2.68,halo:2.72,waveX:2.82,waveZ:2.82,beamX:.92,beamY:.5,motes:'clock'})
 });
 
-export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
+export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
  const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
@@ -68,7 +68,7 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
  const moteMat=additive();moteMat.vertexColors=false;
  const moteCount=mobile?10:16,motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
  const dummy=new THREE.Object3D(),color=new THREE.Color();
- let effect=null,serial=0,themeId=normalizeTheme(theme);
+ let effect=null,serial=0,themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
 
  function begin(mode,plan,pos,time){
@@ -113,9 +113,9 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
 
   // Motes: running, they spiral up and inward into the seed and respawn at the bottom;
   // in the finale they scatter outward and fade.
-  motes.count=moteCount;
-  for(let i=0;i<moteCount;i++){
-   const phase=i/moteCount;
+  const visibleMotes=Math.max(4,Math.round(moteCount*[.4,.7,1][qualityLevel]));motes.count=visibleMotes;
+  for(let i=0;i<visibleMotes;i++){
+   const phase=i/visibleMotes;
    let x,y,z,scale,bright;
    if(running){
     const speed=over?.95:.72,cycle=(effect.age*speed+phase)%1,themeSpin=theme.motion==='spiral'?1.35:theme.motion==='axis'?.35:theme.motion==='inward'?-1:1;
@@ -148,7 +148,8 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical'}={}){
  }
  function clear(){effect=null;group.visible=false;for(const ob of [floor,halo,wave,beam])ob.material.opacity=0;motes.count=0;}
  function setTheme(id){themeId=normalizeTheme(id);if(effect){effect.theme=themeId;effect.colors=activeColors(effect.forms,themeId);}return themeId;}
- function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,theme:effect?.theme||themeId,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
+ function setQuality(level){qualityLevel=Math.max(0,Math.min(2,level|0));return qualityLevel;}
+ function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,theme:effect?.theme||themeId,quality:qualityLevel,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
  function dispose(){group.removeFromParent();const geos=new Set([floor.geometry,haloGeo,beam.geometry,moteGeo]);for(const g of geos)g.dispose();for(const ob of [floor,halo,wave,beam,motes])ob.material.dispose();for(const t of textures)t.dispose();}
- return {start,finish,update,clear,setTheme,state,dispose};
+ return {start,finish,update,clear,setTheme,setQuality,state,dispose};
 }
