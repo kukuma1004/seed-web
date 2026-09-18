@@ -9,7 +9,7 @@ export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v2',RUNS_PATH='seedRanking/runs',BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v3',RUNS_PATH='seedRanking/season11/runs',BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 export const SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000});
@@ -69,7 +69,8 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   const b=await request(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
   return remember({uid:b.localId,idToken:b.idToken,refreshToken:b.refreshToken,expiresAt:now()+Number(b.expiresIn||3600)*1000});
  }
- const runsURL=(s,query='')=>`${config.databaseURL}/${RUNS_PATH}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
+ const pathsFor=season=>season?.id===ARCHIVE_SEASON.id?{runs:LEGACY_RUNS_PATH,builds:LEGACY_BUILDS_PATH}:{runs:RUNS_PATH,builds:BUILDS_PATH};
+ const runsURL=(s,query='',path=RUNS_PATH)=>`${config.databaseURL}/${path}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
  // Two reads merged: the highest scores overall (old seasons are filtered out) and every recent run since the season began,
  // so new runs are found even while old high scores fill the score query.
  const keyRange=season=>{
@@ -79,19 +80,20 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  };
  async function top(limit=20,playerName='',season=SEASON){
   const s=await signIn();
+  const paths=pathsFor(season);
   const [best,recent]=await Promise.all([
-   read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`)),
-   read(runsURL(s,keyRange(season)))
+   read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`,paths.runs)),
+   read(runsURL(s,keyRange(season),paths.runs))
   ]);
   const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit,season);
   // Builds live beside the runs under the same push id. Load the recent batch first, then recover any
   // displayed old high score (and this player's line) that has fallen outside that moving window.
   try{
-   const builds=await request(`${config.databaseURL}/${BUILDS_PATH}.json?${keyRange(season)}auth=${encodeURIComponent(s.idToken)}`);
+   const builds=await request(`${config.databaseURL}/${paths.builds}.json?${keyRange(season)}auth=${encodeURIComponent(s.idToken)}`);
    for(const run of board)if(builds&&validBuild(builds[run.id])&&builds[run.id].uid===run.uid)run.build=builds[run.id];
    const cleanPlayer=cleanName(playerName),wanted=[...board.slice(0,10),...board.filter(run=>cleanPlayer&&run.uid===s.uid&&run.name===cleanPlayer)];
    const missing=[...new Map(wanted.filter(run=>!run.build).map(run=>[run.id,run])).values()];
-   const recovered=await Promise.allSettled(missing.map(run=>request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(run.id)}.json?auth=${encodeURIComponent(s.idToken)}`)));
+   const recovered=await Promise.allSettled(missing.map(run=>request(`${config.databaseURL}/${paths.builds}/${encodeURIComponent(run.id)}.json?auth=${encodeURIComponent(s.idToken)}`)));
    recovered.forEach((result,i)=>{const run=missing[i],build=result.status==='fulfilled'?result.value:null;if(validBuild(build)&&build.uid===run.uid)run.build=build;});
   }catch{}
   return board;

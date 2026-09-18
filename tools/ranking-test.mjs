@@ -66,10 +66,13 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
 // Every journey is faster than the one before, without a region choice.
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).speed>difficulty(c).speed);
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).projectileSpeed>difficulty(c).projectileSpeed);
+for(let c=0;c<8;c++)assert.ok(difficulty(c+1).damage>difficulty(c).damage&&difficulty(c+1).bossTempo>difficulty(c).bossTempo);
 assert.equal(difficulty(20).hp,5.8,'the existing first twenty journeys keep their tuning');
 assert.ok(difficulty(30).hp>difficulty(20).hp&&difficulty(100).hp>difficulty(30).hp,'late-run enemy health never stops growing');
 assert.equal(difficulty(100).speed,1.9,'enemy motion stays at the readable speed cap');
 assert.equal(difficulty(100).projectileSpeed,1.35,'enemy shots stay below the readable projectile-speed cap');
+assert.equal(difficulty(100).damage,2.5,'late-run damage pressure is capped');
+assert.equal(difficulty(100).bossTempo,1.3,'Austin stays readable at the tempo cap');
 
 // Build records: short, validated, unknown ids skipped, shown under a ranking line through a callback.
 {

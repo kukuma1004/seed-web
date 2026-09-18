@@ -16,7 +16,8 @@ export const AUSTIN=Object.freeze({
  alarm:{countdown:1.5,radius:2.2,damage:21,spread:2.9},
  volley:{tell:.6,retell:.48,spread:.32,speed:9,damage:18,lead:.28},
  transition:.95,
- bell:{warnBeats:3,ringDelay:.3,speed:6,damage:19}
+ bell:{warnBeats:3,ringDelay:.3,speed:6,damage:19},
+ damage:{burst:.06,perSecond:.03}
 });
 export const AUSTIN_ARENA=Object.freeze({shape:'circle',radius:7.6});
 // GPT art hook: set to e.g. 'boss-austin-v1.png' (2x2 directional atlas, like warden-*-v4.png) once the art exists.
@@ -30,8 +31,11 @@ export const PHASES=Object.freeze({
 // A short, visible wind-up clears the old hazards before the faster phase begins.
 export function damageAustin(e,amount){
  if(e.state==='phaseShift'||!Number.isFinite(amount)||amount<=0)return 0;
+ if(!Number.isFinite(e.damageAllowance))e.damageAllowance=e.maxHp*AUSTIN.damage.burst;
+ amount=Math.min(amount,e.damageAllowance);
+ if(amount<=0)return 0;
  const floor=e.phase==='normal'?e.maxHp*AUSTIN.overtime:e.phase==='overtime'?e.maxHp*AUSTIN.deadline:0;
- const next=Math.max(floor,e.hp-amount),taken=Math.max(0,e.hp-next);e.hp=next;return taken;
+ const next=Math.max(floor,e.hp-amount),taken=Math.max(0,e.hp-next);e.hp=next;e.damageAllowance=Math.max(0,e.damageAllowance-taken);return taken;
 }
 export function volleyDirections(dir){return [-2,-1,0,1,2].map(i=>dir.clone().applyAxisAngle(new V(0,1,0),i*AUSTIN.volley.spread));}
 export function austinPhase(hp,maxHp){return hp<=maxHp*AUSTIN.deadline?'deadline':hp<=maxHp*AUSTIN.overtime?'overtime':'normal';}
@@ -87,7 +91,7 @@ export function createAustin(scene){
  const tellRingMat=basic(0xffa64d,.75),tellRing=new THREE.Mesh(new THREE.RingGeometry(.92,1.12,40),tellRingMat);tellRing.rotation.x=-Math.PI/2;tellRing.position.y=.22;tellRing.visible=false;fx.add(tellRing);
  const world=new THREE.Group();scene.add(world);
  return {g,body,world,type:'austin',hp:AUSTIN.hp,maxHp:AUSTIN.hp,state:'stalk',timer:.9,pattern:0,phase:'normal',
-  previousPlayer:null,velocity:new V(),volleys:0,phasePending:null,queuedSweep:false,bellAge:999,
+  previousPlayer:null,velocity:new V(),volleys:0,phasePending:null,queuedSweep:false,bellAge:999,damageAllowance:null,
   clock:0,beats:0,hour:0,ringHour:0,pendingRing:0,bellWarn:false,bells:0,
   dir:new V(0,0,1),dashes:0,jabHit:false,bumpCD:0,beamAngle:0,beamSign:1,alarms:[],hit:0,slow:0,
    parts:{head,hourHand,minuteHand,gloves,fx,lane,laneMat,laneRails,laneArrows,fan,fanMats,beams,beamMats,wedge,wedgeMesh,wedgeMat,tellRing,tellRingMat}};
@@ -139,6 +143,7 @@ export function tickAustin(e,dt,hooks){
  if(e.previousPlayer)e.velocity.copy(player).sub(e.previousPlayer).setY(0).divideScalar(Math.max(dt,.001)).clampLength(0,7);
  else e.previousPlayer=new V();
  e.previousPlayer.copy(player);
+ e.damageAllowance=Math.min(e.maxHp*AUSTIN.damage.burst,(Number.isFinite(e.damageAllowance)?e.damageAllowance:e.maxHp*AUSTIN.damage.burst)+e.maxHp*AUSTIN.damage.perSecond*dt);
  const next=austinPhase(e.hp,e.maxHp);
  if(next!==e.phase&&e.state!=='phaseShift'){
   e.state='phaseShift';e.phasePending=next;e.timer=AUSTIN.transition;e.pendingRing=0;e.bellWarn=false;

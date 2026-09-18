@@ -28,6 +28,7 @@ assert.equal(doc.fire('selectstart',{target:editable}).prevented,false,'Name fie
 assert.ok(!panel.innerHTML.includes('aim-stick'));
 assert.match(panel.innerHTML,/dash-charges/,'Double dodge owns two visible charge pips');
 control.update(true,0,{charges:1,maxCharges:2,recharge:4.4});assert.equal(dash.children.small.textContent,'회피 1/2');
+control.update(true,0,{charges:1,maxCharges:2,recharge:4.4},{exit:true});assert.equal(dash.children.small.textContent,'이동');
 move.fire('pointerdown',{pointerId:1,clientX:85,clientY:50});
 assert.equal(control.axes.move.x,1);
 dash.fire('pointerdown',{pointerId:2});

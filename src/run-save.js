@@ -81,7 +81,7 @@ export function roomExitCheckpoint(entry,{hp,inventory}={}){
 // easier and let the score multiplier rise without resistance.
 export function difficulty(cycle){
  const c=Math.max(0,Number(cycle)||0),early=Math.min(c,20),late=Math.max(0,c-20);
- return {hp:1+early*.24+late*.16,speed:Math.min(1.9,1+c*.08),projectileSpeed:Math.min(1.35,1+c*.025),bossHp:1+early*.3+late*.2};
+ return {hp:1+early*.24+late*.16,speed:Math.min(1.9,1+c*.08),projectileSpeed:Math.min(1.35,1+c*.025),bossHp:1+early*.3+late*.2,damage:Math.min(2.5,1+c*.06),bossTempo:Math.min(1.3,1+c*.025)};
 }
 export function replaceLaw(rules,mutated,oldId,newId){
  if(!rules.includes(oldId)||rules.includes(newId)||!Object.hasOwn(LAWS,newId))throw new Error('Invalid law replacement');

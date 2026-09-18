@@ -100,15 +100,15 @@ export function createTouchControls(canAct){
   document.addEventListener('visibilitychange',()=>{if(document.hidden)resetMovement();});
   return {enabled,axes,reset(){dashPress.reset();resetMovement();},
     consumeDash(){const active=dashUntil>performance.now();dashUntil=0;return active;},
-    update(active,cooldown,dash={charges:cooldown>0?0:1,maxCharges:1,recharge:cooldown}){
+    update(active,cooldown,dash={charges:cooldown>0?0:1,maxCharges:1,recharge:cooldown},context={}){
       if(panel.hidden!==!active)panel.hidden=!active;
       if(!active){if(owners.size||dashUntil)resetMovement();return;}
-      const label=dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!dash.charges;
+      const exiting=Boolean(context.exit),label=exiting?'이동':dash.maxCharges>1?`회피 ${dash.charges}/${dash.maxCharges}`:cooldown>0?`${cooldown.toFixed(1)}초`:'회피',cooling=!exiting&&!dash.charges;
       if(dashButton.__cooling!==cooling){dashButton.classList.toggle('cooling',cooling);dashButton.__cooling=cooling;}
       const chargeKey=`${dash.charges}/${dash.maxCharges}`;
       if(dashButton.__charges!==chargeKey){dashButton.classList.toggle('double',dash.maxCharges>1);dashButton.classList.toggle('recharging',dash.charges<dash.maxCharges);if(dashCharges)for(const [i,pip] of [...dashCharges.children].entries())pip.classList.toggle('ready',i<dash.charges);dashButton.__charges=chargeKey;}
       if(dashLabel.textContent!==label)dashLabel.textContent=label;
-      const aria=`회피${dash.maxCharges>1?` · ${dash.charges}/${dash.maxCharges} 충전`:cooldown>0?` · ${cooldown.toFixed(1)}초 뒤 준비`:' · 준비'}`;
+      const aria=exiting?'다음 방으로 이동':`회피${dash.maxCharges>1?` · ${dash.charges}/${dash.maxCharges} 충전`:cooldown>0?` · ${cooldown.toFixed(1)}초 뒤 준비`:' · 준비'}`;
       if(dashButton.__aria!==aria){dashButton.setAttribute?.('aria-label',aria);dashButton.__aria=aria;}
     },
     state(){return {enabled,move:{...axes.move},aim:{...axes.aim},pointers:owners.size+dashPress.state().pointers,floating:Boolean(center?.floating),center:center?{x:center.x,y:center.y}:null};}

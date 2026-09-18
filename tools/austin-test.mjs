@@ -105,16 +105,20 @@ function run(r,seconds,step=1/60,each=()=>{}){for(let t=0;t<seconds;t+=step){tic
 
 console.log('Austin bell gaps, one-two, sweeps, alarms, phases and floor clock passed.');
 
-// A burst cannot skip the two phase changes, and transitional shielding expires.
+// Burst damage is throttled as well as phase-gated: even impossible sustained DPS
+// has to live through the patterns for roughly half a minute.
 {
  const r=rig(new V(0,0,5));
- assert.equal(damageAustin(r.e,1e9),r.e.maxHp*.5);
- tickAustin(r.e,1/60,r.hooks);assert.equal(r.e.state,'phaseShift');
- assert.equal(damageAustin(r.e,1e9),0);assert.ok(austinHint(r.e).includes('피해'));
- run(r,AUSTIN.transition+.05);assert.equal(r.e.phase,'overtime');
- damageAustin(r.e,1e9);assert.equal(r.e.hp,r.e.maxHp*.2);
- tickAustin(r.e,1/60,r.hooks);run(r,AUSTIN.transition+.05);
- assert.equal(r.e.phase,'deadline');assert.equal(damageAustin(r.e,1e9),r.e.maxHp*.2);assert.equal(r.e.hp,0);
+ assert.equal(damageAustin(r.e,1e9),r.e.maxHp*AUSTIN.damage.burst);
+ assert.equal(damageAustin(r.e,1e9),0,'the opening burst budget is spent');
+ let seconds=0,sawOvertime=false,sawDeadline=false,sawShield=false;
+ while(r.e.hp>0&&seconds<60){
+  damageAustin(r.e,1e9);tickAustin(r.e,1/60,r.hooks);seconds+=1/60;
+  sawOvertime||=r.e.phase==='overtime';sawDeadline||=r.e.phase==='deadline';
+  if(r.e.state==='phaseShift'){sawShield=true;assert.equal(damageAustin(r.e,1e9),0);assert.ok(austinHint(r.e).includes('피해'));}
+ }
+ assert.equal(r.e.hp,0);assert.ok(sawOvertime&&sawDeadline&&sawShield,'all visible phases must occur');
+ assert.ok(seconds>=30,`maximum DPS still ended the fight too quickly: ${seconds.toFixed(2)}s`);
 }
 // Every fan is telegraphed and locks its aim. Retargeting happens only before the next visible tell.
 {

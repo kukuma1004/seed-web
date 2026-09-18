@@ -206,7 +206,7 @@ const SURGE=Object.freeze({
  collapse:s=>({bolts:s.bolts+3,wells:s.wells+2,radius:s.radius+.6}),
  frostguard:s=>({satellites:s.satellites+3,novaEvery:s.novaEvery*.3,novaRadius:s.novaRadius+1}),
  returnblade:s=>({bolts:s.bolts+4,hitsPerLeg:s.hitsPerLeg+4}),
- prism:s=>({shards:s.shards+24,generations:s.generations+1}),
+ prism:s=>({shards:s.shards+12,generations:s.generations+1}),
  thunderlance:s=>({jumps:s.jumps+2,pierce:s.pierce+4}),
  frostbloom:s=>({bombs:s.bombs+3,delay:s.delay*.5}),
  stormcrown:s=>({orbs:s.orbs+2,pulse:s.pulse*.55,range:s.range+1.5}),
@@ -233,7 +233,7 @@ const AWAKEN_BOOST=Object.freeze({
  collapse:s=>({radius:s.radius+.15}),
  frostguard:s=>({satellites:Math.min(8,s.satellites+1),novaEvery:s.novaEvery*.65,novaRadius:s.novaRadius+.5}),
  returnblade:s=>({bolts:s.bolts+1,hitsPerLeg:s.hitsPerLeg+2}),
- prism:s=>({shards:s.shards+8,generations:s.generations+1}),
+ prism:s=>({shards:s.shards+6,generations:s.generations+1}),
  thunderlance:s=>({jumps:s.jumps+1,pierce:s.pierce+2}),
  frostbloom:s=>({bombs:s.bombs+1,delay:s.delay*.85}),
  stormcrown:s=>({orbs:s.orbs+1,pulse:s.pulse*.85,range:s.range+.8}),
@@ -293,7 +293,7 @@ function baseStats(id,level){
   case 'collapse':return {interval:1.05*faster,damage:86*power,radius:Math.min(4.2,3.1+.15*up),bolts:5,wells:3};
   case 'frostguard':return {interval:Infinity,damage:40*power,satellites:Math.min(7,4+Math.floor(up/2)),radius:2.5,slow:2,cooldown:.35,nova:30*power,novaRadius:Math.min(4.2,3.2+.12*up),novaEvery:3*faster};
   case 'returnblade':return {interval:.9*faster,damage:34*power,hitsPerLeg:Math.min(9,5+up),bolts:5};
-  case 'prism':return {interval:.7*faster,damage:26*power,generations:Math.min(4,2+Math.floor(up/2)),shards:24,speed:11};
+  case 'prism':return {interval:.7*faster,damage:26*power,generations:Math.min(4,2+Math.floor(up/2)),shards:18,speed:11};
   case 'thunderlance':return {interval:1.25*faster,damage:40*power,length:Math.min(15,11+.8*up),pierce:Math.min(14,8+up),jumps:Math.min(5,1+Math.floor(L/2)),jumpDamage:18*power};
   case 'frostbloom':return {interval:1.4*faster,damage:30*power,shatter:45*power,radius:Math.min(3.4,2.4+.15*up),range:9,flight:.55,delay:.8,bombs:3};
   case 'stormcrown':return {interval:Infinity,damage:22*power,orbs:Math.min(5,2+Math.floor(L/2)),range:4.2,pulse:.75*faster,radius:1.6};

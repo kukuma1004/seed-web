@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
@@ -18,23 +18,24 @@ function fakeFirebase({clock}){
   const token=tokens.get(u.searchParams.get('auth'));const uid=token&&token.exp>clock.t?token.uid:null;
   if(!rulesPublished||!uid)return json(401,{error:'Permission denied'});
   const path=u.pathname.replace(/\.json$/,'').replace(/^\//,'');
-  if(path==='seedRanking/runs'&&opts.method==='POST'){
+  const runsBase=[RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path===base),buildsBase=[BUILDS_PATH,LEGACY_BUILDS_PATH].find(base=>path===base||path.startsWith(base+'/'));
+  if(runsBase&&opts.method==='POST'){
    const run=JSON.parse(opts.body);
    if(run.uid!==uid||typeof run.name!=='string'||run.name.length<1||run.name.length>16||!(run.score>=1)||run.at?.['.sv']!=='timestamp')return json(401,{error:'Permission denied'});
    // Real push IDs start with their creation time; the rest keeps them unique.
    const id=pushKeyPrefix(clock.t)+String(next++).padStart(12,'0');runs[id]={...run,at:clock.t};return json(200,{name:id});
   }
-  if(path==='seedRanking/runs'&&(!opts.method||opts.method==='GET')){
+  if(runsBase&&(!opts.method||opts.method==='GET')){
    const orderBy=u.searchParams.get('orderBy'),limit=Number(u.searchParams.get('limitToLast'));
    if(orderBy==='"$key"'){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null;const kept=Object.entries(runs).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
    assert.equal(orderBy,'"score"');
    const kept=Object.entries(runs).sort((a,b)=>a[1].score-b[1].score).slice(-limit);return json(200,Object.fromEntries(kept));
   }
   // Builds: same rules as docs/firebase-rules-with-seed.json — only the run's writer, once, known fields only.
-  const bm=path.match(/^seedRanking\/builds\/(.+)$/);
-  if(path==='seedRanking/builds'||bm){
+  const bm=buildsBase&&path!==buildsBase?{1:path.slice(buildsBase.length+1)}:null;
+  if(buildsBase){
    if(!buildRulesPublished)return json(401,{error:'Permission denied'});
-   if(path==='seedRanking/builds'){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null,limit=Number(u.searchParams.get('limitToLast'));const kept=Object.entries(builds).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
+   if(path===buildsBase){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null,limit=Number(u.searchParams.get('limitToLast'));const kept=Object.entries(builds).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
    const id=bm[1];
    if(!opts.method||opts.method==='GET')return json(200,builds[id]||null);
    if(opts.method==='PUT'){
@@ -44,7 +45,7 @@ function fakeFirebase({clock}){
    }
    if(opts.method==='DELETE'){if(builds[id]&&builds[id].uid!==uid)return json(401,{error:'Permission denied'});delete builds[id];return json(200,null);}
   }
-  const m=path.match(/^seedRanking\/runs\/(.+)$/);
+  const runBase=[RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path.startsWith(base+'/')),m=runBase?{1:path.slice(runBase.length+1)}:null;
   if(m&&opts.method==='DELETE'){if(runs[m[1]]?.uid!==uid)return json(401,{error:'Permission denied'});delete runs[m[1]];return json(200,null);}
   return json(404,{error:'not found'});
  }
