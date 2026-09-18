@@ -105,6 +105,9 @@ import {createSeedEvolution,LAW_PRESENTATION} from './evolution.js';
 const domCache=new Map();const $=s=>{let e=domCache.get(s);if(!e||!e.isConnected){e=document.querySelector(s);if(e)domCache.set(s,e);else domCache.delete(s);}return e;}, V=THREE.Vector3;
 // Frame-rate HUD writes compare first, so an unchanged number never dirties layout.
 const setText=(e,v)=>{if(e&&e.textContent!==v)e.textContent=v;},setWidth=(e,v)=>{if(e&&e.__width!==v){e.style.width=v;e.__width=v;}},setHidden=(e,v)=>{if(e&&e.hidden!==v)e.hidden=v;};
+// Damage scaling can leave fractional health internally. Keep that precision for
+// balance, but show a whole number so the HUD stays calm and readable.
+const displayHp=value=>Math.min(100,Math.max(0,Math.ceil(Number(value)-1e-6)));
 let canvasRect={left:0,top:0,width:1,height:1};
 // Phones held sideways show the fight closer and follow the seed more (2026-09-15: the arena looked tiny on a phone).
 // World coordinates and hit sizes are unchanged; only the camera frames a smaller area.
@@ -447,7 +450,7 @@ function saveBoundary(nextStage=stage,saveMode='entry',over={}){
  return saveOK;
 }
 // After a warden the journey simply continues: a little health back, and every enemy a little faster.
-function nextJourney(){austinRoom=false;cycle++;rerollUsed=false;stage=0;const before=hp;hp=Math.min(100,hp+JOURNEY_HEAL);wave();$('#toast').textContent=`여정 ${cycle+1} · 생명력 +${hp-before} · 적과 탄막이 조금 더 거세집니다`;}
+function nextJourney(){austinRoom=false;cycle++;rerollUsed=false;stage=0;const before=hp;hp=Math.min(100,hp+JOURNEY_HEAL);wave();$('#toast').textContent=`여정 ${cycle+1} · 생명력 +${displayHp(hp-before)} · 적과 탄막이 조금 더 거세집니다`;}
 function enterAustin(){austinRoom=true;wave();$('#toast').textContent=`${AUSTIN.name} 등장 · 바닥 시계의 침이 다음 종소리의 빈틈을 가리킵니다`;}
 function saveAfterBoss(){if(austinAhead())return saveBoundary(4,'austin');return saveBoundary(0,'entry',{cycle:cycle+1,hp:Math.min(100,hp+JOURNEY_HEAL),rerollUsed:false});}
 document.body.insertAdjacentHTML('beforeend','<button id="save-exit" hidden>저장된 방 입구부터 나중에 이어하기</button>');
@@ -606,7 +609,7 @@ function useInventoryItem(id){
  const item=ITEMS[id],r=useItem(inventory,id,{hp});
  if(!r.ok){$('#toast').textContent=r.reason==='full'?'생명력이 가득합니다 · 물약은 아껴 두세요':r.reason==='passive'?`${item.name}은 쓰러질 때 저절로 쓰입니다`:r.reason==='empty'?`${item?item.name:'물약'}이 없습니다`:'';return;}
  selectedItem=id;potionCD=.6;itemBarKey='';
- if(r.kind==='heal'){hp=r.hp;vfx.pulse(player.position,'seed',1.6,.5);vfx.burst(player.position,'seed',24,1.4);audio.play('pickup');$('#toast').textContent=`${item.name} · 생명력 +${r.healed}`;}
+ if(r.kind==='heal'){hp=r.hp;vfx.pulse(player.position,'seed',1.6,.5);vfx.burst(player.position,'seed',24,1.4);audio.play('pickup');$('#toast').textContent=`${item.name} · 생명력 +${displayHp(r.healed)}`;}
  else if(r.kind==='haste'){hasteTime=r.seconds;vfx.pulse(player.position,'orbit',1.8,.5);vfx.burst(player.position,'orbit',20,1.6);$('#toast').textContent=`${item.name} · ${r.seconds}초 동안 빨라집니다`;}
  else if(r.kind==='shell'){shellTime=r.seconds;vfx.pulse(player.position,'reflect',1.4,.6);vfx.burst(player.position,'reflect',22,1.2);$('#toast').textContent=`${item.name} · ${r.seconds}초 동안 피해를 막습니다`;}
  if(exitOpen){if(stage===4)saveAfterBoss();else saveBoundary(stage+1);}
@@ -646,7 +649,7 @@ function cardChoice(mid=false,fixedOffer=null){
  if($('#change-second'))$('#change-second').onclick=()=>offerSecondFusion(()=>cardChoice(mid,offered),true);
  if($('#change-solo'))$('#change-solo').onclick=()=>offerSolo(()=>cardChoice(mid,offered),true);
  if($('#change-awaken'))$('#change-awaken').onclick=()=>offerAwaken(()=>cardChoice(mid,offered),true);
- document.querySelectorAll('[data-run-bonus]').forEach(button=>button.onclick=()=>{if(mode!=='cards')return;const id=button.dataset.runBonus,result=applyRunBonus(runBonuses,id,{hp});if(!result.ok)return;runBonuses=result.state;hp=result.hp;runBonusOffer=[];const bonus=RUN_BONUSES[id];vfx.pulse(player.position,id==='heal'?'seed':id==='move'?'orbit':id==='shot'?'frost':'burst',1.7,.45);vfx.burst(player.position,id==='heal'?'seed':id==='move'?'orbit':id==='shot'?'frost':'burst',20,1.35);audio.play('pickup');const bonusChoice=button.closest('.run-bonus-choice');bonusChoice.classList.add('received');bonusChoice.innerHTML='<small>희귀한 축복을 받았습니다 · 이제 법칙을 하나 더 골라 주세요</small>';$('#toast').textContent=id==='heal'?`${bonus.name} · 생명력 +${result.healed} · 법칙도 고르세요`:`${bonus.name} ${result.level}/5 · ${bonus.desc} · 법칙도 고르세요`;});
+ document.querySelectorAll('[data-run-bonus]').forEach(button=>button.onclick=()=>{if(mode!=='cards')return;const id=button.dataset.runBonus,result=applyRunBonus(runBonuses,id,{hp});if(!result.ok)return;runBonuses=result.state;hp=result.hp;runBonusOffer=[];const bonus=RUN_BONUSES[id];vfx.pulse(player.position,id==='heal'?'seed':id==='move'?'orbit':id==='shot'?'frost':'burst',1.7,.45);vfx.burst(player.position,id==='heal'?'seed':id==='move'?'orbit':id==='shot'?'frost':'burst',20,1.35);audio.play('pickup');const bonusChoice=button.closest('.run-bonus-choice');bonusChoice.classList.add('received');bonusChoice.innerHTML='<small>희귀한 축복을 받았습니다 · 이제 법칙을 하나 더 골라 주세요</small>';$('#toast').textContent=id==='heal'?`${bonus.name} · 생명력 +${displayHp(result.healed)} · 법칙도 고르세요`:`${bonus.name} ${result.level}/5 · ${bonus.desc} · 법칙도 고르세요`;});
  document.querySelectorAll('[data-choice]').forEach(button=>button.onclick=()=>{if(mode!=='cards')return;const id=button.dataset.choice;
   const mut=parseMutationChoice(id);
   if(mut){if(!applyMutation(mutations,mut.id))return;syncLaws();updateFormLabel();vfx.evolution(player.position,mut.law);finishChoice();$('#toast').textContent=`${mut.badge} ${mut.name} · ${mut.desc}`;return;}
@@ -1126,7 +1129,7 @@ function presentFrame(time){
  renderItemBar();renderActiveButton($('#active-skill'),{forms:heldForms,gauge:activeGauge,live:mode==='playing'&&!paused,touch:document.body.classList.contains('touch-mode')});
  const readyNow=mode==='playing'&&!paused&&!activeGauge.plan&&activeGauge.cooldown<=0&&activeGauge.value>=ACTIVE.max&&activeState(heldForms).state!=='LOCKED';if(readyNow&&!activeReadyAnnounced)audio.play('ultimateReady');activeReadyAnnounced=readyNow;
  if(mode!=='playing'||paused)return;
- const wardenGroup=enemies.filter(e=>e.type==='warden'&&!e.dead&&(stage===4||!e.elite)),boss=enemies.find(e=>e.type==='austin')||wardenGroup.find(e=>e.moveName)||wardenGroup.find(e=>!e.duoSupport)||wardenGroup[0];if(boss)renderBossHud(boss,boss.type==='austin'?[boss]:wardenGroup);else setHidden($('#boss-hud'),true);const nearExit=canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});setHidden($('#exit-room'),!nearExit);setText($('#exit-room'),stage===4?(austinAhead()?'진짜 보스에게 · E':'다음 여정으로 · E'):touch.enabled?'다음 방으로':'다음 방으로 · E');gateHalo.rotation.y=time*.6;setWidth($('#hpbar'),hp+'%');setText($('#hptext'),`${hp} / 100`);setText($('#dashname'),`◇  ${dashState.id?DASH_EVOLUTIONS[dashState.id].name:'회피'}`);setWidth($('#dashbar'),(dm.fill*100).toFixed(1)+'%');setText($('#dashtext'),dashLock>0?'봉인 '+dashLock.toFixed(1)+'s':dm.maxCharges>1?`${dm.charges}/${dm.maxCharges}${dm.charges<dm.maxCharges?' · '+dm.recharge.toFixed(1)+'s':''}`:dm.ready?'준비':dm.recharge.toFixed(1)+'s');
+ const wardenGroup=enemies.filter(e=>e.type==='warden'&&!e.dead&&(stage===4||!e.elite)),boss=enemies.find(e=>e.type==='austin')||wardenGroup.find(e=>e.moveName)||wardenGroup.find(e=>!e.duoSupport)||wardenGroup[0];if(boss)renderBossHud(boss,boss.type==='austin'?[boss]:wardenGroup);else setHidden($('#boss-hud'),true);const nearExit=canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});setHidden($('#exit-room'),!nearExit);setText($('#exit-room'),stage===4?(austinAhead()?'진짜 보스에게 · E':'다음 여정으로 · E'):touch.enabled?'다음 방으로':'다음 방으로 · E');gateHalo.rotation.y=time*.6;setWidth($('#hpbar'),hp+'%');setText($('#hptext'),`${displayHp(hp)} / 100`);setText($('#dashname'),`◇  ${dashState.id?DASH_EVOLUTIONS[dashState.id].name:'회피'}`);setWidth($('#dashbar'),(dm.fill*100).toFixed(1)+'%');setText($('#dashtext'),dashLock>0?'봉인 '+dashLock.toFixed(1)+'s':dm.maxCharges>1?`${dm.charges}/${dm.maxCharges}${dm.charges<dm.maxCharges?' · '+dm.recharge.toFixed(1)+'s':''}`:dm.ready?'준비':dm.recharge.toFixed(1)+'s');
 }
 // The item bar is rebuilt only when counts or the selection change, never every frame.
 function renderItemBar(){
