@@ -676,8 +676,11 @@ function showBetaLock(message='',success=false){
  revealApp();
  mode='beta-lock';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous&&user.email;
+ const accountHint=linked
+  ?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>${adminMode?'관리자 계정 확인 완료':'현재 로그인된 계정 · 관리자가 아니면 다른 계정으로 바꿔 주세요.'}</span></div>`
+  :'';
  $('#overlay').innerHTML=`<div class="menu-panel beta-lock-panel"><p class="eyebrow">SEED · CLOSED BETA</p><div class="account-mark">♧</div><h2>${BETA_NOTICE.title}</h2><p class="account-copy">${BETA_NOTICE.body}</p>
-  <button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>개발자 계정으로 들어가기</strong><small>관리자 Google 계정으로 웹 테스트</small></span></button>
+  ${accountHint}<button id="beta-admin" class="account-button beta-admin-entry"><b>✦</b><span><strong>${linked?'관리자 계정으로 바꾸기':'개발자 계정으로 들어가기'}</strong><small>${linked?'현재 계정에서 로그아웃한 뒤 Google 계정을 다시 선택합니다':'관리자 Google 계정으로 웹 테스트'}</small></span></button>
   <div class="beta-test-path"><strong>이미 등록된 테스터인가요?</strong><span>테스트에 등록된 Google 계정으로 열어야 설치할 수 있어요.</span><a class="account-button beta-install" href="${BETA_TEST_URL}" target="_blank" rel="noopener"><span><b>Google Play 테스트 참여·설치</b><small>공식 비공개 테스트 링크</small></span></a></div>
   <div class="beta-divider"><span>새로 신청하기</span></div>
   ${linked?`<div class="account-status beta-account"><strong>${escapeHtml(user.email)}</strong><span>이 Google 계정으로 신청합니다.</span></div>`:`<button id="beta-google" class="account-button google beta-google"><b>G</b><span><b>Google 계정으로 지원하기</b><small>테스트 등록에 사용할 이메일을 확인합니다</small></span></button>`}
@@ -690,7 +693,7 @@ function showBetaLock(message='',success=false){
  const busy=state=>document.querySelectorAll('#beta-google,#beta-submit').forEach(button=>button.disabled=state);
  if($('#beta-google'))$('#beta-google').onclick=async()=>{busy(true);try{await account.signInWithGoogle();await refreshAdminMode();if(adminMode){showEntry();return;}showBetaLock();}catch(error){showBetaLock(betaApplicationMessage(error));}};
  if($('#beta-submit'))$('#beta-submit').onclick=async()=>{busy(true);try{await submitBetaApplication({account,android:$('#beta-android').checked,consent:$('#beta-consent').checked});showBetaLock('신청을 받았어요. 등록 완료 안내를 받은 뒤 위 공식 링크에서 참여해 주세요.',true);}catch(error){const node=$('#beta-message');if(node)node.textContent=betaApplicationMessage(error);busy(false);}};
- $('#beta-admin').onclick=()=>showAccount();
+ $('#beta-admin').onclick=async()=>{if(linked){await account.signOut();cloud.signOutCleanup();}showAccount();};
 }
 // A tab can stay open for hours without reloading. Recheck the live gate while it
 // is running so an already-open game cannot keep playing after the web closes.

@@ -38,7 +38,7 @@ export function accountLabel(user){
 }
 
 export function createAccountAuth({storage=globalThis.localStorage}={}){
- let user=null,readyPromise=null,webAuth=null,webSdk=null;
+ let user=null,readyPromise=null,webAuth=null,webSdk=null,stopWebObserver=null;
  const listeners=new Set();
  const emit=next=>{user=safeUser(next);for(const listener of listeners)listener(user);return user;};
  const chosen=()=>{try{return storage?.getItem(ACCOUNT_CHOICE_KEY)==='yes';}catch{return false;}};
@@ -58,8 +58,13 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
    webSdk={...appSdk,...authSdk};
    const app=webSdk.getApps()[0]||webSdk.initializeApp(FIREBASE_APP);
    webAuth=webSdk.getAuth(app);
-   await webSdk.setPersistence(webAuth,webSdk.browserLocalPersistence);
+   // Local persistence keeps the developer/tester account after a refresh. A
+   // session fallback still lets privacy-restricted browsers finish login
+   // instead of dropping the authenticated user immediately.
+   try{await webSdk.setPersistence(webAuth,webSdk.browserLocalPersistence);}
+   catch{await webSdk.setPersistence(webAuth,webSdk.browserSessionPersistence);}
    await webAuth.authStateReady();
+   if(!stopWebObserver)stopWebObserver=webSdk.onAuthStateChanged(webAuth,next=>emit(next),()=>{});
    return emit(webAuth.currentUser);
   })().catch(()=>emit(null));
   return readyPromise;
@@ -105,6 +110,7 @@ export function createAccountAuth({storage=globalThis.localStorage}={}){
    }
   }else{
    const authProvider=kind==='apple'?new webSdk.OAuthProvider('apple.com'):new webSdk.GoogleAuthProvider();
+   if(kind==='google')authProvider.setCustomParameters({prompt:'select_account'});
    result=user?.isAnonymous?await webSdk.linkWithPopup(webAuth.currentUser,authProvider):await webSdk.signInWithPopup(webAuth,authProvider);
   }
   rememberChoice();
