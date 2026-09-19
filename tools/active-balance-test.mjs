@@ -33,7 +33,8 @@ for(const level of [SOLO_LEVEL-1,9]){
  // yardstick and make an unchanged weapon fail merely by lowering the median.
  assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x the established median crowd damage`);
  for(const id of newForms)assert.ok(curated[id]>=middle*.55&&curated[id]<=middle*1.55,`level ${level}: ${id} misses the authored fusion damage band`);
- assert.ok(curated.tidepull<=middle*1.55,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} exceeds its control budget`);
+ assert.ok(curated.tidepull>=middle*1.5&&curated.tidepull<=middle*2,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} misses its control-specialist band`);
+ assert.ok(curated.tidepull<curated.collapse,`level ${level}: tidepull control and damage together exceed collapse's dedicated crowd burst`);
  assert.ok(bossDps('tidepull',level)<curated.tidepull*.2,`level ${level}: tidepull lost its single-target weakness`);
  const lanceLine=simulate('thunderlance',level,{scene:'line'}).dps,lanceScatter=simulate('thunderlance',level,{scene:'scattered'}).dps;
  assert.ok(lanceLine>lanceScatter*2.5,`level ${level}: thunderlance no longer rewards a lined-up shot`);
