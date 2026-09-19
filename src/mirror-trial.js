@@ -32,6 +32,27 @@ export const MIRROR_BREAK=Object.freeze({
  ultimateCharge:.12
 });
 
+export const MIRROR_ATTACK_CADENCE=Object.freeze({
+ autoFire:true,
+ manualAttackButton:false,
+ baseCooldown:.9,
+ minimumCooldown:.52,
+ perfectDodgeRefund:.28,
+ breakInstantReady:true,
+ visibleReadyRing:true,
+ mirrorUsesSameBaseCooldown:true
+});
+
+export function mirrorAttackCooldown(intervalScale=1){
+ const scale=Math.max(.35,Math.min(2,Number(intervalScale)||1));
+ return Math.max(MIRROR_ATTACK_CADENCE.minimumCooldown,MIRROR_ATTACK_CADENCE.baseCooldown*scale);
+}
+
+export function refundMirrorAttackCooldown(remaining,perfectDodges=1){
+ const left=Math.max(0,Number(remaining)||0),count=Math.max(0,Math.floor(Number(perfectDodges)||0));
+ return Math.max(0,left-MIRROR_ATTACK_CADENCE.perfectDodgeRefund*count);
+}
+
 // Open arenas stay the same size. Difficulty comes from movement decisions,
 // not from squeezing the player into an increasingly tiny safe area.
 export const MIRROR_MOVEMENT_PROFILES=Object.freeze({

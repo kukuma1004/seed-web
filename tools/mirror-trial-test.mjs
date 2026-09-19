@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {MIRROR_BREAK,MIRROR_COPY_RULES,MIRROR_TOWER,MIRROR_TRIAL_LIMITS,MIRROR_TRIAL_PROTOTYPE,mirrorBuildSnapshot,mirrorCloneLoadout,mirrorFloorRules,mirrorPatternPlan} from '../src/mirror-trial.js';
+import {MIRROR_ATTACK_CADENCE,MIRROR_BREAK,MIRROR_COPY_RULES,MIRROR_TOWER,MIRROR_TRIAL_LIMITS,MIRROR_TRIAL_PROTOTYPE,mirrorAttackCooldown,mirrorBuildSnapshot,mirrorCloneLoadout,mirrorFloorRules,mirrorPatternPlan,refundMirrorAttackCooldown} from '../src/mirror-trial.js';
 
 const snapshot=mirrorBuildSnapshot({
  levels:new Map([['recall',3],['burst',1],['nope',99]]),
@@ -41,8 +41,12 @@ assert.equal(mirrorFloorRules(10).movement.feint,true,'10층부터 방향 속임
 assert.equal(mirrorFloorRules(20).chainLength,3,'후반은 탄 수 대신 패턴 연결이 늘어난다');
 assert.equal(mirrorFloorRules(21).endless,true);
 assert.equal(MIRROR_BREAK.crackGoal,3);assert.ok(MIRROR_BREAK.breakDuration>=2);assert.ok(MIRROR_BREAK.damageMultiplier>1);
+assert.equal(MIRROR_ATTACK_CADENCE.autoFire,true);assert.equal(MIRROR_ATTACK_CADENCE.manualAttackButton,false);assert.equal(MIRROR_ATTACK_CADENCE.visibleReadyRing,true);
+assert.equal(mirrorAttackCooldown(1),.9);assert.equal(mirrorAttackCooldown(.1),MIRROR_ATTACK_CADENCE.minimumCooldown,'아무리 빨라도 최소 발사 간격 유지');
+assert.ok(refundMirrorAttackCooldown(.9,1)<.9,'완벽 회피가 다음 자동공격을 앞당긴다');
+assert.equal(refundMirrorAttackCooldown(.2,3),0,'여러 번 잘 피하면 즉시 발사 준비');
 assert.equal(MIRROR_TRIAL_PROTOTYPE.placement,'separate-challenge');
 assert.equal(MIRROR_TRIAL_PROTOTYPE.localSliceFloors,10);
 assert.equal(MIRROR_TRIAL_PROTOTYPE.released,false,'검증 전에는 본편 메뉴에 공개하지 않는다');
 
-console.log('거울의 탑: 선택 빌드 완전 복제·공격적 완벽 회피·자유 이동·층별 행동·탄환 예산 통과');
+console.log('거울의 탑: 완전 복제·자동공격 쿨타임·회피 환급·자유 이동·층별 행동·탄환 예산 통과');
