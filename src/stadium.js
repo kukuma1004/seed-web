@@ -8,6 +8,10 @@ export const STADIUM_BASES=Object.freeze([
  Object.freeze({x:0,z:-3,next:3}),Object.freeze({x:-3.6,z:.6,next:0})
 ]);
 export const BASE_SLIDE=Object.freeze({radius:.82,speed:11.2,duration:.46,cooldown:.82});
+// Only rooms that visibly paint all four bases may start the assisted slide.
+// Keeping this as room data prevents invisible trigger zones in the baseball
+// and glove silhouettes while preserving the inexpensive coordinate check.
+export const BASE_SLIDE_ARENAS=Object.freeze(['diamond','ballpark']);
 // Home plate is at +Z (the near side of the camera). The mound sits about 47.5% of the
 // home-to-second distance from home, and the catcher waits just behind the plate.
 export const RELAY_LAYOUT=Object.freeze({
@@ -48,6 +52,7 @@ const FIELD_SURFACES=Object.freeze({
  ballpark:Object.freeze({color:0xf0bca5,repeat:2.7,rotation:.14,offset:[.26,.28]})
 });
 function arenaKey(arena){return arena?.id||arena?.shape||'rect';}
+export function baseSlidesEnabled(arena){return BASE_SLIDE_ARENAS.includes(arenaKey(arena));}
 function stadiumFloorGeometry(arena){
  const key=arenaKey(arena);if(floorGeometryCache.has(key))return floorGeometryCache.get(key);
  let geometry;
@@ -135,7 +140,7 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
     const surface=FIELD_SURFACES[arenaKey(arena)]||{color:0xffffff,repeat:2.35,rotation:0,offset:[0,0]};
     floorMat.color.setHex(surface.color);floorMat.map.repeat.setScalar(surface.repeat);floorMat.map.rotation=surface.rotation;floorMat.map.offset.set(...surface.offset);
    }
-   baseEnabled=Boolean(on);relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
+   baseEnabled=Boolean(on&&baseSlidesEnabled(arena));relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
    if(!relayEnabled){relayClock=0;relayHitPass=relayWarnPass=-1;relayLine.visible=false;relayBall.visible=false;}
    if(on===active)return;active=on;group.visible=on;
    if(on){

@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
-import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor,stadiumBaseAt} from '../src/stadium.js';
+import {BASE_SLIDE,BASE_SLIDE_ARENAS,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor,baseSlidesEnabled,stadiumBaseAt} from '../src/stadium.js';
 // Act 2 is open to the closed beta on both the hosted web build and Android app.
 assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
 assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
@@ -38,6 +38,8 @@ STADIUM_ROOMS.forEach((room,stage)=>{
  assert.deepEqual(trapsFor(stage,0,'stadium'),[]);assert.deepEqual(turretSpots(stage,1,'stadium'),[]);
 });
 assert.deepEqual(ACT2_ARENAS.map(a=>a.id),['home-plate','diamond','baseball','glove','ballpark']);
+assert.deepEqual(BASE_SLIDE_ARENAS,['diamond','ballpark']);
+for(const arena of ACT2_ARENAS)assert.equal(baseSlidesEnabled(arena),BASE_SLIDE_ARENAS.includes(arena.id),`${arena.id} slide visibility matches its painted bases`);
 assert.ok(STADIUM_ROOMS.slice(0,4).every(room=>room.enemies.every(([type])=>isAct2Minion(type))));
 assert.equal(new Set(STADIUM_ROOMS.flatMap(r=>r.enemies.map(([t])=>t)).filter(isAct2Minion)).size,4,'every minion appears');
 assert.notEqual(roomFor(2,0,'garden'),STADIUM_ROOMS[2]);
@@ -58,7 +60,8 @@ assert.equal(STADIUM_BASES.length,4);assert.deepEqual(STADIUM_BASES.map(base=>ba
 {const slide=baseSlideFor({x:0,z:4.2});assert.ok(slide);assert.equal(slide.index,0);assert.ok(slide.dx>0&&slide.dz<0);assert.equal(slide.speed,BASE_SLIDE.speed);assert.equal(slide.targetX,STADIUM_BASES[1].x);assert.equal(slide.targetZ,STADIUM_BASES[1].z);assert.ok(Math.abs(slide.duration-BASE_SLIDE.duration)<.02);assert.equal(stadiumBaseAt(STADIUM_BASES[1]),1);assert.equal(baseSlideFor(STADIUM_BASES[1],0,true,1),null,'landing plate stays latched until the seed steps off');assert.equal(baseSlideFor({x:0,z:4.2},.1),null);assert.equal(baseSlideFor({x:9,z:7}),null);assert.equal(baseSlideFor({x:0,z:4.2},0,false),null);}
 // Every possible entry point inside a base trigger has a clear rail to the next base.
 const hitsCover=(x,z,o,r=.4)=>Math.abs(x-o.x)<o.w/2+r&&Math.abs(z-o.z)<o.d/2+r;
-for(const room of STADIUM_ROOMS)for(let leg=0;leg<STADIUM_BASES.length;leg++)for(let a=0;a<12;a++){
+for(const roomIndex of [1,4])for(let leg=0;leg<STADIUM_BASES.length;leg++)for(let a=0;a<12;a++){
+ const room=STADIUM_ROOMS[roomIndex];
  const from=STADIUM_BASES[leg],to=STADIUM_BASES[from.next],angle=a*Math.PI/6,start={x:from.x+Math.cos(angle)*BASE_SLIDE.radius*.9,z:from.z+Math.sin(angle)*BASE_SLIDE.radius*.9};
  for(let step=0;step<=48;step++){const t=step/48,x=start.x+(to.x-start.x)*t,z=start.z+(to.z-start.z)*t;assert.ok(!room.covers.some(o=>hitsCover(x,z,o)),`${room.name} slide ${leg} crosses cover`);}
 }
@@ -109,7 +112,10 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  e.state='stealTell';e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='swingTell';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='rallyTell';e.timer=0;tickAlwaysBeginner(e,.04,ctx);
- assert.ok(fx.pitch>=2&&fx.rush>=1&&fx.swing>=1&&fx.wave>=1,'all five boss patterns own a distinct VFX cue');
+ e.state='doubleTell';e.kind='doubleplay';e.dir.set(0,0,1);e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'doubleRush');
+ e.state='countTell';e.kind='fullcount';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);for(let i=0;i<18;i++)tickAlwaysBeginner(e,.04,ctx);
+ assert.ok(fx.pitch>=6&&fx.rush>=2&&fx.swing>=1&&fx.wave>=1,'all seven boss patterns own readable VFX cues');
+ assert.ok(ALWAYS_PHASES.rally.patterns.includes('doubleplay'));assert.ok(ALWAYS_PHASES.finish.patterns.includes('fullcount'));
  e.hp=e.maxHp*.6;e.state='stalk';tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'phaseShift');for(let t=0;t<1.2;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.equal(e.phase,'rally');assert.ok(summons.includes('runner'));
  assert.equal(fx.phase,1,'phase transition owns a dedicated VFX cue');
 }
