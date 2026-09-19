@@ -16,19 +16,19 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: sixteen hand-authored forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,16);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,16);
+// Catalogue: nineteen hand-authored forms, unique pairs, every law feeds at least two forms.
+assert.equal(Object.keys(FORMS).length,19);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,19);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
 
 // Orbit evolutions must remain visually readable without relying on colour.
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,4);
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,4);
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,5);
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,5);
 {
  const styles=Object.keys(ORBIT_VISUALS),poses=styles.map(id=>orbitPose(id,1,6,.4,.8,{radius:2,inner:1.2,outer:3,period:2.4}));
- assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,4,'each orbit family has a distinct path');
+ assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,5,'each orbit family has a distinct path');
  assert.ok(poses.every(p=>p.scale.length===3&&Number.isFinite(p.yaw)));
 }
 
@@ -153,4 +153,26 @@ for(const id of Object.keys(FORMS)){
  assert.ok(f.calls.some(c=>c.e===returnPath&&c.phase==='return'),'the core damages along its route home');
  assert.ok(f.calls.some(c=>c.e===home&&c.phase==='home'),'reaching the seed creates a second explosion');f.combat.dispose();
 }
-console.log('Forms: sixteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+// The challenge batch rewards an action instead of granting unconditional
+// damage: keep moving, link a crowd, or draw a useful return curve.
+{
+ const target=enemy(4),f=fixture([target]);f.combat.set('comethalo');step(f.combat,.9);
+ assert.equal(f.calls.length,0,'a stationary comet halo loses its charge');
+ for(let i=0;i<140;i++){const a=i*.045;f.player.position.set(Math.cos(a)*.9,0,Math.sin(a)*.9);f.combat.update(.02);}
+ assert.ok(f.calls.some(c=>c.kind==='comethalo'&&c.phase==='corolla'),'continuous movement launches an explosive comet');
+ assert.ok(f.combat.state().bolts<=formStats('comethalo',1).bolts,'the comet pool stays capped');f.combat.dispose();
+}
+{
+ const sparse=fixture([enemy(2),enemy(4)]);sparse.combat.set('stormanchor');sparse.combat.fire(vec(),vec(1));step(sparse.combat,.5);
+ assert.ok(!sparse.calls.some(c=>c.phase==='anchor'),'two enemies cannot earn a gravity anchor');sparse.combat.dispose();
+ const foes=[enemy(2),enemy(4),enemy(4,2),enemy(2,2)],before=foes.map(e=>e.g.position.clone()),crowd=fixture(foes);crowd.combat.set('stormanchor');crowd.combat.fire(vec(),vec(1));step(crowd.combat,.5);
+ assert.ok(crowd.calls.some(c=>c.phase==='anchor'),'three linked enemies create a delayed anchor blast');
+ assert.ok(foes.some((e,i)=>!e.g.position.equals(before[i])),'the anchor gathers ordinary enemies before it bursts');crowd.combat.dispose();
+}
+{
+ const bud=enemy(5),pathA=enemy(3,.75),pathB=enemy(2,-.7),f=fixture([bud,pathA,pathB]);f.combat.set('returningpetals');f.combat.fire(vec(),vec(1),vec(5));
+ for(let i=0;i<140;i++){if(i>30)f.player.position.z=Math.min(1.4,f.player.position.z+.02);f.combat.update(.01);}
+ assert.ok(f.calls.some(c=>c.e===bud&&c.phase==='bloom'),'the distant bud opens before returning');
+ assert.ok(f.calls.some(c=>c.phase==='return'),'curved petals damage along the player-drawn return paths');f.combat.dispose();
+}
+console.log('Forms: nineteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

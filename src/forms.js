@@ -24,7 +24,10 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('blastlance',['pierce','burst'],'폭발 창','긴 창이 적을 관통할수록 폭발력을 모으고, 사거리 끝에서 모은 힘을 터뜨립니다.','일렬로 선 적을 꿰뚫을수록 마지막 폭발이 강해짐','옆으로 흩어진 적과 코앞의 적에게는 충전할 거리가 부족'),
  form('frostkaleidoscope',['reflect','frost'],'서리 만화경','얼음 거울탄이 벽을 튕기며 냉기를 모읍니다. 두 번 이상 튕긴 탄이 적을 맞히면 얼음 파편으로 크게 깨집니다.','벽 각도를 읽어 강한 빙결 파쇄를 준비','트인 공간에서는 파쇄 조건을 만들 수 없음'),
  form('lightningpetal',['split','chain'],'번개 꽃잎','첫 적에게 닿은 꽃봉오리가 여러 전기 꽃잎으로 갈라지고, 꽃잎마다 가까운 다음 적에게 번개를 잇습니다.','적이 여러 방향에 퍼져 있을수록 꽃잎과 번개가 넓게 번짐','적이 한두 마리면 꽃잎과 후속 번개가 사라짐'),
- form('returnflare',['burst','recall'],'귀환 불씨','목표에서 한 번 터진 불씨핵이 씨앗을 향해 돌아오며 적을 긁고, 씨앗에 닿을 때 다시 폭발합니다.','이동으로 귀환 경로와 마지막 폭발 위치를 바꿈','제자리에 머물면 두 폭발과 귀환 경로가 한곳에 겹침')
+ form('returnflare',['burst','recall'],'귀환 불씨','목표에서 한 번 터진 불씨핵이 씨앗을 향해 돌아오며 적을 긁고, 씨앗에 닿을 때 다시 폭발합니다.','이동으로 귀환 경로와 마지막 폭발 위치를 바꿈','제자리에 머물면 두 폭발과 귀환 경로가 한곳에 겹침'),
+ form('comethalo',['orbit','burst'],'혜성 화관','씨앗이 움직인 거리로 화관을 충전하고, 충전된 꽃봉오리가 가까운 적에게 폭발 혜성을 쏩니다.','계속 이동하며 여러 폭발 경로를 이어 감','멈춰 있으면 충전이 빠져 혜성이 나오지 않음',true),
+ form('stormanchor',['chain','gravity'],'뇌우 닻','번개가 세 적 이상을 이으면 그 중심에 중력 닻을 박아 적을 끌어당긴 뒤 터뜨립니다.','여러 방향의 적을 한 점으로 모아 후속 공격 준비','적이 한두 마리면 닻이 생기지 않아 연쇄 피해만 남음'),
+ form('returningpetals',['split','recall'],'회귀 꽃비','먼 곳에서 갈라진 꽃잎이 현재 씨앗 위치를 향해 휘어 돌아옵니다.','이동으로 여러 귀환 경로를 그려 넓게 훑음','제자리에 있으면 꽃잎 경로가 겹쳐 많은 꽃잎을 낭비')
 ].map(f=>[f.id,withPair(f)])));
 
 const pairKey=requires=>[...requires].sort().join('+');
@@ -71,7 +74,7 @@ const SOLO_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)의 단독 진화는 뺀다.
 export const SOLO_FORMS=Object.freeze(Object.fromEntries(Object.entries(SOLO_ALL).filter(([,f])=>!HIDDEN_LAWS.includes(f.requires[0]))));
-// Every first evolution the seed can hold: sixteen authored first fusions and nine solo evolutions.
+// Every first evolution the seed can hold: nineteen authored first fusions and nine solo evolutions.
 // Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
@@ -154,8 +157,8 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)이 들어간 쌍둥이 각성은 뺀다.
 export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
-// Every evolution the seed can hold: sixteen authored first fusions, nine solo evolutions,
-// ten curated awakenings and 26 twin awakenings (61).
+// Every evolution the seed can hold: nineteen authored first fusions, nine solo evolutions,
+// ten curated awakenings and 26 twin awakenings (64).
 export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
@@ -224,6 +227,9 @@ const SURGE=Object.freeze({
  frostkaleidoscope:s=>({bolts:s.bolts+4,bounces:s.bounces+3,shatterBounces:Math.max(1,s.shatterBounces-1)}),
  lightningpetal:s=>({petals:s.petals+2,range:s.range+.8,chainRange:s.chainRange+.6}),
  returnflare:s=>({bolts:s.bolts+2,radius:s.radius+.45,homeRadius:s.homeRadius+.6}),
+ comethalo:s=>({comets:s.comets+2,pulse:s.pulse*.55,chargeDecay:0,blastRadius:s.blastRadius+.45}),
+ stormanchor:s=>({jumps:s.jumps+3,range:s.range+.8,finishRadius:s.finishRadius+.45}),
+ returningpetals:s=>({bolts:s.bolts+2,petals:s.petals+2,range:s.range+1}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
  thunderweb:s=>({jumps:s.jumps+1,decay:Math.min(.93,s.decay+.02)}),
@@ -322,6 +328,9 @@ function baseStats(id,level){
   case 'frostkaleidoscope':return {interval:.98*faster,damage:29*power,speed:11.5,life:3.4,bounces:Math.min(9,4+Math.floor(up/2)),gain:.1,slow:1.7,shatter:54*power,shatterBounces:2,bolts:4};
   case 'lightningpetal':return {interval:1.02*faster,damage:34*power,speed:12,life:1.25,bolts:4,petals:Math.min(5,3+Math.floor(up/3)),petalDamage:22*power,chainDamage:15*power,range:Math.min(5.4,4.2+.1*up),chainRange:3.4};
   case 'returnflare':return {interval:1.32*faster,damage:30*power,returnDamage:22*power,homeDamage:46*power,radius:Math.min(2.5,1.65+.1*up),homeRadius:Math.min(3,2.05+.1*up),range:9,speed:10.5,life:4.5,bolts:3};
+  case 'comethalo':return {interval:Infinity,damage:12*power,blast:22*power,blastRadius:Math.min(2.5,1.45+.1*up),comets:Math.min(5,3+Math.floor(up/3)),radius:2.25,range:Math.min(8,6.6+.1*up),pulse:.72*faster,chargeGain:.75,chargeDecay:.34,chargeCost:.18,speed:12.5,life:1.8,bolts:12};
+  case 'stormanchor':return {interval:1.22*faster,damage:18*power,jumps:Math.min(7,4+Math.floor(up/3)),range:Math.min(5.3,4.3+.1*up),decay:.9,reach:10,minLinks:3,finish:42*power,finishRadius:Math.min(3,2+.1*up),pull:1.25};
+  case 'returningpetals':return {interval:1.08*faster,damage:24*power,petalDamage:38*power,petals:Math.min(6,3+Math.floor(up/3)),range:Math.min(10,8+.14*up),speed:11.5,life:4.2,bolts:3,steer:5.5,hitsPerLeg:Math.min(5,3+Math.floor(up/3))};
   default:return {interval:Infinity,damage:0};
  }
 }
@@ -330,7 +339,7 @@ function baseStats(id,level){
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
  if(GENERATED_FORMS[id]||SECOND_FORMS[id])return `${SECOND_FORMS[id]?'재융합':'진화'} Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
-  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통'],frostkaleidoscope:['bounces','튕김'],lightningpetal:['petals','전기 꽃잎'],returnflare:['homeRadius','귀환 폭발 반경']})[baseFormOf(id)];
+  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통'],frostkaleidoscope:['bounces','튕김'],lightningpetal:['petals','전기 꽃잎'],returnflare:['homeRadius','귀환 폭발 반경'],comethalo:['comets','혜성 꽃봉오리'],stormanchor:['jumps','연쇄'],returningpetals:['petals','귀환 꽃잎']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}
  return parts.join(' · ');

@@ -26,7 +26,7 @@ for(const level of [SOLO_LEVEL-1,9]){
 // reward for lining enemies up or accepting point-blank danger.
 for(const level of [SOLO_LEVEL-1,9]){
  const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
- const newForms=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare'];
+ const newForms=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals'];
  const established=Object.entries(curated).filter(([id])=>!newForms.includes(id)).map(([,damage])=>damage);
  const middle=median(established);
  // Adding a deliberately tactical weapon must not move the historical balance
@@ -79,7 +79,7 @@ for(const id of Object.keys(ALL_FORMS)){
  const base=formStats(id,3),up=formStats(id,3,{surge:true});
  assert.equal(up.surge,true);
  if(Number.isFinite(base.interval))assert.ok(up.interval<base.interval);
- for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed','shatterBounces'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
+ for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','chargeDecay','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed','shatterBounces'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
  assert.deepEqual(formStats(id,1),formStats(id,1,{surge:false}));
 }
 // Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:

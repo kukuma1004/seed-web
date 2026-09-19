@@ -131,6 +131,16 @@ export function createFormVisuals(){
   paint(new THREE.DodecahedronGeometry(.16,0),C.ivory).translate(.13,0,.065),
   paint(leaf(.5,.12,.08,.035,6),C.jade).rotateZ(-Math.PI/2).translate(-.36,0,.06)
  ]);
+ geos.cometBud=join('charged-comet-corolla',[
+  seedBody(.13,.3,C.gold),
+  paint(new THREE.TorusGeometry(.2,.04,5,12),C.jade).rotateX(Math.PI/2),
+  paint(leaf(.48,.15,.1,.04,6),C.ivory).rotateZ(-Math.PI/2).translate(-.3,0,.05)
+ ]);
+ geos.returnPetal=join('returning-split-petal',[
+  paint(crescent(.7),C.ivory).rotateZ(-.2),
+  paint(leaf(.48,.16,.1,.04,6),C.jade).rotateZ(-Math.PI/2).translate(-.25,0,.055),
+  paint(new THREE.OctahedronGeometry(.09,0),C.gold).translate(.13,0,.07)
+ ]);
  geos.gene=join('paired-law-gene',[paint(new THREE.OctahedronGeometry(.19,0).scale(.72,.72,1.45),C.violet),paint(new THREE.TorusGeometry(.22,.035,5,12),C.gold).rotateX(Math.PI/2),paint(leaf(.38,.13,.05,.03,5),C.ivory).rotateZ(-.72).translate(.08,.12,.03)]);
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
  for(let i=0;i<4;i++)star.push(petal(.5,.25,{edge:C.ivory,inner:i%2?C.gold:C.jade,bend:.025,depth:.075}).translate(0,.2,0).rotateZ(i*Math.PI/2));
