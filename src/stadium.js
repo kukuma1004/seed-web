@@ -13,10 +13,15 @@ export const BASE_SLIDE=Object.freeze({radius:.82,speed:11.2,duration:.46,cooldo
 export const RELAY_LAYOUT=Object.freeze({
  pitcher:Object.freeze({x:0,z:.78}),home:Object.freeze({x:0,z:4.2}),catcher:Object.freeze({x:0,z:5.08})
 });
-export function baseSlideFor(position,cooldown=0,enabled=true){
+export function stadiumBaseAt(position,radius=BASE_SLIDE.radius){
+ return STADIUM_BASES.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=radius);
+}
+export function baseSlideFor(position,cooldown=0,enabled=true,blockedIndex=-1){
  if(!enabled||cooldown>0)return null;
- const index=STADIUM_BASES.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=BASE_SLIDE.radius);
- if(index<0)return null;
+ const index=stadiumBaseAt(position);
+ // Landing on a base must not launch the next leg automatically. The player
+ // has to step off the plate and deliberately enter it again.
+ if(index<0||index===blockedIndex)return null;
  const from=STADIUM_BASES[index],to=STADIUM_BASES[from.next],length=Math.hypot(to.x-position.x,to.z-position.z)||1;
  return {index,targetX:to.x,targetZ:to.z,dx:(to.x-position.x)/length,dz:(to.z-position.z)/length,speed:BASE_SLIDE.speed,duration:length/BASE_SLIDE.speed,cooldown:BASE_SLIDE.cooldown};
 }
@@ -57,7 +62,7 @@ function stadiumMarkings(arena){
  const line=(x1,z1,x2,z2,w=.09)=>{const dx=x2-x1,dz=z2-z1,len=Math.hypot(dx,dz);if(len<.001)return;const g=new THREE.PlaneGeometry(w,len).rotateX(-Math.PI/2);g.rotateY(Math.atan2(dx,dz));g.translate((x1+x2)/2,.12,(z1+z2)/2);parts.push(g);};
  const path=(points,w=.09)=>{for(let i=1;i<points.length;i++)line(...points[i-1],...points[i],w);};
  const arc=(cx,cz,rx,rz,a0,a1,steps=18,w=.08)=>{const points=[];for(let i=0;i<=steps;i++){const a=a0+(a1-a0)*i/steps;points.push([cx+Math.sin(a)*rx,cz-Math.cos(a)*rz]);}path(points,w);};
- const baseDiamond=()=>{const home=[0,4.2],first=[3.6,.6],second=[0,-3],third=[-3.6,.6];path([home,first,second,third,home]);for(const [x,z] of [first,second,third]){const b=new THREE.PlaneGeometry(.42,.42).rotateX(-Math.PI/2);b.rotateY(Math.PI/4);b.translate(x,.122,z);parts.push(b);}};
+ const baseDiamond=()=>{const home=[0,4.2],first=[3.6,.6],second=[0,-3],third=[-3.6,.6];path([home,first,second,third,home]);for(const [x,z] of [home,first,second,third]){const b=new THREE.PlaneGeometry(.42,.42).rotateX(-Math.PI/2);b.rotateY(Math.PI/4);b.translate(x,.122,z);parts.push(b);}};
  const batterBox=()=>{path([[-.9,3.5],[.9,3.5],[.9,4.9],[-.9,4.9],[-.9,3.5]],.06);};
  if(key==='home-plate'){
   batterBox();path([[-5.9,5.85],[0,-6.6],[5.9,5.85]],.1);path([[-4.35,1],[0,-5.1],[4.35,1]],.06);
@@ -101,13 +106,8 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const flagXs=[-8,-4.8,-1.6,1.6,4.8,8],flags=new THREE.InstancedMesh(flagGeo,flagMat,flagXs.length),pole=new THREE.Mesh(mergeParts(flagXs.map(x=>new THREE.CylinderGeometry(.03,.03,2.2,5).translate(x,1.1,-8.9))),towerMesh.material);
  flagXs.forEach((x,i)=>flags.setColorAt(i,new THREE.Color(i%2?0xd8a63a:0xc2352b)));flags.instanceColor.needsUpdate=true;group.add(flags,pole);
  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(1,1,1),p=new THREE.Vector3(),yAxis=new THREE.Vector3(0,1,0);
- // Four luminous bases create a clockwise risk/reward movement loop.
- const baseMaterial=new THREE.MeshBasicMaterial({color:0x9cf5ff,transparent:true,opacity:.42,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
- const bases=new THREE.InstancedMesh(new THREE.RingGeometry(.5,.8,4).rotateX(-Math.PI/2).rotateZ(Math.PI/4),baseMaterial,STADIUM_BASES.length),baseMatrix=new THREE.Matrix4();
- STADIUM_BASES.forEach((base,i)=>{baseMatrix.makeTranslation(base.x,.15,base.z);bases.setMatrixAt(i,baseMatrix);});bases.instanceMatrix.needsUpdate=true;group.add(bases);
- const baseCoreMaterial=new THREE.MeshBasicMaterial({color:0x5fe9ff,transparent:true,opacity:.13,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
- const baseCores=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.12,1.12).rotateX(-Math.PI/2).rotateZ(Math.PI/4),baseCoreMaterial,STADIUM_BASES.length);
- STADIUM_BASES.forEach((base,i)=>{baseMatrix.makeTranslation(base.x,.145,base.z);baseCores.setMatrixAt(i,baseMatrix);});baseCores.instanceMatrix.needsUpdate=true;group.add(baseCores);
+ // Bases are painted into the merged chalk geometry above. The old translucent
+ // four-sided rings looked like folded glass and cost two extra draw calls.
  // Passing turret: a compact pitcher on the mound and a mitt behind home plate.
  const relay=new THREE.Group();relay.name='stadium-pass-turret';group.add(relay);
  const relayDark=new THREE.MeshStandardMaterial({color:0x1c2838,roughness:.55,metalness:.5}),relayRed=new THREE.MeshStandardMaterial({color:0x9f2831,roughness:.62,metalness:.18}),relayGold=new THREE.MeshStandardMaterial({color:0xd6a945,emissive:0x5a2d06,emissiveIntensity:.55,roughness:.45,metalness:.22});
@@ -152,7 +152,8 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
    }
   },
   isActive:()=>active,
-  tryBaseSlide(position,cooldown=0){return baseSlideFor(position,cooldown,active&&baseEnabled);},
+  baseAt:position=>stadiumBaseAt(position),
+  tryBaseSlide(position,cooldown=0,blockedIndex=-1){return baseSlideFor(position,cooldown,active&&baseEnabled,blockedIndex);},
   tick(dt,player,{hit=()=>false,sound=()=>{}}={}){
    if(!active||!relayEnabled)return;
    relayClock+=dt;const period=2.7,pass=Math.floor(relayClock/period),phase=relayClock-pass*period,reverse=pass%2===1;
@@ -165,7 +166,6 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
    if(!active)return;
    flagXs.forEach((x,i)=>{q.setFromAxisAngle(yAxis,Math.sin(time*2.2+i*.9)*.35-.2);p.set(x,2.05,-8.9);m.compose(p,q,s);flags.setMatrixAt(i,m);});
    flags.instanceMatrix.needsUpdate=true;
-   const pulse=Math.abs(Math.sin(time*3.4));baseMaterial.opacity=.38+.34*pulse;baseCoreMaterial.opacity=.12+.18*pulse;bases.rotation.y=baseCores.rotation.y=Math.sin(time*1.7)*.018;
    if(relayEnabled){machine.rotation.y=Math.sin(time*1.8)*.08;wheel.rotation.z=time*3;mitt.rotation.y=Math.sin(time*2.1)*.06;}
   },
   state:()=>({active,baseEnabled,relayEnabled,relayClock})

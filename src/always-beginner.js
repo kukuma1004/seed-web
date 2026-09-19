@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 
 const V=THREE.Vector3,TAU=Math.PI*2;
-export const ALWAYS_BEGINNER=Object.freeze({name:'항상초심',hp:13800,damage:Object.freeze({burst:.07,perSecond:.035}),contact:14});
+export const ALWAYS_BEGINNER=Object.freeze({name:'항상초심',hp:13800,damage:Object.freeze({burst:.07,perSecond:.032}),contact:17});
 export const ALWAYS_BEGINNER_ART=Object.freeze({file:'boss-always-beginner-v1.webp',size:4.85,baseline:.015});
 export const ALWAYS_PHASES=Object.freeze({
- rookie:Object.freeze({label:'초심',tempo:1,patterns:Object.freeze(['fastball','steal','curve'])}),
- rally:Object.freeze({label:'집중',tempo:.88,patterns:Object.freeze(['fastball','homerun','curve','steal'])}),
- finish:Object.freeze({label:'끝내기',tempo:.78,patterns:Object.freeze(['curve','homerun','rally','steal'])})
+ rookie:Object.freeze({label:'초심',tempo:.9,patterns:Object.freeze(['fastball','steal','curve'])}),
+ rally:Object.freeze({label:'집중',tempo:.72,patterns:Object.freeze(['fastball','homerun','curve','steal','rally'])}),
+ finish:Object.freeze({label:'끝내기',tempo:.6,patterns:Object.freeze(['curve','homerun','rally','steal','fastball'])})
 });
 const basic=(color,opacity=.5)=>new THREE.MeshBasicMaterial({color,transparent:true,opacity,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true});
 const standard=(color,emissive=0)=>new THREE.MeshStandardMaterial({color,emissive,emissiveIntensity:.65,roughness:.5,metalness:.1});
@@ -46,10 +46,10 @@ export function alwaysBeginnerPatternName(e){return e.moveName||'다음 타석 �
 
 function beginPattern(e,ctx,to){
  const P=ALWAYS_PHASES[e.phase],kind=P.patterns[e.pattern++%P.patterns.length];e.kind=kind;e.dir.copy(to);e.moveName={fastball:'초구 강속구',curve:'휘어지는 변화구',steal:'베이스 질주',homerun:'끝내기 홈런',rally:'응원 파도'}[kind];ctx.sound?.('bossWarning');
- if(kind==='fastball'||kind==='curve'){e.state='pitchTell';e.timer=(kind==='fastball'?.6:.72)*P.tempo;e.hint=kind==='fastball'?'흰 선에서 옆으로':'공이 휘어질 방향까지 보고 한 박자 늦게';e.lane.visible=true;}
- else if(kind==='steal'){e.state='stealTell';e.timer=.72*P.tempo;e.target.copy(ctx.player).setY(0);e.mark.position.copy(e.target);e.mark.visible=true;e.hint='빛나는 베이스에서 떨어지세요';}
- else if(kind==='homerun'){e.state='swingTell';e.timer=.82*P.tempo;e.hint='붉은 부채꼴 뒤로 돌아가세요';e.arc.visible=true;}
- else{e.state='rallyTell';e.timer=.7*P.tempo;e.hint='응원탄 사이의 넓은 틈을 찾으세요';}
+ if(kind==='fastball'||kind==='curve'){e.state='pitchTell';e.timer=(kind==='fastball'?.52:.62)*P.tempo;e.hint=kind==='fastball'?'흰 선에서 옆으로':'공이 휘어질 방향까지 보고 한 박자 늦게';e.lane.visible=true;}
+ else if(kind==='steal'){e.state='stealTell';e.timer=.6*P.tempo;e.target.copy(ctx.player).setY(0);e.mark.position.copy(e.target);e.mark.visible=true;e.hint='빛나는 베이스에서 떨어지세요';}
+ else if(kind==='homerun'){e.state='swingTell';e.timer=.68*P.tempo;e.hint='붉은 부채꼴 뒤로 돌아가세요';e.arc.visible=true;}
+ else{e.state='rallyTell';e.timer=.58*P.tempo;e.hint='응원탄 사이의 넓은 틈을 찾으세요';}
 }
 
 // hooks: player, collide, hit, bolt, burst, pulse, sound, clearBolts, summon and pooled boss VFX
@@ -62,29 +62,30 @@ export function tickAlwaysBeginner(e,dt,hooks){
   if(e.timer<=0){e.phase=e.phasePending;e.phasePending=null;e.state='stalk';e.timer=.35;e.pattern=0;e.body.scale.setScalar(1);e.ring.scale.setScalar(e.phase==='finish'?1.18:e.phase==='rally'?1.09:1);if(!e.summoned.has(e.phase)){e.summoned.add(e.phase);summon(e.phase==='rally'?['runner','pitcher']:['catcher','batter']);}}
   return;
  }
+ if(!e.summoned.has('rookie')){e.summoned.add('rookie');summon(['pitcher']);}
  const P=ALWAYS_PHASES[e.phase],to=flat(player.clone().sub(e.g.position)),distance=to.length();if(distance>1e-6)to.divideScalar(distance);e.timer-=dt;
  e.ring.material.opacity=.26+.14*Math.abs(Math.sin(e.pattern+e.timer*8));
  if(e.state==='stalk'){
-  const side=e.pattern%2?1:-1;e.g.position.addScaledVector(to,dt*(distance>5.5?3.4:distance<3.4?-2.5:0));e.g.position.x+=to.z*dt*2.6*side;e.g.position.z-=to.x*dt*2.6*side;face(e,to);
+  const side=e.pattern%2?1:-1;e.g.position.addScaledVector(to,dt*(distance>5?4.6:distance<3.2?-3.4:0));e.g.position.x+=to.z*dt*3.5*side;e.g.position.z-=to.x*dt*3.5*side;face(e,to);
   if(e.timer<=0)beginPattern(e,{player,sound},to);
  }else if(e.state==='pitchTell'){
   face(e,e.dir);e.lane.material.opacity=.14+.55*Math.abs(Math.sin(e.timer*12));
   if(e.timer<=0){
-   if(e.kind==='fastball'){bolt(e.g.position,e.dir,{speed:17,damage:21,boss:true});for(const a of [-.14,.14])bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),a),{speed:13,damage:15,boss:true});}
-   else for(let i=-2;i<=2;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.16),{speed:12.5-Math.abs(i)*.5,damage:17,curve:(i%2?-.55:.55)*(i<0?-1:1),boss:true});
-   bossPitch(e.g.position,e.dir,e.kind==='curve'?(e.pattern%2?-.8:.8):0);sound('bossAttack');e.lane.visible=false;e.state='recover';e.timer=.62*P.tempo;
+   if(e.kind==='fastball'){bolt(e.g.position,e.dir,{speed:20,damage:23,boss:true});for(const a of [-.13,.13])bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),a),{speed:15.5,damage:17,boss:true});}
+   else for(let i=-3;i<=3;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.145),{speed:14.5-Math.abs(i)*.45,damage:18,curve:(i%2?-.7:.7)*(i<0?-1:1),boss:true});
+    bossPitch(e.g.position,e.dir,e.kind==='curve'?(e.pattern%2?-.95:.95):0);sound('bossAttack');e.lane.visible=false;e.state='recover';e.timer=.44*P.tempo;
   }
  }else if(e.state==='stealTell'){
   e.mark.rotation.z+=dt*5;e.mark.material.opacity=.3+.45*Math.abs(Math.sin(e.timer*18));face(e,flat(e.target.clone().sub(e.g.position)));
-  if(e.timer<=0){e.dir.copy(flat(e.target.clone().sub(e.g.position)).normalize());bossRush(e.g.position,e.target);e.state='steal';e.timer=1.05;}
+  if(e.timer<=0){e.dir.copy(flat(e.target.clone().sub(e.g.position)).normalize());bossRush(e.g.position,e.target);e.state='steal';e.timer=.82;}
  }else if(e.state==='steal'){
-  const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*15);const seg=e.g.position.clone().sub(before),len=seg.lengthSq(),t=len?THREE.MathUtils.clamp(player.clone().sub(before).dot(seg)/len,0,1):0;if(before.addScaledVector(seg,t).distanceTo(player)<1.2)hit(25);if(e.timer<=0||flat(e.target.clone().sub(e.g.position)).dot(e.dir)<-.8){pulse(e.target,'chain',1.3,.35);e.mark.visible=false;e.state='recover';e.timer=.7*P.tempo;}
+  const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*18);const seg=e.g.position.clone().sub(before),len=seg.lengthSq(),t=len?THREE.MathUtils.clamp(player.clone().sub(before).dot(seg)/len,0,1):0;if(before.addScaledVector(seg,t).distanceTo(player)<1.2)hit(27);if(e.timer<=0||flat(e.target.clone().sub(e.g.position)).dot(e.dir)<-.8){pulse(e.target,'chain',1.3,.35);e.mark.visible=false;e.state='recover';e.timer=.48*P.tempo;}
  }else if(e.state==='swingTell'){
   face(e,e.dir);e.arc.material.opacity=.18+.55*Math.abs(Math.sin(e.timer*14));
-  if(e.timer<=0){if(distance<4.2&&to.dot(e.dir)>-.05)hit(29);for(let i=-4;i<=4;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.19),{speed:10.5+Math.abs(i)*.35,damage:18,boss:true});bossSwing(e.g.position,e.dir);sound('bossAttack');e.arc.visible=false;e.state='recover';e.timer=.75*P.tempo;}
+  if(e.timer<=0){if(distance<4.2&&to.dot(e.dir)>-.05)hit(31);for(let i=-5;i<=5;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.17),{speed:12+Math.abs(i)*.32,damage:19,boss:true});bossSwing(e.g.position,e.dir);sound('bossAttack');e.arc.visible=false;e.state='recover';e.timer=.5*P.tempo;}
  }else if(e.state==='rallyTell'){
-  if(e.timer<=0){const gap=Math.atan2(to.z,to.x);for(let i=0;i<18;i++){const a=i*TAU/18;if(Math.abs(Math.atan2(Math.sin(a-gap),Math.cos(a-gap)))<.38)continue;bolt(e.g.position,new V(Math.cos(a),0,Math.sin(a)),{speed:8.8,damage:17,boss:true});}bossWave(e.g.position,gap);sound('bossAttack');e.state='recover';e.timer=.78*P.tempo;}
- }else if(e.timer<=0){e.state='stalk';e.timer=(.48+(e.pattern%3)*.09)*P.tempo;e.moveName='';e.hint='';}
+  if(e.timer<=0){const gap=Math.atan2(to.z,to.x);for(let i=0;i<22;i++){const a=i*TAU/22;if(Math.abs(Math.atan2(Math.sin(a-gap),Math.cos(a-gap)))<.31)continue;bolt(e.g.position,new V(Math.cos(a),0,Math.sin(a)),{speed:10.6,damage:18,boss:true});}bossWave(e.g.position,gap);sound('bossAttack');e.state='recover';e.timer=.52*P.tempo;}
+ }else if(e.timer<=0){e.state='stalk';e.timer=(.34+(e.pattern%3)*.07)*P.tempo;e.moveName='';e.hint='';}
  if(e.state==='stalk'&&distance<1.55&&e.bumpCD<=0&&hit(ALWAYS_BEGINNER.contact))e.bumpCD=.8;
  collide(e.g.position,1.15);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,e.state==='swingTell'?-.15:e.state==='steal'?.2:0,10,dt);e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,e.state==='pitchTell'?(e.kind==='curve'?.07:-.055):e.state==='steal'?.1:0,12,dt);e.body.position.y=e.state==='stalk'?Math.abs(Math.sin(e.timer*8))*.08:0;
 }

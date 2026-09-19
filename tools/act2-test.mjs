@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
-import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor} from '../src/stadium.js';
+import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor,stadiumBaseAt} from '../src/stadium.js';
 // Act 2 is open to the closed beta on both the hosted web build and Android app.
 assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
 assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
@@ -55,7 +55,7 @@ for(const [id,art] of Object.entries(ACT2_WARDEN_ART)){assert.match(art.file,new
 
 // Stadium bases form one clockwise movement loop; cooldown prevents accidental re-triggering.
 assert.equal(STADIUM_BASES.length,4);assert.deepEqual(STADIUM_BASES.map(base=>base.next),[1,2,3,0]);
-{const slide=baseSlideFor({x:0,z:4.2});assert.ok(slide);assert.equal(slide.index,0);assert.ok(slide.dx>0&&slide.dz<0);assert.equal(slide.speed,BASE_SLIDE.speed);assert.equal(slide.targetX,STADIUM_BASES[1].x);assert.equal(slide.targetZ,STADIUM_BASES[1].z);assert.ok(Math.abs(slide.duration-BASE_SLIDE.duration)<.02);assert.equal(baseSlideFor({x:0,z:4.2},.1),null);assert.equal(baseSlideFor({x:9,z:7}),null);assert.equal(baseSlideFor({x:0,z:4.2},0,false),null);}
+{const slide=baseSlideFor({x:0,z:4.2});assert.ok(slide);assert.equal(slide.index,0);assert.ok(slide.dx>0&&slide.dz<0);assert.equal(slide.speed,BASE_SLIDE.speed);assert.equal(slide.targetX,STADIUM_BASES[1].x);assert.equal(slide.targetZ,STADIUM_BASES[1].z);assert.ok(Math.abs(slide.duration-BASE_SLIDE.duration)<.02);assert.equal(stadiumBaseAt(STADIUM_BASES[1]),1);assert.equal(baseSlideFor(STADIUM_BASES[1],0,true,1),null,'landing plate stays latched until the seed steps off');assert.equal(baseSlideFor({x:0,z:4.2},.1),null);assert.equal(baseSlideFor({x:9,z:7}),null);assert.equal(baseSlideFor({x:0,z:4.2},0,false),null);}
 // Every possible entry point inside a base trigger has a clear rail to the next base.
 const hitsCover=(x,z,o,r=.4)=>Math.abs(x-o.x)<o.w/2+r&&Math.abs(z-o.z)<o.d/2+r;
 for(const room of STADIUM_ROOMS)for(let leg=0;leg<STADIUM_BASES.length;leg++)for(let a=0;a<12;a++){
@@ -99,11 +99,11 @@ for(const variant of Object.keys(ACT2_WARDENS)){
 
 // Always Beginner has three phases, a hard damage budget and multiple readable patterns.
 {
- const e=createAlwaysBeginner(scene);assert.equal(e.config.name,'항상초심');assert.equal(Object.keys(ALWAYS_PHASES).length,3);
+ const e=createAlwaysBeginner(scene);assert.equal(e.config.name,'항상초심');assert.equal(Object.keys(ALWAYS_PHASES).length,3);assert.ok(ALWAYS_PHASES.finish.tempo<ALWAYS_PHASES.rally.tempo&&ALWAYS_PHASES.rally.tempo<ALWAYS_PHASES.rookie.tempo,'each phase gets faster');
  assert.match(ALWAYS_BEGINNER_ART.file,/^boss-always-beginner-v1\.webp$/);assert.ok(ALWAYS_BEGINNER_ART.size>4);
  const first=damageAlwaysBeginner(e,e.maxHp);assert.ok(first<=e.maxHp*ALWAYS_BEGINNER.damage.burst+.001);assert.equal(damageAlwaysBeginner(e,100),0,'same-frame burst is capped');
  const bolts=[],summons=[],fx={pitch:0,rush:0,swing:0,wave:0,phase:0},ctx={player:new V(0,0,2),collide:()=>{},hit:()=>true,bolt:(p,d,s)=>bolts.push(s),burst:()=>{},pulse:()=>{},sound:()=>{},clearBolts:()=>{},summon:types=>summons.push(...types),bossPitch:()=>fx.pitch++,bossRush:()=>fx.rush++,bossSwing:()=>fx.swing++,bossWave:()=>fx.wave++,bossPhase:()=>fx.phase++};
- e.damageAllowance=e.maxHp;e.timer=0;for(let t=0;t<8;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.ok(bolts.length>0,'boss attacks during opening phase');
+ e.damageAllowance=e.maxHp;e.timer=0;for(let t=0;t<6;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.ok(bolts.length>=10,'boss attacks repeatedly during opening phase');assert.ok(summons.includes('pitcher'),'opening phase starts with support pressure');
  e.state='pitchTell';e.kind='fastball';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='pitchTell';e.kind='curve';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='stealTell';e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
