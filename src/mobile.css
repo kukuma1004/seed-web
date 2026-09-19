@@ -39,7 +39,18 @@ body.phone-landscape #score-hud small{display:none}
 body.phone-landscape #app-actions{top:max(8px,env(safe-area-inset-top))}
 body.phone-landscape.is-fullscreen #app-actions{display:none}
 body.phone-landscape #toast{top:22%;font-size:12px}
-body.phone-landscape #boss-hud:not(.austin-hud){top:max(44px,calc(env(safe-area-inset-top) + 36px));width:310px;max-width:44vw}
+/* Boss information used to sit in the middle of the arena as a three-line block.
+   A warden learns more text as a journey continues, so that block eventually hid
+   the boss itself on short phones. Keep the useful name, health and attack cue,
+   but pin a compact single-line stack just below the top progress strip. */
+body.phone-landscape #boss-hud{top:max(29px,calc(env(safe-area-inset-top) + 25px));width:270px;max-width:36vw;font-size:9px;line-height:1;contain:layout paint}
+body.phone-landscape #boss-hud>strong{font-size:9px;line-height:11px;letter-spacing:.3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+body.phone-landscape #boss-hud>div{height:7px;margin:2px 0 3px;border-width:1px;box-shadow:0 0 8px #e3a34a2b,inset 0 0 4px #000}
+body.phone-landscape #boss-hud .boss-move{display:block;width:max-content;max-width:100%;margin:0 auto 2px;padding:2px 7px;font-size:8px;line-height:10px;letter-spacing:.02em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 0 7px #ff9a463d}
+body.phone-landscape #boss-hud .boss-move[hidden]{display:none}
+body.phone-landscape #boss-hud small{display:block;max-width:100%;padding:0;font-size:8px;line-height:9px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#e8ddc8cc}
+body.phone-landscape #boss-hud.austin-hud{top:max(29px,calc(env(safe-area-inset-top) + 25px));width:320px;max-width:42vw}
+body.phone-landscape #boss-hud.austin-hud>div:before,body.phone-landscape #boss-hud.austin-hud>div:after{top:-2px;height:9px}
 /* Portrait on a touch device: ask to rotate instead of squeezing the arena. */
 #rotate-hint{display:none}
 @media(orientation:portrait){.touch-mode #rotate-hint{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#071b21f2;color:#e8f5e8;text-align:center;padding:24px}
