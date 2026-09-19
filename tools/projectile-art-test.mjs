@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createProjectileGeometries,projectileGeometry,CRITICAL_PROJECTILE_SCALE,projectileVisualScale,applyProjectileTheme} from '../src/projectile-art.js';
+import {createProjectileGeometries,projectileGeometry,CRITICAL_PROJECTILE_SCALE,CRITICAL_FRAGMENT_SCALE,projectileVisualScale,applyProjectileTheme} from '../src/projectile-art.js';
 
 const geos=createProjectileGeometries(),ids=['seed','reflect','split','chain','orbit','pierce','burst','recall','gravity','frost','portal'];
 assert.deepEqual(Object.keys(geos).sort(),ids.sort());
@@ -16,11 +16,12 @@ for(const [id,geo] of Object.entries(geos)){
 assert.ok(geos.seed.getAttribute('position').count>100,'the common seed shot has a kernel, husk, leaves and growth point');
 assert.ok(geos.seed.getAttribute('position').count<=180,'the upgraded seed shot stays mobile-bounded');
 assert.equal(projectileGeometry(geos,'unknown'),geos.seed);
-assert.equal(CRITICAL_PROJECTILE_SCALE,1.42,'critical shots have a clearly larger silhouette');
+assert.equal(CRITICAL_PROJECTILE_SCALE,2,'critical full shots have an unmistakable silhouette');
+assert.equal(CRITICAL_FRAGMENT_SCALE,1,'critical fragments stop at normal full-shot size');
 assert.equal(projectileVisualScale(false,false),1);
 assert.equal(projectileVisualScale(false,true),CRITICAL_PROJECTILE_SCALE);
 assert.equal(projectileVisualScale(true,false),.62);
-assert.ok(projectileVisualScale(true,true)<1&&projectileVisualScale(true,true)>.8,'critical fragments stay below a normal full shot but remain readable');
+assert.equal(projectileVisualScale(true,true),1,'critical fragments remain readable without filling the screen');
 const themedPoses=new Set();
 for(const theme of ['botanical','void','cyber','celestial']){
  const mesh=new THREE.Mesh(geos.seed);mesh.rotation.y=.73;applyProjectileTheme(mesh,'seed',theme,.37,1.16);

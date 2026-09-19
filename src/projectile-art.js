@@ -57,10 +57,11 @@ export function createProjectileGeometries(){
 export function projectileGeometry(geometries,id){return geometries[id]||geometries.seed;}
 
 // Critical shots keep the same one-mesh budget, but their 1.5x damage must be
-// readable before impact. A 42% silhouette increase is clear from the mobile
-// camera without making fragments look larger than a normal full-size shot.
-export const CRITICAL_PROJECTILE_SCALE=1.42;
-export function projectileVisualScale(fragment=false,critical=false){return (fragment?.62:1)*(critical?CRITICAL_PROJECTILE_SCALE:1);}
+// unmistakable before impact. Full shots use a 2x silhouette. Critical split
+// fragments stop at normal full-shot size so a lucky split volley stays clear.
+export const CRITICAL_PROJECTILE_SCALE=2;
+export const CRITICAL_FRAGMENT_SCALE=1;
+export function projectileVisualScale(fragment=false,critical=false){return fragment?(critical?CRITICAL_FRAGMENT_SCALE:.62):(critical?CRITICAL_PROJECTILE_SCALE:1);}
 
 // Texture-free projectile skins. Collision and travel never change; only the
 // existing mesh pose changes, so a theme adds no draw call or texture upload.
