@@ -3,7 +3,7 @@ import fs from 'node:fs';
 import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
-import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
+import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,ALWAYS_TUNING,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
 import {BASE_SLIDE,BASE_SLIDE_ARENAS,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor,baseSlidesEnabled,stadiumBaseAt} from '../src/stadium.js';
 // Act 2 is open to the closed beta on both the hosted web build and Android app.
 assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
@@ -99,10 +99,18 @@ const scene=new THREE.Scene();
 for(const variant of Object.keys(ACT2_WARDENS)){
  const w=world(new V(0,0,0)),e=createAct2Warden(scene,variant);e.g.position.set(0,0,-5);e.timer=0;let sawMove=false;for(let t=0;t<4;t+=.04){tickAct2Warden(e,.04,t,w.ctx);sawMove||=Boolean(e.moveName);}assert.ok(sawMove,variant);assert.ok(e.world?.parent===scene);
 }
+{
+ const w=world(new V(0,0,0)),e=createAct2Warden(scene,'diamond');e.g.position.set(0,0,-5);e.timer=0;tickAct2Warden(e,.04,0,w.ctx);assert.equal(e.bases.filter(base=>base.visible).length,1,'runner guardian reveals only the next base');
+ let sawSlide=false;for(let t=0;t<4;t+=.04){tickAct2Warden(e,.04,t,w.ctx);sawSlide||=e.state==='slide'||e.state==='slideTell';}assert.equal(sawSlide,true,'base route ends in a body-check slide');
+}
+{
+ const w=world(new V(0,0,0)),e=createAct2Warden(scene,'ace');e.g.position.set(0,0,-5);e.state='tell';e.timer=0;e.dir.set(0,0,1);tickAct2Warden(e,.04,0,w.ctx);assert.equal(w.bolts.length,5);assert.ok(w.bolts[0].spec.speed>=18.5,'ace owns a genuinely fast centre pitch');
+}
 
 // Always Beginner has three phases, a hard damage budget and multiple readable patterns.
 {
  const e=createAlwaysBeginner(scene);assert.equal(e.config.name,'항상초심');assert.equal(Object.keys(ALWAYS_PHASES).length,3);assert.ok(ALWAYS_PHASES.finish.tempo<ALWAYS_PHASES.rally.tempo&&ALWAYS_PHASES.rally.tempo<ALWAYS_PHASES.rookie.tempo,'each phase gets faster');
+ assert.ok(ALWAYS_PHASES.rally.patterns.includes('wildpitch')&&ALWAYS_PHASES.finish.patterns.includes('spiral')&&ALWAYS_PHASES.rookie.patterns.includes('slide'),'new movement and pitch patterns span all phases');assert.ok(ALWAYS_TUNING.spiralBolts<=32,'spiral remains inside the low-end projectile budget');
  assert.match(ALWAYS_BEGINNER_ART.file,/^boss-always-beginner-v1\.webp$/);assert.ok(ALWAYS_BEGINNER_ART.size>4);
  const first=damageAlwaysBeginner(e,e.maxHp);assert.ok(first<=e.maxHp*ALWAYS_BEGINNER.damage.burst+.001);assert.equal(damageAlwaysBeginner(e,100),0,'same-frame burst is capped');
  const bolts=[],summons=[],fx={pitch:0,rush:0,swing:0,wave:0,phase:0},ctx={player:new V(0,0,2),collide:()=>{},hit:()=>true,bolt:(p,d,s)=>bolts.push(s),burst:()=>{},pulse:()=>{},sound:()=>{},clearBolts:()=>{},summon:types=>summons.push(...types),bossPitch:()=>fx.pitch++,bossRush:()=>fx.rush++,bossSwing:()=>fx.swing++,bossWave:()=>fx.wave++,bossPhase:()=>fx.phase++};
@@ -111,10 +119,13 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  e.state='pitchTell';e.kind='curve';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='stealTell';e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
  e.state='swingTell';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
- e.state='rallyTell';e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ e.state='spiralTell';e.kind='spiral';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);for(let i=0;i<45;i++)tickAlwaysBeginner(e,.04,ctx);
+ const spiralBolts=bolts.slice(-ALWAYS_TUNING.spiralBolts);assert.equal(spiralBolts.length,ALWAYS_TUNING.spiralBolts,'rotating wave emits its bounded two-arm spiral');
+ e.state='wildTell';e.kind='wildpitch';e.dir.set(0,0,1);e.timer=0;const beforeWild=bolts.length;tickAlwaysBeginner(e,.04,ctx);assert.equal(bolts.length-beforeWild,2);assert.equal(bolts.at(-2).bounces,1,'wild pitch starts backwards and returns from one wall bounce');assert.ok(bolts.at(-2).life>4.8);
+ e.state='slideTell';e.kind='slide';e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'slide');
  e.state='doubleTell';e.kind='doubleplay';e.dir.set(0,0,1);e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'doubleRush');
  e.state='countTell';e.kind='fullcount';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);for(let i=0;i<18;i++)tickAlwaysBeginner(e,.04,ctx);
- assert.ok(fx.pitch>=6&&fx.rush>=2&&fx.swing>=1&&fx.wave>=1,'all seven boss patterns own readable VFX cues');
+ assert.ok(fx.pitch>=6&&fx.rush>=3&&fx.swing>=1&&fx.wave>=1,'boss patterns own readable body and pooled VFX cues');
  assert.ok(ALWAYS_PHASES.rally.patterns.includes('doubleplay'));assert.ok(ALWAYS_PHASES.finish.patterns.includes('fullcount'));
  e.hp=e.maxHp*.6;e.state='stalk';tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'phaseShift');for(let t=0;t<1.2;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.equal(e.phase,'rally');assert.ok(summons.includes('runner'));
  assert.equal(fx.phase,1,'phase transition owns a dedicated VFX cue');

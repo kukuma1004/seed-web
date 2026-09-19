@@ -45,6 +45,8 @@ export function actorArtRotation(state,time,phase){
  const gaitPhase=Number.isFinite(phase)?phase:0;
  if(state==='stalk')return Math.sin(time*9+gaitPhase)*.025;
  if(state==='commit'||state==='jab')return .13;
+ if(state==='slide'||state==='doubleRush'||state==='steal')return .16;
+ if(state==='lunge')return .11;
  if(state==='jabTell')return -.08;
  if(state==='volleyTell')return .055;
  if(state==='sweepTell')return -.06;
