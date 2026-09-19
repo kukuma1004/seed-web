@@ -4,7 +4,7 @@ import {ALL_FORMS} from './forms.js';
 // The mirror is one bounded boss AI that translates a build into readable
 // patterns. It never runs a second copy of the player's projectile simulation.
 export const MIRROR_TRIAL_LIMITS=Object.freeze({
- patterns:2,
+ concurrentAttackFamilies:2,
  hostileProjectilesLow:36,
  hostileProjectilesNormal:52,
  effectsLow:28,
@@ -12,6 +12,24 @@ export const MIRROR_TRIAL_LIMITS=Object.freeze({
  copiedHealing:false,
  copiedRevive:false,
  copiedRelic:false
+});
+
+export const MIRROR_COPY_RULES=Object.freeze({
+ mode:'exact-tower-build',
+ copied:Object.freeze(['laws','forms','levels','dashEvolution','ultimate']),
+ excluded:Object.freeze(['potions','relic','garden','titles']),
+ sharesGlobalProjectileBudget:true
+});
+
+// Auto-fire remains SEED's basic rule. A near dodge is the player's offensive
+// input: three clean passes crack the mirror and create a short burst window.
+export const MIRROR_BREAK=Object.freeze({
+ perfectDodgeWindow:.16,
+ perfectDodgeRadius:.72,
+ crackGoal:3,
+ breakDuration:2.2,
+ damageMultiplier:1.4,
+ ultimateCharge:.12
 });
 
 // Open arenas stay the same size. Difficulty comes from movement decisions,
@@ -49,13 +67,24 @@ export const MIRROR_PATTERNS=Object.freeze({
 const entryList=value=>value instanceof Map?[...value]:Array.isArray(value)?value:Object.entries(value||{});
 const levelOf=value=>Math.max(1,Math.min(99,Math.floor(Number(value)||1)));
 
-export function mirrorBuildSnapshot({levels=new Map(),forms=new Map()}={}){
+export function mirrorBuildSnapshot({levels=new Map(),forms=new Map(),dashEvolution=null}={}){
  const laws=entryList(levels).filter(([id])=>LAWS[id]).map(([id,level])=>Object.freeze({id,level:levelOf(level)}));
  const evolved=entryList(forms).filter(([id])=>ALL_FORMS[id]).map(([id,level])=>{
   const form=ALL_FORMS[id];
   return Object.freeze({id,level:levelOf(level),laws:Object.freeze(form.requires.filter(law=>LAWS[law]))});
  });
- return Object.freeze({laws:Object.freeze(laws),forms:Object.freeze(evolved)});
+ const dash=typeof dashEvolution==='string'&&dashEvolution?dashEvolution:null;
+ return Object.freeze({laws:Object.freeze(laws),forms:Object.freeze(evolved),dashEvolution:dash});
+}
+
+export function mirrorCloneLoadout(snapshot){
+ return Object.freeze({
+  laws:Object.freeze((snapshot?.laws||[]).map(x=>Object.freeze({...x}))),
+  forms:Object.freeze((snapshot?.forms||[]).map(x=>Object.freeze({...x,laws:Object.freeze([...(x.laws||[])])}))),
+  dashEvolution:snapshot?.dashEvolution||null,
+  ultimate:'same-build',
+  exactCopy:true
+ });
 }
 
 export function mirrorFloorRules(floor=1,{quality='normal'}={}){
@@ -70,7 +99,7 @@ export function mirrorFloorRules(floor=1,{quality='normal'}={}){
   endless:n>=MIRROR_TOWER.endlessFrom,
   arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:0,shrinks:false}),
   movement,
-  patternCount:n<3?1:MIRROR_TRIAL_LIMITS.patterns,
+  concurrentAttackFamilies:n<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
   chainLength:n<5?1:n<10?2:3,
   healAfter:milestone?MIRROR_TOWER.milestoneHeal:MIRROR_TOWER.floorHeal,
   budget:Object.freeze({
@@ -88,12 +117,16 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
  // A brand-new seed still needs a fair, visible attack to fight.
  if(!ordered.length)ordered=[['pierce',1]];
  const tower=mirrorFloorRules(floor??round,{quality});
- const attacks=ordered.slice(0,tower.patternCount).map(([law,score],index)=>Object.freeze({
+ // Every acquired family stays in the loadout. The scheduler only limits how
+ // many may start on the same beat; it never removes a chosen law or form.
+ const attacks=ordered.map(([law,score],index)=>Object.freeze({
   ...MIRROR_PATTERNS[law],law,weight:Number(score.toFixed(2)),order:index+1
  }));
  const r=tower.floor,lead=ordered[0][0];
  return Object.freeze({
   attacks:Object.freeze(attacks),
+  loadout:mirrorCloneLoadout(snapshot),
+  concurrentAttackFamilies:tower.concurrentAttackFamilies,
   ultimate:Object.freeze({...MIRROR_PATTERNS[lead],law:lead,id:`mirror-${MIRROR_PATTERNS[lead].id}`}),
   stats:Object.freeze({
    hpScale:Number((2.15+Math.min(10,r)*.12+Math.min(5,(snapshot?.forms||[]).length)*.08).toFixed(2)),
@@ -111,7 +144,7 @@ export const MIRROR_TRIAL_PROTOTYPE=Object.freeze({
  name:'거울의 탑',
  placement:'separate-challenge',
  unlock:'austin-defeated',
- firstForm:'returnflare',
+ copyMode:MIRROR_COPY_RULES.mode,
  localSliceFloors:10,
  checkpoint:'every-five-floors',
  released:false
