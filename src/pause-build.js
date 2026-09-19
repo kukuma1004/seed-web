@@ -15,7 +15,7 @@ import './pause-build.css';
 function itemBag(inventory){
  const held=heldItems(inventory);
  const rows=held.map(id=>{const it=ITEMS[id];return `<li>${itemArt(id)}<div><strong>${it.name} <span>×${inventory[id]}</span></strong><p>${it.desc}${it.kind!=='revive'?' · Q 마시기 · Shift+Q 고르기':''}</p></div></li>`;}).join('');
- return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:'<p>정시파이터 오스틴을 이기면 물약을 얻어요 · 시간의 물약과 함께 작은 물약·바람 물약·껍질 물약·다시 싹 중 하나</p>'}</section>`;
+ return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:'<p>보스를 이기면 시간의 물약 1개와 추가 보상을 얻어요 · 회복 보상은 모두 생명력 50을 채워 줍니다</p>'}</section>`;
 }
 export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null,titleUI=null,dashUI=null,bonusUI=null){
  const root=document.createElement('section');root.id='pause-build';root.hidden=true;

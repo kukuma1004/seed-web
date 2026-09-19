@@ -1,11 +1,11 @@
-// Items carried through a run. Austin gives the rare kinds; turrets can occasionally yield one small healing potion.
+// Items carried through a run. Bosses give the rare kinds; turrets can occasionally yield one small healing potion.
 // kind: heal (refused at full health) · haste · shell (short protection) · revive (used by itself when the seed falls)
 export const ITEMS=Object.freeze({
- potion:{id:'potion',name:'시간의 물약',kind:'heal',heal:50,max:5,key:'Q',desc:'마시면 생명력 50 회복',from:'오스틴'},
- tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'Q',desc:'마시면 생명력 25 회복',from:'상점 · 포탑 · 오스틴'},
- wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:5,key:'Q',desc:'6초 동안 이동 속도 +35%',from:'오스틴'},
- shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:5,key:'Q',desc:'3초 동안 모든 피해를 막음',from:'오스틴'},
- sprout:{id:'sprout',name:'다시 싹',kind:'revive',heal:50,guard:2,max:1,key:'',desc:'쓰러지는 순간 저절로 생명력 50으로 다시 일어남 (한 번)',from:'오스틴'}
+ potion:{id:'potion',name:'시간의 물약',kind:'heal',heal:50,max:5,key:'Q',desc:'마시면 생명력 50 회복',from:'오스틴 · 항상초심'},
+ tonic:{id:'tonic',name:'작은 물약',kind:'heal',heal:25,max:5,key:'Q',desc:'마시면 생명력 25 회복',from:'상점 · 포탑'},
+ wind:{id:'wind',name:'바람 물약',kind:'haste',seconds:6,speed:1.35,max:5,key:'Q',desc:'6초 동안 이동 속도 +35%',from:'오스틴 · 항상초심'},
+ shell:{id:'shell',name:'껍질 물약',kind:'shell',seconds:3,max:5,key:'Q',desc:'3초 동안 모든 피해를 막음',from:'오스틴 · 항상초심'},
+ sprout:{id:'sprout',name:'다시 싹',kind:'revive',heal:50,guard:2,max:1,key:'',desc:'쓰러지는 순간 저절로 생명력 50으로 다시 일어남 (한 번)',from:'오스틴 · 항상초심'}
 });
 // Order on screen and in the pause sheet. Passive items come last.
 export const ITEM_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']);
@@ -60,7 +60,7 @@ export function tryRevive(inventory){
 // A revive is a collection-grade reward: its absolute chance stays at 1% even
 // when the ordinary potion stacks are full, so filtering cannot inflate it.
 export const BOSS_SPROUT_CHANCE=.01;
-export const AUSTIN_BONUS=Object.freeze([['tonic',35],['wind',32],['shell',32],['sprout',1]]);
+export const AUSTIN_BONUS=Object.freeze([['potion',35],['wind',32],['shell',32],['sprout',1]]);
 export function austinBonus(random=Math.random,inventory=null){
  const available=id=>!inventory||(inventory[id]||0)<ITEMS[id].max;
  const roll=Math.max(0,Math.min(.999999999,Number(random())||0));
@@ -73,7 +73,10 @@ export function austinBonus(random=Math.random,inventory=null){
  return pool[pool.length-1][0];
 }
 export function austinDrops(random=Math.random,inventory=null){
- const bonus=austinBonus(random,inventory);
+ // The guaranteed potion is stored first. Do not offer another one when that
+ // first reward will already fill its five-slot stack.
+ const afterGuaranteed=inventory?{...inventory,potion:Math.min(ITEMS.potion.max,(inventory.potion||0)+1)}:null;
+ const bonus=austinBonus(random,afterGuaranteed);
  return bonus?['potion',bonus]:['potion'];
 }
 
