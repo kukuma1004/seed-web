@@ -141,6 +141,11 @@ export function createFormVisuals(){
   paint(leaf(.48,.16,.1,.04,6),C.jade).rotateZ(-Math.PI/2).translate(-.25,0,.055),
   paint(new THREE.OctahedronGeometry(.09,0),C.gold).translate(.13,0,.07)
  ]);
+ geos.gravityStake=join('gravity-implosion-stake',[
+  paint(new THREE.ConeGeometry(.13,.82,5),C.ivory).rotateX(Math.PI/2),
+  paint(new THREE.OctahedronGeometry(.17,0).scale(.7,.7,1.35),C.violet).translate(0,0,-.28),
+  paint(new THREE.TorusGeometry(.21,.035,5,12),C.gold).rotateX(Math.PI/2).translate(0,0,-.08)
+ ]);
  geos.gene=join('paired-law-gene',[paint(new THREE.OctahedronGeometry(.19,0).scale(.72,.72,1.45),C.violet),paint(new THREE.TorusGeometry(.22,.035,5,12),C.gold).rotateX(Math.PI/2),paint(leaf(.38,.13,.05,.03,5),C.ivory).rotateZ(-.72).translate(.08,.12,.03)]);
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
  for(let i=0;i<4;i++)star.push(petal(.5,.25,{edge:C.ivory,inner:i%2?C.gold:C.jade,bend:.025,depth:.075}).translate(0,.2,0).rotateZ(i*Math.PI/2));

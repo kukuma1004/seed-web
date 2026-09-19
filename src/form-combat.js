@@ -65,7 +65,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
- let bolts=[],wells=[],shatters=[],embers=[],storms=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0;
+ let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0;
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
@@ -101,7 +101,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];storms=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -219,6 +219,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     case 'chainburst':{chainBurst(pos);return S.interval;}
     case 'stormanchor':{stormAnchor(pos);return S.interval;}
     case 'blastlance':{blastLance(pos,aim);return S.interval;}
+    case 'gravitystake':{gravityStakeAttack(pos,aim);return S.interval;}
     case 'frostkaleidoscope':{
      if(full('frostkaleidoscope',S.bolts))return S.interval;
      const ob=spawnMesh(geos.frostMirror,mats.ice,pos);ob.rotation.x=-Math.PI/2;
@@ -368,6 +369,24 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   for(let d=0;d<flat(start,end);d+=1.25)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.25)).setY(.7),d%2.5<1.25?'pierce':'burst',false);
   const radius=Math.min(S.blastRadius+.9,S.blastRadius+struck*.12),power=S.blast*(1+Math.min(1,struck*.12));fx.explosion(end,'burst',radius,true);sound('burstHit');
   for(const e of near(end,radius+.8))if(!e.dead&&flat(e.g.position,end)<radius+bossReach(e,0,.55))support(e,power,{kind:'blastlance',indirect:true,direction:e.g.position.clone().sub(end).setY(0).normalize()});
+ }
+ // Pierce + gravity: a narrow shot only earns its heavy implosion when the
+ // struck target is alone. Crowds split the field and leave only the modest
+ // line damage, making this a deliberate guardian/boss finisher.
+ function gravityStakeAttack(pos,dir,{force=false}={}){
+  const start=pos.clone().setY(0),end=start.clone();
+  for(let travelled=0;travelled<S.length;travelled+=.4){const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();if(blocked(end,next)||boundary(end.clone(),next,probe))break;end.copy(next);}
+  const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.52,1.05)).sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
+  const struck=[];for(const e of line){if(struck.length>=S.pierce)break;if(!support(e,S.damage,{kind:'gravitystake',phase:'line',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck.push(e);}
+  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.7),'gravity',false);
+  const target=force?struck[0]:struck.length===1?struck[0]:null,isolated=target&&!enemies().some(e=>e!==target&&!e.dead&&flat(e.g.position,target.g.position)<S.isolation);
+  if(!target||(!isolated&&!force)||target.dead){fx.pulse(end,'pierce',.45,.18);return;}
+  const count=Math.min(S.implosions,S.stakes-stakes.length);
+  for(let i=0;i<count;i++){
+   const ob=spawnMesh(geos.gravityStake,mats.lens,target.g.position,1.05);ob.rotation.y=i*Math.PI*.5;applyProjectileScale(ob,.92,.92,.92);
+   stakes.push({target,ob,delay:S.delay+i*.16,damage:S.implosion,last:target.g.position.clone().setY(0)});
+  }
+  fx.pulse(target.g.position,'gravity',.9,.3);sound('gravityHit');
  }
  // Split + chain: the first impact opens several petals. Each petal claims a
  // different nearby enemy, then sends one short arc onward. Sparse fights
@@ -836,6 +855,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
    }
   }
   for(let i=bolts.length-1;i>=0;i--)if(bolts[i].life<=0){remove(bolts[i]);bolts.splice(i,1);}
+  for(let i=stakes.length-1;i>=0;i--){
+   const stake=stakes[i];stake.delay-=dt;if(!stake.target.dead){stake.last.copy(stake.target.g.position).setY(0);stake.ob.position.set(stake.last.x,1.05,stake.last.z);}stake.ob.rotation.z+=dt*9;
+   const squeeze=.72+.28*Math.max(0,stake.delay/S.delay);applyProjectileScale(stake.ob,squeeze,squeeze,1.15);
+   if(stake.delay>0)continue;
+   fx.explosion(stake.last,'gravity',.9,true);fx.pulse(stake.last,'pierce',.7,.24);sound('gravityHit');
+   if(!stake.target.dead)support(stake.target,stake.damage,{kind:'gravitystake',phase:'implosion',indirect:true,direction:stake.target.g.position.clone().sub(player.position).setY(0).normalize()});
+   remove(stake);stakes.splice(i,1);
+  }
   for(let i=storms.length-1;i>=0;i--){
    const storm=storms[i];storm.delay-=dt;if(storm.delay>0)continue;
    fx.explosion(storm.pos,'gravity',storm.radius,true);fx.pulse(storm.pos,'chain',storm.radius,.35);sound('burstHit');
@@ -864,7 +891,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  // ---------------- active (signature / overdrive) ----------------
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
-  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
+  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
@@ -954,6 +981,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     case 'stormanchor':for(const e of nearest(4,S.reach))stormAnchor(pos,e,true);break;
     case 'returningpetals':for(const d of around(4))fire(pos,d,pos.clone().addScaledVector(d,Math.min(7,S.range)),true);break;
+    case 'gravitystake':{
+     const target=nearest(1,S.length)[0];if(target)gravityStakeAttack(pos,target.g.position.clone().sub(pos).setY(0).normalize(),{force:true});break;
+    }
    case 'mirrormaze':for(const d of around(8))fire(pos,d,null,true);break;
    case 'fullbloom':for(const d of around(4))fire(pos,d,null,true);break;
    case 'glassspear':for(const d of around(6))fire(pos,d,null,true);break;
@@ -972,6 +1002,6 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
 
  applyTheme();
  return {set,setTheme,fire,update,clear,surge,calm,audioEvent:()=>projectileAudioEvent(sourceForm()),
-  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

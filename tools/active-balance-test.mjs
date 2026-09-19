@@ -5,11 +5,12 @@ import {averageDps,bossDps,simulate,SCENES} from './balance-sim.mjs';
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
 const median=list=>{const s=[...list].sort((a,b)=>a-b),m=s.length/2;return s.length%2?s[Math.floor(m)]:(s[m-1]+s[m])/2;};
 const offensive=ids=>ids.filter(id=>!ALL_FORMS[id].passive);
+const tacticalFusions=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals','gravitystake'];
 
 // Equal investment: a fusion of two laws with p picks between them is level p-1; a solo law at level p evolves to level p-1.
 // A solo evolution starts at law level SOLO_LEVEL, so the first comparison is at evolution level SOLO_LEVEL-1.
 for(const level of [SOLO_LEVEL-1,9]){
- const fusion=Object.fromEntries(offensive(Object.keys(FORMS)).map(id=>[id,averageDps(id,level)]));
+ const fusion=Object.fromEntries(offensive(Object.keys(FORMS)).filter(id=>!tacticalFusions.includes(id)).map(id=>[id,averageDps(id,level)]));
  const solo=Object.fromEntries(offensive(Object.keys(SOLO_FORMS)).map(id=>[id,averageDps(id,level)]));
  const fusionMedian=median(Object.values(fusion)),soloMedian=median(Object.values(solo));
  const ratio=soloMedian/fusionMedian;
@@ -26,16 +27,18 @@ for(const level of [SOLO_LEVEL-1,9]){
 // reward for lining enemies up or accepting point-blank danger.
 for(const level of [SOLO_LEVEL-1,9]){
  const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
- const newForms=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals'];
+ const newForms=tacticalFusions;
  const established=Object.entries(curated).filter(([id])=>!newForms.includes(id)).map(([,damage])=>damage);
  const middle=median(established);
  // Adding a deliberately tactical weapon must not move the historical balance
  // yardstick and make an unchanged weapon fail merely by lowering the median.
  assert.ok(Math.max(...Object.values(curated))<=middle*2.1,`level ${level}: a curated form exceeds 2.1x the established median crowd damage`);
- for(const id of newForms)assert.ok(curated[id]>=middle*.55&&curated[id]<=middle*1.55,`level ${level}: ${id} misses the authored fusion damage band`);
+ for(const id of newForms.filter(id=>id!=='gravitystake'))assert.ok(curated[id]>=middle*.55&&curated[id]<=middle*1.55,`level ${level}: ${id} misses the authored fusion damage band`);
+ assert.ok(curated.gravitystake>=middle*.08&&curated.gravitystake<=middle*.35,`level ${level}: gravity stake no longer pays a clear crowd-damage cost`);
  assert.ok(curated.tidepull>=middle*1.5&&curated.tidepull<=middle*2,`level ${level}: tidepull crowd damage ${Math.round(curated.tidepull)} misses its control-specialist band`);
  assert.ok(curated.tidepull<curated.collapse,`level ${level}: tidepull control and damage together exceed collapse's dedicated crowd burst`);
  assert.ok(bossDps('tidepull',level)<curated.tidepull*.2,`level ${level}: tidepull lost its single-target weakness`);
+ assert.ok(bossDps('gravitystake',level)>curated.gravitystake*2.2&&bossDps('gravitystake',level)>middle*.25,`level ${level}: gravity stake lost its isolated-target specialty`);
  const lanceLine=simulate('thunderlance',level,{scene:'line'}).dps,lanceScatter=simulate('thunderlance',level,{scene:'scattered'}).dps;
  assert.ok(lanceLine>lanceScatter*2.5,`level ${level}: thunderlance no longer rewards a lined-up shot`);
  const stormCluster=simulate('seedstorm',level,{scene:'cluster'}).dps,stormScatter=simulate('seedstorm',level,{scene:'scattered'}).dps;
@@ -79,7 +82,7 @@ for(const id of Object.keys(ALL_FORMS)){
  const base=formStats(id,3),up=formStats(id,3,{surge:true});
  assert.equal(up.surge,true);
  if(Number.isFinite(base.interval))assert.ok(up.interval<base.interval);
- for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','chargeDecay','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed','shatterBounces'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
+ for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','chargeDecay','isolation','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed','shatterBounces'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
  assert.deepEqual(formStats(id,1),formStats(id,1,{surge:false}));
 }
 // Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:

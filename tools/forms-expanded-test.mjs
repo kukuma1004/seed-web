@@ -8,17 +8,17 @@ import {blocksShield} from '../src/shield.js';
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
 const enemy=(x,z=0,type='hound')=>({type,g:{position:vec(x,z),rotation:{y:0}},dead:false});
 function fixture(foes=[],overrides={}){
- const player={position:vec()},calls=[];
- const combat=createFormCombat(new THREE.Scene(),{player,enemies:()=>foes,hit(e,damage,meta){calls.push({e,damage,...meta});return true;},
+ const player={position:vec()},calls=[],scene=new THREE.Scene();
+ const combat=createFormCombat(scene,{player,enemies:()=>foes,hit(e,damage,meta){calls.push({e,damage,...meta});return true;},
   blocked:()=>false,boundary:()=>false,constrain(){},vfx:{},...overrides});
- return {combat,player,calls};
+ return {combat,player,calls,scene};
 }
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: nineteen hand-authored forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,19);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,19);
+// Catalogue: twenty hand-authored forms, unique pairs, every law feeds at least two forms.
+assert.equal(Object.keys(FORMS).length,20);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,20);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
@@ -175,4 +175,13 @@ for(const id of Object.keys(FORMS)){
  assert.ok(f.calls.some(c=>c.e===bud&&c.phase==='bloom'),'the distant bud opens before returning');
  assert.ok(f.calls.some(c=>c.phase==='return'),'curved petals damage along the player-drawn return paths');f.combat.dispose();
 }
-console.log('Forms: nineteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+{
+ const boss=enemy(5,0,'austin'),duel=fixture([boss]);duel.combat.set('gravitystake');duel.combat.fire(vec(),vec(1));
+ assert.equal(duel.combat.state().stakes,1,'one isolated target receives a planted stake');let planted=false;duel.scene.traverse(o=>{if(o.geometry?.name==='seed-form-gravity-implosion-stake')planted=true;});assert.ok(planted,'the target carries a distinct planted-stake mesh');step(duel.combat,.65);
+ planted=false;duel.scene.traverse(o=>{if(o.geometry?.name==='seed-form-gravity-implosion-stake')planted=true;});assert.equal(planted,false,'the planted mesh expires after implosion');
+ assert.ok(duel.calls.some(c=>c.e===boss&&c.phase==='implosion'&&c.damage===formStats('gravitystake',1).implosion),'the stake collapses into its single target');duel.combat.dispose();
+ const target=enemy(5),nearby=enemy(5,2),crowd=fixture([target,nearby]);crowd.combat.set('gravitystake');crowd.combat.fire(vec(),vec(1));step(crowd.combat,.8);
+ assert.ok(crowd.calls.some(c=>c.e===target&&c.phase==='line'),'the narrow line still deals modest contact damage');
+ assert.ok(!crowd.calls.some(c=>c.phase==='implosion'),'a nearby second enemy disperses the implosion');assert.equal(crowd.combat.state().stakes,0);crowd.combat.dispose();
+}
+console.log('Forms: twenty authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
