@@ -1,6 +1,7 @@
 // Act 3 prototype: a forward-scrolling sky route inspired by classic vertical shooters.
 // The first slice is local/admin-only until its controls, readability and mobile budget pass.
 export const ACT3_REGION='skyway';
+export const ACT3_GRAMMAR='A';
 export const ACT3_NAME='3막 · 폭풍의 항로';
 export const ACT3_RELEASED=false;
 export const isAct3=region=>region===ACT3_REGION;
