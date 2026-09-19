@@ -1045,9 +1045,9 @@ function showDungeon(){
   <p class="eyebrow">SEED · 던전</p><h2>어디로 갈까요</h2>
   ${nameFieldHtml()}
   <div class="menu-list">
+   <button id="open-shop" class="menu-item"><strong>출발 상점</strong><small>새 여정에 가져갈 물약 · ${itemCounts(shop.carry)||'없음'}</small></button>
    ${saved?`<button id="continue-run" class="primary menu-item"><strong>이어하기</strong><small>${escapeHtml(where)}</small></button>`:''}
    <button id="start-game" class="${saved?'':'primary '}menu-item"><strong>${saved?'새 씨앗으로 시작':'잠든 정원 · 1막'}</strong><small>${saved?'저장된 도전을 교체합니다':'첫 방부터 문지기까지'}</small></button>
-   <button id="open-shop" class="menu-item"><strong>출발 상점</strong><small>새 여정에 가져갈 물약 · ${itemCounts(shop.carry)||'없음'}</small></button>
    ${act2Ready?`<button id="start-act2" class="menu-item act2-button"><strong>${ACT2_NAME}</strong><small>${saved2?`야간 경기장 · 여정 ${saved2.cycle+1} · ${saved2.stage+1}번째 방 이어하기`:'야간 경기장 · 기본 씨앗으로 새로 시작'}</small></button>${saved2?'<button id="new-act2" class="menu-item small-item">2막 새로 시작</button>':''}`
     :`<p class="act2-lock">${act2Available()?'오스틴을 쓰러뜨리면 2막 · 야간 경기장이 열려요':'2막 · 야간 경기장은 준비 중이에요'}</p>`}
    <button id="back-menu" class="menu-item small-item">돌아가기</button>

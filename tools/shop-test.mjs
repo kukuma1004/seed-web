@@ -72,6 +72,8 @@ assert.equal(STASH_ITEMS.sprout.max,3);
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  assert.doesNotMatch(main,/ITEMS\.potion\.name[^\n]*1개를 가지고 출발/);
  assert.match(main,/const departure=itemCounts\(inventory\)[\s\S]*가져온 물약 없이 출발해요/);
+ const dungeon=main.slice(main.indexOf('function showDungeon()'),main.indexOf('// Every visible ranking line'));
+ assert.ok(dungeon.indexOf('id="open-shop"')<dungeon.indexOf('id="start-game"'),'출발 상점은 1막과 2막보다 위에 둔다');
 }
 
 console.log('상점 보관함: 구매·가져갈 개수 고르기·새 여정에서만 꺼내기·다시 싹 선물 한 번·예전 저장 옮기기 통과');
