@@ -52,14 +52,14 @@ function beginPattern(e,ctx,to){
  else{e.state='rallyTell';e.timer=.7*P.tempo;e.hint='응원탄 사이의 넓은 틈을 찾으세요';}
 }
 
-// hooks: player, collide, hit, bolt, burst, pulse, sound, clearBolts, summon
+// hooks: player, collide, hit, bolt, burst, pulse, sound, clearBolts, summon and pooled boss VFX
 export function tickAlwaysBeginner(e,dt,hooks){
- const {player,collide=()=>{},hit=()=>false,bolt=()=>{},burst=()=>{},pulse=()=>{},sound=()=>{},clearBolts=()=>{},summon=()=>{}}=hooks;
+ const {player,collide=()=>{},hit=()=>false,bolt=()=>{},burst=()=>{},pulse=()=>{},sound=()=>{},clearBolts=()=>{},summon=()=>{},bossPitch=()=>{},bossRush=()=>{},bossSwing=()=>{},bossWave=()=>{},bossPhase=()=>{}}=hooks;
  e.hit=Math.max(0,e.hit-dt);e.bumpCD=Math.max(0,e.bumpCD-dt);e.damageAllowance=Math.min(e.maxHp*ALWAYS_BEGINNER.damage.burst,e.damageAllowance+e.maxHp*ALWAYS_BEGINNER.damage.perSecond*dt);
- const next=phaseFor(e.hp,e.maxHp);if(next!==e.phase&&e.state!=='phaseShift'){e.state='phaseShift';e.phasePending=next;e.timer=1.05;e.lane.visible=e.arc.visible=e.mark.visible=false;clearBolts();pulse(e.g.position,'amber',3.5,.9);sound('bossWarning');}
+ const next=phaseFor(e.hp,e.maxHp);if(next!==e.phase&&e.state!=='phaseShift'){e.state='phaseShift';e.phasePending=next;e.timer=1.05;e.lane.visible=e.arc.visible=e.mark.visible=false;clearBolts();bossPhase(e.g.position,next);sound('bossWarning');}
  if(e.state==='phaseShift'){
-  e.timer-=dt;e.body.scale.setScalar(1+.07*Math.sin(e.timer*22));
-  if(e.timer<=0){e.phase=e.phasePending;e.phasePending=null;e.state='stalk';e.timer=.35;e.pattern=0;e.body.scale.setScalar(1);if(!e.summoned.has(e.phase)){e.summoned.add(e.phase);summon(e.phase==='rally'?['runner','pitcher']:['catcher','batter']);}}
+  e.timer-=dt;const snap=1+.07*Math.sin(e.timer*22),finish=e.phasePending==='finish';e.body.scale.set(snap*(finish?1.045:1),snap*(finish?1.085:1.025),snap);e.ring.material.color.setHex(finish?0xff4050:0xffc35a);e.ring.scale.setScalar(1.05+(1-e.timer)*.16);
+  if(e.timer<=0){e.phase=e.phasePending;e.phasePending=null;e.state='stalk';e.timer=.35;e.pattern=0;e.body.scale.setScalar(1);e.ring.scale.setScalar(e.phase==='finish'?1.18:e.phase==='rally'?1.09:1);if(!e.summoned.has(e.phase)){e.summoned.add(e.phase);summon(e.phase==='rally'?['runner','pitcher']:['catcher','batter']);}}
   return;
  }
  const P=ALWAYS_PHASES[e.phase],to=flat(player.clone().sub(e.g.position)),distance=to.length();if(distance>1e-6)to.divideScalar(distance);e.timer-=dt;
@@ -72,19 +72,19 @@ export function tickAlwaysBeginner(e,dt,hooks){
   if(e.timer<=0){
    if(e.kind==='fastball'){bolt(e.g.position,e.dir,{speed:17,damage:21,boss:true});for(const a of [-.14,.14])bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),a),{speed:13,damage:15,boss:true});}
    else for(let i=-2;i<=2;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.16),{speed:12.5-Math.abs(i)*.5,damage:17,curve:(i%2?-.55:.55)*(i<0?-1:1),boss:true});
-   burst(e.g.position,'amber',22);sound('bossAttack');e.lane.visible=false;e.state='recover';e.timer=.62*P.tempo;
+   bossPitch(e.g.position,e.dir,e.kind==='curve'?(e.pattern%2?-.8:.8):0);sound('bossAttack');e.lane.visible=false;e.state='recover';e.timer=.62*P.tempo;
   }
  }else if(e.state==='stealTell'){
   e.mark.rotation.z+=dt*5;e.mark.material.opacity=.3+.45*Math.abs(Math.sin(e.timer*18));face(e,flat(e.target.clone().sub(e.g.position)));
-  if(e.timer<=0){e.dir.copy(flat(e.target.clone().sub(e.g.position)).normalize());e.state='steal';e.timer=1.05;}
+  if(e.timer<=0){e.dir.copy(flat(e.target.clone().sub(e.g.position)).normalize());bossRush(e.g.position,e.target);e.state='steal';e.timer=1.05;}
  }else if(e.state==='steal'){
   const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*15);const seg=e.g.position.clone().sub(before),len=seg.lengthSq(),t=len?THREE.MathUtils.clamp(player.clone().sub(before).dot(seg)/len,0,1):0;if(before.addScaledVector(seg,t).distanceTo(player)<1.2)hit(25);if(e.timer<=0||flat(e.target.clone().sub(e.g.position)).dot(e.dir)<-.8){pulse(e.target,'chain',1.3,.35);e.mark.visible=false;e.state='recover';e.timer=.7*P.tempo;}
  }else if(e.state==='swingTell'){
   face(e,e.dir);e.arc.material.opacity=.18+.55*Math.abs(Math.sin(e.timer*14));
-  if(e.timer<=0){if(distance<4.2&&to.dot(e.dir)>-.05)hit(29);for(let i=-4;i<=4;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.19),{speed:10.5+Math.abs(i)*.35,damage:18,boss:true});burst(e.g.position,'burst',34);sound('bossAttack');e.arc.visible=false;e.state='recover';e.timer=.75*P.tempo;}
+  if(e.timer<=0){if(distance<4.2&&to.dot(e.dir)>-.05)hit(29);for(let i=-4;i<=4;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.19),{speed:10.5+Math.abs(i)*.35,damage:18,boss:true});bossSwing(e.g.position,e.dir);sound('bossAttack');e.arc.visible=false;e.state='recover';e.timer=.75*P.tempo;}
  }else if(e.state==='rallyTell'){
-  if(e.timer<=0){const gap=Math.atan2(to.z,to.x);for(let i=0;i<18;i++){const a=i*TAU/18;if(Math.abs(Math.atan2(Math.sin(a-gap),Math.cos(a-gap)))<.38)continue;bolt(e.g.position,new V(Math.cos(a),0,Math.sin(a)),{speed:8.8,damage:17,boss:true});}pulse(e.g.position,'amber',5,.5);sound('bossAttack');e.state='recover';e.timer=.78*P.tempo;}
+  if(e.timer<=0){const gap=Math.atan2(to.z,to.x);for(let i=0;i<18;i++){const a=i*TAU/18;if(Math.abs(Math.atan2(Math.sin(a-gap),Math.cos(a-gap)))<.38)continue;bolt(e.g.position,new V(Math.cos(a),0,Math.sin(a)),{speed:8.8,damage:17,boss:true});}bossWave(e.g.position,gap);sound('bossAttack');e.state='recover';e.timer=.78*P.tempo;}
  }else if(e.timer<=0){e.state='stalk';e.timer=(.48+(e.pattern%3)*.09)*P.tempo;e.moveName='';e.hint='';}
  if(e.state==='stalk'&&distance<1.55&&e.bumpCD<=0&&hit(ALWAYS_BEGINNER.contact))e.bumpCD=.8;
- collide(e.g.position,1.15);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,e.state==='swingTell'?-.15:e.state==='steal'?.2:0,10,dt);e.body.position.y=e.state==='stalk'?Math.abs(Math.sin(e.timer*8))*.08:0;
+ collide(e.g.position,1.15);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,e.state==='swingTell'?-.15:e.state==='steal'?.2:0,10,dt);e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,e.state==='pitchTell'?(e.kind==='curve'?.07:-.055):e.state==='steal'?.1:0,12,dt);e.body.position.y=e.state==='stalk'?Math.abs(Math.sin(e.timer*8))*.08:0;
 }

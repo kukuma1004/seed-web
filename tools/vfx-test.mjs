@@ -8,6 +8,7 @@ for(const mobile of [false,true]){
   const beforeA=a.clone(),beforeB=b.clone();
   for(let i=0;i<70;i++){
     fx.impact(a,'reflect',true);fx.explosion(a,'burst',1.6,true);fx.reflect(a,dir);fx.split(a,dir,5);fx.arc(a,b);fx.portal(a,b);fx.dash(a,.3);fx.evolution(a,'chain');fx.trail(a,b);
+    fx.bossPitch(a,dir,0);fx.bossPitch(a,dir,.8);fx.bossRush(a,b);fx.bossSwing(a,dir);fx.bossWave(a,.4);fx.bossPhase(a,i%2?'rally':'finish');
   }
   fx.update(.016);
   assert.deepEqual(a,beforeA);assert.deepEqual(b,beforeB,'VFX must never move gameplay objects');
@@ -18,6 +19,7 @@ for(const mobile of [false,true]){
   assert.ok(fx.state().events.pulse>0,'pulse calls stay valid but draw nothing');
   assert.ok(fx.state().events.flame>0&&fx.state().events.explosion>0,'Explosions add a bounded flame crown');
   assert.ok(fx.state().events.portal>0,'Portals reuse the fixed spark and beam batches');
+  for(const event of ['bossPitch','bossRush','bossSwing','bossWave','bossPhase'])assert.ok(fx.state().events[event]>0,`${event} reuses the fixed VFX batches`);
   assert.ok(fx.state().active<=fx.state().capacity);
   fx.clear();fx.setQuality(0);fx.explosion(a,'burst',1.6,true);fx.update(.016);const lowCount=fx.state().active;
   fx.clear();fx.setQuality(2);fx.explosion(a,'burst',1.6,true);fx.update(.016);assert.ok(lowCount<fx.state().active,'low quality emits fewer particles from the same effect');

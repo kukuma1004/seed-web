@@ -102,9 +102,16 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  const e=createAlwaysBeginner(scene);assert.equal(e.config.name,'항상초심');assert.equal(Object.keys(ALWAYS_PHASES).length,3);
  assert.match(ALWAYS_BEGINNER_ART.file,/^boss-always-beginner-v1\.webp$/);assert.ok(ALWAYS_BEGINNER_ART.size>4);
  const first=damageAlwaysBeginner(e,e.maxHp);assert.ok(first<=e.maxHp*ALWAYS_BEGINNER.damage.burst+.001);assert.equal(damageAlwaysBeginner(e,100),0,'same-frame burst is capped');
- const bolts=[],summons=[],ctx={player:new V(0,0,2),collide:()=>{},hit:()=>true,bolt:(p,d,s)=>bolts.push(s),burst:()=>{},pulse:()=>{},sound:()=>{},clearBolts:()=>{},summon:types=>summons.push(...types)};
+ const bolts=[],summons=[],fx={pitch:0,rush:0,swing:0,wave:0,phase:0},ctx={player:new V(0,0,2),collide:()=>{},hit:()=>true,bolt:(p,d,s)=>bolts.push(s),burst:()=>{},pulse:()=>{},sound:()=>{},clearBolts:()=>{},summon:types=>summons.push(...types),bossPitch:()=>fx.pitch++,bossRush:()=>fx.rush++,bossSwing:()=>fx.swing++,bossWave:()=>fx.wave++,bossPhase:()=>fx.phase++};
  e.damageAllowance=e.maxHp;e.timer=0;for(let t=0;t<8;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.ok(bolts.length>0,'boss attacks during opening phase');
+ e.state='pitchTell';e.kind='fastball';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ e.state='pitchTell';e.kind='curve';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ e.state='stealTell';e.target.set(1,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ e.state='swingTell';e.dir.set(0,0,1);e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ e.state='rallyTell';e.timer=0;tickAlwaysBeginner(e,.04,ctx);
+ assert.ok(fx.pitch>=2&&fx.rush>=1&&fx.swing>=1&&fx.wave>=1,'all five boss patterns own a distinct VFX cue');
  e.hp=e.maxHp*.6;e.state='stalk';tickAlwaysBeginner(e,.04,ctx);assert.equal(e.state,'phaseShift');for(let t=0;t<1.2;t+=.04)tickAlwaysBeginner(e,.04,ctx);assert.equal(e.phase,'rally');assert.ok(summons.includes('runner'));
+ assert.equal(fx.phase,1,'phase transition owns a dedicated VFX cue');
 }
 
 // Pitcher: the line fills in first, then a fast straight ball; the third pitch curves.

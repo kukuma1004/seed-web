@@ -31,7 +31,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
   const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0,bossPitch:0,bossRush:0,bossSwing:0,bossWave:0,bossPhase:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
   const density=()=>[.42,.68,1][qualityLevel]*(mobile?.68:1);
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
@@ -169,6 +169,69 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
       segment(workA,workB,id,.035,.6,.35+i*.035);
     }
   }
+  // Always Beginner's attacks use different silhouettes while staying inside
+  // the same four fixed GPU batches. No lights or per-attack meshes are added.
+  function bossPitch(pos,dir,curve=0){
+    counters.bossPitch++;
+    const dx=dir.x,dz=dir.z,length=Math.hypot(dx,dz)||1,nx=dx/length,nz=dz/length,sideX=nz,sideZ=-nx;
+    let px=pos.x+nx*.45,pz=pos.z+nz*.45;
+    const steps=curve?6:4,tint=curve?'reflect':'amber';
+    for(let i=1;i<=steps;i++){
+      const t=i/steps,bend=curve*Math.sin(t*Math.PI)*1.15;
+      const x=pos.x+nx*(.45+t*2.6)+sideX*bend,z=pos.z+nz*(.45+t*2.6)+sideZ*bend;
+      workA.set(px,.78,pz);workB.set(x,.78,z);segment(workA,workB,tint,curve?.065:.09,curve?.3:.22,(i-1)*.018);px=x;pz=z;
+    }
+    for(const along of [.92,1.42]){
+      const x=pos.x+nx*along,z=pos.z+nz*along;
+      workA.set(x-sideX*.18,.8,z-sideZ*.18);workB.set(x+sideX*.18,.8,z+sideZ*.18);segment(workA,workB,'burst',.045,.18);
+    }
+    burst(pos,tint,curve?9:12,.65);
+  }
+  function bossRush(from,to){
+    counters.bossRush++;
+    const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz)||1,nx=dx/length,nz=dz/length,sideX=nz,sideZ=-nx;
+    const count=qualityLevel===0?2:3;
+    for(let lane=0;lane<count;lane++){
+      const offset=(lane-(count-1)/2)*.22;
+      workA.set(from.x+sideX*offset,.3,from.z+sideZ*offset);workB.set(to.x+sideX*offset,.3,to.z+sideZ*offset);segment(workA,workB,lane===1?'amber':'reflect',.055,.3,lane*.025);
+    }
+    dash(from,Math.atan2(nx,nz));burst(to,'reflect',14,.8,.08);
+  }
+  function bossSwing(pos,dir){
+    counters.bossSwing++;
+    const base=Math.atan2(dir.z,dir.x),radius=2.15,steps=qualityLevel===0?5:8;
+    let angle=base-1.05;
+    workA.set(pos.x+Math.cos(angle)*.55,.88,pos.z+Math.sin(angle)*.55);
+    for(let i=1;i<=steps;i++){
+      angle=base-1.05+i*2.1/steps;const r=.55+(radius-.55)*i/steps;
+      workB.set(pos.x+Math.cos(angle)*r,.88,pos.z+Math.sin(angle)*r);segment(workA,workB,i>steps*.66?'burst':'amber',.09+i*.009,.24,i*.012);workA.copy(workB);
+    }
+    const contactX=pos.x+dir.x*.82,contactZ=pos.z+dir.z*.82;
+    for(let i=0;i<4;i++){
+      const a=i*Math.PI/4,ax=Math.cos(a)*.38,az=Math.sin(a)*.38;
+      workA.set(contactX-ax,.95,contactZ-az);workB.set(contactX+ax,.95,contactZ+az);segment(workA,workB,'awaken',.055,.16);
+    }
+    flame(pos,'burst',12,1.05,.02);burst(pos,'amber',18,1.1);
+  }
+  function bossWave(pos,gapAngle=0){
+    counters.bossWave++;
+    const spokes=qualityLevel===0?12:18;
+    for(let i=0;i<spokes;i++){
+      const a=i*Math.PI*2/spokes,diff=Math.atan2(Math.sin(a-gapAngle),Math.cos(a-gapAngle));if(Math.abs(diff)<.42)continue;
+      const delay=(i%3)*.035;
+      workA.set(pos.x+Math.cos(a)*.65,.48,pos.z+Math.sin(a)*.65);workB.set(pos.x+Math.cos(a)*2.45,.48,pos.z+Math.sin(a)*2.45);segment(workA,workB,i%2?'amber':'reflect',.065,.3,delay);
+    }
+    burst(pos,'amber',20,1.15);flame(pos,'amber',8,.75,.04);
+  }
+  function bossPhase(pos,phase='rally'){
+    counters.bossPhase++;
+    const finish=phase==='finish',rays=qualityLevel===0?6:finish?12:9,tint=finish?'burst':'amber';
+    for(let i=0;i<rays;i++){
+      const a=i*Math.PI*2/rays,r=.55+(i%2)*.28;
+      workA.set(pos.x+Math.cos(a)*r,.16,pos.z+Math.sin(a)*r);workB.set(pos.x+Math.cos(a)*r*(finish?1.45:1.2),1.75+(i%3)*.35,pos.z+Math.sin(a)*r*(finish?1.45:1.2));segment(workA,workB,i%3===0?'awaken':tint,.065,finish?.7:.55,i*.025);
+    }
+    burst(pos,tint,finish?38:28,finish?1.8:1.35);flame(pos,tint,finish?22:14,finish?1.55:1.1,.06);
+  }
   function update(dt){
     for(const pool of batches){
       let count=0;
@@ -186,7 +249,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,bossPitch,bossRush,bossSwing,bossWave,bossPhase,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
     state:()=>({theme:themeId,quality:qualityLevel,active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
