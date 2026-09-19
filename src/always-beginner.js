@@ -32,7 +32,7 @@ export function createAlwaysBeginner(scene){
  const lane=add(g,new THREE.PlaneGeometry(.82,11),basic(0xfff0b0,.18),0,.145,5.5);lane.rotation.x=-Math.PI/2;lane.visible=false;
  const arc=add(g,new THREE.RingGeometry(1.3,4.2,56,1,-Math.PI*.45,Math.PI*.9),basic(0xff5260,.2),0,.15,0);arc.rotation.x=-Math.PI/2;arc.visible=false;
  const mark=add(world,new THREE.RingGeometry(.62,.92,4),basic(0x83e7ff,.45),0,.15,0);mark.rotation.x=-Math.PI/2;mark.rotation.z=Math.PI/4;mark.visible=false;
- return {g,body,world,type:'alwaysbeginner',config:ALWAYS_BEGINNER,hp:ALWAYS_BEGINNER.hp,maxHp:ALWAYS_BEGINNER.hp,state:'stalk',timer:.7,phase:'rookie',pattern:0,dir:new V(0,0,1),target:new V(),moveName:'',hint:'',hit:0,slow:0,takenScale:1,ring,lane,arc,mark,damageAllowance:ALWAYS_BEGINNER.hp*ALWAYS_BEGINNER.damage.burst,bumpCD:0,summoned:new Set()};
+ return {g,body,world,type:'alwaysbeginner',config:ALWAYS_BEGINNER,hp:ALWAYS_BEGINNER.hp,maxHp:ALWAYS_BEGINNER.hp,state:'stalk',timer:.7,phase:'rookie',pattern:0,dir:new V(0,0,1),target:new V(),to:new V(),before:new V(),segment:new V(),probe:new V(),targetDelta:new V(),moveName:'',hint:'',hit:0,slow:0,takenScale:1,ring,lane,arc,mark,damageAllowance:ALWAYS_BEGINNER.hp*ALWAYS_BEGINNER.damage.burst,bumpCD:0,summoned:new Set()};
 }
 
 export function damageAlwaysBeginner(e,amount){
@@ -63,7 +63,7 @@ export function tickAlwaysBeginner(e,dt,hooks){
   return;
  }
  if(!e.summoned.has('rookie')){e.summoned.add('rookie');summon(['pitcher']);}
- const P=ALWAYS_PHASES[e.phase],to=flat(player.clone().sub(e.g.position)),distance=to.length();if(distance>1e-6)to.divideScalar(distance);e.timer-=dt;
+ const P=ALWAYS_PHASES[e.phase],to=flat(e.to.copy(player).sub(e.g.position)),distance=to.length();if(distance>1e-6)to.divideScalar(distance);e.timer-=dt;
  e.ring.material.opacity=.26+.14*Math.abs(Math.sin(e.pattern+e.timer*8));
  if(e.state==='stalk'){
   const side=e.pattern%2?1:-1;e.g.position.addScaledVector(to,dt*(distance>5.2?4.1:distance<3.3?-3:0));e.g.position.x+=to.z*dt*3.1*side;e.g.position.z-=to.x*dt*3.1*side;face(e,to);
@@ -76,10 +76,10 @@ export function tickAlwaysBeginner(e,dt,hooks){
     bossPitch(e.g.position,e.dir,e.kind==='curve'?(e.pattern%2?-.95:.95):0);sound('bossAttack');e.lane.visible=false;e.state='recover';e.timer=.52*P.tempo;
   }
  }else if(e.state==='stealTell'){
-  e.mark.rotation.z+=dt*5;e.mark.material.opacity=.3+.45*Math.abs(Math.sin(e.timer*18));face(e,flat(e.target.clone().sub(e.g.position)));
-  if(e.timer<=0){e.dir.copy(flat(e.target.clone().sub(e.g.position)).normalize());bossRush(e.g.position,e.target);e.state='steal';e.timer=.9;}
+  e.mark.rotation.z+=dt*5;e.mark.material.opacity=.3+.45*Math.abs(Math.sin(e.timer*18));face(e,flat(e.targetDelta.copy(e.target).sub(e.g.position)));
+  if(e.timer<=0){e.dir.copy(flat(e.targetDelta.copy(e.target).sub(e.g.position)).normalize());bossRush(e.g.position,e.target);e.state='steal';e.timer=.9;}
  }else if(e.state==='steal'){
-  const before=e.g.position.clone();e.g.position.addScaledVector(e.dir,dt*17);const seg=e.g.position.clone().sub(before),len=seg.lengthSq(),t=len?THREE.MathUtils.clamp(player.clone().sub(before).dot(seg)/len,0,1):0;if(before.addScaledVector(seg,t).distanceTo(player)<1.2)hit(26);if(e.timer<=0||flat(e.target.clone().sub(e.g.position)).dot(e.dir)<-.8){pulse(e.target,'chain',1.3,.35);e.mark.visible=false;e.state='recover';e.timer=.56*P.tempo;}
+  const before=e.before.copy(e.g.position);e.g.position.addScaledVector(e.dir,dt*17);const seg=e.segment.copy(e.g.position).sub(before),len=seg.lengthSq(),t=len?THREE.MathUtils.clamp(e.probe.copy(player).sub(before).dot(seg)/len,0,1):0;if(e.probe.copy(before).addScaledVector(seg,t).distanceTo(player)<1.2)hit(26);if(e.timer<=0||flat(e.targetDelta.copy(e.target).sub(e.g.position)).dot(e.dir)<-.8){pulse(e.target,'chain',1.3,.35);e.mark.visible=false;e.state='recover';e.timer=.56*P.tempo;}
  }else if(e.state==='swingTell'){
   face(e,e.dir);e.arc.material.opacity=.18+.55*Math.abs(Math.sin(e.timer*14));
   if(e.timer<=0){if(distance<4.2&&to.dot(e.dir)>-.05)hit(30);for(let i=-5;i<=5;i++)bolt(e.g.position,e.dir.clone().applyAxisAngle(new V(0,1,0),i*.17),{speed:11.3+Math.abs(i)*.3,damage:18,boss:true});bossSwing(e.g.position,e.dir);sound('bossAttack');e.arc.visible=false;e.state='recover';e.timer=.58*P.tempo;}
