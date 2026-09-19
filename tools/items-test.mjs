@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {STARTING_ITEMS,startingInventory,ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,TURRET_POTION_CHANCE,TURRET_POTION_PITY,turretPotionDrop,nextHeld,heldItems,usable} from '../src/inventory.js';
+import {STARTING_ITEMS,startingInventory,ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,BOSS_SPROUT_CHANCE,TURRET_POTION_CHANCE,TURRET_POTION_PITY,turretPotionDrop,nextHeld,heldItems,usable} from '../src/inventory.js';
 import {validCheckpoint} from '../src/run-save.js';
 
 // Every kind is listed once, in screen order, with a stack limit.
@@ -41,10 +41,12 @@ for(const id of ['potion','wind','shell','sprout'])assert.equal(ITEMS[id].from,'
 assert.equal(ITEMS.tonic.from,'상점 · 포탑 · 오스틴');
 for(const id of ['potion','tonic','wind','shell'])assert.equal(ITEMS[id].max,5,`${id} run stack is capped at five`);
 assert.deepEqual(AUSTIN_BONUS.map(([id])=>id),['tonic','wind','shell','sprout']);
+assert.equal(BOSS_SPROUT_CHANCE,.01);assert.equal(AUSTIN_BONUS.reduce((sum,[,weight])=>sum+weight,0),100);assert.equal(AUSTIN_BONUS.find(([id])=>id==='sprout')[1],1);
 let seed=7;const rand=()=>(seed=(seed*1664525+1013904223)>>>0)/4294967296;const tally={tonic:0,wind:0,shell:0,sprout:0};
 for(let i=0;i<4000;i++)tally[austinBonus(rand)]++;
-assert.ok(tally.tonic>tally.wind&&tally.wind>tally.sprout&&tally.shell>tally.sprout&&tally.sprout>350,JSON.stringify(tally));
+assert.ok(tally.tonic>tally.wind&&tally.tonic>tally.shell&&tally.sprout>=20&&tally.sprout<=60,JSON.stringify(tally));
 const sproutHeld={...emptyInventory(),sprout:1};for(let i=0;i<300;i++)assert.notEqual(austinBonus(rand,sproutHeld),'sprout','a held sprout is never drawn again');
+const onlySproutOpen={potion:5,tonic:5,wind:5,shell:5,sprout:0};assert.equal(austinBonus(()=>.5,onlySproutOpen),null,'full ordinary stacks do not inflate revive odds');assert.equal(austinBonus(()=>.995,onlySproutOpen),'sprout');
 const allFull={potion:5,tonic:5,wind:5,shell:5,sprout:1};assert.equal(austinBonus(rand,allFull),null);assert.deepEqual(austinDrops(rand,allFull),['potion']);
 
 // A turret has a 5% small-potion chance, with a guaranteed drop on the tenth dry kill.

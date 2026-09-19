@@ -56,15 +56,20 @@ export function tryRevive(inventory){
  return {hp:ITEMS.sprout.heal,guard:ITEMS.sprout.guard};
 }
 
-// Austin always gives the big potion, plus one more drawn from the remaining kinds.
-// Kinds already at their stack limit are not drawn, so the bonus is never wasted.
-export const AUSTIN_BONUS=Object.freeze([['tonic',35],['wind',25],['shell',25],['sprout',15]]);
+// Austin and Always Beginner always give the big potion, plus one bonus roll.
+// A revive is a collection-grade reward: its absolute chance stays at 1% even
+// when the ordinary potion stacks are full, so filtering cannot inflate it.
+export const BOSS_SPROUT_CHANCE=.01;
+export const AUSTIN_BONUS=Object.freeze([['tonic',35],['wind',32],['shell',32],['sprout',1]]);
 export function austinBonus(random=Math.random,inventory=null){
- const pool=AUSTIN_BONUS.filter(([id])=>!inventory||(inventory[id]||0)<ITEMS[id].max);
+ const available=id=>!inventory||(inventory[id]||0)<ITEMS[id].max;
+ const roll=Math.max(0,Math.min(.999999999,Number(random())||0));
+ if(available('sprout')&&roll>=1-BOSS_SPROUT_CHANCE)return 'sprout';
+ const pool=AUSTIN_BONUS.filter(([id])=>id!=='sprout'&&available(id));
  if(!pool.length)return null;
  const total=pool.reduce((sum,[,w])=>sum+w,0);
- let roll=random()*total;
- for(const [id,w] of pool){if(roll<w)return id;roll-=w;}
+ let pick=Math.min(.999999,roll/(1-BOSS_SPROUT_CHANCE))*total;
+ for(const [id,w] of pool){if(pick<w)return id;pick-=w;}
  return pool[pool.length-1][0];
 }
 export function austinDrops(random=Math.random,inventory=null){
