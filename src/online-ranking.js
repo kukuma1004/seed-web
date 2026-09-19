@@ -14,6 +14,8 @@ export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 export const SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000});
 export const ARCHIVE_SEASON=Object.freeze({id:'1.0',name:'베타 시즌 1.0 · 첫 정원',start:0,end:SEASON.start});
+export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2});
+export const runAct=run=>run?.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN;
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start&&(!Number.isFinite(season.end)||run.at<season.end);
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -23,13 +25,13 @@ const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 // only fourteen enemies at once. Keep a small margin for future hand-tuned rooms.
 export const MAX_KILLS_PER_JOURNEY=180;
 export function validRun(e){
- if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)))return false;
+ if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER)))return false;
  const multiplier=1+e.cycle*.5;
  return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=(e.kills+12)*50*multiplier&&e.time>=e.cycle*15&&e.time>=e.kills/6;
 }
 // One line per player (same device and same name keep only their best), highest first, earliest wins ties.
-export function bestPerPlayer(data,limit=20,season=SEASON){
- const runs=Object.entries(data&&typeof data==='object'?data:{}).map(([id,v])=>({id,...v})).filter(validRun).filter(run=>!season||inSeason(run,season)).sort((a,b)=>b.score-a.score||a.at-b.at);
+export function bestPerPlayer(data,limit=20,season=SEASON,act=null){
+ const runs=Object.entries(data&&typeof data==='object'?data:{}).map(([id,v])=>({id,...v})).filter(validRun).filter(run=>(!season||inSeason(run,season))&&(!act||runAct(run)===act)).sort((a,b)=>b.score-a.score||a.at-b.at);
  const seen=new Set(),out=[];
  for(const run of runs){const key=run.uid+'\n'+run.name;if(seen.has(key))continue;seen.add(key);out.push(run);if(out.length>=limit)break;}
  return out;
@@ -78,14 +80,14 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   const end=Number.isFinite(season?.end)?`${pushKeyPrefix(Math.max(0,season.end-1))}\uf8ff`:'';
   return `orderBy=${encodeURIComponent('"$key"')}&startAt=${encodeURIComponent(JSON.stringify(start))}&${end?`endAt=${encodeURIComponent(JSON.stringify(end))}&`:''}limitToLast=${FETCH_RECENT}&`;
  };
- async function top(limit=20,playerName='',season=SEASON){
+ async function top(limit=20,playerName='',season=SEASON,act=null){
   const s=await signIn();
   const paths=pathsFor(season);
   const [best,recent]=await Promise.all([
    read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&limitToLast=${FETCH_RUNS}&`,paths.runs)),
    read(runsURL(s,keyRange(season),paths.runs))
   ]);
-  const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit,season);
+  const board=bestPerPlayer({...(best&&typeof best==='object'?best:{}),...(recent&&typeof recent==='object'?recent:{})},limit,season,act);
   // Builds live beside the runs under the same push id. Load the recent batch first, then recover any
   // displayed old high score (and this player's line) that has fallen outside that moving window.
   try{
@@ -98,8 +100,8 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   }catch{}
   return board;
  }
- async function post({name,score,cycle,stage,kills,time,build=null}){
-  const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),at:0};
+ async function post({name,score,cycle,stage,kills,time,act=ACT.AUSTIN,build=null}){
+  const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),act:act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,at:0};
   if(!validRun(shaped)||isBadName(shaped.name))throw new Error('invalid-run');
   const s=await signIn();
   const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
@@ -116,8 +118,8 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  async function submit(entry,limit=20){
   let sent;
   try{sent=await post(entry);}
-  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,build:validBuild(entry.build)?entry.build:null}]);throw error;}
-  const board=await top(limit,sent.name);
+  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,act:entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,build:validBuild(entry.build)?entry.build:null}]);throw error;}
+  const act=entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,board=await top(limit,sent.name,SEASON,act);
   const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
   return {id:sent.id,board,rank:mine+1,bestRank:best+1};
  }

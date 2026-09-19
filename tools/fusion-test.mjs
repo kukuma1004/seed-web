@@ -9,6 +9,9 @@ import {formLawHint} from '../src/form-ui.js';
 
 // Fusing removes both ingredient laws and the form takes a single slot.
 const levels=new Map([['orbit',2],['frost',3],['split',1],['burst',1],['chain',1],['recall',1]]),forms=new Map();
+const mirrorLevels=new Map([['orbit',2],['reflect',1]]);
+assert.equal(canFuse(mirrorLevels,'mirrorguard'),true,'공전 Lv.2 + 반사 Lv.1은 거울 수호가 된다');
+assert.equal(fusionLevel(mirrorLevels,'mirrorguard'),2,'거울 수호 레벨은 두 재료 레벨 합 - 1');
 assert.equal(slotsUsed(levels,forms),SLOT_CAP);
 assert.equal(canFuse(levels,'frostguard'),true);assert.equal(fusionLevel(levels,'frostguard'),4);
 assert.equal(fuse(levels,forms,'frostguard'),true);

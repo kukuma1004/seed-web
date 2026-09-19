@@ -52,6 +52,7 @@
 .rank-tabs{display:flex;gap:8px;justify-content:center;margin:2px 0 4px}
 .rank-tabs button{min-height:40px;padding:6px 16px}
 .rank-tabs button[aria-pressed="true"]{border-color:#f0c86a;color:#ffe3a0;background:#3a2a12cc}
+.rank-season{margin:4px 0 7px;padding:8px 9px;border:1px solid #d2b55b55;background:#241b0ca8}.rank-season>strong{display:block;margin-bottom:6px;color:#f4dda0;font-size:12px;letter-spacing:.4px}.rank-tabs.secondary{opacity:.83;margin-top:7px}.rank-tabs.secondary button{min-height:34px;font-size:10px;padding:5px 10px}
 @media(max-height:480px){.name-field{margin:2px 0 6px}.name-field input{min-height:40px;font-size:16px}.name-field small{display:none}}
 
 /* Keep Austin's clock face and boxing guard clear of the boss HUD. */

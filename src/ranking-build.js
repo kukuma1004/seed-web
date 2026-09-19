@@ -28,7 +28,8 @@ export function buildText(b){
  if(p.relic)parts.push(`유물 ${RELICS[p.relic].name}`);
  return parts.join(' · ');
 }
-export function bossText(b){
+export function bossText(b,act=1){
  const p=parseBuild(b);if(!p)return '';
- return `문지기 ${p.wardens}${p.austins?` · 오스틴 ${p.austins}회 격파`:''}`;
+ const boss=act===2?'항상초심':'오스틴';
+ return `문지기 ${p.wardens}${p.austins?` · ${boss} ${p.austins}회 격파`:''}`;
 }

@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,ACT,runAct,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
 
@@ -21,7 +21,7 @@ function fakeFirebase({clock}){
   const runsBase=[RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path===base),buildsBase=[BUILDS_PATH,LEGACY_BUILDS_PATH].find(base=>path===base||path.startsWith(base+'/'));
   if(runsBase&&opts.method==='POST'){
    const run=JSON.parse(opts.body);
-   if(run.uid!==uid||typeof run.name!=='string'||run.name.length<1||run.name.length>16||!(run.score>=1)||run.at?.['.sv']!=='timestamp')return json(401,{error:'Permission denied'});
+   if(run.uid!==uid||typeof run.name!=='string'||run.name.length<1||run.name.length>16||!(run.score>=1)||![ACT.AUSTIN,ACT.ALWAYS_BEGINNER].includes(run.act)||run.at?.['.sv']!=='timestamp')return json(401,{error:'Permission denied'});
    // Real push IDs start with their creation time; the rest keeps them unique.
    const id=pushKeyPrefix(clock.t)+String(next++).padStart(12,'0');runs[id]={...run,at:clock.t};return json(200,{name:id});
   }
@@ -59,6 +59,10 @@ function fakeFirebase({clock}){
  assert.deepEqual(board.map(e=>e.id),['d','b','c'],'best per device+name, ties go to the earlier run, invalid rows dropped');
  assert.equal(bestPerPlayer(null).length,0);assert.equal(bestPerPlayer(data,1,null).length,1);
  assert.ok(!validRun({...data.a,stage:5})&&!validRun({...data.a,score:0}));
+ assert.equal(runAct(data.a),ACT.AUSTIN,'old season 1.1 rows without act remain Austin records');
+ assert.ok(validRun({...data.a,act:ACT.ALWAYS_BEGINNER})&&!validRun({...data.a,act:3}));
+ const split={...data,a:{...data.a,act:ACT.AUSTIN},b:{...data.b,act:ACT.ALWAYS_BEGINNER},c:{...data.c,act:ACT.ALWAYS_BEGINNER}};
+ assert.deepEqual(bestPerPlayer(split,20,null,ACT.ALWAYS_BEGINNER).map(e=>e.id),['b','c'],'boss boards filter before choosing each player best');
  assert.ok(!validRun({...data.a,cycle:2,kills:1000,time:90}),'impossible old kill counts are hidden even if they predate the database rules');
  assert.ok(!validRun({...data.a,cycle:2,kills:20,time:2}),'impossible kill speed is hidden');
  assert.equal(MAX_KILLS_PER_JOURNEY,180);assert.ok(validRun({...data.a,cycle:100,kills:16200,time:3000,score:10000}),'long legitimate dense journeys remain rankable');
@@ -90,6 +94,9 @@ function fakeFirebase({clock}){
  await assert.rejects(other.remove(again.id),e=>e.status===401);
  assert.ok(await reloaded.remove(again.id));assert.ok(!fb.runs[again.id]);
  assert.equal((await reloaded.top()).find(e=>e.name==='민준').score,1800,'the older best shows again after removal');
+ const act2=await other.submit({...base,name:'서연',score:3900,act:ACT.ALWAYS_BEGINNER});
+ assert.equal(runAct(fb.runs[act2.id]),ACT.ALWAYS_BEGINNER);assert.deepEqual((await other.top(20,'',SEASON,ACT.ALWAYS_BEGINNER)).map(e=>e.name),['서연']);
+ assert.equal((await other.top(20,'',SEASON,ACT.AUSTIN))[0].score,3600,'Austin and Always Beginner keep separate best records');
 }
 
 // Failures surface as errors so the game can fall back to this device's board.

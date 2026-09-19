@@ -82,6 +82,7 @@ assert.equal(difficulty(100).bossTempo,1.3,'Austin stays readable at the tempo c
  assert.deepEqual(parseBuild({...b,forms:'blackhole:7,future:3,prism:x'}).forms,[['blackhole',7]]);
  assert.equal(buildRecord({relic:'nope'}).relic,'');
  assert.equal(bossText(b),'문지기 10 · 오스틴 2회 격파');assert.equal(bossText({...b,austins:0}),'문지기 10');
+ assert.equal(bossText(b,2),'문지기 10 · 항상초심 2회 격파');
  assert.ok(buildText(b).includes('작은 블랙홀 Lv.7')&&buildText(b).includes('유물 전도 코일'));
  const s=memory();submitScore(s,{name:'조합',score:10,cycle:0,stage:1,kills:5,time:9,build:b});
  assert.deepEqual(readRanking(s)[0].build,b,'this device keeps the build too');
