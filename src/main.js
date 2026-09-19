@@ -350,8 +350,13 @@ function renderRoomAnalysis(report,{training=false}={}){
  root.innerHTML=`<header><span>${training?'훈련 결과':'방 클리어 분석'}</span><strong>${combatGrade(report.dps)} · ${Math.round(report.dps)} DPS</strong></header><div class="analysis-bars">${top.map(row=>`<p><span>${escapeHtml(sourceName(row.id))}</span><i><b style="width:${Math.max(3,Math.round(row.share*100))}%"></b></i><em>${Math.round(row.dps)}</em></p>`).join('')}</div><footer><span>${report.kills}처치 · 최고 1초 ${Math.round(report.peak)}</span>${extras.length?`<small>${extras.join(' · ')}</small>`:''}<button type="button" aria-label="전투 분석 닫기">×</button></footer>`;
  root.querySelector('button').onclick=()=>{root.hidden=true;};root.hidden=false;
 }
-function finishRoomAnalysis(training=false){
- const report=combatAnalysis.finish(elapsed);if(!report)return null;lastRoomAnalysis=report;renderRoomAnalysis(report,{training});
+function combatAnalysisSummary(report){
+ if(!report)return '';
+ const top=report.sources.slice(0,3),utility=report.utility||{},extras=[utility.freeze?`\uBE59\uACB0 ${Math.round(utility.freeze)}`:'',utility.pull?`\uB04C\uC5B4\uB2F9\uAE40 ${Math.round(utility.pull)}`:'',utility.blocked?`\uD0C4\uD658 \uBC29\uC5B4 ${Math.round(utility.blocked)}`:'',utility.critical?`\uCE58\uBA85\uD0C0 ${Math.round(utility.critical)}`:''].filter(Boolean);
+ return `<section class="death-combat-analysis"><header><span>\uB9C8\uC9C0\uB9C9 \uC804\uD22C \uBD84\uC11D</span><strong>${combatGrade(report.dps)} \u00b7 ${Math.round(report.dps)} DPS</strong></header><div class="analysis-bars">${top.map(row=>`<p><span>${escapeHtml(sourceName(row.id))}</span><i><b style="width:${Math.max(3,Math.round(row.share*100))}%"></b></i><em>${Math.round(row.dps)}</em></p>`).join('')}</div><footer><span>${report.kills}\uCC98\uCE58 \u00b7 \uCD5C\uACE0 1\uCD08 ${Math.round(report.peak)}</span>${extras.length?`<small>${extras.join(' \u00b7 ')}</small>`:''}</footer></section>`;
+}
+function finishRoomAnalysis(training=false,show=false){
+ const report=combatAnalysis.finish(elapsed);if(!report)return null;lastRoomAnalysis=report;if(show)renderRoomAnalysis(report,{training});else $('#room-analysis').hidden=true;
  if(!developerRun&&!training){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(profile.forms.length);}
  return report;
 }
@@ -701,7 +706,8 @@ function hitPlayer(amount){if(labSafe||invuln>0||shellTime>0||mode!=='playing')r
   // A sprout stands the seed back up once, with a moment to breathe and no shots already in the air.
   const revive=tryRevive(inventory);
   if(revive){hp=revive.hp;invuln=Math.max(invuln,revive.guard);for(const p of enemyShots)release(p.ob);enemyShots=[];itemBarKey='';cameraShake=.32;vfx.pulse(player.position,'seed',2.8,.8);vfx.burst(player.position,'seed',44,2.2);$('#toast').textContent=`${ITEMS.sprout.name}이 돋았다 · 생명력 ${revive.hp}으로 다시 일어났습니다`;return;}
-  if(!developerRun)clearCheckpoint(actStore());mode='dead';showEnd(false);
+  const deathReport=finishRoomAnalysis(false,false);
+  if(!developerRun)clearCheckpoint(actStore());mode='dead';showEnd(deathReport);
  }
 }
 let cameraShake=0;const aimRing=ring(scene,.22,0xa4f8db);aimRing.material.opacity=.5;aimRing.visible=false;
@@ -1134,7 +1140,7 @@ function showRanking(view='online'){
  });
 }
 // Falling ends the run: the score goes to this browser's board at once and to everyone's ranking in the background.
-function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-screen','garden-mode');activeVfx.clear();cancelActive(activeGauge);$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;
+function showEnd(deathReport=null){touch.reset();$('#overlay').classList.remove('intro','menu-screen','garden-mode');activeVfx.clear();cancelActive(activeGauge);$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;$('#room-analysis').hidden=true;
  if(developerRun){$('#overlay').hidden=false;$('#overlay').classList.add('intro','menu-screen','developer-mode');$('#overlay').innerHTML='<div class="menu-panel developer-panel developer-end"><p class="eyebrow">SEED · ADMIN ONLY</p><h2>실험 종료</h2><p>점수·보상·도감·정원·저장에는 아무것도 남지 않았습니다.</p><div class="developer-footer"><button id="developer-retry">실험실로</button><button id="developer-end-main">메인으로</button></div></div>';$('#developer-retry').onclick=showDeveloperLab;$('#developer-end-main').onclick=showIntro;return;}
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&!developerRun&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
@@ -1146,6 +1152,7 @@ function showEnd(){touch.reset();$('#overlay').classList.remove('intro','menu-sc
  const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,build};
  const local=ranked?submitScore(actStore(),entry):null;
  const endBoard=local?.ranking||readRanking(actStore());$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="garden-line">${escapeHtml(harvestLine(lastHarvest))}</p><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><div class="intro-links"><button class="primary" id="restart">다시 시작</button><button class="discovery-link" id="end-garden">정원 보기</button></div>`;
+ if(deathReport)$('#rank-status').insertAdjacentHTML('beforebegin',combatAnalysisSummary(deathReport));
  $('#restart').onclick=showIntro;
  $('#end-garden').onclick=()=>showGarden(showEnd);
  if(!ranked)return;
@@ -1230,7 +1237,7 @@ for(let p of enemyShots){p.life-=dt;p.age=(p.age||0)+dt;if(p.recall&&p.age>1.3){
 
 for(let arr of [shots,enemyShots,effects])for(let i=arr.length-1;i>=0;i--){let p=arr[i];if(arr===effects){p.life-=dt;if(p.vel)p.ob.position.addScaledVector(p.vel,dt);p.ob.scale.setScalar(Math.max(.01,p.life/p.max));}if(p.life<=0){if(arr===enemyShots)endEnemyShot(p);if(p.burstOnEnd)mutationBurst(p.ob.position.clone(),TUNE.splitBurst.radius,TUNE.splitBurst.damage);release(p.ob);arr.splice(i,1);}}
 updateEscorts(0);updateFallen(dt,time);updateRunes(dt);const bossFalling=fallen.some(f=>f.hold);
- enemies=enemies.filter(e=>!e.dead);if(!trainingSession&&!enemies.length&&crowdLeft===0&&mode==='playing'&&!roomCleared&&!bossFalling){for(let p of enemyShots)release(p.ob);enemyShots=[];roomCleared=true;finishRoomAnalysis(false);score+=roomPoints(stage,cycle);clearForms();for(const p of shots)release(p.ob);shots=[];if(stage<4)openExit();else cardChoice();}
+ enemies=enemies.filter(e=>!e.dead);if(!trainingSession&&!enemies.length&&crowdLeft===0&&mode==='playing'&&!roomCleared&&!bossFalling){for(let p of enemyShots)release(p.ob);enemyShots=[];roomCleared=true;finishRoomAnalysis(false,false);score+=roomPoints(stage,cycle);clearForms();for(const p of shots)release(p.ob);shots=[];if(stage<4)openExit();else cardChoice();}
 if(mode==='playing'&&!roomCleared&&!bossFalling&&choiceKills>=killsForChoice(choicesTaken)){choiceKills-=killsForChoice(choicesTaken);choicesTaken++;cardChoice(true);}}
 // 판 시간은 게임 시계(프레임 간격)가 아니라 실제 시계로 잰다. 게임을 느리게 돌리는 도구를 쓰면
 // 예전에는 기록 시간이 그만큼 줄어 '분당 처치'가 부풀려졌다. 실제 시계는 그렇게 줄지 않는다.
