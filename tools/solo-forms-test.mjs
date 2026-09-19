@@ -12,8 +12,8 @@ const V=THREE.Vector3;
 assert.equal(Object.keys(SOLO_FORMS).length,Object.keys(LAWS).length);
 for(const law of Object.keys(LAWS)){const id=soloFormOf(law);assert.ok(id&&isSoloForm(id),law);assert.deepEqual([...SOLO_FORMS[id].requires],[law]);}
 for(const f of Object.values(SOLO_FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.solo===true&&f.pair.includes('단독'));assert.ok(!Object.hasOwn(FORMS,f.id));}
-assert.equal(Object.keys(ALL_FORMS).length,58);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,58);
-assert.equal(eligibleForms(Object.keys(LAWS)).length,13,'fusion offers never include solo evolutions');
+assert.equal(Object.keys(ALL_FORMS).length,61);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,61);
+assert.equal(eligibleForms(Object.keys(LAWS)).length,16,'fusion offers never include solo evolutions');
 assert.equal(isFormEligible('fullbloom',['split']),false);assert.equal(canFuse(new Map([['split',9]]),'fullbloom'),false);
 assert.deepEqual(Object.keys(FORM_COMBAT).sort(),Object.keys(ALL_FORMS).sort());
 

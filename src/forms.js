@@ -21,7 +21,10 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 날아오는 적 탄환을 되받아 가장 가까운 적에게 돌려보냅니다(문지기 탄 제외).','사수·포탑의 탄막을 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함',true),
  form('gravitymirror',['reflect','gravity'],'중력 거울','거울핵이 벽을 튕길 때마다 짧은 중력장을 남겨 적을 끌어모으고, 마지막 충돌에서 압축해 터뜨립니다.','벽을 이용해 적의 위치를 바꾸고 마지막 폭발까지 연결','트인 공간에서는 튕김과 끌림을 충분히 만들기 어려움'),
  form('chainburst',['chain','burst'],'연쇄 폭발','번개가 적 사이를 차례로 건너간 뒤 마지막 표적에서 폭발합니다.','흩어진 무리를 이어 마지막 밀집 지점을 폭파','적이 한두 마리뿐이면 연쇄 거리와 마무리 폭발을 낭비'),
- form('blastlance',['pierce','burst'],'폭발 창','긴 창이 적을 관통할수록 폭발력을 모으고, 사거리 끝에서 모은 힘을 터뜨립니다.','일렬로 선 적을 꿰뚫을수록 마지막 폭발이 강해짐','옆으로 흩어진 적과 코앞의 적에게는 충전할 거리가 부족')
+ form('blastlance',['pierce','burst'],'폭발 창','긴 창이 적을 관통할수록 폭발력을 모으고, 사거리 끝에서 모은 힘을 터뜨립니다.','일렬로 선 적을 꿰뚫을수록 마지막 폭발이 강해짐','옆으로 흩어진 적과 코앞의 적에게는 충전할 거리가 부족'),
+ form('frostkaleidoscope',['reflect','frost'],'서리 만화경','얼음 거울탄이 벽을 튕기며 냉기를 모읍니다. 두 번 이상 튕긴 탄이 적을 맞히면 얼음 파편으로 크게 깨집니다.','벽 각도를 읽어 강한 빙결 파쇄를 준비','트인 공간에서는 파쇄 조건을 만들 수 없음'),
+ form('lightningpetal',['split','chain'],'번개 꽃잎','첫 적에게 닿은 꽃봉오리가 여러 전기 꽃잎으로 갈라지고, 꽃잎마다 가까운 다음 적에게 번개를 잇습니다.','적이 여러 방향에 퍼져 있을수록 꽃잎과 번개가 넓게 번짐','적이 한두 마리면 꽃잎과 후속 번개가 사라짐'),
+ form('returnflare',['burst','recall'],'귀환 불씨','목표에서 한 번 터진 불씨핵이 씨앗을 향해 돌아오며 적을 긁고, 씨앗에 닿을 때 다시 폭발합니다.','이동으로 귀환 경로와 마지막 폭발 위치를 바꿈','제자리에 머물면 두 폭발과 귀환 경로가 한곳에 겹침')
 ].map(f=>[f.id,withPair(f)])));
 
 const pairKey=requires=>[...requires].sort().join('+');
@@ -68,7 +71,7 @@ const SOLO_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)의 단독 진화는 뺀다.
 export const SOLO_FORMS=Object.freeze(Object.fromEntries(Object.entries(SOLO_ALL).filter(([,f])=>!HIDDEN_LAWS.includes(f.requires[0]))));
-// Every first evolution the seed can hold: thirteen authored first fusions and nine solo evolutions.
+// Every first evolution the seed can hold: sixteen authored first fusions and nine solo evolutions.
 // Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
 // of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
@@ -151,8 +154,8 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
 ].map(f=>[f.id,f])));
 // 숨긴 법칙(차원)이 들어간 쌍둥이 각성은 뺀다.
 export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
-// Every evolution the seed can hold: thirteen authored first fusions, nine solo evolutions,
-// ten curated awakenings and 26 twin awakenings (58).
+// Every evolution the seed can hold: sixteen authored first fusions, nine solo evolutions,
+// ten curated awakenings and 26 twin awakenings (61).
 export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
@@ -218,6 +221,9 @@ const SURGE=Object.freeze({
  gravitymirror:s=>({bounces:s.bounces+3,pullRadius:s.pullRadius+.7,blastRadius:s.blastRadius+.45}),
  chainburst:s=>({jumps:s.jumps+3,range:s.range+.8,finishRadius:s.finishRadius+.45}),
  blastlance:s=>({pierce:s.pierce+5,length:s.length+3,blastRadius:s.blastRadius+.5}),
+ frostkaleidoscope:s=>({bolts:s.bolts+4,bounces:s.bounces+3,shatterBounces:Math.max(1,s.shatterBounces-1)}),
+ lightningpetal:s=>({petals:s.petals+2,range:s.range+.8,chainRange:s.chainRange+.6}),
+ returnflare:s=>({bolts:s.bolts+2,radius:s.radius+.45,homeRadius:s.homeRadius+.6}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
  thunderweb:s=>({jumps:s.jumps+1,decay:Math.min(.93,s.decay+.02)}),
@@ -231,7 +237,7 @@ const SURGE=Object.freeze({
 });
 // While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
 export const SURGE_DAMAGE=1.6;
-const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','emberDamage','returnDamage','blast','finish'];
+const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','chainDamage','emberDamage','returnDamage','homeDamage','blast','finish'];
 // Awakened: a lasting share of the surge. Counts grow a little, attacks come a little faster and hit a little harder;
 // the ultimate still adds the full surge on top.
 const AWAKEN_BOOST=Object.freeze({
@@ -310,6 +316,9 @@ function baseStats(id,level){
   case 'gravitymirror':return {interval:1.05*faster,damage:28*power,speed:10.5,life:3,bounces:Math.min(7,3+Math.floor(up/2)),pullRadius:Math.min(3.2,2.15+.12*up),pull:4.4,blast:48*power,blastRadius:Math.min(2.5,1.65+.1*up),bolts:4};
   case 'chainburst':return {interval:1.18*faster,damage:31*power,jumps:Math.min(7,3+Math.floor(up/2)),range:Math.min(5.2,4.1+.1*up),decay:.88,reach:10,finish:52*power,finishRadius:Math.min(2.6,1.7+.1*up)};
   case 'blastlance':return {interval:1.3*faster,damage:37*power,length:Math.min(17,12+.7*up),pierce:Math.min(13,7+up),ramp:.08,blast:42*power,blastRadius:Math.min(3,1.65+.1*up)};
+  case 'frostkaleidoscope':return {interval:.98*faster,damage:29*power,speed:11.5,life:3.4,bounces:Math.min(9,4+Math.floor(up/2)),gain:.1,slow:1.7,shatter:54*power,shatterBounces:2,bolts:4};
+  case 'lightningpetal':return {interval:1.02*faster,damage:34*power,speed:12,life:1.25,bolts:4,petals:Math.min(5,3+Math.floor(up/3)),petalDamage:22*power,chainDamage:15*power,range:Math.min(5.4,4.2+.1*up),chainRange:3.4};
+  case 'returnflare':return {interval:1.32*faster,damage:30*power,returnDamage:22*power,homeDamage:46*power,radius:Math.min(2.5,1.65+.1*up),homeRadius:Math.min(3,2.05+.1*up),range:9,speed:10.5,life:4.5,bolts:3};
   default:return {interval:Infinity,damage:0};
  }
 }
@@ -318,7 +327,7 @@ function baseStats(id,level){
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
  if(GENERATED_FORMS[id]||SECOND_FORMS[id])return `${SECOND_FORMS[id]?'재융합':'진화'} Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
-  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통']})[baseFormOf(id)];
+  const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통'],frostkaleidoscope:['bounces','튕김'],lightningpetal:['petals','전기 꽃잎'],returnflare:['homeRadius','귀환 폭발 반경']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}
  return parts.join(' · ');

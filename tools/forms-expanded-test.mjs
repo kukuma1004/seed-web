@@ -16,9 +16,9 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: thirteen hand-authored forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,13);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,13);
+// Catalogue: sixteen hand-authored forms, unique pairs, every law feeds at least two forms.
+assert.equal(Object.keys(FORMS).length,16);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,16);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
@@ -135,4 +135,22 @@ for(const id of Object.keys(FORMS)){
  const end=enemy(12),f=fixture([enemy(2),enemy(5),enemy(8),end]);f.combat.set('blastlance');f.combat.fire(vec(),vec(1));
  assert.ok(f.calls.filter(c=>c.e===end&&c.kind==='blastlance').length>=2,'the far target receives the charged line and endpoint blast');f.combat.dispose();
 }
-console.log('Forms: thirteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+// The next small batch also has one interaction and one readable weakness each:
+// wall-charged ice, crowd-only lightning petals, and a player-routed return flare.
+{
+ const foe=enemy(2),splash=enemy(2,1),f=fixture([foe,splash],{boundary:walls});f.combat.set('frostkaleidoscope');f.combat.fire(vec(),vec(1));step(f.combat,1.8);
+ assert.ok(f.calls.some(c=>c.e===foe&&c.kind==='frostkaleidoscope'&&c.phase==='shatter'),'two wall rebounds charge an ice shatter');
+ assert.ok((foe.slow||0)>0&&(splash.slow||0)>0,'the shatter chills its target and nearby enemy');f.combat.dispose();
+}
+{
+ const foes=[enemy(2),enemy(3.2,1),enemy(3.4,-1),enemy(5,1)],f=fixture(foes);f.combat.set('lightningpetal');f.combat.fire(vec(),vec(1));step(f.combat,.5);
+ assert.ok(foes.slice(0,3).every(e=>f.calls.some(c=>c.e===e&&c.kind==='lightningpetal')),'the bud opens into different nearby targets');
+ assert.ok(f.calls.some(c=>c.e===foes[3]&&c.damage===formStats('lightningpetal',1).chainDamage),'a claimed petal sends one short follow-up arc');f.combat.dispose();
+}
+{
+ const outbound=enemy(5),returnPath=enemy(2.5),home=enemy(.8,.5),f=fixture([outbound,returnPath,home]);f.combat.set('returnflare');f.combat.fire(vec(),vec(1),vec(5));step(f.combat,1.4);
+ assert.ok(f.calls.some(c=>c.e===outbound&&c.kind==='returnflare'&&c.phase==='outbound'),'the remote endpoint explodes');
+ assert.ok(f.calls.some(c=>c.e===returnPath&&c.phase==='return'),'the core damages along its route home');
+ assert.ok(f.calls.some(c=>c.e===home&&c.phase==='home'),'reaching the seed creates a second explosion');f.combat.dispose();
+}
+console.log('Forms: sixteen authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

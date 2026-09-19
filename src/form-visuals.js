@@ -114,6 +114,23 @@ export function createFormVisuals(){
   paint(leaf(.46,.17,.05,.04,5),C.ice).rotateZ(Math.PI/2).translate(.25,0,.04),
   paint(leaf(.46,.17,.05,.04,5),C.jade).rotateZ(-Math.PI/2).translate(-.25,0,.04)
  ]);
+ geos.frostMirror=join('frost-mirror-shard',[
+  paint(new THREE.OctahedronGeometry(.24,0).scale(.62,1.32,.62),C.ice),
+  paint(new THREE.TorusGeometry(.25,.035,5,12),C.blue).rotateX(Math.PI/2),
+  paint(leaf(.4,.12,.02,.035,5),C.ivory).rotateZ(Math.PI/2).translate(.23,0,.035),
+  paint(leaf(.4,.12,.02,.035,5),C.ivory).rotateZ(-Math.PI/2).translate(-.23,0,.035)
+ ]);
+ geos.lightningPetal=join('lightning-petal-bud',[
+  seedBody(.12,.26,C.gold),
+  paint(leaf(.45,.15,.05,.04,5),C.ivory).rotateZ(.72).translate(.11,.12,.02),
+  paint(leaf(.45,.15,.05,.04,5),C.blue).rotateZ(-.72).translate(-.11,.12,.055),
+  paint(new THREE.ConeGeometry(.065,.32,4),C.gold).rotateX(Math.PI/2).translate(0,0,-.21)
+ ]);
+ geos.returnFlare=join('returning-flare-core',[
+  paint(crescent(.82),C.gold).rotateZ(-.18),
+  paint(new THREE.DodecahedronGeometry(.16,0),C.ivory).translate(.13,0,.065),
+  paint(leaf(.5,.12,.08,.035,6),C.jade).rotateZ(-Math.PI/2).translate(-.36,0,.06)
+ ]);
  geos.gene=join('paired-law-gene',[paint(new THREE.OctahedronGeometry(.19,0).scale(.72,.72,1.45),C.violet),paint(new THREE.TorusGeometry(.22,.035,5,12),C.gold).rotateX(Math.PI/2),paint(leaf(.38,.13,.05,.03,5),C.ivory).rotateZ(-.72).translate(.08,.12,.03)]);
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
  for(let i=0;i<4;i++)star.push(petal(.5,.25,{edge:C.ivory,inner:i%2?C.gold:C.jade,bend:.025,depth:.075}).translate(0,.2,0).rotateZ(i*Math.PI/2));

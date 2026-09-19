@@ -99,5 +99,5 @@ for(const id of Object.keys(ALL_FORMS)){
  combat.surge(2);combat.calm();assert.equal(combat.state().surge,0);
  combat.dispose();
 }
-assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,22,'손제작 조합 13 + 단독 진화 9');
+assert.equal(Object.keys(FORMS).length+Object.keys(SOLO_FORMS).length,25,'손제작 조합 16 + 단독 진화 9');
 console.log(`Actives: ${Object.keys(SIGNATURES).length} signatures, one orbit core, measured recharge cadence, stabilization, saves and every surge in real combat passed.`);

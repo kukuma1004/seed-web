@@ -16,7 +16,7 @@ import {DASH_EVOLUTIONS,createDashState,tickDash,spendDash,dashMeter,dashEvoluti
 // Forms that fly as a projectile can be stopped by a shield's face; area and orbit forms go around it.
 // Movement and seed-shot tempo (2026-09-15: +5% each; were 5.8, 13.8 and 9.2). Dash, enemy shots and evolution bolts are unchanged.
 const PLAYER_SPEED=5.8*1.05,SHOT_SPEED=13.8*1.05,FRAGMENT_SPEED=9.2*1.05;
-const DIRECT_FORMS=new Set(['returnblade','prism','thunderlance','seedstorm','mirrorguard','gravitymirror','blastlance','mirrormaze','fullbloom','glassspear','rewind']);
+const DIRECT_FORMS=new Set(['returnblade','prism','thunderlance','seedstorm','mirrorguard','gravitymirror','blastlance','frostkaleidoscope','lightningpetal','returnflare','mirrormaze','fullbloom','glassspear','rewind']);
 import {readDiscoveries,writeDiscoveries,recordDiscovery,growthGuide,rerollUnlocked} from './discoveries.js';
 import {createCombatAnalysis,recordPersonalBests,combatGrade} from './combat-analysis.js';
 import {createFormCombat} from './form-combat.js';

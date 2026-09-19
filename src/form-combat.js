@@ -213,6 +213,25 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     case 'chainburst':{chainBurst(pos);return S.interval;}
     case 'blastlance':{blastLance(pos,aim);return S.interval;}
+    case 'frostkaleidoscope':{
+     if(full('frostkaleidoscope',S.bolts))return S.interval;
+     const ob=spawnMesh(geos.frostMirror,mats.ice,pos);ob.rotation.x=-Math.PI/2;
+     bolts.push({kind:'frostkaleidoscope',ob,dir:aim,life:S.life,bounces:force?S.shatterBounces:0,passed:new Set()});
+     fx.muzzle(pos,aim,'frost');return S.interval;
+    }
+    case 'lightningpetal':{
+     if(full('lightningpetal',S.bolts))return S.interval;
+     const ob=spawnMesh(geos.lightningPetal,mats.storm,pos);ob.rotation.x=-Math.PI/2;
+     bolts.push({kind:'lightningpetal',ob,dir:aim,life:S.life});fx.muzzle(pos,aim,'chain');return S.interval;
+    }
+    case 'returnflare':{
+     if(full('returnflare',S.bolts))return S.interval;
+     const to=target?new V(target.x,0,target.z):pos.clone().addScaledVector(aim,S.range),offset=to.clone().sub(pos).setY(0);
+     if(offset.length()>S.range)offset.setLength(S.range);
+     const ob=spawnMesh(geos.returnFlare,mats.storm,pos);ob.rotation.x=-Math.PI/2;
+     bolts.push({kind:'returnflare',ob,dir:aim.clone(),to:pos.clone().setY(0).add(offset),age:0,returning:false,returnHits:new Set(),life:S.life});
+     fx.muzzle(pos,aim,'burst');return S.interval;
+    }
    }
   return Infinity;
  }
@@ -315,6 +334,24 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   for(let d=0;d<flat(start,end);d+=1.25)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.25)).setY(.7),d%2.5<1.25?'pierce':'burst',false);
   const radius=Math.min(S.blastRadius+.9,S.blastRadius+struck*.12),power=S.blast*(1+Math.min(1,struck*.12));fx.explosion(end,'burst',radius,true);sound('burstHit');
   for(const e of near(end,radius+.8))if(!e.dead&&flat(e.g.position,end)<radius+bossReach(e,0,.55))support(e,power,{kind:'blastlance',indirect:true,direction:e.g.position.clone().sub(end).setY(0).normalize()});
+ }
+ // Split + chain: the first impact opens several petals. Each petal claims a
+ // different nearby enemy, then sends one short arc onward. Sparse fights
+ // deliberately waste most of the weapon's budget.
+ function lightningBloom(first,direction){
+  if(!support(first,S.damage,{kind:'lightningpetal',direction:direction.clone()}))return;
+  const touched=new Set([first]),petals=enemies().filter(e=>!e.dead&&!touched.has(e)&&flat(e.g.position,first.g.position)<S.range&&!blocked(first.g.position.clone().setY(0),e.g.position.clone().setY(0))).sort((a,b)=>flat(a.g.position,first.g.position)-flat(b.g.position,first.g.position)).slice(0,S.petals);
+  fx.split(first.g.position,direction,Math.min(5,S.petals));sound('split');
+  for(const petal of petals){
+   touched.add(petal);fx.trail(first.g.position.clone().setY(.7),petal.g.position.clone().setY(.7),'split',true);fx.arc(first.g.position,petal.g.position);
+   support(petal,S.petalDamage,{kind:'lightningpetal',indirect:true,direction:petal.g.position.clone().sub(first.g.position).setY(0).normalize()});
+   const next=nearestEnemy(petal.g.position,S.chainRange,touched,true);if(!next)continue;
+   touched.add(next);fx.arc(petal.g.position,next.g.position);support(next,S.chainDamage,{kind:'lightningpetal',indirect:true,direction:next.g.position.clone().sub(petal.g.position).setY(0).normalize()});
+  }
+ }
+ function returnFlareBurst(pos,damage,radius,phase){
+  fx.explosion(pos,'burst',radius,true);fx.pulse(pos,phase==='home'?'recall':'burst',radius,.32);sound('burstHit');
+  for(const e of near(pos,radius+.8))if(!e.dead&&flat(e.g.position,pos)<radius+bossReach(e,0,.5))support(e,damage,{kind:'returnflare',phase,indirect:true,direction:e.g.position.clone().sub(pos).setY(0).normalize()});
  }
  // Frost in a cone in front of the seed (cone = half angle; PI is all around). Slowed enemies take more.
  function breath(pos,dir,cone){
@@ -483,6 +520,19 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     fx.trail(previous,b.ob.position,b.kind==='collapse'?'gravity':'recall',false);
     continue;
    }
+    if(b.kind==='frostkaleidoscope'){
+     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;b.ob.rotation.z-=dt*4;
+     const wall=boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     if(cover){b.ob.position.copy(previous);b.dir.negate();}
+     if(wall||cover){if(b.bounces>=S.bounces){b.life=0;continue;}b.bounces++;b.passed.clear();fx.reflect(b.ob.position,b.dir);fx.pulse(b.ob.position,'frost',.45+.08*b.bounces,.18);sound('reflect');}
+     const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+     if(e){
+      b.passed.add(e);const charged=b.bounces>=S.shatterBounces,landed=support(e,S.damage*(1+S.gain*b.bounces),{kind:'frostkaleidoscope',direction});
+      if(!landed){b.life=0;continue;}e.slow=Math.max(e.slow||0,S.slow);
+      if(charged){fx.explosion(e.g.position,'frost',1.25,true);sound('frostHit');support(e,S.shatter*(1+.12*(b.bounces-S.shatterBounces)),{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction});for(const other of near(e.g.position,1.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<1.35+bossReach(other,0,.35)){support(other,S.shatter*.35,{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});other.slow=Math.max(other.slow||0,S.slow*.7);}b.life=0;}
+     }
+     fx.trail(previous,b.ob.position,'frost',b.bounces>0);continue;
+    }
     if(b.kind==='gravitymirror'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*9;b.ob.rotation.z+=dt*5;
      const wall=boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
@@ -602,6 +652,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     fx.trail(previous,b.ob.position,'split',petalKind);
     continue;
    }
+   if(b.kind==='lightningpetal'){
+    b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*10;b.ob.rotation.z+=dt*5;
+    if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.life=0;continue;}
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.66,1.16));
+    if(e){b.life=0;lightningBloom(e,b.dir);}
+    fx.trail(previous,b.ob.position,'chain',false);continue;
+   }
    if(b.kind==='flarebloom'){
    b.t+=dt;const k=Math.min(1,b.t/S.flight);
    b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2.4);b.ob.rotation.y+=dt*6;
@@ -640,6 +697,23 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     fx.trail(previous,b.ob.position,'recall',true);
     continue;
+   }
+   if(b.kind==='returnflare'){
+    b.age+=dt;b.ob.rotation.y+=dt*8;b.ob.rotation.z+=dt*7;
+    if(b.returning){
+     b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();
+     if(flat(b.ob.position,player.position)<.62){returnFlareBurst(b.ob.position,S.homeDamage,S.homeRadius,'home');b.life=0;continue;}
+     b.ob.position.addScaledVector(b.dir,dt*S.speed);
+     const direction=b.dir.clone(),targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.returnHits.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
+     targets.sort((a,b)=>a.g.position.clone().sub(previous).dot(direction)-b.g.position.clone().sub(previous).dot(direction));
+     for(const e of targets){b.returnHits.add(e);if(!support(e,S.returnDamage,{kind:'returnflare',phase:'return',direction:direction.clone()})){b.life=0;break;}}
+     fx.trail(previous,b.ob.position,'recall',true);continue;
+    }
+    b.ob.position.addScaledVector(b.dir,dt*S.speed);
+    const hitWall=boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position),arrived=flat(b.ob.position,b.to)<.4||b.age>=S.range/S.speed;
+    if(hitWall)b.ob.position.copy(previous);
+    if(hitWall||arrived){returnFlareBurst(b.ob.position,S.damage,S.radius,'outbound');b.returning=true;b.returnHits.clear();fx.pulse(b.ob.position,'recall',.6,.22);}
+    fx.trail(previous,b.ob.position,'burst',false);continue;
    }
    if(b.kind==='blackhole'){
     if(b.t<.5){b.t+=dt;const k=Math.min(1,b.t/.5);b.ob.position.lerpVectors(b.from,b.to,k).setY(.6);if(k<1)continue;fx.pulse(b.to,'gravity',S.radius,.5);}
@@ -698,7 +772,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  // ---------------- active (signature / overdrive) ----------------
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
-  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
+  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
@@ -775,6 +849,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     case 'chainburst':for(const e of nearest(4,S.reach))chainBurst(pos,e);break;
     case 'blastlance':for(const a of [-.52,-.26,0,.26,.52])blastLance(pos,dir.clone().applyAxisAngle(Y,a));break;
+    case 'frostkaleidoscope':for(const d of around(8))fire(pos,d,null,true);break;
+    case 'lightningpetal':for(const d of around(8))fire(pos,d,null,true);break;
+    case 'returnflare':for(const d of around(4))fire(pos,d,pos.clone().addScaledVector(d,Math.min(7,S.range)),true);break;
    case 'mirrormaze':for(const d of around(8))fire(pos,d,null,true);break;
    case 'fullbloom':for(const d of around(4))fire(pos,d,null,true);break;
    case 'glassspear':for(const d of around(6))fire(pos,d,null,true);break;
