@@ -6,6 +6,10 @@ import {COMBO_LAW_BY_ID} from './combo-catalog.js';
 // 1,090-entry catalogue. A recipe is data only, so choice cards and the 3D
 // combat projectile can never drift into unrelated designs.
 const FALLBACK='#d6efc7';
+// Contract for the eventual 1,090-entry catalogue. Only the equipped recipe is
+// materialised, it remains one merged mesh, and every generated shape must fit
+// inside this mobile geometry budget.
+export const COMBO_PROJECTILE_BUDGET=Object.freeze({liveGeometries:1,meshesPerProjectile:1,materialsPerProjectile:1,textures:0,maxVertices:700,maxTriangles:234});
 const LAW_SHAPES=Object.freeze({
  reflect:'prism',split:'petal',chain:'fork',orbit:'ring',pierce:'spear',
  burst:'flare',recall:'crescent',gravity:'well',frost:'crystal',portal:'gate'
@@ -40,7 +44,13 @@ function colorGeometry(geometry,color,tip=1.12){
  const p=g.getAttribute('position'),n=g.getAttribute('normal'),base=new THREE.Color(color),out=[];
  const min=g.boundingBox.min.z,max=g.boundingBox.max.z,span=max-min||1;
  for(let i=0;i<p.count;i++){
-  const t=(p.getZ(i)-min)/span,shade=.7+.18*Math.max(0,n.getY(i))+.12*t;
+  const t=(p.getZ(i)-min)/span;
+  // Directional facets and two broad energy bands are baked into vertex
+  // colour. This creates metallic depth and readable motion at no runtime cost.
+  const facet=.08*Math.max(0,n.getX(i)*.72+n.getY(i)*.7+n.getZ(i)*.28);
+  const rim=.055*Math.min(1,Math.abs(n.getX(i))+Math.abs(n.getY(i)));
+  const band=.045*(.5+.5*Math.cos((t*2.15+.18)*Math.PI*2));
+  const shade=.64+.18*Math.max(0,n.getY(i))+.11*t+facet+rim+band;
   const c=base.clone().multiplyScalar(shade*(1+(tip-1)*t));out.push(c.r,c.g,c.b);
  }
  g.setAttribute('color',new THREE.Float32BufferAttribute(out,3));return g;

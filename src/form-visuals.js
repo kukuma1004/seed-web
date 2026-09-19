@@ -10,9 +10,15 @@ function paint(geometry,color){
  if(g!==geometry)geometry.dispose();
  g.deleteAttribute('uv');g.computeVertexNormals();g.computeBoundingBox();
  const p=g.getAttribute('position'),n=g.getAttribute('normal'),base=new THREE.Color(color),out=[];
- const height=g.boundingBox.max.y-g.boundingBox.min.y||1;
+ const height=g.boundingBox.max.y-g.boundingBox.min.y||1,width=g.boundingBox.max.x-g.boundingBox.min.x||1;
  for(let i=0;i<p.count;i++){
-  const shade=.79+.14*(p.getY(i)-g.boundingBox.min.y)/height+.07*Math.max(0,n.getZ(i));
+  // Baked key light, edge glint and a faint centre vein make the low-poly
+  // facets readable without another material, texture or per-shot light.
+  const vertical=(p.getY(i)-g.boundingBox.min.y)/height;
+  const edge=Math.min(1,Math.abs(p.getX(i))/(width*.5));
+  const facing=Math.max(0,n.getZ(i));
+  const vein=Math.max(0,1-Math.abs(p.getX(i))/(width*.13));
+  const shade=.72+.17*vertical+.09*facing+.08*edge+.07*vein;
   const c=base.clone().multiplyScalar(shade);out.push(c.r,c.g,c.b);
  }
  g.setAttribute('color',new THREE.Float32BufferAttribute(out,3));return g;
@@ -98,7 +104,9 @@ export function createFormVisuals(){
  ]);
  geos.seed=join('winged-seed',[
   seedBody(.105,.23,C.ivory),
-  paint(leaf(.33,.13,.06,.025,5),C.jade).rotateZ(-.65).translate(.07,.095,0)
+  paint(leaf(.33,.13,.06,.025,5),C.jade).rotateZ(-.65).translate(.07,.095,0),
+  paint(new THREE.ConeGeometry(.035,.25,4),C.gold).rotateZ(.78).translate(-.09,-.09,.025),
+  paint(new THREE.OctahedronGeometry(.045,0),C.ice).translate(.015,.14,.055)
  ]);
  geos.mirror=join('leaf-mirror',[
   paint(leaf(.8,.57,0,.085,5),C.gold),
@@ -134,17 +142,25 @@ export function createFormVisuals(){
  geos.cometBud=join('charged-comet-corolla',[
   seedBody(.13,.3,C.gold),
   paint(new THREE.TorusGeometry(.2,.04,5,12),C.jade).rotateX(Math.PI/2),
-  paint(leaf(.48,.15,.1,.04,6),C.ivory).rotateZ(-Math.PI/2).translate(-.3,0,.05)
+  paint(leaf(.48,.15,.1,.04,6),C.ivory).rotateZ(-Math.PI/2).translate(-.3,0,.05),
+  paint(new THREE.ConeGeometry(.055,.38,4),C.blue).rotateZ(Math.PI/2).translate(.29,.09,.035),
+  paint(new THREE.ConeGeometry(.045,.3,4),C.violet).rotateZ(Math.PI/2).translate(.25,-.1,.025),
+  paint(new THREE.OctahedronGeometry(.075,0),C.ice).translate(0,0,.13)
  ]);
  geos.returnPetal=join('returning-split-petal',[
   paint(crescent(.7),C.ivory).rotateZ(-.2),
   paint(leaf(.48,.16,.1,.04,6),C.jade).rotateZ(-Math.PI/2).translate(-.25,0,.055),
-  paint(new THREE.OctahedronGeometry(.09,0),C.gold).translate(.13,0,.07)
+  paint(new THREE.OctahedronGeometry(.09,0),C.gold).translate(.13,0,.07),
+  paint(new THREE.ConeGeometry(.045,.32,4),C.blue).rotateZ(Math.PI/2).translate(.29,.09,.03),
+  paint(new THREE.ConeGeometry(.04,.28,4),C.violet).rotateZ(Math.PI/2).translate(.25,-.1,.02)
  ]);
  geos.gravityStake=join('gravity-implosion-stake',[
   paint(new THREE.ConeGeometry(.13,.82,5),C.ivory).rotateX(Math.PI/2),
   paint(new THREE.OctahedronGeometry(.17,0).scale(.7,.7,1.35),C.violet).translate(0,0,-.28),
-  paint(new THREE.TorusGeometry(.21,.035,5,12),C.gold).rotateX(Math.PI/2).translate(0,0,-.08)
+  paint(new THREE.TorusGeometry(.21,.035,5,12),C.gold).rotateX(Math.PI/2).translate(0,0,-.08),
+  paint(new THREE.ConeGeometry(.05,.34,4),C.jade).rotateZ(.7).translate(.13,0,-.22),
+  paint(new THREE.ConeGeometry(.05,.34,4),C.jade).rotateZ(-.7).translate(-.13,0,-.22),
+  paint(new THREE.OctahedronGeometry(.06,0),C.ice).translate(0,0,.39)
  ]);
  geos.gene=join('paired-law-gene',[paint(new THREE.OctahedronGeometry(.19,0).scale(.72,.72,1.45),C.violet),paint(new THREE.TorusGeometry(.22,.035,5,12),C.gold).rotateX(Math.PI/2),paint(leaf(.38,.13,.05,.03,5),C.ivory).rotateZ(-.72).translate(.08,.12,.03)]);
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
