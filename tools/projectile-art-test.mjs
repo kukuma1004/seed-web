@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
-import {createProjectileGeometries,projectileGeometry} from '../src/projectile-art.js';
+import * as THREE from 'three';
+import {createProjectileGeometries,projectileGeometry,applyProjectileTheme} from '../src/projectile-art.js';
 
 const geos=createProjectileGeometries(),ids=['seed','reflect','split','chain','orbit','pierce','burst','recall','gravity','frost','portal'];
 assert.deepEqual(Object.keys(geos).sort(),ids.sort());
@@ -12,5 +13,13 @@ for(const [id,geo] of Object.entries(geos)){
  assert.ok(geo.name.includes(id));
 }
 assert.equal(projectileGeometry(geos,'unknown'),geos.seed);
+const themedPoses=new Set();
+for(const theme of ['botanical','void','cyber','celestial']){
+ const mesh=new THREE.Mesh(geos.seed);mesh.rotation.y=.73;applyProjectileTheme(mesh,'seed',theme,.37,1.16);
+ assert.equal(mesh.rotation.y,.73,'cosmetic animation keeps the gameplay heading');
+ assert.ok([...mesh.scale.toArray(),mesh.rotation.x,mesh.rotation.z].every(Number.isFinite));
+ themedPoses.add([...mesh.scale.toArray(),mesh.rotation.x,mesh.rotation.z].map(v=>v.toFixed(3)).join('|'));
+}
+assert.equal(themedPoses.size,4,'four themes give the same projectile four distinct animated poses');
 for(const geo of Object.values(geos))geo.dispose();
-console.log('Eleven one-mesh projectile silhouettes and the fallback passed.');
+console.log('Eleven one-mesh projectile silhouettes, four animated theme poses and the fallback passed.');

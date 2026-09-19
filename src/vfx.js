@@ -114,7 +114,21 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     workA.set(pos.x,.7,pos.z);workB.copy(workA).addScaledVector(dir,.65);segment(workA,workB,id,.09,.1);burst(pos,id,3,.4);
   }
   function trail(from,to,id='seed',fragment=false){
-    counters.trail++;if(qualityLevel===0&&fragment)return;segment(from,to,id,fragment?.025:.055,fragment?.12:.22);
+    counters.trail++;if(qualityLevel===0&&fragment)return;
+    const theme=THEMES[themeId],width=fragment?.025:.055,life=fragment?.12:.22;
+    if(qualityLevel===0){segment(from,to,id,width,life);return;}
+    if(theme.trailMode==='dash'){
+      workA.copy(from).lerp(to,.43);workB.copy(from).lerp(to,.62);segment(from,workA,id,width,life);segment(workB,to,id,width*.82,life*.86);return;
+    }
+    if(theme.trailMode==='ribbon'){
+      workA.copy(to).sub(from);const length=Math.hypot(workA.x,workA.z)||1,ox=-workA.z/length*.045,oz=workA.x/length*.045;
+      workB.set(from.x+ox,from.y,from.z+oz);workC.set(to.x+ox,to.y,to.z+oz);segment(workB,workC,id,width*.72,life);
+      workB.set(from.x-ox,from.y,from.z-oz);workC.set(to.x-ox,to.y,to.z-oz);segment(workB,workC,id,width*.72,life);return;
+    }
+    segment(from,to,id,width,life);
+    if(theme.trailMode==='leaf'&&!fragment){
+      workA.copy(from).lerp(to,.55);workC.copy(to).sub(from);workB.set(workA.x-workC.z*.18,workA.y+.04,workA.z+workC.x*.18);segment(workA,workB,'amber',width*.65,life*.7);
+    }else if(theme.trailMode==='comet'&&!fragment){emitPos.copy(from).lerp(to,.52);emitVelocity.set(0,.28,0);emit(sparks,emitPos,'awaken',life*.9,width*1.15,width*2.1,width,{velocity:emitVelocity});}
   }
   function reflect(pos,dir){
     counters.reflect++;pulse(pos,'reflect',.42,.3);burst(pos,'reflect',12);

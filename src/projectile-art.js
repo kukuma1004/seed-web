@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
+import {THEMES,normalizeTheme} from './themes.js';
 
 const alongZ=geometry=>geometry.rotateX(Math.PI/2);
 const merge=(name,parts)=>{
@@ -40,3 +41,22 @@ export function createProjectileGeometries(){
 }
 
 export function projectileGeometry(geometries,id){return geometries[id]||geometries.seed;}
+
+// Texture-free projectile skins. Collision and travel never change; only the
+// existing mesh pose changes, so a theme adds no draw call or texture upload.
+const PROJECTILE_MOTION=Object.freeze({
+ seed:Object.freeze({spin:1,pulse:1,tilt:1}),split:Object.freeze({spin:1.55,pulse:1.15,tilt:1.3}),pierce:Object.freeze({spin:.28,pulse:.3,tilt:.18}),
+ burst:Object.freeze({spin:.8,pulse:1.6,tilt:.65}),recall:Object.freeze({spin:1.75,pulse:.75,tilt:1.15}),gravity:Object.freeze({spin:.72,pulse:1.45,tilt:.9}),
+ frost:Object.freeze({spin:.42,pulse:.55,tilt:.35}),chain:Object.freeze({spin:1.35,pulse:1.05,tilt:1.4}),reflect:Object.freeze({spin:1.5,pulse:.65,tilt:.75}),
+ orbit:Object.freeze({spin:2,pulse:.8,tilt:1.1}),portal:Object.freeze({spin:1.25,pulse:1.25,tilt:.85})
+});
+export function applyProjectileTheme(mesh,id,themeId,age,baseScale=1){
+ const theme=THEMES[normalizeTheme(themeId)],motion=PROJECTILE_MOTION[id]||PROJECTILE_MOTION.seed,t=Number.isFinite(age)?age:0;
+ const phase=t*(5.2+motion.spin),wave=Math.sin(phase),pulse=1+wave*theme.projectilePulse*motion.pulse;
+ let sx=theme.projectileScale[0]*baseScale*pulse,sy=theme.projectileScale[1]*baseScale*pulse,sz=theme.projectileScale[2]*baseScale;
+ if(theme.projectileMotion==='collapse'){const pinch=1-wave*.065*motion.pulse;sx*=pinch;sy*=2-pinch;sz*=1+Math.cos(phase*.7)*.045;mesh.rotation.x=Math.sin(phase*.53)*.18*motion.tilt;mesh.rotation.z=t*theme.projectileSpin*motion.spin;}
+ else if(theme.projectileMotion==='packet'){const tick=Math.floor(t*16)%4;sz*=1+(tick===0?.11:0);sx*=tick===2?.88:1;mesh.rotation.x=0;mesh.rotation.z=Math.round(t*theme.projectileSpin*motion.spin/(Math.PI/2))*(Math.PI/2);}
+ else if(theme.projectileMotion==='twinkle'){const star=1+Math.max(0,Math.sin(phase*1.4))*.09*motion.pulse;sx*=star;sy*=star;mesh.rotation.x=Math.sin(t*2.1)*.13*motion.tilt;mesh.rotation.z=t*theme.projectileSpin*motion.spin;}
+ else{mesh.rotation.x=Math.sin(phase*.72)*.09*motion.tilt;mesh.rotation.z=Math.sin(phase*.58)*.22*motion.tilt+t*theme.projectileSpin*motion.spin*.12;}
+ mesh.scale.set(sx,sy,sz);return mesh;
+}
