@@ -14,6 +14,26 @@ export const MIRROR_TRIAL_LIMITS=Object.freeze({
  copiedRelic:false
 });
 
+// Open arenas stay the same size. Difficulty comes from movement decisions,
+// not from squeezing the player into an increasingly tiny safe area.
+export const MIRROR_MOVEMENT_PROFILES=Object.freeze({
+ reflection:Object.freeze({name:'비친 새싹',desiredDistance:Object.freeze([4.8,8]),strafe:.52,reposition:.9,dash:false,feint:false}),
+ duelist:Object.freeze({name:'거울 결투가',desiredDistance:Object.freeze([4.2,7.4]),strafe:.68,reposition:.72,dash:true,feint:false}),
+ trickster:Object.freeze({name:'깨진 형상',desiredDistance:Object.freeze([3.8,7]),strafe:.78,reposition:.62,dash:true,feint:true}),
+ apex:Object.freeze({name:'완성된 거울',desiredDistance:Object.freeze([3.5,6.6]),strafe:.86,reposition:.54,dash:true,feint:true})
+});
+
+export const MIRROR_TOWER=Object.freeze({
+ name:'거울의 탑',
+ milestoneFloors:Object.freeze([5,10,15,20]),
+ endlessFrom:21,
+ checkpointEvery:5,
+ choiceEvery:1,
+ arenaRadius:13,
+ floorHeal:.12,
+ milestoneHeal:.35
+});
+
 export const MIRROR_PATTERNS=Object.freeze({
  reflect:Object.freeze({id:'bank-shot',name:'거울 반사',tell:.58,commit:.76,recover:.46,projectiles:5}),
  split:Object.freeze({id:'petal-fan',name:'갈라지는 꽃',tell:.52,commit:.68,recover:.48,projectiles:7}),
@@ -38,18 +58,40 @@ export function mirrorBuildSnapshot({levels=new Map(),forms=new Map()}={}){
  return Object.freeze({laws:Object.freeze(laws),forms:Object.freeze(evolved)});
 }
 
-export function mirrorPatternPlan(snapshot,{round=1,quality='normal'}={}){
+export function mirrorFloorRules(floor=1,{quality='normal'}={}){
+ const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0;
+ const tier=n<5?0:n<10?1:n<15?2:3;
+ const movement=[MIRROR_MOVEMENT_PROFILES.reflection,MIRROR_MOVEMENT_PROFILES.duelist,MIRROR_MOVEMENT_PROFILES.trickster,MIRROR_MOVEMENT_PROFILES.apex][tier];
+ const low=quality==='low';
+ return Object.freeze({
+  floor:n,
+  milestone,
+  checkpoint:milestone,
+  endless:n>=MIRROR_TOWER.endlessFrom,
+  arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:0,shrinks:false}),
+  movement,
+  patternCount:n<3?1:MIRROR_TRIAL_LIMITS.patterns,
+  chainLength:n<5?1:n<10?2:3,
+  healAfter:milestone?MIRROR_TOWER.milestoneHeal:MIRROR_TOWER.floorHeal,
+  budget:Object.freeze({
+   hostileProjectiles:low?MIRROR_TRIAL_LIMITS.hostileProjectilesLow:MIRROR_TRIAL_LIMITS.hostileProjectilesNormal,
+   effects:low?MIRROR_TRIAL_LIMITS.effectsLow:MIRROR_TRIAL_LIMITS.effectsNormal
+  })
+ });
+}
+
+export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
  const weight=new Map(Object.keys(LAWS).map(id=>[id,0]));
  for(const law of snapshot?.laws||[])weight.set(law.id,(weight.get(law.id)||0)+1+Math.min(2.4,law.level*.2));
  for(const form of snapshot?.forms||[])for(const law of form.laws||[])weight.set(law,(weight.get(law)||0)+2+Math.min(2.8,form.level*.18));
  let ordered=[...weight].filter(([law,score])=>score>0&&MIRROR_PATTERNS[law]).sort((a,b)=>b[1]-a[1]||a[0].localeCompare(b[0]));
  // A brand-new seed still needs a fair, visible attack to fight.
  if(!ordered.length)ordered=[['pierce',1]];
- const attacks=ordered.slice(0,MIRROR_TRIAL_LIMITS.patterns).map(([law,score],index)=>Object.freeze({
+ const tower=mirrorFloorRules(floor??round,{quality});
+ const attacks=ordered.slice(0,tower.patternCount).map(([law,score],index)=>Object.freeze({
   ...MIRROR_PATTERNS[law],law,weight:Number(score.toFixed(2)),order:index+1
  }));
- const r=Math.max(1,Math.floor(Number(round)||1)),lead=ordered[0][0];
- const cap=quality==='low'?MIRROR_TRIAL_LIMITS.hostileProjectilesLow:MIRROR_TRIAL_LIMITS.hostileProjectilesNormal;
+ const r=tower.floor,lead=ordered[0][0];
  return Object.freeze({
   attacks:Object.freeze(attacks),
   ultimate:Object.freeze({...MIRROR_PATTERNS[lead],law:lead,id:`mirror-${MIRROR_PATTERNS[lead].id}`}),
@@ -59,17 +101,18 @@ export function mirrorPatternPlan(snapshot,{round=1,quality='normal'}={}){
    hitDamageMaxHp:Number(Math.min(.13,.072+r*.004).toFixed(3)),
    attackSpeedScale:Number(Math.min(1.28,.9+r*.025).toFixed(3))
   }),
-  budget:Object.freeze({hostileProjectiles:cap,effects:quality==='low'?MIRROR_TRIAL_LIMITS.effectsLow:MIRROR_TRIAL_LIMITS.effectsNormal}),
+  tower,
+  budget:tower.budget,
   copied:Object.freeze({healing:false,revive:false,relic:false})
  });
 }
 
 export const MIRROR_TRIAL_PROTOTYPE=Object.freeze({
- name:'거울의 시련',
+ name:'거울의 탑',
  placement:'separate-challenge',
  unlock:'austin-defeated',
  firstForm:'returnflare',
- rounds:3,
- checkpoint:'between-rounds',
+ localSliceFloors:10,
+ checkpoint:'every-five-floors',
  released:false
 });
