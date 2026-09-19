@@ -31,7 +31,7 @@ import {createSpatialIndex} from './spatial-index.js';
 import {createShield,tickShield,blocksShield} from './shield.js';
 import {readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,REGION_NAMES,restoredScore,restoredWardens,restoredAustins} from './run-save.js';
 import {createSeedBody} from './seed-body.js';
-import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK} from './seed-title.js';
+import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
 import {codexNews} from './titles.js';
 import {ACT2_REGION,ACT2_NAME,isAct2,actOf,act2Unlocked,act2Available,playableRegion,actStorage} from './act2.js';
 import {ACT2_ART,ACT2_GEOMETRIES,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from './act2-enemies.js';
@@ -319,7 +319,8 @@ if(localInspection&&new URLSearchParams(location.search).has('gardenLab'))garden
 ]});
 let gardenFx=gardenEffects(garden),lastHarvest=null;
 const gardenStats=()=>gardenFx.mastery;
-const maxPlayerHp=()=>gardenStats()?.maxHp||100;
+let seedTitle=null;
+const maxPlayerHp=()=>(gardenStats()?.maxHp||100)+(seedTitle?.state().maxHpBonus||0);
 const gardenPower=()=>gardenStats()?.power||1;
 const gardenCooldown=()=>gardenStats()?.cooldownRate||1;
 const totalCritChance=()=>Math.min(.25,(LS?.critChance||0)+(gardenStats()?.critical||0));
@@ -341,7 +342,7 @@ function requireName(){const input=$('#player-name'),name=cleanName(input?input.
  if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}
  const consent=$('#ranking-terms');if(!rankingTermsAccepted(runStorage)&&!consent?.checked){if(consent)consent.focus();setText($('#name-hint'),'명예의 전당 이용규칙을 읽고 동의해 주세요');return false;}
  setRankingTermsAccepted(runStorage,true);playerName=saveName(runStorage,name);return true;}
-let saveOK=false,profile=readDiscoveries(runStorage);const titleAccount=readAccountProfile(runStorage),seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),discovered:profile.forms.length,total:Object.keys(FORMS).length,badges:titleAccount.badges,equipped:titleAccount.equippedTitle});
+let saveOK=false,profile=readDiscoveries(runStorage);const titleAccount=readAccountProfile(runStorage);seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),alwaysBeginner:profile.bosses.includes('alwaysbeginner'),discovered:profile.forms.length,total:Object.keys(FORMS).length,badges:titleAccount.badges,equipped:titleAccount.equippedTitle});
 const sourceName=id=>id==='seed'?'기본 씨앗':FORMS[id]?.name||LAWS[id]?.name||'연계 효과';
 function renderRoomAnalysis(report,{training=false}={}){
  const root=$('#room-analysis');if(!root||!report){if(root)root.hidden=true;return;}
@@ -355,7 +356,7 @@ function finishRoomAnalysis(training=false){
  return report;
 }
 function buildRoomBoundary(){const stadiumRoom=isAct2(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:mats,stadiumRoom);}
-function remember(kind,id){if(developerRun)return {profile,saved:true};const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
+function remember(kind,id){if(developerRun)return {profile,saved:true};const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}LS=relicLawStats(lawStats(levels),relics);document.querySelectorAll('#rules>div').forEach(n=>{const lv=levelOf(levels,n.dataset.rule),mark=mutationOf(mutations,n.dataset.rule);n.classList.toggle('active',lv>0);n.classList.toggle('mutated',Boolean(mark));n.querySelector('span:not(.law-art)').textContent=LAWS[n.dataset.rule].name+(lv?' Lv.'+lv:'')+(mark?' '+mark.badge:'');});}
 function levelPressure(){return 1+.07*Math.max(0,buildLevel(levels,heldForms)-1);}
 function effectiveLaws(){return [...effectiveLevels(levels,heldForms).keys()];}
@@ -621,7 +622,7 @@ function enemyDown(e){
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin'||e.type==='alwaysbeginner')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
  if(e.type==='austin'){austinsDefeated++;if(developerRun){$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const mastery=grantAustinMastery(garden,rng);garden=mastery.garden;writeGarden(runStorage,garden);refreshGardenEffects();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${masteryLine(mastery)}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}}
- else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · 2막 기록에 남았습니다`;}}
+ else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}`;}}
  else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':''}`;}}
  else $('#toast').textContent=stageWarden?'쌍문지기 한 명 격파 · 남은 문지기를 쓰러뜨리세요':'정예 문지기 격파!';
 }
@@ -819,7 +820,7 @@ function showSeasonPause(){
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
- const permanentStats=[titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.shotSpeedBonus?`탄속 +${Math.round(titleInfo.shotSpeedBonus*1000)/10}%`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
+ const permanentStats=[titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.shotSpeedBonus?`탄속 +${Math.round(titleInfo.shotSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
  const titleProfile=titleInfo.titles.length?`<section class="title-profile"><div class="title-profile-head"><strong>칭호</strong><span>영구 ${permanentStats}</span></div><div class="title-options">${titleInfo.titles.map(title=>`<button type="button" class="title-option ${title.id===titleInfo.equipped?'equipped':''}" data-equip-title="${escapeHtml(title.id)}" aria-pressed="${title.id===titleInfo.equipped}"><span><strong>${escapeHtml(title.name)}</strong><small>${escapeHtml(title.perk)}</small></span><em>${title.id===titleInfo.equipped?'장착 중':'장착'}</em></button>`).join('')}</div><small>장착은 씨앗 위 표시만 바꾸며, 획득한 업적 효과는 항상 유지됩니다.</small></section>`:`<section class="title-profile empty"><strong>칭호</strong><small>도감 20개 발견이나 특별한 기록으로 칭호를 얻을 수 있어요.</small></section>`;
  $('#overlay').innerHTML=`<div class="menu-panel account-panel"><p class="eyebrow">SEED · ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 씨앗':'어떻게 시작할까요'}</h2>
   <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
