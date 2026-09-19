@@ -6,11 +6,17 @@
 .card.form-upgrade{border-color:#e8c26a99;background:linear-gradient(150deg,#3a3320,#12191a)}.card.form-upgrade .form-pair{display:flex;justify-content:center;gap:6px;margin:6px 0}.card.form-upgrade .form-pair .law-art{width:64px;height:64px}.build-form{border-color:#e8c26a!important;color:#f3dfaa}.build-form .law-art{width:22px!important;height:22px!important}
 .form-art{display:block;flex:none;background-size:400% 300%;background-repeat:no-repeat;background-color:#101d27;border:1px solid #b6a77570;border-radius:8px;box-shadow:0 5px 18px #0004}
 .form-portrait{width:100%;aspect-ratio:1;max-width:210px;margin:0 auto 10px}
+.projectile-preview{position:relative;width:100%;height:76px;margin:2px 0 8px;border:1px solid #b7d4c22c;border-radius:11px;overflow:hidden;background:radial-gradient(circle at 70% 45%,#d8ffe915,#071217 72%)}
+.projectile-preview svg{display:block;width:100%;height:59px;filter:drop-shadow(0 0 6px #d7fff355)}
+.projectile-preview span{position:absolute;left:8px;bottom:4px;font-size:9px;letter-spacing:.04em;color:#b8cfc5;white-space:nowrap}
+.awaken-card .projectile-preview{border-color:#f4ce7652;background:radial-gradient(circle at 70% 45%,#ffd5721d,#071217 72%)}
 .build-form .form-art{width:28px;height:28px}
 .book .form-portrait{max-width:125px;margin-bottom:6px}
 .book-entry.unknown .form-portrait{filter:grayscale(1) brightness(.4)}
 @media(max-height:500px) and (orientation:landscape){.form-portrait{width:84px;margin-bottom:4px}.book .form-portrait{width:65px}.build-form .form-art{width:22px;height:22px}}
+@media(max-height:500px) and (orientation:landscape){.projectile-preview{height:43px;margin:0 0 3px}.projectile-preview svg{height:34px}.projectile-preview span{font-size:7px;bottom:1px}}
 @media(max-width:600px) and (orientation:portrait){.form-card>.form-portrait{width:90px;grid-column:1;grid-row:1/7;align-self:center;margin:0}.book .form-card{display:block}.book .form-portrait{width:100%;margin:0 auto}}
+@media(max-width:600px) and (orientation:portrait){.form-card>.projectile-preview{grid-column:1;grid-row:6/8;height:42px;margin:0;align-self:end}.form-card>.projectile-preview svg{height:32px}.form-card>.projectile-preview span{display:none}.book .form-card>.projectile-preview{display:none}}
 /* Awakened evolutions: dedicated relic paintings, a gold frame and a slow shimmer. */
 .form-art.awakened-art{position:relative;border-color:#ffe08a;box-shadow:inset 0 0 0 2px #ffe08acc,0 0 16px #ffd36a88;filter:saturate(1.25) brightness(1.08)}
 .form-art.awakened-art::after{content:"";position:absolute;inset:0;border-radius:inherit;background:linear-gradient(120deg,transparent 30%,#fff3c255 50%,transparent 70%);background-size:250% 100%;animation:awaken-shine 3.2s ease-in-out infinite}

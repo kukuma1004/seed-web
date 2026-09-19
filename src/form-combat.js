@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
+import {buildComboProjectileGeometry,projectileAudioEvent} from './combo-projectile.js';
 
 // Ordinary prism is allowed to grow as it finds walls. Infinite Prism already
 // adds another generation, a larger shard pool and a permanent damage boost,
@@ -59,10 +60,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
- let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map();
+ let bolts=[],wells=[],shatters=[],embers=[],cooldowns=new Map(),comboGeo=null;
  const nearbyList=[],previousPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
+ const sourceForm=()=>AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
 
  function applyTheme(){
   for(const [name,base] of originalMats){
@@ -94,7 +96,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);bolts=[];wells=[];shatters=[];embers=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -104,6 +106,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
   const asTwin=Boolean(opts.twin);
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;ownerId=opts.twinId||id;twin=asTwin;if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
+  if((GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed')&&!comboGeo)comboGeo=buildComboProjectileGeometry(sourceForm());
   rebuildOrbit();
  }
  function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;return true;}
@@ -112,13 +115,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
 
  // force: an active's opening move may go past the usual on-screen caps (still bounded by its own loop).
  function fire(pos,dir,target=null,force=false){
-  if(!active||ALL_FORMS[active].passive)return Infinity;
+  if(!active||sourceForm().passive)return Infinity;
   const aim=dir.clone().setY(0).normalize();
   const full=(kind,cap)=>!force&&count(kind)>=cap;
   if(GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'){
    if(full('gene',S.bolts))return S.interval;
    const second=SECOND_FORMS[active],secondRole=second?.family==='convergence'?(secondPhase++%2?'consume':'mark'):null;
-   const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||ALL_FORMS[active].requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
+   const source=sourceForm();
+   const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||source.requires)],ob=spawnMesh(comboGeo||geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
    // A second fusion alternates two inherited law packets, so its projectile
    // traits follow the packet being fired. Existing gene attacks keep their
    // authored stat sheet (notably riftseed's two-target pierce).
@@ -445,7 +449,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
       else if(second.family==='convergence'&&b.secondRole==='mark'){secondMarks.set(e,markClock+S.markWindow);fx.pulse(e.g.position,b.laws[0],.62,.24);}
       else if(second.family==='convergence'&&b.secondRole==='consume'){const expires=secondMarks.get(e)||0;if(expires>=markClock){secondMarks.delete(e);fx.explosion(e.g.position,S.followUpLaws.includes('burst')?'burst':S.followUpLaws[0],1.05);sound(S.followUpLaws.includes('portal')?'portal':'fusion');support(e,S.damage*S.followUpScale,{kind:b.form,direction:direction.clone(),comboLaws:S.followUpLaws,generated:true,indirect:true,convergence:true});}}
      }
-     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);applyProjectileScale(ob,.65,.65,.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
+     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(comboGeo||geos.gene,mats.gene,e.g.position);applyProjectileScale(ob,.65,.65,.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
      b.pierce--;if(b.pierce<=0){b.life=0;break;}
     }
     fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
@@ -788,7 +792,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
  }
 
  applyTheme();
- return {set,setTheme,fire,update,clear,surge,calm,
+ return {set,setTheme,fire,update,clear,surge,calm,audioEvent:()=>projectileAudioEvent(sourceForm()),
   state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

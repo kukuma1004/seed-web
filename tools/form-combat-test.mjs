@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createFormCombat,FORM_COMBAT,segmentDistance} from '../src/form-combat.js';
+import {GENERATED_FORMS} from '../src/forms.js';
 import {blocksShield} from '../src/shield.js';
 
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
@@ -17,6 +18,15 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elapsed+=dt)combat.update(Math.min(dt,seconds-elapsed));};
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
+
+// Future catalogue forms build one merged projectile only when equipped. This
+// proves the 1,090-entry visual grammar is wired to combat without preloading it.
+{
+ const f=fixture(),id=Object.keys(GENERATED_FORMS)[0];f.combat.set(id,2);f.combat.fire(vec(),vec(1));
+ const meshes=[];f.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});
+ assert.ok(meshes.some(o=>o.geometry.name===`seed-combo-projectile-${id}`));
+ assert.match(f.combat.audioEvent(),/^shot/);assert.equal(f.combat.state().bolts,1);f.combat.dispose();
+}
 
 // Themes are cosmetic: switching one never changes the immutable combat stats.
 {

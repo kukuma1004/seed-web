@@ -1,11 +1,13 @@
 import {FORMS,SOLO_FORMS,SOLO_LEVEL,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,ALL_FORMS} from './forms.js';
 import {formArt} from './form-art.js';
 import {SIGNATURES} from './actives.js';
+import {comboProjectilePreview} from './combo-projectile.js';
 
 export function formCard(form,held=[],discovered=false,selectable=true,level=0,current=0){
  const laws=new Set(held);
  return `<${selectable?'button':'article'} class="form-card" ${selectable?`data-form="${form.id}"`:''}>
  ${formArt(form.id,'form-portrait')}
+ ${comboProjectilePreview(form)}
  <small>${discovered?'발견한 진화':'새로운 가능성'}${selectable?' · '+(current?`보유 Lv.${current} → Lv.${level}`:level?'진화 Lv.'+level:form.requires.filter(id=>laws.has(id)).length+'/2 법칙'):''}</small>
  <strong>${form.name}</strong><p>${form.pair}</p><p>${form.desc}</p>
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
@@ -16,6 +18,7 @@ export function soloCard(form,lawLevel,current=0,discovered=false){
  const next=current+lawLevel-1;
  return `<button class="form-card solo-card" data-solo="${form.id}">
  ${formArt(form.id,'form-portrait')}
+ ${comboProjectilePreview(form)}
  <small>${discovered?'발견한 단독 진화':'새로운 단독 진화'} · ${current?`보유 Lv.${current} → Lv.${next}`:'진화 Lv.'+next}<span class="solo-tag">단독</span></small>
  <strong>${form.name}</strong><p>${form.pair} · 법칙 Lv.${lawLevel}</p><p>${form.desc}</p>
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
@@ -27,6 +30,7 @@ export function awakenCard(option,forms,level,discovered=false,index=0){
  const parts=option.from.map(id=>`${ALL_FORMS[id].name} Lv.${forms.get(id)}`).join(' + ');
  return `<button class="form-card awaken-card" data-awaken="${index}">
  ${formArt(form.id,'form-portrait')}
+ ${comboProjectilePreview(form)}
  <small>${discovered?'발견한 각성 진화':'새로운 각성 진화'} · ${current?`보유 Lv.${current} → Lv.${level}`:'진화 Lv.'+level}<span class="awaken-tag">각성</span></small>
  <strong>${form.name}</strong><p>${parts}</p><p>${form.desc}</p>${form.synergy?`<small class="twin-synergy">${form.synergy.name} · 두 공격이 ${form.synergy.window}초 안에 같은 적을 맞히면 추가 피해와 두 성질이 함께 발동</small>`:''}
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
@@ -36,6 +40,7 @@ export function secondFusionCard(option,forms,level,discovered=false,index=0){
  const form=SECOND_FORMS[option.id],parts=option.from.map(id=>`${ALL_FORMS[id].name} Lv.${forms.get(id)}`).join(' + ');
  return `<button class="form-card second-fusion-card ${form.family}" data-second="${index}">
  ${formArt(form.id,'form-portrait')}
+ ${comboProjectilePreview(form)}
  <small>${discovered?'발견한 재융합':'새로운 재융합'} · Lv.${level}<span class="awaken-tag">${form.family==='resonance'?'공명형':'교차형'}</span></small>
  <strong>${form.name}</strong><p>${parts} → 한 칸</p><p>${form.desc}</p>
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>

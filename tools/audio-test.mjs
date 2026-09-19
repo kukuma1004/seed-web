@@ -4,6 +4,7 @@ import {AUDIO_EVENTS,MUSIC_SCENES,createAudioLimiter,createGameAudio,ultimateAud
 for(const id of ['shot','hit','gravityHit','burstHit','pierceHit','frostHit','split','chain','reflect','portal','evolve','fusion','ultimateReady','ultimate','finale','bossWarning','bossAttack','bossDefeat']){
  const e=AUDIO_EVENTS[id];assert.ok(e,`${id} exists`);assert.ok(e.duration>0&&e.gain>0&&e.cooldown>=0);assert.ok(e.priority>=0);
 }
+for(const id of ['shotCrystal','shotPetal','shotArc','shotOrbit','shotPierce','shotBurst','shotReturn','shotGravity','shotFrost','shotPortal'])assert.ok(AUDIO_EVENTS[id]?.duration>=.1,`${id} keeps an audible flight sweep`);
 const ultimateEvents=['BURST','RAIN','ORBIT','BEAM','DOMAIN','BLACKHOLE','TIME_STOP'].map(ultimateAudioEvent);
 assert.equal(new Set(ultimateEvents).size,7,'all seven ultimate skeletons need a distinct sound identity');
 for(const id of ultimateEvents)assert.ok(AUDIO_EVENTS[id]?.priority===4,id);

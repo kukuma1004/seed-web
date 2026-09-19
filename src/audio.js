@@ -3,6 +3,16 @@
 // Cooldowns and a hard voice budget keep dense late-game builds readable.
 export const AUDIO_EVENTS=Object.freeze({
  shot:{wave:'triangle',freq:430,end:250,duration:.065,gain:.025,cooldown:.085,priority:0},
+ shotCrystal:{wave:'sine',freq:660,end:940,duration:.12,gain:.026,cooldown:.1,priority:0,notes:[1,1.5]},
+ shotPetal:{wave:'triangle',freq:480,end:620,duration:.11,gain:.026,cooldown:.1,priority:0,notes:[1,1.18]},
+ shotArc:{wave:'square',freq:720,end:360,duration:.105,gain:.021,cooldown:.1,priority:0,notes:[1,1.5]},
+ shotOrbit:{wave:'sine',freq:240,end:520,duration:.15,gain:.025,cooldown:.13,priority:0,notes:[1,1.26]},
+ shotPierce:{wave:'triangle',freq:930,end:310,duration:.13,gain:.029,cooldown:.11,priority:0},
+ shotBurst:{wave:'sawtooth',freq:190,end:74,duration:.17,gain:.032,cooldown:.13,priority:0,notes:[1,.7]},
+ shotReturn:{wave:'triangle',freq:390,end:760,duration:.18,gain:.026,cooldown:.13,priority:0,notes:[1,.75]},
+ shotGravity:{wave:'sine',freq:118,end:54,duration:.21,gain:.034,cooldown:.15,priority:0,notes:[1,.5]},
+ shotFrost:{wave:'sine',freq:790,end:1040,duration:.16,gain:.025,cooldown:.13,priority:0,notes:[1,1.5]},
+ shotPortal:{wave:'sine',freq:150,end:690,duration:.23,gain:.032,cooldown:.16,priority:0,notes:[1,.5,2]},
  hit:{wave:'sine',freq:180,end:95,duration:.07,gain:.035,cooldown:.05,priority:0},
  gravityHit:{wave:'sine',freq:92,end:48,duration:.16,gain:.052,cooldown:.11,priority:1,notes:[1,.5]},
  burstHit:{wave:'sawtooth',freq:138,end:58,duration:.14,gain:.058,cooldown:.1,priority:1,notes:[1,.67]},
