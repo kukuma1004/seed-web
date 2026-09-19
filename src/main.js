@@ -21,7 +21,7 @@ import {readDiscoveries,writeDiscoveries,recordDiscovery,growthGuide,rerollUnloc
 import {createCombatAnalysis,recordPersonalBests,combatGrade} from './combat-analysis.js';
 import {createFormCombat} from './form-combat.js';
 import {formCard,soloCard,awakenCard,secondFusionCard,discoveryBook,formLawHint} from './form-ui.js';
-import {buildArenaBoundary,arenaFor,constrainToArena,reflectArenaBoundary,safeArenaSpawn} from './arena.js';
+import {buildArenaBoundary,arenaFor,constrainToArena,reflectArenaBoundary,safeArenaSpawn,shouldBuildArenaBoundary} from './arena.js';
 import {escortWave,escortTypes} from './boss-escorts.js';
 import './forms.css';
 import './combo-art.css';
@@ -372,7 +372,7 @@ function finishRoomAnalysis(training=false,show=false){
  if(!developerRun&&!training){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(profile.forms.length);}
  return report;
 }
-function buildRoomBoundary(){const stadiumRoom=isAct2(region),skyRoom=isAct3(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:skyRoom?skyway.boundaryMaterials:mats,stadiumRoom);}
+function buildRoomBoundary(){if(!shouldBuildArenaBoundary(region))return;const stadiumRoom=isAct2(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:mats,stadiumRoom);}
 function remember(kind,id){if(developerRun)return {profile,saved:true};const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}LS=relicLawStats(lawStats(levels),relics);document.querySelectorAll('#rules>div').forEach(n=>{const lv=levelOf(levels,n.dataset.rule),mark=mutationOf(mutations,n.dataset.rule);n.classList.toggle('active',lv>0);n.classList.toggle('mutated',Boolean(mark));n.querySelector('span:not(.law-art)').textContent=LAWS[n.dataset.rule].name+(lv?' Lv.'+lv:'')+(mark?' '+mark.badge:'');});}
 function levelPressure(){return 1+.07*Math.max(0,buildLevel(levels,heldForms)-1);}

@@ -62,6 +62,10 @@ export function arenaFor(stage,cycle=0,region='garden') {
   return stage===2?CIRCLE:RECT;
 }
 
+// A scrolling route uses the screen edge as its movement limit. Drawing the
+// ordinary front/back walls over it turns the route back into a closed room.
+export function shouldBuildArenaBoundary(region='garden') { return !isAct3(region); }
+
 // Polygon helpers. Inward normals are measured once per outline and reused.
 const polygonCache=new WeakMap();
 function pointInPolygon(x,z,points) {

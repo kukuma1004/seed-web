@@ -4,7 +4,7 @@ import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,a
 import {ACT3_GEOMETRIES,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,TEMPEST_CARRIER} from '../src/act3-enemies.js';
 import {createSkyway} from '../src/skyway.js';
 import {roomFor} from '../src/journey.js';
-import {arenaFor,insideArena} from '../src/arena.js';
+import {arenaFor,insideArena,shouldBuildArenaBoundary} from '../src/arena.js';
 import {trapsFor} from '../src/traps.js';
 import {turretSpots} from '../src/turret.js';
 import {REGION_NAMES,writeCheckpoint,readCheckpoint} from '../src/run-save.js';
@@ -18,6 +18,7 @@ assert.equal(act3Unlocked({bosses:['alwaysbeginner']}),true);assert.equal(act3Un
 assert.ok(ACT3_PRESSURE.hp>1&&ACT3_PRESSURE.speed>1&&ACT3_PRESSURE.projectile>1&&ACT3_PRESSURE.bossTempo>1);
 
 assert.equal(SKYWAY_ROOMS.length,5);assert.equal(arenaFor(0,0,ACT3_REGION),ACT3_ARENA);
+assert.equal(shouldBuildArenaBoundary(ACT3_REGION),false,'the scrolling route has no visible front/back room walls');assert.equal(shouldBuildArenaBoundary('garden'),true);
 SKYWAY_ROOMS.forEach((room,stage)=>{
  assert.equal(roomFor(stage,0,ACT3_REGION),room);assert.equal(roomFor(stage,4,ACT3_REGION),room);
  for(const [type,x,z] of room.enemies){assert.ok(isAct3Minion(type)||type==='act3warden',type);assert.ok(insideArena({x,z},.5,ACT3_ARENA),`${room.name}: ${type}`);}
@@ -59,7 +60,7 @@ for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
 {
  const skyScene=new THREE.Scene();skyScene.background=new THREE.Color(0x102010);skyScene.fog=new THREE.FogExp2(0x102010,.02);const light=new THREE.HemisphereLight(0xffffff,0x334455,1),garden=new THREE.Group();garden.visible=true;skyScene.add(light,garden);
  const sky=createSkyway(skyScene,{lights:[light],hide:[garden],mobile:true});assert.equal(sky.group.visible,false);sky.setActive(true);const before=sky.state();sky.tick(1,true);const after=sky.state();
- assert.equal(sky.group.visible,true);assert.equal(garden.visible,false);assert.ok(after.distance>before.distance);assert.equal(after.drawCalls,3);assert.ok(after.instances<100,'scrolling environment stays batched');
+ assert.equal(sky.group.visible,true);assert.equal(garden.visible,false);assert.ok(after.distance>before.distance);assert.equal(after.drawCalls,3);assert.equal(after.openEnds,true);assert.equal(after.parallaxLayers,3);assert.ok(after.instances<100,'scrolling environment stays batched');
  sky.setActive(false);assert.equal(garden.visible,true);assert.equal(sky.group.visible,false);
 }
 console.log('Act 3: local gate, separate save, five rooms, flight roles, warden, boss patterns and batched scrolling passed.');
