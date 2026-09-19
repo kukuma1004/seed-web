@@ -4,7 +4,7 @@ import * as THREE from 'three';
 import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
-import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,baseSlideFor} from '../src/stadium.js';
+import {BASE_SLIDE,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor} from '../src/stadium.js';
 // Act 2 is open to the closed beta on both the hosted web build and Android app.
 assert.equal(ACT2_RELEASED,true);assert.equal(act2Available({hostname:'kukuma1004.github.io'}),true);assert.equal(act2Available({hostname:'localhost'}),true);assert.equal(act2Available({hostname:'127.0.0.1'}),true);
 assert.equal(playableRegion('stadium',{hostname:'kukuma1004.github.io'}),'stadium');assert.equal(playableRegion('stadium',{hostname:'localhost'}),'stadium');assert.equal(playableRegion('garden',{hostname:'kukuma1004.github.io'}),'garden');
@@ -34,7 +34,7 @@ STADIUM_ROOMS.forEach((room,stage)=>{
  for(const c of room.covers)assert.ok(insideArena({x:c.x,z:c.z},0,arena));
  for(const base of STADIUM_BASES)assert.ok(insideArena(base,BASE_SLIDE.radius,arena),`${room.name} base loop`);
  assert.ok(insideArena(arena.start,.5,arena),`${room.name} start`);assert.ok(insideArena(arena.exit,.4,arena),`${room.name} exit`);
- if(stage===1||stage===3)assert.ok(insideArena({x:0,z:-6.35},.4,arena),`${room.name} relay target`);
+ if(stage===1||stage===3){assert.ok(insideArena(RELAY_LAYOUT.pitcher,.5,arena),`${room.name} pitcher mound`);assert.ok(insideArena(RELAY_LAYOUT.catcher,.5,arena),`${room.name} catcher`);}
  assert.deepEqual(trapsFor(stage,0,'stadium'),[]);assert.deepEqual(turretSpots(stage,1,'stadium'),[]);
 });
 assert.deepEqual(ACT2_ARENAS.map(a=>a.id),['home-plate','diamond','baseball','glove','ballpark']);
@@ -55,7 +55,16 @@ for(const [id,art] of Object.entries(ACT2_WARDEN_ART)){assert.match(art.file,new
 
 // Stadium bases form one clockwise movement loop; cooldown prevents accidental re-triggering.
 assert.equal(STADIUM_BASES.length,4);assert.deepEqual(STADIUM_BASES.map(base=>base.next),[1,2,3,0]);
-{const slide=baseSlideFor({x:0,z:4.2});assert.ok(slide);assert.equal(slide.index,0);assert.ok(slide.dx>0&&slide.dz<0);assert.equal(slide.speed,BASE_SLIDE.speed);assert.equal(baseSlideFor({x:0,z:4.2},.1),null);assert.equal(baseSlideFor({x:9,z:7}),null);assert.equal(baseSlideFor({x:0,z:4.2},0,false),null);}
+{const slide=baseSlideFor({x:0,z:4.2});assert.ok(slide);assert.equal(slide.index,0);assert.ok(slide.dx>0&&slide.dz<0);assert.equal(slide.speed,BASE_SLIDE.speed);assert.equal(slide.targetX,STADIUM_BASES[1].x);assert.equal(slide.targetZ,STADIUM_BASES[1].z);assert.ok(Math.abs(slide.duration-BASE_SLIDE.duration)<.02);assert.equal(baseSlideFor({x:0,z:4.2},.1),null);assert.equal(baseSlideFor({x:9,z:7}),null);assert.equal(baseSlideFor({x:0,z:4.2},0,false),null);}
+// Every possible entry point inside a base trigger has a clear rail to the next base.
+const hitsCover=(x,z,o,r=.4)=>Math.abs(x-o.x)<o.w/2+r&&Math.abs(z-o.z)<o.d/2+r;
+for(const room of STADIUM_ROOMS)for(let leg=0;leg<STADIUM_BASES.length;leg++)for(let a=0;a<12;a++){
+ const from=STADIUM_BASES[leg],to=STADIUM_BASES[from.next],angle=a*Math.PI/6,start={x:from.x+Math.cos(angle)*BASE_SLIDE.radius*.9,z:from.z+Math.sin(angle)*BASE_SLIDE.radius*.9};
+ for(let step=0;step<=48;step++){const t=step/48,x=start.x+(to.x-start.x)*t,z=start.z+(to.z-start.z)*t;assert.ok(!room.covers.some(o=>hitsCover(x,z,o)),`${room.name} slide ${leg} crosses cover`);}
+}
+// Baseball order: second base -> mound -> home -> catcher along the centre line.
+assert.equal(RELAY_LAYOUT.pitcher.x,0);assert.equal(RELAY_LAYOUT.catcher.x,0);assert.ok(STADIUM_BASES[2].z<RELAY_LAYOUT.pitcher.z);assert.ok(RELAY_LAYOUT.pitcher.z<RELAY_LAYOUT.home.z);assert.ok(RELAY_LAYOUT.home.z<RELAY_LAYOUT.catcher.z);
+const moundRatio=(RELAY_LAYOUT.home.z-RELAY_LAYOUT.pitcher.z)/(RELAY_LAYOUT.home.z-STADIUM_BASES[2].z);assert.ok(moundRatio>.44&&moundRatio<.51,'mound follows baseball proportions');
 
 // Storage: act 2 keeps its own checkpoint and local board; the name stays shared.
 {

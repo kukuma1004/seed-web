@@ -8,12 +8,17 @@ export const STADIUM_BASES=Object.freeze([
  Object.freeze({x:0,z:-3,next:3}),Object.freeze({x:-3.6,z:.6,next:0})
 ]);
 export const BASE_SLIDE=Object.freeze({radius:.82,speed:11.2,duration:.46,cooldown:.82});
+// Home plate is at +Z (the near side of the camera). The mound sits about 47.5% of the
+// home-to-second distance from home, and the catcher waits just behind the plate.
+export const RELAY_LAYOUT=Object.freeze({
+ pitcher:Object.freeze({x:0,z:.78}),home:Object.freeze({x:0,z:4.2}),catcher:Object.freeze({x:0,z:5.08})
+});
 export function baseSlideFor(position,cooldown=0,enabled=true){
  if(!enabled||cooldown>0)return null;
  const index=STADIUM_BASES.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=BASE_SLIDE.radius);
  if(index<0)return null;
- const from=STADIUM_BASES[index],to=STADIUM_BASES[from.next],length=Math.hypot(to.x-from.x,to.z-from.z)||1;
- return {index,dx:(to.x-from.x)/length,dz:(to.z-from.z)/length,speed:BASE_SLIDE.speed,duration:BASE_SLIDE.duration,cooldown:BASE_SLIDE.cooldown};
+ const from=STADIUM_BASES[index],to=STADIUM_BASES[from.next],length=Math.hypot(to.x-position.x,to.z-position.z)||1;
+ return {index,targetX:to.x,targetZ:to.z,dx:(to.x-position.x)/length,dz:(to.z-position.z)/length,speed:BASE_SLIDE.speed,duration:length/BASE_SLIDE.speed,cooldown:BASE_SLIDE.cooldown};
 }
 
 // The act-2 night stadium, drawn over the act-1 garden: a single 512 px hand-painted clay tile
@@ -103,18 +108,20 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const baseCoreMaterial=new THREE.MeshBasicMaterial({color:0x5fe9ff,transparent:true,opacity:.13,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const baseCores=new THREE.InstancedMesh(new THREE.PlaneGeometry(1.12,1.12).rotateX(-Math.PI/2).rotateZ(Math.PI/4),baseCoreMaterial,STADIUM_BASES.length);
  STADIUM_BASES.forEach((base,i)=>{baseMatrix.makeTranslation(base.x,.145,base.z);baseCores.setMatrixAt(i,baseMatrix);});baseCores.instanceMatrix.needsUpdate=true;group.add(baseCores);
- // Passing turret: a compact pitcher machine in the middle and a mitt target across the field.
+ // Passing turret: a compact pitcher on the mound and a mitt behind home plate.
  const relay=new THREE.Group();relay.name='stadium-pass-turret';group.add(relay);
  const relayDark=new THREE.MeshStandardMaterial({color:0x1c2838,roughness:.55,metalness:.5}),relayRed=new THREE.MeshStandardMaterial({color:0x9f2831,roughness:.62,metalness:.18}),relayGold=new THREE.MeshStandardMaterial({color:0xd6a945,emissive:0x5a2d06,emissiveIntensity:.55,roughness:.45,metalness:.22});
- const machine=new THREE.Group();machine.position.set(0,0,0);relay.add(machine);
- const machineParts=[new THREE.CylinderGeometry(.62,.82,1.05,8).translate(0,.58,0),new THREE.CylinderGeometry(.42,.42,.36,12).rotateZ(Math.PI/2).translate(0,1.25,0),new THREE.ConeGeometry(.24,.95,8).rotateX(Math.PI/2).translate(0,1.25,-.55)];
+ const machine=new THREE.Group();machine.position.set(RELAY_LAYOUT.pitcher.x,0,RELAY_LAYOUT.pitcher.z);relay.add(machine);
+ const machineParts=[new THREE.CylinderGeometry(.62,.82,1.05,8).translate(0,.58,0),new THREE.CylinderGeometry(.42,.42,.36,12).rotateZ(Math.PI/2).translate(0,1.25,0),new THREE.ConeGeometry(.24,.95,8).rotateX(Math.PI/2).translate(0,1.25,.55)];
  machine.add(new THREE.Mesh(mergeParts(machineParts),relayRed));
  const wheel=new THREE.Mesh(new THREE.TorusGeometry(.5,.1,6,18),relayGold);wheel.position.y=1.25;wheel.rotation.y=Math.PI/2;machine.add(wheel);
- const mitt=new THREE.Group();mitt.position.set(0,0,-6.35);relay.add(mitt);
+ const mitt=new THREE.Group();mitt.position.set(RELAY_LAYOUT.catcher.x,0,RELAY_LAYOUT.catcher.z);relay.add(mitt);
  const mittPalm=new THREE.Mesh(new THREE.SphereGeometry(.6,9,6),relayGold);mittPalm.scale.set(1.25,1,.35);mittPalm.position.y=.9;mitt.add(mittPalm);
  const mittStand=new THREE.Mesh(new THREE.CylinderGeometry(.12,.22,1.3,7),relayDark);mittStand.position.y=.35;mitt.add(mittStand);
- const relayLine=new THREE.Mesh(new THREE.PlaneGeometry(.34,6.35).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xfff4c7,transparent:true,opacity:.18,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}));relayLine.position.set(0,.16,-3.175);relay.add(relayLine);
- const relayBall=new THREE.Mesh(new THREE.IcosahedronGeometry(.27,1),new THREE.MeshBasicMaterial({color:new THREE.Color(0xfff2d5).multiplyScalar(1.7),toneMapped:false}));relayBall.position.set(0,.8,0);relay.add(relayBall);
+ const relayLength=RELAY_LAYOUT.catcher.z-RELAY_LAYOUT.pitcher.z;
+ const relayLine=new THREE.Mesh(new THREE.PlaneGeometry(.34,relayLength).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xfff4c7,transparent:true,opacity:.18,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}));relayLine.position.set(0,.16,(RELAY_LAYOUT.pitcher.z+RELAY_LAYOUT.catcher.z)/2);relay.add(relayLine);
+ const relayBallParts=[tint(new THREE.IcosahedronGeometry(.27,1),0xfff2d5),tint(new THREE.TorusGeometry(.275,.019,3,14,Math.PI*1.55).rotateX(Math.PI/2).rotateY(.62),0xc53b37),tint(new THREE.TorusGeometry(.275,.019,3,14,Math.PI*1.55).rotateX(Math.PI/2).rotateY(-.62).rotateZ(Math.PI),0xc53b37)];
+ const relayBall=new THREE.Mesh(mergeParts(relayBallParts),new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}));relayBall.position.set(RELAY_LAYOUT.pitcher.x,.82,RELAY_LAYOUT.pitcher.z);relay.add(relayBall);
  relay.visible=false;
  // Night light: the act-1 values are remembered and restored when the stadium is left.
  const saved=new Map(),hidden=new Map();
@@ -151,7 +158,7 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
    relayClock+=dt;const period=2.7,pass=Math.floor(relayClock/period),phase=relayClock-pass*period,reverse=pass%2===1;
    relayLine.visible=phase<1.25;relayLine.material.opacity=phase<.68?.12+.5*(phase/.68):.22;
    relayBall.visible=phase>=.68&&phase<1.25;
-   if(relayBall.visible){const t=Math.min(1,(phase-.68)/.57),from=reverse?-6.35:0,to=reverse?0:-6.35;relayBall.position.set(0,.82,THREE.MathUtils.lerp(from,to,t));relayBall.rotation.x+=dt*12;relayBall.rotation.z+=dt*8;if(relayHitPass!==pass&&Math.hypot(player.x-relayBall.position.x,player.z-relayBall.position.z)<.72){relayHitPass=pass;hit(16);sound('bossAttack');}}
+   if(relayBall.visible){const t=Math.min(1,(phase-.68)/.57),from=reverse?RELAY_LAYOUT.catcher.z:RELAY_LAYOUT.pitcher.z,to=reverse?RELAY_LAYOUT.pitcher.z:RELAY_LAYOUT.catcher.z;relayBall.position.set(0,.82,THREE.MathUtils.lerp(from,to,t));relayBall.rotation.x+=dt*12;relayBall.rotation.z+=dt*8;if(relayHitPass!==pass&&Math.hypot(player.x-relayBall.position.x,player.z-relayBall.position.z)<.72){relayHitPass=pass;hit(16);sound('bossAttack');}}
    if(phase<.08&&relayWarnPass!==pass){relayWarnPass=pass;sound('bossWarning');}
   },
   update(time){
@@ -168,4 +175,9 @@ function mergeParts(parts){
  const flat=parts.map(g=>g.index?g.toNonIndexed():g),merged=mergeGeometries(flat,false);
  for(const g of new Set([...parts,...flat]))g.dispose();
  return merged;
+}
+function tint(geometry,color){
+ const g=geometry.index?geometry.toNonIndexed():geometry,c=new THREE.Color(color),values=new Float32Array(g.getAttribute('position').count*3);
+ for(let i=0;i<values.length;i+=3){values[i]=c.r;values[i+1]=c.g;values[i+2]=c.b;}
+ g.setAttribute('color',new THREE.BufferAttribute(values,3));return g;
 }
