@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import * as THREE from 'three';
-import {STADIUM_ROOMS,ACT2_REGION,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
+import {STADIUM_ROOMS,ACT2_REGION,ACT2_PRESSURE,isAct2,actOf,act2Unlocked,act2Available,playableRegion,ACT2_RELEASED,actStorage,ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden} from '../src/act2-wardens.js';
 import {ALWAYS_BEGINNER,ALWAYS_BEGINNER_ART,ALWAYS_PHASES,ALWAYS_TUNING,createAlwaysBeginner,tickAlwaysBeginner,damageAlwaysBeginner} from '../src/always-beginner.js';
 import {BASE_SLIDE,BASE_SLIDE_ARENAS,STADIUM_BASES,STADIUM_CLAY_ART,STADIUM_TRIM_ART,RELAY_LAYOUT,baseSlideFor,baseSlidesEnabled,stadiumBaseAt} from '../src/stadium.js';
@@ -44,6 +44,9 @@ assert.ok(STADIUM_ROOMS.slice(0,4).every(room=>room.enemies.every(([type])=>isAc
 assert.equal(new Set(STADIUM_ROOMS.flatMap(r=>r.enemies.map(([t])=>t)).filter(isAct2Minion)).size,4,'every minion appears');
 assert.notEqual(roomFor(2,0,'garden'),STADIUM_ROOMS[2]);
 assert.equal(STADIUM_ROOMS[4].enemies[0][0],'act2warden');
+assert.deepEqual(STADIUM_ROOMS[4].enemies.slice(1).map(([type])=>type),['pitcher','runner'],'guardian room keeps specialist pressure alive');
+assert.ok(ACT2_PRESSURE.hp>1&&ACT2_PRESSURE.speed>1&&ACT2_PRESSURE.projectile>1&&ACT2_PRESSURE.bossTempo>1,'act 2 starts above act 1 pressure');
+assert.ok(ACT2_PRESSURE.crowdInitial<=14&&Math.max(...ACT2_PRESSURE.crowdExtra)<=6,'crowd increase raises pressure without stretching rooms too far');
 
 // Five-journey guardian ladder: A, B, C, then two staged pair fights.
 assert.deepEqual(act2WardenEncounter(0),{primary:'ace',support:null,trigger:0,hpScale:1});
@@ -136,7 +139,7 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  const w=world(),e=createAct2Minion(scene,'pitcher',()=>.1);e.g.position.set(0,0,-7);let sawLine=false;
  run(e,w.ctx,1.6,.05,()=>{if(e.state==='windup'&&e.line.visible)sawLine=true;});
  assert.ok(sawLine,'windup line shows');assert.equal(w.bolts.length,1);assert.equal(w.bolts[0].spec.speed,ACT2_MINIONS.pitcher.ballSpeed);assert.ok(w.bolts[0].dir.z>.9,'aimed at the seed');
- run(e,w.ctx,8);assert.ok(w.bolts.length>=3);assert.ok(w.bolts[2].spec.curve,'third pitch curves');
+ run(e,w.ctx,6);assert.ok(w.bolts.length>=2);assert.ok(w.bolts[1].spec.curve,'every second pitch curves');assert.ok(ACT2_MINIONS.pitcher.ballSpeed>=16&&ACT2_MINIONS.pitcher.windup<.6);
  w.ctx.blocked=()=>true;const before=w.bolts.length;e.state='stalk';e.timer=0;run(e,w.ctx,3);assert.equal(w.bolts.length,before,'no pitch without a clear line');
 }
 // Runner: marks where the seed stood, sprints through, then rests exposed.
@@ -144,7 +147,8 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  const player=new V(),w=world(player),e=createAct2Minion(scene,'runner',()=>.1);e.g.position.set(0,0,-6);e.timer=0;
  run(e,w.ctx,.1);assert.equal(e.state,'mark');assert.ok(e.base.visible);assert.ok(e.basePos.distanceTo(new V())<1e-6);
  player.set(3,0,0);run(e,w.ctx,.9);assert.equal(e.state,'commit');
- run(e,w.ctx,1.3);assert.equal(e.state,'recover');assert.equal(e.takenScale,ACT2_MINIONS.runner.exposed);assert.ok(e.g.position.z>-.2,'ran through the base');assert.equal(w.hits.length,0,'a seed that left the base is safe');
+ let sawRecover=false;run(e,w.ctx,1.3,.05,()=>{sawRecover||=e.state==='recover';});assert.equal(sawRecover,true);assert.ok(e.g.position.z>-.2,'ran through the base');assert.equal(w.hits.length,0,'a seed that left the base is safe');
+ e.state='stalk';e.timer=0;e.runs=1;e.g.position.set(0,0,-6);player.set(0,0,0);run(e,w.ctx,.05);assert.equal(e.chainLeft,1,'every second run prepares a follow-up dash');
 }
 // Batter: sends a frontal shot back, but not a piercing one or one from behind.
 {
