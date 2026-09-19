@@ -9,7 +9,7 @@ import {validRunBonuses} from './run-bonuses.js';
 import {SLOT_CAP} from './progression.js';
 import {roomPoints} from './score.js';
 export const SAVE_KEY='seed-run-checkpoint-v1';
-export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:'야간 경기장'};
+export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:'야간 경기장',skyway:'폭풍의 항로'};
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
 const validCount=v=>v===undefined||(Number.isInteger(v)&&v>=0&&v<100000);
 export function validCheckpoint(s){

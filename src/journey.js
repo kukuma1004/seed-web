@@ -1,6 +1,7 @@
 import {LAWS,offerLaws} from './laws.js';
 import {isStarRoom} from './room-rotation.js';
 import {STADIUM_ROOMS,isAct2} from './act2.js';
+import {SKYWAY_ROOMS,isAct3} from './act3.js';
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
 export const ROOMS=[
  {name:'잠든 정원의 입구',hint:'첫 법칙을 깨우세요',covers:[wall(-3,1,2,1.2,1.7),wall(5.8,4,2.4,.9)],enemies:[['hound',-4,-3],['caster',5,-3]]},
@@ -16,7 +17,7 @@ export const STAR_ROOM=Object.freeze({id:'star',name:'별빛 정원',hint:'별 �
  covers:[wall(-3.8,.5,1.1,1.1),wall(3.8,.5,1.1,1.1)],
  enemies:[['hound',7.6,-2],['caster',0,-6.9],['hound',-4.6,-2.6]],
  shield:{x:0,z:-.6}});
-export function roomFor(stage,cycle=0,region='garden'){if(isAct2(region))return STADIUM_ROOMS[stage];return isStarRoom(stage,cycle)?STAR_ROOM:ROOMS[stage];}
+export function roomFor(stage,cycle=0,region='garden'){if(isAct3(region))return SKYWAY_ROOMS[stage];if(isAct2(region))return STADIUM_ROOMS[stage];return isStarRoom(stage,cycle)?STAR_ROOM:ROOMS[stage];}
 export const LAW_NAMES=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.name]));
 export function rewardOptions(room,laws,mutated=[],options={}){
  const random=options.random||Math.random;

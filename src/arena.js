@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {isStarRoom} from './room-rotation.js';
 import {isAct2} from './act2.js';
+import {ACT3_ARENA,isAct3} from './act3.js';
 
 const RECT=Object.freeze({shape:'rect',halfWidth:10,halfDepth:8});
 const CIRCLE=Object.freeze({shape:'circle',radius:7.6});
@@ -55,6 +56,7 @@ export const STAR=Object.freeze({
 
 // A room's visible rim, movement and projectiles share this definition.
 export function arenaFor(stage,cycle=0,region='garden') {
+  if(isAct3(region))return ACT3_ARENA;
   if(isAct2(region))return ACT2_ARENAS[Math.max(0,Math.min(ACT2_ARENAS.length-1,stage))];
   if(isStarRoom(stage,cycle))return STAR;
   return stage===2?CIRCLE:RECT;

@@ -17,7 +17,7 @@ export const TURRET_LAYOUTS=[
 ];
 // Star garden: one turret in a bottom tip behind the seed; later journeys add one in the other bottom tip.
 export const STAR_TURRETS={base:[{x:-5.4,z:6.9}],extra:[{x:5.4,z:6.9}]};
-export function turretSpots(stage,cycle=0,region='garden'){if(region==='stadium')return [];const layout=isStarRoom(stage,cycle)?STAR_TURRETS:(TURRET_LAYOUTS[stage]||{base:[],extra:[]});return cycle>0?[...layout.base,...layout.extra]:[...layout.base];}
+export function turretSpots(stage,cycle=0,region='garden'){if(region==='stadium'||region==='skyway')return [];const layout=isStarRoom(stage,cycle)?STAR_TURRETS:(TURRET_LAYOUTS[stage]||{base:[],extra:[]});return cycle>0?[...layout.base,...layout.extra]:[...layout.base];}
 
 // The two laws with the highest level; ties go to the law taken first.
 export function copiedLaws(levels){
