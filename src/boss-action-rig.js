@@ -1,13 +1,14 @@
 import * as THREE from 'three';
+import {actorArtFile} from './actor-art.js';
 
 const textures=new Map();
 const clamp=THREE.MathUtils.clamp;
 const smooth=t=>t*t*(3-2*t);
 
 function texture(file){
- if(textures.has(file))return textures.get(file);
- const map=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+file);
- map.colorSpace=THREE.SRGBColorSpace;textures.set(file,map);return map;
+ const selected=actorArtFile(file);if(textures.has(selected))return textures.get(selected);
+ const map=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+selected);
+ map.colorSpace=THREE.SRGBColorSpace;textures.set(selected,map);return map;
 }
 function actionSprite(parent,file,{x=0,y=0,z=0,width=1,height=1,pivot=[.5,.5],opacity=1}={}){
  const material=new THREE.SpriteMaterial({map:texture(file),transparent:true,alphaTest:.035,opacity,depthTest:false,depthWrite:false,toneMapped:false});
@@ -76,8 +77,36 @@ function attachAlways(e){
  return {bat,batEcho,ball};
 }
 
+export function johanActionPose(e,time=0){
+ const phaseChange=e.moveName==='폭풍핵 변환';
+ if(phaseChange)return {kind:'phase',phase:true,core:true,phaseScale:3.9,coreScale:2.15,rotation:time*1.8,opacity:.92};
+ if(e.state!=='tell'&&e.state!=='barrage')return {kind:'idle'};
+ const live=e.state==='barrage',pulse=1+Math.sin(time*(live?24:15))*(live?.08:.04),step=e.volleyStep||0;
+ if(e.pattern===0)return {kind:'cannons',cannons:true,width:4.25*pulse,height:3.15*pulse,z:.12+(live?.3:0),opacity:live?1:.76,recoil:live&&(step%2===1)};
+ if(e.pattern===1)return {kind:'spiral',core:true,coreScale:(live?2.35:2.05)*pulse,rotation:time*(live?2.8:1.35)*(e.turnSign||1),opacity:live?1:.78};
+ if(e.pattern===2)return {kind:'turn',thrusters:true,width:3.45*pulse,height:4.4*pulse,z:-.18,rotation:(e.turnSign||1)*-.08,opacity:live?1:.72};
+ if(e.pattern===3)return {kind:'wall',phase:true,phaseScale:(live?3.35:2.8)*pulse,rotation:(step%2?1:-1)*.08,opacity:live?.9:.67};
+ return {kind:'core',core:true,phase:true,coreScale:2.55*pulse,phaseScale:3.75*pulse,rotation:time*(live?3.2:1.5),opacity:live?1:.82};
+}
+
+function attachJohan(e){
+ const cannons=actionSprite(e.g,'boss-johan-cannons-v1.webp',{width:4.25,height:3.15});
+ const core=actionSprite(e.g,'boss-johan-core-v1.webp',{width:2.25,height:2.25});
+ const thrusters=actionSprite(e.g,'boss-johan-thrusters-v1.webp',{width:3.45,height:4.4});
+ const phase=actionSprite(e.g,'boss-johan-phase-v1.webp',{width:3.35,height:3.35});
+ e.updateActionArt=time=>{
+  const pose=johanActionPose(e,time);e.actionArtState=pose;hide(cannons,core,thrusters,phase);
+  if(pose.cannons)show(cannons,{x:0,y:2.18,z:pose.z,width:pose.width*(pose.recoil?.94:1),height:pose.height*(pose.recoil?.94:1),rotation:0,opacity:pose.opacity});
+  if(pose.core)show(core,{x:0,y:2.2,z:.44,width:pose.coreScale,height:pose.coreScale,rotation:pose.rotation,opacity:pose.opacity});
+  if(pose.thrusters)show(thrusters,{x:0,y:1.38,z:pose.z,width:pose.width,height:pose.height,rotation:pose.rotation,opacity:pose.opacity});
+  if(pose.phase)show(phase,{x:0,y:2.18,z:.62,width:pose.phaseScale,height:pose.phaseScale,rotation:-pose.rotation*.55,opacity:pose.opacity*.78});
+ };
+ return {cannons,core,thrusters,phase};
+}
+
 export function attachBossActionRig(e){
  if(e.type==='austin')return attachAustin(e);
  if(e.type==='alwaysbeginner')return attachAlways(e);
+ if(e.type==='tempestcarrier')return attachJohan(e);
  return null;
 }

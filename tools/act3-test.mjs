@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {existsSync} from 'node:fs';
 import * as THREE from 'three';
 import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn} from '../src/act3.js';
+import {ACT2_PRESSURE} from '../src/act2.js';
 import {ACT3_GEOMETRIES,ACT3_ART,ACT3_MINIONS,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,TEMPEST_CARRIER} from '../src/act3-enemies.js';
 import {createSkyway} from '../src/skyway.js';
 import {roomFor} from '../src/journey.js';
@@ -17,6 +18,8 @@ assert.equal(act3Available({hostname:'localhost'}),true);assert.equal(act3Availa
 assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'}),'garden');assert.equal(playableAct3Region(ACT3_REGION,{hostname:'localhost'}),ACT3_REGION);
 assert.equal(act3Unlocked({bosses:['alwaysbeginner']}),true);assert.equal(act3Unlocked({bosses:['austin']}),false);assert.equal(isAct3(ACT3_REGION),true);assert.equal(REGION_NAMES.skyway,'폭풍의 항로');
 assert.ok(ACT3_PRESSURE.hp>1&&ACT3_PRESSURE.speed>1&&ACT3_PRESSURE.projectile>1&&ACT3_PRESSURE.bossTempo>1);
+assert.ok(ACT3_PRESSURE.hp>ACT2_PRESSURE.hp&&ACT3_PRESSURE.speed>ACT2_PRESSURE.speed&&ACT3_PRESSURE.projectile>ACT2_PRESSURE.projectile&&ACT3_PRESSURE.bossTempo>ACT2_PRESSURE.bossTempo,'act 3 stays a measured step above act 2');
+assert.ok(ACT3_PRESSURE.crowdInterval<ACT2_PRESSURE.crowdInterval,'act 3 formations reinforce faster without raising the live actor cap');
 assert.ok(ACT3_PRESSURE.projectileCapLow<ACT3_PRESSURE.projectileCapNormal&&ACT3_PRESSURE.projectileCapNormal<=64,'hostile projectiles stay capped for phones');
 const crowd=Array.from({length:12},(_,i)=>act3CrowdType(i,3));
 assert.equal(crowd.filter(type=>type==='sky-diver').length,1,'chargers are rare');
@@ -53,6 +56,7 @@ const scene=new THREE.Scene();
 for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
  const w=world(),e=createAct3Minion(scene,type,()=>.25);e.g.position.set(0,0,-5);e.timer=0;const states=new Set();
  for(let time=0;time<5;time+=.04){tickAct3Minion(e,.04,time,w.ctx);states.add(e.state);}
+ assert.equal(e.homeReady,true,`${type} owns a stable formation anchor`);assert.ok(Number.isFinite(e.artRoll),`${type} bank animation stays finite`);
  assert.ok(w.bolts.length||states.has('commit'),`${type} produces a shot or a real charge`);
  if(type==='sky-bomber')assert.ok(w.bolts.length>=5,'bomber completes its warning and fan attack');
 }

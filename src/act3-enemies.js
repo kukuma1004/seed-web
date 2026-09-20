@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 
-const V=THREE.Vector3,AXIS_Y=new V(0,1,0);
+const V=THREE.Vector3,AXIS_Y=new V(0,1,0),FORWARD=new V(0,0,1);
 const tint=(geometry,color)=>{const g=geometry.index?geometry.toNonIndexed():geometry,c=new THREE.Color(color),a=new Float32Array(g.attributes.position.count*3);for(let i=0;i<a.length;i+=3){a[i]=c.r;a[i+1]=c.g;a[i+2]=c.b;}g.setAttribute('color',new THREE.BufferAttribute(a,3));return g;};
 const merge=parts=>{const flat=parts.map(g=>g.index?g.toNonIndexed():g),out=mergeGeometries(flat,false);for(const g of new Set([...parts,...flat]))if(g!==out)g.dispose();return out;};
 const wing=(x,scale=1,flip=1)=>tint(new THREE.ConeGeometry(.54*scale,1.75*scale,3).rotateZ(flip*Math.PI/2).rotateY(flip*.2).translate(x,.76,0),0x9ae8d0);
@@ -57,11 +57,11 @@ function baseActor(scene,type,kind,hp){
  const g=new THREE.Group(),body=new THREE.Group(),fallback=new THREE.Mesh(ACT3_GEOMETRIES[kind],ACT3_MATERIALS.craft);fallback.castShadow=false;fallback.receiveShadow=false;body.add(fallback);g.add(body);
  const tell=new THREE.Mesh(ACT3_GEOMETRIES.tellRing,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);tell.rotation.x=-Math.PI/2;tell.position.y=.12;tell.visible=false;g.add(tell);
  const line=new THREE.Mesh(ACT3_GEOMETRIES.tellLine,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);line.rotation.x=-Math.PI/2;line.position.set(0,.11,5);line.visible=false;g.add(line);scene.add(g);
- return {g,body,tell,line,type,hp,maxHp:hp,state:'stalk',timer:.7,phase:0,hit:0,dir:new V(0,0,1),before:new V(),target:new V(),moveName:'',hint:'',attacks:0,pattern:0};
+ return {g,body,tell,line,type,hp,maxHp:hp,state:'stalk',timer:.7,phase:0,hit:0,dir:new V(0,0,1),before:new V(),target:new V(),home:new V(),formation:new V(),homeReady:false,artRoll:0,moveName:'',hint:'',attacks:0,pattern:0};
 }
 
 export function createAct3Minion(scene,type,random=Math.random){
- const c=ACT3_MINIONS[type];if(!c)throw new Error(`Unknown act-3 minion ${type}`);const e=baseActor(scene,type,c.kind,c.hp);e.config=c;e.phase=random()*Math.PI*2;e.lane=random()<.5?-1:1;return e;
+ const c=ACT3_MINIONS[type];if(!c)throw new Error(`Unknown act-3 minion ${type}`);const e=baseActor(scene,type,c.kind,c.hp);e.config=c;e.phase=random()*Math.PI*2;e.lane=random()<.5?-1:1;e.state='entry';e.timer=.46+random()*.18;return e;
 }
 export function createAct3Warden(scene){const e=baseActor(scene,'act3warden','warden',1850);e.config={name:'편대 문지기'};e.timer=.9;return e;}
 export const TEMPEST_CARRIER=Object.freeze({name:'폭풍비행사 요한',type:'tempestcarrier',hp:16800,damage:Object.freeze({burst:.05,perSecond:.026})});
@@ -69,29 +69,37 @@ export function createTempestCarrier(scene){const e=baseActor(scene,TEMPEST_CARR
 export function damageTempestCarrier(e,amount){const cap=e.maxHp*TEMPEST_CARRIER.damage.burst,allowed=Math.max(0,Math.min(Number(amount)||0,e.damageAllowance,cap));e.damageAllowance-=allowed;e.hp-=allowed;return allowed;}
 
 const face=(e,d)=>{if(d.lengthSq()>.001)e.g.rotation.y=Math.atan2(d.x,d.z);};
-const finishMotion=(e,dt,time)=>{const dx=e.g.position.x-e.before.x,dz=e.g.position.z-e.before.z;e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,-dx*1.7,7,dt);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,dz*.34,7,dt);e.body.position.y=Math.sin(time*5+e.phase)*.07;e.hit=Math.max(0,e.hit-dt);};
+const finishMotion=(e,dt,time)=>{const dx=e.g.position.x-e.before.x,dz=e.g.position.z-e.before.z;e.artRoll=THREE.MathUtils.damp(e.artRoll,THREE.MathUtils.clamp(-dx*2.4,-.24,.24),9,dt);e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,-dx*1.7,7,dt);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,dz*.34,7,dt);e.body.position.y=Math.sin(time*5+e.phase)*.07;e.hit=Math.max(0,e.hit-dt);};
 const shot=(ctx,e,dir,spec={})=>ctx.bolt(e.g.position,dir,{speed:spec.speed||8.4,damage:spec.damage||e.config?.damage||14,boss:Boolean(spec.boss),curve:spec.curve||0,life:spec.life||4.5});
+const formationMove=(e,dt,time,{x=1,z=.45,xf=1.15,zf=.72,speed=4}={})=>{
+ if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;}
+ e.formation.set(THREE.MathUtils.clamp(e.home.x+Math.sin(time*xf+e.phase)*x,-7.7,7.7),0,THREE.MathUtils.clamp(e.home.z+Math.cos(time*zf+e.phase)*z,-6.35,-2.65));
+ e.g.position.x=THREE.MathUtils.damp(e.g.position.x,e.formation.x,speed,dt);e.g.position.z=THREE.MathUtils.damp(e.g.position.z,e.formation.z,speed,dt);
+};
 
 export function tickAct3Minion(e,dt,time,ctx){
  e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;
- if(e.type==='sky-scout'){
-  e.g.position.x+=Math.sin(time*2.2+e.phase)*dt*1.5;e.g.position.addScaledVector(to,dt*(distance>6?e.config.speed:distance<3?-1.8:.25));face(e,to);
+ if(e.state==='entry'){
+  if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;}e.g.position.x=THREE.MathUtils.damp(e.g.position.x,e.home.x,7,dt);e.g.position.z=THREE.MathUtils.damp(e.g.position.z,e.home.z,7,dt);face(e,FORWARD);
+  if(e.timer<=0){e.state='stalk';e.timer=.2+(e.phase%1)*.35;}
+ }else if(e.type==='sky-scout'){
+  formationMove(e,dt,time,{x:1.35,z:.4,xf:1.65,zf:.82,speed:5});face(e,to);
   if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});if(e.attacks%3===0)for(const a of [-.22,.22])shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,a),{speed:8.7});ctx.sound?.('bossAttack');}
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
-   e.g.position.x+=Math.sin(time*.9+e.phase)*dt*1.2;e.g.position.addScaledVector(to,dt*(distance>7?e.config.speed:distance<5?-1.1:0));face(e,to);
+   formationMove(e,dt,time,{x:1.05,z:.72,xf:.82,zf:.6,speed:3.4});face(e,to);
    if(e.timer<=0){e.state='tell';e.timer=.34;e.dir.copy(to);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1+(.34-e.timer)*.8);face(e,e.dir);
    if(e.timer<=0){for(let i=-2;i<=2;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.19),{speed:6.5+Math.abs(i)*.35});e.state='stalk';e.timer=e.config.cooldown;ctx.sound?.('bossAttack');}
   }
  }else if(e.type==='sky-diver'){
-  if(e.state==='stalk'){e.g.position.x+=Math.sin(time*1.4+e.phase)*dt*1.05;e.g.position.addScaledVector(to,dt*(distance>7?2.2:distance<4?-1.2:0));face(e,to);if(e.timer<=0){e.state='tell';e.timer=.28;e.dir.copy(to);ctx.sound?.('bossWarning');}}
+  if(e.state==='stalk'){formationMove(e,dt,time,{x:1.55,z:.6,xf:1.35,zf:.8,speed:4.4});face(e,to);if(e.timer<=0){e.state='tell';e.timer=.28;e.dir.copy(to);ctx.sound?.('bossWarning');}}
   else if(e.state==='tell'){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);face(e,e.dir);if(e.timer<=0){e.state='commit';e.timer=.46;e.chargeHit=false;}}
   else if(e.state==='commit'){face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*15.5);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<.85){e.chargeHit=true;ctx.hit(e.config.damage);}if(e.timer<=0){e.state='recover';e.timer=.5;}}
   else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else{
-  e.g.position.x+=Math.sin(time*.72+e.phase)*dt*.65;e.g.position.addScaledVector(to,dt*(distance>8?1.1:distance<6?-.75:0));face(e,to);
+  formationMove(e,dt,time,{x:.72,z:.34,xf:.58,zf:.45,speed:2.6});face(e,to);
   if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;for(let i=-3;i<=3;i++)shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,i*.15),{speed:7.2+((i+3)%2)*1.3});ctx.sound?.('bossAttack');}
  }
  ctx.collide(e.g.position,.52);finishMotion(e,dt,time);

@@ -12,7 +12,9 @@ const reducedAtlases=Object.freeze({
  'enemy-batter-v1.webp':'mobile/enemy-batter-v1.webp','warden-act2-ace-v1.webp':'mobile/warden-act2-ace-v1.webp',
  'warden-act2-diamond-v1.webp':'mobile/warden-act2-diamond-v1.webp','warden-act2-slugger-v1.webp':'mobile/warden-act2-slugger-v1.webp',
  'boss-always-beginner-v1.webp':'mobile/boss-always-beginner-v1.webp',
- 'enemy-act3-flight-atlas-v2.webp':'mobile/enemy-act3-flight-atlas-v2.webp','boss-act3-johan-atlas-v2.webp':'mobile/boss-act3-johan-atlas-v2.webp'
+ 'enemy-act3-flight-atlas-v2.webp':'mobile/enemy-act3-flight-atlas-v2.webp','boss-act3-johan-atlas-v2.webp':'mobile/boss-act3-johan-atlas-v2.webp',
+ 'boss-johan-cannons-v1.webp':'mobile/boss-johan-cannons-v1.webp','boss-johan-core-v1.webp':'mobile/boss-johan-core-v1.webp',
+ 'boss-johan-thrusters-v1.webp':'mobile/boss-johan-thrusters-v1.webp','boss-johan-phase-v1.webp':'mobile/boss-johan-phase-v1.webp'
 });
 let reduced=false;
 export function configureActorArt({reducedTextures=false}={}){reduced=Boolean(reducedTextures);}
@@ -91,7 +93,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
   sprite.geometry=ghost.geometry=nextGeometry;
   const impact=THREE.MathUtils.clamp((e.hit||0)/.14,0,1),reaction=(e.impactSide||1)*impact*.105;
   const facingRoll=topDownFacing?Math.atan2(Math.sin(e.g.rotation.y-yaw+Math.PI),Math.cos(e.g.rotation.y-yaw+Math.PI)):0;
-  sprite.userData.roll=ghost.userData.roll=facingRoll+actorArtRotation(e.state,time,e.phase)+reaction;
+  sprite.userData.roll=ghost.userData.roll=facingRoll+actorArtRotation(e.state,time,e.phase)+(e.artRoll||0)+reaction;
   sprite.scale.set(size*(1+impact*.045),size*(1-impact*.035),1);ghost.scale.copy(sprite.scale);
   mat.color.setHex(e.block>0?0xb5efff:e.hit>0?0xffd1aa:(e.tint??0xffffff));
   ghost.visible=occlusion&&silhouettes.enabled&&(!silhouettes.test||silhouettes.test(e.g.position));

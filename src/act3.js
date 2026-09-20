@@ -10,8 +10,8 @@ export function act3Available(where=globalThis.location){return ACT3_RELEASED||[
 export function playableAct3Region(region,where=globalThis.location){return isAct3(region)&&!act3Available(where)?'garden':region;}
 
 export const ACT3_PRESSURE=Object.freeze({
- hp:1.24,speed:1.16,projectile:1.2,bossTempo:1.12,
- crowdInitial:10,crowdInterval:.68,crowdExtra:Object.freeze([6,8,10,12,0]),
+ hp:1.22,speed:1.17,projectile:1.22,bossTempo:1.14,
+ crowdInitial:11,crowdInterval:.64,crowdExtra:Object.freeze([5,7,9,11,0]),
  projectileCapLow:48,projectileCapNormal:64
 });
 
