@@ -1238,23 +1238,22 @@ function showEnd(deathReport=null){touch.reset();$('#overlay').classList.remove(
  // 보낼 값은 판이 끝난 지금 그대로 찍어 둔다. 예전에는 flush()가 끝난 뒤에야 점수·처치를 읽어서,
  // 그 사이에 다음 판을 시작하면 앞뒤가 안 맞는 기록이 랭킹에 올라갔다.
  const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,build};
- const local=ranked?submitScore(actStore(),entry):null;
- const endBoard=local?.ranking||readRanking(actStore());$('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div id="rank-board">${rankingBoard(endBoard,local?.entry||endBoard.find(e=>e.name===name)||null)}</div><p class="garden-line">${escapeHtml(harvestLine(lastHarvest))}</p><p class="form-note">발견 ${profile.forms.length}/${Object.keys(FORMS).length}</p><div class="intro-links"><button class="primary" id="restart">다시 시작</button><button class="discovery-link" id="end-garden">정원 보기</button></div>`;
+ if(ranked)submitScore(actStore(),entry);
+ $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>씨앗은 다시 뿌리를 내립니다</p><h2>잠든 씨앗</h2><div class="final-score"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>여정 ${cycle+1} · ${inAustinRoom()?AUSTIN.name:(stage+1)+'번째 방'} · ${kills} 처치 · ${Math.floor(elapsed)}초</span></div><p id="rank-status" class="rank-result">${ranked?(isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div class="end-actions"><button class="primary" id="restart">돌아가기</button><button class="discovery-link" id="end-ranking">랭킹 보기</button></div>`;
  if(deathReport)$('#rank-status').insertAdjacentHTML('beforebegin',combatAnalysisSummary(deathReport));
  $('#restart').onclick=showIntro;
- $('#end-garden').onclick=()=>showGarden(showEnd);
+ $('#end-ranking').onclick=()=>showRanking('online');
  if(!ranked)return;
  if(!betaRankingEligible()){setText($('#rank-status'),'이 기기 기록에는 남았어요 · 베타 시즌 1.1 랭킹은 Android 앱 또는 등록된 PC 웹 테스터의 Google 계정 기록만 받아요');return;}
  // 화면 시계와 실제 시계가 크게 어긋난 판(게임 속도를 바꾸는 도구)은 모두의 랭킹에 올리지 않는다.
  if(!paceTrusted(paceGame,paceReal)){setText($('#rank-status'),'게임 속도가 평소와 달라서 이 판은 모두의 랭킹에 올리지 않았어요 · 이 기기 기록에는 남아요');return;}
  online.flush().catch(()=>0).then(()=>online.submit(entry,500)).then(r=>{
   if(serial!==rankSerial)return;
-  const status=$('#rank-status'),box=$('#rank-board');
+  const status=$('#rank-status');
   if(status)status.innerHTML=r.rank?`모두의 랭킹 <b>${r.rank}위</b>에 올랐어요!`:r.bestRank?`기록했어요 · ${escapeHtml(name)}의 최고 기록은 <b>${r.bestRank}위</b>`:'기록했어요 · 아직 상위권 밖이에요';
-  const mine=r.board[(r.rank||r.bestRank)-1]||r.board.find(e=>e.uid===online.uid()&&e.name===name)||null;if(box){box.innerHTML=rankingBoard(r.board,mine,true);bindRankSafety();}
  }).catch(()=>{
   if(serial!==rankSerial)return;
-  const status=$('#rank-status');if(status)status.innerHTML='지금은 랭킹 서버에 연결하지 못했어요 · 이 기록은 기기에 보관했다가 다음에 자동으로 올라가요<br>아래는 <b>이 기기</b> 기록이에요 · 모두의 기록은 서버에 그대로 있어요';
+  const status=$('#rank-status');if(status)status.innerHTML='지금은 랭킹 서버에 연결하지 못했어요 · 이 기록은 기기에 보관했다가 다음에 자동으로 올라가요<br><b>랭킹 보기</b>에서 다시 확인할 수 있어요';
  });
 }
 // 점검 중 화면. 정원은 뒤에 그대로 보이고, 들어갈 단추는 두지 않는다.
