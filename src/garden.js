@@ -74,7 +74,7 @@ const plant=p=>{
   branch:BRANCHES.includes(p.branch)?p.branch:PLAY_STYLES[style].branch,active:false};
 };
 const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
-export const emptyGarden=()=>({version:5,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),fragments:0,harvests:0,records:[]});
+export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[]});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
@@ -93,6 +93,7 @@ export function normalizeGarden(value){
   if(SEEDS[id]&&Number.isInteger(n)&&n>0)g.seeds[id]=Math.min(99,n);
  if(value.traits&&typeof value.traits==='object')for(const [id,styles] of Object.entries(value.traits))
   if(SEEDS[id]&&Array.isArray(styles))g.traits[id]=styles.slice(0,g.seeds[id]||0).map(validStyle);
+ g.bossWins=Number.isInteger(value?.bossWins)?Math.max(0,Math.min(1e6,value.bossWins)):MASTERY_KEYS.reduce((n,id)=>n+Math.max(0,Math.floor(Number(value?.mastery?.[id])||0)),0);
  if(value.mastery&&typeof value.mastery==='object')for(const id of MASTERY_KEYS)
   g.mastery[id]=Math.max(0,Math.min(MASTERY_STAT_CAP,Math.floor(Number(value.mastery[id])||0)));
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
@@ -103,18 +104,22 @@ export function normalizeGarden(value){
 export function readGarden(storage){try{return autoPlantSeeds(normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY))));}catch{return emptyGarden();}}
 export function writeGarden(storage,garden){try{storage?.setItem(GARDEN_KEY,JSON.stringify(autoPlantSeeds(garden)));return true;}catch{return false;}}
 
-// 각 막의 최종 보스 한 번 격파 = 아직 상한에 닿지 않은 능력 하나에 0.1%.
+// 각 막의 최종 보스 한 번 격파 = 아직 상한에 닿지 않은 능력 하나에 0.1~0.3%(1~3점).
+export const BOSS_MASTERY_MIN=1,BOSS_MASTERY_MAX=3;
 // 정수 포인트로 저장해서 장기간 플레이해도 0.1+0.1의 소수 오차가 쌓이지 않는다.
 export function grantBossMastery(garden,random=Math.random){
  const g=normalizeGarden(garden),total=MASTERY_KEYS.reduce((n,id)=>n+g.mastery[id],0);
  const open=MASTERY_KEYS.filter(id=>g.mastery[id]<MASTERY_STAT_CAP);
  if(!open.length)return {garden:g,granted:false,id:null,points:0};
  const roll=Math.max(0,Math.min(.999999,Number(random?.())||0)),id=open[Math.floor(roll*open.length)];
- g.mastery[id]++;
- const earned=Math.floor((total+1)/BOSS_BLOOM_EVERY),milestone=(total+1)%BOSS_BLOOM_EVERY===0
+ const spread=BOSS_MASTERY_MAX-BOSS_MASTERY_MIN+1,sizeRoll=Math.max(0,Math.min(.999999,Number(random?.())||0));
+ const gain=Math.min(BOSS_MASTERY_MIN+Math.floor(sizeRoll*spread),MASTERY_STAT_CAP-g.mastery[id]);
+ g.mastery[id]+=gain;
+ const wins=g.bossWins+1;g.bossWins=wins;
+ const earned=Math.floor(wins/BOSS_BLOOM_EVERY),milestone=wins%BOSS_BLOOM_EVERY===0
   ? {type:earned%BOSS_FRUIT_EVERY===0?'fruit':'flower',count:earned}
   : null;
- return {garden:g,granted:true,id,points:g.mastery[id],milestone};
+ return {garden:g,granted:true,id,gain,points:g.mastery[id],milestone};
 }
 // 이전 코드와 저장 검사를 위한 이름 호환.
 export const grantAustinMastery=grantBossMastery;
@@ -125,14 +130,14 @@ export function gardenMastery(garden){
 // 저장을 따로 늘리지 않고 보스 성장점에서 정원의 기념 식물을 계산한다.
 // 찐보스 다섯 번마다 기억꽃 하나, 네 번째 꽃마다 황금 열매 하나가 된다.
 export function bossGardenMilestones(garden){
- const mastery=gardenMastery(garden),defeats=mastery.total,earned=Math.floor(defeats/BOSS_BLOOM_EVERY),fruits=Math.floor(earned/BOSS_FRUIT_EVERY);
+ const g=normalizeGarden(garden),mastery=gardenMastery(g),defeats=g.bossWins,earned=Math.floor(defeats/BOSS_BLOOM_EVERY),fruits=Math.floor(earned/BOSS_FRUIT_EVERY);
  const full=MASTERY_KEYS.every(id=>mastery.points[id]>=MASTERY_STAT_CAP);
  return Object.freeze({defeats,earned,flowers:earned-fruits,fruits,next:full?0:BOSS_BLOOM_EVERY-defeats%BOSS_BLOOM_EVERY});
 }
 export function masteryLine(result){
  if(!result?.granted||!MASTERY[result.id])return '정원 성장이 최대치에 도달했습니다';
  const bloom=result.milestone?.type==='fruit'?' · 황금 열매가 맺혔습니다':result.milestone?' · 기억꽃이 피었습니다':'';
- return `정원 성장 · ${MASTERY[result.id].name} +0.1% (현재 ${(result.points/10).toFixed(1)}%)${bloom}`;
+ return `정원 성장 · ${MASTERY[result.id].name} +${((result.gain||1)/10).toFixed(1)}% (현재 ${(result.points/10).toFixed(1)}%)${bloom}`;
 }
 
 // 어떤 씨앗이 남는가: 가장 깊게 키운 법칙이 결정한다. 오스틴을 이기면 시계탑 씨앗이 함께 남는다.

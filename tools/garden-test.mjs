@@ -77,7 +77,7 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
 
 {
  const old=normalizeGarden({version:2,plots:[{seed:'split',growth:9,branch:'vine',active:true}],seeds:{reflect:1},harvests:5});
- assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,5);
+ assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,6);
  const s=memory();assert.ok(writeGarden(s,old));assert.equal(readGarden(s).plots[0].style,'agile');
  assert.equal(readGarden(s).plots[1].seed,'reflect','옛 씨앗 상자의 씨앗도 빈 화단에 자동으로 심는다');
  s.setItem('seed-garden-v1','{깨진 json');assert.deepEqual(readGarden(s).plots,Array(PLOTS).fill(null));
