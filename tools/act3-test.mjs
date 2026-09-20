@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {existsSync} from 'node:fs';
+import {existsSync,readFileSync} from 'node:fs';
 import * as THREE from 'three';
 import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn} from '../src/act3.js';
 import {ACT2_PRESSURE} from '../src/act2.js';
@@ -16,6 +16,7 @@ const V=THREE.Vector3;
 assert.equal(ACT3_RELEASED,false,'the first slice remains local/admin-only');
 assert.equal(act3Available({hostname:'localhost'}),true);assert.equal(act3Available({hostname:'kukuma1004.github.io'}),false);
 assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'}),'garden');assert.equal(playableAct3Region(ACT3_REGION,{hostname:'localhost'}),ACT3_REGION);
+assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'},true),ACT3_REGION,'the administrator preview can enter act 3 before public release');
 assert.equal(act3Unlocked({bosses:['alwaysbeginner']}),true);assert.equal(act3Unlocked({bosses:['austin']}),false);assert.equal(isAct3(ACT3_REGION),true);assert.equal(REGION_NAMES.skyway,'폭풍의 항로');
 assert.ok(ACT3_PRESSURE.hp>1&&ACT3_PRESSURE.speed>1&&ACT3_PRESSURE.projectile>1&&ACT3_PRESSURE.bossTempo>1);
 assert.ok(ACT3_PRESSURE.hp>ACT2_PRESSURE.hp&&ACT3_PRESSURE.speed>ACT2_PRESSURE.speed&&ACT3_PRESSURE.projectile>ACT2_PRESSURE.projectile&&ACT3_PRESSURE.bossTempo>ACT2_PRESSURE.bossTempo,'act 3 stays a measured step above act 2');
@@ -35,6 +36,10 @@ SKYWAY_ROOMS.forEach((room,stage)=>{
  assert.deepEqual(trapsFor(stage,0,ACT3_REGION),[]);assert.deepEqual(turretSpots(stage,0,ACT3_REGION),[]);
 });
 assert.equal(new Set(SKYWAY_ROOMS.flatMap(room=>room.enemies.map(([type])=>type)).filter(isAct3Minion)).size,4,'all four flight roles appear');
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),developerStart=main.slice(main.indexOf('function startDeveloperEncounter'),main.indexOf('function showDeveloperLab'));
+assert.match(main,/playableAct3Region\(playableRegion\(r\),globalThis\.location,developerRun\)/,'the public administrator lab must bypass only the unreleased act-3 gate');
+assert.doesNotMatch(developerStart,/restart\(\);[\s\S]*wave\(\)/,'the developer lab must build the selected encounter once instead of stacking it over the first room');
+assert.match(developerStart,/act3field:\{region:ACT3_REGION,stage:1[\s\S]*act3warden:\{region:ACT3_REGION,stage:4[\s\S]*act3boss:\{region:ACT3_REGION,stage:4/,'all three act-3 laboratory entries target the skyway');
 for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier','act3warden','tempestcarrier'])assert.ok(KILL_POINTS[type]>0,type);
 assert.ok(Object.values(ACT3_GEOMETRIES).every(geometry=>geometry.attributes?.position?.count>0),'all procedural flight meshes are valid');
 assert.deepEqual(ACT3_ART.tempestcarrier.frames,[1,2,3],'the boss owns a visual phase for each health band');

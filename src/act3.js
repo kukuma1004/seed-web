@@ -7,7 +7,7 @@ export const ACT3_RELEASED=false;
 export const isAct3=region=>region===ACT3_REGION;
 export const act3Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosses.includes('alwaysbeginner');
 export function act3Available(where=globalThis.location){return ACT3_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
-export function playableAct3Region(region,where=globalThis.location){return isAct3(region)&&!act3Available(where)?'garden':region;}
+export function playableAct3Region(region,where=globalThis.location,preview=false){return isAct3(region)&&!act3Available(where)&&!preview?'garden':region;}
 
 export const ACT3_PRESSURE=Object.freeze({
  hp:1.22,speed:1.17,projectile:1.22,bossTempo:1.14,
