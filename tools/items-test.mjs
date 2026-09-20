@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {STARTING_ITEMS,startingInventory,ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,BOSS_SPROUT_CHANCE,TURRET_POTION_CHANCE,TURRET_POTION_PITY,turretPotionDrop,nextHeld,heldItems,usable} from '../src/inventory.js';
+import {STARTING_ITEMS,startingInventory,ITEMS,ITEM_ORDER,emptyInventory,normalizeInventory,validInventory,addItem,useItem,drinkPotion,tryRevive,austinDrops,austinBonus,AUSTIN_BONUS,BOSS_SPROUT_CHANCE,GOLDEN_FRUIT_POTIONS,goldenFruitPotion,TURRET_POTION_CHANCE,TURRET_POTION_PITY,turretPotionDrop,nextHeld,heldItems,usable} from '../src/inventory.js';
 import {validCheckpoint} from '../src/run-save.js';
 
 // Every kind is listed once, in screen order, with a stack limit.
@@ -50,6 +50,16 @@ const sproutHeld={...emptyInventory(),sprout:1};for(let i=0;i<300;i++)assert.not
 const onlySproutOpen={potion:5,tonic:5,wind:5,shell:5,sprout:0};assert.equal(austinBonus(()=>.5,onlySproutOpen),null,'full ordinary stacks do not inflate revive odds');assert.equal(austinBonus(()=>.995,onlySproutOpen),'sprout');
 const allFull={potion:5,tonic:5,wind:5,shell:5,sprout:1};assert.equal(austinBonus(rand,allFull),null);assert.deepEqual(austinDrops(rand,allFull),['potion']);
 const onePotionSlot={...emptyInventory(),potion:4};assert.notDeepEqual(austinDrops(()=>0,onePotionSlot),['potion','potion'],'guaranteed reward reserves the last potion slot');
+
+// Every fourth memory flower grants one ordinary boss potion, never a revive.
+assert.deepEqual(GOLDEN_FRUIT_POTIONS,['potion','wind','shell']);
+assert.equal(goldenFruitPotion(()=>0,emptyInventory()),'potion');
+assert.equal(goldenFruitPotion(()=>.4,emptyInventory()),'wind');
+assert.equal(goldenFruitPotion(()=>.999,emptyInventory()),'shell');
+assert.equal(goldenFruitPotion(()=>0,{...emptyInventory(),potion:5}),'wind','full kinds are rerolled out of the pool');
+assert.equal(goldenFruitPotion(()=>.999,{...emptyInventory(),potion:5,wind:5}),'shell');
+assert.equal(goldenFruitPotion(()=>.5,{...emptyInventory(),potion:5,wind:5,shell:5}),null,'all ordinary stacks full');
+for(let i=0;i<100;i++)assert.notEqual(goldenFruitPotion(rand,emptyInventory()),'sprout');
 
 // A turret has a 5% small-potion chance, with a guaranteed drop on the tenth dry kill.
 assert.equal(TURRET_POTION_CHANCE,.05);assert.equal(TURRET_POTION_PITY,10);
