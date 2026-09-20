@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
-import {MIRROR_ARENA,mirrorSteering,mirrorVolley} from '../src/mirror-fighter.js';
+import * as THREE from 'three';
+import {MIRROR_ARENA,MIRROR_PANELS,mirrorAttackSequence,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
+import {mirrorPatternPlan} from '../src/mirror-trial.js';
 
 assert.equal(MIRROR_ARENA.shape,'circle');
 assert.equal(MIRROR_ARENA.radius,13,'기존 7.6 원형방보다 넓은 도주 공간');
@@ -19,4 +21,31 @@ assert.ok(mirrorVolley('orbit',20).length<=8,'원형 탄막도 모바일 상한 
 assert.equal(mirrorVolley('reflect',4)[0].bounces,2);
 assert.equal(mirrorVolley('recall',4)[0].recall,true);
 
-console.log('거울 분신: 넓은 원형 전장, 거리 조절, 외곽 차단, 경량 탄막 통과');
+for(const panel of MIRROR_PANELS)assert.ok(Math.hypot(panel.x,panel.z)+Math.max(panel.w,panel.d)/2<MIRROR_ARENA.radius,'반사판은 넓은 전장 안쪽에 둔다');
+const previous={x:-7,z:0},next={x:-4,z:0},direction={x:1,z:0};
+assert.equal(reflectMirrorPanels(previous,next,direction),true,'빠른 탄환도 얇은 반사판을 건너뛰지 않는다');
+assert.ok(direction.x<0&&next.x<-5.4,'반사판 법선으로 남은 이동 거리를 되돌린다');
+
+const attacks=[{law:'reflect',name:'거울 반사'},{law:'frost',name:'서리 부채'},{law:'gravity',name:'중력 우물'}];
+assert.equal(mirrorAttackSequence({attacks,concurrentAttackFamilies:1},0).length,1,'초반은 한 공격만 읽게 한다');
+const linked=mirrorAttackSequence({attacks,concurrentAttackFamilies:2},0);
+assert.deepEqual(linked.map(x=>x.attack.law),['reflect','frost'],'연계는 서로 다른 두 공격군을 순서대로 쓴다');
+assert.ok(linked[1].delay>=.25&&linked[1].damageScale<1,'두 번째 공격은 짧게 늦추고 피해를 낮춘다');
+
+const simulationPlan=mirrorPatternPlan({
+  laws:[{id:'reflect',level:2},{id:'frost',level:2},{id:'gravity',level:2}],
+  forms:[{id:'gravitymirror',level:1,laws:['reflect','gravity']},{id:'frostkaleidoscope',level:1,laws:['frost','reflect']}],
+},{floor:10});
+const simulated={
+  g:new THREE.Group(),floor:10,plan:simulationPlan,hit:0,turnTimer:0,strafeSign:1,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,
+  broken:0,state:'stalk',timer:0,attackCD:.1,shotIndex:0,attackIndex:0,queuedAttacks:[],readyRing:{material:new THREE.MeshBasicMaterial(),scale:new THREE.Vector3(1,1,1)},moveName:'',motion:{update(){}},
+};
+let simulatedShots=0;
+for(let frame=0;frame<10_000;frame++){
+  tickMirrorFighter(simulated,1/60,frame/60,{player:{x:Math.sin(frame/180)*7,z:Math.cos(frame/220)*7},camera:null,constrain(position){const length=Math.hypot(position.x,position.z);if(length>12.4){position.x*=12.4/length;position.z*=12.4/length;}},fire(){simulatedShots+=1;}});
+  assert.ok(Number.isFinite(simulated.g.position.x)&&Number.isFinite(simulated.g.position.z),'장시간 전투에서도 분신 위치가 유효하다');
+}
+assert.ok(simulatedShots>20,'10층 분신이 장시간 멈추지 않고 연계 공격한다');
+assert.ok(simulated.queuedAttacks.length<=2,'지연 공격 큐가 무한히 쌓이지 않는다');
+
+console.log('거울 분신: 넓은 원형 전장, 통과형 반사판, 거리 조절, 외곽 차단, 단계 연계와 경량 탄막 통과');

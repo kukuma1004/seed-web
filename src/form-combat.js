@@ -55,7 +55,7 @@ const immovable=e=>['warden','austin','act2warden','alwaysbeginner','turret'].in
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
@@ -538,7 +538,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
      else b.portaled=true;
     }
     const beforeMove=b.ob.position.clone();b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;
-    const probe=b.dir.clone(),wall=boundary(beforeMove,b.ob.position,probe),cover=!wall&&blocked(beforeMove,b.ob.position);
+    const probe=b.dir.clone(),panel=b.laws.includes('reflect')&&reflector(beforeMove,b.ob.position,probe),wall=panel||boundary(beforeMove,b.ob.position,probe),cover=!wall&&blocked(beforeMove,b.ob.position);
     if(wall)b.dir.copy(probe);
     if(cover){b.ob.position.copy(beforeMove);b.dir.negate();}
     if(wall||cover){if(b.bounces>0&&!b.returning){b.bounces--;b.passed.clear();fx.reflect(b.ob.position,b.dir);sound('reflect');}else if(b.laws.includes('recall')&&!b.returning){b.returning=true;b.passed.clear();}else b.life=0;}
@@ -627,7 +627,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
    }
     if(b.kind==='frostkaleidoscope'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;b.ob.rotation.z-=dt*4;
-     const wall=boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){if(b.bounces>=S.bounces){b.life=0;continue;}b.bounces++;b.passed.clear();fx.reflect(b.ob.position,b.dir);fx.pulse(b.ob.position,'frost',.45+.08*b.bounces,.18);sound('reflect');}
      const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
@@ -640,7 +640,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     if(b.kind==='gravitymirror'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*9;b.ob.rotation.z+=dt*5;
-     const wall=boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){gravityPulse(b.ob.position);b.passed.clear();if(++b.bounces>=S.bounces){gravityDetonate(b.ob.position);b.life=0;continue;}fx.reflect(b.ob.position,b.dir);sound('reflect');}
      const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
@@ -649,7 +649,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
     }
     if(b.kind==='prism'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
-     const wall=boundary(previous,b.ob.position,b.dir);
+     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
      const cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){
@@ -725,7 +725,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,b
    }
    if(b.kind==='mirrormaze'){
     b.ob.position.addScaledVector(b.dir,dt*b.speed);b.ob.rotation.y+=dt*10;
-    const wall=boundary(previous,b.ob.position,b.dir);
+     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
     const cover=!wall&&blocked(previous,b.ob.position);
     if(cover){b.ob.position.copy(previous);b.dir.negate();}
     if(wall||cover){

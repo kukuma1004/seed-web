@@ -29,6 +29,9 @@ for(const quality of ['low','normal']){
 const blank=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1,quality:'low'});
 assert.equal(blank.attacks[0].law,'pierce','기본 씨앗은 읽기 쉬운 직선 공격부터 시작');
 assert.equal(blank.attacks.length,1,'첫 두 층은 대표 패턴 하나만 쓴다');
+const reflectStack=mirrorPatternPlan(mirrorBuildSnapshot({forms:new Map([['prism',5],['mirrormaze',5],['gravitymirror',5],['frostkaleidoscope',5],['mirrorguard',5]])}),{floor:10,quality:'low'});
+assert.equal(reflectStack.attacks.filter(x=>x.law==='reflect').length,1,'반사 진화를 여러 개 가져도 분신의 반사 공격군은 하나로 합친다');
+assert.ok(reflectStack.attacks.length>1,'반사 이외의 진화 성질은 잃지 않는다');
 assert.equal(mirrorPatternPlan(snapshot,{floor:3}).concurrentAttackFamilies,2,'3층부터 두 공격군을 같은 전투에 운용한다');
 for(const floor of MIRROR_TOWER.milestoneFloors){
  const rules=mirrorFloorRules(floor,{quality:'low'});
