@@ -28,6 +28,13 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('comethalo',['orbit','burst'],'혜성 화관','씨앗이 움직인 거리로 화관을 충전하고, 충전된 꽃봉오리가 가까운 적에게 폭발 혜성을 쏩니다.','계속 이동하며 여러 폭발 경로를 이어 감','멈춰 있으면 충전이 빠져 혜성이 나오지 않음',true),
  form('stormanchor',['chain','gravity'],'뇌우 닻','번개가 세 적 이상을 이으면 그 중심에 중력 닻을 박아 적을 끌어당긴 뒤 터뜨립니다.','여러 방향의 적을 한 점으로 모아 후속 공격 준비','적이 한두 마리면 닻이 생기지 않아 연쇄 피해만 남음'),
  form('returningpetals',['split','recall'],'회귀 꽃비','먼 곳에서 갈라진 꽃잎이 현재 씨앗 위치를 향해 휘어 돌아옵니다.','이동으로 여러 귀환 경로를 그려 넓게 훑음','제자리에 있으면 꽃잎 경로가 겹쳐 많은 꽃잎을 낭비'),
+ // 2026-09-21 1묶음(COMBO_1090_MASTER_PLAN.md §12): 역할이 서로 다른 다섯 조합.
+ // 이름은 도감 카탈로그의 이름을 그대로 쓰고, 같은 이름의 쌍둥이 각성과는 ID로 구분한다.
+ form('icicle',['pierce','frost'],'고드름 창','창이 적을 얼리고, 자기가 얼린 적을 다시 꿰뚫으면 얼음째 깨뜨립니다.','혼자 버티는 단단한 적을 같은 자리에서 두 번 노림','여럿에게 나눠 쏘면 깨뜨릴 표식이 남지 않고 관통 수도 적음'),
+ form('halobloom',['orbit','split'],'꽃잎 후광','씨앗을 도는 꽃잎 고리가 적을 베고, 여덟 번 베면 꽃잎이 모두 바깥으로 만개합니다.','사방에서 붙는 무리를 베다가 한꺼번에 흩뿌림','만개한 뒤 고리가 잠시 비고 멀리 있는 적에게는 닿지 않음',true),
+ form('frostnet',['chain','frost'],'얼어붙은 그물','번개가 세 적 이상을 이으면 그 선 위에 서리 줄이 남아 지나는 적을 얼립니다.','길목을 얼려 무리의 발을 묶음','피해가 가장 낮고 문지기·보스는 줄 위에서도 멈추지 않음'),
+ form('rewindbolt',['chain','recall'],'되감는 번개','번개가 지나간 길을 기억했다가, 씨앗이 충분히 움직이면 그 길을 되감아 한 번 더 흐릅니다.','움직이며 같은 무리를 두 번 훑음','제자리에 서 있으면 기억한 길이 그대로 사라짐'),
+ form('refractlance',['pierce','reflect'],'굴절 창','창이 벽에 닿으면 벽을 타고 옆으로 꺾이고, 꺾인 창은 더 깊이 박힙니다.','적을 벽이나 엄폐물 쪽으로 몰면 한 발로 벽에 붙은 줄을 통째로 훑음','벽에서 떨어진 적에게는 꺾인 창이 지나가지 않아 평범한 창 한 자루'),
  form('gravitystake',['pierce','gravity'],'중력 말뚝','좁은 선에 적 하나만 걸리면 말뚝이 박혀 잠시 뒤 그 대상 안으로 강하게 내파합니다.','혼자 남은 문지기·보스에게 집중 피해','주변에 다른 적이 있거나 둘 이상을 꿰뚫으면 내파가 생기지 않음')
 ].map(f=>[f.id,withPair(f)])));
 
@@ -231,6 +238,11 @@ const SURGE=Object.freeze({
  comethalo:s=>({comets:s.comets+2,pulse:s.pulse*.55,chargeDecay:0,blastRadius:s.blastRadius+.45}),
  stormanchor:s=>({jumps:s.jumps+3,range:s.range+.8,finishRadius:s.finishRadius+.45}),
  returningpetals:s=>({bolts:s.bolts+2,petals:s.petals+2,range:s.range+1}),
+ icicle:s=>({pierce:s.pierce+1,shatterRadius:s.shatterRadius+.35,mark:s.mark+2}),
+ halobloom:s=>({petals:s.petals+4,bloomAt:Math.max(3,s.bloomAt-4),regrow:s.regrow*.45}),
+ frostnet:s=>({jumps:s.jumps+3,range:s.range+.8,webLife:s.webLife+1.6,minLinks:2}),
+ rewindbolt:s=>({jumps:s.jumps+1,range:s.range+.5,rewindDistance:s.rewindDistance*.6}),
+ refractlance:s=>({folds:s.folds+3,pierce:s.pierce+4,length:s.length+3}),
  gravitystake:s=>({pierce:s.pierce+2,implosions:2,isolation:s.isolation-1}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
@@ -333,6 +345,12 @@ function baseStats(id,level){
   case 'comethalo':return {interval:Infinity,damage:12*power,blast:22*power,blastRadius:Math.min(2.5,1.45+.1*up),comets:Math.min(5,3+Math.floor(up/3)),radius:2.25,range:Math.min(8,6.6+.1*up),pulse:.72*faster,chargeGain:.75,chargeDecay:.34,chargeCost:.18,speed:12.5,life:1.8,bolts:12};
   case 'stormanchor':return {interval:1.22*faster,damage:18*power,jumps:Math.min(7,4+Math.floor(up/3)),range:Math.min(5.3,4.3+.1*up),decay:.9,reach:10,minLinks:3,finish:42*power,finishRadius:Math.min(3,2+.1*up),pull:1.25};
   case 'returningpetals':return {interval:1.08*faster,damage:24*power,petalDamage:38*power,petals:Math.min(6,3+Math.floor(up/3)),range:Math.min(10,8+.14*up),speed:11.5,life:4.2,bolts:3,steer:5.5,hitsPerLeg:Math.min(5,3+Math.floor(up/3))};
+  // 1묶음. 서리 표식은 이 무기가 스스로 남긴 것만 세므로 다른 빙결로는 파쇄를 살 수 없다.
+  case 'icicle':return {interval:1.05*faster,damage:30*power,length:Math.min(14,10+.55*up),pierce:Math.min(4,2+Math.floor(up/3)),slow:1.9,mark:3.5,shatter:150*power,shatterRadius:Math.min(1.9,1.35+.07*up),shatterShare:.22};
+  case 'halobloom':return {interval:Infinity,damage:30*power,petals:Math.min(8,4+Math.floor(up/2)),radius:1.8,cooldown:.3,bloomAt:8,petalDamage:34*power,splitDamage:18*power,range:6.2,speed:11,regrow:Math.max(.9,1.7-.06*up)};
+  case 'frostnet':return {interval:1.15*faster,damage:14*power,jumps:Math.min(6,3+Math.floor(up/3)),range:Math.min(5,4.4+.06*up),decay:.9,reach:10,minLinks:3,webLife:Math.min(4.4,3.2+.1*up),webSlow:1.7,webTick:.65,webDamage:4.5*power};
+  case 'rewindbolt':return {interval:1.1*faster,damage:34*power,jumps:Math.min(7,3+Math.floor(up/2)),range:Math.min(5,4.3+.06*up),decay:.9,reach:10,rewindDistance:Math.max(3.8,5-.15*up),rewindScale:.8,forget:4,trails:3};
+  case 'refractlance':return {interval:1.15*faster,damage:44*power,length:Math.min(13,9+.5*up),pierce:Math.min(9,5+Math.floor(up*.6)),folds:Math.min(3,1+Math.floor(up/3)),foldGain:.22};
   case 'gravitystake':return {interval:1.45*faster,damage:12*power,length:Math.min(17,12+.6*up),pierce:Math.min(10,6+Math.floor(up/2)),implosion:160*power,isolation:5.2,delay:.58,stakes:4,implosions:1};
   default:return {interval:Infinity,damage:0};
  }

@@ -16,19 +16,19 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: twenty hand-authored forms, unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,20);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,20);
+// Catalogue: twenty-five hand-authored forms (20 + the 2026-09-21 batch of five), unique pairs, every law feeds at least two forms.
+assert.equal(Object.keys(FORMS).length,25);
+assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,25);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
 
 // Orbit evolutions must remain visually readable without relying on colour.
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,5);
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,5);
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,6);
+assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,6);
 {
  const styles=Object.keys(ORBIT_VISUALS),poses=styles.map(id=>orbitPose(id,1,6,.4,.8,{radius:2,inner:1.2,outer:3,period:2.4}));
- assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,5,'each orbit family has a distinct path');
+ assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,6,'each orbit family has a distinct path');
  assert.ok(poses.every(p=>p.scale.length===3&&Number.isFinite(p.yaw)));
 }
 
@@ -184,4 +184,4 @@ for(const id of Object.keys(FORMS)){
  assert.ok(crowd.calls.some(c=>c.e===target&&c.phase==='line'),'the narrow line still deals modest contact damage');
  assert.ok(!crowd.calls.some(c=>c.phase==='implosion'),'a nearby second enemy disperses the implosion');assert.equal(crowd.combat.state().stakes,0);crowd.combat.dispose();
 }
-console.log('Forms: twenty authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+console.log('Forms: twenty-five authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

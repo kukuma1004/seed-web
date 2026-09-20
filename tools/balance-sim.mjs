@@ -5,6 +5,8 @@ import {createFormCombat} from '../src/form-combat.js';
 import {TWIN_FORMS} from '../src/forms.js';
 import {arenaFor,constrainToArena,reflectArenaBoundary} from '../src/arena.js';
 const V=THREE.Vector3;
+// 이동이 곧 화력인 조합: 혜성 화관(충전)과 되감는 번개(길 되감기).
+const MOVEMENT_FORMS=new Set(['comethalo','rewindbolt']);
 
 export const SCENES=Object.freeze({
  cluster:()=>Array.from({length:10},(_,i)=>{const a=i*2.39996,r=.5+1.3*Math.sqrt(i/10);return [Math.cos(a)*r,-5+Math.sin(a)*r];}),
@@ -12,23 +14,29 @@ export const SCENES=Object.freeze({
  scattered:()=>Array.from({length:10},(_,i)=>{const a=i*Math.PI*2/10+.3,r=3.5+(i%3)*2;return [Math.cos(a)*r,Math.sin(a)*r];})
 });
 
-export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=null,surgeSeconds=0,shots=false,positions=null,enemyType='swarm'}={}){
+// still: 이동이 화력인 조합을 일부러 세워 두고 잰다(정지 약점 확인).
+// walls: 방 한가운데에 엄폐물 한 덩이를 두고 잰다(벽 보상 확인).
+export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=null,surgeSeconds=0,shots=false,positions=null,enemyType='swarm',still=false,walls=false}={}){
  const arena=arenaFor(0);
  const enemies=(positions||SCENES[scene]()).map(([x,z],i)=>({type:enemyType,hp:1e9,maxHp:1e9,g:{position:new V(x,0,z)},slow:0,i}));
- const parts=TWIN_FORMS[id]?TWIN_FORMS[id].parts:[id],movingHalo=parts.includes('comethalo');
- const player={position:new V(movingHalo?1.2:0,0,0)};
+ const parts=TWIN_FORMS[id]?TWIN_FORMS[id].parts:[id];
+ // 이동을 공격 자원으로 쓰는 조합은 비교표에서 의도된 플레이(작은 원을 계속 돎)로 잰다.
+ // 멈췄을 때의 약점은 각 조합의 전용 검사에서 따로 확인한다.
+ const movingPlay=!still&&parts.some(part=>MOVEMENT_FORMS.has(part));
+ // 한 덩이 엄폐물: 줄지어 선 적 너머(z=-6)에 벽이 있어 꺾이는 무기가 보상을 받는다.
+ const cover={x:0,z:-6,w:8,d:1.2};
+ const hitsCover=(a,b)=>walls&&Math.min(a.z,b.z)<=cover.z+cover.d/2&&Math.max(a.z,b.z)>=cover.z-cover.d/2&&Math.abs((a.x+b.x)/2-cover.x)<=cover.w/2;
+ const player={position:new V(movingPlay?1.2:0,0,0)};
  let damage=0;const shotList=[];
  // A twin awakening fights with two combats, like the game (one per attack, openings staggered by five seconds).
  const combats=parts.map((part,i)=>{const c=createFormCombat(new THREE.Scene(),{player,enemies:()=>enemies,
-  hit:(e,amount)=>{damage+=amount;return true;},blocked:()=>false,
+  hit:(e,amount)=>{damage+=amount;return true;},blocked:hitsCover,
   boundary:(a,b,dir)=>reflectArenaBoundary(a,b,dir,arena),constrain:(p,r)=>constrainToArena(p,r,arena),vfx:null,enemyShots:()=>shotList});
   c.set(part,level,TWIN_FORMS[id]?{twin:true,openingDelay:2+i*5}:{});c.cooldown=0;return c;});
  let t=0,surged=false;
  const steps=Math.round(seconds/dt);
  for(let step=0;step<steps;step++,t+=dt){
-  // 혜성 화관은 이동을 공격 자원으로 쓰는 숙련 조합이다. 비교표에서는
-  // 작은 원을 계속 도는 의도 플레이를 재고, 별도 테스트에서 정지 약점을 확인한다.
-  if(movingHalo)player.position.set(Math.cos(t*2.2)*1.2,0,Math.sin(t*2.2)*1.2);
+  if(movingPlay)player.position.set(Math.cos(t*2.2)*1.2,0,Math.sin(t*2.2)*1.2);
   // Enemy shots fly in from 6 units away, three at a time, twice a second.
   if(shots&&step%25===0)for(let k=0;k<3;k++){const a=k*2.1+step*.01;shotList.push({life:1.5,boss:enemyType==='austin',dir:new V(-Math.cos(a),0,-Math.sin(a)),ob:{position:new V(Math.cos(a)*6,.7,Math.sin(a)*6)}});}
   for(const q of shotList){q.life-=dt;if(q.life>0)q.ob.position.addScaledVector(q.dir,dt*4.5);}

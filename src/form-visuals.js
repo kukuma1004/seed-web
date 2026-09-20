@@ -166,5 +166,17 @@ export function createFormVisuals(){
  const star=[paint(new THREE.OctahedronGeometry(.145,0),C.gold)];
  for(let i=0;i<4;i++)star.push(petal(.5,.25,{edge:C.ivory,inner:i%2?C.gold:C.jade,bend:.025,depth:.075}).translate(0,.2,0).rotateZ(i*Math.PI/2));
  geos.starPetal=join('four-point-star-bloom',star);
+ // 1묶음. 고드름 창은 끝이 갈라진 결정 한 자루, 후광 꽃잎은 바깥으로 흩뿌려지는 한 장이다.
+ geos.icicle=join('frost-splitting-icicle',[
+  paint(new THREE.ConeGeometry(.12,.86,5),C.ice).rotateX(Math.PI/2).translate(0,0,.08),
+  paint(new THREE.ConeGeometry(.055,.4,4),C.ivory).rotateX(Math.PI/2).rotateY(.34).translate(.09,0,.44),
+  paint(new THREE.ConeGeometry(.055,.4,4),C.ivory).rotateX(Math.PI/2).rotateY(-.34).translate(-.09,0,.44),
+  paint(new THREE.TorusGeometry(.19,.032,5,12),C.blue).rotateX(Math.PI/2).translate(0,0,-.2),
+  paint(leaf(.3,.11,.04,.03,5),C.jade).rotateX(Math.PI/2).rotateZ(.9).translate(.1,0,-.3)
+ ]);
+ geos.haloPetal=join('halo-bloom-petal',[
+  petal(.52,.27,{edge:C.ivory,inner:C.jade,bend:.05,depth:.07}),
+  paint(new THREE.OctahedronGeometry(.085,0),C.gold).translate(0,-.2,0)
+ ]);
  return {mats,geos};
 }

@@ -44,7 +44,7 @@ for(const t of Object.values(TWIN_FORMS)){
  assert.deepEqual(attackPartsOf(t.id),[...t.parts]);
  assert.ok(t.synergy.name&&t.synergy.window>=2&&t.synergy.bonus>=.1&&t.synergy.bonus<=.25&&t.synergy.effects.length===2);
  const first=Object.values(FORMS).find(f=>[...f.requires].sort().join()===[...t.requires].sort().join());
- if(first){assert.ok(['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals','gravitystake'].includes(first.id),`${t.id} unexpected duplicate path`);assert.notEqual(first.desc,t.desc,'a direct fusion and a twin awakening must fight differently');}
+ if(first){assert.ok(['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals','gravitystake','icicle','halobloom','frostnet','rewindbolt','refractlance'].includes(first.id),`${t.id} unexpected duplicate path`);assert.notEqual(first.desc,t.desc,'a direct fusion and a twin awakening must fight differently');}
 }
 assert.equal(new Set(Object.values(TWIN_FORMS).map(t=>t.synergy.name)).size,26,'Every twin pair has a distinct resonance.');
 {

@@ -19,7 +19,8 @@ export const ORBIT_VISUALS=Object.freeze({
  stormcrown:Object.freeze({geometry:'orb',material:'storm',motion:'crown'}),
  mirrorguard:Object.freeze({geometry:'mirror',material:'mirror',motion:'shield-wall'}),
  starring:Object.freeze({geometry:'starPetal',material:'star',motion:'breathing-star'}),
- comethalo:Object.freeze({geometry:'cometBud',material:'storm',motion:'charged-comet'})
+ comethalo:Object.freeze({geometry:'cometBud',material:'storm',motion:'charged-comet'}),
+ halobloom:Object.freeze({geometry:'haloPetal',material:'seed',motion:'counting-halo'})
 });
 
 // Orbit paths are intentionally different silhouettes. They are also pure so
@@ -36,6 +37,11 @@ export function orbitPose(id,index,count,angle,time,S){
  if(id==='mirrorguard'){
   const square=t=>Math.sign(t)*Math.pow(Math.abs(t),.68);
   return {x:square(Math.cos(a))*S.radius,y:.76+wave*.045,z:square(Math.sin(a))*S.radius,pitch:-.38,yaw:Math.PI/2-a,roll:wave*.06,scale:[1.32,1.32,1.32]};
+ }
+ if(id==='halobloom'){
+  // 벤 횟수가 찰수록 고리가 조금씩 조여들어 만개가 가까운 것이 눈에 보인다.
+  const tighten=1-.1*Math.min(1,S.charge||0);
+  return {x:Math.cos(a)*S.radius*tighten,y:.6+(index%2?.16:0)+wave*.07,z:Math.sin(a)*S.radius*tighten,pitch:-1.02,yaw:Math.PI/2-a,roll:wave*.2,scale:[1.28,1.28,1.28]};
  }
  if(id==='comethalo'){
   const chase=.82+.18*Math.sin(time*2.7+index*1.7);
@@ -66,6 +72,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
  let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0;
+ // 1묶음 상태: 고드름 창이 스스로 남긴 서리 표식 · 얼어붙은 그물이 남긴 선 · 되감는 번개가 기억한 길 · 꽃잎 후광이 센 벤 횟수.
+ let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
@@ -95,13 +103,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
-  const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:0;
+  const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -156,6 +164,10 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     fx.muzzle(pos,aim,'reflect');return S.interval;
    }
    case 'thunderlance':{lance(pos,aim);return S.interval;}
+   case 'icicle':{icicleLance(pos,aim);return S.interval;}
+   case 'frostnet':{frostNet(pos);return S.interval;}
+   case 'rewindbolt':{rewindNet(pos);return S.interval;}
+   case 'refractlance':{refractLance(pos,aim);return S.interval;}
    case 'frostbloom':{
     if(full('frostbloom',S.bombs))return S.interval;
     const to=target?new V(target.x,0,target.z):pos.clone().addScaledVector(aim,6);
@@ -277,6 +289,162 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    touched.add(next);fx.arc(from.g.position,next.g.position);
    support(next,S.jumpDamage,{kind:'thunderlance',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
    from=next;
+  }
+ }
+
+
+ // Pierce + frost: the lance freezes what it hits and shatters what IT froze.
+ // The mark belongs to this weapon, so another frost source cannot buy the shatter.
+ function icicleLance(pos,dir){
+  const start=pos.clone().setY(0),end=start.clone();
+  for(let travelled=0;travelled<S.length;travelled+=.4){
+   const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();
+   if(blocked(end,next)||boundary(end.clone(),next,probe))break;
+   end.copy(next);
+  }
+  const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2))
+   .sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
+  let struck=0;
+  for(const e of line){
+   if(struck>=S.pierce)break;
+   const marked=(iceMarks.get(e)||0)>markClock;
+   if(!support(e,S.damage,{kind:'icicle',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}
+   struck++;
+   // 창끝에 처음 닿은 적만 얼고, 그 적만 깨진다. 뒤의 적은 꿰뚫리기만 한다.
+   if(struck>1)continue;
+   if(!marked){iceMarks.set(e,markClock+S.mark);e.slow=Math.max(e.slow||0,S.slow);fx.pulse(e.g.position,'frost',.55,.22);continue;}
+   iceMarks.delete(e);
+   fx.explosion(e.g.position,'frost',S.shatterRadius,true);sound('frostHit');
+   support(e,S.shatter,{kind:'icicle',indirect:true,phase:'shatter',direction:dir.clone()});
+   for(const other of near(e.g.position,S.shatterRadius+.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<S.shatterRadius+bossReach(other,0,.4))
+    support(other,S.shatter*S.shatterShare,{kind:'icicle',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});
+  }
+  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.7),'frost',false);
+  fx.pulse(end,'frost',.5,.2);
+ }
+
+ // Orbit + split: the ring counts its cuts, then throws every petal outward at once.
+ function bloomBurst(pos){
+  haloCuts=0;haloRegrow=S.regrow;orbit.visible=false;
+  fx.split(pos,new V(0,0,1),Math.min(5,S.petals));sound('split');
+  for(let i=0;i<S.petals;i++){
+   const dir=new V(Math.cos(i*Math.PI*2/S.petals),0,Math.sin(i*Math.PI*2/S.petals));
+   const ob=spawnMesh(geos.haloPetal,mats.seed,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(dir.x,dir.z);
+   bolts.push({kind:'halobloom',ob,dir,life:S.range/S.speed,gen:0,passed:new Set()});
+  }
+ }
+
+ // Chain + frost: three or more links leave a frost line along the route.
+ // Guardians and bosses take the line's damage but never its hold.
+ function frostNet(pos,first=null){
+  let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
+  const touched=new Set([from]),route=[from.g.position.clone().setY(0)];let damage=S.damage;
+  fx.arc(pos.clone().setY(.9),from.g.position);
+  support(from,damage,{kind:'frostnet',indirect:true,direction:from.g.position.clone().sub(pos).setY(0).normalize()});
+  for(let j=0;j<S.jumps;j++){
+   const next=nearestEnemy(from.g.position,S.range,touched,true);if(!next)break;
+   touched.add(next);damage*=S.decay;fx.arc(from.g.position,next.g.position);
+   support(next,damage,{kind:'frostnet',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
+   route.push(next.g.position.clone().setY(0));from=next;
+  }
+  if(route.length<S.minLinks)return;
+  for(let i=1;i<route.length;i++)frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
+ }
+ function updateFrostLines(dt){
+  for(const line of frostLines){
+   line.life-=dt;line.tick-=dt;
+   if(line.life<=0||line.tick>0)continue;
+   line.tick=S.webTick||.5;
+   fx.trail(line.a.clone().setY(.22),line.b.clone().setY(.22),'frost',true);
+   for(const e of enemies()){
+    if(e.dead||segmentDistance(line.a,line.b,e.g.position)>=bossReach(e,.72,1.2))continue;
+    support(e,S.webDamage,{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
+    if(!immovable(e))e.slow=Math.max(e.slow||0,S.webSlow);
+   }
+  }
+  frostLines=frostLines.filter(line=>line.life>0);
+ }
+
+ // Chain + recall: the route is remembered, and moving far enough plays it back.
+ function rewindNet(pos,first=null,instant=false){
+  let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
+  const touched=new Set([from]),route=[pos.clone().setY(.9),from.g.position.clone().setY(0)];let damage=S.damage;
+  fx.arc(route[0],from.g.position);
+  support(from,damage,{kind:'rewindbolt',indirect:true,direction:from.g.position.clone().sub(pos).setY(0).normalize()});
+  for(let j=0;j<S.jumps;j++){
+   const next=nearestEnemy(from.g.position,S.range,touched,true);if(!next)break;
+   touched.add(next);damage*=S.decay;fx.arc(from.g.position,next.g.position);
+   support(next,damage,{kind:'rewindbolt',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
+   route.push(next.g.position.clone().setY(0));from=next;
+  }
+  // One enemy leaves no road worth rewinding.
+  if(route.length<3)return;
+  const memory={route,life:S.forget,moved:0};
+  if(instant){replayRoute(memory);return;}
+  rewindMemories.push(memory);
+  while(rewindMemories.length>S.trails)rewindMemories.shift();
+ }
+ function replayRoute(memory){
+  for(let i=1;i<memory.route.length;i++)fx.arc(memory.route[i-1],memory.route[i]);
+  sound('chainHit');
+  for(const e of enemies()){
+   if(e.dead)continue;
+   for(let i=1;i<memory.route.length;i++){
+    if(segmentDistance(memory.route[i-1],memory.route[i],e.g.position)>=bossReach(e,.75,1.2))continue;
+    support(e,S.damage*S.rewindScale,{kind:'rewindbolt',indirect:true,phase:'rewind',direction:e.g.position.clone().sub(memory.route[i-1]).setY(0).normalize()});
+    break;
+   }
+  }
+ }
+ function updateRewind(dt){
+  const moved=flat(player.position,lastPlayerPosition);lastPlayerPosition.copy(player.position);
+  const replayed=[];
+  for(const memory of rewindMemories){
+   memory.life-=dt;memory.moved+=moved;
+   if(memory.moved>=S.rewindDistance)replayed.push(memory);
+  }
+  for(const memory of replayed)replayRoute(memory);
+  rewindMemories=rewindMemories.filter(memory=>memory.life>0&&memory.moved<S.rewindDistance);
+ }
+
+ // How far a lance can run from here before a wall stops it.
+ function lanceReach(from,heading,limit){
+  const end=from.clone();
+  for(let travelled=0;travelled<limit;travelled+=.4){
+   const next=end.clone().addScaledVector(heading,.4),probe=heading.clone();
+   if(blocked(end,next)||boundary(end.clone(),next,probe))break;
+   end.copy(next);
+  }
+  return end;
+ }
+ // Pierce + reflect: the wall is a hinge, and the lance turns to run ALONG it.
+ // That is the whole condition: enemies pressed against a wall get swept, enemies
+ // out in the open only meet the first straight leg.
+ function refractLance(pos,dir){
+  let start=pos.clone().setY(0),heading=dir.clone().setY(0).normalize(),budget=S.pierce,folds=0;
+  for(let leg=0;leg<=S.folds;leg++){
+   const end=start.clone();let hinge=null;
+   for(let travelled=0;travelled<S.length;travelled+=.4){
+    const next=end.clone().addScaledVector(heading,.4),probe=heading.clone();
+    if(blocked(end,next)||boundary(end.clone(),next,probe)){
+     // 벽을 만나면 벽이 뻗은 쪽으로 꺾인다. 더 멀리 나가는 쪽을 고른다.
+     const left=heading.clone().applyAxisAngle(Y,Math.PI/2),right=heading.clone().applyAxisAngle(Y,-Math.PI/2);
+     hinge=flat(end,lanceReach(end,left,S.length))>=flat(end,lanceReach(end,right,S.length))?left:right;
+     break;
+    }
+    end.copy(next);
+   }
+   const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2))
+    .sort((a,b)=>a.g.position.clone().sub(start).dot(heading)-b.g.position.clone().sub(start).dot(heading));
+   for(const e of line){
+    if(budget<=0)break;
+    if(!support(e,S.damage*(1+S.foldGain*folds),{kind:'refractlance',direction:heading.clone()})){budget=0;break;}
+    budget--;
+   }
+   for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(heading,d).setY(.7),start.clone().addScaledVector(heading,Math.min(flat(start,end),d+1.5)).setY(.7),'pierce',folds>0);
+   if(!hinge||budget<=0||leg>=S.folds){fx.pulse(end,'pierce',.5,.2);break;}
+   fx.reflect(end,hinge);sound('reflect');
+   folds++;start=end.clone();heading=hinge;
   }
  }
 
@@ -425,6 +593,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function plant(pos){if(wells.length>=S.wells)wells.shift();wells.push({pos:pos.clone(),life:.8,pulse:0});fx.flame(pos,'gravity',18,S.radius*.42);fx.burst(pos,'gravity',24,S.radius*.34);}
 
  function updateOrbit(dt){
+  if(active==='halobloom'){
+   // 만개한 뒤 고리가 다시 자라는 동안에도 시계는 돈다.
+   S.charge=Math.min(1,haloCuts/Math.max(1,S.bloomAt));
+   if(haloRegrow>0){haloRegrow-=dt;if(haloRegrow<=0){orbit.visible=orbit.children.length>0;fx.pulse(player.position,'split',S.radius,.3);}}
+  }
   if(!orbit.visible)return;
   const spin=active==='frostguard'?3.4:active==='stormcrown'?2.4:active==='starring'?2.2:active==='comethalo'?3.1:2.8;
   if(active==='comethalo'){
@@ -453,6 +626,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);support(e,S.damage,{kind:'starring',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()});fx.pulse(e.g.position,'orbit',.45,.2);
     }
+   }else if(active==='halobloom'){
+    for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
+     cooldowns.set(e,S.cooldown);
+     if(support(e,S.damage,{kind:'halobloom',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()})){haloCuts++;fx.pulse(e.g.position,'split',.42,.18);}
+    }
    }else if(active==='mirrorguard'){
     for(const q of enemyShots()){
      if(!(q.life>0)||q.boss||flat(q.ob.position,ob.position)>=.65)continue;
@@ -467,6 +645,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     }
    }
   });
+  if(active==='halobloom'&&haloRegrow<=0&&haloCuts>=S.bloomAt)bloomBurst(player.position);
   if(active==='comethalo'){
    pulseTimer-=dt;if(pulseTimer>0||movementCharge<S.chargeCost)return;pulseTimer=S.pulse;
    let launched=0;const ordered=Array.from({length:orbit.children.length},(_,i)=>orbit.children[(cometCursor+i)%orbit.children.length]);
@@ -521,6 +700,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   if(awakened())awakenOpening(dt);
   for(const [e,t] of cooldowns){if(e.dead||t<=dt)cooldowns.delete(e);else cooldowns.set(e,t-dt);}
   updateOrbit(dt);
+  if(frostLines.length)updateFrostLines(dt);
+  if(active==='rewindbolt'&&rewindMemories.length)updateRewind(dt);
   for(const b of bolts){
    b.life-=dt;
    if(b.life<=0)continue;
@@ -757,6 +938,23 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     fx.trail(previous,b.ob.position,'split',petalKind);
     continue;
    }
+   if(b.kind==='halobloom'){
+    b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*10;
+    const direction=b.dir.clone();
+    const e=near(b.ob.position,1.6).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+    if(e){
+     b.passed.add(e);
+     const landed=support(e,b.gen?S.splitDamage:S.petalDamage,{kind:'halobloom',direction});
+     b.life=0;
+     // 첫 장만 한 번 갈라진다. 갈라진 꽃잎은 더 갈라지지 않는다.
+     if(landed&&b.gen===0)for(const turn of [-.5,.5]){
+      if(count('halobloom')>=40)break;
+      const ob=spawnMesh(geos.haloPetal,mats.seed,b.ob.position);ob.rotation.x=-Math.PI/2;
+      bolts.push({kind:'halobloom',ob,dir:b.dir.clone().applyAxisAngle(Y,turn),life:.5,gen:1,passed:new Set()});
+     }
+    }
+    fx.trail(previous,b.ob.position,'split',b.gen>0);continue;
+   }
    if(b.kind==='lightningpetal'){
     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*10;b.ob.rotation.z+=dt*5;
     if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.life=0;continue;}
@@ -891,7 +1089,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // ---------------- active (signature / overdrive) ----------------
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
-  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
+  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',icicle:'frost',halobloom:'split',frostnet:'frost',rewindbolt:'recall',refractlance:'pierce',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
@@ -989,6 +1187,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    case 'glassspear':for(const d of around(6))fire(pos,d,null,true);break;
    case 'rewind':for(const d of around(4))fire(pos,d,null,true);break;
    case 'thunderweb':for(const e of nearest(3,S.reach))web(pos,e);break;
+   case 'icicle':{const line=nearest(3,S.length);if(!line.length)icicleLance(pos,dir);for(const e of line)icicleLance(pos,e.g.position.clone().sub(pos).setY(0).normalize());break;}
+   case 'frostnet':for(const e of nearest(3,S.reach))frostNet(pos,e);break;
+   case 'rewindbolt':for(const e of nearest(2,S.reach))rewindNet(pos,e,true);break;
+   case 'refractlance':for(const a of [-.5,-.25,0,.25,.5])refractLance(pos,dir.clone().applyAxisAngle(Y,a));break;
+   case 'halobloom':{haloCuts=S.bloomAt;haloRegrow=0;bloomBurst(pos);break;}
    case 'blackhole':for(const a of [-.9,0,.9])fire(pos,dir.clone().applyAxisAngle(Y,a),pos.clone().addScaledVector(dir.clone().applyAxisAngle(Y,a),3.2),true);break;
    case 'winterbreath':breath(pos,dir,Math.PI);break;
    case 'starring':{
@@ -1002,6 +1205,6 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
 
  applyTheme();
  return {set,setTheme,fire,update,clear,surge,calm,audioEvent:()=>projectileAudioEvent(sourceForm()),
-  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }
