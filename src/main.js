@@ -901,6 +901,7 @@ function showSeasonPause(){
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
+ const gardenLine=gardenSummary(),knownForms=adminMode?Object.keys(FORMS).length:profile.forms.length;
  const permanentStats=[titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.shotSpeedBonus?`탄속 +${Math.round(titleInfo.shotSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
  const act1Best=readRanking(runStorage)[0]||null,act2Best=readRanking(actStorage(runStorage,2))[0]||null;
  const recordProfile=`<section class="account-records"><header><strong>시즌 1.1 기록</strong><button type="button" id="account-ranking">전체 보기</button></header><div><span><b>오스틴</b><em>${act1Best?formatScore(act1Best.score)+'점':'도전 전'}</em></span><span><b>항상초심</b><em>${act2Best?formatScore(act2Best.score)+'점':'도전 전'}</em></span></div></section>`;
@@ -908,6 +909,7 @@ function showAccount(error=''){
  $('#overlay').innerHTML=`<div class="menu-panel account-panel"><p class="eyebrow">SEED · PROFILE & ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 프로필':'어떻게 시작할까요'}</h2>
   <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
   ${user?`<div class="account-status"><strong>${escapeHtml(account.label())}</strong><span>${user.isAnonymous?'나중에 Google 또는 Apple 계정에 연결하면 현재 기록을 그대로 지킬 수 있어요.':'이 UID로 여러 기기의 기록을 이어갑니다.'}</span>${badgeLine?`<em class="account-badge">✦ ${escapeHtml(badgeLine)}</em>`:''}<small>UID ${escapeHtml(user.uid)}</small></div>`:''}
+  <section class="profile-collection"><button type="button" id="profile-garden"><span class="profile-collection-icon" aria-hidden="true">♧</span><span><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></span><em>›</em></button><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 전체 공개 · ':''}${knownForms}/${Object.keys(FORMS).length} 발견</small></span><em>›</em></button></section>
   ${recordProfile}
   ${titleProfile}
   <div class="account-buttons">
@@ -924,6 +926,8 @@ function showAccount(error=''){
  if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple);
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest);
  if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAccessMode();showEntry();};
+ $('#profile-garden').onclick=()=>showGarden(showAccount);
+ $('#profile-discoveries').onclick=()=>showDiscoveries(showAccount);
  if($('#account-ranking'))$('#account-ranking').onclick=()=>showRanking('online');
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
@@ -940,22 +944,16 @@ function showIntro(){trainingSession=null;mirrorSession=null;mirrorReadyRing.vis
  if(betaBoosterGift.granted){showBetaBoosterGift();return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const planted=garden.plots.filter(Boolean).length,shop=readShop(runStorage);
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
  const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
- const gardenLine=planted?`플레이 흔적으로 자란 식물 ${planted}/${garden.plots.length}`:garden.fragments?`씨앗 조각 ${garden.fragments}/3 · 모이면 자동으로 심겨요`:'여정을 마치면 식물이 저절로 심겨요';
- $('#overlay').innerHTML=`<div class="menu-panel">
+ $('#overlay').innerHTML=`<button id="patch-notes" class="menu-news-button" aria-label="새 소식 열기"><span>새 소식${newsDot?'<i class="news-dot" aria-label="읽지 않은 새 소식"></i>':''}</span><small>${PATCH_NOTES[0].date}</small></button><div class="menu-panel">
   <p class="eyebrow">SEED</p><h2>잠든 정원</h2>
   ${nameFieldHtml()}
   <div class="menu-list">
    <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
    ${adminMode?'<button id="developer-lab" class="menu-item developer-entry"><strong>개발자 실험실</strong><small>조합 선택 · 문지기 · 오스틴 바로 확인</small></button>':''}
-   <button id="go-garden" class="menu-item"><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></button>
-   <button id="go-shop" class="menu-item"><strong>출발 상점</strong><small>${shop.coins}원 · 보관함 ${itemCounts(shop.stash)||'비어 있음'}</small></button>
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
-   <button id="discoveries" class="menu-item"><strong>도감</strong><small>${adminMode?'관리자 전체 공개 · '+Object.keys(FORMS).length+'/'+Object.keys(FORMS).length:profile.forms.length+'/'+Object.keys(FORMS).length+' 발견'}</small></button>
-   <button id="account-link" class="menu-item"><strong>프로필·계정</strong><small>${escapeHtml(account.label())} · 칭호와 기록</small></button>
-   <button id="patch-notes" class="menu-item"><strong>새 소식${newsDot?'<i class="news-dot" aria-label="새 소식"></i>':''}</strong><small>${PATCH_NOTES[0].date} · ${escapeHtml(PATCH_NOTES[0].title)}</small></button>
+   <button id="account-link" class="menu-item"><strong>프로필·계정</strong><small>${escapeHtml(account.label())} · 정원 · 도감 · 칭호</small></button>
   </div>
   <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · <a href="https://kukuma1004.github.io/seed-web/terms.html" target="_blank" rel="noopener">랭킹 이용규칙</a> · 광고와 결제가 없는 게임입니다</p>
  </div>`;
@@ -963,12 +961,9 @@ function showIntro(){trainingSession=null;mirrorSession=null;mirrorReadyRing.vis
  online.flush().catch(()=>0);
  $('#go-dungeon').onclick=showDungeon;
  if($('#developer-lab'))$('#developer-lab').onclick=showDeveloperLab;
- $('#go-garden').onclick=()=>showGarden(showIntro);
- $('#go-shop').onclick=()=>showShop(showIntro);
  $('#patch-notes').onclick=showNotes;
  $('#ranking-link').onclick=()=>showRanking('online');
  $('#account-link').onclick=()=>showAccount();
- $('#discoveries').onclick=()=>{mode='discoveries';const bookProfile=adminMode?{...profile,forms:Object.keys(FORMS)}:profile;$('#overlay').classList.remove('intro','menu-screen');$('#overlay').innerHTML=discoveryBook(bookProfile,seedTitle.state());$('#close-discoveries').onclick=showIntro;};
  updateFormLabel();
 }
 function startDeveloperEncounter(target){
@@ -1187,6 +1182,17 @@ function showGarden(back=showIntro){
  refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  $('#overlay').hidden=false;$('#overlay').classList.remove('intro','menu-screen','ranking-overlay');$('#overlay').classList.add('garden-mode');
  paintGardenPanel();
+}
+function gardenSummary(){
+ const planted=garden.plots.filter(Boolean).length;
+ return planted?`플레이 흔적으로 자란 식물 ${planted}/${garden.plots.length}`:garden.fragments?`씨앗 조각 ${garden.fragments}/3 · 모이면 자동으로 심겨요`:'여정을 마치면 식물이 저절로 심겨요';
+}
+function showDiscoveries(back=showIntro){
+ mode='discoveries';touch.reset();keys.clear();
+ const bookProfile=adminMode?{...profile,forms:Object.keys(FORMS)}:profile;
+ $('#overlay').hidden=false;$('#overlay').classList.remove('intro','menu-screen','garden-mode','ranking-overlay');
+ $('#overlay').innerHTML=discoveryBook(bookProfile,seedTitle.state());
+ $('#close-discoveries').onclick=back;
 }
 // 새 소식 화면. 읽으면 점이 사라진다.
 function showNotes(){

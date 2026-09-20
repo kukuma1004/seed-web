@@ -185,6 +185,9 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 
 /* 새 소식(패치노트) */
 .news-dot{display:inline-block;width:7px;height:7px;margin-left:6px;border-radius:50%;background:#ffd76a;box-shadow:0 0 8px #ffd76a99;vertical-align:middle}
+.menu-news-button{position:absolute;z-index:5;top:max(18px,env(safe-area-inset-top));right:max(18px,env(safe-area-inset-right));min-width:92px;min-height:44px;padding:7px 12px;border:1px solid #acc8b65c;border-radius:999px;color:#dcecdf;background:#0b2025d9;box-shadow:0 5px 18px #0005;text-align:center;backdrop-filter:blur(8px)}
+.menu-news-button span,.menu-news-button small{display:block}.menu-news-button span{font-size:12px;font-weight:700}.menu-news-button small{margin-top:1px;color:#91a99e;font-size:9px}.menu-news-button:hover,.menu-news-button:focus-visible{border-color:#dce8bc;background:#15332f}.menu-news-button:active{transform:scale(.97)}
+@media(max-height:520px) and (orientation:landscape){.menu-news-button{top:max(8px,env(safe-area-inset-top));right:max(9px,env(safe-area-inset-right));min-width:82px;min-height:40px;padding:5px 10px}}
 .notes-panel{width:min(520px,92vw)!important}
 .notes-list{display:flex;flex-direction:column;gap:10px;overflow-y:auto;padding-right:4px}
 .note{border:1px solid #a4b7ab33;border-radius:12px;padding:10px 12px;background:#0e2328cc}
