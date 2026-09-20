@@ -2,7 +2,7 @@
 // 그림은 아직 법칙 그림을 빌려 쓴다(전용 그림이 나오면 plantArt만 바꾸면 된다).
 import {LAWS} from './laws.js';
 import {lawArt} from './law-art.js';
-import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,FOUNDER,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,PLAY_STYLES,MASTERY,MASTERY_KEYS,MASTERY_TOTAL_CAP,
+import {harvestLine,gardenRecordLine,SEEDS,SEED_IDS,GUARDIAN,FOUNDER,FRAGMENTS_PER_SEED,STAGES,STAGE_NAMES,STAGE_POINTS,PLAY_STYLES,MASTERY,MASTERY_KEYS,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE,
  stageOf,nextStagePoints,plantName,branchSummary,centerInfo,plantSeed,uproot,craftSeed,gardenMastery} from './garden.js';
 import './garden.css';
 
@@ -64,12 +64,13 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
   <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
   <section class="garden-mastery"><div><strong>오스틴의 기억</strong><small>격파할 때마다 무작위 능력 +0.1%</small></div><p>${masteryRows}</p><small>누적 ${mastery.total}/${MASTERY_TOTAL_CAP} · 능력별 최대 3%</small></section>
   <div class="panel-body">${body}</div>
-  <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><div><button class="ghost small" id="garden-training">훈련장</button><button class="primary" id="garden-close">돌아가기</button></div></footer>
+  <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><div>${GARDEN_TRAINING_VISIBLE&&onTraining?'<button class="ghost small" id="garden-training">훈련장</button>':''}<button class="primary" id="garden-close">돌아가기</button></div></footer>
  </aside>`;
 
  const update=next=>{onChange(next);};
  root.querySelector('#garden-close').onclick=onClose;
- root.querySelector('#garden-training').onclick=()=>onTraining?.();
+ const trainingButton=root.querySelector('#garden-training');
+ if(trainingButton)trainingButton.onclick=()=>onTraining();
  for(const button of root.querySelectorAll('[data-plant]'))
   button.onclick=()=>{const r=plantSeed(garden,button.dataset.plant,selection.index);if(r.ok)update(r.garden);};
  for(const button of root.querySelectorAll('[data-craft]'))

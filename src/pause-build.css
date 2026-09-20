@@ -5,11 +5,11 @@
 #pause-loadout{overflow:auto;min-height:0;display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:2px;overscroll-behavior:contain}
 .pause-item{display:flex;align-items:center;gap:12px;border:1px solid #94b1a13d;border-radius:9px;padding:12px;background:#081a2180;text-align:left;min-width:0}.pause-item.evolved{border-color:#dbc27c66}.pause-item>span{width:64px;height:64px}.pause-item>div{min-width:0}.pause-item small{font-size:10px;color:#bfc6a1}.pause-item h3{font-size:16px;margin:4px 0;color:#f2f5df}.pause-item h3 span{font-size:12px;color:#d4c589;white-space:nowrap}.pause-item p{font-size:11px;line-height:1.65;color:#b8cec6;margin:0;overflow-wrap:anywhere}
 .pause-empty{grid-column:1/-1;text-align:center;padding:20px;color:#b9cfc6;line-height:1.9}
-.pause-sheet footer{display:flex;gap:10px;justify-content:center;margin-top:16px;flex:none}.pause-sheet footer button{min-height:44px;margin:0;border-radius:6px;font-size:13px}
-.pause-sheet footer .primary{margin:0;min-height:44px}
-#pause-build #save-exit{position:static;transform:none;max-width:none;padding:10px 15px;font-size:11px;background:#122c2b}
+.pause-sheet footer{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:100%;margin-top:16px;flex:none}
+.pause-sheet footer button,.pause-sheet footer .primary,#pause-build #save-exit{position:static;transform:none;width:100%;min-width:0;max-width:none;min-height:46px;margin:0;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.25;text-align:center}
+#pause-build #save-exit{background:#122c2b}
 body:has(#pause-build:not([hidden])) #pause{z-index:10}body:has(#pause-build:not([hidden])) #toast{visibility:hidden}
-@media(max-width:600px){.pause-sheet{padding:14px}#pause-loadout{grid-template-columns:1fr}.pause-item{padding:9px}.pause-item>span{width:56px;height:56px}.pause-sheet footer{flex-direction:column;gap:7px}.pause-sheet h2{font-size:23px}}
+@media(max-width:600px){.pause-sheet{padding:14px}#pause-loadout{grid-template-columns:1fr}.pause-item{padding:9px}.pause-item>span{width:56px;height:56px}.pause-sheet footer{grid-template-columns:1fr;gap:7px}.pause-sheet h2{font-size:23px}}
 @media(max-height:500px) and (orientation:landscape){.pause-sheet{padding:10px 64px 10px 16px}.pause-item p{display:none}.pause-sheet header p{margin:2px 0 6px!important}#pause-loadout{gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}.pause-sheet h2{font-size:20px;margin:2px}.pause-sheet header p{margin:4px 0 8px}.pause-sheet header small{font-size:10px}.pause-item{padding:8px;gap:8px}.pause-item>span{width:48px;height:48px}.pause-item h3{font-size:14px}.pause-item p{font-size:10px}.pause-sheet footer{margin-top:8px}}
 .item-bag{grid-column:1/-1;border-top:1px solid #ddc88755;padding-top:12px;text-align:left}.item-bag h3{margin:0 0 8px;color:#f1db9e}.item-bag>p{margin:0;font-size:12px;line-height:1.7;color:#b6c8bd}.item-bag ul{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:7px}.item-bag li{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid #ccb16b55;border-radius:10px;background:#1c2a26cc}.item-bag li .potion-icon{flex:none}.item-bag strong{font-size:13px;color:#f3e6c0}.item-bag strong span{color:#e8cf8f;font-variant-numeric:tabular-nums}.item-bag li p{margin:3px 0 0;font-size:11.5px;line-height:1.5;color:#c9d3c3}
 .title-perk .title-total{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:7px!important;padding:8px 10px;border:1px solid #d9bd6660;border-radius:9px;background:#3b321a66}.title-perk .title-total strong{font-size:15px}.title-perk .title-total small{color:#adbfaf;font-size:10px}.title-perk>p.equipped{color:#ffe7a1}.title-perk>p.equipped strong{color:#ffe7a1}
@@ -17,11 +17,11 @@ body:has(#pause-build:not([hidden])) #pause{z-index:10}body:has(#pause-build:not
 #quality-toggle,#theme-toggle,#sound-toggle{padding:10px 15px;font-size:11px;background:#122c2b;color:#eff6d9;border:1px solid #b3cead;border-radius:inherit;cursor:pointer}
 #quality-toggle:hover,#theme-toggle:hover,#sound-toggle:hover{border-color:#e8c26a}
 #theme-toggle{border-color:#9a8fda;color:#eee9ff}
-/* 하단 단추가 다섯 개가 되면서 휴대폰 가로에서 글자가 두 줄로 꺾였다. 줄바꿈 없이, 모자라면 두 줄로 나눠 앉힌다. */
-.pause-sheet footer{flex-wrap:wrap}
-.pause-sheet footer button{white-space:nowrap}
+/* 다섯 단추가 모두 같은 칸과 높이를 사용한다. 짧은 가로 화면에서도
+   글자 크기나 안쪽 여백이 달라져 한 단추만 작아 보이지 않게 한다. */
+.pause-sheet footer button{white-space:normal}
 @media(max-height:500px) and (orientation:landscape){
- .pause-sheet footer{flex-direction:row;gap:6px}
- .pause-sheet footer button,#pause-build #save-exit{padding:6px 10px;font-size:10px;min-height:0}
+ .pause-sheet footer{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+ .pause-sheet footer button,.pause-sheet footer .primary,#pause-build #save-exit{padding:6px 8px;font-size:10px;min-height:36px}
 }
 

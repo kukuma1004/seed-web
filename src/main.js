@@ -1146,7 +1146,9 @@ function paintGardenPanel(){
    if(gardenSelection?.kind==='plot'&&!garden.plots[gardenSelection.index])gardenSelection=null;
    if(gardenScene)gardenScene.select(gardenSelection?.kind==='plot'?gardenSelection.index:-1);
    paintGardenPanel();},
-   onSelect:selectGardenSpot,onTraining:showTrainingSetup,
+   // 훈련장은 비교 방식과 보상을 다시 정할 때까지 진입점만 숨긴다.
+   // 구현과 개인 최고기록은 보존해 두어 나중에 안전하게 다시 켤 수 있다.
+   onSelect:selectGardenSpot,
    onClose:()=>gardenReturn()
  });
 }

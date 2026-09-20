@@ -4,6 +4,9 @@ import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
 export const GARDEN_KEY='seed-garden-v1';
+// 훈련장은 비교 규칙과 보상을 다시 정할 때까지 보류한다. 구현과 기록은
+// 지우지 않고 이 한 플래그로 진입점만 닫아, 나중에 검토 후 다시 열 수 있다.
+export const GARDEN_TRAINING_VISIBLE=false;
 export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower',FOUNDER='founder';
 export const MASTERY_STEP=.001,MASTERY_STAT_CAP=30,MASTERY_TOTAL_CAP=100;
 export const MASTERY=Object.freeze({
