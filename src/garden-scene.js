@@ -191,13 +191,13 @@ export function createGardenScene(){
  scene.add(fireflies);
 
  const plantGroup=new THREE.Group(),centerGroup=new THREE.Group();scene.add(plantGroup,centerGroup);
- // 찐보스 5회마다 생기는 기념 식물. 최대 20개를 꽃/열매 두 인스턴스
- // 묶음으로 그려 드로우콜과 메모리 할당을 일정하게 유지한다.
+ // 찐보스 5회마다 생기는 기념 식물. 능력별 5%까지 얻는 최대 50개를
+ // 꽃/열매 두 인스턴스 묶음으로 그려 드로우콜은 그대로 유지한다.
  const blossomShape=new THREE.Shape();
  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=i%2===0?.15:.07,x=Math.cos(a)*r,y=Math.sin(a)*r;i?blossomShape.lineTo(x,y):blossomShape.moveTo(x,y);}blossomShape.closePath();
  const blossomGeo=new THREE.ShapeGeometry(blossomShape),blossomMat=new THREE.MeshBasicMaterial({color:0xffdc79,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
  const fruitGeo=new THREE.IcosahedronGeometry(.14,1),fruitMat=new THREE.MeshStandardMaterial({color:0xffc857,emissive:0xffa21a,emissiveIntensity:.6,roughness:.38,metalness:.08});
- const bossBlossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,20),bossFruits=new THREE.InstancedMesh(fruitGeo,fruitMat,5);
+ const bossBlossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,50),bossFruits=new THREE.InstancedMesh(fruitGeo,fruitMat,13);
  bossBlossoms.count=0;bossFruits.count=0;bossBlossoms.renderOrder=4;bossFruits.renderOrder=4;scene.add(bossBlossoms,bossFruits);
  // The painted beds already show every empty slot. The raycast meshes stay
  // present for tapping, but draw nothing until one slot is actually selected.

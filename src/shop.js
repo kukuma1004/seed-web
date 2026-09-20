@@ -12,11 +12,18 @@ export const STARTING_COINS=200;
 // 상점 보관함: 산 물약과 선물을 모아 두는 곳. 가져갈 개수(carry)는 아이가 고르고,
 // 새 여정을 시작할 때만 그만큼 가방으로 옮긴다. 많이 갖고 있어도 안 가져갈 수 있다.
 // 보관함에는 넉넉히 모아 둘 수 있지만, 한 여정에 가져가는 작은 물약은 최대 5개다.
-export const STASH_ITEMS=Object.freeze({tonic:Object.freeze({max:SHOP_STOCK_MAX,carryMax:TONIC_CARRY_MAX}),sprout:Object.freeze({max:3})});
-export const STASH_ORDER=Object.freeze(['tonic','sprout']);
+export const STASH_ITEMS=Object.freeze({
+ potion:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.potion.max}),
+ tonic:Object.freeze({max:SHOP_STOCK_MAX,carryMax:TONIC_CARRY_MAX}),
+ wind:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.wind.max}),
+ shell:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.shell.max}),
+ sprout:Object.freeze({max:3,carryMax:1})
+});
+export const STASH_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']);
 const carryMax=id=>Math.min(STASH_ITEMS[id].carryMax??STASH_ITEMS[id].max,ITEMS[id]?.max??STASH_ITEMS[id].max);
 const count=v=>Number.isInteger(v)&&v>0?v:0;
-const EMPTY=()=>({version:2,coins:STARTING_COINS,stash:{tonic:0,sprout:0},carry:{tonic:0,sprout:0},gifts:[]});
+const emptyCounts=()=>Object.fromEntries(STASH_ORDER.map(id=>[id,0]));
+const EMPTY=()=>({version:3,coins:STARTING_COINS,stash:emptyCounts(),carry:emptyCounts(),gifts:[]});
 let fallback=EMPTY();
 
 export function normalizeShop(value){
@@ -30,7 +37,7 @@ export function normalizeShop(value){
   carry[id]=Math.min(wanted,stash[id],carryMax(id));
  }
  const gifts=[...new Set(Array.isArray(value?.gifts)?value.gifts.filter(g=>typeof g==='string'&&g.length<=40):[])].slice(-20);
- return {version:2,coins:Math.max(0,Math.min(9_999_999,coins)),stash,carry,gifts};
+ return {version:3,coins:Math.max(0,Math.min(9_999_999,coins)),stash,carry,gifts};
 }
 export function readShop(storage){
  if(!storage)return normalizeShop(fallback);
@@ -48,6 +55,15 @@ export function writeShop(storage,value){
 export function earnCoins(storage,amount){
  const current=readShop(storage),add=Number.isInteger(amount)&&amount>0?amount:0;
  current.coins=Math.min(9_999_999,current.coins+add);writeShop(storage,current);return current;
+}
+// 보스·이벤트 보상은 현재 여정 가방이 아니라 창고에 쌓인다. 가져갈
+// 개수는 플레이어가 출발 상점에서 직접 정하므로 carry는 건드리지 않는다.
+export function stashItem(storage,id,n=1){
+ const current=readShop(storage);
+ if(!Object.hasOwn(STASH_ITEMS,id))return {stored:0,shop:current};
+ const before=current.stash[id],add=count(n);
+ current.stash[id]=Math.min(STASH_ITEMS[id].max,before+add);
+ writeShop(storage,current);return {stored:current.stash[id]-before,shop:readShop(storage)};
 }
 // 산 만큼은 가져가기에도 더한다(사자마자 가져가고 싶은 경우가 대부분). 줄이는 건 보관함에서.
 export function buyTonics(storage,n){

@@ -8,7 +8,7 @@ export const GARDEN_KEY='seed-garden-v1';
 // 지우지 않고 이 한 플래그로 진입점만 닫아, 나중에 검토 후 다시 열 수 있다.
 export const GARDEN_TRAINING_VISIBLE=false;
 export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower',FOUNDER='founder';
-export const MASTERY_STEP=.001,MASTERY_STAT_CAP=30,MASTERY_TOTAL_CAP=100,BOSS_BLOOM_EVERY=5,BOSS_FRUIT_EVERY=4;
+export const MASTERY_STEP=.001,MASTERY_STAT_CAP=50,BOSS_BLOOM_EVERY=5,BOSS_FRUIT_EVERY=4;
 export const MASTERY=Object.freeze({
  power:{name:'공격력',desc:'모든 공격 피해'},
  move:{name:'이동 속도',desc:'씨앗 이동 속도'},
@@ -93,10 +93,8 @@ export function normalizeGarden(value){
   if(SEEDS[id]&&Number.isInteger(n)&&n>0)g.seeds[id]=Math.min(99,n);
  if(value.traits&&typeof value.traits==='object')for(const [id,styles] of Object.entries(value.traits))
   if(SEEDS[id]&&Array.isArray(styles))g.traits[id]=styles.slice(0,g.seeds[id]||0).map(validStyle);
- if(value.mastery&&typeof value.mastery==='object'){
-  let remaining=MASTERY_TOTAL_CAP;
-  for(const id of MASTERY_KEYS){const points=Math.max(0,Math.min(MASTERY_STAT_CAP,Math.floor(Number(value.mastery[id])||0),remaining));g.mastery[id]=points;remaining-=points;}
- }
+ if(value.mastery&&typeof value.mastery==='object')for(const id of MASTERY_KEYS)
+  g.mastery[id]=Math.max(0,Math.min(MASTERY_STAT_CAP,Math.floor(Number(value.mastery[id])||0)));
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
@@ -110,7 +108,7 @@ export function writeGarden(storage,garden){try{storage?.setItem(GARDEN_KEY,JSON
 export function grantBossMastery(garden,random=Math.random){
  const g=normalizeGarden(garden),total=MASTERY_KEYS.reduce((n,id)=>n+g.mastery[id],0);
  const open=MASTERY_KEYS.filter(id=>g.mastery[id]<MASTERY_STAT_CAP);
- if(total>=MASTERY_TOTAL_CAP||!open.length)return {garden:g,granted:false,id:null,points:0};
+ if(!open.length)return {garden:g,granted:false,id:null,points:0};
  const roll=Math.max(0,Math.min(.999999,Number(random?.())||0)),id=open[Math.floor(roll*open.length)];
  g.mastery[id]++;
  const earned=Math.floor((total+1)/BOSS_BLOOM_EVERY),milestone=(total+1)%BOSS_BLOOM_EVERY===0
@@ -127,8 +125,9 @@ export function gardenMastery(garden){
 // 저장을 따로 늘리지 않고 보스 성장점에서 정원의 기념 식물을 계산한다.
 // 찐보스 다섯 번마다 기억꽃 하나, 네 번째 꽃마다 황금 열매 하나가 된다.
 export function bossGardenMilestones(garden){
- const defeats=gardenMastery(garden).total,earned=Math.floor(defeats/BOSS_BLOOM_EVERY),fruits=Math.floor(earned/BOSS_FRUIT_EVERY);
- return Object.freeze({defeats,earned,flowers:earned-fruits,fruits,next:defeats>=MASTERY_TOTAL_CAP?0:BOSS_BLOOM_EVERY-defeats%BOSS_BLOOM_EVERY});
+ const mastery=gardenMastery(garden),defeats=mastery.total,earned=Math.floor(defeats/BOSS_BLOOM_EVERY),fruits=Math.floor(earned/BOSS_FRUIT_EVERY);
+ const full=MASTERY_KEYS.every(id=>mastery.points[id]>=MASTERY_STAT_CAP);
+ return Object.freeze({defeats,earned,flowers:earned-fruits,fruits,next:full?0:BOSS_BLOOM_EVERY-defeats%BOSS_BLOOM_EVERY});
 }
 export function masteryLine(result){
  if(!result?.granted||!MASTERY[result.id])return '정원 성장이 최대치에 도달했습니다';

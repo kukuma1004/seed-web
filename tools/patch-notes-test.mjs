@@ -3,14 +3,14 @@ import {PATCH_NOTES,NOTES_KEY,latestNoteId,readSeenNote,markNotesSeen,hasUnseenN
 
 const memory=()=>{const d=new Map();return {getItem:k=>d.has(k)?d.get(k):null,setItem:(k,v)=>d.set(k,String(v)),d};};
 
-// 소식은 최신이 맨 위, 날짜 id는 겹치지 않고, 빈 글이 없다.
+// 소식은 최신이 맨 위, 날짜와 같은 날의 짧은 개정 id는 겹치지 않고, 빈 글이 없다.
 assert.ok(noteCount()>=3);
 const ids=PATCH_NOTES.map(n=>n.id);
 assert.equal(new Set(ids).size,ids.length,'같은 날짜가 두 번 오지 않는다');
 assert.deepEqual([...ids].sort().reverse(),ids,'최신 소식이 맨 위');
 assert.equal(latestNoteId,ids[0]);
 for(const note of PATCH_NOTES){
- assert.match(note.id,/^\d{4}-\d{2}-\d{2}$/,`${note.id} 날짜 형식`);
+ assert.match(note.id,/^\d{4}-\d{2}-\d{2}(?:-[a-z0-9]+)*$/,`${note.id} 날짜 형식`);
  assert.ok(note.date&&note.title.length>=3,`${note.id} 제목`);
  assert.ok(Array.isArray(note.lines)&&note.lines.length>=1,`${note.id} 내용`);
  for(const line of note.lines){

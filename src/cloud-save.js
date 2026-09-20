@@ -32,7 +32,7 @@ export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now()}={
  const shop=json(storage,SHOP_KEY);
  return normalizeCloudSnapshot({
   version:CLOUD_SCHEMA,revision,updatedAt,
-  discoveries:json(storage,DISCOVERIES_KEY),garden:json(storage,GARDEN_KEY),shop:shop??{version:2,coins:STARTING_COINS},
+  discoveries:json(storage,DISCOVERIES_KEY),garden:json(storage,GARDEN_KEY),shop:shop??{version:3,coins:STARTING_COINS},
   checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY])},
   settings:{quality,theme:storage?.getItem(THEME_KEY),sound:storage?.getItem(SOUND_KEY)},
   player:{name:storage?.getItem(NAME_KEY)},account:json(storage,ACCOUNT_PROFILE_KEY)
@@ -47,7 +47,7 @@ export function normalizeCloudSnapshot(value){
   updatedAt:int(value?.updatedAt,0,Number.MAX_SAFE_INTEGER),
   discoveries:normalizeDiscoveries(value?.discoveries),
   garden:autoPlantSeeds(normalizeGarden(value?.garden)),
-  shop:normalizeShop(value?.shop??{version:2,coins:STARTING_COINS}),
+  shop:normalizeShop(value?.shop??{version:3,coins:STARTING_COINS}),
   checkpoints:{version:1,act1:checkpoint(value?.checkpoints?.act1),act2:checkpoint(value?.checkpoints?.act2)},
   settings:{quality:quality??1,theme:normalizeTheme(value?.settings?.theme),sound:value?.settings?.sound==='off'?'off':'on'},
   player:{name:cleanName(value?.player?.name)},

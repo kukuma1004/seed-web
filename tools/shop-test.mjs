@@ -1,23 +1,24 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashTotal,carryTotal} from '../src/shop.js';
+import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashItem,stashTotal,carryTotal} from '../src/shop.js';
 
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};};
-const empty={tonic:0,sprout:0};
+const empty={potion:0,tonic:0,wind:0,shell:0,sprout:0};
 
 // 처음 오는 사람은 시작 자금으로 물약 하나를 살 수 있다.
 {
  const s=memory();
- assert.deepEqual(readShop(s),{version:2,coins:STARTING_COINS,stash:empty,carry:empty,gifts:[]});
+ assert.deepEqual(readShop(s),{version:3,coins:STARTING_COINS,stash:empty,carry:empty,gifts:[]});
  assert.equal(STARTING_COINS,SHOP_PRICES[1],'시작 자금으로 딱 한 개');
  assert.equal(readShop(s).coins,STARTING_COINS,'두 번째로 열어도 다시 주지 않는다');
  const spent=buyTonics(s,1);assert.ok(spent.ok);assert.equal(spent.shop.coins,0);
- assert.deepEqual(spent.shop.stash,{tonic:1,sprout:0});assert.deepEqual(spent.shop.carry,{tonic:1,sprout:0},'산 만큼은 가져가기에도 들어간다');
+ assert.deepEqual(spent.shop.stash,{...empty,tonic:1});assert.deepEqual(spent.shop.carry,{...empty,tonic:1},'산 만큼은 가져가기에도 들어간다');
  assert.ok(s.data.has(SHOP_KEY));
 }
 
 // 값과 한계
 assert.equal(SHOP_PRICES[1],200);assert.equal(SHOP_PRICES[10],1500);assert.equal(SHOP_STOCK_MAX,50);assert.equal(TONIC_CARRY_MAX,5);
+assert.deepEqual(Object.keys(STASH_ITEMS),['potion','tonic','wind','shell','sprout']);
 {
  const s=memory();writeShop(s,{coins:0,stash:empty,carry:empty});
  assert.equal(earnCoins(s,50).coins,50);assert.equal(buyTonics(s,1).reason,'coins');
@@ -60,11 +61,23 @@ assert.equal(STASH_ITEMS.sprout.max,3);
 // 예전 저장(version 1): 산 작은 물약은 다음 새 여정에 전부 들어가던 약속 그대로 옮긴다.
 {
  const old=normalizeShop({version:1,coins:250,tonics:4});
- assert.deepEqual(old,{version:2,coins:250,stash:{tonic:4,sprout:0},carry:{tonic:4,sprout:0},gifts:[]});
- assert.deepEqual(normalizeShop({coins:-2,tonics:99}).stash,{tonic:SHOP_STOCK_MAX,sprout:0});
+ assert.deepEqual(old,{version:3,coins:250,stash:{...empty,tonic:4},carry:{...empty,tonic:4},gifts:[]});
+ assert.deepEqual(normalizeShop({coins:-2,tonics:99}).stash,{...empty,tonic:SHOP_STOCK_MAX});
  assert.deepEqual(normalizeShop(null).stash,empty);
  const broken={getItem(){throw new Error('막힘');},setItem(){throw new Error('막힘');}};
  assert.equal(readShop(broken).coins,STARTING_COINS);
+}
+
+// 황금 열매의 보스 물약은 현재 가방이 아니라 창고에 들어가며, 가져갈
+// 개수는 자동으로 바꾸지 않는다.
+{
+ const s=memory();const reward=stashItem(s,'wind',1);
+ assert.equal(reward.stored,1);assert.equal(reward.shop.stash.wind,1);assert.equal(reward.shop.carry.wind,0);
+ stashItem(s,'potion',1);stashItem(s,'shell',1);
+ assert.equal(setCarry(s,'wind',1).carry.wind,1);
+ assert.deepEqual(claimCarry(s),{wind:1});assert.equal(readShop(s).stash.wind,0);
+ assert.equal(stashItem(s,'sprout',99).shop.stash.sprout,3);
+ assert.equal(stashItem(s,'unknown',1).stored,0);
 }
 
 // 시작 안내는 예전의 존재하지 않는 시간의 물약을 약속하지 않고 실제 반입 가방을 읽는다.

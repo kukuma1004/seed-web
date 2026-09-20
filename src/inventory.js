@@ -64,8 +64,8 @@ export const AUSTIN_BONUS=Object.freeze([['potion',35],['wind',32],['shell',32],
 // A golden garden fruit is earned only once per twenty final-boss defeats.
 // It repeats one ordinary boss potion, never the collection-grade revive.
 export const GOLDEN_FRUIT_POTIONS=Object.freeze(['potion','wind','shell']);
-export function goldenFruitPotion(random=Math.random,inventory=null){
- const pool=GOLDEN_FRUIT_POTIONS.filter(id=>!inventory||(inventory[id]||0)<ITEMS[id].max);
+export function goldenFruitPotion(random=Math.random,inventory=null,limits=ITEMS){
+ const pool=GOLDEN_FRUIT_POTIONS.filter(id=>!inventory||(inventory[id]||0)<(limits[id]?.max??ITEMS[id].max));
  if(!pool.length)return null;
  const roll=Math.max(0,Math.min(.999999,Number(random())||0));
  return pool[Math.floor(roll*pool.length)];

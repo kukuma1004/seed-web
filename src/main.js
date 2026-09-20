@@ -73,7 +73,7 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,goldenFruitPotion,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
-import {SHOP_STOCK_MAX,SHOP_PRICES,TONIC_CARRY_MAX,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift} from './shop.js';
+import {SHOP_STOCK_MAX,SHOP_PRICES,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashItem} from './shop.js';
 import './shop.css';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,offeredFusion,slotsUsed,fusionLevel,canFuse,fuse,secondFusionOptions,secondFusionLevel,fuseSecond,evolveSolo,effectiveLevels,buildLevel,awakenOptions,awakenLevel,awaken} from './progression.js';
@@ -368,9 +368,9 @@ function grantFinalBossGardenMemory(){
 }
 function grantGoldenFruitPotion(growth){
  if(growth?.milestone?.type!=='fruit')return '';
- const id=goldenFruitPotion(rng,inventory);
- if(!id){earnCoins(runStorage,200);return '황금 열매 보너스 · 가방이 가득 차 200원으로 교환';}
- addItem(inventory,id,1);itemBarKey='';return `황금 열매 보너스 · ${ITEMS[id].name} 1개`;
+ const shop=readShop(runStorage),id=goldenFruitPotion(rng,shop.stash,STASH_ITEMS);
+ if(!id){earnCoins(runStorage,200);return '황금 열매 보너스 · 창고가 가득 차 200원으로 교환';}
+ stashItem(runStorage,id,1);return `황금 열매 보너스 · ${ITEMS[id].name} 1개 창고 보관`;
 }
 function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))||null;}
 function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);
@@ -1014,8 +1014,8 @@ function showShop(back=showIntro,message=''){
  const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic+10>SHOP_STOCK_MAX;
  // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.
  const stashRows=STASH_ORDER.filter(id=>id==='tonic'||shop.stash[id]).map(id=>{
-  const most=Math.min(shop.stash[id],id==='tonic'?TONIC_CARRY_MAX:ITEMS[id].max);
-  return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개${id==='tonic'?` · 출발 최대 ${TONIC_CARRY_MAX}개`:id==='sprout'?' · 한 판에 1개':''}</small></div>`
+  const most=Math.min(shop.stash[id],STASH_ITEMS[id].carryMax);
+  return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개 · 출발 최대 ${STASH_ITEMS[id].carryMax}개</small></div>`
    +`<div class="stash-carry" role="group" aria-label="${ITEMS[id].name} 가져갈 개수"><button type="button" data-carry="${id}" data-step="-1" ${shop.carry[id]<=0?'disabled':''} aria-label="하나 덜">−</button><b>${shop.carry[id]}</b><button type="button" data-carry="${id}" data-step="1" ${shop.carry[id]>=most?'disabled':''} aria-label="하나 더">+</button></div></li>`;
  }).join('');
  $('#overlay').innerHTML=`<div class="menu-panel shop-panel"><p class="eyebrow">SEED · 출발 준비</p><h2>물약 상점</h2>

@@ -3,7 +3,7 @@ import {SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STA
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,harvestFromRun,addHarvest,craftSeed,
  uproot,growPlants,activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,autoPlantSeeds,
  harvestLine,gardenRecordLine,objectJosa,wayJosa,CENTER,centerStage,centerInfo,activeSlots,bloomedCount,
- playStyleFromRun,grantBossMastery,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE,
+ playStyleFromRun,grantBossMastery,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,GARDEN_TRAINING_VISIBLE,
  bossGardenMilestones,BOSS_BLOOM_EVERY,BOSS_FRUIT_EVERY} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 import {GARDEN_GROWTH_ART,growthArtTile,centerArtTile} from '../src/garden-scene.js';
@@ -106,7 +106,8 @@ assert.equal(objectJosa('메아리 씨앗'),'을');assert.deepEqual([wayJosa('�
 assert.ok(harvestLine({seeds:['reflect'],fragments:0}).includes('정원에 자동으로 심었어요'));
 assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
 
-// 모든 막 보스가 공통으로 쓰는 성장점은 매번 정확히 0.1%, 능력별 3%와 전체 10%에서 멈춘다.
+// 모든 막 보스가 공통으로 쓰는 성장점은 매번 정확히 0.1%다. 능력별 5%만
+// 제한하고, 예전의 전체 10% 합산 제한은 두지 않는다.
 {
  let g=emptyGarden();const first=grantBossMastery(g,()=>0);g=first.garden;
  assert.equal(first.id,'power');assert.equal(gardenMastery(g).power,1.001);assert.ok(masteryLine(first).includes('+0.1%'));
@@ -115,8 +116,11 @@ assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
  assert.equal(g.mastery.power,MASTERY_STAT_CAP);
  // 가득 찬 공격력은 후보에서 빠지고 다음 능력으로 넘어간다.
  g=grantAustinMastery(g,()=>0).garden;assert.equal(g.mastery.move,1);
- for(let i=31;i<MASTERY_TOTAL_CAP;i++)g=grantAustinMastery(g,()=>.999999).garden;
- assert.ok(gardenMastery(g).total<=MASTERY_TOTAL_CAP);
+ for(let i=0;i<300;i++)g=grantAustinMastery(g,()=>0).garden;
+ const capped=gardenMastery(g);assert.equal(capped.total,MASTERY_STAT_CAP*5);
+ for(const points of Object.values(capped.points))assert.equal(points,MASTERY_STAT_CAP);
+ assert.equal(grantAustinMastery(g,()=>0).granted,false);
+ assert.equal(bossGardenMilestones(g).next,0);
 }
 
 // 저장을 늘리지 않는 보스 기념 식물: 5회마다 꽃, 네 번째 기념은 열매다.
