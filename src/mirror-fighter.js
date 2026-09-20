@@ -84,8 +84,11 @@ export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
 
 export function mirrorAttackSequence(plan,attackIndex=0){
  const attacks=plan?.attacks||[];if(!attacks.length)return [];
- const count=Math.min(Math.max(1,plan.concurrentAttackFamilies||1),attacks.length),out=[];
- for(let i=0;i<count;i++)out.push(Object.freeze({attack:attacks[(attackIndex+i)%attacks.length],delay:i===0?0:.3,damageScale:i===0?1:.62}));
+ // Only two families begin on one beat, but upper floors may append a third,
+ // softer follow-up. This raises decision pressure without raising the live
+ // projectile budget or creating an unreadable simultaneous wall.
+ const count=Math.min(Math.max(1,plan.chainLength||plan.concurrentAttackFamilies||1),attacks.length),out=[];
+ for(let i=0;i<count;i++)out.push(Object.freeze({attack:attacks[(attackIndex+i)%attacks.length],delay:i*.3,damageScale:i===0?1:i===1?.62:.46}));
  return Object.freeze(out);
 }
 

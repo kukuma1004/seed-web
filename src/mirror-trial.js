@@ -69,8 +69,11 @@ export const MIRROR_TOWER=Object.freeze({
  checkpointEvery:5,
  choiceEvery:1,
  arenaRadius:13,
- floorHeal:.12,
- milestoneHeal:.35
+ // The public ten-floor challenge should reward clean dodges rather than let
+ // a player erase every mistake between floors. Milestones still provide one
+ // meaningful recovery beat before the next behaviour tier.
+ floorHeal:.08,
+ milestoneHeal:.24
 });
 
 export const MIRROR_PATTERNS=Object.freeze({
@@ -110,7 +113,9 @@ export function mirrorCloneLoadout(snapshot){
 
 export function mirrorFloorRules(floor=1,{quality='normal'}={}){
  const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0;
- const tier=n<5?0:n<10?1:n<15?2:3;
+ // Teach one behaviour at a time, then make the last four floors a real
+ // mastery check instead of waiting until floor ten to reveal the feint.
+ const tier=n<4?0:n<7?1:n<9?2:3;
  const movement=[MIRROR_MOVEMENT_PROFILES.reflection,MIRROR_MOVEMENT_PROFILES.duelist,MIRROR_MOVEMENT_PROFILES.trickster,MIRROR_MOVEMENT_PROFILES.apex][tier];
  const low=quality==='low';
  return Object.freeze({
@@ -121,7 +126,7 @@ export function mirrorFloorRules(floor=1,{quality='normal'}={}){
   arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:0,shrinks:false}),
   movement,
   concurrentAttackFamilies:n<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
-  chainLength:n<5?1:n<10?2:3,
+  chainLength:n<4?1:n<8?2:3,
   healAfter:milestone?MIRROR_TOWER.milestoneHeal:MIRROR_TOWER.floorHeal,
   budget:Object.freeze({
    hostileProjectiles:low?MIRROR_TRIAL_LIMITS.hostileProjectilesLow:MIRROR_TRIAL_LIMITS.hostileProjectilesNormal,
@@ -148,12 +153,13 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
   attacks:Object.freeze(attacks),
   loadout:mirrorCloneLoadout(snapshot),
   concurrentAttackFamilies:tower.concurrentAttackFamilies,
+  chainLength:tower.chainLength,
   ultimate:Object.freeze({...MIRROR_PATTERNS[lead],law:lead,id:`mirror-${MIRROR_PATTERNS[lead].id}`}),
   stats:Object.freeze({
-   hpScale:Number((2.15+Math.min(10,r)*.12+Math.min(5,(snapshot?.forms||[]).length)*.08).toFixed(2)),
-   moveSpeedScale:Number(Math.min(.94,.7+r*.018).toFixed(3)),
-   hitDamageMaxHp:Number(Math.min(.13,.072+r*.004).toFixed(3)),
-   attackSpeedScale:Number(Math.min(1.28,.9+r*.025).toFixed(3))
+   hpScale:Number((2.25+Math.min(10,r)*.14+Math.min(5,(snapshot?.forms||[]).length)*.09).toFixed(2)),
+   moveSpeedScale:Number(Math.min(1,.72+r*.024).toFixed(3)),
+   hitDamageMaxHp:Number(Math.min(.13,.074+r*.0046).toFixed(3)),
+   attackSpeedScale:Number(Math.min(1.3,.92+r*.03).toFixed(3))
   }),
   tower,
   budget:tower.budget,
@@ -167,6 +173,21 @@ export const MIRROR_TRIAL_PROTOTYPE=Object.freeze({
  unlock:'austin-defeated',
  copyMode:MIRROR_COPY_RULES.mode,
  localSliceFloors:10,
+ releaseFloors:10,
  checkpoint:'every-five-floors',
- released:false
+ released:true
 });
+
+export const MIRROR_RECORD_KEY='seed-mirror-tower-record-v1';
+export function normalizeMirrorRecord(value){
+ const floor=Math.max(0,Math.min(MIRROR_TRIAL_PROTOTYPE.releaseFloors,Math.floor(Number(value?.bestFloor)||0)));
+ return Object.freeze({version:1,bestFloor:floor,clears:Math.max(0,Math.min(9999,Math.floor(Number(value?.clears)||0))),perfectDodges:Math.max(0,Math.min(1e7,Math.floor(Number(value?.perfectDodges)||0)))});
+}
+export function readMirrorRecord(storage){
+ try{return normalizeMirrorRecord(JSON.parse(storage?.getItem(MIRROR_RECORD_KEY)));}catch{return normalizeMirrorRecord();}
+}
+export function recordMirrorResult(storage,{floor=0,won=false,perfectDodges=0}={}){
+ const before=readMirrorRecord(storage),next=normalizeMirrorRecord({bestFloor:Math.max(before.bestFloor,floor),clears:before.clears+(won?1:0),perfectDodges:Math.max(before.perfectDodges,perfectDodges)});
+ try{storage?.setItem(MIRROR_RECORD_KEY,JSON.stringify(next));}catch{}
+ return next;
+}

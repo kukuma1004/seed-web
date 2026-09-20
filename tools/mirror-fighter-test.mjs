@@ -31,6 +31,9 @@ assert.equal(mirrorAttackSequence({attacks,concurrentAttackFamilies:1},0).length
 const linked=mirrorAttackSequence({attacks,concurrentAttackFamilies:2},0);
 assert.deepEqual(linked.map(x=>x.attack.law),['reflect','frost'],'연계는 서로 다른 두 공격군을 순서대로 쓴다');
 assert.ok(linked[1].delay>=.25&&linked[1].damageScale<1,'두 번째 공격은 짧게 늦추고 피해를 낮춘다');
+const lateChain=mirrorAttackSequence({attacks,concurrentAttackFamilies:2,chainLength:3},0);
+assert.equal(lateChain.length,3,'후반층은 동시 탄막을 늘리지 않고 세 번째 순차 연계를 붙인다');
+assert.ok(lateChain[2].delay>lateChain[1].delay&&lateChain[2].damageScale<lateChain[1].damageScale);
 
 const simulationPlan=mirrorPatternPlan({
   laws:[{id:'reflect',level:2},{id:'frost',level:2},{id:'gravity',level:2}],
