@@ -70,6 +70,7 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 }
 
 .plot-effect{margin:0;font-size:12px;color:#cfe9d9}
+.garden-auto-note{margin:10px 0 0;padding:9px 10px;border:1px solid #d8c77742;border-radius:9px;background:#172b25aa;color:#e7dcae;font-size:10px;line-height:1.55}
 .plot-effect.dim,.dim{color:#8fa79b}
 .branch-row{display:grid;gap:6px}
 .branch{display:flex;flex-direction:column;gap:2px;padding:7px 9px;border:1px solid #a4b7ab55;border-radius:10px;background:#102a30;color:#e6f2e9;text-align:left;cursor:pointer}

@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STAGE_POINTS,PLAY_STYLES,
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,harvestFromRun,addHarvest,craftSeed,
- plantSeed,uproot,growPlants,activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,
+ uproot,growPlants,activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,autoPlantSeeds,
  harvestLine,gardenRecordLine,objectJosa,wayJosa,CENTER,centerStage,centerInfo,activeSlots,bloomedCount,
- playStyleFromRun,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE} from '../src/garden.js';
+ playStyleFromRun,grantBossMastery,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 import {GARDEN_GROWTH_ART,growthArtTile,centerArtTile} from '../src/garden-scene.js';
 
@@ -36,6 +36,10 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
  assert.equal(agile.style,'agile');assert.equal(agile.growth,2);
  const boss=harvestFromRun({levels:{frost:4},wardens:5,austins:1,elapsed:300,damageTaken:40});
  assert.deepEqual(boss.seeds,[GUARDIAN,'frost']);assert.equal(boss.style,'endure');
+ const act2Boss=harvestFromRun({levels:{orbit:4},wardens:5,austins:1,bossId:'alwaysbeginner'});
+ assert.deepEqual(act2Boss.seeds,['orbit']);assert.equal(act2Boss.record.boss,'alwaysbeginner');assert.ok(gardenRecordLine(act2Boss.record).includes('항상초심 격파'));
+ const act3Boss=harvestFromRun({levels:{chain:4},wardens:5,austins:1,bossId:'tempestcarrier'});
+ assert.deepEqual(act3Boss.seeds,['chain']);assert.ok(gardenRecordLine(act3Boss.record).includes('요한 격파'));
  const lose=harvestFromRun({levels:{chain:2},wardens:0});assert.equal(lose.fragments,1);
  assert.ok(gardenRecordLine(rush.record).includes('맹공의 흔적'));
 }
@@ -44,10 +48,8 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
  let g=emptyGarden();
  g=addHarvest(g,{seeds:['reflect'],style:'rush',record:{law:'reflect',kills:80,score:1,style:'rush'}});
  g=addHarvest(g,{seeds:['reflect'],style:'agile',record:{law:'reflect',kills:20,score:1,style:'agile'}});
- assert.deepEqual(g.traits.reflect,['rush','agile']);
- let r=plantSeed(g,'reflect',0);assert.ok(r.ok);g=r.garden;
  assert.equal(g.plots[0].style,'rush');assert.equal(g.plots[0].branch,PLAY_STYLES.rush.branch);
- g=plantSeed(g,'reflect',1).garden;assert.equal(g.plots[1].style,'agile');assert.equal(g.plots[1].branch,'vine');
+ assert.equal(g.plots[1].style,'agile');assert.equal(g.plots[1].branch,'vine');
  assert.equal(g.traits.reflect,undefined);assert.equal(g.seeds.reflect,undefined);
  g=growPlants(g,STAGE_POINTS.bloom);assert.equal(stageOf(g.plots[0].growth),'bloom');
  assert.equal(plantName(g.plots[0]),SEEDS.reflect.branchNames.flower);
@@ -60,13 +62,12 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
  let g=emptyGarden();
  for(let i=0;i<FRAGMENTS_PER_SEED;i++)g=addHarvest(g,{fragments:1,record:{law:'chain',kills:10,score:1,style:'agile'}});
  assert.equal(craftSeed(g,GUARDIAN).ok,false);assert.equal(craftSeed(g,FOUNDER).ok,false);
- g=craftSeed(g,'chain').garden;assert.equal(g.fragments,0);
- g=plantSeed(g,'chain',0).garden;assert.equal(g.plots[0].style,'agile');
+ assert.equal(g.fragments,0);assert.equal(g.plots[0].seed,'chain');assert.equal(g.plots[0].style,'agile');
 }
 
 {
  let g=addHarvest(emptyGarden(),{seeds:['reflect',GUARDIAN],style:'rush'});
- g=plantSeed(g,'reflect',0).garden;g=plantSeed(g,GUARDIAN,1).garden;g=growPlants(g,99);
+ g=growPlants(g,99);
  const fx=gardenEffects(g);
  assert.deepEqual(fx.lawWeights,{});assert.deepEqual(fx.formGuides,[]);assert.deepEqual(fx.relicLaws,[]);assert.deepEqual(fx.mutationLaws,[]);
  assert.equal(fx.freshBonus,0);assert.equal(fx.guideCount,0);assert.equal(fx.austinEvery,5);assert.equal(fx.actives.length,2);
@@ -75,8 +76,9 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
 
 {
  const old=normalizeGarden({version:2,plots:[{seed:'split',growth:9,branch:'vine',active:true}],seeds:{reflect:1},harvests:5});
- assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,4);
+ assert.equal(old.plots[0].style,'agile');assert.equal(old.plots[0].active,false);assert.equal(old.version,5);
  const s=memory();assert.ok(writeGarden(s,old));assert.equal(readGarden(s).plots[0].style,'agile');
+ assert.equal(readGarden(s).plots[1].seed,'reflect','옛 씨앗 상자의 씨앗도 빈 화단에 자동으로 심는다');
  s.setItem('seed-garden-v1','{깨진 json');assert.deepEqual(readGarden(s).plots,Array(PLOTS).fill(null));
 }
 
@@ -85,18 +87,29 @@ assert.equal(playStyleFromRun({kills:4,elapsed:40,dashes:1}),'balanced');
  for(let i=0;i<MAX_RECORDS+3;i++)g=addHarvest(g,harvestFromRun({levels:{chain:i+1},wardens:1,kills:i+30,elapsed:120,journey:i+1}));
  assert.equal(g.records.length,MAX_RECORDS);
  assert.equal(centerStage(g)>=1,true);assert.ok(centerInfo(g).name);assert.equal(CENTER.some(x=>'slots' in x),false);
- g=plantSeed(g,'chain',0).garden;g=growPlants(g,STAGE_POINTS.bloom);assert.equal(bloomedCount(g),1);
+ g=growPlants(g,STAGE_POINTS.bloom);assert.ok(bloomedCount(g)>=1);
+}
+
+{
+ const full=normalizeGarden({plots:[
+  {seed:FOUNDER,growth:9,style:'balanced'},{seed:'reflect',growth:9,style:'rush'},
+  {seed:'split',growth:2,style:'agile'},{seed:'chain',growth:4,style:'endure'},
+  {seed:'orbit',growth:9,style:'rush'},{seed:'frost',growth:9,style:'endure'}
+ ],seeds:{gravity:1},traits:{gravity:['agile']}});
+ const planted=autoPlantSeeds(full);assert.equal(planted.plots[0].seed,FOUNDER,'창립 기념 식물은 자동 교체하지 않는다');
+ assert.equal(planted.plots[2].seed,'gravity','새 흔적은 가장 덜 자란 일반 식물을 바꾼다');assert.deepEqual(planted.seeds,{});
 }
 
 for(const id of SEED_IDS)for(const branch of ['flower','tree','vine'])assert.ok(branchSummary(id,branch,'bloom').includes('전투 능력'));
 assert.equal(objectJosa('메아리 씨앗'),'을');assert.deepEqual([wayJosa('반사'),wayJosa('관통')],['로','으로']);
-assert.ok(harvestLine({seeds:['reflect'],fragments:0}).includes('메아리 씨앗을 얻었어요'));
+assert.ok(harvestLine({seeds:['reflect'],fragments:0}).includes('정원에 자동으로 심었어요'));
 assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
 
-// 오스틴 성장점은 매번 정확히 0.1%, 능력별 3%와 전체 10%에서 멈춘다.
+// 모든 막 보스가 공통으로 쓰는 성장점은 매번 정확히 0.1%, 능력별 3%와 전체 10%에서 멈춘다.
 {
- let g=emptyGarden();const first=grantAustinMastery(g,()=>0);g=first.garden;
+ let g=emptyGarden();const first=grantBossMastery(g,()=>0);g=first.garden;
  assert.equal(first.id,'power');assert.equal(gardenMastery(g).power,1.001);assert.ok(masteryLine(first).includes('+0.1%'));
+ assert.equal(grantAustinMastery,grantBossMastery,'옛 오스틴 호출 이름은 같은 공통 보상을 가리킨다');
  for(let i=1;i<MASTERY_STAT_CAP;i++)g=grantAustinMastery(g,()=>0).garden;
  assert.equal(g.mastery.power,MASTERY_STAT_CAP);
  // 가득 찬 공격력은 후보에서 빠지고 다음 능력으로 넘어간다.
@@ -105,4 +118,4 @@ assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
  assert.ok(gardenMastery(g).total<=MASTERY_TOTAL_CAP);
 }
 
-console.log('정원: 플레이 흔적·오스틴 0.1% 성장·옛 저장 이관·저장 통과');
+console.log('정원: 자동 심기·전 막 보스 0.1% 성장·옛 저장 이관·저장 통과');

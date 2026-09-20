@@ -1,5 +1,5 @@
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
-import {GARDEN_KEY,normalizeGarden,SEEDS} from './garden.js';
+import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS} from './garden.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
 import {SAVE_KEY,validCheckpoint,withoutHidden} from './run-save.js';
 import {ACT2_STORAGE_KEYS} from './act2.js';
@@ -46,7 +46,7 @@ export function normalizeCloudSnapshot(value){
   revision:int(value?.revision,0,1e12),
   updatedAt:int(value?.updatedAt,0,Number.MAX_SAFE_INTEGER),
   discoveries:normalizeDiscoveries(value?.discoveries),
-  garden:normalizeGarden(value?.garden),
+  garden:autoPlantSeeds(normalizeGarden(value?.garden)),
   shop:normalizeShop(value?.shop??{version:2,coins:STARTING_COINS}),
   checkpoints:{version:1,act1:checkpoint(value?.checkpoints?.act1),act2:checkpoint(value?.checkpoints?.act2)},
   settings:{quality:quality??1,theme:normalizeTheme(value?.settings?.theme),sound:value?.settings?.sound==='off'?'off':'on'},

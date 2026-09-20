@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {ACCOUNT_PROFILE_KEY,FOUNDING_BADGE,FOUNDING_SEED,normalizeAccountProfile} from '../src/account-profile.js';
 import {DISCOVERIES_KEY} from '../src/discoveries.js';
-import {GARDEN_KEY,emptyGarden,gardenEffects,plantSeed,chooseBranch,setActive,growPlants} from '../src/garden.js';
+import {GARDEN_KEY,emptyGarden,gardenEffects,autoPlantSeeds,chooseBranch,setActive,growPlants} from '../src/garden.js';
 import {SHOP_KEY} from '../src/shop.js';
 import {SAVE_KEY} from '../src/run-save.js';
 import {ACT2_STORAGE_KEYS} from '../src/act2.js';
@@ -37,16 +37,16 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 {
  const grant={label:'SEED 창립 테스터 선물',rewards:{jp:3000,badges:[FOUNDING_BADGE],seeds:{[FOUNDING_SEED]:1},items:{tonic:2},skins:['founder-glow']}};
  const first=applyRewardGrants(normalizeCloudSnapshot({shop:{coins:100}}),{'founding-tester-2026':grant},5000);
- assert.equal(first.applied.length,1);assert.equal(first.snapshot.shop.coins,3100);assert.equal(first.snapshot.shop.stash.tonic,2);assert.equal(first.snapshot.garden.seeds[FOUNDING_SEED],1);
+ assert.equal(first.applied.length,1);assert.equal(first.snapshot.shop.coins,3100);assert.equal(first.snapshot.shop.stash.tonic,2);assert.equal(first.snapshot.garden.plots[0].seed,FOUNDING_SEED);
  assert.ok(first.snapshot.account.badges.includes(FOUNDING_BADGE)&&first.snapshot.account.skins.includes('founder-glow'));
  const second=applyRewardGrants(first.snapshot,{'founding-tester-2026':grant},6000);
- assert.equal(second.applied.length,0);assert.equal(second.snapshot.shop.coins,3100);assert.equal(second.snapshot.garden.seeds[FOUNDING_SEED],1);
+ assert.equal(second.applied.length,0);assert.equal(second.snapshot.shop.coins,3100);assert.equal(second.snapshot.garden.plots[0].seed,FOUNDING_SEED);
 }
 
 // The beta seed is a garden collectible: it can grow and be displayed, but never changes combat odds.
 {
  let garden=emptyGarden();garden.seeds[FOUNDING_SEED]=1;
- garden=plantSeed(garden,FOUNDING_SEED,0).garden;garden=growPlants(garden,9);garden=chooseBranch(garden,0,'flower').garden;garden=setActive(garden,0,true).garden;
+ garden=autoPlantSeeds(garden);garden=growPlants(garden,9);garden=chooseBranch(garden,0,'flower').garden;garden=setActive(garden,0,true).garden;
  const effects=gardenEffects(garden);assert.equal(effects.actives.length,1);assert.deepEqual(effects.lawWeights,{});assert.equal(effects.freshBonus,0);
 }
 

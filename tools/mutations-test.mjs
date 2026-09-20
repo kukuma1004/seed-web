@@ -4,7 +4,7 @@ import {MUTATIONS,MUTATION_IDS,MUTATION_LAWS,KINDS,RUNE,TUNE,MAX_SHOTS,
  eligibleMutationLaws,withMutationOffer,applyMutation,validMutations,mutationsToSave,mutationsFromSave,
  mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from '../src/mutations.js';
 import {LAWS} from '../src/laws.js';
-import {emptyGarden,addHarvest,plantSeed,growPlants,chooseBranch,setActive,gardenEffects,STAGE_POINTS} from '../src/garden.js';
+import {emptyGarden,addHarvest,growPlants,chooseBranch,setActive,gardenEffects,STAGE_POINTS} from '../src/garden.js';
 
 // 변이는 세 법칙 × 세 갈래, 아홉 개. 모두 이름과 설명이 있다.
 assert.equal(MUTATION_IDS.length,MUTATION_LAWS.length*KINDS.length);
@@ -85,7 +85,7 @@ assert.equal(parseMutationChoice('reflect'),null);assert.equal(parseMutationChoi
 // 정원은 이제 플레이 기록 전용이다. 어떤 식물을 길러도 변이를 열지 않는다.
 {
  let g=addHarvest(emptyGarden(),{seeds:['reflect','chain']});
- g=plantSeed(g,'reflect',0).garden;g=plantSeed(g,'chain',1).garden;g=growPlants(g,STAGE_POINTS.mature);
+ g=growPlants(g,STAGE_POINTS.mature);
  const fx=gardenEffects(g);
  assert.deepEqual(fx.mutationLaws,[],'정원은 변이를 열지 않는다');
  const levels=new Map([['reflect',2],['chain',5]]);

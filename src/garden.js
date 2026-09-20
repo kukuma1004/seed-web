@@ -1,5 +1,5 @@
 // 정원 · 플레이 방식이 식물의 모습으로 남는 개인 기록 공간.
-// 식물은 그대로 장식이며, 오스틴 격파로만 아주 작은 영구 성장점이 남는다.
+// 식물은 플레이 기록을 보여 주는 장식이며, 각 막 최종 보스 격파로 아주 작은 영구 성장점이 남는다.
 import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 
@@ -74,14 +74,14 @@ const plant=p=>{
   branch:BRANCHES.includes(p.branch)?p.branch:PLAY_STYLES[style].branch,active:false};
 };
 const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
-export const emptyGarden=()=>({version:4,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),fragments:0,harvests:0,records:[]});
+export const emptyGarden=()=>({version:5,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),fragments:0,harvests:0,records:[]});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
  const forms=Array.isArray(value.forms)?value.forms.map(entry=>typeof entry==='string'?{id:entry,level:1}:entry).filter(entry=>entry&&Object.hasOwn(ALL_FORMS,entry.id)&&Number.isFinite(entry.level)&&entry.level>0).slice(0,2).map(entry=>({id:entry.id,level:Math.min(999,Math.floor(entry.level))})):[];
  const score=Math.max(0,Math.min(1e9,Math.floor(value.score)||0)),kills=Math.max(0,Math.min(1e7,Math.floor(value.kills)||0)),journey=Math.max(1,Math.min(999,Math.floor(value.journey)||1));
  const elapsed=Math.max(0,Math.min(1e7,Number(value.elapsed)||0)),dashes=Math.max(0,Math.min(1e6,Math.floor(value.dashes)||0)),damageTaken=Math.max(0,Math.min(1e7,Number(value.damageTaken)||0));
- const boss=value.boss==='austin'?'austin':value.boss==='warden'?'warden':null;
+ const boss=['austin','alwaysbeginner','tempestcarrier','warden'].includes(value.boss)?value.boss:null;
  if(!law&&!forms.length&&!score&&!kills)return null;
  return {law,forms,score,kills,journey,boss,elapsed,dashes,damageTaken,style:validStyle(value.style),rare:forms.some(entry=>Object.hasOwn(SECOND_FORMS,entry.id))};
 };
@@ -102,18 +102,20 @@ export function normalizeGarden(value){
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
  return g;
 }
-export function readGarden(storage){try{return normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY)));}catch{return emptyGarden();}}
-export function writeGarden(storage,garden){try{storage?.setItem(GARDEN_KEY,JSON.stringify(normalizeGarden(garden)));return true;}catch{return false;}}
+export function readGarden(storage){try{return autoPlantSeeds(normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY))));}catch{return emptyGarden();}}
+export function writeGarden(storage,garden){try{storage?.setItem(GARDEN_KEY,JSON.stringify(autoPlantSeeds(garden)));return true;}catch{return false;}}
 
-// 오스틴 한 번 격파 = 아직 상한에 닿지 않은 능력 하나에 0.1%.
+// 각 막의 최종 보스 한 번 격파 = 아직 상한에 닿지 않은 능력 하나에 0.1%.
 // 정수 포인트로 저장해서 장기간 플레이해도 0.1+0.1의 소수 오차가 쌓이지 않는다.
-export function grantAustinMastery(garden,random=Math.random){
+export function grantBossMastery(garden,random=Math.random){
  const g=normalizeGarden(garden),total=MASTERY_KEYS.reduce((n,id)=>n+g.mastery[id],0);
  const open=MASTERY_KEYS.filter(id=>g.mastery[id]<MASTERY_STAT_CAP);
  if(total>=MASTERY_TOTAL_CAP||!open.length)return {garden:g,granted:false,id:null,points:0};
  const roll=Math.max(0,Math.min(.999999,Number(random?.())||0)),id=open[Math.floor(roll*open.length)];
  g.mastery[id]++;return {garden:g,granted:true,id,points:g.mastery[id]};
 }
+// 이전 코드와 저장 검사를 위한 이름 호환.
+export const grantAustinMastery=grantBossMastery;
 export function gardenMastery(garden){
  const points=normalizeGarden(garden).mastery,rate=id=>points[id]*MASTERY_STEP;
  return Object.freeze({points:Object.freeze({...points}),power:1+rate('power'),move:1+rate('move'),critical:rate('critical'),cooldownRate:1+rate('cooldown'),maxHp:100*(1+rate('maxHp')),total:MASTERY_KEYS.reduce((n,id)=>n+points[id],0)});
@@ -140,16 +142,48 @@ export function playStyleFromRun({kills=0,elapsed=0,dashes=0,damageTaken=0,warde
  if(elapsed>=180&&damageTaken<=55)return 'endure';
  return 'balanced';
 }
-export function harvestFromRun({levels={},forms={},wardens=0,austins=0,score=0,kills=0,journey=1,elapsed=0,dashes=0,damageTaken=0}={}){
+export function harvestFromRun({levels={},forms={},wardens=0,austins=0,bossId=null,score=0,kills=0,journey=1,elapsed=0,dashes=0,damageTaken=0}={}){
  const law=dominantLaw(levels),seeds=[];
  const style=playStyleFromRun({kills,elapsed,dashes,damageTaken,wardens,austins});
- if(austins>0)seeds.push(GUARDIAN);
+ const finalBoss=bossId||austins>0&&'austin';
+ if(finalBoss==='austin')seeds.push(GUARDIAN);
  // 문지기를 한 번이라도 넘었으면 완성된 씨앗, 못 넘었으면 조각만 남는다.
  if(law&&wardens>0)seeds.push(law);
  const fragments=law&&wardens<=0?1:0;
  const strongest=Object.entries(forms).filter(([id,level])=>Object.hasOwn(ALL_FORMS,id)&&Number.isFinite(level)&&level>0).sort((a,b)=>b[1]-a[1]).slice(0,2).map(([id,level])=>({id,level}));
- const boss=austins>0?'austin':wardens>0?'warden':null;
+ const boss=finalBoss||wardens>0&&'warden'||null;
  return {seeds,fragments,style,growth:1+Math.max(0,wardens)+Math.max(0,austins)*2,record:runRecord({law,forms:strongest,score,kills,journey,boss,elapsed,dashes,damageTaken,style})};
+}
+// 정원은 플레이어가 씨앗을 꺼내 심는 인벤토리가 아니다. 저장에 들어온
+// 씨앗과 조각을 즉시 화단에 반영한다. 빈 화단을 먼저 쓰고, 여섯 칸이
+// 찼으면 같은 종류·갈래는 더 자라며 새 흔적은 가장 덜 자란 일반 식물을
+// 바꾼다. 개척자의 별씨앗은 베타 기념물이므로 자동 교체하지 않는다.
+export function autoPlantSeeds(garden){
+ const g=normalizeGarden(garden),recent=g.records[0];
+ if(recent?.law&&g.fragments>=FRAGMENTS_PER_SEED){
+  const made=Math.floor(g.fragments/FRAGMENTS_PER_SEED);g.fragments%=FRAGMENTS_PER_SEED;
+  g.seeds[recent.law]=Math.min(99,(g.seeds[recent.law]||0)+made);
+  const styles=g.traits[recent.law]||(g.traits[recent.law]=[]);
+  for(let i=0;i<made;i++)styles.push(validStyle(recent.style));
+ }
+ const takeStyle=id=>{
+  const style=validStyle(g.traits[id]?.shift()||recent?.law===id&&recent.style);
+  if(!g.traits[id]?.length)delete g.traits[id];
+  g.seeds[id]--;if(!g.seeds[id])delete g.seeds[id];
+  return style;
+ };
+ for(const id of SEED_IDS)while((g.seeds[id]||0)>0){
+  const nextStyle=validStyle(g.traits[id]?.[0]||recent?.law===id&&recent.style),branch=PLAY_STYLES[nextStyle].branch;
+  let index=g.plots.findIndex(p=>!p);
+  if(index<0){
+   const same=g.plots.findIndex(p=>p.seed===id&&p.branch===branch);
+   if(same>=0){takeStyle(id);g.plots[same].growth=Math.min(999,g.plots[same].growth+1);continue;}
+   const candidates=g.plots.map((p,i)=>({p,i})).filter(({p})=>p.seed!==FOUNDER).sort((a,b)=>a.p.growth-b.p.growth||a.i-b.i);
+   index=(candidates[0]||{i:0}).i;
+  }
+  const style=takeStyle(id);g.plots[index]={seed:id,growth:0,style,branch:PLAY_STYLES[style].branch,active:false};
+ }
+ return g;
 }
 export function addHarvest(garden,harvest){
  const g=normalizeGarden(garden);
@@ -161,21 +195,22 @@ export function addHarvest(garden,harvest){
  g.fragments=Math.min(999,g.fragments+(harvest?.fragments||0));
  const record=runRecord(harvest?.record);if(record)g.records=[record,...g.records].slice(0,MAX_RECORDS);
  g.harvests++;
- return g;
+ return autoPlantSeeds(g);
 }
 export function gardenRecordLine(record){
  const r=runRecord(record);if(!r)return '';
  const build=r.forms.map(entry=>`${ALL_FORMS[entry.id].name} Lv.${entry.level}`).join(' + ')||(r.law?`${LAWS[r.law].name} 법칙`:'이름 없는 씨앗');
- const boss=r.boss==='austin'?'오스틴 격파':r.boss==='warden'?'문지기 돌파':'도전';
+ const boss=r.boss==='austin'?'오스틴 격파':r.boss==='alwaysbeginner'?'항상초심 격파':r.boss==='tempestcarrier'?'요한 격파':r.boss==='warden'?'문지기 돌파':'도전';
  return `여정 ${r.journey} · ${build} · ${boss} · ${r.kills} 처치 · ${PLAY_STYLES[r.style].label}${r.rare?' · 희귀 재융합':''}`;
 }
-// 조각 세 개로 원하는 씨앗 하나를 만든다(실패한 여정도 쌓이면 선택이 된다).
+// 옛 저장과 관리자 도구 호환용. 새 플레이에서는 조각 세 개가 모이면
+// 최근 여정의 법칙 씨앗이 자동으로 만들어져 바로 심긴다.
 export function craftSeed(garden,seedId){
  const g=normalizeGarden(garden);
  if(!SEEDS[seedId]||seedId===GUARDIAN||SEEDS[seedId].exclusive||g.fragments<FRAGMENTS_PER_SEED)return {garden:g,ok:false};
  g.fragments-=FRAGMENTS_PER_SEED;g.seeds[seedId]=Math.min(99,(g.seeds[seedId]||0)+1);
  (g.traits[seedId]||(g.traits[seedId]=[])).push(g.records[0]?.style||'balanced');
- return {garden:g,ok:true};
+ return {garden:autoPlantSeeds(g),ok:true};
 }
 export function plantSeed(garden,seedId,index){
  const g=normalizeGarden(garden);
@@ -289,7 +324,7 @@ export function harvestLine(harvest){
  if(!harvest)return '';
  const names=(harvest.seeds||[]).map(id=>SEEDS[id]?.name).filter(Boolean);
  const parts=[];
- if(names.length)parts.push(`${names.join(' · ')}${objectJosa(names.at(-1))} 얻었어요`);
+ if(names.length)parts.push(`${names.join(' · ')}${objectJosa(names.at(-1))} 정원에 자동으로 심었어요`);
  if(harvest.fragments)parts.push(`씨앗 조각 ${harvest.fragments}개를 주웠어요`);
  if(!parts.length)return '이번 여정에서는 씨앗이 남지 않았어요';
  return parts.join(' · ');

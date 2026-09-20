@@ -62,7 +62,7 @@ import {createWarden,tickWarden,wardenVariantFor,wardenEncounter,DUO_WARDEN,WARD
 import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,austinPatternName,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX} from './score.js';
 import {createOnlineRanking,SEASON,ARCHIVE_SEASON,ACT,runAct} from './online-ranking.js';
-import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantAustinMastery,masteryLine} from './garden.js';
+import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
 import {PATCH_NOTES,hasUnseenNotes,markNotesSeen} from './patch-notes.js';
@@ -336,7 +336,7 @@ function freezeStatic(group){group.updateMatrixWorld(true);group.traverse(o=>{o.
 // Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
 const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage,authProvider:()=>account.tokenSession()});let playerName=lastName(runStorage),rankSerial=0;
 const betaRankingEligible=()=>Boolean((account.native||betaTesterMode)&&account.user()&&!account.user().isAnonymous);
-// 정원의 식물은 시각 기록이고, 오스틴이 남긴 작은 성장점만 전투에 적용된다.
+// 정원의 식물은 시각 기록이고, 각 막의 최종 보스가 남긴 작은 성장점만 전투에 적용된다.
 let garden=readGarden(runStorage);
 // A read-only-looking local art board assembled from in-memory data. It never
 // writes over the tester's garden and cannot be enabled on the public host.
@@ -363,6 +363,9 @@ function ensureGardenScene(){
 const mutations=new Map(),runes=[];
 function austinKnown(){return Boolean(profile?.bosses?.includes('austin'));}
 function refreshGardenEffects(){gardenFx=gardenEffects(garden,activeSlots(garden,{austinDefeated:austinKnown()}));}
+function grantFinalBossGardenMemory(){
+ const result=grantBossMastery(garden,rng);garden=result.garden;writeGarden(runStorage,garden);refreshGardenEffects();return masteryLine(result);
+}
 function gardenGuideLaw(){return gardenFx.formGuides.find(law=>!levels.has(law))||null;}
 function requireName(){const input=$('#player-name'),name=cleanName(input?input.value:playerName);
  // 거른 별명(name-filter.js)은 쓸 수 없다. 휴대폰에서는 안내 줄이 숨겨지므로 칸을 비우고 칸 안에 이유를 적는다.
@@ -677,9 +680,9 @@ function enemyDown(e){
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);audio.play('bossDefeat');
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
- if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const mastery=grantAustinMastery(garden,rng);garden=mastery.garden;writeGarden(runStorage,garden);refreshGardenEffects();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+200원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${masteryLine(mastery)}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}}
- else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+300원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}`;}}
- else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const wallet=earnCoins(runStorage,400);remember('bosses','tempestcarrier');const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+400원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400원 (보유 ${wallet.coins}원)`;}}
+ if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+200원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}`;}}
+ else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+300원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300원 (보유 ${wallet.coins}원) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}`;}}
+ else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const wallet=earnCoins(runStorage,400);remember('bosses','tempestcarrier');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name);itemBarKey='';bossRewardLine=`+400원 · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400원 (보유 ${wallet.coins}원) · ${gardenGrowth}`;}}
  else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;const bossSignal=act3BossAhead()?' · 폭풍 중심에서 거대한 기체음이 들립니다':act2BossAhead()?' · 관중석의 함성이 결승전을 부릅니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':'';$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50원 (보유 ${wallet.coins}원)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':bossSignal}`;}}
  else $('#toast').textContent=stageWarden?'쌍문지기 한 명 격파 · 남은 문지기를 쓰러뜨리세요':'정예 문지기 격파!';
 }
@@ -931,10 +934,10 @@ function showIntro(){trainingSession=null;mirrorSession=null;mirrorReadyRing.vis
  if(betaBoosterGift.granted){showBetaBoosterGift();return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const seeds=Object.values(garden.seeds).reduce((sum,n)=>sum+n,0),planted=garden.plots.filter(Boolean).length,shop=readShop(runStorage);
+ const planted=garden.plots.filter(Boolean).length,shop=readShop(runStorage);
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
  const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
- const gardenLine=planted?`플레이 흔적으로 자란 식물 ${planted}/${garden.plots.length}`:seeds?`심을 씨앗 ${seeds}개`:garden.fragments?`씨앗 조각 ${garden.fragments}개`:'여정의 흔적을 식물로 키워 보세요';
+ const gardenLine=planted?`플레이 흔적으로 자란 식물 ${planted}/${garden.plots.length}`:garden.fragments?`씨앗 조각 ${garden.fragments}/3 · 모이면 자동으로 심겨요`:'여정을 마치면 식물이 저절로 심겨요';
  $('#overlay').innerHTML=`<div class="menu-panel">
   <p class="eyebrow">SEED</p><h2>잠든 정원</h2>
   ${nameFieldHtml()}
@@ -1056,7 +1059,7 @@ function showCloudGift(grants){
   const r=grant.rewards||{},lines=[];
   if(r.jp)lines.push(`<li><strong>${Number(r.jp).toLocaleString('ko-KR')} JP</strong><small>상점에서 사용할 수 있어요</small></li>`);
   for(const id of r.badges||[])lines.push(`<li><strong>✦ ${escapeHtml(BADGES[id]?.name||id)}</strong><small>${escapeHtml(BADGES[id]?.description||'계정에 남는 특별 배지')}</small></li>`);
-  for(const [id,n] of Object.entries(r.seeds||{}))lines.push(`<li><strong>${escapeHtml(SEEDS[id]?.name||id)} ×${n}</strong><small>나의 정원 씨앗 상자에 들어갔어요</small></li>`);
+  for(const [id,n] of Object.entries(r.seeds||{}))lines.push(`<li><strong>${escapeHtml(SEEDS[id]?.name||id)} ×${n}</strong><small>나의 정원 화단에 자동으로 심겼어요</small></li>`);
   for(const id of r.skins||[])lines.push(`<li><strong>스킨 · ${escapeHtml(id)}</strong><small>계정 보관함에 등록되었어요</small></li>`);
   for(const [id,n] of Object.entries(r.items||{}))lines.push(`<li><strong>${escapeHtml(ITEMS[id]?.name||id)} ×${n}</strong><small>출발 상점 보관함에 들어갔어요</small></li>`);
   return lines;
@@ -1211,8 +1214,9 @@ function showEnd(deathReport=null){touch.reset();$('#overlay').classList.remove(
  if(developerRun){$('#overlay').hidden=false;$('#overlay').classList.add('intro','menu-screen','developer-mode');$('#overlay').innerHTML='<div class="menu-panel developer-panel developer-end"><p class="eyebrow">SEED · ADMIN ONLY</p><h2>실험 종료</h2><p>점수·보상·도감·정원·저장에는 아무것도 남지 않았습니다.</p><div class="developer-footer"><button id="developer-retry">실험실로</button><button id="developer-end-main">메인으로</button></div></div>';$('#developer-retry').onclick=showDeveloperLab;$('#developer-end-main').onclick=showIntro;return;}
  const serial=++rankSerial,name=playerName||lastName(runStorage),ranked=!localInspection&&!developerRun&&score>0&&Boolean(name);
  const build=buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated});
- // 정원: 이번 여정이 남긴 씨앗을 넣고, 심어 둔 식물에 성장점을 준다.
- lastHarvest=harvestFromRun({levels:Object.fromEntries(effectiveLevels(levels,heldForms)),forms:Object.fromEntries(heldForms),wardens:wardensDefeated,austins:austinsDefeated,score,kills,journey:cycle+1,elapsed,dashes:runDashes,damageTaken:runDamageTaken});
+ // 정원: 이번 여정이 남긴 씨앗을 자동으로 심고, 심어진 식물에 성장점을 준다.
+ const gardenBoss=austinsDefeated>0?(isAct3(region)?'tempestcarrier':isAct2(region)?'alwaysbeginner':'austin'):null;
+ lastHarvest=harvestFromRun({levels:Object.fromEntries(effectiveLevels(levels,heldForms)),forms:Object.fromEntries(heldForms),wardens:wardensDefeated,austins:austinsDefeated,bossId:gardenBoss,score,kills,journey:cycle+1,elapsed,dashes:runDashes,damageTaken:runDamageTaken});
  garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);refreshGardenEffects();
  // 보낼 값은 판이 끝난 지금 그대로 찍어 둔다. 예전에는 flush()가 끝난 뒤에야 점수·처치를 읽어서,
  // 그 사이에 다음 판을 시작하면 앞뒤가 안 맞는 기록이 랭킹에 올라갔다.
