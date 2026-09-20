@@ -8,7 +8,7 @@ export const GARDEN_KEY='seed-garden-v1';
 // 지우지 않고 이 한 플래그로 진입점만 닫아, 나중에 검토 후 다시 열 수 있다.
 export const GARDEN_TRAINING_VISIBLE=false;
 export const PLOTS=6,ACTIVE_SLOTS=3,MAX_ACTIVE_SLOTS=4,FRAGMENTS_PER_SEED=3,MAX_RECORDS=12,GUARDIAN='clocktower',FOUNDER='founder';
-export const MASTERY_STEP=.001,MASTERY_STAT_CAP=30,MASTERY_TOTAL_CAP=100;
+export const MASTERY_STEP=.001,MASTERY_STAT_CAP=30,MASTERY_TOTAL_CAP=100,BOSS_BLOOM_EVERY=5,BOSS_FRUIT_EVERY=4;
 export const MASTERY=Object.freeze({
  power:{name:'공격력',desc:'모든 공격 피해'},
  move:{name:'이동 속도',desc:'씨앗 이동 속도'},
@@ -112,7 +112,11 @@ export function grantBossMastery(garden,random=Math.random){
  const open=MASTERY_KEYS.filter(id=>g.mastery[id]<MASTERY_STAT_CAP);
  if(total>=MASTERY_TOTAL_CAP||!open.length)return {garden:g,granted:false,id:null,points:0};
  const roll=Math.max(0,Math.min(.999999,Number(random?.())||0)),id=open[Math.floor(roll*open.length)];
- g.mastery[id]++;return {garden:g,granted:true,id,points:g.mastery[id]};
+ g.mastery[id]++;
+ const earned=Math.floor((total+1)/BOSS_BLOOM_EVERY),milestone=(total+1)%BOSS_BLOOM_EVERY===0
+  ? {type:earned%BOSS_FRUIT_EVERY===0?'fruit':'flower',count:earned}
+  : null;
+ return {garden:g,granted:true,id,points:g.mastery[id],milestone};
 }
 // 이전 코드와 저장 검사를 위한 이름 호환.
 export const grantAustinMastery=grantBossMastery;
@@ -120,9 +124,16 @@ export function gardenMastery(garden){
  const points=normalizeGarden(garden).mastery,rate=id=>points[id]*MASTERY_STEP;
  return Object.freeze({points:Object.freeze({...points}),power:1+rate('power'),move:1+rate('move'),critical:rate('critical'),cooldownRate:1+rate('cooldown'),maxHp:100*(1+rate('maxHp')),total:MASTERY_KEYS.reduce((n,id)=>n+points[id],0)});
 }
+// 저장을 따로 늘리지 않고 보스 성장점에서 정원의 기념 식물을 계산한다.
+// 찐보스 다섯 번마다 기억꽃 하나, 네 번째 꽃마다 황금 열매 하나가 된다.
+export function bossGardenMilestones(garden){
+ const defeats=gardenMastery(garden).total,earned=Math.floor(defeats/BOSS_BLOOM_EVERY),fruits=Math.floor(earned/BOSS_FRUIT_EVERY);
+ return Object.freeze({defeats,earned,flowers:earned-fruits,fruits,next:defeats>=MASTERY_TOTAL_CAP?0:BOSS_BLOOM_EVERY-defeats%BOSS_BLOOM_EVERY});
+}
 export function masteryLine(result){
  if(!result?.granted||!MASTERY[result.id])return '정원 성장이 최대치에 도달했습니다';
- return `정원 성장 · ${MASTERY[result.id].name} +0.1% (현재 ${(result.points/10).toFixed(1)}%)`;
+ const bloom=result.milestone?.type==='fruit'?' · 황금 열매가 맺혔습니다':result.milestone?' · 기억꽃이 피었습니다':'';
+ return `정원 성장 · ${MASTERY[result.id].name} +0.1% (현재 ${(result.points/10).toFixed(1)}%)${bloom}`;
 }
 
 // 어떤 씨앗이 남는가: 가장 깊게 키운 법칙이 결정한다. 오스틴을 이기면 시계탑 씨앗이 함께 남는다.

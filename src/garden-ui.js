@@ -3,7 +3,7 @@
 import {LAWS} from './laws.js';
 import {lawArt} from './law-art.js';
 import {harvestLine,gardenRecordLine,SEEDS,FOUNDER,STAGES,STAGE_NAMES,STAGE_POINTS,PLAY_STYLES,MASTERY,MASTERY_KEYS,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE,
- stageOf,nextStagePoints,plantName,branchSummary,centerInfo,gardenMastery} from './garden.js';
+ stageOf,nextStagePoints,plantName,branchSummary,centerInfo,gardenMastery,bossGardenMilestones} from './garden.js';
 import './garden.css';
 
 const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -26,6 +26,9 @@ const growthBar=growth=>{
 export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClose,onTraining,austinDefeated=false}){
  const planted=garden.plots.filter(Boolean).length,center=centerInfo(garden,{austinDefeated});
  const mastery=gardenMastery(garden),masteryRows=MASTERY_KEYS.map(id=>`<span><b>${escape(MASTERY[id].name)}</b><em>+${(mastery.points[id]/10).toFixed(1)}%</em></span>`).join('');
+ const keepsake=bossGardenMilestones(garden),keepsakeLine=keepsake.earned
+  ? `기억꽃 ${keepsake.flowers}송이 · 황금 열매 ${keepsake.fruits}개${keepsake.next?` · 다음 개화까지 ${keepsake.next}회`:''}`
+  : `찐보스 ${keepsake.next}회 격파하면 첫 기억꽃이 피어요`;
  const fragmentLine=garden.fragments?`<p class="garden-auto-note">씨앗 조각 ${garden.fragments}/3 · 세 조각이 모이면 최근 여정의 식물이 자동으로 돋아요.</p>`:'';
 
  let body;
@@ -50,7 +53,7 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
 
  root.innerHTML=`<aside class="garden-panel${selection?'':' idle'}">
   <header><strong>나의 정원</strong><small>${escape(center.name)}</small></header>
-  <section class="garden-mastery"><div><strong>보스의 기억</strong><small>각 막의 최종 보스 격파마다 무작위 능력 +0.1%</small></div><p>${masteryRows}</p><small>누적 ${mastery.total}/${MASTERY_TOTAL_CAP} · 능력별 최대 3%</small></section>
+  <section class="garden-mastery"><div><strong>보스의 기억</strong><small>각 막의 최종 보스 격파마다 무작위 능력 +0.1%</small></div><p>${masteryRows}</p><small>누적 ${mastery.total}/${MASTERY_TOTAL_CAP} · 능력별 최대 3%</small><div class="garden-keepsake"><b>✦</b><span>${keepsakeLine}</span></div></section>
   <div class="panel-body">${body}</div>
   <footer><small>자라고 있는 식물 ${planted}/6 · 식물은 플레이 기록</small><div>${GARDEN_TRAINING_VISIBLE&&onTraining?'<button class="ghost small" id="garden-training">훈련장</button>':''}<button class="primary" id="garden-close">돌아가기</button></div></footer>
  </aside>`;

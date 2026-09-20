@@ -340,7 +340,7 @@ const betaRankingEligible=()=>Boolean((account.native||betaTesterMode)&&account.
 let garden=readGarden(runStorage);
 // A read-only-looking local art board assembled from in-memory data. It never
 // writes over the tester's garden and cannot be enabled on the public host.
-if(localInspection&&new URLSearchParams(location.search).has('gardenLab'))garden=normalizeGarden({...garden,harvests:30,plots:[
+if(localInspection&&new URLSearchParams(location.search).has('gardenLab'))garden=normalizeGarden({...garden,harvests:30,mastery:{power:4,move:4,critical:4,cooldown:4,maxHp:4},plots:[
  {seed:'reflect',growth:0,style:'balanced'},{seed:'split',growth:2,style:'agile'},
  {seed:'chain',growth:4,style:'rush'},{seed:'orbit',growth:9,style:'endure'},
  {seed:'gravity',growth:9,style:'agile'},{seed:'frost',growth:9,style:'rush'}

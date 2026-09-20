@@ -3,7 +3,8 @@ import {SEEDS,SEED_IDS,GUARDIAN,FOUNDER,PLOTS,FRAGMENTS_PER_SEED,MAX_RECORDS,STA
  stageOf,nextStagePoints,emptyGarden,normalizeGarden,readGarden,writeGarden,harvestFromRun,addHarvest,craftSeed,
  uproot,growPlants,activePlants,plantName,plantSummary,branchSummary,gardenEffects,dominantLaw,autoPlantSeeds,
  harvestLine,gardenRecordLine,objectJosa,wayJosa,CENTER,centerStage,centerInfo,activeSlots,bloomedCount,
- playStyleFromRun,grantBossMastery,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE} from '../src/garden.js';
+ playStyleFromRun,grantBossMastery,grantAustinMastery,gardenMastery,masteryLine,MASTERY_STAT_CAP,MASTERY_TOTAL_CAP,GARDEN_TRAINING_VISIBLE,
+ bossGardenMilestones,BOSS_BLOOM_EVERY,BOSS_FRUIT_EVERY} from '../src/garden.js';
 import {LAWS} from '../src/laws.js';
 import {GARDEN_GROWTH_ART,growthArtTile,centerArtTile} from '../src/garden-scene.js';
 
@@ -116,6 +117,19 @@ assert.ok(harvestLine({seeds:[],fragments:1}).includes('조각 1개'));
  g=grantAustinMastery(g,()=>0).garden;assert.equal(g.mastery.move,1);
  for(let i=31;i<MASTERY_TOTAL_CAP;i++)g=grantAustinMastery(g,()=>.999999).garden;
  assert.ok(gardenMastery(g).total<=MASTERY_TOTAL_CAP);
+}
+
+// 저장을 늘리지 않는 보스 기념 식물: 5회마다 꽃, 네 번째 기념은 열매다.
+{
+ let g=emptyGarden();
+ for(let i=0;i<BOSS_BLOOM_EVERY-1;i++)g=grantBossMastery(g,()=>i/10).garden;
+ assert.deepEqual(bossGardenMilestones(g),{defeats:4,earned:0,flowers:0,fruits:0,next:1});
+ const flower=grantBossMastery(g,()=>.4);g=flower.garden;
+ assert.equal(flower.milestone.type,'flower');assert.ok(masteryLine(flower).includes('기억꽃'));
+ for(let i=5;i<BOSS_BLOOM_EVERY*BOSS_FRUIT_EVERY-1;i++)g=grantBossMastery(g,()=>i/100).garden;
+ const fruit=grantBossMastery(g,()=>.9);g=fruit.garden;
+ assert.equal(fruit.milestone.type,'fruit');assert.ok(masteryLine(fruit).includes('황금 열매'));
+ assert.deepEqual(bossGardenMilestones(g),{defeats:20,earned:4,flowers:3,fruits:1,next:5});
 }
 
 console.log('정원: 자동 심기·전 막 보스 0.1% 성장·옛 저장 이관·저장 통과');

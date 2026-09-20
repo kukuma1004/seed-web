@@ -3,7 +3,7 @@
 // 식물은 씨앗 색과 성장 단계, 갈래로 모양이 달라진다. 그림이 준비되면 이 모양만 교체하면 된다.
 import * as THREE from 'three';
 import {LAWS} from './laws.js';
-import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN} from './garden.js';
+import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN,bossGardenMilestones} from './garden.js';
 
 const V=THREE.Vector3;
 // The painted terrace has two beds in each of three depth rows. These fallback
@@ -191,6 +191,14 @@ export function createGardenScene(){
  scene.add(fireflies);
 
  const plantGroup=new THREE.Group(),centerGroup=new THREE.Group();scene.add(plantGroup,centerGroup);
+ // 찐보스 5회마다 생기는 기념 식물. 최대 20개를 꽃/열매 두 인스턴스
+ // 묶음으로 그려 드로우콜과 메모리 할당을 일정하게 유지한다.
+ const blossomShape=new THREE.Shape();
+ for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=i%2===0?.15:.07,x=Math.cos(a)*r,y=Math.sin(a)*r;i?blossomShape.lineTo(x,y):blossomShape.moveTo(x,y);}blossomShape.closePath();
+ const blossomGeo=new THREE.ShapeGeometry(blossomShape),blossomMat=new THREE.MeshBasicMaterial({color:0xffdc79,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const fruitGeo=new THREE.IcosahedronGeometry(.14,1),fruitMat=new THREE.MeshStandardMaterial({color:0xffc857,emissive:0xffa21a,emissiveIntensity:.6,roughness:.38,metalness:.08});
+ const bossBlossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,20),bossFruits=new THREE.InstancedMesh(fruitGeo,fruitMat,5);
+ bossBlossoms.count=0;bossFruits.count=0;bossBlossoms.renderOrder=4;bossFruits.renderOrder=4;scene.add(bossBlossoms,bossFruits);
  // The painted beds already show every empty slot. The raycast meshes stay
  // present for tapping, but draw nothing until one slot is actually selected.
  const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
@@ -206,7 +214,7 @@ export function createGardenScene(){
  // 정원에서 움직이지 않는 표시는 행렬 계산을 잠가 둔다.
  for(const fixed of [...markers,centerPick])if(fixed){fixed.updateMatrix();fixed.matrixAutoUpdate=false;}
  const picks=[],raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();
- let plants=[],center=null,selected=-1,time=0;
+ let plants=[],center=null,selected=-1,time=0,milestoneCount=0;
  const anchorRay=new THREE.Raycaster(),anchorNdc=new THREE.Vector2(),groundPlane=new THREE.Plane(new V(0,1,0),0),anchorPoint=new V();
  const anchorWorld=(anchor,target)=>{
   // The background uses a centred cover crop. Undo that crop first, then cast
@@ -216,6 +224,23 @@ export function createGardenScene(){
   anchorNdc.set(u*2-1,1-v*2);anchorRay.setFromCamera(anchorNdc,camera);
   if(anchorRay.ray.intersectPlane(groundPlane,anchorPoint))target.set(anchorPoint.x,0,anchorPoint.z);
  };
+ const milestoneMatrix=new THREE.Matrix4(),milestonePosition=new THREE.Vector3(),milestoneScale=new THREE.Vector3(),milestoneRotation=new THREE.Quaternion();
+ function syncMilestones(){
+  let flower=0,fruit=0;
+  for(let i=0;i<milestoneCount;i++){
+   const spot=plotSpots[i%plotSpots.length],layer=Math.floor(i/plotSpots.length),a=(i%plotSpots.length)*2.31+layer*.83;
+   const radius=.34+layer*.11,isFruit=(i+1)%4===0;
+   milestonePosition.set(spot.x+Math.cos(a)*radius,isFruit?.22:.32,spot.z+Math.sin(a)*radius*.72);
+   if(isFruit){
+    milestoneRotation.setFromAxisAngle(new V(0,1,0),a);milestoneScale.setScalar(1+layer*.04);
+    milestoneMatrix.compose(milestonePosition,milestoneRotation,milestoneScale);bossFruits.setMatrixAt(fruit++,milestoneMatrix);
+   }else{
+    milestoneRotation.copy(camera.quaternion);milestoneScale.setScalar(1+layer*.035);
+    milestoneMatrix.compose(milestonePosition,milestoneRotation,milestoneScale);bossBlossoms.setMatrixAt(flower++,milestoneMatrix);
+   }
+  }
+  bossBlossoms.count=flower;bossFruits.count=fruit;bossBlossoms.instanceMatrix.needsUpdate=true;bossFruits.instanceMatrix.needsUpdate=true;
+ }
  syncAnchors=()=>{
   PLOT_ANCHORS.forEach((anchor,index)=>{
    const spot=plotSpots[index];anchorWorld(anchor,anchorPoint);spot.x=anchorPoint.x;spot.z=anchorPoint.z;
@@ -225,6 +250,7 @@ export function createGardenScene(){
   centerPick.position.set(centerSpot.x,.035,centerSpot.z);centerPick.updateMatrix();
   for(const plant of plants){const spot=plotSpots[plant.userData.plot];if(spot)plant.position.set(spot.x,0,spot.z);}
   if(center)center.position.set(centerSpot.x,0,centerSpot.z);
+  syncMilestones();
  };
 
  function clearGroup(group){
@@ -249,6 +275,7 @@ export function createGardenScene(){
   center=buildCenter(centerStage(garden,{austinDefeated}),artKit);
   center.position.set(centerSpot.x,0,centerSpot.z);
   centerGroup.add(center);
+  milestoneCount=bossGardenMilestones(garden).earned;syncMilestones();
   picks.push(centerPick);
   select(selected);
  }
@@ -277,6 +304,8 @@ export function createGardenScene(){
   });
   fireflies.instanceMatrix.needsUpdate=true;
   fireflyMat.opacity=.55+Math.sin(time*2.2)*.25;
+  blossomMat.opacity=.82+Math.sin(time*1.7)*.1;
+  fruitMat.emissiveIntensity=.48+Math.sin(time*1.35)*.12;
  }
  function resize(width,height){camera.aspect=width/Math.max(1,height);viewAspect=camera.aspect;camera.updateProjectionMatrix();fitBackdrop(backdrop);syncAnchors();}
  // 화면 좌표(0~1)로 무엇을 눌렀는지 알려 준다.
