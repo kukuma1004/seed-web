@@ -10,16 +10,31 @@ export function act3Available(where=globalThis.location){return ACT3_RELEASED||[
 export function playableAct3Region(region,where=globalThis.location){return isAct3(region)&&!act3Available(where)?'garden':region;}
 
 export const ACT3_PRESSURE=Object.freeze({
- hp:1.22,speed:1.14,projectile:1.18,bossTempo:1.1,
- crowdInitial:8,crowdInterval:.84,crowdExtra:Object.freeze([2,3,4,5,0])
+ hp:1.24,speed:1.16,projectile:1.2,bossTempo:1.12,
+ crowdInitial:10,crowdInterval:.68,crowdExtra:Object.freeze([6,8,10,12,0]),
+ projectileCapLow:48,projectileCapNormal:64
 });
 
+// The sky route is a shooter stage first. Only one slot in twelve is a charger;
+// the rest keep pressure on the player with aimed fire and overlapping lanes.
+export function act3CrowdType(index,stage=0){
+ const slot=(index+stage*3)%12;
+ if(slot===9)return 'sky-diver';
+ if(slot===4||slot===10)return 'sky-bomber';
+ if(stage>=2&&slot===7)return 'sky-carrier';
+ return 'sky-scout';
+}
+export function act3ReinforcementSpawn(index){
+ const lanes=[-7.6,-5.1,-2.55,0,2.55,5.1,7.6];
+ return Object.freeze({x:lanes[index%lanes.length],z:-7.2+(Math.floor(index/lanes.length)%2)*.9});
+}
+
 export const SKYWAY_ROOMS=Object.freeze([
- Object.freeze({name:'상승 기류',hint:'V자 편대의 가운데를 비우고 날개 끝부터 끊으세요',covers:[],enemies:[['sky-scout',-4.8,-4.8],['sky-scout',0,-6.1],['sky-scout',4.8,-4.8]]}),
- Object.freeze({name:'구름 협곡',hint:'돌격기의 짧은 섬광을 본 뒤 옆으로 빠지고 폭격탄 사이를 지나세요',covers:[],enemies:[['sky-diver',-4.5,-4.8],['sky-bomber',0,-6.2],['sky-diver',4.5,-4.8]]}),
- Object.freeze({name:'뇌운 회랑',hint:'속도가 다른 탄은 한 번에 피하지 말고 두 번에 나누어 가르세요',covers:[],enemies:[['sky-bomber',-4.2,-5.6],['sky-bomber',4.2,-5.6],['sky-scout',0,-3.8]]}),
- Object.freeze({name:'공중 함대',hint:'뒤에서 탄을 뿌리는 모함을 먼저 노릴지 돌격 편대를 먼저 끊을지 정하세요',covers:[],enemies:[['sky-carrier',0,-6.1],['sky-diver',-5.8,-3.8],['sky-diver',5.8,-3.8],['sky-scout',0,-2.5]]}),
- Object.freeze({name:'폭풍 관문',hint:'편대 문지기의 날개가 접히면 돌진, 펼쳐지면 교차 사격입니다',covers:[],enemies:[['act3warden',0,-4.7],['sky-scout',-5.7,-5.6],['sky-scout',5.7,-5.6]]})
+ Object.freeze({name:'상승 기류',hint:'전진하는 V자 편대의 날개 끝부터 끊고 중앙 탄선을 가르세요',covers:[],enemies:[['sky-scout',-5.6,-4.4],['sky-scout',-2.8,-5.3],['sky-scout',0,-6.2],['sky-scout',2.8,-5.3],['sky-scout',5.6,-4.4]]}),
+ Object.freeze({name:'구름 협곡',hint:'폭격탄 사이를 옮겨 다니고 붉은 돌격기만 짧게 크게 피하세요',covers:[],enemies:[['sky-scout',-6,-5],['sky-scout',-2.5,-5.8],['sky-bomber',0,-6.5],['sky-scout',2.5,-5.8],['sky-diver',6,-5]]}),
+ Object.freeze({name:'뇌운 회랑',hint:'빠른 탄을 먼저 넘고 느린 탄의 빈 줄로 두 번 나누어 이동하세요',covers:[],enemies:[['sky-bomber',-5,-6],['sky-scout',-2.5,-4.6],['sky-scout',0,-6.5],['sky-scout',2.5,-4.6],['sky-bomber',5,-6]]}),
+ Object.freeze({name:'공중 함대',hint:'모함의 넓은 탄막을 읽으며 작은 편대부터 잘라 안전한 항로를 만드세요',covers:[],enemies:[['sky-carrier',0,-6.4],['sky-scout',-5.8,-5.4],['sky-bomber',-2.8,-4.6],['sky-scout',2.8,-4.6],['sky-scout',5.8,-5.4],['sky-diver',0,-3.6]]}),
+ Object.freeze({name:'폭풍 관문',hint:'문지기의 교차 탄막을 따라 이동하며 양쪽 호위 편대를 먼저 끊으세요',covers:[],enemies:[['act3warden',0,-5.2],['sky-scout',-6,-6],['sky-scout',-3.3,-4.8],['sky-scout',3.3,-4.8],['sky-scout',6,-6]]})
 ]);
 
 export const ACT3_ARENA=Object.freeze({

@@ -11,7 +11,8 @@ const reducedAtlases=Object.freeze({
  'enemy-pitcher-v1.webp':'mobile/enemy-pitcher-v1.webp','enemy-runner-v1.webp':'mobile/enemy-runner-v1.webp',
  'enemy-batter-v1.webp':'mobile/enemy-batter-v1.webp','warden-act2-ace-v1.webp':'mobile/warden-act2-ace-v1.webp',
  'warden-act2-diamond-v1.webp':'mobile/warden-act2-diamond-v1.webp','warden-act2-slugger-v1.webp':'mobile/warden-act2-slugger-v1.webp',
- 'boss-always-beginner-v1.webp':'mobile/boss-always-beginner-v1.webp'
+ 'boss-always-beginner-v1.webp':'mobile/boss-always-beginner-v1.webp',
+ 'enemy-act3-flight-atlas-v2.webp':'mobile/enemy-act3-flight-atlas-v2.webp','boss-act3-johan-atlas-v2.webp':'mobile/boss-act3-johan-atlas-v2.webp'
 });
 let reduced=false;
 export function configureActorArt({reducedTextures=false}={}){reduced=Boolean(reducedTextures);}
@@ -74,21 +75,23 @@ function billboard(mesh,camera,size,baseline){
  };
 }
 
-export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],baseline=.04,preserveBody=false,occlusion=true}){
+export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],atlasFrame=null,topDownFacing=false,baseline=.04,preserveBody=false,occlusion=true,lighting=true}){
  const body=e.body||e.motion?.body||e.g;
  // Turret head/orbit materials remain live gameplay references until death.
  for(const child of [...body.children])if(preserveBody)child.visible=false;else release(child);
- const texture=atlas(file),geometry=directional?actorFrameGeometry(0):ACTOR_ART_GEOMETRIES.full;
- const mat=applySpriteLighting(new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}),{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065});
+ const texture=atlas(file),firstFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,geometry=Number.isFinite(firstFrame)?actorFrameGeometry(firstFrame):directional?actorFrameGeometry(0):ACTOR_ART_GEOMETRIES.full;
+ const baseMaterial=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const mat=lighting?applySpriteLighting(baseMaterial,{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065}):baseMaterial;
  const sprite=new THREE.Mesh(geometry,mat);sprite.scale.set(size,size,1);billboard(sprite,camera,size,baseline);body.add(sprite);
  const ghostMat=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.26,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xffad7a,side:THREE.DoubleSide,forceSinglePass:true});
  const ghost=new THREE.Mesh(geometry,ghostMat);ghost.name='quality-occlusion-ghost';ghost.visible=occlusion;ghost.scale.set(size,size,1);ghost.renderOrder=2;billboard(ghost,camera,size,baseline);body.add(ghost);
  e.updateArt=(time)=>{
-  const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
-  const frame=seedFrame(e.g.rotation.y,yaw),nextGeometry=directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
+ const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
+  const frame=seedFrame(e.g.rotation.y,yaw),fixedFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,nextGeometry=Number.isFinite(fixedFrame)?actorFrameGeometry(fixedFrame):directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
   sprite.geometry=ghost.geometry=nextGeometry;
   const impact=THREE.MathUtils.clamp((e.hit||0)/.14,0,1),reaction=(e.impactSide||1)*impact*.105;
-  sprite.userData.roll=ghost.userData.roll=actorArtRotation(e.state,time,e.phase)+reaction;
+  const facingRoll=topDownFacing?Math.atan2(Math.sin(e.g.rotation.y-yaw+Math.PI),Math.cos(e.g.rotation.y-yaw+Math.PI)):0;
+  sprite.userData.roll=ghost.userData.roll=facingRoll+actorArtRotation(e.state,time,e.phase)+reaction;
   sprite.scale.set(size*(1+impact*.045),size*(1-impact*.035),1);ghost.scale.copy(sprite.scale);
   mat.color.setHex(e.block>0?0xb5efff:e.hit>0?0xffd1aa:(e.tint??0xffffff));
   ghost.visible=occlusion&&silhouettes.enabled&&(!silhouettes.test||silhouettes.test(e.g.position));

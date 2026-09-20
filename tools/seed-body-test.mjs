@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,THEME_CREST_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame,stableSeedFrame} from '../src/seed-body.js';
-import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry} from '../src/actor-art.js';
+import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry,actorArtFile} from '../src/actor-art.js';
 for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw,yaw),0);
  assert.equal(seedFrame(yaw+Math.PI/2,yaw),1);
@@ -50,4 +50,6 @@ assert.equal(actorArtRotation('stalk',2,.7),Math.sin(18+.7)*.025);
 console.log('Austin named phases and mob gait phases produce finite sprite poses.');
 assert.equal(new Set(Object.values(ACTOR_ART_GEOMETRIES)).size,5);
 for(let frame=0;frame<4;frame++)assert.equal(actorFrameGeometry(frame+4),actorFrameGeometry(frame));
+assert.equal(actorArtFile('enemy-act3-flight-atlas-v2.webp',{reducedTextures:true}),'mobile/enemy-act3-flight-atlas-v2.webp');
+assert.equal(actorArtFile('boss-act3-johan-atlas-v2.webp',{reducedTextures:true}),'mobile/boss-act3-johan-atlas-v2.webp');
 console.log('Directional actor art reuses one atlas with four shared UV planes.');

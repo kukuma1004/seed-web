@@ -27,36 +27,45 @@ const craft=(kind)=>{
 
 export const ACT3_GEOMETRIES=Object.freeze({
  scout:craft('scout'),diver:craft('diver'),bomber:craft('bomber'),carrier:craft('carrier'),warden:craft('warden'),boss:craft('boss'),
- tellRing:new THREE.RingGeometry(.78,1,24),tellLine:new THREE.PlaneGeometry(.22,11),bolt:merge([tint(new THREE.OctahedronGeometry(.24,0).scale(.65,.65,1.45),0xd7f7ff),tint(new THREE.ConeGeometry(.12,.65,5).rotateX(-Math.PI/2).translate(0,0,.45),0x66d9ff)])
+ tellRing:new THREE.RingGeometry(.78,1,24),tellLine:new THREE.PlaneGeometry(.22,11),bolt:merge([tint(new THREE.OctahedronGeometry(.24,0).scale(.65,.65,1.45),0xd7f7ff),tint(new THREE.ConeGeometry(.12,.65,5).rotateX(-Math.PI/2).translate(0,0,.45),0x66d9ff)]),
+ bossBolt:merge([tint(new THREE.OctahedronGeometry(.29,0).scale(.72,.72,1.42),0xff9cf4),tint(new THREE.TorusGeometry(.27,.045,4,12).rotateX(Math.PI/2),0x8deaff)])
 });
 export const ACT3_MATERIALS=Object.freeze({
  craft:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.46,metalness:.18,emissive:0x132e38,emissiveIntensity:.38}),
  warning:new THREE.MeshBasicMaterial({color:0xffa65c,transparent:true,opacity:.68,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
  bossWarning:new THREE.MeshBasicMaterial({color:0xe175ff,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
- bolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false})
+ bolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),bossBolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false})
 });
 
-const CONFIG=Object.freeze({
- 'sky-scout':{kind:'scout',hp:48,speed:3.7,damage:12,cooldown:1.35},
- 'sky-diver':{kind:'diver',hp:62,speed:4.1,damage:20,cooldown:1.55},
- 'sky-bomber':{kind:'bomber',hp:84,speed:2.35,damage:14,cooldown:1.8},
- 'sky-carrier':{kind:'carrier',hp:170,speed:1.4,damage:15,cooldown:1.55}
+export const ACT3_MINIONS=Object.freeze({
+ 'sky-scout':{kind:'scout',hp:54,speed:3.85,damage:11,cooldown:1.05},
+ 'sky-diver':{kind:'diver',hp:28,speed:5.3,damage:18,cooldown:1.9},
+ 'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.52},
+ 'sky-carrier':{kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.25}
 });
-export const isAct3Minion=type=>Object.hasOwn(CONFIG,type);
+export const ACT3_ART=Object.freeze({
+ 'sky-scout':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:0,size:1.72,baseline:.08}),
+ 'sky-diver':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:1,size:1.46,baseline:.08}),
+ 'sky-bomber':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:2,size:2.18,baseline:.08}),
+ 'sky-carrier':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:3,size:2.48,baseline:.08}),
+ act3warden:Object.freeze({file:'boss-act3-johan-atlas-v2.webp',frame:0,size:3.55,baseline:.08}),
+ tempestcarrier:Object.freeze({file:'boss-act3-johan-atlas-v2.webp',frames:Object.freeze([1,2,3]),size:4.35,baseline:.08})
+});
+export const isAct3Minion=type=>Object.hasOwn(ACT3_MINIONS,type);
 
 function baseActor(scene,type,kind,hp){
- const g=new THREE.Group(),body=new THREE.Mesh(ACT3_GEOMETRIES[kind],ACT3_MATERIALS.craft);body.castShadow=false;body.receiveShadow=false;g.add(body);
+ const g=new THREE.Group(),body=new THREE.Group(),fallback=new THREE.Mesh(ACT3_GEOMETRIES[kind],ACT3_MATERIALS.craft);fallback.castShadow=false;fallback.receiveShadow=false;body.add(fallback);g.add(body);
  const tell=new THREE.Mesh(ACT3_GEOMETRIES.tellRing,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);tell.rotation.x=-Math.PI/2;tell.position.y=.12;tell.visible=false;g.add(tell);
  const line=new THREE.Mesh(ACT3_GEOMETRIES.tellLine,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);line.rotation.x=-Math.PI/2;line.position.set(0,.11,5);line.visible=false;g.add(line);scene.add(g);
  return {g,body,tell,line,type,hp,maxHp:hp,state:'stalk',timer:.7,phase:0,hit:0,dir:new V(0,0,1),before:new V(),target:new V(),moveName:'',hint:'',attacks:0,pattern:0};
 }
 
 export function createAct3Minion(scene,type,random=Math.random){
- const c=CONFIG[type];if(!c)throw new Error(`Unknown act-3 minion ${type}`);const e=baseActor(scene,type,c.kind,c.hp);e.config=c;e.phase=random()*Math.PI*2;e.lane=random()<.5?-1:1;return e;
+ const c=ACT3_MINIONS[type];if(!c)throw new Error(`Unknown act-3 minion ${type}`);const e=baseActor(scene,type,c.kind,c.hp);e.config=c;e.phase=random()*Math.PI*2;e.lane=random()<.5?-1:1;return e;
 }
 export function createAct3Warden(scene){const e=baseActor(scene,'act3warden','warden',1850);e.config={name:'편대 문지기'};e.timer=.9;return e;}
-export const TEMPEST_CARRIER=Object.freeze({name:'뇌운모함',type:'tempestcarrier',hp:13200,damage:Object.freeze({burst:.06,perSecond:.028})});
-export function createTempestCarrier(scene){const e=baseActor(scene,TEMPEST_CARRIER.type,'boss',TEMPEST_CARRIER.hp);e.config=TEMPEST_CARRIER;e.timer=1.1;e.phaseIndex=0;e.damageAllowance=e.maxHp*TEMPEST_CARRIER.damage.burst;return e;}
+export const TEMPEST_CARRIER=Object.freeze({name:'폭풍비행사 요한',type:'tempestcarrier',hp:16800,damage:Object.freeze({burst:.05,perSecond:.026})});
+export function createTempestCarrier(scene){const e=baseActor(scene,TEMPEST_CARRIER.type,'boss',TEMPEST_CARRIER.hp);e.config=TEMPEST_CARRIER;e.timer=.9;e.phaseIndex=0;e.lastPhase=0;e.damageAllowance=e.maxHp*TEMPEST_CARRIER.damage.burst;e.volleyLeft=0;e.volleyTimer=0;e.volleyStep=0;e.turnSign=1;return e;}
 export function damageTempestCarrier(e,amount){const cap=e.maxHp*TEMPEST_CARRIER.damage.burst,allowed=Math.max(0,Math.min(Number(amount)||0,e.damageAllowance,cap));e.damageAllowance-=allowed;e.hp-=allowed;return allowed;}
 
 const face=(e,d)=>{if(d.lengthSq()>.001)e.g.rotation.y=Math.atan2(d.x,d.z);};
@@ -71,15 +80,15 @@ export function tickAct3Minion(e,dt,time,ctx){
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
    e.g.position.x+=Math.sin(time*.9+e.phase)*dt*1.2;e.g.position.addScaledVector(to,dt*(distance>7?e.config.speed:distance<5?-1.1:0));face(e,to);
-   if(e.timer<=0){e.state='tell';e.timer=.42;e.dir.copy(to);ctx.sound?.('bossWarning');}
+   if(e.timer<=0){e.state='tell';e.timer=.34;e.dir.copy(to);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
-   e.tell.visible=true;e.tell.scale.setScalar(1+(.42-e.timer)*.8);face(e,e.dir);
+   e.tell.visible=true;e.tell.scale.setScalar(1+(.34-e.timer)*.8);face(e,e.dir);
    if(e.timer<=0){for(let i=-2;i<=2;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.19),{speed:6.5+Math.abs(i)*.35});e.state='stalk';e.timer=e.config.cooldown;ctx.sound?.('bossAttack');}
   }
  }else if(e.type==='sky-diver'){
-  if(e.state==='stalk'){e.g.position.x+=Math.sin(time*1.4+e.phase)*dt*1.05;e.g.position.addScaledVector(to,dt*(distance>7?2.2:distance<4?-1.2:0));face(e,to);if(e.timer<=0){e.state='tell';e.timer=.38;e.dir.copy(to);ctx.sound?.('bossWarning');}}
-  else if(e.state==='tell'){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);face(e,e.dir);if(e.timer<=0){e.state='commit';e.timer=.54;e.chargeHit=false;}}
-  else if(e.state==='commit'){face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*13.8);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<.85){e.chargeHit=true;ctx.hit(e.config.damage);}if(e.timer<=0){e.state='recover';e.timer=.55;}}
+  if(e.state==='stalk'){e.g.position.x+=Math.sin(time*1.4+e.phase)*dt*1.05;e.g.position.addScaledVector(to,dt*(distance>7?2.2:distance<4?-1.2:0));face(e,to);if(e.timer<=0){e.state='tell';e.timer=.28;e.dir.copy(to);ctx.sound?.('bossWarning');}}
+  else if(e.state==='tell'){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);face(e,e.dir);if(e.timer<=0){e.state='commit';e.timer=.46;e.chargeHit=false;}}
+  else if(e.state==='commit'){face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*15.5);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<.85){e.chargeHit=true;ctx.hit(e.config.damage);}if(e.timer<=0){e.state='recover';e.timer=.5;}}
   else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else{
   e.g.position.x+=Math.sin(time*.72+e.phase)*dt*.65;e.g.position.addScaledVector(to,dt*(distance>8?1.1:distance<6?-.75:0));face(e,to);
@@ -102,21 +111,73 @@ export function tickAct3Warden(e,dt,time,ctx){
  ctx.collide(e.g.position,.78);finishMotion(e,dt,time);
 }
 
+const BOSS_MOVES=Object.freeze([
+ Object.freeze({name:'편대 포문',hint:'조준선이 겹치기 전에 조금씩 옆으로 흘러 연속 부채꼴을 빼세요'}),
+ Object.freeze({name:'태풍 나선',hint:'바깥으로 달아나지 말고 회전하는 탄의 꼬리를 따라 한 바퀴 도세요'}),
+ Object.freeze({name:'크루이프 턴',hint:'첫 움직임은 속임수입니다 · 반전한 기체의 반대쪽으로 교차탄을 가르세요'}),
+ Object.freeze({name:'낙뢰 장벽',hint:'매번 이동하는 빈 줄을 찾아 벽 하나마다 한 칸씩 옮기세요'}),
+ Object.freeze({name:'폭풍핵 전개',hint:'큰 원을 그리지 말고 번갈아 벌어지는 두 고리 사이를 짧게 움직이세요'})
+]);
+const bossShot=(ctx,e,dir,spec={},offsetX=0)=>{
+ const origin=e.g.position.clone();origin.x+=offsetX;
+ ctx.bolt(origin,dir,{speed:spec.speed||8.4,damage:spec.damage||15,boss:true,curve:spec.curve||0,life:spec.life||5,scale:spec.scale||1});
+};
+function startBossBarrage(e,phase){
+ e.state='barrage';e.volleyStep=0;e.volleyTimer=0;
+ if(e.pattern===0)e.volleyLeft=6+phase*2;
+ else if(e.pattern===1)e.volleyLeft=12+phase*3;
+ else if(e.pattern===2){e.volleyLeft=10+phase*2;e.turnSign=e.g.position.x>0?-1:1;}
+ else if(e.pattern===3)e.volleyLeft=5+phase;
+ else e.volleyLeft=4;
+}
+function tickBossBarrage(e,phase,dt,ctx){
+ e.volleyTimer-=dt;
+ if(e.pattern===2){
+  const halfway=(10+phase*2)/2,sign=e.volleyLeft>halfway?e.turnSign:-e.turnSign;
+  e.g.position.x=THREE.MathUtils.clamp(e.g.position.x+sign*dt*(6.4+phase*.8),-6.3,6.3);
+ }
+ if(e.volleyTimer>0)return false;
+ const aimed=e.target.copy(ctx.player).sub(e.g.position).setY(0);if(aimed.lengthSq()>.001)aimed.normalize();else aimed.set(0,0,1);
+ if(e.pattern===0){
+  for(let i=-2;i<=2;i++)bossShot(ctx,e,aimed.clone().applyAxisAngle(AXIS_Y,i*.12),{speed:8.1+(e.volleyStep%2)*1.15,damage:15+phase*2,scale:1.05},i*.28);
+  e.volleyTimer=.2-phase*.015;
+ }else if(e.pattern===1){
+  const spin=e.volleyStep*.34*(e.turnSign||1);
+  for(let i=0;i<3;i++){const a=spin+i*Math.PI*2/3;bossShot(ctx,e,new V(Math.sin(a),0,Math.cos(a)),{speed:6.9+(i%2)*1.2,damage:14+phase*2,curve:(i%2?-.09:.09),scale:1.08});}
+  e.volleyTimer=.14;
+ }else if(e.pattern===2){
+  const cross=(e.volleyStep%2?1:-1)*.26;
+  for(const a of [-cross,0,cross])bossShot(ctx,e,aimed.clone().applyAxisAngle(AXIS_Y,a),{speed:9.6+phase*.45,damage:16+phase*2,curve:-Math.sign(a||e.turnSign)*.06,scale:1.12},a*2);
+  e.volleyTimer=.16;
+ }else if(e.pattern===3){
+  const gap=(e.volleyStep*2+phase)%7;
+  for(let lane=0;lane<7;lane++)if(lane!==gap){const x=-6.6+lane*2.2,dir=new V((ctx.player.x-x)*.035,0,1).normalize();bossShot(ctx,e,dir,{speed:8.2+phase*.5,damage:17+phase*2,scale:1.08},x-e.g.position.x);}
+  e.volleyTimer=.32;
+ }else{
+  const count=16,offset=(e.volleyStep%2?Math.PI/count:0)+e.volleyStep*.08;
+  for(let i=0;i<count;i++){const a=offset+i*Math.PI*2/count;bossShot(ctx,e,new V(Math.sin(a),0,Math.cos(a)),{speed:7.25+(e.volleyStep%2)*1.05,damage:16+phase*2,curve:(e.volleyStep%2?-.07:.07),scale:1.12});}
+  e.volleyTimer=.38;
+ }
+ e.volleyStep++;e.volleyLeft--;ctx.sound?.('bossAttack');
+ return e.volleyLeft<=0;
+}
+
 export function tickTempestCarrier(e,dt,time,ctx){
  e.before.copy(e.g.position);e.timer-=dt;e.damageAllowance=Math.min(e.maxHp*TEMPEST_CARRIER.damage.burst,e.damageAllowance+e.maxHp*TEMPEST_CARRIER.damage.perSecond*dt);const ratio=e.hp/e.maxHp,to=e.target.copy(ctx.player).sub(e.g.position).setY(0);if(to.lengthSq()>.001)to.normalize();e.tell.visible=e.line.visible=false;
  const phase=ratio>.66?0:ratio>.33?1:2;e.phaseIndex=phase;
- if(e.state!=='charge')e.g.position.x=Math.sin(time*(.55+phase*.12))*Math.min(5.6,2.8+phase*1.2);face(e,to);
- if(e.state==='stalk'&&e.timer<=0){e.pattern=e.attacks++%3;e.state='tell';e.timer=[.6,.46,.52][e.pattern]/(1+phase*.08);e.dir.copy(to);e.moveName=['번개 격자','폭풍 나선','모함 강하'][e.pattern];e.hint=['서로 다른 속도의 세로 탄 사이에서 한 줄씩 옮기세요','바깥으로 도망가지 말고 나선의 뒤를 따라 도세요','중앙 섬광 뒤 좌우 어느 쪽으로든 크게 빠지세요'][e.pattern];ctx.sound?.('bossWarning');}
- else if(e.state==='tell'){
-  if(e.pattern===2){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);}else{e.tell.visible=true;e.tell.scale.setScalar(1.6+Math.sin(time*14)*.16);}
-  if(e.timer<=0){
-   if(e.pattern===0){for(let lane=-4;lane<=4;lane++)for(let row=0;row<2+phase;row++){const d=new V(Math.sin(lane*.16),0,Math.cos(lane*.16));shot(ctx,e,d,{speed:6.6+row*2.2,damage:15+phase*2,boss:true});}}
-   else if(e.pattern===1){const count=20+phase*4,offset=e.attacks*.31;for(let i=0;i<count;i++){const a=offset+i*Math.PI*2/count;shot(ctx,e,new V(Math.sin(a),0,Math.cos(a)),{speed:6.4+(i%3)*1.15,damage:14+phase*2,boss:true,curve:(i%2?1:-1)*.12});}}
-   else {e.state='charge';e.timer=.7;e.chargeHit=false;ctx.sound?.('bossAttack');finishMotion(e,dt,time);return;}
-   e.state='recover';e.timer=.7-phase*.06;ctx.sound?.('bossAttack');
-  }
- }else if(e.state==='charge'){e.g.position.addScaledVector(e.dir,dt*(15+phase));if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<1.55){e.chargeHit=true;ctx.hit(32+phase*3);}if(e.timer<=0){e.g.position.set(0,0,2.8);e.state='recover';e.timer=.72;}}
- else if(e.state==='recover'&&e.timer<=0){e.state='stalk';e.timer=.42-phase*.04;e.moveName='';e.hint='';}
+ if(phase>e.lastPhase){e.lastPhase=phase;e.state='recover';e.timer=.72;e.moveName='폭풍핵 변환';e.hint='장갑이 열리며 호위 편대가 진입합니다';ctx.summon?.(phase===1?['sky-scout','sky-scout']:['sky-bomber','sky-scout']);ctx.sound?.('bossWarning');}
+ if(e.state!=='barrage'||e.pattern!==2)e.g.position.x=THREE.MathUtils.damp(e.g.position.x,Math.sin(time*(.62+phase*.1))*Math.min(5.7,3.4+phase),4.2,dt);
+ e.g.position.z=THREE.MathUtils.damp(e.g.position.z,-1.8,5,dt);face(e,to);
+ if(e.state==='stalk'&&e.timer<=0){
+  const available=phase===0?3:phase===1?4:5;e.pattern=e.attacks++%available;if(e.pattern===1)e.turnSign=e.attacks%2?1:-1;
+  const move=BOSS_MOVES[e.pattern];e.state='tell';e.timer=[.46,.38,.34,.42,.5][e.pattern]/(1+phase*.06);e.dir.copy(to);e.moveName=move.name;e.hint=move.hint;ctx.sound?.('bossWarning');
+ }else if(e.state==='tell'){
+  e.tell.visible=true;e.tell.scale.setScalar((e.pattern===4?2.1:1.45)+Math.sin(time*16)*.13);
+  if(e.pattern===2){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);}
+  if(e.timer<=0)startBossBarrage(e,phase);
+ }else if(e.state==='barrage'){
+  if(tickBossBarrage(e,phase,dt,ctx)){e.state='recover';e.timer=.58-phase*.04;}
+ }else if(e.state==='recover'&&e.timer<=0){e.state='stalk';e.timer=.34-phase*.035;e.moveName='';e.hint='';}
  ctx.collide(e.g.position,1.35);finishMotion(e,dt,time);
 }
 
