@@ -63,7 +63,7 @@ for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
  for(let time=0;time<5;time+=.04){tickAct3Minion(e,.04,time,w.ctx);states.add(e.state);}
  assert.equal(e.homeReady,true,`${type} owns a stable formation anchor`);assert.ok(Number.isFinite(e.artRoll),`${type} bank animation stays finite`);
  assert.ok(w.bolts.length||states.has('commit'),`${type} produces a shot or a real charge`);
- if(type==='sky-bomber')assert.ok(w.bolts.length>=5,'bomber completes its warning and fan attack');
+ if(type==='sky-bomber')assert.ok(w.bolts.length>=3,'bomber completes its warning and fan attack');
 }
 {
  const w=world(),e=createAct3Warden(scene);e.g.position.set(0,0,-5);e.timer=0;const moves=new Set();

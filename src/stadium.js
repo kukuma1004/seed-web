@@ -113,35 +113,19 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  const m=new THREE.Matrix4(),q=new THREE.Quaternion(),s=new THREE.Vector3(1,1,1),p=new THREE.Vector3(),yAxis=new THREE.Vector3(0,1,0);
  // Bases are painted into the merged chalk geometry above. The old translucent
  // four-sided rings looked like folded glass and cost two extra draw calls.
- // Passing turret: a compact pitcher on the mound and a mitt behind home plate.
- const relay=new THREE.Group();relay.name='stadium-pass-turret';group.add(relay);
- const relayDark=new THREE.MeshStandardMaterial({color:0x1c2838,roughness:.55,metalness:.5}),relayRed=new THREE.MeshStandardMaterial({color:0x9f2831,roughness:.62,metalness:.18}),relayGold=new THREE.MeshStandardMaterial({color:0xd6a945,emissive:0x5a2d06,emissiveIntensity:.55,roughness:.45,metalness:.22});
- const machine=new THREE.Group();machine.position.set(RELAY_LAYOUT.pitcher.x,0,RELAY_LAYOUT.pitcher.z);relay.add(machine);
- const machineParts=[new THREE.CylinderGeometry(.62,.82,1.05,8).translate(0,.58,0),new THREE.CylinderGeometry(.42,.42,.36,12).rotateZ(Math.PI/2).translate(0,1.25,0),new THREE.ConeGeometry(.24,.95,8).rotateX(Math.PI/2).translate(0,1.25,.55)];
- machine.add(new THREE.Mesh(mergeParts(machineParts),relayRed));
- const wheel=new THREE.Mesh(new THREE.TorusGeometry(.5,.1,6,18),relayGold);wheel.position.y=1.25;wheel.rotation.y=Math.PI/2;machine.add(wheel);
- const mitt=new THREE.Group();mitt.position.set(RELAY_LAYOUT.catcher.x,0,RELAY_LAYOUT.catcher.z);relay.add(mitt);
- const mittPalm=new THREE.Mesh(new THREE.SphereGeometry(.6,9,6),relayGold);mittPalm.scale.set(1.25,1,.35);mittPalm.position.y=.9;mitt.add(mittPalm);
- const mittStand=new THREE.Mesh(new THREE.CylinderGeometry(.12,.22,1.3,7),relayDark);mittStand.position.y=.35;mitt.add(mittStand);
- const relayLength=RELAY_LAYOUT.catcher.z-RELAY_LAYOUT.pitcher.z;
- const relayLine=new THREE.Mesh(new THREE.PlaneGeometry(.34,relayLength).rotateX(-Math.PI/2),new THREE.MeshBasicMaterial({color:0xfff4c7,transparent:true,opacity:.18,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}));relayLine.position.set(0,.16,(RELAY_LAYOUT.pitcher.z+RELAY_LAYOUT.catcher.z)/2);relay.add(relayLine);
- const relayBallParts=[tint(new THREE.IcosahedronGeometry(.27,1),0xfff2d5),tint(new THREE.TorusGeometry(.275,.019,3,14,Math.PI*1.55).rotateX(Math.PI/2).rotateY(.62),0xc53b37),tint(new THREE.TorusGeometry(.275,.019,3,14,Math.PI*1.55).rotateX(Math.PI/2).rotateY(-.62).rotateZ(Math.PI),0xc53b37)];
- const relayBall=new THREE.Mesh(mergeParts(relayBallParts),new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}));relayBall.position.set(RELAY_LAYOUT.pitcher.x,.82,RELAY_LAYOUT.pitcher.z);relay.add(relayBall);
- relay.visible=false;
  // Night light: the act-1 values are remembered and restored when the stadium is left.
  const saved=new Map(),hidden=new Map();
  const night={background:new THREE.Color('#0d1a2a'),fog:new THREE.Color('#122236'),fogDensity:.014};
- let active=false,baseEnabled=false,relayEnabled=false,relayClock=0,relayHitPass=-1,relayWarnPass=-1;
+ let active=false,baseEnabled=false;
  return {
   group,coverMaterial:trimMat,boundaryMaterials:{dark:track.material,armor:trimMat,stone:trimMat},
-  setActive(on,arena=null,{stage=0,bossRoom=false}={}){
+  setActive(on,arena=null){
    if(on&&arena){
     floor.geometry=stadiumFloorGeometry(arena);chalk.geometry=stadiumMarkings(arena);chalk.scale.setScalar(1);
     const surface=FIELD_SURFACES[arenaKey(arena)]||{color:0xffffff,repeat:2.35,rotation:0,offset:[0,0]};
     floorMat.color.setHex(surface.color);floorMat.map.repeat.setScalar(surface.repeat);floorMat.map.rotation=surface.rotation;floorMat.map.offset.set(...surface.offset);
    }
-   baseEnabled=Boolean(on&&baseSlidesEnabled(arena));relayEnabled=Boolean(on&&!bossRoom&&(stage===1||stage===3));relay.visible=relayEnabled;
-   if(!relayEnabled){relayClock=0;relayHitPass=relayWarnPass=-1;relayLine.visible=false;relayBall.visible=false;}
+   baseEnabled=Boolean(on&&baseSlidesEnabled(arena));
    if(on===active)return;active=on;group.visible=on;
    if(on){
     saved.set('background',scene.background?.clone());saved.set('fog',scene.fog?.color.clone());saved.set('density',scene.fog?.density);
@@ -159,30 +143,16 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
   isActive:()=>active,
   baseAt:position=>stadiumBaseAt(position),
   tryBaseSlide(position,cooldown=0,blockedIndex=-1){return baseSlideFor(position,cooldown,active&&baseEnabled,blockedIndex);},
-  tick(dt,player,{hit=()=>false,sound=()=>{}}={}){
-   if(!active||!relayEnabled)return;
-   relayClock+=dt;const period=2.7,pass=Math.floor(relayClock/period),phase=relayClock-pass*period,reverse=pass%2===1;
-   relayLine.visible=phase<1.25;relayLine.material.opacity=phase<.68?.12+.5*(phase/.68):.22;
-   relayBall.visible=phase>=.68&&phase<1.25;
-   if(relayBall.visible){const t=Math.min(1,(phase-.68)/.57),from=reverse?RELAY_LAYOUT.catcher.z:RELAY_LAYOUT.pitcher.z,to=reverse?RELAY_LAYOUT.pitcher.z:RELAY_LAYOUT.catcher.z;relayBall.position.set(0,.82,THREE.MathUtils.lerp(from,to,t));relayBall.rotation.x+=dt*12;relayBall.rotation.z+=dt*8;if(relayHitPass!==pass&&Math.hypot(player.x-relayBall.position.x,player.z-relayBall.position.z)<.72){relayHitPass=pass;hit(16);sound('bossAttack');}}
-   if(phase<.08&&relayWarnPass!==pass){relayWarnPass=pass;sound('bossWarning');}
-  },
   update(time){
    if(!active)return;
    flagXs.forEach((x,i)=>{q.setFromAxisAngle(yAxis,Math.sin(time*2.2+i*.9)*.35-.2);p.set(x,2.05,-8.9);m.compose(p,q,s);flags.setMatrixAt(i,m);});
    flags.instanceMatrix.needsUpdate=true;
-   if(relayEnabled){machine.rotation.y=Math.sin(time*1.8)*.08;wheel.rotation.z=time*3;mitt.rotation.y=Math.sin(time*2.1)*.06;}
   },
-  state:()=>({active,baseEnabled,relayEnabled,relayClock})
+  state:()=>({active,baseEnabled})
  };
 }
 function mergeParts(parts){
  const flat=parts.map(g=>g.index?g.toNonIndexed():g),merged=mergeGeometries(flat,false);
  for(const g of new Set([...parts,...flat]))g.dispose();
  return merged;
-}
-function tint(geometry,color){
- const g=geometry.index?geometry.toNonIndexed():geometry,c=new THREE.Color(color),values=new Float32Array(g.getAttribute('position').count*3);
- for(let i=0;i<values.length;i+=3){values[i]=c.r;values[i+1]=c.g;values[i+2]=c.b;}
- g.setAttribute('color',new THREE.BufferAttribute(values,3));return g;
 }

@@ -16,6 +16,7 @@ import {turretSpots} from '../src/turret.js';
 import {validCheckpoint,readCheckpoint,writeCheckpoint,SAVE_KEY,REGION_NAMES} from '../src/run-save.js';
 import {RANKING_KEY,readRanking,submitScore,KILL_POINTS} from '../src/score.js';
 import {blocksShield} from '../src/shield.js';
+import {RELAY,createRelayRig,isRelayPart,relayBallZ,relayName,relayPotionDrop,relayRoom,relayThrow,stopRelay,tickRelayRig} from '../src/act2-relay.js';
 import {contactShadowRadius} from '../src/contact-shadows.js';
 const V=THREE.Vector3;
 
@@ -167,4 +168,46 @@ for(const variant of Object.keys(ACT2_WARDENS)){
  const turning=createAct2Minion(scene,'catcher',()=>.1);turning.g.position.set(0,0,-5);turning.g.rotation.y=Math.PI;run(turning,world().ctx,.5);
  assert.ok(Math.abs(Math.atan2(Math.sin(turning.g.rotation.y-Math.PI),Math.cos(turning.g.rotation.y-Math.PI)))<ACT2_MINIONS.catcher.turn*.6+.05,'turns slowly, so flanking works');
 }
-console.log('Act 2: unlock, separate save, base sliding, guardian ladder, Always Beginner, and stadium enemy rules passed.');
+// 캐치볼 장치: 둘째·넷째 방에만 놓이고, 둘 다 부술 수 있으며, 한쪽만 부숴도 공이 멈춘다.
+{
+ assert.deepEqual([...RELAY.stages],[1,3]);
+ assert.equal(relayRoom(1),true);assert.equal(relayRoom(3),true);
+ assert.equal(relayRoom(0),false);assert.equal(relayRoom(4),false);assert.equal(relayRoom(1,true),false,'결승전 방에는 없다');
+ assert.equal(isRelayPart(RELAY.machine.type),true);assert.equal(isRelayPart(RELAY.mitt.type),true);assert.equal(isRelayPart('catcher'),false);
+ assert.equal(relayName(RELAY.mitt.type),RELAY.mitt.name);assert.equal(relayName(RELAY.machine.type),RELAY.machine.name);
+ // 반반 확률: 절반보다 작게 나오면 물약, 같거나 크면 없음.
+ assert.equal(RELAY.potionChance,.5);
+ assert.equal(relayPotionDrop(()=>.49),true);assert.equal(relayPotionDrop(()=>.5),false);assert.equal(relayPotionDrop(()=>.99),false);
+ // 점수와 그림자에도 이름이 있어야 기본값으로 새지 않는다.
+ for(const type of [RELAY.machine.type,RELAY.mitt.type]){assert.ok(KILL_POINTS[type]>0,type);assert.ok(contactShadowRadius(type)>.5,type);}
+
+ // 던지는 시간표: 먼저 선이 차오르고, 그다음에만 공이 날아간다.
+ assert.equal(relayThrow(0).t,null,'차오르는 동안에는 공이 없다');
+ assert.equal(relayThrow(RELAY.charge+RELAY.flight/2).t>.4,true);
+ assert.equal(relayThrow(RELAY.charge+RELAY.flight+.01).t,null,'받고 나면 사라진다');
+ assert.equal(relayThrow(RELAY.period+RELAY.charge+.01).reverse,true,'다음 공은 반대로 간다');
+ assert.ok(relayBallZ(0)<relayBallZ(1),'마운드에서 홈으로');
+ assert.ok(relayBallZ(0,true)>relayBallZ(1,true),'홀수 번째는 반대로');
+
+ const rig=createRelayRig(scene);
+ assert.equal(rig.machine.g.parent,scene);assert.equal(rig.mitt.g.parent,scene);assert.equal(rig.machine.world.parent,scene);
+ assert.ok(rig.machine.hp>0&&rig.mitt.hp>0);assert.equal(rig.machine.maxHp,RELAY.machine.hp);
+ // 공이 지나가는 길에 서 있으면 한 번만 맞는다.
+ const onLine=new THREE.Vector3(0,0,relayBallZ(.5)),hits=[];
+ const ctx={player:onLine,hit:a=>{hits.push(a);return true;},sound:()=>{}};
+ for(let t=0;t<RELAY.period;t+=.02)tickRelayRig(rig.machine,.02,t,ctx);
+ assert.equal(hits.length,1,'한 번 지나가면 한 번만 맞는다');assert.equal(hits[0],RELAY.damage);
+ // 옆으로 비키면 맞지 않는다.
+ const aside=new THREE.Vector3(4,0,relayBallZ(.5)),safe=[];
+ const rig2=createRelayRig(scene);
+ for(let t=0;t<RELAY.period*2;t+=.02)tickRelayRig(rig2.machine,.02,t,{player:aside,hit:a=>{safe.push(a);return true;},sound:()=>{}});
+ assert.equal(safe.length,0,'선 밖은 안전하다');
+ // 글러브를 부수면 기계가 남아 있어도 캐치볼이 끝난다.
+ assert.equal(stopRelay(rig.mitt),true);assert.equal(stopRelay(rig.mitt),false,'두 번 멈추지 않는다');
+ const after=hits.length;
+ for(let t=0;t<RELAY.period*2;t+=.02)tickRelayRig(rig.machine,.02,t,ctx);
+ assert.equal(hits.length,after,'멈춘 뒤에는 공이 오지 않는다');
+ assert.equal(rig.rig.ball.visible,false);assert.equal(rig.rig.line.visible,false);
+}
+
+console.log('Act 2: unlock, separate save, base sliding, guardian ladder, Always Beginner, and stadium enemy rules, the breakable catch passed.');

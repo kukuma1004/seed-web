@@ -38,10 +38,12 @@ export const ACT3_MATERIALS=Object.freeze({
 });
 
 export const ACT3_MINIONS=Object.freeze({
- 'sky-scout':{kind:'scout',hp:54,speed:3.85,damage:11,cooldown:1.05},
+ // 하늘길은 탄이 가장 많은 막이다. 화면이 탄으로 덮이면 길이 보이지 않으므로
+ // 편대 수는 그대로 두고 쏘는 간격을 늘려 빈 줄이 눈에 들어오게 한다.
+ 'sky-scout':{kind:'scout',hp:54,speed:3.85,damage:11,cooldown:1.5},
  'sky-diver':{kind:'diver',hp:28,speed:5.3,damage:18,cooldown:1.9},
- 'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.52},
- 'sky-carrier':{kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.25}
+ 'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.7},
+ 'sky-carrier':{kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.45}
 });
 export const ACT3_ART=Object.freeze({
  'sky-scout':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:0,size:1.72,baseline:.08}),
@@ -84,14 +86,14 @@ export function tickAct3Minion(e,dt,time,ctx){
   if(e.timer<=0){e.state='stalk';e.timer=.2+(e.phase%1)*.35;}
  }else if(e.type==='sky-scout'){
   formationMove(e,dt,time,{x:1.35,z:.4,xf:1.65,zf:.82,speed:5});face(e,to);
-  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});if(e.attacks%3===0)for(const a of [-.22,.22])shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,a),{speed:8.7});ctx.sound?.('bossAttack');}
+  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});if(e.attacks%4===0)for(const a of [-.26,.26])shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,a),{speed:8.7});ctx.sound?.('bossAttack');}
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
    formationMove(e,dt,time,{x:1.05,z:.72,xf:.82,zf:.6,speed:3.4});face(e,to);
    if(e.timer<=0){e.state='tell';e.timer=.34;e.dir.copy(to);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1+(.34-e.timer)*.8);face(e,e.dir);
-   if(e.timer<=0){for(let i=-2;i<=2;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.19),{speed:6.5+Math.abs(i)*.35});e.state='stalk';e.timer=e.config.cooldown;ctx.sound?.('bossAttack');}
+   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.3),{speed:6.5+Math.abs(i)*.35});e.state='stalk';e.timer=e.config.cooldown;ctx.sound?.('bossAttack');}
   }
  }else if(e.type==='sky-diver'){
   if(e.state==='stalk'){formationMove(e,dt,time,{x:1.55,z:.6,xf:1.35,zf:.8,speed:4.4});face(e,to);if(e.timer<=0){e.state='tell';e.timer=.28;e.dir.copy(to);ctx.sound?.('bossWarning');}}
@@ -100,7 +102,7 @@ export function tickAct3Minion(e,dt,time,ctx){
   else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else{
   formationMove(e,dt,time,{x:.72,z:.34,xf:.58,zf:.45,speed:2.6});face(e,to);
-  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;for(let i=-3;i<=3;i++)shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,i*.15),{speed:7.2+((i+3)%2)*1.3});ctx.sound?.('bossAttack');}
+  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;for(let i=-2;i<=2;i++)shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,i*.21),{speed:7.2+((i+2)%2)*1.3});ctx.sound?.('bossAttack');}
  }
  ctx.collide(e.g.position,.52);finishMotion(e,dt,time);
 }
