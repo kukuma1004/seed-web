@@ -28,3 +28,12 @@ batches.sync(Array.from({length:5},()=>({ob:shotObject(geo,opaque)})));
 assert.equal(batches.state().instances,5);
 batches.sync([]);assert.equal(scene.children.filter(c=>c.isInstancedMesh).every(c=>c.count===0&&!c.visible),true);
 console.log('탄환 묶음 그리기: 예전 개별 물체와 같은 행렬, 반투명 고리는 분리 통과');
+// 셰이더 미리 준비: 묶음으로 그리는 탄 재질과, 등불이 꺼진 조명 상태(2막·3막)까지 준비해야 판 시작 때 새 컴파일이 0개다.
+{
+ const fs=await import('node:fs');
+ const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ for(const pair of ["[projectileGeometry(projectileGeos,'seed'),mats['shot-seed']]",'[enemyGeos.boltCore,mats.enemyBolt]','[stadiumBallGeo,mats.stadiumBall]','[austinGeo.core,mats.austinBolt]'])assert.ok(main.includes(pair),`셰이더 미리 준비에 ${pair} 필요`);
+ assert.match(main,/const litLanterns=lanternLights\.filter\(l=>l\.visible\);[\s\S]*for\(const l of litLanterns\)l\.visible=false;[\s\S]*for\(const l of litLanterns\)l\.visible=true;/,'등불이 꺼진 조명 상태도 미리 준비해야 한다');
+ assert.match(main,/function warmShaders\(\)[\s\S]*shaderWarmGroup\.removeFromParent\(\)/,'견본은 컴파일 뒤 장면에서 뺀다');
+}
+console.log('셰이더 미리 준비 목록 검사 통과');

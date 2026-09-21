@@ -207,7 +207,7 @@ function buildShaderWarmGroup(){
  for(const toneMapped of [false,true])g.add(new THREE.Mesh(proto,new THREE.MeshBasicMaterial({transparent:true,opacity:.5,depthWrite:false,side:THREE.DoubleSide,toneMapped})));
  const form=createFormVisuals(),formGeos=Object.values(form.geos);g.add(new THREE.Mesh(formGeos[0],Object.values(form.mats)[0]));for(const geo of formGeos.slice(1))geo.dispose();
  createTrapVisuals(g,trapsFor(3,0,'garden'),mats);
- shotBatches.prepare([[projectileGeometry(projectileGeos,'seed'),mats['shot-seed']],[enemyGeos.boltCore,mats.enemyBolt],[stadiumBallGeo,mats.stadiumBall]]);
+ shotBatches.prepare([[projectileGeometry(projectileGeos,'seed'),mats['shot-seed']],[enemyGeos.boltCore,mats.enemyBolt],[stadiumBallGeo,mats.stadiumBall],[austinGeo.core,mats.austinBolt]]);
  // 적 그림(명암 셰이더)과 가려질 때 보이는 윤곽: 적이 처음 나오는 순간 컴파일되던 두 가지.
  const actor={g:new THREE.Group()};g.add(actor.g);attachActorArt(actor,camera,release,{file:'enemy-hound-v4.png',size:1,directional:true,occlusion:true});
  return g;
@@ -221,7 +221,13 @@ function warmShaders(){
   // 견본은 컴파일하는 동안만 장면에 둔다(두면 매 프레임 행렬 갱신 대상이 된다). 재질은 그대로 살아 있어 셰이더도 남는다.
   scene.add(shaderWarmGroup);
   const previous=renderer.getRenderTarget();renderer.setRenderTarget(bloomPass.enabled?composer.readBuffer:null);
-  try{renderer.compileAsync(scene,camera).catch(()=>{});}finally{renderer.setRenderTarget(previous);shaderWarmGroup.removeFromParent();}
+  // 정원 등불(점광원)은 '높음' 화질에서만 켜지고 2막·3막에서는 정원과 함께 숨는다. 켜진 빛의 수가 다르면 셰이더도 달라지므로
+  // 등불이 보이는 상태와 모두 꺼진 상태를 한 번씩 준비한다(휴대폰 기본 화질은 등불이 없어 한 번이면 된다).
+  const litLanterns=lanternLights.filter(l=>l.visible);
+  try{
+   renderer.compileAsync(scene,camera).catch(()=>{});
+   if(litLanterns.length){for(const l of litLanterns)l.visible=false;try{renderer.compileAsync(scene,camera).catch(()=>{});}finally{for(const l of litLanterns)l.visible=true;}}
+  }finally{renderer.setRenderTarget(previous);shaderWarmGroup.removeFromParent();}
  }catch{}
 }
 function scheduleShaderWarm(delay=700){if(!shaderWarmTimer)shaderWarmTimer=setTimeout(warmShaders,delay);}
