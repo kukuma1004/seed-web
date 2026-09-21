@@ -89,6 +89,10 @@ export const MIRROR_PATTERNS=Object.freeze({
  frost:Object.freeze({id:'frost-sector',name:'서리 부채',tell:.56,commit:.86,recover:.55,projectiles:5})
 });
 
+// 체감 난이도 층(2026-09-22 사용자: "지금은 3층 난이도로 시작한다 → 1층 난이도부터").
+// 1층은 예전 1층보다 두 층만큼 쉽고, 올라갈수록 차이가 줄어 10층에서 예전 곡선과 같아진다(10층 도전의 끝은 그대로).
+// 층 번호·회복·기록·체크포인트는 진짜 층을 쓰고, 분신의 강함·행동 단계·탄속만 이 값을 쓴다.
+export function mirrorDifficultyFloor(floor=1){const n=Math.max(1,Number(floor)||1);return Number((n-2*Math.max(0,(10-n)/9)).toFixed(3));}
 const entryList=value=>value instanceof Map?[...value]:Array.isArray(value)?value:Object.entries(value||{});
 const levelOf=value=>Math.max(1,Math.min(99,Math.floor(Number(value)||1)));
 
@@ -113,21 +117,22 @@ export function mirrorCloneLoadout(snapshot){
 }
 
 export function mirrorFloorRules(floor=1,{quality='normal'}={}){
- const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0;
+ const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0,d=mirrorDifficultyFloor(n);
  // Teach one behaviour at a time, then make the last four floors a real
  // mastery check instead of waiting until floor ten to reveal the feint.
- const tier=n<4?0:n<7?1:n<9?2:3;
+ const tier=d<4?0:d<7?1:d<9?2:3;
  const movement=[MIRROR_MOVEMENT_PROFILES.reflection,MIRROR_MOVEMENT_PROFILES.duelist,MIRROR_MOVEMENT_PROFILES.trickster,MIRROR_MOVEMENT_PROFILES.apex][tier];
  const low=quality==='low';
  return Object.freeze({
   floor:n,
+  difficulty:d,
   milestone,
   checkpoint:milestone,
   endless:n>=MIRROR_TOWER.endlessFrom,
   arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:0,shrinks:false}),
   movement,
-  concurrentAttackFamilies:n<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
-  chainLength:n<4?1:n<8?2:3,
+  concurrentAttackFamilies:d<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
+  chainLength:d<4?1:d<8?2:3,
   healAfter:milestone?MIRROR_TOWER.milestoneHeal:MIRROR_TOWER.floorHeal,
   budget:Object.freeze({
    hostileProjectiles:low?MIRROR_TRIAL_LIMITS.hostileProjectilesLow:MIRROR_TRIAL_LIMITS.hostileProjectilesNormal,
@@ -149,7 +154,7 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
  const attacks=ordered.map(([law,score],index)=>Object.freeze({
   ...MIRROR_PATTERNS[law],law,weight:Number(score.toFixed(2)),order:index+1
  }));
- const r=tower.floor,lead=ordered[0][0];
+ const r=tower.difficulty,lead=ordered[0][0];
  return Object.freeze({
   attacks:Object.freeze(attacks),
   loadout:mirrorCloneLoadout(snapshot),

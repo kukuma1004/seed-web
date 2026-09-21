@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import {createSeedBody} from './seed-body.js';
 import {createMotion} from './motion.js';
-import {mirrorBuildSnapshot,mirrorPatternPlan} from './mirror-trial.js';
+import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan} from './mirror-trial.js';
 
 export const MIRROR_ARENA=Object.freeze({
  shape:'circle',id:'mirror-tower',radius:13,
@@ -92,7 +92,8 @@ export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
 
 export const MIRROR_PROJECTILE_BASE_SPEED=10.2;
 export function mirrorProjectileSpeed(floor=1,speedScale=1){
- const climb=Math.min(1.18,1+Math.max(0,Math.floor(Number(floor)||1)-1)*.018);
+ // 체감 난이도 층을 쓴다: 1층 탄은 예전 1층보다 조금 느리고(약 4%), 10층은 예전과 같다.
+ const climb=Math.min(1.18,1+(mirrorDifficultyFloor(floor)-1)*.018);
  return MIRROR_PROJECTILE_BASE_SPEED*climb*Math.max(.5,Number(speedScale)||1);
 }
 
@@ -153,7 +154,7 @@ export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hi
   enemy.readyRing.material.color.setHex(0xffd471);enemy.readyRing.material.opacity=.72;enemy.readyRing.scale.setScalar(1.08+Math.sin(time*11)*.08);
  }else{
   if(enemy.state==='broken'){enemy.state='stalk';enemy.attackCD=.62;}
-  const speed=4.05*enemy.plan.stats.moveSpeedScale+(enemy.floor-1)*.03;
+  const speed=4.05*enemy.plan.stats.moveSpeedScale+(mirrorDifficultyFloor(enemy.floor)-1)*.03;
   if(enemy.dashTime>0){enemy.dashTime=Math.max(0,enemy.dashTime-dt);enemy.g.position.addScaledVector(enemy.dashDir,speed*2.9*dt);}else{enemy.g.position.x+=steering.x*speed*dt;enemy.g.position.z+=steering.z*speed*dt;}constrain(enemy.g.position);
   enemy.attackCD-=dt;
   const progress=clamp(1-enemy.attackCD/.9,0,1);enemy.readyRing.material.color.setHex(0xe7dbff);enemy.readyRing.material.opacity=.16+progress*.62;enemy.readyRing.scale.setScalar(.84+progress*.2);
