@@ -92,3 +92,6 @@ release/
 !tools/perf-monitor-test.mjs
 !tools/ranking-eligibility-test.mjs
 !tools/instanced-shots-test.mjs
+
+# Higgsfield 원본(4K 등)은 저장소에 올리지 않는다. public/에는 가공한 결과만.
+art-source/
