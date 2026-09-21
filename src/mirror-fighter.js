@@ -70,14 +70,16 @@ export function mirrorSteering({mirrorX=0,mirrorZ=0,playerX=0,playerZ=0,arenaRad
  return Object.freeze({x:x/length,z:z/length,distance,edgeCut:edge});
 }
 
-// 2026-09-21 사용자 요청: 한 발씩 나가 감질났다 → 씨앗과 분신 모두 한 번에 7발 부채꼴(공전은 둘레 7~8발).
-// 맞으면 잠깐 무적이라 분신 부채꼴은 씨앗에게 한 번만 들어가고, 씨앗 부채꼴도 분신에게 한 발만 들어간다(서로 공평).
-export const MIRROR_FAN=Object.freeze([-.36,-.24,-.12,0,.12,.24,.36]);
+// 2026-09-22 사용자 요청: 한꺼번에 퍼지는 부채꼴 대신 기관총처럼 "7발 연사 → 장전 → 다시 연사".
+// 씨앗과 분신 모두 같은 방식. 한 발 한 발이 쏘는 순간의 조준 방향을 따라가고, 흔들림(jitter)만 조금 준다.
+// 씨앗이 맞으면 잠깐 무적이라 분신 연사는 씨앗에게 대개 한 번만 들어간다. 반대로 분신은 무적이 없어서,
+// 씨앗 연사의 첫 명중만 온전한 피해·법칙 효과를 내고 같은 연사의 이어지는 명중은 followDamage만큼만 들어간다.
+export const MIRROR_BURST=Object.freeze({shots:7,interval:.07,jitter:Object.freeze([0,-.035,.035,-.018,.018,-.05,.05]),followDamage:.18});
 // 원형 경기장(반지름 13)은 일반 방보다 넓어, 거울의 탑에서만 카메라가 씨앗을 더 따라가고 조금 멀리 본다.
 export const MIRROR_VIEW=Object.freeze({followX:.62,followZ:.78,zoom:.9});
 export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
  const damageScale=law==='orbit'?.58:law==='split'?.7:1;
- const fan=extra=>MIRROR_FAN.map(angle=>({angle,...extra}));
+ const fan=extra=>MIRROR_BURST.jitter.map(angle=>({angle,...extra}));
  if(law==='orbit'){const n=Math.min(8,Math.max(7,5+Math.floor(floor/5)));return Array.from({length:n},(_,i)=>({angle:i*Math.PI*2/n,damageScale,speedScale:.95}));}
  if(law==='split'||law==='chain')return fan({damageScale,speedScale:law==='chain'?1.1:.98});
  if(law==='burst')return fan({damageScale:.82,speedScale:.86,burst:true});
@@ -120,14 +122,21 @@ export function createMirrorFighter(scene,{floor=1,quality='normal',levels=new M
  const hp=Math.round(180*plan.stats.hpScale);
  return {
   g:root,type:'mirrorseed',hp,maxHp:hp,dead:false,hit:0,slow:0,state:'stalk',timer:0,attackCD:.68,
-  broken:0,cracks:0,shotIndex:0,attackIndex:0,strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
+  broken:0,cracks:0,shotIndex:0,attackIndex:0,bursts:[],strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
   floor,plan,moveName:'비친 자동공격 준비',snapshot
  };
 }
 
-function fireAttack(enemy,entry,fire){
+// 공격 하나 = 연사 한 번. 바로 쏘지 않고 줄에 세워 두었다가 pumpBursts가 interval마다 한 발씩 내보낸다.
+function fireAttack(enemy,entry){
  const volley=mirrorVolley(entry.attack.law,enemy.floor,enemy.shotIndex++);
- for(const spec of volley){const direction=enemy.dir.clone().applyAxisAngle(AXIS_Y,spec.angle||0);fire(enemy.g.position,direction,{...spec,damageScale:(spec.damageScale||1)*entry.damageScale*enemy.plan.stats.hitDamageMaxHp,law:entry.attack.law});}
+ (enemy.bursts||=[]).push({clock:0,law:entry.attack.law,specs:volley.map(spec=>({...spec,damageScale:(spec.damageScale||1)*entry.damageScale*enemy.plan.stats.hitDamageMaxHp,law:entry.attack.law}))});
+}
+function pumpBursts(enemy,dt,fire){
+ const burst=enemy.bursts?.[0];if(!burst)return;
+ burst.clock-=dt;
+ while(burst.specs.length&&burst.clock<=0){const spec=burst.specs.shift();fire(enemy.g.position,enemy.dir.clone().applyAxisAngle(AXIS_Y,spec.angle||0),spec);burst.clock+=MIRROR_BURST.interval;}
+ if(!burst.specs.length)enemy.bursts.shift();
 }
 
 export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit}={}){
@@ -140,7 +149,7 @@ export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hi
  enemy.faceDir.copy(enemy.state==='tell'&&movement.feint&&enemy.timer>.12?enemy.feintDir:enemy.dir);enemy.g.rotation.y=Math.atan2(enemy.faceDir.x,enemy.faceDir.z);
 
  if(enemy.broken>0){
-  enemy.broken=Math.max(0,enemy.broken-dt);enemy.state='broken';enemy.moveName='거울 깨짐 · 지금 공격하세요';
+  enemy.broken=Math.max(0,enemy.broken-dt);enemy.state='broken';enemy.moveName='거울 깨짐 · 지금 공격하세요';if(enemy.bursts)enemy.bursts.length=0;
   enemy.readyRing.material.color.setHex(0xffd471);enemy.readyRing.material.opacity=.72;enemy.readyRing.scale.setScalar(1.08+Math.sin(time*11)*.08);
  }else{
   if(enemy.state==='broken'){enemy.state='stalk';enemy.attackCD=.62;}
@@ -152,16 +161,17 @@ export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hi
   else if(enemy.state==='tell'){
    enemy.timer-=dt;enemy.readyRing.material.opacity=.58+Math.sin(time*24)*.3;
    if(enemy.timer<=0){
-    const first=enemy.queuedAttacks.shift();if(first)fireAttack(enemy,first,fire);
+    const first=enemy.queuedAttacks.shift();if(first)fireAttack(enemy,first);
     if(movement.dash){enemy.dashTime=.16;enemy.dashDir.set(enemy.dir.z*enemy.strafeSign,0,-enemy.dir.x*enemy.strafeSign).addScaledVector(enemy.dir,-.18).normalize();}
     enemy.state='recover';enemy.timer=enemy.queuedAttacks.length?.4:.2;enemy.attackCD=.78/enemy.plan.stats.attackSpeedScale;enemy.moveName=enemy.queuedAttacks.length?`${first.attack.name} → 연계 준비`:first?.attack.name||'비친 자동공격';
    }
   }else if(enemy.state==='recover'){
    enemy.timer-=dt;
    for(const entry of enemy.queuedAttacks)entry.delay-=dt;
-   while(enemy.queuedAttacks.length&&enemy.queuedAttacks[0].delay<=0){const entry=enemy.queuedAttacks.shift();fireAttack(enemy,entry,fire);enemy.moveName=`연계 · ${entry.attack.name}`;}
+   while(enemy.queuedAttacks.length&&enemy.queuedAttacks[0].delay<=0){const entry=enemy.queuedAttacks.shift();fireAttack(enemy,entry);enemy.moveName=`연계 · ${entry.attack.name}`;}
    if(enemy.timer<=0&&enemy.queuedAttacks.length===0)enemy.state='stalk';
   }
+  pumpBursts(enemy,dt,fire);
   if(steering.distance<.72&&enemy.state!=='tell'&&hit)hit(Math.max(5,Math.round(enemy.plan.stats.hitDamageMaxHp*70)));
  }
  enemy.motion.update(dt,enemy.g.position.x-previousX,enemy.g.position.z-previousZ,{type:'seed',state:enemy.state,timer:enemy.timer,hit:enemy.hit});

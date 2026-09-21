@@ -4,7 +4,9 @@ const V=THREE.Vector3,TAU=Math.PI*2,AXIS_Y=new V(0,1,0);
 const FULL_COUNT_OFFSETS=Object.freeze([-.16,0,.16]),FULL_COUNT_SPEEDS=Object.freeze([21.5,25,23]);
 export const ALWAYS_BEGINNER=Object.freeze({name:'항상초심',hp:13800,damage:Object.freeze({burst:.07,perSecond:.033}),contact:18});
 export const ALWAYS_BEGINNER_ART=Object.freeze({file:'boss-always-beginner-v1.webp',size:4.85,baseline:.015});
-export const ALWAYS_TUNING=Object.freeze({spiralVolleys:16,spiralInterval:.085,spiralBolts:32,fastballSpeed:22.5,slideSpeed:24});
+// tempo·boltSpeed(2026-09-22 사용자: "항상초심이 너무 어렵다, 속도를 조금 늦추자"): 몸동작·예고·질주 시계 전체를 12%,
+// 던지는 공의 속도를 10% 늦춘다. 받는 피해 허용량(damageAllowance)은 원래 시간으로 차서 싸움 길이는 늘지 않는다.
+export const ALWAYS_TUNING=Object.freeze({spiralVolleys:16,spiralInterval:.085,spiralBolts:32,fastballSpeed:22.5,slideSpeed:24,tempo:.88,boltSpeed:.9});
 export const ALWAYS_PHASES=Object.freeze({
  rookie:Object.freeze({label:'초심',tempo:.86,patterns:Object.freeze(['fastball','steal','curve','slide'])}),
  rally:Object.freeze({label:'집중',tempo:.68,patterns:Object.freeze(['fastball','doubleplay','wildpitch','homerun','spiral','curve','slide'])}),
@@ -61,8 +63,9 @@ function passedTarget(e){return flat(e.targetDelta.copy(e.target).sub(e.g.positi
 
 // hooks: player, collide, hit, bolt, burst, pulse, sound, clearBolts, summon and pooled boss VFX
 export function tickAlwaysBeginner(e,dt,hooks){
- const {player,collide=()=>{},hit=()=>false,bolt=()=>{},burst=()=>{},pulse=()=>{},sound=()=>{},clearBolts=()=>{},summon=()=>{},bossPitch=()=>{},bossRush=()=>{},bossSwing=()=>{},bossWave=()=>{},bossPhase=()=>{}}=hooks;
+ const {player,collide=()=>{},hit=()=>false,bolt:rawBolt=()=>{},burst=()=>{},pulse=()=>{},sound=()=>{},clearBolts=()=>{},summon=()=>{},bossPitch=()=>{},bossRush=()=>{},bossSwing=()=>{},bossWave=()=>{},bossPhase=()=>{}}=hooks;
  e.hit=Math.max(0,e.hit-dt);e.bumpCD=Math.max(0,e.bumpCD-dt);e.damageAllowance=Math.min(e.maxHp*ALWAYS_BEGINNER.damage.burst,e.damageAllowance+e.maxHp*ALWAYS_BEGINNER.damage.perSecond*dt);
+ dt*=ALWAYS_TUNING.tempo;const bolt=(pos,dir,options={})=>rawBolt(pos,dir,{...options,speed:(options.speed||0)*ALWAYS_TUNING.boltSpeed});
  const next=phaseFor(e.hp,e.maxHp);if(next!==e.phase&&e.state!=='phaseShift'){e.state='phaseShift';e.phasePending=next;e.timer=1.05;e.lane.visible=e.arc.visible=e.mark.visible=false;clearBolts();bossPhase(e.g.position,next);sound('bossWarning');}
  if(e.state==='phaseShift'){
   e.timer-=dt;const snap=1+.07*Math.sin(e.timer*22),finish=e.phasePending==='finish';e.body.scale.set(snap*(finish?1.045:1),snap*(finish?1.085:1.025),snap);e.ring.material.color.setHex(finish?0xff4050:0xffc35a);e.ring.scale.setScalar(1.05+(1-e.timer)*.16);

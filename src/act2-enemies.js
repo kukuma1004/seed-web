@@ -61,7 +61,8 @@ function tickCatcher(e,s,dt,time,ctx,toPlayer,dist){
  if(e.state==='stalk'){
   turnToward(e,toPlayer,s.turn,dt);
   const face=facingOf(e);
-  if(dist>s.keep+.4)e.g.position.addScaledVector(face,dt*s.speed);else if(dist<s.keep-.8)e.g.position.addScaledVector(face,-dt*s.speed*.6);
+  // 2026-09-22 사용자: 다가가면 뒷걸음질해 '밀면 밀리는' 것처럼 보였다 → 가까이 가도 제자리를 지킨다(멀면 다가오기·옆걸음은 그대로).
+  if(dist>s.keep+.4)e.g.position.addScaledVector(face,dt*s.speed);
   if(e.timer<=0&&dist<2.3){e.state='tell';e.timer=s.tell;e.dir.copy(face);}
  }else if(e.state==='tell'){if(e.timer<=0){e.state='commit';e.timer=s.shove;}}
  else if(e.state==='commit'){e.g.position.addScaledVector(e.dir,dt*s.shoveSpeed);if(!e.struck&&dist<1.1){ctx.hit(s.damage);e.struck=true;}if(e.timer<=0){e.state='recover';e.timer=s.recover;e.struck=false;}}
@@ -79,7 +80,8 @@ export function catcherReturn(e,ctx){
 function tickPitcher(e,s,dt,time,ctx,toPlayer,dist){
  if(e.state==='stalk'){
   turnToward(e,toPlayer,4,dt);
-  if(dist<s.near)e.g.position.addScaledVector(toPlayer,-dt*s.retreat);else if(dist>s.far)e.g.position.addScaledVector(toPlayer,dt*s.approach);
+  // 2026-09-22 사용자: 다가가면 뒷걸음질해 '밀면 밀리는' 것처럼 보였다 → 가까이 가도 제자리를 지킨다(멀면 다가오기·옆걸음은 그대로).
+  if(dist>s.far)e.g.position.addScaledVector(toPlayer,dt*s.approach);
   const side=e.phase<3?1:-1;e.g.position.x+=toPlayer.z*dt*s.strafe*side;e.g.position.z-=toPlayer.x*dt*s.strafe*side;
   if(e.timer<=0&&!ctx.blocked(e.g.position,ctx.player)){e.state='windup';e.timer=s.windup;e.dir.copy(toPlayer);e.g.rotation.y=Math.atan2(toPlayer.x,toPlayer.z);}
   e.line.visible=false;
@@ -113,7 +115,8 @@ function tickBatter(e,s,dt,time,ctx,toPlayer,dist){
  const face=facingOf(e);
  if(e.state==='stalk'){
   turnToward(e,toPlayer,3,dt);
-  if(dist<s.near)e.g.position.addScaledVector(toPlayer,-dt*s.retreat);else if(dist>s.far)e.g.position.addScaledVector(toPlayer,dt*s.approach);
+  // 2026-09-22 사용자: 다가가면 뒷걸음질해 '밀면 밀리는' 것처럼 보였다 → 가까이 가도 제자리를 지킨다(멀면 다가오기·옆걸음은 그대로).
+  if(dist>s.far)e.g.position.addScaledVector(toPlayer,dt*s.approach);
   if(e.timer<=0&&dist<1.6){e.state='tell';e.timer=s.tell;}
  }else if(e.state==='tell'){if(e.timer<=0){e.state='lunge';e.timer=s.lunge;e.dir.copy(face);}}
  else if(e.state==='lunge'){e.g.position.addScaledVector(e.dir,dt*s.lungeSpeed);if(e.timer<=0){if(dist<s.swingRange&&toPlayer.dot(face)>.2)ctx.hit(s.damage);e.state='recover';e.timer=s.recover;e.arc.visible=true;e.arc.material.opacity=.9;}}

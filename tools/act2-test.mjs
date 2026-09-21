@@ -53,8 +53,11 @@ assert.ok(ACT2_PRESSURE.crowdInitial<=14&&Math.max(...ACT2_PRESSURE.crowdExtra)<
 assert.deepEqual(act2WardenEncounter(0),{primary:'ace',support:null,trigger:0,hpScale:1});
 assert.deepEqual(act2WardenEncounter(1),{primary:'diamond',support:null,trigger:0,hpScale:1});
 assert.deepEqual(act2WardenEncounter(2),{primary:'slugger',support:null,trigger:0,hpScale:1});
-assert.deepEqual(act2WardenEncounter(3),{primary:'ace',support:'diamond',trigger:.6,hpScale:.8});
-assert.deepEqual(act2WardenEncounter(4),{primary:'diamond',support:'slugger',trigger:.6,hpScale:.8});
+// 보스(항상초심)를 깨기 전에는 여정이 깊어도 문지기 한 마리, 깬 뒤부터 둘째 문지기가 난입한다.
+assert.deepEqual(act2WardenEncounter(3),{primary:'ace',support:null,trigger:0,hpScale:1});
+assert.deepEqual(act2WardenEncounter(4),{primary:'diamond',support:null,trigger:0,hpScale:1});
+assert.deepEqual(act2WardenEncounter(3,1),{primary:'ace',support:'diamond',trigger:.6,hpScale:.8});
+assert.deepEqual(act2WardenEncounter(4,2),{primary:'diamond',support:'slugger',trigger:.6,hpScale:.8});
 assert.equal(Object.keys(ACT2_WARDENS).length,3);
 assert.equal(new Set(Object.values(ACT2_WARDEN_ART).map(art=>art.file)).size,3,'each guardian owns an atlas');
 for(const [id,art] of Object.entries(ACT2_WARDEN_ART)){assert.match(art.file,new RegExp(`^warden-act2-${id}-v1\\.webp$`));assert.ok(art.size>=3.7);}

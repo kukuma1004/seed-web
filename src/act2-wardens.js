@@ -13,11 +13,11 @@ export const ACT2_WARDEN_ART=Object.freeze({
  slugger:Object.freeze({file:'warden-act2-slugger-v1.webp',size:4.25,baseline:.015})
 });
 
-export function act2WardenEncounter(cycle=0){
+// bosses: 이번 판에서 쓰러뜨린 찐보스 수(항상초심). 1막(오스틴)과 같게, 보스를 깨기 전에는 문지기가 늘 한 마리이고
+// 깬 뒤부터 둘째 문지기가 60% 체력에서 난입한다(2026-09-22 사용자: 보스를 깨기 전 5여정에 난입하는 건 아니다).
+export function act2WardenEncounter(cycle=0,bosses=0){
  const c=Math.max(0,Math.floor(Number(cycle)||0));
- if(c===0)return Object.freeze({primary:'ace',support:null,trigger:0,hpScale:1});
- if(c===1)return Object.freeze({primary:'diamond',support:null,trigger:0,hpScale:1});
- if(c===2)return Object.freeze({primary:'slugger',support:null,trigger:0,hpScale:1});
+ if(c<3||!(Number(bosses)>0))return Object.freeze({primary:['ace','diamond','slugger'][c%3],support:null,trigger:0,hpScale:1});
  return c%2?Object.freeze({primary:'ace',support:'diamond',trigger:.6,hpScale:.8}):Object.freeze({primary:'diamond',support:'slugger',trigger:.6,hpScale:.8});
 }
 

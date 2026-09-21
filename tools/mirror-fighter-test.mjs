@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {MIRROR_ARENA,MIRROR_PANELS,MIRROR_PROJECTILE_BASE_SPEED,mirrorAttackSequence,mirrorProjectileSpeed,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
+import {MIRROR_ARENA,MIRROR_BURST,MIRROR_PANELS,MIRROR_PROJECTILE_BASE_SPEED,mirrorAttackSequence,mirrorProjectileSpeed,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
 import {mirrorPatternPlan} from '../src/mirror-trial.js';
 
 assert.equal(MIRROR_ARENA.shape,'circle');
@@ -16,16 +16,20 @@ const edge=mirrorSteering({mirrorX:0,mirrorZ:0,playerX:11.3,playerZ:0,strafeSign
 assert.ok(edge.edgeCut>.5,'외곽 도주를 감지');
 assert.ok(edge.x>.8,'외곽에서는 도주선 쪽으로 길을 자름');
 
-// 2026-09-21: 씨앗과 분신 모두 한 번에 7발 부채꼴(공전은 둘레 7~8발).
+// 2026-09-22: 씨앗과 분신 모두 기관총처럼 7발 연사 → 장전(공전은 둘레 7~8발을 차례로).
 for(const law of ['pierce','split','chain','burst','reflect','recall','frost','gravity'])assert.equal(mirrorVolley(law,3).length,7,`${law} 7발`);
+assert.ok(mirrorVolley('pierce',3).every(spec=>Math.abs(spec.angle)<=.06),'연사는 부채꼴이 아니라 조준선 근처로 모인다');
+assert.equal(MIRROR_BURST.shots,7);assert.ok(MIRROR_BURST.interval>=.05&&MIRROR_BURST.interval<=.1&&MIRROR_BURST.followDamage<.3);
 assert.ok(mirrorVolley('orbit',1).length>=7&&mirrorVolley('orbit',20).length<=8,'원형 탄막 7~8발, 모바일 상한 유지');
 assert.equal(mirrorVolley('reflect',4)[0].bounces,2);
 assert.equal(mirrorVolley('recall',4)[0].recall,true);
 assert.equal(mirrorVolley('burst',4)[0].burst,true,'폭발 조합은 빗나가도 폭발을 남긴다');
 assert.equal(mirrorVolley('gravity',4)[0].gravity,true,'중력 조합은 플레이어를 끌어당기는 우물을 남긴다');
 {const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- assert.match(main,/if\(mirrorSession\)\{const volley=\{hit:false\};for\(const angle of MIRROR_FAN\)projectile\(/,'씨앗도 거울의 탑에서 7발 부채꼴');
- assert.match(main,/!\(p\.volley\?\.hit&&e\.type==='mirrorseed'\)/,'같은 부채꼴은 분신에게 한 발만');
+ assert.match(main,/if\(mirrorSession\)mirrorBurst=\{left:MIRROR_BURST\.shots/,'씨앗도 거울의 탑에서 7발 연사');
+ assert.match(main,/shootCD=mirrorSession\?mirrorAttackCooldown\(\)\+MIRROR_BURST\.shots\*MIRROR_BURST\.interval/,'연사가 끝난 뒤 장전 시간이 따로 있다');
+ assert.match(main,/if\(follow\)damageEnemy\(e,shotDamage\*MIRROR_BURST\.followDamage/,'같은 연사의 이어지는 명중은 약하게');
+ assert.match(main,/!p\.fragment&&!follow&&shots\.length<MAX_SHOTS/,'이어지는 명중은 분열 조각을 만들지 않는다');
  assert.match(main,/mirrorSession\?Math\.max\(viewLayout\.followZ,MIRROR_VIEW\.followZ\)/,'거울의 탑 카메라는 씨앗을 더 따라간다');}
 assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProjectileSpeed(1),'거울 탄환은 첫 층부터 빠르고 층에 따라 조금 더 빨라진다');
 
@@ -47,6 +51,18 @@ const lateChain=mirrorAttackSequence({attacks,concurrentAttackFamilies:2,chainLe
 assert.equal(lateChain.length,3,'후반층은 동시 탄막을 늘리지 않고 세 번째 순차 연계를 붙인다');
 assert.ok(lateChain[2].delay>lateChain[1].delay&&lateChain[2].damageScale<lateChain[1].damageScale);
 
+// 분신 연사: 공격 하나가 한 번에 7발이 아니라 interval마다 한 발씩 나간다.
+{
+  const plan=mirrorPatternPlan({laws:[{id:'pierce',level:2}],forms:[]},{floor:1});
+  const clone={g:new THREE.Group(),floor:1,plan,hit:0,turnTimer:1,strafeSign:1,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,
+    broken:0,state:'tell',timer:0,attackCD:5,shotIndex:0,attackIndex:0,queuedAttacks:[{attack:plan.attacks[0],delay:0,damageScale:1}],bursts:[],readyRing:{material:new THREE.MeshBasicMaterial(),scale:new THREE.Vector3(1,1,1)},moveName:'',motion:{update(){}}};
+  let fired=0;const hooks={player:{x:0,z:8},camera:null,constrain(){},fire(){fired++;},hit(){}};
+  tickMirrorFighter(clone,1/60,0,hooks);assert.equal(fired,1,'연사 첫 발만 바로 나간다');
+  for(let i=0;i<6;i++)tickMirrorFighter(clone,MIRROR_BURST.interval,i,hooks);
+  assert.equal(fired,MIRROR_BURST.shots,'interval마다 한 발씩, 모두 7발');
+  clone.bursts.push({clock:0,law:'pierce',specs:[{angle:0},{angle:0}]});clone.broken=1;tickMirrorFighter(clone,1/60,9,hooks);
+  assert.equal(clone.bursts.length,0,'거울이 깨지면 남은 연사는 멈춘다');
+}
 const simulationPlan=mirrorPatternPlan({
   laws:[{id:'reflect',level:2},{id:'frost',level:2},{id:'gravity',level:2}],
   forms:[{id:'gravitymirror',level:1,laws:['reflect','gravity']},{id:'frostkaleidoscope',level:1,laws:['frost','reflect']}],
