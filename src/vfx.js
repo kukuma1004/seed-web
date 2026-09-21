@@ -20,12 +20,34 @@ export function shockCrownGeometry(segments=14){
  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.computeVertexNormals();geometry.name='seed-vfx-broken-shock-crown';return geometry;
 }
 
+// Higgsfield 이펙트 아틀라스(2026-09-21 첫 시험, HIGGSFIELD_RULES.md): 512², 128px 칸 4×4, 검정 바탕 흑백 소재.
+// 흑백이라 법칙 색은 지금처럼 인스턴스 색으로 입힌다. 원본 → tools/vfx-atlas-build.py → public/assets/vfx-atlas-v1.webp(18KB).
+export const VFX_ATLAS_FILE='assets/vfx-atlas-v1.webp';
+export const VFX_CELLS=Object.freeze({orb:0,star:1,flecks:2,ring:3,flame:4,trail:5,comet:6,crescent:7,leaf:8,petal:9,shard:10,lightning:11,mist:12,spores:13,shock:14,sigil:15});
+
+// 불꽃 조각·불꽃 혀를 소재 그림을 입힌 판으로 그린다. 판은 늘 카메라를 보고, 인스턴스마다 칸(fxSprite.x)과 화면 회전(fxSprite.y)을 고른다.
+// 묶음 수(드로콜)는 그대로이고 셰이더만 한 종류 바뀐다(판 시작 전 미리 준비됨).
+export function vfxSpriteMaterial(atlas){
+ const material=new THREE.MeshBasicMaterial({map:atlas,transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ material.onBeforeCompile=shader=>{
+  shader.vertexShader=shader.vertexShader
+   .replace('#include <common>','#include <common>\nattribute vec2 fxSprite;')
+   .replace('#include <uv_vertex>','#include <uv_vertex>\nvMapUv=(uv+vec2(mod(fxSprite.x,4.),3.-floor(fxSprite.x/4.)))*.25;')
+   .replace('#include <project_vertex>',['vec4 mvPosition=modelViewMatrix*instanceMatrix*vec4(0.,0.,0.,1.);',
+    'vec2 fxP=vec2(transformed.x*length(instanceMatrix[0].xyz),transformed.y*length(instanceMatrix[1].xyz));',
+    'float fxC=cos(fxSprite.y),fxS=sin(fxSprite.y);mvPosition.xy+=vec2(fxP.x*fxC-fxP.y*fxS,fxP.x*fxS+fxP.y*fxC);',
+    'gl_Position=projectionMatrix*mvPosition;'].join('\n'));
+ };
+ material.customProgramCacheKey=()=>'seed-vfx-sprite-v1';
+ return material;
+}
+
 export function streakGeometry(){
  const geometry=new THREE.OctahedronGeometry(1,0).scale(.72,.5,.72);geometry.name='seed-vfx-tapered-streak';return geometry;
 }
 
 // Fixed GPU batches (four): effects cannot add lights, shadows or an unbounded mesh per spark.
-export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical',quality=2}={}){
+export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical',quality=2,atlas=null}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0),identity=new THREE.Quaternion();
   const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
@@ -33,19 +55,35 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
   const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0,bossPitch:0,bossRush:0,bossSwing:0,bossWave:0,bossPhase:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
   const density=()=>[.42,.68,1][qualityLevel]*(mobile?.68:1);
-  function batch(geometry,capacity){
-    const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+  function batch(geometry,capacity,sprite=null){
+    const material=sprite?vfxSpriteMaterial(atlas):new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+    if(sprite){geometry.name='seed-vfx-sprite';const cells=new THREE.InstancedBufferAttribute(new Float32Array(capacity*2),2);cells.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('fxSprite',cells);}
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     // 색 버퍼를 처음부터 둔다. 첫 setColorAt 때 생기면 셰이더 종류가 바뀌어 전투 중에 다시 컴파일된다.
     mesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(capacity*3).fill(1),3);mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled=false;mesh.count=0;group.add(mesh);
-    return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion(),twinkle:0}))};
+    return {mesh,capacity,sprite,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion(),twinkle:0}))};
   }
-  const sparks=batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
+  // 아틀라스가 있으면 불꽃 조각·불꽃 혀는 소재 판으로 그린다. 판 크기 배율은 예전 팔면체·원뿔이 보이던 크기에 맞춘 값이다
+  // (소재 그림은 칸의 가운데 60~75%만 차지하고 가장자리가 부드럽게 사라진다). 불꽃 판은 아래 끝이 발생 위치다.
+  // glow: 부드러운 테두리만큼 줄어든 반짝임을 채우는 밝기 배율. 조각 가운데가 하얗게 넘치도록 불꽃 조각은 크게 올렸다
+  // (2026-09-21 사용자: "반짝임이 줄어서 아쉽다"). 휴대폰은 화면이 작고 기본 화질의 번짐이 약해 1.35배 더 밝힌다.
+  const sparks=atlas?batch(new THREE.PlaneGeometry(1,1),mobile?240:480,{x:4.2,y:2.1,glow:1.9}):batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
   const beams=batch(streakGeometry(),mobile?120:240);
   // One tapered batch gives explosions a rising flame crown without creating a
   // mesh or a light for every lick of fire.
-  const flames=batch(new THREE.ConeGeometry(1,2,5).translate(0,1,0),mobile?96:180);
+  const flames=atlas?batch(new THREE.PlaneGeometry(1,1).translate(0,.5,0),mobile?96:180,{x:5,y:2.7,glow:1.15}):batch(new THREE.ConeGeometry(1,2,5).translate(0,1,0),mobile?96:180);
+  const chance=(a,b,rate)=>random()<rate?a:b;
+  // 법칙마다 불꽃 조각 소재를 섞는다(색은 그대로 법칙 색). 작은 조각은 별빛이 가장 또렷하게 반짝여서 별빛을 바탕으로 두고,
+  // 법칙 모양(얼음 조각·번개·꽃잎·홀씨·잎)은 섞어 넣는 정도로만 쓴다. 둥근 빛은 뭉개져 보여 불씨에만 쓴다.
+  function sparkCell(id){
+    if(id==='frost')return chance(VFX_CELLS.shard,VFX_CELLS.star,.35);
+    if(id==='chain')return chance(VFX_CELLS.lightning,VFX_CELLS.star,.3);
+    if(id==='split')return chance(VFX_CELLS.petal,VFX_CELLS.star,.4);
+    if(id==='gravity')return chance(VFX_CELLS.spores,VFX_CELLS.star,.4);
+    if(id==='burst'||id==='amber')return chance(VFX_CELLS.orb,VFX_CELLS.star,.4);
+    return chance(VFX_CELLS.leaf,VFX_CELLS.star,.25);
+  }
   const ghostParts=[];
   const part=(geo,x,y,z)=>{geo.translate(x,y,z);ghostParts.push(geo);};
   part(new THREE.IcosahedronGeometry(.43,1).scale(1,1.2,.75),0,.65,0);
@@ -60,10 +98,10 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   const ghosts=batch(mergeGeometries(unindexed),mobile?4:8);
   for(const geo of [...ghostParts,...unindexed])geo.dispose();
   const batches=[sparks,beams,flames,ghosts];
-  function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0}={}){
+  function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0,cell=0,angle=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
     p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=themeColor(themeId,tint,FX_COLORS[tint]??tint??FX_COLORS.seed);
-    p.grow=grow;p.delay=delay;p.gravity=gravity;p.twinkle=random()*Math.PI*2;
+    p.grow=grow;p.delay=delay;p.gravity=gravity;p.twinkle=random()*Math.PI*2;p.cell=cell;p.angle=angle;
     return p;
   }
   // Kept as a no-op so every caller (forms, bosses, items) stays valid without drawing a floor ring.
@@ -80,7 +118,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     for(let i=0;i<count;i++){
       const a=random()*Math.PI*2,r=random()*.55*spread,size=.045+random()*.055;
       emitPos.set(pos.x+Math.cos(a)*r,pos.y+.08,pos.z+Math.sin(a)*r);emitVelocity.set(Math.cos(a)*.18,.45+random()*1.25,Math.sin(a)*.18);emitRotation.setFromAxisAngle(up,a);
-      emit(flames,emitPos,id,.28+random()*.34,size,size*(2.5+random()*2),size,{velocity:emitVelocity,rotation:emitRotation,delay});
+      emit(flames,emitPos,id,.28+random()*.34,size,size*(2.5+random()*2),size,{velocity:emitVelocity,rotation:emitRotation,delay,cell:VFX_CELLS.flame,angle:flames.sprite?(random()-.5)*.35:0});
     }
   }
   function burst(pos,id='seed',n=12,spread=1,delay=0){
@@ -95,7 +133,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
       }else if(theme.motion==='spiral'){
         const r=random()*.45*spread;emitPos.set(pos.x+Math.cos(a)*r,pos.y+.35,pos.z+Math.sin(a)*r);emitVelocity.set(Math.cos(a+Math.PI/2)*speed*.72,.75+random()*1.8,Math.sin(a+Math.PI/2)*speed*.72);
       }else{emitPos.set(pos.x,pos.y+.6,pos.z);emitVelocity.set(Math.cos(a)*speed,.5+random()*2,Math.sin(a)*speed);}
-      const flat=theme.motion==='axis';emit(sparks,emitPos,id,.25+random()*.3,size*(flat?1.7:1),size*(flat?.75:2.5),size,{velocity:emitVelocity,gravity:theme.motion==='spiral'?1.4:theme.motion==='inward'?.8:3,delay});
+      const flat=theme.motion==='axis',cell=sparks.sprite?sparkCell(id):0;emit(sparks,emitPos,id,.25+random()*.3,size*(flat?1.7:1),size*(flat?.75:2.5),size,{velocity:emitVelocity,gravity:theme.motion==='spiral'?1.4:theme.motion==='inward'?.8:3,delay,cell,angle:sparks.sprite?random()*Math.PI*2:0});
     }
     if(id==='burst')flame(pos,id,Math.max(5,Math.ceil(n*.55)),spread,delay);
   }
@@ -130,7 +168,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     segment(from,to,id,width,life);
     if(theme.trailMode==='leaf'&&!fragment){
       workA.copy(from).lerp(to,.55);workC.copy(to).sub(from);workB.set(workA.x-workC.z*.18,workA.y+.04,workA.z+workC.x*.18);segment(workA,workB,'amber',width*.65,life*.7);
-    }else if(theme.trailMode==='comet'&&!fragment){emitPos.copy(from).lerp(to,.52);emitVelocity.set(0,.28,0);emit(sparks,emitPos,'awaken',life*.9,width*1.15,width*2.1,width,{velocity:emitVelocity});}
+    }else if(theme.trailMode==='comet'&&!fragment){emitPos.copy(from).lerp(to,.52);emitVelocity.set(0,.28,0);emit(sparks,emitPos,'awaken',life*.9,width*1.15,width*2.1,width,{velocity:emitVelocity,cell:VFX_CELLS.star});}
   }
   function reflect(pos,dir){
     counters.reflect++;pulse(pos,'reflect',.42,.3);burst(pos,'reflect',12);
@@ -258,19 +296,21 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
         p.vel.y-=p.gravity*dt;p.pos.addScaledVector(p.vel,dt);
         const t=p.life/p.max,theme=THEMES[themeId],base=pool===ghosts?1:pool===flames?.35+.9*Math.sin(Math.PI*(1-t)):.4+.6*t;
         const scale=pool===sparks?base*theme.sparkScale*(1-theme.twinkle+theme.twinkle*Math.abs(Math.sin((1-t)*Math.PI*6+p.twinkle))):base;
-        dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);dummy.updateMatrix();
-        pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4));pool.mesh.setColorAt(count,color);count++;
+        dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);
+        if(pool.sprite){dummy.scale.x*=pool.sprite.x;dummy.scale.y*=pool.sprite.y;pool.mesh.geometry.attributes.fxSprite.setXY(count,p.cell,p.angle);}
+        dummy.updateMatrix();pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4)*(pool.sprite?pool.sprite.glow*(mobile?1.35:1):1));pool.mesh.setColorAt(count,color);count++;
       }
       // 살아 있는 조각만큼만 GPU로 올린다(예전에는 빈 칸까지 매 프레임 전체 버퍼를 올렸다). 하나도 없으면 그리지도 올리지도 않는다.
       pool.mesh.count=count;if(!count)continue;
       const matrix=pool.mesh.instanceMatrix,colors=pool.mesh.instanceColor;
       matrix.clearUpdateRanges();matrix.addUpdateRange(0,count*16);matrix.needsUpdate=true;
       if(colors){colors.clearUpdateRanges();colors.addUpdateRange(0,count*3);colors.needsUpdate=true;}
+      if(pool.sprite){const cells=pool.mesh.geometry.attributes.fxSprite;cells.clearUpdateRanges();cells.addUpdateRange(0,count*2);cells.needsUpdate=true;}
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
   return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,bossPitch,bossRush,bossSwing,bossWave,bossPhase,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
-    state:()=>({theme:themeId,quality:qualityLevel,active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
+    state:()=>({theme:themeId,quality:qualityLevel,textured:Boolean(atlas),active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

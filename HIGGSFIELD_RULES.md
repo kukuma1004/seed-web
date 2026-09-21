@@ -121,3 +121,11 @@ Higgsfield는 게임 엔진·게임 코드·웹사이트를 만드는 데 쓰지
   - MCP에는 4K 이미지·영상 생성 도구도 들어 있다. **쓰지 않는다.** 이미지 생성만, 필요한 해상도만.
   - 비용 미리 보기는 CLI `higgsfield generate cost`로 먼저 확인한다(MCP 도구로 비용을 알 수 없을 때).
 - **크레딧 주의**: 에이전트(CLI·MCP)로 생성하면 플랜과 상관없이 **매번 크레딧이 차감된다.** 웹사이트의 무제한·무료 생성 혜택은 적용되지 않는다(Higgsfield 공식 도움말).
+- 2026-09-21 사용자가 MCP 인증 완료. 계정: 무료 플랜, 작업 공간은 개인 하나. 무료 플랜은 GPT Image 2.5가 막혀 있다("basic 플랜 이상 필요", 시작 전에 거절돼 크레딧은 빠지지 않음). Nano Banana 2(1K 1.5크레딧)는 된다.
+- 비용 미리 보기: MCP `generate_image`에 `get_cost:true`를 주면 생성하지 않고 크레딧만 알려 준다. 조회한 값(1K 기준): Z Image 0.15 · FLUX.2 pro 1 · GPT Image 2.5 medium 1 / high 2 · Recraft V4.1 1.25 · Nano Banana 2 1.5 · GPT Image 2 high 3.5.
+
+## 11. 생성 기록 (같은 것을 다시 만들지 않기 위해)
+
+| 날짜 | 무엇 | 모델 · 크레딧 | 원본 | 게임 적용 |
+|---|---|---|---|---|
+| 2026-09-21 | 전투 이펙트 소재 시트(4×4, 흑백, 검정 바탕): 빛 구슬·별빛·빛 조각·빛 고리·불꽃 혀·빛 꼬리·혜성·초승달 베기·잎·꽃잎·얼음 조각·번개·안개·홀씨·충격 고리·덩굴 문양 | Nano Banana 2 1K · 1.5 | `art-source/higgsfield/20260921/vfx-sheet-nb2-1k.png`(1024², 1.1MB) | `tools/vfx-atlas-build.py` → `public/assets/vfx-atlas-v1.webp`(512², 18KB). 불꽃 조각·불꽃 혀 묶음(`src/vfx.js`)에 입힘. 칸 번호는 `VFX_CELLS` |

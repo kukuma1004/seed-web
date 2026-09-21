@@ -23,6 +23,7 @@ tools/*
 !tools/journey-test.mjs
 !tools/projectile-art-test.mjs
 !tools/vfx-test.mjs
+!tools/vfx-atlas-build.py
 !tools/active-vfx-test.mjs
 !tools/reward-art-test.mjs
 !tools/laws-test.mjs

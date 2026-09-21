@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createVFX} from '../src/vfx.js';
+import fs from 'node:fs';
+import {createVFX,VFX_ATLAS_FILE,VFX_CELLS} from '../src/vfx.js';
 
 for(const mobile of [false,true]){
   const scene=new THREE.Scene(),fx=createVFX(scene,{mobile,random:()=>.5});
@@ -33,4 +34,29 @@ for(const mobile of [false,true]){
   const disposed=[];for(const mesh of meshes){mesh.geometry.addEventListener('dispose',()=>disposed.push('geometry'));mesh.material.addEventListener('dispose',()=>disposed.push('material'));}
   fx.dispose();assert.equal(scene.children.length,0);assert.equal(disposed.length,8);
 }
-console.log('VFX capacity, flame-layer explosions, input isolation, finite transforms, expiry, reset and GPU resource disposal passed.');
+// Higgsfield 이펙트 아틀라스(2026-09-21 첫 시험): 묶음 수는 그대로, 불꽃 조각·불꽃 혀만 소재 판으로 바뀐다.
+{
+  const atlasFile=new URL('../public/'+VFX_ATLAS_FILE,import.meta.url);
+  assert.ok(fs.statSync(atlasFile).size<64*1024,'effect atlas stays a small WebP');
+  const atlas=new THREE.Texture(),scene=new THREE.Scene(),fx=createVFX(scene,{atlas,random:()=>.3}),a=new THREE.Vector3(1,0,2);
+  const meshes=[...scene.children[0].children],sprites=meshes.filter(m=>m.geometry.name==='seed-vfx-sprite');
+  assert.equal(meshes.length,4,'the atlas keeps the same four GPU batches');
+  assert.equal(sprites.length,2,'sparks and flames become atlas sprites');
+  for(const mesh of sprites){
+    assert.equal(mesh.material.map,atlas);assert.equal(mesh.material.customProgramCacheKey(),'seed-vfx-sprite-v1');
+    assert.equal(mesh.material.blending,THREE.AdditiveBlending);assert.equal(mesh.material.depthWrite,false);
+  }
+  fx.explosion(a,'burst',1.6,true);for(const id of ['frost','chain','split','gravity','seed'])fx.impact(a,id,true);fx.update(.016);
+  for(const mesh of sprites){
+    assert.ok(mesh.count>0);const cells=mesh.geometry.attributes.fxSprite.array;
+    for(let i=0;i<mesh.count;i++){const cell=cells[i*2];assert.ok(Number.isInteger(cell)&&cell>=0&&cell<16,'atlas cell in range');assert.ok(Number.isFinite(cells[i*2+1]));}
+  }
+  const flames=sprites[1];flames.geometry.computeBoundingBox();
+  assert.equal(flames.geometry.boundingBox.min.y,0,'the flame sprite is anchored at its base');
+  for(let i=0;i<flames.count;i++)assert.equal(flames.geometry.attributes.fxSprite.array[i*2],VFX_CELLS.flame);
+  assert.equal(fx.state().textured,true);
+  const shader={vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader};sprites[0].material.onBeforeCompile(shader);
+  assert.ok(shader.vertexShader.includes('attribute vec2 fxSprite')&&shader.vertexShader.includes('vMapUv=(uv+')&&!shader.vertexShader.includes('#include <project_vertex>'),'sprite shader patch applies to this three.js version');
+  fx.dispose();
+}
+console.log('VFX capacity, flame-layer explosions, input isolation, finite transforms, expiry, reset, GPU resource disposal and the effect atlas passed.');
