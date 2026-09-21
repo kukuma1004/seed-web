@@ -22,7 +22,7 @@ for(const quality of ['low','normal']){
  assert.equal(plan.attacks[0].law,'recall','진화의 대표 성질을 우선한다');
  assert.equal(plan.loadout.exactCopy,true);
  assert.equal(plan.copied.healing,false);assert.equal(plan.copied.revive,false);assert.equal(plan.copied.relic,false);
- assert.ok(plan.budget.hostileProjectiles<60,'모바일 적 탄환 예산을 넘지 않는다');
+ assert.ok(plan.budget.hostileProjectiles<=84,'모바일 적 탄환 예산을 넘지 않는다(7발 부채꼴 기준, 묶음 그리기)');
  assert.ok(plan.stats.hitDamageMaxHp<=.13,'한 발 최대 피해 상한');
  assert.equal(plan.tower.arena.shrinks,false,'난이도가 올라가도 이동 공간을 억지로 줄이지 않는다');
 }

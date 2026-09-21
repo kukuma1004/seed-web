@@ -70,16 +70,22 @@ export function mirrorSteering({mirrorX=0,mirrorZ=0,playerX=0,playerZ=0,arenaRad
  return Object.freeze({x:x/length,z:z/length,distance,edgeCut:edge});
 }
 
+// 2026-09-21 사용자 요청: 한 발씩 나가 감질났다 → 씨앗과 분신 모두 한 번에 7발 부채꼴(공전은 둘레 7~8발).
+// 맞으면 잠깐 무적이라 분신 부채꼴은 씨앗에게 한 번만 들어가고, 씨앗 부채꼴도 분신에게 한 발만 들어간다(서로 공평).
+export const MIRROR_FAN=Object.freeze([-.36,-.24,-.12,0,.12,.24,.36]);
+// 원형 경기장(반지름 13)은 일반 방보다 넓어, 거울의 탑에서만 카메라가 씨앗을 더 따라가고 조금 멀리 본다.
+export const MIRROR_VIEW=Object.freeze({followX:.62,followZ:.78,zoom:.9});
 export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
  const damageScale=law==='orbit'?.58:law==='split'?.7:1;
- if(law==='orbit')return Array.from({length:Math.min(8,5+Math.floor(floor/5))},(_,i)=>({angle:i*Math.PI*2/Math.min(8,5+Math.floor(floor/5)),damageScale,speedScale:.95}));
- if(law==='split'||law==='chain')return [-.24,0,.24].map(angle=>({angle,damageScale,speedScale:law==='chain'?1.1:.98}));
- if(law==='burst')return [-.12,.12].map(angle=>({angle,damageScale:.82,speedScale:.86,burst:true}));
- if(law==='reflect')return [{angle:0,damageScale,bounces:2,speedScale:1.08}];
- if(law==='recall')return [{angle:shotIndex%2?-.1:.1,damageScale,recall:true,speedScale:.96}];
- if(law==='frost')return [-.16,.16].map(angle=>({angle,damageScale:.76,frost:true,speedScale:.9}));
- if(law==='gravity')return [{angle:0,damageScale:.9,curve:(shotIndex%2?1:-1)*.2,speedScale:.84,gravity:true}];
- return [{angle:0,damageScale,speedScale:1.12}];
+ const fan=extra=>MIRROR_FAN.map(angle=>({angle,...extra}));
+ if(law==='orbit'){const n=Math.min(8,Math.max(7,5+Math.floor(floor/5)));return Array.from({length:n},(_,i)=>({angle:i*Math.PI*2/n,damageScale,speedScale:.95}));}
+ if(law==='split'||law==='chain')return fan({damageScale,speedScale:law==='chain'?1.1:.98});
+ if(law==='burst')return fan({damageScale:.82,speedScale:.86,burst:true});
+ if(law==='reflect')return fan({damageScale,bounces:2,speedScale:1.08});
+ if(law==='recall')return fan({damageScale,recall:true,speedScale:.96});
+ if(law==='frost')return fan({damageScale:.76,frost:true,speedScale:.9});
+ if(law==='gravity')return fan({damageScale:.9,curve:(shotIndex%2?1:-1)*.2,speedScale:.84,gravity:true});
+ return fan({damageScale,speedScale:1.12});
 }
 
 export const MIRROR_PROJECTILE_BASE_SPEED=10.2;

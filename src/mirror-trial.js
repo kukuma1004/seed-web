@@ -5,8 +5,9 @@ import {ALL_FORMS} from './forms.js';
 // patterns. It never runs a second copy of the player's projectile simulation.
 export const MIRROR_TRIAL_LIMITS=Object.freeze({
  concurrentAttackFamilies:2,
- hostileProjectilesLow:36,
- hostileProjectilesNormal:52,
+ // 2026-09-21: 부채꼴 7발(최대 세 공격 연계)이 중간에 잘리지 않게 올렸다. 분신 탄은 묶음으로 그려 드로콜이 늘지 않는다.
+ hostileProjectilesLow:60,
+ hostileProjectilesNormal:84,
  effectsLow:28,
  effectsNormal:44,
  copiedHealing:false,

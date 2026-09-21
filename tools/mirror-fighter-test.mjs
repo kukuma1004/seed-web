@@ -16,13 +16,17 @@ const edge=mirrorSteering({mirrorX:0,mirrorZ:0,playerX:11.3,playerZ:0,strafeSign
 assert.ok(edge.edgeCut>.5,'외곽 도주를 감지');
 assert.ok(edge.x>.8,'외곽에서는 도주선 쪽으로 길을 자름');
 
-assert.equal(mirrorVolley('pierce',1).length,1);
-assert.equal(mirrorVolley('split',3).length,3);
-assert.ok(mirrorVolley('orbit',20).length<=8,'원형 탄막도 모바일 상한 유지');
+// 2026-09-21: 씨앗과 분신 모두 한 번에 7발 부채꼴(공전은 둘레 7~8발).
+for(const law of ['pierce','split','chain','burst','reflect','recall','frost','gravity'])assert.equal(mirrorVolley(law,3).length,7,`${law} 7발`);
+assert.ok(mirrorVolley('orbit',1).length>=7&&mirrorVolley('orbit',20).length<=8,'원형 탄막 7~8발, 모바일 상한 유지');
 assert.equal(mirrorVolley('reflect',4)[0].bounces,2);
 assert.equal(mirrorVolley('recall',4)[0].recall,true);
 assert.equal(mirrorVolley('burst',4)[0].burst,true,'폭발 조합은 빗나가도 폭발을 남긴다');
 assert.equal(mirrorVolley('gravity',4)[0].gravity,true,'중력 조합은 플레이어를 끌어당기는 우물을 남긴다');
+{const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ assert.match(main,/if\(mirrorSession\)\{const volley=\{hit:false\};for\(const angle of MIRROR_FAN\)projectile\(/,'씨앗도 거울의 탑에서 7발 부채꼴');
+ assert.match(main,/!\(p\.volley\?\.hit&&e\.type==='mirrorseed'\)/,'같은 부채꼴은 분신에게 한 발만');
+ assert.match(main,/mirrorSession\?Math\.max\(viewLayout\.followZ,MIRROR_VIEW\.followZ\)/,'거울의 탑 카메라는 씨앗을 더 따라간다');}
 assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProjectileSpeed(1),'거울 탄환은 첫 층부터 빠르고 층에 따라 조금 더 빨라진다');
 
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),mirrorBoltSource=main.slice(main.indexOf('function mirrorBolt'),main.indexOf('function mirrorPerfectDodge'));
