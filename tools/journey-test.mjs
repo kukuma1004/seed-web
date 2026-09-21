@@ -3,6 +3,7 @@ import * as THREE from 'three';
 import {ROOMS,EXIT,rewardOptions,learnedLaws,canUseExit} from '../src/journey.js';
 import {createWarden,tickWarden,FAN_SPACING,FAN_SHIFT} from '../src/warden.js';
 import {segmentHitsCover} from '../src/collision.js';
+import {FINAL_BOSS_CAP,FINAL_BOSS_EVERY,MAX_RUN_CYCLE,bossCapReached} from '../src/journey.js';
 assert.equal(ROOMS.length,5);assert.equal(new Set(ROOMS.map(r=>JSON.stringify(r.covers))).size,5);
 for(const room of ROOMS)for(const [type,x,z] of [...room.enemies,['player',0,5],['exit',EXIT.x,EXIT.z]])assert.equal(segmentHitsCover({x,z},{x,z},room.covers,type==='warden'?1:.65),false,`${room.name}: ${type} inside cover`);
 assert.equal(rewardOptions(0,[]).length,3);assert.equal(new Set(rewardOptions(2,['reflect','split'])).size,3);assert.ok(rewardOptions(3,['reflect','split','chain']).every(id=>['reflect','split','chain'].includes(id)));
@@ -24,3 +25,7 @@ let fanCount=0;for(let i=0;i<30;i++)tickWarden(fanBoss,.02,i*.02,new THREE.Vecto
 assert.equal(fanCount,15,'Three five-bolt salvos per fan attack');
 // Neighbouring bolts leave a lane wider than the seed (hit radius .6 each side) within five units.
 {const gap=2*5*Math.sin(FAN_SPACING/2);assert.ok(gap>1.3,`fan lane ${gap.toFixed(2)} at distance 5`);assert.ok(FAN_SHIFT<FAN_SPACING/4,'salvos keep their lanes');}
+
+// 2026-09-21: 한 판은 찐보스를 열 번 이기면 끝난다. 찐보스는 다섯 여정마다이니 마지막은 50번째 여정(cycle 49).
+assert.equal(FINAL_BOSS_CAP,10);assert.equal(FINAL_BOSS_EVERY,5);assert.equal(MAX_RUN_CYCLE,49);
+assert.equal(bossCapReached(9),false);assert.equal(bossCapReached(10),true);assert.equal(bossCapReached(27),true,'옛 저장처럼 이미 넘겼다면 다음 찐보스에서 끝');assert.equal(bossCapReached(undefined),false);

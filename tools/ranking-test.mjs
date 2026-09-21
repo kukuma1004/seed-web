@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {buildRecord,parseBuild,validBuild,buildText,bossText,BUILD_TEXT_MAX} from '../src/ranking-build.js';
-import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS} from '../src/score.js';
+import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS,rankOrder,formatTime} from '../src/score.js';
 import {ITEMS,emptyInventory,normalizeInventory,validInventory,addItem,drinkPotion} from '../src/inventory.js';
 import {validCheckpoint,difficulty} from '../src/run-save.js';
 
@@ -69,10 +69,15 @@ for(let c=0;c<8;c++)assert.ok(difficulty(c+1).projectileSpeed>difficulty(c).proj
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).damage>difficulty(c).damage&&difficulty(c+1).bossTempo>difficulty(c).bossTempo);
 assert.equal(difficulty(20).hp,5.8,'the existing first twenty journeys keep their tuning');
 assert.ok(difficulty(30).hp>difficulty(20).hp&&difficulty(100).hp>difficulty(30).hp,'late-run enemy health never stops growing');
-assert.equal(difficulty(100).speed,1.9,'enemy motion stays at the readable speed cap');
-assert.equal(difficulty(100).projectileSpeed,1.35,'enemy shots stay below the readable projectile-speed cap');
-assert.equal(difficulty(100).damage,2.5,'late-run damage pressure is capped');
-assert.equal(difficulty(100).bossTempo,1.3,'Austin stays readable at the tempo cap');
+// 2026-09-21: 적의 위협은 50번째 여정(cycle 49)까지 계속 오르고, 그 뒤(옛 저장)는 그 값에 머문다.
+for(const key of ['speed','projectileSpeed','damage','bossTempo']){
+ for(let c=0;c<49;c++)assert.ok(difficulty(c+1)[key]>=difficulty(c)[key],`${key}가 ${c+2}번째 여정에서 줄어듦`);
+ assert.ok(difficulty(49)[key]>difficulty(30)[key],`${key}가 뒤쪽 여정에서 멈춤`);
+ assert.equal(difficulty(100)[key],difficulty(49)[key],`${key}는 50번째 여정 값에 머문다`);
+}
+assert.equal(difficulty(12).speed,1.9,'앞쪽 곡선은 그대로');assert.equal(difficulty(25).damage,2.5,'앞쪽 곡선은 그대로');
+assert.ok(difficulty(49).speed<=2.3&&difficulty(49).projectileSpeed<=1.55&&difficulty(49).bossTempo<=1.45,'50번째 여정에서도 읽을 수 있는 빠르기');
+assert.ok(difficulty(49).damage<=3.3,'50번째 여정 공격력 상한');
 
 // Build records: short, validated, unknown ids skipped, shown under a ranking line through a callback.
 {
@@ -92,4 +97,16 @@ assert.equal(difficulty(100).bossTempo,1.3,'Austin stays readable at the tempo c
 }
 // Potions: Q drinks, so no item claims a number key (1·2·3 choose cards).
 for(const it of Object.values(ITEMS))assert.ok(it.key===''||it.key==='Q',it.id);
-console.log('Score, ranking board, names, potions and save fields passed.');
+// 2026-09-21: 같은 점수면 더 빨리 끝낸 쪽이 위, 줄마다 걸린 시간과 완주가 보인다.
+{
+ const a={score:900,time:600,at:2},b={score:900,time:450,at:3},c={score:950,time:9999,at:1};
+ assert.deepEqual([a,b,c].sort(rankOrder),[c,b,a]);
+ assert.equal(formatTime(5),'5초');assert.equal(formatTime(754),'12분 34초');assert.equal(formatTime(8197),'2시간 16분');assert.equal(formatTime(-3),'0초');
+ const mem=new Map(),store={getItem:k=>mem.has(k)?mem.get(k):null,setItem:(k,v)=>mem.set(k,String(v))};
+ submitScore(store,{name:'완주씨앗',score:5000,cycle:49,stage:4,kills:5100,time:1500,done:true},10);
+ submitScore(store,{name:'빠른씨앗',score:5000,cycle:49,stage:4,kills:5100,time:1200,done:true},11);
+ const board=readRanking(store);assert.deepEqual(board.map(e=>e.name),['빠른씨앗','완주씨앗'],'이 기기 기록판도 같은 점수면 빠른 순');
+ const html=rankingTable(board);assert.ok(html.includes('완주 · 여정 50')&&html.includes('20분 00초')&&!html.includes('5번째 방'),'완주 줄에는 방 대신 완주와 시간이 보인다');
+ assert.ok(rankingTable([{name:'가',score:10,cycle:0,stage:2,kills:3,time:65,at:1}]).includes('여정 1 · 3번째 방 · 3 처치 · 1분 05초'));
+}
+console.log('Score, ranking board, names, potions and save fields, time tie-break and clears passed.');

@@ -29,4 +29,14 @@ close(titleState({discovered:200}).codexBonus,CODEX.maxStat);close(titleState({d
 assert.match(codexNews(9,10),/칭호/);assert.match(codexNews(19,20),/1%/);assert.equal(codexNews(10,11),null);assert.equal(codexNews(5,6),null);
 assert.equal(codexNews(200,220),null,'상한 뒤에는 새 소식이 없다');
 assert.match(codexNews(79,80),/4%/);assert.equal(codexNews(209,210),null,'상한 뒤에는 더 오른다는 알림을 띄우지 않습니다.');
-console.log('칭호: 오스틴 이속 +5%, 도감 10개에서 칭호와 10개마다 모든 능력 +0.5%(최대 10%), 목표·겹침·새 소식 통과');
+// 2026-09-21: 오스틴 10회 완주 칭호. 이동 속도 +10%이고 '정시를 깨운 자' +5%와 더해지지 않는다.
+{
+ const clearOnly=titleState({austinClear:true}),both=titleState({austin:true,austinClear:true}),austinOnly=titleState({austin:true});
+ assert.ok(Math.abs(clearOnly.moveSpeedBonus-.1)<1e-9);
+ assert.ok(Math.abs(both.moveSpeedBonus-.1)<1e-9,'두 칭호를 가져도 +15%가 아니라 +10%');
+ assert.ok(Math.abs(austinOnly.moveSpeedBonus-.05)<1e-9,'완주 전에는 그대로 +5%');
+ assert.equal(both.titles[0].id,'austinclear','완주 칭호가 먼저 보인다');
+ assert.match(both.titles.find(t=>t.id==='austinclear').perk,/겹치지 않음/);
+ assert.equal(titleState({austin:true,austinClear:true,equipped:'austin'}).shown,'정시를 깨운 자','고른 칭호가 우선');
+}
+console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 도감 10개에서 칭호와 10개마다 모든 능력 +0.5%(최대 10%), 목표·겹침·새 소식 통과');

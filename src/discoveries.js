@@ -2,7 +2,8 @@ import {LAWS} from './laws.js';
 import {ALL_FORMS as FORMS} from './forms.js';
 
 export const DISCOVERIES_KEY='seed-discoveries-v1';
-const BOSS_IDS=new Set(['warden','austin','alwaysbeginner','tempestcarrier']);
+// austinclear: 오스틴을 열 번 이겨 1막을 완주함(칭호 '정시를 정복한 자'). 기기 사이 저장에도 함께 옮겨진다.
+const BOSS_IDS=new Set(['warden','austin','alwaysbeginner','tempestcarrier','austinclear']);
 const emptyProfile=()=>({version:1,forms:[],bosses:[],records:{}});
 const uniqueKnown=(items,known)=>Array.isArray(items)?[...new Set(items.filter(id=>typeof id==='string'&&known(id)))]:[];
 const recordsOf=value=>{

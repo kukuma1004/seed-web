@@ -2,6 +2,9 @@
 // Pure data and rules only (no DOM or CSS), so tests and the pause sheet share one source.
 import {FIRST_GARDEN_BADGE} from './account-profile.js';
 export const AUSTIN_TITLE='정시를 깨운 자';
+// 오스틴을 열 번 이겨 1막을 완주한 씨앗(2026-09-21). 이동 속도 +10%이고 '정시를 깨운 자'의 +5%와 더해지지 않는다.
+export const AUSTIN_CLEAR_TITLE='정시를 정복한 자';
+export const AUSTIN_CLEAR_MOVE_SPEED=.1;
 export const ALWAYS_BEGINNER_TITLE='초심을 지킨 자';
 export const CODEX_TITLE='정원의 기록자';
 export const FIRST_GARDEN_TITLE='첫 정원의 선구자';
@@ -15,18 +18,20 @@ const percent=v=>`${Math.round(v*1000)/10}%`;
 export function codexSteps(discovered=0){return discovered>=CODEX.titleAt?Math.floor(discovered/CODEX.step):0;}
 export function codexBonus(discovered=0){return Math.min(CODEX.maxStat,codexSteps(discovered)*CODEX.statPerStep);}
 
-export function titleState({austin=false,alwaysBeginner=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
+export function titleState({austin=false,austinClear=false,alwaysBeginner=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
  const n=Math.max(0,Math.floor(Number(discovered)||0)),codex=n>=CODEX.titleAt,codexStat=codexBonus(n);
  const titles=[];
  if(Array.isArray(badges)&&badges.includes(FIRST_GARDEN_BADGE))titles.push({id:FIRST_GARDEN_BADGE,name:FIRST_GARDEN_TITLE,perk:'초대 명예의 전당 TOP 10',shotSpeed:0,moveSpeed:0,maxHp:0});
- if(austin)titles.push({id:'austin',name:AUSTIN_TITLE,perk:`이동 속도 +${percent(AUSTIN_MOVE_SPEED)}`,shotSpeed:0,moveSpeed:AUSTIN_MOVE_SPEED,maxHp:0});
+ if(austinClear)titles.push({id:'austinclear',name:AUSTIN_CLEAR_TITLE,perk:`오스틴 10회 완주 · 이동 속도 +${percent(AUSTIN_CLEAR_MOVE_SPEED)}${austin?` ('${AUSTIN_TITLE}'와 겹치지 않음)`:''}`,shotSpeed:0,moveSpeed:AUSTIN_CLEAR_MOVE_SPEED,maxHp:0});
+ if(austin)titles.push({id:'austin',name:AUSTIN_TITLE,perk:`이동 속도 +${percent(AUSTIN_MOVE_SPEED)}${austinClear?` ('${AUSTIN_CLEAR_TITLE}'에 포함)`:''}`,shotSpeed:0,moveSpeed:AUSTIN_MOVE_SPEED,maxHp:0});
  if(alwaysBeginner)titles.push({id:'alwaysbeginner',name:ALWAYS_BEGINNER_TITLE,perk:`최대 생명력 +${ALWAYS_BEGINNER_MAX_HP}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_BEGINNER_MAX_HP});
  if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 모든 능력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
  const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
  const goal=!codex?CODEX.titleAt:codexStat<CODEX.maxStat?(codexSteps(n)+1)*CODEX.step:null;
  const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:codex?`모든 능력 +${percent(CODEX.statPerStep)}`:`칭호 '${CODEX_TITLE}'`}:null;
  const sources=titles.filter(title=>title.shotSpeed>0).map(({id,name,shotSpeed})=>({id,name,shotSpeed}));
- const moveSpeedBonus=austin?AUSTIN_MOVE_SPEED:0,shotSpeedBonus=0,maxHpBonus=alwaysBeginner?ALWAYS_BEGINNER_MAX_HP:0;
+ // 오스틴 두 칭호의 이동 속도는 더하지 않고 큰 쪽 하나만 쓴다.
+ const moveSpeedBonus=Math.max(austin?AUSTIN_MOVE_SPEED:0,austinClear?AUSTIN_CLEAR_MOVE_SPEED:0),shotSpeedBonus=0,maxHpBonus=alwaysBeginner?ALWAYS_BEGINNER_MAX_HP:0;
  return {titles,equipped:selected?.id||null,shown:selected?.name||null,moveSpeed:1+moveSpeedBonus,moveSpeedBonus,shotSpeed:1,shotSpeedBonus,shotSpeedSources:sources,maxHp:100+maxHpBonus,maxHpBonus,codexBonus:codex?codexStat:0,next};
 }
 

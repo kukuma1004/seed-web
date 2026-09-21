@@ -3,6 +3,12 @@ import {isStarRoom} from './room-rotation.js';
 import {STADIUM_ROOMS,isAct2} from './act2.js';
 import {SKYWAY_ROOMS,isAct3} from './act3.js';
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
+// 2026-09-21: 여정을 끝없이 되풀이하면 지루하고, 오래 버틴 판이 점수를 독차지한다.
+// 한 판은 그 막의 찐보스(오스틴·항상초심)를 열 번 이기면 완주로 끝난다.
+// 찐보스는 다섯 여정마다 한 번 나오므로 완주는 50번째 여정이다.
+export const FINAL_BOSS_CAP=10,FINAL_BOSS_EVERY=5;
+export const MAX_RUN_CYCLE=FINAL_BOSS_CAP*FINAL_BOSS_EVERY-1;
+export const bossCapReached=bosses=>Number.isInteger(bosses)&&bosses>=FINAL_BOSS_CAP;
 export const ROOMS=[
  {name:'잠든 정원의 입구',hint:'첫 법칙을 깨우세요',covers:[wall(-3,1,2,1.2,1.7),wall(5.8,4,2.4,.9)],enemies:[['hound',-4,-3],['caster',5,-3]]},
  {name:'메아리 회랑',hint:'긴 벽을 돌아 사선을 만드세요',covers:[wall(-3,0,1.1,5),wall(3,-1,1.1,4)],enemies:[['hound',-6,-4],['caster',6,-4],['hound',0,-3]]},

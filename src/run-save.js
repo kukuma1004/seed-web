@@ -1,3 +1,4 @@
+import {MAX_RUN_CYCLE} from './journey.js';
 import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS,isFormEligible} from './forms.js';
@@ -80,9 +81,15 @@ export function roomExitCheckpoint(entry,{hp,inventory}={}){
 // health keeps growing gently after journey 20. Player evolution levels never
 // stop growing, so capping enemy health made very long runs progressively
 // easier and let the score multiplier rise without resistance.
+// 2026-09-21: 씨앗은 끝까지 세지는데 적은 여정 13(속도)·15(탄속)·26(공격력)에서 멈춰, 뒤쪽 여정이 시간만 잡아먹었다.
+// 한 판이 찐보스 열 번(50번째 여정)에서 끝나므로 거기까지 적의 위협도 계속 오른다. 앞쪽 곡선은 그대로 두고,
+// 멈추던 지점부터 완만하게 이어 올린다. 체력은 원래도 계속 올라 그대로 둔다(더 올리면 시간만 길어진다).
+// 50번째 여정을 넘긴 옛 저장은 50번째 값에 머문다.
+export const LATE_SCALING=Object.freeze({speed:Object.freeze({from:12,slope:.01}),projectileSpeed:Object.freeze({from:14,slope:.005}),damage:Object.freeze({from:25,slope:.03}),bossTempo:Object.freeze({from:12,slope:.004})});
+const tail=(c,{from,slope})=>Math.max(0,Math.min(c,MAX_RUN_CYCLE)-from)*slope;
 export function difficulty(cycle){
  const c=Math.max(0,Number(cycle)||0),early=Math.min(c,20),late=Math.max(0,c-20);
- return {hp:1+early*.24+late*.16,speed:Math.min(1.9,1+c*.08),projectileSpeed:Math.min(1.35,1+c*.025),bossHp:1+early*.3+late*.2,damage:Math.min(2.5,1+c*.06),bossTempo:Math.min(1.3,1+c*.025)};
+ return {hp:1+early*.24+late*.16,speed:Math.min(1.9,1+c*.08)+tail(c,LATE_SCALING.speed),projectileSpeed:Math.min(1.35,1+c*.025)+tail(c,LATE_SCALING.projectileSpeed),bossHp:1+early*.3+late*.2,damage:Math.min(2.5,1+c*.06)+tail(c,LATE_SCALING.damage),bossTempo:Math.min(1.3,1+c*.025)+tail(c,LATE_SCALING.bossTempo)};
 }
 export function replaceLaw(rules,mutated,oldId,newId){
  if(!rules.includes(oldId)||rules.includes(newId)||!Object.hasOwn(LAWS,newId))throw new Error('Invalid law replacement');
