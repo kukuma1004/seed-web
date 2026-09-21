@@ -9,7 +9,7 @@ export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v3',RUNS_PATH='seedRanking/season11/runs',BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v3',BUILD_PENDING_KEY='seed-ranking-build-pending-v1',RUNS_PATH='seedRanking/season11/runs',BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10,BUILD_PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 export const SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000});
@@ -100,14 +100,35 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   }catch{}
   return board;
  }
+ // 조합을 기록 옆에 쓴다. 규칙이 막으면 예외가 나므로 부르는 쪽이 판단한다.
+ function putBuild(s,id,build){
+  return request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,
+   {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:s.uid,laws:build.laws,forms:build.forms,relic:build.relic,wardens:build.wardens,austins:build.austins})});
+ }
+ function pendingBuilds(){try{const list=JSON.parse(storage?.getItem(BUILD_PENDING_KEY));return Array.isArray(list)?list.filter(v=>typeof v?.id==='string'&&validBuild(v.build)):[];}catch{return [];}}
+ function keepPendingBuilds(list){try{storage?.setItem(BUILD_PENDING_KEY,JSON.stringify(list.slice(-BUILD_PENDING_MAX)));}catch{}}
+ // 2026-09-21: 시즌 1.1 규칙이 조합 쓰기를 막고 있어 165건이 조합 없이 올라갔다.
+ // 조용히 버리지 말고 이 브라우저에 남겨 두었다가 규칙이 고쳐지면 다시 보낸다.
+ async function flushBuilds(){
+  const list=pendingBuilds();if(!list.length)return 0;
+  let s;try{s=await signIn();}catch{return 0;}
+  let sent=0;
+  while(list.length){
+   try{await putBuild(s,list[0].id,list[0].build);sent++;list.shift();}
+   catch{break;}
+  }
+  keepPendingBuilds(list);return sent;
+ }
  async function post({name,score,cycle,stage,kills,time,act=ACT.AUSTIN,build=null}){
   const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),act:act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,at:0};
   if(!validRun(shaped)||isBadName(shaped.name))throw new Error('invalid-run');
   const s=await signIn();
   const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
-  // The build is extra: if it cannot be written (older rules), the run still counts.
+  // The build is extra: if it cannot be written (older rules), the run still counts
+  // and the build waits in this browser instead of disappearing.
   if(created?.name&&validBuild(build)){
-   try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(created.name)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:s.uid,laws:build.laws,forms:build.forms,relic:build.relic,wardens:build.wardens,austins:build.austins})});}catch{}
+   try{await putBuild(s,created.name,build);}
+   catch{keepPendingBuilds([...pendingBuilds(),{id:created.name,build}]);}
   }
   return {id:created?.name,uid:s.uid,name:shaped.name};
  }
@@ -119,6 +140,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   let sent;
   try{sent=await post(entry);}
   catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,act:entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,build:validBuild(entry.build)?entry.build:null}]);throw error;}
+  await flushBuilds();
   const act=entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,board=await top(limit,sent.name,SEASON,act);
   const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
   return {id:sent.id,board,rank:mine+1,bestRank:best+1};
@@ -130,9 +152,9 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
    try{await post(list[0]);sent++;list.shift();}
    catch(error){if(error.message==='invalid-run'){list.shift();continue;}break;}
   }
-  keepPending(list);return sent;
+  keepPending(list);await flushBuilds();return sent;
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
  async function remove(id){const s=await signIn();try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});}catch{}await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
- return {signIn,top,submit,flush,remove,pendingCount:()=>pending().length,uid:()=>session?.uid||null};
+ return {signIn,top,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
 }

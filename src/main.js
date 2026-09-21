@@ -1148,7 +1148,7 @@ function showDungeon(){
 // Every visible ranking line shows its build. Legacy runs explain why they cannot.
 function rankBuild(entry,place){
  const b=parseBuild(entry.build);
- if(!b)return '<div class="rank-build none">이전 버전 기록 · 조합 미저장</div>';
+ if(!b)return '<div class="rank-build none">조합 기록 없음</div>';
  const boss=`<span class="rank-boss">${bossText(entry.build,runAct(entry))}</span>`;
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;

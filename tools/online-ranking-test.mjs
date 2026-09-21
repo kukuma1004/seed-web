@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import {createOnlineRanking,bestPerPlayer,validRun,AUTH_KEY,FIREBASE,SEASON,ARCHIVE_SEASON,ACT,runAct,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
@@ -143,7 +144,13 @@ function fakeFirebase({clock}){
  const older=await ranking.submit({name:'옛규칙',score:900,cycle:0,stage:2,kills:30,time:100,build});
  assert.ok(older.rank>0,'the run is kept even when the build cannot be written');assert.equal(older.board.find(e=>e.name==='옛규칙').build,undefined);
  assert.equal(ranking.pendingCount(),0,'a refused build does not queue the run again');
+ // 2026-09-21: 거부당한 조합을 조용히 버리면 기록만 남고 조합이 영영 사라진다. 이 브라우저에 두었다가 다시 보낸다.
+ assert.equal(ranking.pendingBuildCount(),1,'거부당한 조합은 이 브라우저에 남는다');
  fb.buildRulesPublished=true;
+ assert.equal(await ranking.flushBuilds(),1,'규칙이 고쳐지면 남아 있던 조합을 다시 보낸다');
+ assert.equal(ranking.pendingBuildCount(),0,'다시 보낸 뒤에는 남지 않는다');
+ assert.equal(fb.builds[older.id]?.laws,build.laws,'되살린 조합이 그 기록에 붙는다');
+ assert.equal(await ranking.flushBuilds(),0,'보낼 것이 없으면 아무 일도 하지 않는다');
  const noBuild=await ranking.submit({name:'빈손',score:10,cycle:0,stage:0,kills:1,time:5});assert.equal(noBuild.board.find(e=>e.name==='빈손').build,undefined);
  // Someone else's build under a run id is ignored.
  fb.builds[older.id]={...fb.builds[first.id],uid:'intruder'};
@@ -166,4 +173,29 @@ function fakeFirebase({clock}){
  await assert.rejects(ranking.submit({name:'',score:5,cycle:0,stage:0,kills:1,time:1}),/invalid-run/);assert.equal(ranking.pendingCount(),10,'invalid runs are never queued');
 }
 
-console.log('Online ranking: anonymous sign-in reuse, submit, per-player board, ranks, cleanup, fallbacks and waiting runs passed.');
+// 보안 규칙 파일 점검. 2026-09-21: 시즌 1.1의 조합 쓰기 규칙이 예전 시즌의 기록 경로를 보고 있어
+// 165건이 조합 없이 올라갔다. 같은 실수가 다시 나지 않도록 경로 짝을 자동으로 확인한다.
+{
+ const rules=JSON.parse(fs.readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules;
+ const ranking=rules?.seedRanking;
+ assert.ok(ranking,'seedRanking 규칙이 있어야 한다');
+ // 기록과 조합이 짝으로 있는 구역을 모두 찾는다: 최상위(예전 시즌)와 seasonNN 하위 구역.
+ const areas=[{prefix:[],node:ranking},...Object.entries(ranking).filter(([,v])=>v&&typeof v==='object'&&v.runs&&v.builds).map(([name,v])=>({prefix:[name],node:v}))];
+ assert.ok(areas.length>=2,'예전 시즌과 현재 시즌 두 구역이 있어야 한다');
+ for(const {prefix,node} of areas){
+  const where=['seedRanking',...prefix].join('/');
+  const write=node.builds?.$runId?.['.write'];
+  assert.ok(typeof write==='string',`${where}/builds 쓰기 규칙이 있어야 한다`);
+  const chain=['seedRanking',...prefix,'runs'].map(part=>`.child('${part}')`).join('');
+  assert.ok(write.includes(`root${chain}.child($runId)`),`${where}/builds 규칙이 ${where}/runs 대신 다른 경로를 본다`);
+  assert.ok(node.runs?.$runId?.['.write'],`${where}/runs 쓰기 규칙이 있어야 한다`);
+  assert.ok(node.runs['.indexOn']?.includes('score'),`${where}/runs 점수 색인이 있어야 한다`);
+ }
+ // 게임이 실제로 쓰는 경로가 규칙에 있는 구역이어야 한다.
+ for(const path of [RUNS_PATH,BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH]){
+  const node=path.split('/').reduce((at,part)=>at?.[part],rules);
+  assert.ok(node?.$runId,`${path} 경로에 규칙이 없다`);
+ }
+}
+
+console.log('Online ranking: anonymous sign-in reuse, submit, per-player board, ranks, cleanup, fallbacks, waiting runs and the rules file season paths passed.');
