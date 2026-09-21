@@ -27,29 +27,17 @@ export function initialQuality({search='',stored=null,mobile=false}={}){
  return mobile?1:2;
 }
 
-// Watches frame times while the game is being played and steps quality down when frames stay slow.
-// It never steps back up by itself, so the picture does not flicker between levels.
-// Average FPS alone hid short freezes: a few 80-250 ms frames were diluted by the
-// next smooth frames, while frames over 250 ms were ignored entirely. Count jank
-// inside the same window and cap only true tab/app suspensions.
-export const GOVERNOR=Object.freeze({windowSeconds:2,slowFrameMs:20,verySlowFrameMs:40,jankFrameMs:28,severeFrameMs:80,jankRatio:.12,severeFrames:3,settleSeconds:3,ignoreFrameMs:1000,slowWindowsToDrop:2});
-export function createQualityGovernor(level,{onChange=()=>{}}={}){
- const state={level,total:0,frames:0,jank:0,severe:0,settle:GOVERNOR.settleSeconds,slowWindows:0,drops:0,lastAverage:0,lastJankRatio:0};
- function sample(frameMs,active=true){
-  if(!active||!(frameMs>0)||frameMs>GOVERNOR.ignoreFrameMs)return state.level;
-  const seconds=frameMs/1000;
-  // Right after a start or a change, shaders compile and textures upload: do not judge those frames.
-  if(state.settle>0){state.settle-=seconds;return state.level;}
-  state.total+=frameMs;state.frames++;if(frameMs>=GOVERNOR.jankFrameMs)state.jank++;if(frameMs>=GOVERNOR.severeFrameMs)state.severe++;
-  if(state.total<GOVERNOR.windowSeconds*1000)return state.level;
-  const average=state.total/state.frames,jankRatio=state.jank/state.frames,severe=state.severe;
-  state.lastAverage=average;state.lastJankRatio=jankRatio;state.total=0;state.frames=0;state.jank=0;state.severe=0;
-  const visiblyJanky=jankRatio>=GOVERNOR.jankRatio||severe>=GOVERNOR.severeFrames;
-  state.slowWindows=average>GOVERNOR.slowFrameMs||visiblyJanky?state.slowWindows+1:0;
-  if((state.slowWindows>=GOVERNOR.slowWindowsToDrop||severe>=GOVERNOR.severeFrames)&&state.level>0){
-   state.level=average>GOVERNOR.verySlowFrameMs?0:state.level-1;state.drops++;state.slowWindows=0;state.settle=GOVERNOR.settleSeconds;onChange(state.level,average);
-  }
-  return state.level;
- }
- return {sample,state:()=>({...state})};
+// 자동 화질 낮춤은 없앴다(2026-09-21 사용자 결정: 느린 기기라도 화질을 스스로 바꾸지 않는다).
+// 화질은 기기 기본값(휴대폰 보통·컴퓨터 높음)으로 시작하고, 바꾸는 것은 플레이어가 일시정지 메뉴에서만 한다.
+// 예전 자동 낮춤이 저장해 둔 값이 남아 있을 수 있어, 기기 기본보다 낮은 저장값을 한 번만 기본값으로 되돌린다
+// (직접 낮춘 경우도 한 번 기본값으로 돌아가며, 다시 고르면 그대로 유지된다).
+export const QUALITY_RESET_KEY='seed-quality-auto-reset-v1';
+export function resetAutoLowered(storage,{mobile=false}={}){
+ try{
+  if(!storage||storage.getItem(QUALITY_RESET_KEY))return false;
+  storage.setItem(QUALITY_RESET_KEY,'1');
+  const raw=storage.getItem(QUALITY_KEY),saved=clampLevel(Number(raw)),base=mobile?1:2;
+  if(raw!==null&&raw!==''&&saved!==null&&saved<base){storage.setItem(QUALITY_KEY,String(base));return true;}
+ }catch{}
+ return false;
 }
