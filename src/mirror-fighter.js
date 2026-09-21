@@ -72,14 +72,20 @@ export function mirrorSteering({mirrorX=0,mirrorZ=0,playerX=0,playerZ=0,arenaRad
 
 export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
  const damageScale=law==='orbit'?.58:law==='split'?.7:1;
- if(law==='orbit')return Array.from({length:Math.min(8,5+Math.floor(floor/5))},(_,i)=>({angle:i*Math.PI*2/Math.min(8,5+Math.floor(floor/5)),damageScale,speedScale:.82}));
- if(law==='split'||law==='chain')return [-.24,0,.24].map(angle=>({angle,damageScale,speedScale:law==='chain'?1.08:.92}));
- if(law==='burst')return [-.12,.12].map(angle=>({angle,damageScale:.82,speedScale:.78}));
- if(law==='reflect')return [{angle:0,damageScale,bounces:2,speedScale:1.04}];
- if(law==='recall')return [{angle:shotIndex%2?-.1:.1,damageScale,recall:true,speedScale:.88}];
- if(law==='frost')return [-.16,.16].map(angle=>({angle,damageScale:.76,frost:true,speedScale:.82}));
- if(law==='gravity')return [{angle:0,damageScale:.9,curve:(shotIndex%2?1:-1)*.2,speedScale:.74}];
- return [{angle:0,damageScale,speedScale:1.08}];
+ if(law==='orbit')return Array.from({length:Math.min(8,5+Math.floor(floor/5))},(_,i)=>({angle:i*Math.PI*2/Math.min(8,5+Math.floor(floor/5)),damageScale,speedScale:.95}));
+ if(law==='split'||law==='chain')return [-.24,0,.24].map(angle=>({angle,damageScale,speedScale:law==='chain'?1.1:.98}));
+ if(law==='burst')return [-.12,.12].map(angle=>({angle,damageScale:.82,speedScale:.86,burst:true}));
+ if(law==='reflect')return [{angle:0,damageScale,bounces:2,speedScale:1.08}];
+ if(law==='recall')return [{angle:shotIndex%2?-.1:.1,damageScale,recall:true,speedScale:.96}];
+ if(law==='frost')return [-.16,.16].map(angle=>({angle,damageScale:.76,frost:true,speedScale:.9}));
+ if(law==='gravity')return [{angle:0,damageScale:.9,curve:(shotIndex%2?1:-1)*.2,speedScale:.84,gravity:true}];
+ return [{angle:0,damageScale,speedScale:1.12}];
+}
+
+export const MIRROR_PROJECTILE_BASE_SPEED=10.2;
+export function mirrorProjectileSpeed(floor=1,speedScale=1){
+ const climb=Math.min(1.18,1+Math.max(0,Math.floor(Number(floor)||1)-1)*.018);
+ return MIRROR_PROJECTILE_BASE_SPEED*climb*Math.max(.5,Number(speedScale)||1);
 }
 
 export function mirrorAttackSequence(plan,attackIndex=0){
@@ -107,8 +113,8 @@ export function createMirrorFighter(scene,{floor=1,quality='normal',levels=new M
  const readyRing=new THREE.Mesh(new THREE.TorusGeometry(.53,.035,4,28),readyMaterial);readyRing.rotation.x=Math.PI/2;readyRing.position.y=1.48;readyRing.castShadow=false;root.add(readyRing);
  const hp=Math.round(180*plan.stats.hpScale);
  return {
-  g:root,type:'mirrorseed',hp,maxHp:hp,dead:false,hit:0,slow:0,state:'stalk',timer:0,attackCD:1.15,
-  broken:0,cracks:0,shotIndex:0,attackIndex:0,strafeSign:1,turnTimer:1.8,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
+  g:root,type:'mirrorseed',hp,maxHp:hp,dead:false,hit:0,slow:0,state:'stalk',timer:0,attackCD:.68,
+  broken:0,cracks:0,shotIndex:0,attackIndex:0,strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
   floor,plan,moveName:'비친 자동공격 준비',snapshot
  };
 }
@@ -121,7 +127,7 @@ function fireAttack(enemy,entry,fire){
 export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit}={}){
  const previousX=enemy.g.position.x,previousZ=enemy.g.position.z;
  enemy.hit=Math.max(0,(enemy.hit||0)-dt);enemy.turnTimer-=dt;
- if(enemy.turnTimer<=0){enemy.turnTimer=1.7+(enemy.floor%3)*.28;enemy.strafeSign*=-1;}
+ if(enemy.turnTimer<=0){enemy.turnTimer=.92+(enemy.floor%3)*.16;enemy.strafeSign*=-1;}
  const movement=enemy.plan.tower.movement;
  const steering=mirrorSteering({mirrorX:enemy.g.position.x,mirrorZ:enemy.g.position.z,playerX:player.x,playerZ:player.z,arenaRadius:enemy.plan.tower.arena.radius,desiredDistance:movement.desiredDistance,strafe:movement.strafe,strafeSign:enemy.strafeSign});
  enemy.dir.set(player.x-enemy.g.position.x,0,player.z-enemy.g.position.z).normalize();
@@ -132,17 +138,17 @@ export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hi
   enemy.readyRing.material.color.setHex(0xffd471);enemy.readyRing.material.opacity=.72;enemy.readyRing.scale.setScalar(1.08+Math.sin(time*11)*.08);
  }else{
   if(enemy.state==='broken'){enemy.state='stalk';enemy.attackCD=.62;}
-  const speed=3.35*enemy.plan.stats.moveSpeedScale+(enemy.floor-1)*.025;
-  if(enemy.dashTime>0){enemy.dashTime=Math.max(0,enemy.dashTime-dt);enemy.g.position.addScaledVector(enemy.dashDir,speed*2.75*dt);}else{enemy.g.position.x+=steering.x*speed*dt;enemy.g.position.z+=steering.z*speed*dt;}constrain(enemy.g.position);
+  const speed=4.05*enemy.plan.stats.moveSpeedScale+(enemy.floor-1)*.03;
+  if(enemy.dashTime>0){enemy.dashTime=Math.max(0,enemy.dashTime-dt);enemy.g.position.addScaledVector(enemy.dashDir,speed*2.9*dt);}else{enemy.g.position.x+=steering.x*speed*dt;enemy.g.position.z+=steering.z*speed*dt;}constrain(enemy.g.position);
   enemy.attackCD-=dt;
   const progress=clamp(1-enemy.attackCD/.9,0,1);enemy.readyRing.material.color.setHex(0xe7dbff);enemy.readyRing.material.opacity=.16+progress*.62;enemy.readyRing.scale.setScalar(.84+progress*.2);
-  if(enemy.state==='stalk'&&enemy.attackCD<=0){enemy.queuedAttacks=mirrorAttackSequence(enemy.plan,enemy.attackIndex).map(entry=>({...entry}));enemy.attackIndex+=enemy.queuedAttacks.length;const first=enemy.queuedAttacks[0]?.attack;enemy.state='tell';enemy.timer=clamp((first?.tell||.5)*.72,.3,.5);enemy.feintDir.copy(enemy.dir).applyAxisAngle(AXIS_Y,(enemy.shotIndex%2?1:-1)*.42);enemy.moveName=movement.feint?'거울 속임수 · 마지막 순간 방향 전환':'비친 자동공격 · 회피로 스쳐 균열';}
+  if(enemy.state==='stalk'&&enemy.attackCD<=0){enemy.queuedAttacks=mirrorAttackSequence(enemy.plan,enemy.attackIndex).map(entry=>({...entry}));enemy.attackIndex+=enemy.queuedAttacks.length;const first=enemy.queuedAttacks[0]?.attack;enemy.state='tell';enemy.timer=clamp((first?.tell||.5)*.64,.24,.42);enemy.feintDir.copy(enemy.dir).applyAxisAngle(AXIS_Y,(enemy.shotIndex%2?1:-1)*.42);enemy.moveName=movement.feint?'거울 속임수 · 마지막 순간 방향 전환':'비친 자동공격 · 회피로 스쳐 균열';}
   else if(enemy.state==='tell'){
    enemy.timer-=dt;enemy.readyRing.material.opacity=.58+Math.sin(time*24)*.3;
    if(enemy.timer<=0){
     const first=enemy.queuedAttacks.shift();if(first)fireAttack(enemy,first,fire);
-    if(movement.dash){enemy.dashTime=.18;enemy.dashDir.set(enemy.dir.z*enemy.strafeSign,0,-enemy.dir.x*enemy.strafeSign).addScaledVector(enemy.dir,-.18).normalize();}
-    enemy.state='recover';enemy.timer=enemy.queuedAttacks.length?.48:.26;enemy.attackCD=.9/enemy.plan.stats.attackSpeedScale;enemy.moveName=enemy.queuedAttacks.length?`${first.attack.name} → 연계 준비`:first?.attack.name||'비친 자동공격';
+    if(movement.dash){enemy.dashTime=.16;enemy.dashDir.set(enemy.dir.z*enemy.strafeSign,0,-enemy.dir.x*enemy.strafeSign).addScaledVector(enemy.dir,-.18).normalize();}
+    enemy.state='recover';enemy.timer=enemy.queuedAttacks.length?.4:.2;enemy.attackCD=.78/enemy.plan.stats.attackSpeedScale;enemy.moveName=enemy.queuedAttacks.length?`${first.attack.name} → 연계 준비`:first?.attack.name||'비친 자동공격';
    }
   }else if(enemy.state==='recover'){
    enemy.timer-=dt;

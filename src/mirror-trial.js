@@ -16,7 +16,7 @@ export const MIRROR_TRIAL_LIMITS=Object.freeze({
 
 export const MIRROR_COPY_RULES=Object.freeze({
  mode:'exact-tower-build',
- copied:Object.freeze(['laws','forms','levels','dashEvolution','ultimate']),
+ copied:Object.freeze(['laws','forms','levels','dashEvolution','ultimate','projectileArt']),
  excluded:Object.freeze(['potions','relic','garden','titles']),
  sharesGlobalProjectileBudget:true
 });
@@ -56,10 +56,10 @@ export function refundMirrorAttackCooldown(remaining,perfectDodges=1){
 // Open arenas stay the same size. Difficulty comes from movement decisions,
 // not from squeezing the player into an increasingly tiny safe area.
 export const MIRROR_MOVEMENT_PROFILES=Object.freeze({
- reflection:Object.freeze({name:'비친 새싹',desiredDistance:Object.freeze([4.8,8]),strafe:.52,reposition:.9,dash:false,feint:false}),
- duelist:Object.freeze({name:'거울 결투가',desiredDistance:Object.freeze([4.2,7.4]),strafe:.68,reposition:.72,dash:true,feint:false}),
- trickster:Object.freeze({name:'깨진 형상',desiredDistance:Object.freeze([3.8,7]),strafe:.78,reposition:.62,dash:true,feint:true}),
- apex:Object.freeze({name:'완성된 거울',desiredDistance:Object.freeze([3.5,6.6]),strafe:.86,reposition:.54,dash:true,feint:true})
+ reflection:Object.freeze({name:'비친 새싹',desiredDistance:Object.freeze([4.3,7.4]),strafe:.7,reposition:.68,dash:true,feint:false}),
+ duelist:Object.freeze({name:'거울 결투가',desiredDistance:Object.freeze([4,7]),strafe:.8,reposition:.58,dash:true,feint:false}),
+ trickster:Object.freeze({name:'깨진 형상',desiredDistance:Object.freeze([3.7,6.7]),strafe:.88,reposition:.5,dash:true,feint:true}),
+ apex:Object.freeze({name:'완성된 거울',desiredDistance:Object.freeze([3.4,6.3]),strafe:.96,reposition:.44,dash:true,feint:true})
 });
 
 export const MIRROR_TOWER=Object.freeze({
@@ -157,9 +157,9 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
   ultimate:Object.freeze({...MIRROR_PATTERNS[lead],law:lead,id:`mirror-${MIRROR_PATTERNS[lead].id}`}),
   stats:Object.freeze({
    hpScale:Number((2.25+Math.min(10,r)*.14+Math.min(5,(snapshot?.forms||[]).length)*.09).toFixed(2)),
-   moveSpeedScale:Number(Math.min(1,.72+r*.024).toFixed(3)),
+   moveSpeedScale:Number(Math.min(1.18,.86+r*.028).toFixed(3)),
    hitDamageMaxHp:Number(Math.min(.13,.074+r*.0046).toFixed(3)),
-   attackSpeedScale:Number(Math.min(1.3,.92+r*.03).toFixed(3))
+   attackSpeedScale:Number(Math.min(1.38,.98+r*.035).toFixed(3))
   }),
   tower,
   budget:tower.budget,

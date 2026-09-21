@@ -12,6 +12,7 @@ const clone=mirrorCloneLoadout(snapshot);
 assert.deepEqual(clone.laws,snapshot.laws);assert.deepEqual(clone.forms,snapshot.forms);
 assert.equal(clone.dashEvolution,'twin');assert.equal(clone.ultimate,'same-build');assert.equal(clone.exactCopy,true);
 assert.equal(MIRROR_COPY_RULES.mode,'exact-tower-build');
+assert.ok(MIRROR_COPY_RULES.copied.includes('projectileArt'),'분신은 플레이어와 같은 법칙 탄환 외형을 복사한다');
 assert.ok(!MIRROR_COPY_RULES.copied.includes('relic'));assert.ok(MIRROR_COPY_RULES.excluded.includes('potions'));
 
 for(const quality of ['low','normal']){
@@ -38,8 +39,9 @@ for(const floor of MIRROR_TOWER.milestoneFloors){
  assert.equal(rules.checkpoint,true);assert.equal(rules.healAfter,MIRROR_TOWER.milestoneHeal);
  assert.ok(rules.budget.hostileProjectiles<=MIRROR_TRIAL_LIMITS.hostileProjectilesLow);
 }
-assert.equal(mirrorFloorRules(1).movement.dash,false);
-assert.equal(mirrorFloorRules(4).movement.dash,true,'4층부터 분신이 예고 후 회피 이동을 쓴다');
+assert.equal(mirrorFloorRules(1).movement.dash,true,'1층부터 분신이 발사 후 자리를 바꾼다');
+assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.moveSpeedScale>=.88,'첫 층부터 빠릿한 이동 속도를 가진다');
+assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.attackSpeedScale>=1,'첫 층부터 공격 준비가 늘어지지 않는다');
 assert.equal(mirrorFloorRules(7).movement.feint,true,'7층부터 방향 속임수를 쓴다');
 assert.equal(mirrorFloorRules(8).chainLength,3,'후반 세 층은 세 번째 약한 연계까지 쓴다');
 assert.equal(mirrorFloorRules(20).chainLength,3,'후반은 탄 수 대신 패턴 연결이 늘어난다');

@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {MIRROR_ARENA,MIRROR_PANELS,mirrorAttackSequence,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
+import {MIRROR_ARENA,MIRROR_PANELS,MIRROR_PROJECTILE_BASE_SPEED,mirrorAttackSequence,mirrorProjectileSpeed,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
 import {mirrorPatternPlan} from '../src/mirror-trial.js';
 
 assert.equal(MIRROR_ARENA.shape,'circle');
@@ -20,6 +21,13 @@ assert.equal(mirrorVolley('split',3).length,3);
 assert.ok(mirrorVolley('orbit',20).length<=8,'원형 탄막도 모바일 상한 유지');
 assert.equal(mirrorVolley('reflect',4)[0].bounces,2);
 assert.equal(mirrorVolley('recall',4)[0].recall,true);
+assert.equal(mirrorVolley('burst',4)[0].burst,true,'폭발 조합은 빗나가도 폭발을 남긴다');
+assert.equal(mirrorVolley('gravity',4)[0].gravity,true,'중력 조합은 플레이어를 끌어당기는 우물을 남긴다');
+assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProjectileSpeed(1),'거울 탄환은 첫 층부터 빠르고 층에 따라 조금 더 빨라진다');
+
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),mirrorBoltSource=main.slice(main.indexOf('function mirrorBolt'),main.indexOf('function mirrorPerfectDodge'));
+assert.doesNotMatch(mirrorBoltSource,/enemyBolt\(/,'거울 분신은 공통 보스 구체를 쓰지 않는다');
+assert.match(mirrorBoltSource,/projectileGeometry\(projectileGeos,law\)[\s\S]*mats\['shot-'\+law\][\s\S]*applyProjectileTheme/,'거울 분신은 플레이어와 같은 탄환 형상·재질·테마를 쓴다');
 
 for(const panel of MIRROR_PANELS)assert.ok(Math.hypot(panel.x,panel.z)+Math.max(panel.w,panel.d)/2<MIRROR_ARENA.radius,'반사판은 넓은 전장 안쪽에 둔다');
 const previous={x:-7,z:0},next={x:-4,z:0},direction={x:1,z:0};
