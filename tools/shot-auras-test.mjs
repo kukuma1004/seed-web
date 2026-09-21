@@ -40,6 +40,7 @@ const shot=(dir,extra={})=>({ob:{position:new THREE.Vector3(0,.67,0)},dir:new TH
   assert.equal(fx.sync([bolt,{ob:{position:new THREE.Vector3()},tint:'frost'}],camera),2,'evolution bolts join, resting ones are skipped');
   assert.equal(fx.mesh.geometry.attributes.fxSprite.array[0],SHOT_CELLS.crackleTrail,'an evolution bolt uses its second ingredient as the trail');
   assert.ok([...fx.mesh.instanceColor.array.slice(0,6)].every(Number.isFinite),'missing age/life never produces NaN colours');
+  assert.equal(fx.sync([shot([0,0,-1],{fragment:true,tint:'split'})],camera),1,'split fragments wear only a small aura, no trail (less clutter)');
   const many=Array.from({length:10},()=>shot([0,0,-1]));assert.equal(fx.sync(many,camera),8,'capacity is never exceeded');
   assert.equal(fx.sync([],camera),0);assert.equal(fx.mesh.count,0);
   fx.dispose();assert.equal(scene.children.length,0);
