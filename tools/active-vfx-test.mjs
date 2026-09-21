@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {ARCHETYPE_VFX,ULTIMATE_ARCHETYPE_ART,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
+import {ARCHETYPE_VFX,MOTE_CELLS,ULTIMATE_ARCHETYPE_ART,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
 
 // Light, not stickers: the gradients fade to black (no light under additive blending) at their edges.
 assert.ok(glowFalloff(.5,.5)>.95&&glowFalloff(0,.5)===0&&glowFalloff(.95,.95)===0,'floor glow fades out before the rim');
@@ -17,6 +17,21 @@ assert.equal(new Set(Object.values(ARCHETYPE_VFX).map(profile=>profile.glyph)).s
 const ultimateAtlas=readFileSync(new URL('../public/'+ULTIMATE_ARCHETYPE_ART,import.meta.url));
 assert.equal(ultimateAtlas.toString('ascii',0,4),'RIFF');assert.equal(ultimateAtlas.toString('ascii',8,12),'WEBP');assert.ok(ultimateAtlas.length<300_000,'ultimate atlas stays inside the mobile transfer budget');
 
+// 잔빛 소재 판(2026-09-22): 이펙트 아틀라스가 있으면 잔빛이 골격마다 다른 소재 칸으로 그려지고, 묶음 수는 그대로다.
+{
+  const scene=new THREE.Scene(),fx=createActiveVFX(scene,{spriteAtlas:new THREE.Texture()}),root=scene.getObjectByName('active-vfx');
+  assert.equal(root.children.length,5,'sprite motes keep five draw calls');
+  const motes=scene.getObjectByName('active-motes');assert.ok(motes.geometry.attributes.fxSprite,'motes carry atlas cells');
+  assert.equal(motes.material.customProgramCacheKey?.(),'seed-vfx-sprite-v1','motes share the effect-sprite shader');
+  const p=new THREE.Vector3();
+  for(const archetype of Object.keys(ARCHETYPE_VFX)){
+    fx.start({state:'SURGE',forms:['prism'],seconds:3,archetype},p);fx.update(.2,p);
+    const cell=motes.geometry.attributes.fxSprite.array[0];assert.equal(cell,MOTE_CELLS[ARCHETYPE_VFX[archetype].motes],`${archetype} motes use their own cell`);
+    assert.ok([...motes.instanceMatrix.array.slice(0,motes.count*16)].every(Number.isFinite));
+    fx.clear();
+  }
+  fx.dispose();
+}
 for(const mobile of [false,true]){
   const scene=new THREE.Scene(),fx=createActiveVFX(scene,{mobile});
   const root=scene.getObjectByName('active-vfx');

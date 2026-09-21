@@ -40,15 +40,16 @@ export function createShotAuras(scene,{atlas=null,capacity=320,mobile=false}={})
   if(atlas){
    camera.updateMatrixWorld();
    for(const p of shots){
-    if(p.life<=0||count+2>capacity)continue;
+    if(p.life<=0||count+2>capacity||!p.dir)continue;
     // 탄마다 한 번만 정한다(매 프레임 새 객체를 만들지 않게). 테마가 바뀌면 다시 정한다.
-    const look=p.auraLook?.theme===theme?p.auraLook:(p.auraLook=shotAuraLook(p.tint,{critical:p.critical,trailLaw:second||first,fragment:p.fragment,theme}));
+    const look=p.auraLook?.theme===theme?p.auraLook:(p.auraLook=shotAuraLook(p.tint,{critical:p.critical,trailLaw:p.auraTrail||second||first,fragment:p.fragment,theme}));
+    const age=p.age??.3,life=p.life??1;
     view.set(p.dir.x,0,p.dir.z).transformDirection(camera.matrixWorldInverse);
-    const heading=Math.atan2(-view.x,view.y),k=p.visualScale||1,fade=Math.min(1,p.life/.18,(p.age+.03)/.08),x=p.ob.position.x,z=p.ob.position.z;
+    const heading=Math.atan2(-view.x,view.y),k=p.visualScale||1,fade=Math.min(1,life/.18,(age+.03)/.08),x=p.ob.position.x,z=p.ob.position.z;
     const length=(p.fragment?.62:1)*1.35*Math.min(k,1.4),width=length*.72;
     put(count++,x-p.dir.x*length*.46,z-p.dir.z*length*.46,width,length,look.trail,heading,look.trailColor,1.7*fade);
-    const size=(p.critical?.62:.9)*k,pulse=.88+.12*Math.sin(p.age*10);
-    put(count++,x,z,size,size,look.aura,look.aligned?heading:p.age*look.spin,look.auraColor,1.3*pulse*fade);
+    const size=(p.critical?.62:.9)*k,pulse=.88+.12*Math.sin(age*10);
+    put(count++,x,z,size,size,look.aura,look.aligned?heading:age*look.spin,look.auraColor,1.3*pulse*fade);
    }
   }
   mesh.count=count;if(!count)return 0;

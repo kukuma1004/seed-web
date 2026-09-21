@@ -2,10 +2,14 @@ import * as THREE from 'three';
 import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
+import {VFX_CELLS,vfxSpriteMaterial} from './vfx.js';
 
 // Ultimate stage around the seed. Seven authored glyphs share one atlas;
 // halo, beam and motes remain code-driven. Still five draw calls.
-export const ULTIMATE_ARCHETYPE_ART='assets/ultimate-archetypes-v1.webp';
+// v2(2026-09-22): Higgsfield로 그린 덩굴·잎 문양(흑백, 궁극기 색으로 물든다). 배치는 v1과 같은 4×2.
+export const ULTIMATE_ARCHETYPE_ART='assets/ultimate-archetypes-v2.webp';
+// 잔빛: 이펙트 소재 아틀라스가 있으면 팔면체 대신 골격마다 다른 소재 판(별빛·꽃잎·빛 구슬·잎·홀씨)으로 그린다.
+export const MOTE_CELLS=Object.freeze({burst:VFX_CELLS.star,rain:VFX_CELLS.petal,orbit:VFX_CELLS.orb,beam:VFX_CELLS.star,domain:VFX_CELLS.leaf,blackhole:VFX_CELLS.spores,clock:VFX_CELLS.star});
 
 // A tiny grayscale gradient texture. Additive blending turns black into "no light", so the
 // gradient doubles as transparency without alpha sorting.
@@ -46,7 +50,7 @@ export const ARCHETYPE_VFX=Object.freeze({
  TIME_STOP:Object.freeze({glyph:6,floor:2.68,halo:2.72,waveX:2.82,waveZ:2.82,beamX:.92,beamY:.5,motes:'clock'})
 });
 
-export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2}={}){
+export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2,spriteAtlas=null}={}){
  const group=new THREE.Group();group.name='active-vfx';group.visible=false;scene.add(group);
  const textures=[];
  const additive=(map=null)=>{const material=new THREE.MeshBasicMaterial({color:0xffffff,map,transparent:true,opacity:0,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});return material;};
@@ -64,9 +68,12 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2}
  const wave=new THREE.Mesh(haloGeo,additive(haloTex));wave.position.y=.13;wave.name='active-wave';group.add(wave);
  const beam=new THREE.Mesh(new THREE.CylinderGeometry(.34,.62,4.6,24,1,true).translate(0,2.3,0),additive(beamTex));beam.name='active-beam';group.add(beam);
 
- const moteGeo=new THREE.OctahedronGeometry(.09,0);moteGeo.scale(.55,1.9,.55);
- const moteMat=additive();moteMat.vertexColors=false;
- const moteCount=mobile?10:16,motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(moteCount*3).fill(1),3);motes.instanceColor.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
+ const spriteMotes=Boolean(spriteAtlas);
+ const moteGeo=spriteMotes?new THREE.PlaneGeometry(1,1):new THREE.OctahedronGeometry(.09,0);if(!spriteMotes)moteGeo.scale(.55,1.9,.55);
+ const moteMat=spriteMotes?vfxSpriteMaterial(spriteAtlas):additive();moteMat.vertexColors=false;
+ const moteCount=mobile?10:16,moteCells=spriteMotes?new THREE.InstancedBufferAttribute(new Float32Array(moteCount*2),2):null;
+ if(moteCells){moteCells.setUsage(THREE.DynamicDrawUsage);moteGeo.setAttribute('fxSprite',moteCells);}
+ const motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(moteCount*3).fill(1),3);motes.instanceColor.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
  const dummy=new THREE.Object3D(),color=new THREE.Color();
  let effect=null,serial=0,themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
@@ -140,10 +147,11 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2}
     const out=1-life,a=phase*Math.PI*2+(type==='ORBIT'?effect.age*3:0),r=(type==='BLACKHOLE'?2.4*(1-out)+.15:1+6*out);
     x=Math.cos(a)*r;z=Math.sin(a)*r;y=.6+(type==='RAIN'?(i%4)*.5:2*out-2.4*out*out);scale=1.2*(1-out*.5);bright=life;
    }
-   dummy.position.set(x,Math.max(.1,y),z);dummy.rotation.set(0,-phase*Math.PI*2,0);dummy.scale.setScalar(Math.max(.01,scale));dummy.updateMatrix();
+   dummy.position.set(x,Math.max(.1,y),z);dummy.rotation.set(0,-phase*Math.PI*2,0);dummy.scale.setScalar(Math.max(.01,scale)*(spriteMotes?.42:1));dummy.updateMatrix();
+   if(moteCells)moteCells.setXY(i,MOTE_CELLS[profile.motes]??VFX_CELLS.star,profile.motes==='rain'?0:phase*Math.PI*2+effect.age*1.3);
    motes.setMatrixAt(i,dummy.matrix);color.setHex(effect.colors[i%effect.colors.length]??primary).multiplyScalar(2.4*Math.max(0,bright));motes.setColorAt(i,color);
   }
-  motes.instanceMatrix.needsUpdate=true;if(motes.instanceColor)motes.instanceColor.needsUpdate=true;moteMat.opacity=1;
+  motes.instanceMatrix.needsUpdate=true;if(motes.instanceColor)motes.instanceColor.needsUpdate=true;if(moteCells)moteCells.needsUpdate=true;moteMat.opacity=spriteMotes?.9:1;
   if(effect.time<=0){effect=null;clear();}
  }
  function clear(){effect=null;group.visible=false;for(const ob of [floor,halo,wave,beam])ob.material.opacity=0;motes.count=0;}

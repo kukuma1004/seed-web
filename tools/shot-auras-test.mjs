@@ -35,6 +35,11 @@ const shot=(dir,extra={})=>({ob:{position:new THREE.Vector3(0,.67,0)},dir:new TH
   const m=new THREE.Matrix4(),p=new THREE.Vector3();fx.mesh.getMatrixAt(0,m);p.setFromMatrixPosition(m);
   assert.ok(p.z>0,'the trail sits behind the shot');
   assert.ok([...fx.mesh.instanceMatrix.array.slice(0,6*16)].every(Number.isFinite));
+  // 진화 탄: 나이·수명이 없을 수 있고, 꼬리는 재료 둘째 법칙(auraTrail). 방향이 없는(머무는) 것은 건너뛴다.
+  const bolt={ob:{position:new THREE.Vector3()},dir:new THREE.Vector3(0,0,-1),tint:'reflect',auraTrail:'chain'};
+  assert.equal(fx.sync([bolt,{ob:{position:new THREE.Vector3()},tint:'frost'}],camera),2,'evolution bolts join, resting ones are skipped');
+  assert.equal(fx.mesh.geometry.attributes.fxSprite.array[0],SHOT_CELLS.crackleTrail,'an evolution bolt uses its second ingredient as the trail');
+  assert.ok([...fx.mesh.instanceColor.array.slice(0,6)].every(Number.isFinite),'missing age/life never produces NaN colours');
   const many=Array.from({length:10},()=>shot([0,0,-1]));assert.equal(fx.sync(many,camera),8,'capacity is never exceeded');
   assert.equal(fx.sync([],camera),0);assert.equal(fx.mesh.count,0);
   fx.dispose();assert.equal(scene.children.length,0);

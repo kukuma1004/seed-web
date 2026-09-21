@@ -114,6 +114,7 @@ const runStorage=cloud.storage;
 import {createMotion} from './motion.js';
 import {createVFX,FX_COLORS,VFX_ATLAS_FILE} from './vfx.js';
 import {createShotAuras,shotAuraLook,SHOT_ATLAS_FILE} from './shot-auras.js';
+import {FLOOR_ATLAS_FILE,floorSlabVariant,floorSlabUV} from './floor-art.js';
 import {THEMES,readTheme,writeTheme,nextTheme,themeColor} from './themes.js';
 import {LAWS,synergyHint,hitBudget,acquireTarget} from './laws.js';
 import {CROWD_CAP,crowdTotal,crowdInterval,safeSpawn} from './crowd.js';
@@ -168,9 +169,9 @@ const vfx=createVFX(scene,{mobile:mobileDevice,theme:combatTheme,quality:quality
 // Higgsfield 탄환 소재(2026-09-22): 씨앗 탄 뒤에 법칙 빛 무늬와 꼬리를 겹친다. ?vfxtex=0 이면 함께 꺼진다(전후 비교).
 const shotAtlas=vfxAtlas&&!(localInspection&&new URLSearchParams(location.search).get('shotaura')==='0')?new THREE.TextureLoader().load(import.meta.env.BASE_URL+SHOT_ATLAS_FILE,texture=>renderer.initTexture(texture)):null;
 if(shotAtlas)shotAtlas.colorSpace=THREE.NoColorSpace;
-const shotAuras=createShotAuras(scene,{atlas:shotAtlas,capacity:(MAX_SHOTS+30)*2,mobile:mobileDevice});
+const shotAuras=createShotAuras(scene,{atlas:shotAtlas,capacity:(MAX_SHOTS+90)*2,mobile:mobileDevice}),auraList=[];
 let playerTrailInterval=mobileDevice?.075:.045;
-const activeVfx=createActiveVFX(scene,{mobile:mobileDevice,theme:combatTheme,quality:qualityLevel});
+const activeVfx=createActiveVFX(scene,{mobile:mobileDevice,theme:combatTheme,quality:qualityLevel,spriteAtlas:vfxAtlas});
 const camera=new THREE.PerspectiveCamera(39,1,.1,100);const look=new V(0,0,0);camera.position.set(16,22,22);camera.lookAt(look);
 const composer=new EffectComposer(renderer);const renderPass=new RenderPass(scene,camera);composer.addPass(renderPass);const bloomPass=new UnrealBloomPass(new THREE.Vector2(1,1),.42,.5,1.1);composer.addPass(bloomPass);const outputPass=new OutputPass();composer.addPass(outputPass);
 // 채도 +20%(2026-09-21 사용자 결정): 톤 매핑 뒤 화면 색 변환 직전에 한 줄. 이미 매 프레임 도는 출력 단계라 따로 한 번 더 그리지 않는다.
@@ -182,6 +183,10 @@ outputPass.material.needsUpdate=true;
 const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
 scene.add(new THREE.HemisphereLight(0xcfe3ea,0x44564a,1.5));let sun=new THREE.DirectionalLight(0xffedcf,2.2);sun.position.set(-9,17,6);sun.castShadow=true;sun.shadow.mapSize.set(QUALITY_LEVELS[qualityLevel].shadowSize,QUALITY_LEVELS[qualityLevel].shadowSize);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,far:50});sun.shadow.normalBias=.035;scene.add(sun);
 const texloader=new THREE.TextureLoader(), stone=texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-v4.png'),normal=mobileDevice?null:texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-normal.png');stone.colorSpace=THREE.SRGBColorSpace;for(let t of [stone,normal].filter(Boolean)){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.34,.34);t.anisotropy=mobileDevice?2:8;}
+// Higgsfield 1막 바닥(2026-09-22): 판석 4종 2×2 아틀라스(PC 1024 · 휴대폰 512). ?vfxtex=0 이면 예전 돌 그림(전후 비교, 로컬 점검 전용).
+const floorArt=!(localInspection&&new URLSearchParams(location.search).get('vfxtex')==='0');
+const floorTex=floorArt?texloader.load(import.meta.env.BASE_URL+(mobileDevice?'assets/mobile/':'assets/')+FLOOR_ATLAS_FILE,texture=>renderer.initTexture(texture)):null;
+if(floorTex){floorTex.colorSpace=THREE.SRGBColorSpace;floorTex.anisotropy=mobileDevice?2:8;}
 const mats={stone:new THREE.MeshStandardMaterial({color:0xb8c9c3,map:stone,roughness:.88,metalness:.02}),dark:new THREE.MeshStandardMaterial({color:0x667c75,roughness:.9,map:stone}),root:new THREE.MeshStandardMaterial({color:0x3b3528,roughness:.9}),leaf:new THREE.MeshStandardMaterial({color:0x3e6242,roughness:.72,side:THREE.DoubleSide}),jade:new THREE.MeshStandardMaterial({color:0x91f2c0,emissive:0x38ffb0,emissiveIntensity:2.8,roughness:.2}),amber:new THREE.MeshStandardMaterial({color:0xffdb83,emissive:0xff970f,emissiveIntensity:3}),orbitPetal:new THREE.MeshStandardMaterial({color:0xffffff,vertexColors:true,emissive:0x4ccf83,emissiveIntensity:.55,roughness:.38,metalness:.08}),armor:new THREE.MeshStandardMaterial({color:0xd7cbae,map:stone,roughness:.57}),enemy:new THREE.MeshStandardMaterial({color:0xa48969,map:stone,roughness:.7}),black:new THREE.MeshStandardMaterial({color:0x536160,map:stone,roughness:.5}),cover:new THREE.MeshStandardMaterial({color:0xa1a28c,map:stone,roughness:.85}),enemyBolt:new THREE.MeshStandardMaterial({color:0x3a0710,emissive:0xff2a3c,emissiveIntensity:2.4,roughness:.35}),enemyHalo:new THREE.MeshBasicMaterial({color:0xff4050,transparent:true,opacity:.85,side:THREE.DoubleSide,forceSinglePass:true,depthWrite:false,toneMapped:false}),bossBolt:new THREE.MeshStandardMaterial({color:0x22021a,emissive:0xd21cff,emissiveIntensity:2.8,roughness:.3}),bossHalo:new THREE.MeshBasicMaterial({color:0xff3cc8,transparent:true,opacity:.9,side:THREE.DoubleSide,forceSinglePass:true,depthWrite:false,toneMapped:false}),frostBolt:new THREE.MeshStandardMaterial({color:0x0a2436,emissive:0x5fd8ff,emissiveIntensity:2.4,roughness:.3})};
 for(const id of ['seed',...Object.keys(LAWS)])mats['shot-'+id]=new THREE.MeshBasicMaterial({color:new THREE.Color(FX_COLORS[id]).multiplyScalar(2),vertexColors:true,toneMapped:false});
 mats.criticalShot=new THREE.MeshBasicMaterial({color:new THREE.Color(0xffc84f).multiplyScalar(2.25),vertexColors:true,toneMapped:false});
@@ -249,12 +254,20 @@ function warmShaders(){
 function scheduleShaderWarm(delay=700){if(!shaderWarmTimer)shaderWarmTimer=setTimeout(warmShaders,delay);}
 function mesh(geo,mat,parent,x=0,y=0,z=0){let m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);m.castShadow=m.receiveShadow=true;parent.add(m);return m;}
 const box=(p,x,y,z,w,h,d,m=mats.stone)=>mesh(new THREE.BoxGeometry(w,h,d),m,p,x,y,z);
+// 색은 예전 돌 재질과 같게 둔다(아틀라스를 예전 바닥 평균 밝기에 맞춰 가공했다).
+if(floorTex)mats.floor=new THREE.MeshStandardMaterial({color:0xb8c9c3,map:floorTex,roughness:.88,metalness:.02});
+// 판석마다 아틀라스 네 칸 중 하나와 뒤집기를 격자 위치로 고른다(장면 난수 순서를 건드리지 않아 정원 배치는 그대로).
+function floorSlab(parent,x,y,z){
+ const geometry=new THREE.BoxGeometry(1.47,.2,1.47);
+ if(mats.floor){const variant=floorSlabVariant(x,z),uv=geometry.attributes.uv;for(let i=0;i<uv.count;i++){const [u,v]=floorSlabUV(variant,uv.getX(i),uv.getY(i));uv.setXY(i,u,v);}}
+ return mesh(geometry,mats.floor||mats.stone,parent,x,y,z);
+}
 const orb=(p,x,y,z,r,m)=>mesh(new THREE.IcosahedronGeometry(r,1),m,p,x,y,z);
 function limb(p,a,b,r,m=mats.root,r2=r*.65){let av=new V(...a),bv=new V(...b),v=bv.clone().sub(av);let ob=mesh(new THREE.CylinderGeometry(r2,r,v.length(),7),m,p);ob.position.copy(av.add(bv).multiplyScalar(.5));ob.quaternion.setFromUnitVectors(new V(0,1,0),v.normalize());return ob;}
 function path(points,r,mat,parent=terrain){return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new V(...p))),Math.max(10,points.length*6),r,5,false),mat,parent);}
 let randseed=487;function rng(){randseed=(randseed*1664525+1013904223)>>>0;return randseed/4294967296;}
 const terrain=new THREE.Group();scene.add(terrain);box(terrain,0,-.7,0,22,1.4,18,mats.dark);
-for(let x=-10.5;x<11;x+=1.5)for(let z=-8.5;z<9;z+=1.5){let t=box(terrain,x,-.035+rng()*.025,z,1.47,.2,1.47);t.rotation.y=(rng()-.5)*.035;}
+for(let x=-10.5;x<11;x+=1.5)for(let z=-8.5;z<9;z+=1.5){let t=floorSlab(terrain,x,-.035+rng()*.025,z);t.rotation.y=(rng()-.5)*.035;}
 const watermat=new THREE.MeshStandardMaterial({color:0x59777f,roughness:.08,metalness:.82,transparent:true,opacity:.42});for(let i=0;i<45;i++){let p=mesh(new THREE.CircleGeometry(.3+rng()*1.2,16),watermat,terrain,(rng()-.5)*20,.08,(rng()-.5)*16);p.rotation.x=-Math.PI/2;p.scale.y=.35+rng()*.6;}
 const leafShape=new THREE.Shape();leafShape.moveTo(0,0);leafShape.bezierCurveTo(-.17,.2,-.16,.42,0,.62);leafShape.bezierCurveTo(.16,.42,.17,.2,0,0);const leafGeo=new THREE.ShapeGeometry(leafShape,5);const leafMats=[0x183f31,0x395b36,0x17372c,0x516443].map(color=>new THREE.MeshStandardMaterial({color,roughness:.87,side:THREE.DoubleSide}));const petalMat=new THREE.MeshStandardMaterial({color:0xe7e9d5,roughness:.65});
 // The old garden built more than three thousand leaf Mesh objects, cloned every
@@ -1448,7 +1461,7 @@ let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],f
  const cameraPose=cameraFeel.follow(visualDt,{playerX:player.position.x,playerZ:player.position.z,moveX:cameraMoveX,moveZ:cameraMoveZ,followX:mirrorSession?Math.max(viewLayout.followX,MIRROR_VIEW.followX):viewLayout.followX,followZ:mirrorSession?Math.max(viewLayout.followZ,MIRROR_VIEW.followZ):viewLayout.followZ,baseZoom:viewLayout.zoom*(isAct3(region)?ACT3_VIEW_ZOOM:mirrorSession?MIRROR_VIEW.zoom:1),biasZ:isAct3(region)?ACT3_VIEW_BIAS:0});look.set(cameraPose.x,0,cameraPose.z);if(Math.abs(camera.zoom-cameraPose.zoom)>.0005){camera.zoom=cameraPose.zoom;camera.updateProjectionMatrix();}camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-visualDt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);camera.updateMatrixWorld();stadium.update(now*.001);skyway.tick(visualDt,mode==='playing'&&!paused);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);perfMark(PS.scene);presentFrame(now*.001);perfMark(PS.hud);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='training-setup'||mode==='training-result'||mode==='notes'||mode==='maintenance'||mode==='gift')&&gardenScene;
  if(showGardenScene)gardenScene.update(visualDt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
- shotBatches.sync(shots,enemyShots);{const laws=chosen.values(),first=laws.next().value||'seed';shotAuras.sync(shots,camera,{theme:combatTheme,first,second:laws.next().value});}perfMark(PS.scene);composer.render();perfMark(PS.render);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
+ shotBatches.sync(shots,enemyShots);{const laws=chosen.values(),first=laws.next().value||'seed';auraList.length=0;for(const p of shots)auraList.push(p);for(const c of formCombats.values())c.auraBolts?.(auraList);shotAuras.sync(auraList,camera,{theme:combatTheme,first,second:laws.next().value});}perfMark(PS.scene);composer.render();perfMark(PS.render);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
 function renderBossHud(boss,group=[boss]){
  const hud=$('#boss-hud'),hpTotal=group.reduce((n,e)=>n+Math.max(0,e.hp),0),maxTotal=group.reduce((n,e)=>n+e.maxHp,0),pct=Math.max(0,hpTotal/maxTotal*100);setHidden(hud,false);setWidth(hud.querySelector('i'),pct.toFixed(1)+'%');
  if(boss.type==='mirrorseed'){

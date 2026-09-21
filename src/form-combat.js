@@ -1550,7 +1550,18 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  }
 
  applyTheme();
- return {set,setTheme,fire,update,clear,surge,calm,audioEvent:()=>projectileAudioEvent(sourceForm()),
+ // Higgsfield 탄환 소재(2026-09-22): 방향을 가지고 날아가는 진화 탄만 main의 소재 판 묶음에 넘긴다(떨어져 머무는 샘·정원·말뚝은 제외).
+ // 재료 첫 법칙이 빛 무늬, 둘째 법칙이 꼬리. 탄마다 한 번만 정해 둔다.
+ function auraBolts(out){
+  let laws=null;
+  for(const b of bolts){
+   if(!b.dir||!b.ob?.parent||b.anchored)continue;
+   if(!b.auraReady){const own=b.laws||(laws||=sourceForm().requires||[]);b.auraReady=true;b.tint=own[0]||'seed';b.auraTrail=own[1]||b.tint;b.fragment=Boolean(b.fragment||b.gen>0);b.visualScale=.85*(b.ob.userData.visualScale?.[0]??1);}
+   out.push(b);
+  }
+  return out;
+ }
+ return {set,setTheme,fire,update,clear,surge,calm,auraBolts,audioEvent:()=>projectileAudioEvent(sourceForm()),
   state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }
