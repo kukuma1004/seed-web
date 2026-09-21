@@ -32,9 +32,11 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   const uid=session.uid,previousOwner=owner(),m=meta(),migration=account.pendingMigration?.(),migrating=Boolean(migration?.fromUid&&migration?.toUid===uid&&(!previousOwner||previousOwner===migration.fromUid));
   let remote=null,rewards=null;
   try{[remote,rewards]=await Promise.all([firebase(`seedUsers/${uid}/save`),firebase(`seedUserRewards/${uid}`)]);}catch(error){return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
-  const local=collectCloudSnapshot(raw,{revision:m.localRevision,updatedAt:m.updatedAt||now()});
+  // 2026-09-21: 서버에서 받아 오는 동안 새로 저장한 것이 있으면 그것도 '올려야 할 것'으로 본다.
+  // (예전에는 시작할 때 읽은 표시만 봐서, 그 사이 저장을 서버의 옛 저장으로 덮어쓸 수 있었다.)
+  const fresh=meta(),local=collectCloudSnapshot(raw,{revision:fresh.localRevision,updatedAt:fresh.updatedAt||now()});
   const sameOwner=!previousOwner||previousOwner===uid;
-  const localDirty=sameOwner&&m.localRevision>m.syncedRevision;
+  const localDirty=sameOwner&&fresh.localRevision>fresh.syncedRevision;
   let merged;
   if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:migrating||localDirty?'local':'remote'});
   else if(sameOwner||migrating)merged=local;
@@ -46,7 +48,11 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   active=false;const changed=applyCloudSnapshot(raw,merged);active=true;
   if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged});}
   catch(error){dirty=true;return {ok:false,reason:'upload',error,changed,rewards:lastRewards};}
-  setOwner(uid);writeMeta({ownerUid:uid,localRevision:nextRevision,syncedRevision:nextRevision,updatedAt:merged.updatedAt});dirty=false;
+  // 2026-09-21: 올리는 사이에 저장한 것(방 저장·코인 등)은 이번 업로드에 들어가지 않았다. 예전에는 여기서 '다 올림'으로
+  // 덮어써서, 다음 실행 때 서버의 옛 저장이 기기의 최신 저장을 이겨 진행이 되돌아갔다. 그 경우 '아직 안 올림'으로 남기고 곧 다시 올린다.
+  const wroteDuring=meta().localRevision>fresh.localRevision;
+  setOwner(uid);writeMeta({ownerUid:uid,localRevision:wroteDuring?nextRevision+1:nextRevision,syncedRevision:nextRevision,updatedAt:wroteDuring?now():merged.updatedAt});dirty=wroteDuring;
+  if(wroteDuring)schedule();
   if(migrating)account.finishMigration?.();
   if(lastRewards.length)try{globalThis.sessionStorage?.setItem('seed-cloud-reward-notice-v1',JSON.stringify(lastRewards));}catch{}
   try{raw?.setItem('seed-cloud-last-sync-v1',String(now()));}catch{}

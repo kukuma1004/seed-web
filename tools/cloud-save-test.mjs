@@ -103,4 +103,31 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.equal(state.save.shop.coins,875);assert.equal(state.save.shop.stash.tonic,3);assert.equal(storage.getItem('seed-cloud-owner-v1'),'google-uid');
 }
 
+// 2026-09-21: 업로드가 오가는 사이에 방 저장을 하면, 그 저장이 '올림'으로 잘못 표시되어 다음 실행 때
+// 서버의 옛 저장이 이겨 진행이 되돌아갔다. 이제는 아직 안 올린 것으로 남아 다음 동기화에서 올라가고, 다음 실행에서도 기기 저장이 이긴다.
+{
+ const storage=memory({[SHOP_KEY]:JSON.stringify({version:2,coins:100,stash:{tonic:0,sprout:0},carry:{tonic:0,sprout:0},gifts:[]})});
+ const state={save:null,puts:0,duringPut:null},account={ready:async()=>({uid:'u9'}),user:()=>({uid:'u9'}),tokenSession:async()=>({uid:'u9',idToken:'t'})};
+ const fetchImpl=async(url,options={})=>{
+  const path=new URL(url).pathname.replace(/^\//,'').replace(/\.json$/,'');
+  if(path!=='seedUsers/u9/save')return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){state.save=JSON.parse(options.body);state.puts++;if(state.duringPut){const f=state.duringPut;state.duringPut=null;f();}return {ok:true,status:200,json:async()=>state.save};}
+  return {ok:true,status:200,json:async()=>state.save};
+ };
+ let clock=5000;const cloud=createCloudSync({storage,account,fetchImpl,now:()=>++clock,debounceMs:60_000});
+ await cloud.start();
+ cloud.storage.setItem(SHOP_KEY,JSON.stringify({...state.save.shop,coins:200}));
+ // 두 번째 업로드가 오가는 사이에 코인이 300이 된다.
+ state.duringPut=()=>cloud.storage.setItem(SHOP_KEY,JSON.stringify({...state.save.shop,coins:300}));
+ await cloud.syncNow();
+ assert.equal(state.save.shop.coins,200,'이번 업로드에는 200까지만 들어갔다');
+ assert.equal(cloud.isDirty(),true,'올리는 사이 저장한 300은 아직 안 올린 것으로 남는다');
+ const meta=JSON.parse(storage.getItem('seed-cloud-meta-v1'));assert.ok(meta.localRevision>meta.syncedRevision);
+ // 다음 실행(새 코디네이터): 기기 저장(300)이 서버(200)를 이기고 올라간다.
+ const next=createCloudSync({storage,account,fetchImpl,now:()=>++clock,debounceMs:60_000});
+ await next.start();
+ assert.equal(JSON.parse(storage.getItem(SHOP_KEY)).coins,300,'다음 실행에서 서버의 옛 저장이 기기 저장을 덮어쓰지 않는다');
+ assert.equal(state.save.shop.coins,300);
+}
+
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');
