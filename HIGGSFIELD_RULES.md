@@ -129,3 +129,4 @@ Higgsfield는 게임 엔진·게임 코드·웹사이트를 만드는 데 쓰지
 | 날짜 | 무엇 | 모델 · 크레딧 | 원본 | 게임 적용 |
 |---|---|---|---|---|
 | 2026-09-21 | 전투 이펙트 소재 시트(4×4, 흑백, 검정 바탕): 빛 구슬·별빛·빛 조각·빛 고리·불꽃 혀·빛 꼬리·혜성·초승달 베기·잎·꽃잎·얼음 조각·번개·안개·홀씨·충격 고리·덩굴 문양 | Nano Banana 2 1K · 1.5 | `art-source/higgsfield/20260921/vfx-sheet-nb2-1k.png`(1024², 1.1MB) | `tools/vfx-atlas-build.py` → `public/assets/vfx-atlas-v1.webp`(512², 18KB). 불꽃 조각·불꽃 혀 묶음(`src/vfx.js`)에 입힘. 칸 번호는 `VFX_CELLS` |
+| 2026-09-22 | 탄환 소재 시트(4×4, 흑백, 검정 바탕): 법칙 빛 무늬 10종(씨앗 잎·프리즘·꽃잎 부채·전기 구슬·고리 행성·창끝·불꽃 고리·초승달 고리·소용돌이·눈꽃) + 치명타 별 + 꼬리 5종(부드러운 빛·반짝이·잎·번개·서리 안개) | Nano Banana 2 1K · 1.5 | `art-source/higgsfield/20260922/shot-sheet-nb2-1k.png` | `public/assets/shot-atlas-v1.webp`(512², 23KB). 씨앗 탄 뒤에 빛 무늬 + 꼬리 두 장(`src/shot-auras.js`, 한 묶음·드로콜 +1). 첫 법칙 = 무늬, 둘째 법칙 = 꼬리. 칸 번호는 `SHOT_CELLS` |

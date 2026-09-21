@@ -24,6 +24,7 @@ tools/*
 !tools/projectile-art-test.mjs
 !tools/vfx-test.mjs
 !tools/vfx-atlas-build.py
+!tools/shot-auras-test.mjs
 !tools/active-vfx-test.mjs
 !tools/reward-art-test.mjs
 !tools/laws-test.mjs
