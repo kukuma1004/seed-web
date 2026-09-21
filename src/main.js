@@ -450,7 +450,7 @@ const totalCritChance=()=>Math.min(.25,(LS?.critChance||0)+masteryRate('critical
 // 정원 장면은 처음 볼 때 만든다. 만든 뒤에는 정원 화면과 첫 화면에서 이 장면을 그린다.
 let gardenScene=null,gardenSelection=null;
 function ensureGardenScene(){
- if(!gardenScene){gardenScene=createGardenScene();gardenScene.resize(canvasRect.width||1,canvasRect.height||1);}
+ if(!gardenScene){gardenScene=createGardenScene({mobile:mobileDevice});gardenScene.resize(canvasRect.width||1,canvasRect.height||1);}
  gardenScene.setGarden(garden,{austinDefeated:austinKnown()});
  return gardenScene;
 }

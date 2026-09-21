@@ -15,14 +15,18 @@ export const PLOT_SPOTS=Object.freeze([
  {x:-1.327,z:.581},{x:1.345,z:.581}
 ]);
 export const CENTER_SPOT=Object.freeze({x:0,z:-2.6});
-// Normalized pixel positions in garden-sanctuary-v1.webp (1600 x 900).
+// Normalized pixel positions of the soil beds in the backdrop, measured on a 1600 x 900 grid (the art is 16:9).
 // Plants are rooted at the visual centre of the soil, not at the stone rim.
+// v2(2026-09-22, Higgsfield): v1과 같은 구도로 다시 그린 배경. 흙 중심을 두 그림에서 같은 방식으로 재서 차이(최대 10px)만큼 옮겼다.
 const PLOT_ANCHORS=Object.freeze([
- {u:621/1600,v:335/900},{u:1006/1600,v:335/900},
- {u:530/1600,v:487/900},{u:1074/1600,v:487/900},
- {u:652/1600,v:618/900},{u:950/1600,v:618/900}
+ {u:621/1600,v:331/900},{u:1003/1600,v:325/900},
+ {u:526/1600,v:488/900},{u:1076/1600,v:486/900},
+ {u:652/1600,v:618/900},{u:952/1600,v:618/900}
 ]);
+// 정원 배경(메인 화면). PC 1920×1080 · 휴대폰 1280×720(assets/mobile/).
+export const GARDEN_BACKDROP_ART='garden-sanctuary-v2.webp';
 const CENTER_ANCHOR=Object.freeze({u:.5,v:453/900});
+// 식물 12종 4×3. 2026-09-22 Higgsfield로 다시 그린 v4는 밤 배경에서 만화처럼 떠 보이고 빛 둘레에 분홍 테두리가 남아 쓰지 않았다(원본은 art-source에 보관).
 export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v3.webp';
 // 4 x 3 atlas cells. Keeping the selection in data makes it easy to test and
 // prevents the garden UI from drifting away from the saved growth stage.
@@ -142,7 +146,7 @@ export function buildCenter(index,artKit=null){
  return group;
 }
 
-export function createGardenScene(){
+export function createGardenScene({mobile=false}={}){
  const scene=new THREE.Scene();
  scene.background=new THREE.Color('#0d2429');
  const plotSpots=PLOT_SPOTS.map(spot=>({...spot})),centerSpot={...CENTER_SPOT};
@@ -157,7 +161,7 @@ export function createGardenScene(){
   texture.needsUpdate=true;
   syncAnchors();
  };
- const backdrop=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/garden-sanctuary-v1.webp',texture=>{
+ const backdrop=new THREE.TextureLoader().load(import.meta.env.BASE_URL+(mobile?'assets/mobile/':'assets/')+GARDEN_BACKDROP_ART,texture=>{
   texture.colorSpace=THREE.SRGBColorSpace;
   texture.minFilter=THREE.LinearFilter;
   texture.magFilter=THREE.LinearFilter;
