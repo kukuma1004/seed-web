@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LAWS} from '../src/laws.js';
-import {FORMS,formLevel,formStats,formUpgradeLine} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,CANDIDATE_FORMS,COMBO_BATCHES,formLevel,formStats,formUpgradeLine} from '../src/forms.js';
 import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,PRISM_CHILD_FALLOFF,orbitPose} from '../src/form-combat.js';
 import {blocksShield} from '../src/shield.js';
 
@@ -16,9 +16,12 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: twenty-five hand-authored forms (20 + the 2026-09-21 batch of five), unique pairs, every law feeds at least two forms.
-assert.equal(Object.keys(FORMS).length,25);
-assert.equal(new Set(Object.values(FORMS).map(f=>[...f.requires].sort().join('+'))).size,25);
+// Catalogue: twenty-five hand-authored forms, of which twenty are offered. A batch whose art is not ready stays out of the offers.
+assert.equal(Object.keys(CURATED_FORMS).length,25);
+assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,25);
+assert.equal(Object.keys(FORMS).length,20,'그림이 없는 1묶음은 선택지에 나오지 않는다');
+assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),[...COMBO_BATCHES['20260921'].ids].sort());
+for(const id of Object.keys(CANDIDATE_FORMS))assert.ok(!Object.hasOwn(FORMS,id),`${id} 선택지에 새어 나감`);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
@@ -184,4 +187,4 @@ for(const id of Object.keys(FORMS)){
  assert.ok(crowd.calls.some(c=>c.e===target&&c.phase==='line'),'the narrow line still deals modest contact damage');
  assert.ok(!crowd.calls.some(c=>c.phase==='implosion'),'a nearby second enemy disperses the implosion');assert.equal(crowd.combat.state().stakes,0);crowd.combat.dispose();
 }
-console.log('Forms: twenty-five authored pairs, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+console.log('Forms: twenty-five authored pairs (twenty offered), uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

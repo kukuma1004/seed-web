@@ -49,7 +49,16 @@ const generatedForm=entry=>Object.freeze({
 });
 export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
 // 2026-09-18: 자동 조합은 계속 숨기고, 검증한 손제작 조합만 FORMS에 넣는다.
-export const FORMS=Object.freeze({...CURATED_FORMS});
+// 2026-09-21: 조합 묶음은 따로 관리한다. 카드·탄환 그림이 나오기 전까지 live:false로 두고 선택지에 내지 않는다.
+// 코드·수치·검사는 그대로 유지되고, ALL_FORMS에는 남아 있어 이미 얻은 저장과 도감은 깨지지 않는다.
+// 공개할 때는 live만 true로 바꾼다. 기록: combo-batches/
+export const COMBO_BATCHES=Object.freeze({
+ '20260921':Object.freeze({live:false,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])})
+});
+const HELD_BACK=new Set(Object.values(COMBO_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
+export const isHeldBack=id=>HELD_BACK.has(id);
+export const CANDIDATE_FORMS=Object.freeze(Object.fromEntries(Object.entries(CURATED_FORMS).filter(([id])=>HELD_BACK.has(id))));
+export const FORMS=Object.freeze(Object.fromEntries(Object.entries(CURATED_FORMS).filter(([id])=>!HELD_BACK.has(id))));
 const RUNTIME_FIRST_BY_PAIR=new Map(Object.values(FORMS).map(f=>[pairKey(f.requires),f.id]));
 const secondForm=entry=>{
  const parts=Object.freeze(entry.parts.map(id=>RUNTIME_FIRST_BY_PAIR.get(pairKey(FIRST_FUSION_BY_ID[id].laws))));
@@ -167,7 +176,7 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
 export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
 // Every evolution the seed can hold: twenty authored first fusions, nine solo evolutions,
 // ten curated awakenings and 26 twin awakenings (65).
-export const ALL_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
+export const ALL_FORMS=Object.freeze({...FORMS,...CANDIDATE_FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
 // The attacks an evolution fights with, one combat each: a twin has two, everything else one.

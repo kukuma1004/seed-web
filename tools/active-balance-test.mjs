@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
 import {averageDps,bossDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
@@ -30,7 +30,8 @@ for(const level of [SOLO_LEVEL-1,9]){
 // runaway damage, and the two aim-dependent weapons must retain their intended
 // reward for lining enemies up or accepting point-blank danger.
 for(const level of [SOLO_LEVEL-1,9]){
- const curated=Object.fromEntries(Object.keys(FORMS).map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
+ // 보류 중인 묶음도 손제작 조합이라 같은 잣대로 잰다.
+ const curated=Object.fromEntries(Object.keys(CURATED_FORMS).map(id=>[id,averageDps(id,level,{shots:CURATED_FORMS[id].passive})]));
  const newForms=tacticalFusions;
  const established=Object.entries(curated).filter(([id])=>!newForms.includes(id)).map(([,damage])=>damage);
  const middle=median(established);
@@ -51,7 +52,7 @@ for(const level of [SOLO_LEVEL-1,9]){
 
 // 2026-09-21 1묶음: 다섯 조합이 각자 다른 역할을 실제로 수행하는지 같은 시드로 잰다.
 for(const level of [SOLO_LEVEL-1,9]){
- const crowd=Object.fromEntries(batch1.map(id=>[id,averageDps(id,level,{shots:FORMS[id].passive})]));
+ const crowd=Object.fromEntries(batch1.map(id=>[id,averageDps(id,level,{shots:CURATED_FORMS[id].passive})]));
  const boss=Object.fromEntries(batch1.map(id=>[id,bossDps(id,level)]));
  // 단일 대상: 고드름 창은 묶음에서 보스 피해가 가장 높고, 다수전 피해는 중간을 넘지 않는다.
  assert.ok(boss.icicle===Math.max(...Object.values(boss)),`level ${level}: 고드름 창이 단일 대상 1위가 아님`);
