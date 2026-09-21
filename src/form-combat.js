@@ -21,7 +21,9 @@ export const ORBIT_VISUALS=Object.freeze({
  starring:Object.freeze({geometry:'starPetal',material:'star',motion:'breathing-star'}),
  comethalo:Object.freeze({geometry:'cometBud',material:'storm',motion:'charged-comet'}),
  halobloom:Object.freeze({geometry:'haloPetal',material:'seed',motion:'counting-halo'}),
- ebbring:Object.freeze({geometry:'blade',material:'tide',motion:'ebbing-ring'})
+ ebbring:Object.freeze({geometry:'blade',material:'tide',motion:'ebbing-ring'}),
+ spearring:Object.freeze({geometry:'gravityStake',material:'blade',motion:'launching-spears'}),
+ accretiondisk:Object.freeze({geometry:'vortex',material:'core',motion:'feeding-disk'})
 });
 
 // Orbit paths are intentionally different silhouettes. They are also pure so
@@ -38,6 +40,15 @@ export function orbitPose(id,index,count,angle,time,S){
  if(id==='mirrorguard'){
   const square=t=>Math.sign(t)*Math.pow(Math.abs(t),.68);
   return {x:square(Math.cos(a))*S.radius,y:.76+wave*.045,z:square(Math.sin(a))*S.radius,pitch:-.38,yaw:Math.PI/2-a,roll:wave*.06,scale:[1.32,1.32,1.32]};
+ }
+ if(id==='spearring'){
+  // 창끝이 바깥을 향한 채 돈다.
+  return {x:Math.cos(a)*S.radius,y:.8+wave*.06,z:Math.sin(a)*S.radius,pitch:0,yaw:Math.PI/2-a,roll:0,scale:[1.1,1.1,1.1]};
+ }
+ if(id==='accretiondisk'){
+  // 납작한 원반처럼 기울어 돌고, 부스러기가 찰수록 조금씩 커진다.
+  const fill=1+.25*Math.min(1,S.fill||0);
+  return {x:Math.cos(a)*S.radius*1.1,y:.45+.18*Math.sin(a*2+time),z:Math.sin(a)*S.radius*.8,pitch:-Math.PI/2,yaw:time*2+index,roll:.35,scale:[fill,fill,fill]};
  }
  if(id==='ebbring'){
   // 고리 중심은 씨앗이 아니라 뒤따라오는 닻이다(updateOrbit가 더한다). 멈추면 작게 오므라든다.
@@ -82,6 +93,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
  // 2묶음 상태: 밀물 고리의 닻 · 끌림 꽃밭들.
  const ebbAnchor=new V();let ebbReady=false,gardens=[];
+ // 3묶음 상태: 창날 고리의 빠진 창·발사 시계 · 강착 원반 부스러기 · 서리 되감기 표식 · 차가운 소용돌이 · 서리꽃 겹침.
+ let spearGone=[],spearClock=0,debris=0,rimeMarks=new WeakMap(),coldWells=[],petalStacks=new WeakMap();
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
@@ -111,13 +124,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
-  const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:0;
+  const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:active==='spearring'?S.spears:active==='accretiondisk'?S.vortices:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;ebbReady=false;gardens=[];active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -178,6 +191,29 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    case 'refractlance':{refractLance(pos,aim);return S.interval;}
    case 'thundermirror':{thunderMirror(pos);return S.interval;}
    case 'pierceshower':{pierceShower(pos,aim);return S.interval;}
+   case 'rimeback':{
+    if(full('rimeback',S.bolts))return S.interval;
+    const ob=spawnMesh(geos.blade,mats.ice,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.9,.9,.9);
+    bolts.push({kind:'rimeback',ob,dir:aim.clone(),age:0,returning:false,hitSet:new Set(),life:4});
+    fx.muzzle(pos,aim,'frost');return S.interval;
+   }
+   case 'coldwell':{
+    if(full('coldwell',2))return S.interval;
+    const to=target?new V(target.x,0,target.z):pos.clone().addScaledVector(aim,5),offset=to.clone().sub(pos).setY(0);if(offset.length()>S.range)offset.setLength(S.range);
+    bolts.push({kind:'coldwell',ob:spawnMesh(geos.vortex,mats.ice,pos),from:pos.clone().setY(0),to:pos.clone().setY(0).add(offset),t:0,life:4});
+    fx.muzzle(pos,aim,'frost');return S.interval;
+   }
+   case 'rimepetal':{
+    if(full('rimepetal',S.bolts))return S.interval;
+    const ob=spawnMesh(geos.bloom,mats.ice,pos);ob.rotation.x=-Math.PI/2;
+    bolts.push({kind:'rimepetal',ob,dir:aim,life:S.life});fx.muzzle(pos,aim,'frost');return S.interval;
+   }
+   case 'echolane':{
+    if(full('echolane',S.bolts))return S.interval;
+    const ob=spawnMesh(geos.frostMirror,mats.mirror,pos);ob.rotation.x=-Math.PI/2;
+    bolts.push({kind:'echolane',ob,dir:aim.clone(),out:aim.clone(),toSeed:false,pass:0,passed:new Set(),life:S.life});
+    fx.muzzle(pos,aim,'reflect');return S.interval;
+   }
    case 'sunmirror':{
     if(full('sunmirror',S.bolts))return S.interval;
     const ob=spawnMesh(geos.lens,mats.star,pos);ob.rotation.x=-Math.PI/2;
@@ -546,6 +582,77 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   gardens=gardens.filter(g=>g.life>0);
  }
 
+
+ // Orbit + pierce: one spear leaves the ring as a lance, then grows back.
+ function spearLaunch(target){
+  const dir=target.g.position.clone().sub(player.position).setY(0).normalize();
+  const start=player.position.clone().setY(0),end=start.clone();
+  for(let travelled=0;travelled<S.length;travelled+=.4){
+   const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();
+   if(blocked(end,next)||boundary(end.clone(),next,probe))break;
+   end.copy(next);
+  }
+  const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2))
+   .sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
+  let struck=0;
+  for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.lance,{kind:'spearring',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;}
+  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.8),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.8),'pierce',false);
+  fx.pulse(end,'pierce',.5,.2);sound('reflect');
+ }
+ // Orbit + gravity: the disk throws its debris at the nearest enemies.
+ function ventDebris(){
+  const n=debris;debris=0;S.fill=0;fx.pulse(player.position,'gravity',S.radius+.6,.35);sound('gravityHit');
+  const targets=near(player.position,10).filter(e=>!e.dead).sort((a,b)=>flat(a.g.position,player.position)-flat(b.g.position,player.position));
+  for(let i=0;i<n;i++){
+   if(count('debris')>=24)break;
+   const t=targets[i%Math.max(1,targets.length)];
+   const dir=t?t.g.position.clone().sub(player.position).setY(0).normalize():new V(Math.cos(i*2.4),0,Math.sin(i*2.4));
+   const ob=spawnMesh(geos.shard,mats.core,player.position);applyProjectileScale(ob,.7,.7,.7);
+   bolts.push({kind:'debris',ob,dir,life:S.debrisLife});
+  }
+ }
+ // Frost + gravity: a cold well pulls, freezes whoever it held long enough, then shatters by that count.
+ function updateColdWells(dt){
+  for(const w of coldWells){
+   w.hold-=dt;w.tick-=dt;
+   const inside=near(w.pos,S.radius+.8).filter(e=>!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.4));
+   for(const e of inside){
+    if(!immovable(e)){
+     const pull=w.pos.clone().sub(e.g.position).setY(0),d=pull.length();
+     if(d>.35){e.g.position.addScaledVector(pull.normalize(),Math.min(d-.35,S.pull*dt));constrain(e.g.position,.65);}
+     const held=(w.held.get(e)||0)+dt;w.held.set(e,held);
+     if(held>=S.freezeAfter&&!w.frozen.has(e)){w.frozen.add(e);fx.pulse(e.g.position,'frost',.6,.3);}
+    }
+    e.slow=Math.max(e.slow||0,w.frozen.has(e)?S.slow*1.5:S.slow*.5);
+   }
+   if(w.tick<=0){w.tick=S.tickEvery;fx.flame(w.pos,'frost',8,S.radius*.3);for(const e of inside)support(e,S.damage,{kind:'coldwell',indirect:true,phase:'tick',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});}
+   if(w.hold<=0){
+    const frozen=[...w.frozen].filter(e=>!e.dead).length,blast=S.shatter*(1+S.frozenGain*frozen);
+    fx.explosion(w.pos,'frost',S.radius,frozen>=2);sound('frostHit');
+    for(const e of near(w.pos,S.radius+.8))if(!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.5))support(e,blast*(w.frozen.has(e)?1.4:1),{kind:'coldwell',indirect:true,phase:'shatter',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
+   }
+  }
+  coldWells=coldWells.filter(w=>w.hold>0);
+ }
+ // Frost + split: the bud breaks into frost petals; three petals on one enemy bloom into frost.
+ function rimeBloom(first,dir){
+  support(first,S.damage,{kind:'rimepetal',direction:dir.clone()});first.slow=Math.max(first.slow||0,S.slow);
+  fx.split(first.g.position,dir,Math.min(5,S.petals));
+  for(let i=0;i<S.petals;i++){
+   if(count('rimeshard')>=36)break;
+   const a=(i-(S.petals-1)/2)*(Math.PI*1.2/Math.max(1,S.petals-1));
+   const ob=spawnMesh(geos.starPetal,mats.ice,first.g.position);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.6,.6,.6);
+   bolts.push({kind:'rimeshard',ob,dir:dir.clone().applyAxisAngle(Y,a),life:S.petalLife,passed:new Set([first])});
+  }
+ }
+ function frostStack(e,dir){
+  const now=markClock,list=(petalStacks.get(e)||[]).filter(t=>now-t<1.5);list.push(now);petalStacks.set(e,list);
+  if(list.length<S.bloomStacks)return;
+  petalStacks.delete(e);fx.explosion(e.g.position,'frost',.9,true);sound('frostHit');
+  support(e,S.bloomDamage,{kind:'rimepetal',indirect:true,phase:'bloom',direction:dir.clone()});
+  if(!immovable(e))e.slow=Math.max(e.slow||0,S.slow*2);
+ }
+
  // Chain lightning that starts at the nearest visible enemy and hops, weaker with every hop.
  function web(pos,first=null){
   let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
@@ -732,6 +839,19 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);support(e,S.damage,{kind:'starring',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()});fx.pulse(e.g.position,'orbit',.45,.2);
     }
+   }else if(active==='spearring'){
+    ob.visible=!(spearGone[i]>0);
+    if(ob.visible)for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
+     cooldowns.set(e,S.cooldown);support(e,S.damage,{kind:'spearring',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()});
+    }
+   }else if(active==='accretiondisk'){
+    // 적 탄(문지기·보스 탄 제외)을 끌어와 부스러기로 삼는다.
+    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<S.catchRadius&&debris<S.capacity){q.life=0;q.struck=true;debris++;fx.burst(q.ob.position,'gravity',6);}
+    for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.85,1.35)){
+     cooldowns.set(e,S.cooldown);
+     if(support(e,S.damage,{kind:'accretiondisk',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()})&&debris<S.capacity)debris++;
+     if(!immovable(e)&&!e.dead){const pull=ob.position.clone().sub(e.g.position).setY(0);if(pull.length()>.3){e.g.position.addScaledVector(pull.normalize(),S.pull*.2);constrain(e.g.position,.65);}}
+    }
    }else if(active==='ebbring'){
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);
@@ -757,6 +877,16 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
   });
   if(active==='halobloom'&&haloRegrow<=0&&haloCuts>=S.bloomAt)bloomBurst(player.position);
+  if(active==='spearring'){
+   for(let i=0;i<spearGone.length;i++)if(spearGone[i]>0)spearGone[i]-=dt;
+   spearClock-=dt;
+   if(spearClock<=0){
+    const target=nearestEnemy(player.position,S.length,new Set(),true);
+    const slot=orbit.children.findIndex((ob,i)=>!(spearGone[i]>0));
+    if(target&&slot>=0){spearGone[slot]=S.regrow;spearLaunch(target);spearClock=S.launchEvery;}else spearClock=.2;
+   }
+  }
+  if(active==='accretiondisk'){S.fill=debris/Math.max(1,S.capacity);if(debris>=S.capacity)ventDebris();}
   if(active==='comethalo'){
    pulseTimer-=dt;if(pulseTimer>0||movementCharge<S.chargeCost)return;pulseTimer=S.pulse;
    let launched=0;const ordered=Array.from({length:orbit.children.length},(_,i)=>orbit.children[(cometCursor+i)%orbit.children.length]);
@@ -813,6 +943,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   updateOrbit(dt);
   if(frostLines.length)updateFrostLines(dt);
   if(gardens.length)updateGardens(dt);
+  if(coldWells.length)updateColdWells(dt);
   if(active==='rewindbolt'&&rewindMemories.length)updateRewind(dt);
   for(const b of bolts){
    b.life-=dt;
@@ -1050,6 +1181,61 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     fx.trail(previous,b.ob.position,'split',petalKind);
     continue;
    }
+   if(b.kind==='rimeback'){
+    b.age+=dt;
+    if(!b.returning&&b.age>S.outTime){b.returning=true;b.hitSet.clear();fx.pulse(b.ob.position,'frost',.4,.2);}
+    if(b.returning){b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();if(flat(b.ob.position,player.position)<.5){b.life=0;continue;}}
+    const direction=b.dir.clone();b.ob.position.addScaledVector(b.dir,dt*(b.returning?S.returnSpeed:S.speed));b.ob.rotation.y+=dt*10;
+    if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.ob.position.copy(previous);if(!b.returning){b.returning=true;b.hitSet.clear();}}
+    for(const e of near(b.ob.position,1.8)){
+     if(e.dead||b.hitSet.has(e)||segmentDistance(previous,b.ob.position,e.g.position)>=bossReach(e,.7,1.2))continue;
+     b.hitSet.add(e);
+     const marked=(rimeMarks.get(e)||0)>markClock;
+     if(!support(e,S.damage,{kind:'rimeback',direction}))continue;
+     if(!b.returning){rimeMarks.set(e,markClock+S.mark);e.slow=Math.max(e.slow||0,S.slow);continue;}
+     // 돌아오는 길에 자기가 얼린 적을 만나면 깨뜨린다.
+     if(marked){rimeMarks.delete(e);fx.explosion(e.g.position,'frost',S.shatterRadius,true);sound('frostHit');
+      for(const o of near(e.g.position,S.shatterRadius+.8))if(!o.dead&&flat(o.g.position,e.g.position)<S.shatterRadius+bossReach(o,0,.4))support(o,o===e?S.shatter:S.shatter*.3,{kind:'rimeback',indirect:true,phase:'shatter',direction:o.g.position.clone().sub(e.g.position).setY(0).normalize()});}
+    }
+    fx.trail(previous,b.ob.position,'frost',b.returning);continue;
+   }
+   if(b.kind==='coldwell'){
+    b.t+=dt;const k=Math.min(1,b.t/S.flight);
+    b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2);b.ob.rotation.y+=dt*6;
+    fx.trail(previous,b.ob.position,'frost',false);
+    if(k<1)continue;
+    b.life=0;coldWells.push({pos:b.to.clone(),hold:S.hold,tick:0,held:new Map(),frozen:new Set()});while(coldWells.length>S.wells+1)coldWells.shift();
+    fx.pulse(b.to,'frost',S.radius,.5);continue;
+   }
+   if(b.kind==='rimepetal'){
+    b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*8;
+    if(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position)){b.life=0;continue;}
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.66,1.16));
+    if(e){b.life=0;rimeBloom(e,b.dir);}
+    fx.trail(previous,b.ob.position,'frost',false);continue;
+   }
+   if(b.kind==='rimeshard'){
+    b.ob.position.addScaledVector(b.dir,dt*S.speed*.9);b.ob.rotation.y+=dt*9;
+    const e=near(b.ob.position,1.4).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.62,1.1));
+    if(e){b.passed.add(e);if(support(e,S.petalDamage,{kind:'rimepetal',phase:'petal',direction:b.dir.clone()})){e.slow=Math.max(e.slow||0,S.slow);frostStack(e,b.dir);}b.life=0;}
+    fx.trail(previous,b.ob.position,'frost',true);continue;
+   }
+   if(b.kind==='echolane'){
+    // 벽에 닿으면 씨앗에게로, 씨앗을 스치면 다시 벽으로. 오갈 때마다 세진다.
+    if(b.toSeed){b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();if(flat(b.ob.position,player.position)<.7){if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=false;b.pass++;b.passed.clear();b.dir.copy(b.out);fx.reflect(b.ob.position,b.dir);}}
+    b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
+    const wall=!b.toSeed&&(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position));
+    if(wall){b.ob.position.copy(previous);if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=true;b.pass++;b.passed.clear();fx.reflect(b.ob.position,b.dir);sound('reflect');}
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+    if(e){b.passed.add(e);if(!support(e,S.damage*(1+S.gain*b.pass),{kind:'echolane',direction:b.dir.clone()}))b.life=0;}
+    fx.trail(previous,b.ob.position,'reflect',b.pass>0);continue;
+   }
+   if(b.kind==='debris'){
+    b.ob.position.addScaledVector(b.dir,dt*S.debrisSpeed);b.ob.rotation.y+=dt*12;
+    const e=near(b.ob.position,1.4).find(x=>!x.dead&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.62,1.1));
+    if(e){support(e,S.debrisDamage,{kind:'accretiondisk',phase:'debris',direction:b.dir.clone()});b.life=0;}
+    fx.trail(previous,b.ob.position,'gravity',true);continue;
+   }
    if(b.kind==='sunmirror'){
     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.z+=dt*(3+b.charge);
     applyProjectileScale(b.ob,1+.09*b.charge,1+.09*b.charge,1+.09*b.charge);
@@ -1233,7 +1419,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // ---------------- active (signature / overdrive) ----------------
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
-  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',icicle:'frost',halobloom:'split',frostnet:'frost',rewindbolt:'recall',refractlance:'pierce',thundermirror:'chain',sunmirror:'burst',pierceshower:'split',ebbring:'recall',pullgarden:'gravity',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
+  const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',icicle:'frost',halobloom:'split',frostnet:'frost',rewindbolt:'recall',refractlance:'pierce',thundermirror:'chain',sunmirror:'burst',pierceshower:'split',ebbring:'recall',pullgarden:'gravity',spearring:'pierce',accretiondisk:'gravity',rimeback:'frost',coldwell:'frost',rimepetal:'frost',echolane:'reflect',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
@@ -1345,6 +1531,12 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     for(const e of enemies())if(!e.dead&&flat(e.g.position,pos)<S.radius+1.2+bossReach(e,.3,.8))support(e,S.damage*5,{kind:'ebbring',indirect:true,phase:'surge',direction:e.g.position.clone().sub(pos).setY(0).normalize()});
     break;
    }
+   case 'spearring':{for(const e of nearest(3,S.length))spearLaunch(e);spearClock=S.launchEvery;break;}
+   case 'accretiondisk':{debris=Math.max(debris,S.capacity*3);ventDebris();break;}
+   case 'rimeback':for(const d of around(6))fire(pos,d,null,true);break;
+   case 'coldwell':{const spots=nearest(2,S.range);if(!spots.length)spots.push({g:{position:pos.clone().addScaledVector(dir,3)}});for(const e of spots)coldWells.push({pos:e.g.position.clone().setY(0),hold:S.hold,tick:0,held:new Map(),frozen:new Set()});break;}
+   case 'rimepetal':for(const e of nearest(2,10))rimeBloom(e,e.g.position.clone().sub(pos).setY(0).normalize());break;
+   case 'echolane':for(const d of around(4))fire(pos,d,null,true);break;
    case 'pullgarden':{const spots=nearest(4,S.range);if(!spots.length)plantGardens(pos.clone().addScaledVector(dir,3).setY(0),S.fields);for(const e of spots)plantGardens(e.g.position.clone().setY(0),1);break;}
    case 'blackhole':for(const a of [-.9,0,.9])fire(pos,dir.clone().applyAxisAngle(Y,a),pos.clone().addScaledVector(dir.clone().applyAxisAngle(Y,a),3.2),true);break;
    case 'winterbreath':breath(pos,dir,Math.PI);break;
@@ -1359,6 +1551,6 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
 
  applyTheme();
  return {set,setTheme,fire,update,clear,surge,calm,audioEvent:()=>projectileAudioEvent(sourceForm()),
-  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

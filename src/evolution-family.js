@@ -5,7 +5,7 @@ import {baseFormOf} from './forms.js';
 // core active preserves their identity and prevents three independent auto-attacks
 // and projectile shields from multiplying each other.
 // 1·2묶음의 꽃잎 후광·밀물 고리도 씨앗을 도는 고리라 같은 규칙을 따른다(2026-09-21).
-export const ORBIT_FORMS=Object.freeze(['frostguard','stormcrown','mirrorguard','starring','halobloom','ebbring']);
+export const ORBIT_FORMS=Object.freeze(['frostguard','stormcrown','mirrorguard','starring','halobloom','ebbring','spearring','accretiondisk']);
 const ORBIT_SET=new Set(ORBIT_FORMS);
 
 // An awakened evolution belongs to its fusion's family (and the orbit family when that fusion orbits).

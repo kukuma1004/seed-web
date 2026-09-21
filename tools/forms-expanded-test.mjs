@@ -17,8 +17,8 @@ const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.upd
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
 // Catalogue: twenty-five hand-authored forms, of which twenty are offered. A batch whose art is not ready stays out of the offers.
-assert.equal(Object.keys(CURATED_FORMS).length,30);
-assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,30);
+assert.equal(Object.keys(CURATED_FORMS).length,36,'차원 법칙을 뺀 1차 융합 36칸이 모두 손제작');
+assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,36);
 assert.equal(Object.keys(FORMS).length,20,'그림이 없는 1묶음은 선택지에 나오지 않는다');
 assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),Object.values(COMBO_BATCHES).filter(b=>!b.live).flatMap(b=>b.ids).sort(),'보류 중인 묶음만 선택지 밖에 있다');
 for(const id of Object.keys(CANDIDATE_FORMS))assert.ok(!Object.hasOwn(FORMS,id),`${id} 선택지에 새어 나감`);
@@ -188,4 +188,24 @@ for(const id of Object.keys(FORMS)){
  assert.ok(crowd.calls.some(c=>c.e===target&&c.phase==='line'),'the narrow line still deals modest contact damage');
  assert.ok(!crowd.calls.some(c=>c.phase==='implosion'),'a nearby second enemy disperses the implosion');assert.equal(crowd.combat.state().stakes,0);crowd.combat.dispose();
 }
-console.log('Forms: twenty-five authored pairs (twenty offered), uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+// 서리 되감기: 나갈 때 얼리고, 돌아오는 길에 자기가 얼린 적을 깨뜨린다.
+{
+ const foe=enemy(0,-3),{combat,calls}=fixture([foe]);
+ combat.set('rimeback',4);combat.fire(vec(),vec(0,-1));
+ step(combat,2.2);
+ const out=calls.filter(c=>c.kind==='rimeback'&&!c.phase),shatter=calls.filter(c=>c.phase==='shatter');
+ assert.ok(out.length>=2,'나가고 돌아오며 두 번 벤다');assert.ok(shatter.length>=1,'돌아오는 길에 얼린 적을 깨뜨린다');
+ assert.ok(foe.slow>0,'나가는 길에 얼린다');
+ combat.dispose();
+}
+// 메아리 회랑: 벽에 닿으면 씨앗에게 돌아오고, 오갈 때마다 세진다.
+{
+ const foe=enemy(0,-2),{combat,calls}=fixture([foe],{boundary:walls});
+ combat.set('echolane',4);combat.fire(vec(),vec(1,0));
+ step(combat,3);
+ const hits=calls.filter(c=>c.kind==='echolane');
+ assert.ok(combat.state().bolts<=2,'탄이 무한히 남지 않는다');
+ assert.ok(hits.length===0||hits.every((c,i)=>i===0||c.damage>=hits[i-1].damage),'오갈수록 피해가 줄지 않는다');
+ combat.dispose();
+}
+console.log('Forms: thirty-six authored pairs (twenty offered), uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

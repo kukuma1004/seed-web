@@ -9,7 +9,8 @@ const offensive=ids=>ids.filter(id=>!ALL_FORMS[id].passive);
 // 손대지 않은 조합이 덩달아 검사에 걸리므로 기준에서 빼고 따로 잰다.
 const tacticalFusions=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals','gravitystake',
  'icicle','halobloom','frostnet','rewindbolt','refractlance',
- 'thundermirror','sunmirror','pierceshower','ebbring','pullgarden'];
+ 'thundermirror','sunmirror','pierceshower','ebbring','pullgarden',
+ 'spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'];
 const batch1=['icicle','halobloom','frostnet','rewindbolt','refractlance'];
 
 // Equal investment: a fusion of two laws with p picks between them is level p-1; a solo law at level p evolves to level p-1.
@@ -114,6 +115,24 @@ for(const level of [SOLO_LEVEL-1,9]){
  assert.ok(bossDps('pullgarden',level)<crowd('pullgarden')*.35,`level ${level}: 끌림 꽃밭이 혼자인 적에게 너무 셈`);
 }
 
+// 2026-09-21 3묶음 역할 검사.
+for(const level of [SOLO_LEVEL-1,9]){
+ const r=(id,o)=>simulate(id,level,o).dps;
+ // 창날 고리: 창이 줄을 꿰뚫으므로 줄지어 선 적에게 확실히 세다.
+ assert.ok(r('spearring',{scene:'line',shots:true})>r('spearring',{scene:'scattered',shots:true})*1.5,`level ${level}: 창날 고리가 줄 꿰뚫기 보상을 잃음`);
+ // 강착 원반: 적 탄이 날아오면 원반이 빨리 차서 세진다.
+ assert.ok(averageDps('accretiondisk',level,{shots:true})>averageDps('accretiondisk',level)*1.2,`level ${level}: 강착 원반이 탄막 보상을 잃음`);
+ // 서리 꽃잎: 꽃잎이 겹치는 뭉친 무리에서 세다.
+ assert.ok(r('rimepetal',{scene:'cluster'})>r('rimepetal',{scene:'scattered'})*1.25,`level ${level}: 서리 꽃잎이 뭉친 무리 보상을 잃음`);
+ // 메아리 회랑: 벽이 가까우면 짧은 길을 여러 번 오간다.
+ {
+  const few=[[0,-2],[0,-3],[0,-4]];
+  assert.ok(r('echolane',{positions:few,walls:true,seconds:5})>r('echolane',{positions:few,seconds:5})*1.15,`level ${level}: 메아리 회랑이 벽 보상을 잃음`);
+ }
+ // 얼어붙은 블랙홀: 제어라 문지기·보스 하나에게는 약하다.
+ assert.ok(bossDps('coldwell',level)<averageDps('coldwell',level)*.15,`level ${level}: 얼어붙은 블랙홀이 단일 대상에 너무 셈`);
+}
+
 // Orbit family roles: only the crown spends its whole budget on automatic
 // damage; the mirror is deliberately weak until it can turn enemy shots back.
 for(const level of [SOLO_LEVEL-1,9]){
@@ -153,7 +172,7 @@ for(const id of Object.keys(ALL_FORMS)){
  if(Number.isFinite(base.interval))assert.ok(up.interval<base.interval);
  for(const [key,value] of Object.entries(base))if(typeof value==='number'&&Number.isFinite(value)&&!['interval','novaEvery','pulse','delay','period','decay','chargeDecay','isolation','cone','range','spread','life','flight','slow','cooldown','gain','ramp','inner','speed','shatterBounces',
   // 작을수록 좋은 값들(조건이 빨리 차거나 금방 회복된다)
-  'bloomAt','regrow','rewindDistance','minLinks','webTick'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
+  'bloomAt','regrow','rewindDistance','minLinks','webTick','launchEvery','capacity','freezeAfter'].includes(key))assert.ok(up[key]>=value,`${id}.${key}`);
  assert.deepEqual(formStats(id,1),formStats(id,1,{surge:false}));
 }
 // Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:

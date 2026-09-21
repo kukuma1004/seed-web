@@ -41,6 +41,13 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('pierceshower',['pierce','split'],'꿰뚫는 꽃비','창이 적을 꿰뚫을 때마다 그 자리에서 꽃잎 두 장이 양옆으로 튀어 나갑니다.','줄지어 오는 무리를 창과 꽃잎으로 한 번에 훑음','혼자 있는 적에게는 꽃잎이 헛나감'),
  form('ebbring',['orbit','recall'],'밀물 고리','고리가 씨앗을 바로 따라오지 않고 지나온 자리에 남았다가 밀물처럼 따라붙으며 벱니다.','계속 움직이면 뒤쫓아 오는 적을 고리가 대신 베어 줌','멈춰 서면 고리가 작게 오므라들어 약해짐',true),
  form('pullgarden',['gravity','split'],'끌림 꽃밭','씨앗이 땅에서 갈라져 작은 끌림 꽃밭 여러 개를 만들고, 한 꽃밭에 적이 둘 이상 모이면 꽃이 피며 터집니다.','흩어진 무리를 여러 곳에 조금씩 모아 한꺼번에 터뜨림','혼자 있는 적 곁에서는 꽃이 피지 않음'),
+ // 2026-09-21 3묶음(보류). 남은 1차 융합 여섯으로 차원 법칙을 뺀 36칸이 모두 채워진다.
+ form('spearring',['orbit','pierce'],'창날 고리','씨앗을 도는 창 가운데 하나가 틈틈이 고리에서 떨어져 나가 가장 가까운 적의 줄을 꿰뚫고, 잠시 뒤 다시 자랍니다.','곁을 지키면서 방패병과 줄지어 선 적을 꿰뚫음','창이 빠진 동안 고리가 비고, 창을 쏘는 간격이 김',true),
+ form('accretiondisk',['orbit','gravity'],'강착 원반','씨앗을 도는 소용돌이가 적 탄환과 베어 낸 부스러기를 끌어모으고, 가득 차면 가까운 적들에게 한꺼번에 내던집니다.','탄막과 근접 무리를 모두 탄으로 바꿔 되돌려 줌','가득 찰 때까지는 근접 베기뿐이라 멀리 있는 적에게 약함',true),
+ form('rimeback',['frost','recall'],'서리 되감기','서리잎이 나가며 적을 얼리고, 돌아오는 길에 얼어 있는 적을 깨뜨립니다.','움직여서 돌아오는 길을 얼린 적 위로 겹치면 두 번 벰','돌아오는 길이 얼린 적을 비껴가면 깨뜨리지 못함'),
+ form('coldwell',['frost','gravity'],'얼어붙은 블랙홀','던진 자리에 차가운 소용돌이가 생겨 적을 끌어당기고, 오래 붙잡힌 적을 얼린 뒤 얼린 수만큼 크게 부서집니다.','무리를 한곳에 묶어 두었다가 한꺼번에 깨뜨림','느리게 쌓여 빠른 적과 문지기·보스는 붙잡지 못함'),
+ form('rimepetal',['frost','split'],'서리 꽃잎','봉오리가 적에게 닿으면 서리 꽃잎으로 갈라지고, 꽃잎을 세 장 이상 맞은 적은 서리꽃이 피며 크게 얼어붙습니다.','모여 있는 무리를 꽃잎으로 덮어 한꺼번에 얼림','흩어진 적은 꽃잎이 겹치지 않아 서리꽃이 잘 피지 않음'),
+ form('echolane',['reflect','recall'],'메아리 회랑','탄이 벽에 닿으면 씨앗에게 되돌아오고, 씨앗을 스치면 다시 벽으로 튕겨 나가며 오갈 때마다 세집니다.','벽을 등지고 싸우면 짧은 길을 여러 번 왕복함','트인 곳에서는 벽까지 멀어 한두 번 오가고 끝남'),
  form('gravitystake',['pierce','gravity'],'중력 말뚝','좁은 선에 적 하나만 걸리면 말뚝이 박혀 잠시 뒤 그 대상 안으로 강하게 내파합니다.','혼자 남은 문지기·보스에게 집중 피해','주변에 다른 적이 있거나 둘 이상을 꿰뚫으면 내파가 생기지 않음')
 ].map(f=>[f.id,withPair(f)])));
 
@@ -60,7 +67,8 @@ export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filt
 // 공개할 때는 live만 true로 바꾼다. 기록: combo-batches/
 export const COMBO_BATCHES=Object.freeze({
  '20260921':Object.freeze({live:false,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])}),
- '20260921-2':Object.freeze({live:false,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])})
+ '20260921-2':Object.freeze({live:false,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])}),
+ '20260921-3':Object.freeze({live:false,ids:Object.freeze(['spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'])})
 });
 const HELD_BACK=new Set(Object.values(COMBO_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
 export const isHeldBack=id=>HELD_BACK.has(id);
@@ -264,6 +272,12 @@ const SURGE=Object.freeze({
  pierceshower:s=>({pierce:s.pierce+2}),
  ebbring:s=>({blades:s.blades+3,radius:s.radius+.35,cooldown:s.cooldown*.5,calmScale:1}),
  pullgarden:s=>({fields:s.fields+2,fieldRadius:s.fieldRadius+.4}),
+ spearring:s=>({spears:s.spears+2,launchEvery:s.launchEvery*.45,pierce:s.pierce+2}),
+ accretiondisk:s=>({vortices:s.vortices+2,capacity:Math.max(3,s.capacity-3),catchRadius:s.catchRadius+.6,cooldown:s.cooldown*.5}),
+ rimeback:s=>({bolts:s.bolts+3,shatterRadius:s.shatterRadius+.5}),
+ coldwell:s=>({wells:s.wells+1,radius:s.radius+.6,freezeAfter:s.freezeAfter*.5}),
+ rimepetal:s=>({petals:s.petals+2}),
+ echolane:s=>({passes:s.passes+3,bolts:s.bolts+2}),
  gravitystake:s=>({pierce:s.pierce+2,implosions:2,isolation:s.isolation-1}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
@@ -378,6 +392,13 @@ function baseStats(id,level){
   case 'pierceshower':return {interval:1.1*faster,damage:26*power,length:Math.min(12,9+.4*up),pierce:Math.min(8,4+Math.floor(up/2)),petalDamage:16*power,spread:2,petalSpeed:11,petalLife:.45};
   case 'ebbring':return {interval:Infinity,damage:36*power,blades:Math.min(6,3+Math.floor(up/2)),radius:1.35,calmRadius:.75,calmScale:.55,ebb:1.5,cooldown:.3,stretch:.45};
   case 'pullgarden':return {interval:1.35*faster,damage:8*power,bloom:30*power,fields:Math.min(4,2+Math.floor(up/3)),fieldRadius:1.5,life:2.6,pull:1.3,range:8,flight:.5,tickEvery:.5,bloomAt:2,bloomRadius:1.7};
+  // 3묶음
+  case 'spearring':return {interval:Infinity,damage:14*power,lance:48*power,spears:Math.min(5,2+Math.floor(up/2)),radius:1.9,cooldown:.4,launchEvery:Math.max(.7,1.5-.06*up),length:Math.min(12,9+.4*up),pierce:Math.min(8,4+Math.floor(up/2)),regrow:1.2};
+  case 'accretiondisk':return {interval:Infinity,damage:18*power,debrisDamage:28*power,vortices:Math.min(5,2+Math.floor(up/2)),radius:2,cooldown:.35,capacity:Math.min(10,6+Math.floor(up/3)),catchRadius:1.6,pull:.8,debrisSpeed:12,debrisLife:1};
+  case 'rimeback':return {interval:1*faster,damage:16*power,shatter:34*power,bolts:2,outTime:.6,speed:10,returnSpeed:12,slow:1.6,mark:2.5,shatterRadius:1.2};
+  case 'coldwell':return {interval:1.6*faster,damage:5*power,shatter:24*power,radius:Math.min(3,2.3+.08*up),hold:2.4,pull:2.2,freezeAfter:1,slow:2,wells:2,range:8,flight:.5,frozenGain:.15,tickEvery:.5};
+  case 'rimepetal':return {interval:1*faster,damage:42*power,petalDamage:28*power,petals:Math.min(7,4+Math.floor(up/3)),speed:12,life:1.2,petalLife:.5,bloomStacks:3,bloomDamage:50*power,slow:1.5,bolts:3};
+  case 'echolane':return {interval:1.1*faster,damage:22*power,passes:Math.min(6,3+Math.floor(up/3)),gain:.1,speed:13,life:4,bolts:2};
   case 'gravitystake':return {interval:1.45*faster,damage:12*power,length:Math.min(17,12+.6*up),pierce:Math.min(10,6+Math.floor(up/2)),implosion:160*power,isolation:5.2,delay:.58,stakes:4,implosions:1};
   default:return {interval:Infinity,damage:0};
  }
