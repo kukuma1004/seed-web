@@ -13,7 +13,7 @@ export const MASTERY=Object.freeze({
  power:{name:'공격력',desc:'모든 공격 피해'},
  move:{name:'이동 속도',desc:'씨앗 이동 속도'},
  critical:{name:'치명타',desc:'치명타 확률'},
- cooldown:{name:'순환',desc:'자동 공격·회피·궁극기 재사용'},
+ cooldown:{name:'순환',desc:'자동 공격·회피 재사용'},
  maxHp:{name:'최대 생명력',desc:'출발 최대 생명력'}
 });
 export const MASTERY_KEYS=Object.freeze(Object.keys(MASTERY));

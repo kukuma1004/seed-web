@@ -55,18 +55,19 @@ assert.equal(plan.archetype,'RAIN');
 chargeActive(g,40);assert.equal(g.value,0,'no charge while the active runs (no self-refilling loop)');
 assert.equal(startActive(g,new Map([['prism',2]])),null,'no second start while running');
 assert.equal(tickActive(g,ACTIVE.signatureSeconds-.1),null);const ended=tickActive(g,.2);assert.equal(ended,plan);assert.equal(g.plan,null);
-assert.equal(g.cooldown,ACTIVE.cooldownSeconds);chargeActive(g,10);assert.equal(g.value,0,'post-use stabilization blocks immediate refill');
-tickActive(g,ACTIVE.cooldownSeconds-.1);chargeActive(g,10);assert.equal(g.value,0,'cooldown must fully finish');
-tickActive(g,.2);chargeActive(g,10);assert.equal(g.value,10,'charging resumes after stabilization');
-const fast=createActiveGauge(0,10);tickActive(fast,1,1.02);assert.ok(Math.abs(fast.cooldown-8.98)<1e-9,'garden circulation speeds cooldown without shortening the active itself');
+// 2026-09-21: 안정화 없음 — 끝나자마자 다시 충전된다(발동 중에는 여전히 충전 안 됨).
+assert.equal(ACTIVE.cooldownSeconds,0);assert.equal(g.cooldown,0);chargeActive(g,10);assert.equal(g.value,10,'사용 뒤 곧바로 충전');
+assert.equal(createActiveGauge(0,10).cooldown,0,'예전 저장의 안정화 값은 0으로 읽는다');
 g.value=ACTIVE.max;const od=startActive(g,three);
 assert.equal(od.state,'OVERDRIVE');assert.equal(od.seconds,ACTIVE.overdriveSeconds);assert.deepEqual(od.tags,['CONTROL','EXPLOSION','BOUNCE','MULTI']);assert.ok(od.finale.pull>0&&od.finale.hits===2);
 assert.equal(od.archetype,'BLACKHOLE');
 cancelActive(g);assert.equal(g.plan,null);
 assert.equal(createActiveGauge(250).value,ACTIVE.max);assert.equal(createActiveGauge(NaN).value,0);
-assert.equal(createActiveGauge(0,999).cooldown,ACTIVE.cooldownSeconds);
+assert.equal(createActiveGauge(0,999).cooldown,0);
 const normalCycle=ACTIVE.max/(ACTIVE.kill*2)+ACTIVE.cooldownSeconds,fastCycle=ACTIVE.max/(ACTIVE.kill*8)+ACTIVE.cooldownSeconds;
-assert.ok(normalCycle>=60&&fastCycle>=30,`ultimate cadence remains special (${normalCycle}s normal, ${fastCycle}s fast-clear)`);
+// 충전 20% 빠르게: 일반 84마리. 초당 2마리면 약 42초, 초당 8마리 몰아잡기여도 10초는 넘는다.
+assert.equal(Math.ceil(ACTIVE.max/ACTIVE.kill),84);
+assert.ok(normalCycle>=40&&fastCycle>=10,`ultimate cadence (${normalCycle}s normal, ${fastCycle}s fast-clear)`);
 
 // Texts for the pause sheet.
 assert.equal(activeSummary(new Map(),g).state,'LOCKED');
@@ -78,7 +79,7 @@ const save={version:1,cycle:0,stage:1,mode:'entry',region:'garden',hp:90,rules:[
 assert.ok(validCheckpoint(save),'solo evolution in a save');
 assert.ok(validCheckpoint({...save,activeGauge:70}));assert.ok(validCheckpoint({...save,activeGauge:0}));
 for(const bad of [-1,101,NaN,'50'])assert.ok(!validCheckpoint({...save,activeGauge:bad}),String(bad));
-assert.ok(validCheckpoint({...save,activeCooldown:12.5}));assert.ok(!validCheckpoint({...save,activeCooldown:ACTIVE.cooldownSeconds+.1}));
+assert.ok(validCheckpoint({...save,activeCooldown:12.5}),'예전 저장의 안정화 값도 그대로 열린다');assert.ok(!validCheckpoint({...save,activeCooldown:ACTIVE.legacyCooldownMax+.1}));
 assert.ok(validActiveGauge(undefined));assert.ok(validActiveCooldown(undefined));
 
 // Every evolution's surge runs in the real combat code: its opening move and boosted attacks deal damage, then it calms down.

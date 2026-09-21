@@ -34,7 +34,7 @@ export function renderActiveButton(button,{forms,gauge,live,touch=false}){
  const s=activeState(forms),running=Boolean(gauge.plan),ready=activeReady(gauge,forms);
  const shownForms=running?gauge.plan.forms:s.forms;
  const cooling=!running&&gauge.cooldown>0;
- const fill=running?Math.max(0,gauge.plan.time/gauge.plan.seconds):cooling?gauge.cooldown/ACTIVE.cooldownSeconds:gauge.value/ACTIVE.max;
+ const fill=running?Math.max(0,gauge.plan.time/gauge.plan.seconds):cooling?gauge.cooldown/Math.max(1,ACTIVE.cooldownSeconds):gauge.value/ACTIVE.max;
  const hide=!live;
  if(button.hidden!==hide)button.hidden=hide;
  if(hide)return;
@@ -64,5 +64,5 @@ export function activeSection(forms,gauge){
  const gaugeText=gauge.cooldown>0?`안정화 ${Math.ceil(gauge.cooldown)}초`:`게이지 ${Math.floor(gauge.value)}/${ACTIVE.max}`;
  return `<section class="active-sheet ${summary.state.toLowerCase()}"><h3>궁극기 <span>${STATE_NAMES[summary.state]} · ${gaugeText}</span></h3>
  <div class="active-sheet-body">${art?`<div class="active-sheet-art">${art}</div>`:''}<div><strong>${summary.title}</strong><ul>${lines}${detail}</ul>
- <p class="active-rule">진화 1개: 그 진화의 시그니처 · 진화 2개 이상: 서로 다른 계열 중 가장 강한 둘의 오버드라이브 · 일반 적 100마리 분량 · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화 · F 키 또는 궁극기 버튼</p></div></div></section>`;
+ <p class="active-rule">진화 1개: 그 진화의 시그니처 · 진화 2개 이상: 서로 다른 계열 중 가장 강한 둘의 오버드라이브 · 일반 적 ${Math.ceil(ACTIVE.max/ACTIVE.kill)}마리 분량${ACTIVE.cooldownSeconds>0?` · 사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`:''} · F 키 또는 궁극기 버튼</p></div></div></section>`;
 }

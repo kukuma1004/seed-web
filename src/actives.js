@@ -7,10 +7,13 @@ import {activeUltimateEvolutions} from './evolution-family.js';
 // Numbers here are first-pass values meant to be tuned; they all live in ACTIVE.
 export const ACTIVE=Object.freeze({
  max:100,
- kill:1,            // a whole crowd is required; fast-clearing builds no longer loop ultimates
- eliteKill:6,       // elite, shield and turret kills
- bossShare:30,      // a whole boss health bar contributes less than a third of the gauge
- cooldownSeconds:20,// post-use lock prevents a screen clear from paying for the next ultimate
+ // 2026-09-21 사용자 결정: 사용 뒤 20초 안정화를 없애고 충전을 20% 빠르게(1 → 1.2, 6 → 7.2, 30 → 36).
+ // 발동 중 처치로는 여전히 충전되지 않아 궁극기가 스스로 다음 궁극기를 채우지는 않는다.
+ kill:1.2,          // 일반 적 84마리면 가득
+ eliteKill:7.2,     // elite, shield and turret kills
+ bossShare:36,      // a whole boss health bar contributes about a third of the gauge
+ cooldownSeconds:0, // 안정화 없음
+ legacyCooldownMax:20,// 예전 저장에 남은 안정화 값(최대 20초)도 저장 검사에서 통과시킨 뒤 0으로 읽는다
  signatureSeconds:3,
  overdriveSeconds:4.5,
  finaleDamage:100, // raised from 60 with SURGE_DAMAGE so the closing blast finishes what the overdrive started
@@ -150,7 +153,7 @@ export function createActiveGauge(value=0,cooldown=0){return {value:clampGauge(v
 export const clampGauge=v=>Number.isFinite(v)?Math.max(0,Math.min(ACTIVE.max,v)):0;
 export const clampActiveCooldown=v=>Number.isFinite(v)?Math.max(0,Math.min(ACTIVE.cooldownSeconds,v)):0;
 export const validActiveGauge=v=>v===undefined||(Number.isFinite(v)&&v>=0&&v<=ACTIVE.max);
-export const validActiveCooldown=v=>v===undefined||(Number.isFinite(v)&&v>=0&&v<=ACTIVE.cooldownSeconds);
+export const validActiveCooldown=v=>v===undefined||(Number.isFinite(v)&&v>=0&&v<=Math.max(ACTIVE.cooldownSeconds,ACTIVE.legacyCooldownMax));
 export function chargeActive(gauge,amount){
  if(gauge.plan||gauge.cooldown>0||!(amount>0))return gauge.value;
  gauge.value=clampGauge(gauge.value+amount);return gauge.value;
@@ -190,5 +193,5 @@ export function activeSummary(forms,gauge){
  const tags=overdriveTags(s.forms),finale=overdriveFinale(tags,s.level);
  const archetype=ultimateArchetype(s.forms);
  return {state:s.state,forms:s.forms,title:`오버드라이브 · ${s.forms.map(id=>SIGNATURES[id].name).join(' + ')}`,archetype:archetype.id,
-  lines:[`${archetype.name}형 · ${archetype.desc}`,`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`공전 진화는 가장 강한 하나만 공명`,`사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`,`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
+  lines:[`${archetype.name}형 · ${archetype.desc}`,`두 시그니처를 함께 ${ACTIVE.overdriveSeconds}초`,`공전 진화는 가장 강한 하나만 공명`,...(ACTIVE.cooldownSeconds>0?[`사용 뒤 ${ACTIVE.cooldownSeconds}초 안정화`]:[]),`태그 ${tags.map(t=>TAG_NAMES[t]).join('·')}`,`끝날 때 ${finale.lines.join(' · ')}`],tags,finale,ready:gauge?activeReady(gauge,forms):false};
 }
