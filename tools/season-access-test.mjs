@@ -36,7 +36,7 @@ assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에�
 assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAccessMode=async\(\)=>\{const user=account\.user\(\);adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');
 assert.match(main,/publicWebBetaLocked\(\)&&!adminMode&&!betaTesterMode/,'등록된 테스터만 잠긴 PC 웹을 통과해야 합니다.');
 assert.match(main,/if\(localAdminLab\|\|account\.user\(\)\)showIntro\(\);else showAccount\(\)/,'로컬 관리자 UI 검사는 외부 계정을 만들지 않고 바로 시작해야 합니다.');
-assert.match(main,/account\.native\|\|betaTesterMode/,'등록된 PC 웹 테스터도 베타 랭킹에 참여할 수 있어야 합니다.');
+assert.match(main,/accountCanRank\(\{native:account\.native,admin:adminMode,tester:betaTesterMode/,'등록된 PC 웹 테스터(와 관리자)도 베타 랭킹에 참여할 수 있어야 합니다.');
 assert.match(main,/betaTesterMode\?grantGift\(runStorage,BETA_BOOSTER_GIFT,'sprout',1\)/,'베타테스터는 계정마다 다시 싹 부스터를 한 번 받아야 합니다.');
 assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
 assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 \$\{Object\.keys\(FORMS\)\.length\}종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화를 하드코딩된 개수 없이 모두 제공해야 합니다.');

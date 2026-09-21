@@ -36,6 +36,8 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   function batch(geometry,capacity){
     const material=new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    // 색 버퍼를 처음부터 둔다. 첫 setColorAt 때 생기면 셰이더 종류가 바뀌어 전투 중에 다시 컴파일된다.
+    mesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(capacity*3).fill(1),3);mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
     mesh.frustumCulled=false;mesh.count=0;group.add(mesh);
     return {mesh,capacity,cursor:0,slots:Array.from({length:capacity},()=>({life:0,pos:new THREE.Vector3(),vel:new THREE.Vector3(),scale:new THREE.Vector3(),rotation:new THREE.Quaternion(),twinkle:0}))};
   }
@@ -259,7 +261,11 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
         dummy.position.copy(p.pos);dummy.quaternion.copy(p.rotation);dummy.scale.copy(p.scale).multiplyScalar(scale);dummy.updateMatrix();
         pool.mesh.setMatrixAt(count,dummy.matrix);color.setHex(p.tint).multiplyScalar(t*(pool===ghosts?.5:2.4));pool.mesh.setColorAt(count,color);count++;
       }
-      pool.mesh.count=count;pool.mesh.instanceMatrix.needsUpdate=true;if(pool.mesh.instanceColor)pool.mesh.instanceColor.needsUpdate=true;
+      // 살아 있는 조각만큼만 GPU로 올린다(예전에는 빈 칸까지 매 프레임 전체 버퍼를 올렸다). 하나도 없으면 그리지도 올리지도 않는다.
+      pool.mesh.count=count;if(!count)continue;
+      const matrix=pool.mesh.instanceMatrix,colors=pool.mesh.instanceColor;
+      matrix.clearUpdateRanges();matrix.addUpdateRange(0,count*16);matrix.needsUpdate=true;
+      if(colors){colors.clearUpdateRanges();colors.addUpdateRange(0,count*3);colors.needsUpdate=true;}
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}

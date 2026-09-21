@@ -66,7 +66,7 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2}
 
  const moteGeo=new THREE.OctahedronGeometry(.09,0);moteGeo.scale(.55,1.9,.55);
  const moteMat=additive();moteMat.vertexColors=false;
- const moteCount=mobile?10:16,motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
+ const moteCount=mobile?10:16,motes=new THREE.InstancedMesh(moteGeo,moteMat,moteCount);motes.instanceMatrix.setUsage(THREE.DynamicDrawUsage);motes.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(moteCount*3).fill(1),3);motes.instanceColor.setUsage(THREE.DynamicDrawUsage);motes.frustumCulled=false;motes.name='active-motes';group.add(motes);
  const dummy=new THREE.Object3D(),color=new THREE.Color();
  let effect=null,serial=0,themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};

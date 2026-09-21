@@ -89,3 +89,6 @@ android/keystore.properties
 !tools/seed-admin-grant.mjs
 !tools/grant-founding-testers.mjs
 release/
+!tools/perf-monitor-test.mjs
+!tools/ranking-eligibility-test.mjs
+!tools/instanced-shots-test.mjs

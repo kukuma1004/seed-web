@@ -342,6 +342,41 @@
           ".validate": "newData.hasChildren(['label', 'createdAt', 'rewards']) && newData.child('label').isString() && newData.child('label').val().length <= 80 && newData.child('createdAt').isNumber() && newData.child('rewards').hasChildren()"
         }
       }
+    },
+    "seedPerformance": {
+      "sessions": {
+        "$uid": {
+          ".read": "auth != null && auth.uid == $uid",
+          "$sessionId": {
+            ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous'",
+            ".validate": "newData.hasChildren(['v', 'at', 'version', 'device', 'p95', 'avg', 'r']) && $sessionId.length <= 40",
+            "v": {
+              ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && newData.val() <= now"
+            },
+            "version": {
+              ".validate": "newData.isString() && newData.val().length <= 40"
+            },
+            "device": {
+              ".validate": "newData.isString() && newData.val().length <= 80"
+            },
+            "p95": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000"
+            },
+            "avg": {
+              ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000"
+            },
+            "r": {
+              ".validate": "newData.isString() && newData.val().length <= 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        }
+      }
     }
   }
 }
