@@ -111,6 +111,13 @@ Higgsfield는 게임 엔진·게임 코드·웹사이트를 만드는 데 쓰지
 
 ## 10. 현재 연결 상태 (2026-09-21)
 
-- 공식 CLI `@higgsfield/cli` 1.1.26 설치(공식 저장소 higgsfield-ai/cli). 공식 스킬 `higgsfield-generate`만 설치(`~/.claude/skills/`).
-- **로그인 전**: 사용자가 직접 `higgsfield auth login`(브라우저 로그인, API 키 불필요) 후 `higgsfield workspace list` → `higgsfield workspace set <id>`로 결제 작업 공간을 고른다.
-- 생성 없이 쓸 수 있는 확인 명령: `higgsfield account status`(플랜·크레딧), `higgsfield model list`, `higgsfield generate cost …`(비용 미리 보기). `higgsfield auth token`은 비밀 값을 출력하므로 쓰지 않는다.
+연결 통로가 두 개다. 어느 쪽으로 생성하든 위 규칙(작업당 3개·생성 전 보고·영상 금지·4K 금지)은 똑같이 적용한다.
+
+- **공식 CLI** `@higgsfield/cli` 1.1.26 설치(공식 저장소 higgsfield-ai/cli). 공식 스킬 `higgsfield-generate`만 설치(`~/.claude/skills/`).
+  - 로그인 전: 사용자가 직접 `higgsfield auth login`(브라우저 로그인, API 키 불필요) 후 `higgsfield workspace list` → `higgsfield workspace set <id>`로 결제 작업 공간을 고른다.
+  - 생성 없이 쓸 수 있는 확인 명령: `higgsfield account status`(플랜·크레딧), `higgsfield model list`, `higgsfield generate cost …`(비용 미리 보기). `higgsfield auth token`은 비밀 값을 출력하므로 쓰지 않는다.
+- **공식 MCP 서버** `https://mcp.higgsfield.ai/mcp`(Higgsfield 공식 도움말에 안내된 주소). Claude Code 사용자 설정에 `higgsfield`라는 이름으로 등록했다(HTTP, 모든 프로젝트 공통).
+  - 인증 전: 사용자가 대화형 `claude` 터미널에서 `/mcp` → higgsfield → 인증(브라우저 OAuth)을 직접 한다. 토큰·코드를 Claude에게 붙여 넣지 않는다.
+  - MCP에는 4K 이미지·영상 생성 도구도 들어 있다. **쓰지 않는다.** 이미지 생성만, 필요한 해상도만.
+  - 비용 미리 보기는 CLI `higgsfield generate cost`로 먼저 확인한다(MCP 도구로 비용을 알 수 없을 때).
+- **크레딧 주의**: 에이전트(CLI·MCP)로 생성하면 플랜과 상관없이 **매번 크레딧이 차감된다.** 웹사이트의 무제한·무료 생성 혜택은 적용되지 않는다(Higgsfield 공식 도움말).
