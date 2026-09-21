@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {buildRecord,parseBuild,validBuild,buildText,bossText,BUILD_TEXT_MAX} from '../src/ranking-build.js';
-import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS,rankOrder,formatTime} from '../src/score.js';
+import {RANKING_KEY,killPoints,roomPoints,cleanName,readRanking,submitScore,lastName,rankingTable,RANKING_SIZE,KILL_POINTS,rankOrder,formatTime,clearBonus,CLEAR_BONUS} from '../src/score.js';
 import {ITEMS,emptyInventory,normalizeInventory,validInventory,addItem,drinkPotion} from '../src/inventory.js';
 import {validCheckpoint,difficulty} from '../src/run-save.js';
 
@@ -109,4 +109,7 @@ for(const it of Object.values(ITEMS))assert.ok(it.key===''||it.key==='Q',it.id);
  const html=rankingTable(board);assert.ok(html.includes('완주 · 여정 50')&&html.includes('20분 00초')&&!html.includes('5번째 방'),'완주 줄에는 방 대신 완주와 시간이 보인다');
  assert.ok(rankingTable([{name:'가',score:10,cycle:0,stage:2,kills:3,time:65,at:1}]).includes('여정 1 · 3번째 방 · 3 처치 · 1분 05초'));
 }
-console.log('Score, ranking board, names, potions and save fields, time tie-break and clears passed.');
+// 완주 보너스: 90분에서 1초 빠를 때마다 60점, 90분을 넘기면 0.
+assert.equal(CLEAR_BONUS.baseSeconds,5400);assert.equal(clearBonus(3300),126000);assert.equal(clearBonus(5400),0);assert.equal(clearBonus(9000),0);assert.equal(clearBonus(-5),324000);
+assert.ok(clearBonus(3000)>clearBonus(3600),'빠를수록 보너스가 크다');
+console.log('Score, ranking board, names, potions and save fields, time tie-break, clears and clear bonus passed.');

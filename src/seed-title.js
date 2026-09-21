@@ -10,10 +10,10 @@ export const ALWAYS_BEGINNER_TITLE_PERK=Object.freeze({maxHp:ALWAYS_BEGINNER_MAX
 // A screen-space nameplate follows the world position. Korean text stays crisp
 // on low-resolution mobile canvases and costs no WebGL texture or draw call.
 // It shows the first title held (Austin's before the codex title); austin/discovered feed titles.js.
-export function createSeedTitle(player,{austin=false,austinClear=false,alwaysBeginner=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
+export function createSeedTitle(player,{austin=false,austinClear=false,alwaysBeginner=false,alwaysClear=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
  const root=document.createElement('div');root.className='seed-victory-title';root.hidden=true;document.body.append(root);
  const world=new THREE.Vector3(),lift=new THREE.Vector3(0,1.42,0);
- let current={austin:Boolean(austin),austinClear:Boolean(austinClear),alwaysBeginner:Boolean(alwaysBeginner),discovered,total,badges:Array.isArray(badges)?[...badges]:[],equipped},state=titleState(current);
+ let current={austin:Boolean(austin),austinClear:Boolean(austinClear),alwaysBeginner:Boolean(alwaysBeginner),alwaysClear:Boolean(alwaysClear),discovered,total,badges:Array.isArray(badges)?[...badges]:[],equipped},state=titleState(current);
  const refresh=()=>{state=titleState(current);if(root.textContent!==(state.shown||''))root.textContent=state.shown||'';};
  refresh();
  return {
@@ -22,6 +22,8 @@ export function createSeedTitle(player,{austin=false,austinClear=false,alwaysBeg
   isUnlocked(){return current.austin;},
   setAustinClearUnlocked(value=true){current={...current,austinClear:Boolean(value)};refresh();},
   isAustinClearUnlocked(){return current.austinClear;},
+  setAlwaysClearUnlocked(value=true){current={...current,alwaysClear:Boolean(value)};refresh();},
+  isAlwaysClearUnlocked(){return current.alwaysClear;},
   setAlwaysBeginnerUnlocked(value=true){current={...current,alwaysBeginner:Boolean(value)};refresh();},
   isAlwaysBeginnerUnlocked(){return current.alwaysBeginner;},
   setDiscovered(count,total=current.total){current={...current,discovered:count,total};refresh();},

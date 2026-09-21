@@ -39,4 +39,12 @@ assert.match(codexNews(79,80),/4%/);assert.equal(codexNews(209,210),null,'상한
  assert.match(both.titles.find(t=>t.id==='austinclear').perk,/겹치지 않음/);
  assert.equal(titleState({austin:true,austinClear:true,equipped:'austin'}).shown,'정시를 깨운 자','고른 칭호가 우선');
 }
-console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 도감 10개에서 칭호와 10개마다 모든 능력 +0.5%(최대 10%), 목표·겹침·새 소식 통과');
+// 2막 완주 칭호: 최대 생명력 +20, '초심을 지킨 자' +10과 더해지지 않는다.
+{
+ const both=titleState({alwaysBeginner:true,alwaysClear:true}),only=titleState({alwaysClear:true}),old=titleState({alwaysBeginner:true});
+ assert.equal(both.maxHpBonus,20,'+30이 아니라 +20');assert.equal(only.maxHpBonus,20);assert.equal(old.maxHpBonus,10);
+ assert.ok(both.titles.findIndex(t=>t.id==='alwaysclear')<both.titles.findIndex(t=>t.id==='alwaysbeginner'),'완주 칭호가 먼저');
+ const all=titleState({austin:true,austinClear:true,alwaysBeginner:true,alwaysClear:true});
+ assert.ok(Math.abs(all.moveSpeedBonus-.1)<1e-9&&all.maxHpBonus===20,'두 막의 완주 칭호는 서로 다른 능력이라 함께 적용된다');
+}
+console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 2막 완주 생명력 +20(중복 없음), 도감 10개에서 칭호와 10개마다 모든 능력 +0.5%(최대 10%), 목표·겹침·새 소식 통과');
