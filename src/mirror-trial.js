@@ -89,10 +89,11 @@ export const MIRROR_PATTERNS=Object.freeze({
  frost:Object.freeze({id:'frost-sector',name:'서리 부채',tell:.56,commit:.86,recover:.55,projectiles:5})
 });
 
-// 체감 난이도 층(2026-09-22 사용자: "지금은 3층 난이도로 시작한다 → 1층 난이도부터").
-// 1층은 예전 1층보다 두 층만큼 쉽고, 올라갈수록 차이가 줄어 10층에서 예전 곡선과 같아진다(10층 도전의 끝은 그대로).
+// 체감 난이도 층(2026-09-22 사용자: "조금 더 어렵게 — 지금 3층 난이도로 1층을 시작하자").
+// 모든 층을 두 층 위의 난이도로 싸운다(1층 = 예전 3층). 위층은 기존 상한(체력·이동·공격 준비·한 발 피해)에 걸려 완만해진다.
 // 층 번호·회복·기록·체크포인트는 진짜 층을 쓰고, 분신의 강함·행동 단계·탄속만 이 값을 쓴다.
-export function mirrorDifficultyFloor(floor=1){const n=Math.max(1,Number(floor)||1);return Number((n-2*Math.max(0,(10-n)/9)).toFixed(3));}
+export const MIRROR_DIFFICULTY_SHIFT=2;
+export function mirrorDifficultyFloor(floor=1){return Math.max(1,Math.floor(Number(floor)||1))+MIRROR_DIFFICULTY_SHIFT;}
 const entryList=value=>value instanceof Map?[...value]:Array.isArray(value)?value:Object.entries(value||{});
 const levelOf=value=>Math.max(1,Math.min(99,Math.floor(Number(value)||1)));
 

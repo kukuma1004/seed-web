@@ -92,7 +92,7 @@ export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
 
 export const MIRROR_PROJECTILE_BASE_SPEED=10.2;
 export function mirrorProjectileSpeed(floor=1,speedScale=1){
- // 체감 난이도 층을 쓴다: 1층 탄은 예전 1층보다 조금 느리고(약 4%), 10층은 예전과 같다.
+ // 체감 난이도 층을 쓴다(1층 = 예전 3층 탄속).
  const climb=Math.min(1.18,1+(mirrorDifficultyFloor(floor)-1)*.018);
  return MIRROR_PROJECTILE_BASE_SPEED*climb*Math.max(.5,Number(speedScale)||1);
 }

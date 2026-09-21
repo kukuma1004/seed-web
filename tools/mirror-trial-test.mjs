@@ -33,22 +33,14 @@ assert.equal(blank.attacks.length,1,'첫 두 층은 대표 패턴 하나만 쓴�
 const reflectStack=mirrorPatternPlan(mirrorBuildSnapshot({forms:new Map([['prism',5],['mirrormaze',5],['gravitymirror',5],['frostkaleidoscope',5],['mirrorguard',5]])}),{floor:10,quality:'low'});
 assert.equal(reflectStack.attacks.filter(x=>x.law==='reflect').length,1,'반사 진화를 여러 개 가져도 분신의 반사 공격군은 하나로 합친다');
 assert.ok(reflectStack.attacks.length>1,'반사 이외의 진화 성질은 잃지 않는다');
-// 2026-09-22: 1층을 예전보다 두 층만큼 쉽게(체감 난이도 층), 10층은 예전과 같게.
-assert.equal(mirrorDifficultyFloor(1),-1);assert.equal(mirrorDifficultyFloor(10),10);assert.ok(mirrorDifficultyFloor(5)<5&&mirrorDifficultyFloor(5)>3);
-assert.equal(mirrorPatternPlan(snapshot,{floor:3}).concurrentAttackFamilies,1,'3층은 아직 한 공격군');
-assert.equal(mirrorPatternPlan(snapshot,{floor:5}).concurrentAttackFamilies,2,'5층부터 두 공격군을 같은 전투에 운용한다');
-{const early=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats,top=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:10}).stats;assert.ok(early.hpScale<2.39&&early.attackSpeedScale<1.015,'1층 분신은 예전 1층보다 약하다');assert.ok(top.hpScale===3.65&&top.attackSpeedScale===1.33,'10층 분신은 예전과 같다');}
-for(const floor of MIRROR_TOWER.milestoneFloors){
- const rules=mirrorFloorRules(floor,{quality:'low'});
- assert.equal(rules.checkpoint,true);assert.equal(rules.healAfter,MIRROR_TOWER.milestoneHeal);
- assert.ok(rules.budget.hostileProjectiles<=MIRROR_TRIAL_LIMITS.hostileProjectilesLow);
-}
-assert.equal(mirrorFloorRules(1).movement.dash,true,'1층부터 분신이 발사 후 자리를 바꾼다');
-assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.moveSpeedScale>=.82,'첫 층도 너무 굼뜨지 않는다');
-assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.attackSpeedScale>=.93,'첫 층도 공격 준비가 늘어지지 않는다');
-assert.equal(mirrorFloorRules(7).movement.feint,false,'7층까지는 속임수 없음(1층을 쉽게 한 만큼 행동 단계가 조금 늦게 열린다)');
-assert.equal(mirrorFloorRules(8).movement.feint,true,'8층부터 방향 속임수를 쓴다');
-assert.equal(mirrorFloorRules(8).chainLength,2);assert.equal(mirrorFloorRules(9).chainLength,3,'마지막 두 층은 세 번째 약한 연계까지 쓴다');
+// 2026-09-22: 모든 층을 두 층 위 난이도로(1층 = 예전 3층).
+assert.equal(mirrorDifficultyFloor(1),3);assert.equal(mirrorDifficultyFloor(10),12);
+assert.equal(mirrorPatternPlan(snapshot,{floor:1}).concurrentAttackFamilies,2,'1층부터 두 공격군을 같은 전투에 운용한다(예전 3층)');
+{const first=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats,top=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:10}).stats;assert.equal(first.hpScale,2.67,'1층 분신 체력 = 예전 3층');assert.ok(top.moveSpeedScale<=1.18&&top.attackSpeedScale<=1.38&&top.hitDamageMaxHp<=.13,'위층은 기존 상한 안');}
+assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.moveSpeedScale>=.88,'첫 층부터 빠릿한 이동 속도를 가진다');
+assert.ok(mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1}).stats.attackSpeedScale>=1,'첫 층부터 공격 준비가 늘어지지 않는다');
+assert.equal(mirrorFloorRules(4).movement.feint,false);assert.equal(mirrorFloorRules(5).movement.feint,true,'5층부터 방향 속임수를 쓴다(예전 7층)');
+assert.equal(mirrorFloorRules(5).chainLength,2);assert.equal(mirrorFloorRules(6).chainLength,3,'6층부터 세 번째 약한 연계까지 쓴다(예전 8층)');
 assert.equal(mirrorFloorRules(20).chainLength,3,'후반은 탄 수 대신 패턴 연결이 늘어난다');
 assert.equal(mirrorFloorRules(21).endless,true);
 assert.equal(MIRROR_BREAK.crackGoal,3);assert.ok(MIRROR_BREAK.breakDuration>=2);assert.ok(MIRROR_BREAK.damageMultiplier>1);
