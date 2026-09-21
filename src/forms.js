@@ -35,6 +35,12 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('frostnet',['chain','frost'],'얼어붙은 그물','번개가 세 적 이상을 이으면 그 선 위에 서리 줄이 남아 지나는 적을 얼립니다.','길목을 얼려 무리의 발을 묶음','피해가 가장 낮고 문지기·보스는 줄 위에서도 멈추지 않음'),
  form('rewindbolt',['chain','recall'],'되감는 번개','번개가 지나간 길을 기억했다가, 씨앗이 충분히 움직이면 그 길을 되감아 한 번 더 흐릅니다.','움직이며 같은 무리를 두 번 훑음','제자리에 서 있으면 기억한 길이 그대로 사라짐'),
  form('refractlance',['pierce','reflect'],'굴절 창','창이 벽에 닿으면 벽을 타고 옆으로 꺾이고, 꺾인 창은 더 깊이 박힙니다.','적을 벽이나 엄폐물 쪽으로 몰면 한 발로 벽에 붙은 줄을 통째로 훑음','벽에서 떨어진 적에게는 꺾인 창이 지나가지 않아 평범한 창 한 자루'),
+ // 2026-09-21 2묶음. 그림(카드·탄환)이 나올 때까지 선택지에는 나오지 않는다(COMBO_BATCHES).
+ form('thundermirror',['reflect','chain'],'천둥 거울','번개가 두 적 사이를 거울처럼 오가며 여러 번 내리칩니다. 혼자 남은 적에게는 벽에 반사된 번개가 한 번 더 떨어집니다.','문지기와 호위병처럼 둘이 붙어 있는 상대를 번갈아 두들김','무리 전체로는 퍼지지 않고 두 적만 칩니다'),
+ form('sunmirror',['reflect','burst'],'태양 거울','천천히 나아가는 거울핵이 부딪히는 적 탄환을 빨아들여 빛을 모으고, 모은 만큼 크게 터집니다.','사수·포탑이 탄을 뿌리는 방에서 탄막을 폭발로 바꿈','탄을 쏘지 않는 적 앞에서는 작은 폭발에 그침'),
+ form('pierceshower',['pierce','split'],'꿰뚫는 꽃비','창이 적을 꿰뚫을 때마다 그 자리에서 꽃잎 두 장이 양옆으로 튀어 나갑니다.','줄지어 오는 무리를 창과 꽃잎으로 한 번에 훑음','혼자 있는 적에게는 꽃잎이 헛나감'),
+ form('ebbring',['orbit','recall'],'밀물 고리','고리가 씨앗을 바로 따라오지 않고 지나온 자리에 남았다가 밀물처럼 따라붙으며 벱니다.','계속 움직이면 뒤쫓아 오는 적을 고리가 대신 베어 줌','멈춰 서면 고리가 작게 오므라들어 약해짐',true),
+ form('pullgarden',['gravity','split'],'끌림 꽃밭','씨앗이 땅에서 갈라져 작은 끌림 꽃밭 여러 개를 만들고, 한 꽃밭에 적이 둘 이상 모이면 꽃이 피며 터집니다.','흩어진 무리를 여러 곳에 조금씩 모아 한꺼번에 터뜨림','혼자 있는 적 곁에서는 꽃이 피지 않음'),
  form('gravitystake',['pierce','gravity'],'중력 말뚝','좁은 선에 적 하나만 걸리면 말뚝이 박혀 잠시 뒤 그 대상 안으로 강하게 내파합니다.','혼자 남은 문지기·보스에게 집중 피해','주변에 다른 적이 있거나 둘 이상을 꿰뚫으면 내파가 생기지 않음')
 ].map(f=>[f.id,withPair(f)])));
 
@@ -53,7 +59,8 @@ export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filt
 // 코드·수치·검사는 그대로 유지되고, ALL_FORMS에는 남아 있어 이미 얻은 저장과 도감은 깨지지 않는다.
 // 공개할 때는 live만 true로 바꾼다. 기록: combo-batches/
 export const COMBO_BATCHES=Object.freeze({
- '20260921':Object.freeze({live:false,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])})
+ '20260921':Object.freeze({live:false,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])}),
+ '20260921-2':Object.freeze({live:false,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])})
 });
 const HELD_BACK=new Set(Object.values(COMBO_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
 export const isHeldBack=id=>HELD_BACK.has(id);
@@ -252,6 +259,11 @@ const SURGE=Object.freeze({
  frostnet:s=>({jumps:s.jumps+3,range:s.range+.8,webLife:s.webLife+1.6,minLinks:2}),
  rewindbolt:s=>({jumps:s.jumps+1,range:s.range+.5,rewindDistance:s.rewindDistance*.6}),
  refractlance:s=>({folds:s.folds+3,pierce:s.pierce+4,length:s.length+3}),
+ thundermirror:s=>({echoes:s.echoes+3,range:s.range+.8}),
+ sunmirror:s=>({maxCharge:s.maxCharge+4,bolts:s.bolts+2,absorb:s.absorb+.4}),
+ pierceshower:s=>({pierce:s.pierce+2}),
+ ebbring:s=>({blades:s.blades+3,radius:s.radius+.35,cooldown:s.cooldown*.5,calmScale:1}),
+ pullgarden:s=>({fields:s.fields+2,fieldRadius:s.fieldRadius+.4}),
  gravitystake:s=>({pierce:s.pierce+2,implosions:2,isolation:s.isolation-1}),
  mirrormaze:s=>({bolts:s.bolts+4,bounces:s.bounces+5}),
  fullbloom:s=>({bolts:s.bolts+2,petals:s.petals+1}),
@@ -360,6 +372,12 @@ function baseStats(id,level){
   case 'frostnet':return {interval:1.15*faster,damage:14*power,jumps:Math.min(6,3+Math.floor(up/3)),range:Math.min(5,4.4+.06*up),decay:.9,reach:10,minLinks:3,webLife:Math.min(4.4,3.2+.1*up),webSlow:1.7,webTick:.65,webDamage:4.5*power};
   case 'rewindbolt':return {interval:1.1*faster,damage:34*power,jumps:Math.min(7,3+Math.floor(up/2)),range:Math.min(5,4.3+.06*up),decay:.9,reach:10,rewindDistance:Math.max(3.8,5-.15*up),rewindScale:.8,forget:4,trails:3};
   case 'refractlance':return {interval:1.15*faster,damage:44*power,length:Math.min(13,9+.5*up),pierce:Math.min(9,5+Math.floor(up*.6)),folds:Math.min(3,1+Math.floor(up/3)),foldGain:.22};
+  // 2묶음
+  case 'thundermirror':return {interval:1.12*faster,damage:46*power,echoes:Math.min(7,3+Math.floor(up/2)),decay:.9,reach:10,range:Math.min(5,4.2+.08*up),soloEcho:.7};
+  case 'sunmirror':return {interval:1.2*faster,damage:24*power,blast:56*power,radius:1.5,chargeRadius:.18,chargeGain:.35,maxCharge:Math.min(10,6+Math.floor(up/2)),absorb:.95,speed:7.5,life:1.7,bolts:2};
+  case 'pierceshower':return {interval:1.1*faster,damage:26*power,length:Math.min(12,9+.4*up),pierce:Math.min(8,4+Math.floor(up/2)),petalDamage:16*power,spread:2,petalSpeed:11,petalLife:.45};
+  case 'ebbring':return {interval:Infinity,damage:36*power,blades:Math.min(6,3+Math.floor(up/2)),radius:1.35,calmRadius:.75,calmScale:.55,ebb:1.5,cooldown:.3,stretch:.45};
+  case 'pullgarden':return {interval:1.35*faster,damage:8*power,bloom:30*power,fields:Math.min(4,2+Math.floor(up/3)),fieldRadius:1.5,life:2.6,pull:1.3,range:8,flight:.5,tickEvery:.5,bloomAt:2,bloomRadius:1.7};
   case 'gravitystake':return {interval:1.45*faster,damage:12*power,length:Math.min(17,12+.6*up),pierce:Math.min(10,6+Math.floor(up/2)),implosion:160*power,isolation:5.2,delay:.58,stakes:4,implosions:1};
   default:return {interval:Infinity,damage:0};
  }

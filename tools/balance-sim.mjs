@@ -6,7 +6,7 @@ import {TWIN_FORMS} from '../src/forms.js';
 import {arenaFor,constrainToArena,reflectArenaBoundary} from '../src/arena.js';
 const V=THREE.Vector3;
 // 이동이 곧 화력인 조합: 혜성 화관(충전)과 되감는 번개(길 되감기).
-const MOVEMENT_FORMS=new Set(['comethalo','rewindbolt']);
+const MOVEMENT_FORMS=new Set(['comethalo','rewindbolt','ebbring']);
 
 export const SCENES=Object.freeze({
  cluster:()=>Array.from({length:10},(_,i)=>{const a=i*2.39996,r=.5+1.3*Math.sqrt(i/10);return [Math.cos(a)*r,-5+Math.sin(a)*r];}),

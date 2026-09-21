@@ -8,7 +8,8 @@ const offensive=ids=>ids.filter(id=>!ALL_FORMS[id].passive);
 // 의도적으로 역할이 치우친 조합들. 이 조합들이 기준 중앙값을 흔들면
 // 손대지 않은 조합이 덩달아 검사에 걸리므로 기준에서 빼고 따로 잰다.
 const tacticalFusions=['gravitymirror','chainburst','blastlance','frostkaleidoscope','lightningpetal','returnflare','comethalo','stormanchor','returningpetals','gravitystake',
- 'icicle','halobloom','frostnet','rewindbolt','refractlance'];
+ 'icicle','halobloom','frostnet','rewindbolt','refractlance',
+ 'thundermirror','sunmirror','pierceshower','ebbring','pullgarden'];
 const batch1=['icicle','halobloom','frostnet','rewindbolt','refractlance'];
 
 // Equal investment: a fusion of two laws with p picks between them is level p-1; a solo law at level p evolves to level p-1.
@@ -87,6 +88,30 @@ for(const level of [SOLO_LEVEL-1,9]){
   const open=simulate('refractlance',level,{positions:alongWall,seconds:4}).dps;
   assert.ok(walled>open*1.25,`level ${level}: 굴절 창이 벽 보상을 잃음 (${Math.round(walled)} vs 벽 없음 ${Math.round(open)})`);
  }
+}
+
+// 2026-09-21 2묶음 역할 검사.
+for(const level of [SOLO_LEVEL-1,9]){
+ const crowd=id=>averageDps(id,level,{shots:CURATED_FORMS[id].passive});
+ // 천둥 거울: 둘이 붙어 있을 때 가장 세다(혼자 있는 적보다 확실히, 무리 전체보다 크게 늘지 않음).
+ {
+  const pair=simulate('thundermirror',level,{positions:[[0,-3],[.9,-3.4]],seconds:6}).dps,single=bossDps('thundermirror',level);
+  assert.ok(pair>single*1.6,`level ${level}: 천둥 거울이 두 적 주고받기 보상을 잃음 (${Math.round(pair)} vs 혼자 ${Math.round(single)})`);
+ }
+ // 태양 거울: 적 탄이 날아오는 방에서 확실히 세진다.
+ {
+  const quiet=averageDps('sunmirror',level),fire=averageDps('sunmirror',level,{shots:true});
+  assert.ok(fire>quiet*1.25,`level ${level}: 태양 거울이 탄막 보상을 잃음 (${Math.round(fire)} vs ${Math.round(quiet)})`);
+ }
+ // 꿰뚫는 꽃비: 무리용이라 혼자 있는 적에게는 약하다.
+ assert.ok(crowd('pierceshower')>bossDps('pierceshower',level)*3,`level ${level}: 꿰뚫는 꽃비가 무리 특화를 잃음`);
+ // 밀물 고리: 움직여야 세다.
+ {
+  const still=simulate('ebbring',level,{scene:'cluster',still:true}).dps,moving=simulate('ebbring',level,{scene:'cluster'}).dps;
+  assert.ok(moving>still*1.35,`level ${level}: 밀물 고리가 이동 보상을 잃음 (${Math.round(moving)} vs 정지 ${Math.round(still)})`);
+ }
+ // 끌림 꽃밭: 둘 이상 모여야 피므로 혼자인 적에게는 약하다.
+ assert.ok(bossDps('pullgarden',level)<crowd('pullgarden')*.35,`level ${level}: 끌림 꽃밭이 혼자인 적에게 너무 셈`);
 }
 
 // Orbit family roles: only the crown spends its whole budget on automatic

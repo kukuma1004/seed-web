@@ -17,21 +17,22 @@ const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.upd
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
 // Catalogue: twenty-five hand-authored forms, of which twenty are offered. A batch whose art is not ready stays out of the offers.
-assert.equal(Object.keys(CURATED_FORMS).length,25);
-assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,25);
+assert.equal(Object.keys(CURATED_FORMS).length,30);
+assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,30);
 assert.equal(Object.keys(FORMS).length,20,'그림이 없는 1묶음은 선택지에 나오지 않는다');
-assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),[...COMBO_BATCHES['20260921'].ids].sort());
+assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),Object.values(COMBO_BATCHES).filter(b=>!b.live).flatMap(b=>b.ids).sort(),'보류 중인 묶음만 선택지 밖에 있다');
 for(const id of Object.keys(CANDIDATE_FORMS))assert.ok(!Object.hasOwn(FORMS,id),`${id} 선택지에 새어 나감`);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
 for(const f of Object.values(FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.pair.includes('+'));assert.equal(f.requires.length,2);}
 assert.match(FORMS.tidepull.desc,/왕복/);assert.equal(FORMS.tidepull.name,'귀환 해일');
 
 // Orbit evolutions must remain visually readable without relying on colour.
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,6);
-assert.deepEqual(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,6);
+// 공전 조합마다 모양과 움직임이 달라야 한다(개수는 공전 외형 표와 같이 간다).
+assert.equal(new Set(Object.values(ORBIT_VISUALS).map(v=>v.geometry)).size,Object.keys(ORBIT_VISUALS).length);
+assert.equal(new Set(Object.values(ORBIT_VISUALS).map(v=>v.motion)).size,Object.keys(ORBIT_VISUALS).length);
 {
  const styles=Object.keys(ORBIT_VISUALS),poses=styles.map(id=>orbitPose(id,1,6,.4,.8,{radius:2,inner:1.2,outer:3,period:2.4}));
- assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,6,'each orbit family has a distinct path');
+ assert.equal(new Set(poses.map(p=>`${p.x.toFixed(2)},${p.y.toFixed(2)},${p.z.toFixed(2)}`)).size,styles.length,'each orbit family has a distinct path');
  assert.ok(poses.every(p=>p.scale.length===3&&Number.isFinite(p.yaw)));
 }
 
