@@ -1224,8 +1224,9 @@ const PATCH_GIFT='sorry-boss-potions-20260922',PATCH_GIFT_ITEMS=Object.freeze({p
 function showPatchGift(){
  mode='gift';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel gift-panel"><p class="eyebrow">SEED · 선물</p><h2>자주 고쳐서 미안해요</h2>
-  ${Object.keys(PATCH_GIFT_ITEMS).map(id=>`<div class="gift-item">${itemArt(id)}<div><strong>${escapeHtml(ITEMS[id].name)} 1개</strong><small>${escapeHtml(ITEMS[id].desc)}</small></div></div>`).join('')}
+ // 물약 4개를 2×2로 묶는다(한 줄씩 쌓으면 가로 휴대폰에서 '확인'이 화면 밖으로 밀려 눌리지 않았다, 9/22).
+ $('#overlay').innerHTML=`<div class="menu-panel gift-panel gift-compact"><p class="eyebrow">SEED · 선물</p><h2>자주 고쳐서 미안해요</h2>
+  <div class="gift-grid">${Object.keys(PATCH_GIFT_ITEMS).map(id=>`<div class="gift-item">${itemArt(id)}<div><strong>${escapeHtml(ITEMS[id].name)} 1개</strong><small>${escapeHtml(ITEMS[id].desc)}</small></div></div>`).join('')}</div>
   <p class="gift-line">요즘 업데이트가 잦았죠. 보스 물약 4종 1세트를 상점 보관함에 넣어 두었어요.</p>
   <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
