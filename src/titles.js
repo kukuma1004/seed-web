@@ -29,7 +29,7 @@ export function titleState({austin=false,austinClear=false,alwaysBeginner=false,
  if(austin)titles.push({id:'austin',name:AUSTIN_TITLE,perk:`이동 속도 +${percent(AUSTIN_MOVE_SPEED)}${austinClear?` ('${AUSTIN_CLEAR_TITLE}'에 포함)`:''}`,shotSpeed:0,moveSpeed:AUSTIN_MOVE_SPEED,maxHp:0});
  if(alwaysClear)titles.push({id:'alwaysclear',name:ALWAYS_CLEAR_TITLE,perk:`항상초심 10회 완주 · 최대 생명력 +${ALWAYS_CLEAR_MAX_HP}${alwaysBeginner?` ('${ALWAYS_BEGINNER_TITLE}'와 겹치지 않음)`:''}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_CLEAR_MAX_HP});
  if(alwaysBeginner)titles.push({id:'alwaysbeginner',name:ALWAYS_BEGINNER_TITLE,perk:`최대 생명력 +${ALWAYS_BEGINNER_MAX_HP}${alwaysClear?` ('${ALWAYS_CLEAR_TITLE}'에 포함)`:''}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_BEGINNER_MAX_HP});
- if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 모든 능력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
+ if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 공격력·이속·치명타·순환·최대 생명력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
  const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
  const goal=!codex?CODEX.titleAt:codexStat<CODEX.maxStat?(codexSteps(n)+1)*CODEX.step:null;
  const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:codex?`모든 능력 +${percent(CODEX.statPerStep)}`:`칭호 '${CODEX_TITLE}'`}:null;

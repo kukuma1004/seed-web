@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,stashItem,stashTotal,carryTotal} from '../src/shop.js';
+import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem,stashTotal,carryTotal} from '../src/shop.js';
 
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};};
 const empty={potion:0,tonic:0,wind:0,shell:0,sprout:0};
@@ -89,4 +89,15 @@ assert.equal(STASH_ITEMS.sprout.max,3);
  assert.ok(dungeon.indexOf('id="open-shop"')<dungeon.indexOf('id="start-game"'),'출발 상점은 1막과 2막보다 위에 둔다');
 }
 
+// 9/22 잦은 패치 사과 선물: 보스 물약 4종 한 세트가 한 번에, 한 번만. 이미 가득 찬 칸은 넘치지 않는다.
+{
+ const s=memory(),set={potion:1,wind:1,shell:1,sprout:1};
+ writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:3},carry:{...readShop(s).carry,sprout:1}});
+ const gift=grantGiftSet(s,'sorry-boss-potions-20260922',set);
+ assert.equal(gift.granted,true);
+ for(const id of ['potion','wind','shell'])assert.equal(gift.shop.stash[id],1,id);
+ assert.equal(gift.shop.stash.sprout,3,'다시 싹 보관 상한 3을 넘지 않는다');
+ assert.equal(grantGiftSet(s,'sorry-boss-potions-20260922',set).granted,false,'같은 세트는 다시 주지 않는다');
+ assert.equal(grantGiftSet(s,'empty-gift',{nope:3}).granted,false,'모르는 물건만 있으면 주지 않는다');
+}
 console.log('상점 보관함: 구매·가져갈 개수 고르기·새 여정에서만 꺼내기·다시 싹 선물 한 번·예전 저장 옮기기 통과');

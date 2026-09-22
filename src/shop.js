@@ -94,6 +94,15 @@ export function claimCarry(storage){
  return taken;
 }
 // 한 번만 주는 선물. 같은 이름의 선물은 다시 주지 않는다. 받은 선물은 가져가기에도 넣어 둔다.
+// 여러 물건을 한 선물로(선물 id 하나로 한 번만). 보관함 상한을 넘는 몫은 버린다.
+export function grantGiftSet(storage,giftId,items={}){
+ const current=readShop(storage),entries=Object.entries(items).filter(([id])=>Object.hasOwn(STASH_ITEMS,id));
+ if(!entries.length||current.gifts.includes(giftId))return {granted:false,shop:current};
+ current.gifts.push(giftId);
+ for(const [id,n] of entries){const before=current.stash[id];current.stash[id]=Math.min(STASH_ITEMS[id].max,before+count(n));current.carry[id]=current.carry[id]+(current.stash[id]-before);}
+ writeShop(storage,current);
+ return {granted:true,shop:readShop(storage)};
+}
 export function grantGift(storage,giftId,id,n=1){
  const current=readShop(storage);
  if(!Object.hasOwn(STASH_ITEMS,id)||current.gifts.includes(giftId))return {granted:false,shop:current};
