@@ -9,6 +9,7 @@ export const TONIC_CARRY_MAX=5;
 export const SHOP_PRICES=Object.freeze({1:200,10:1500});
 // 처음 오는 사람도 물약 하나는 살 수 있게 시작 자금을 준다(첫 판을 맨손으로 시작하지 않도록).
 export const STARTING_COINS=200;
+export const SHOP_PURCHASE_LOG=60;
 // 상점 보관함: 산 물약과 선물을 모아 두는 곳. 가져갈 개수(carry)는 아이가 고르고,
 // 새 여정을 시작할 때만 그만큼 가방으로 옮긴다. 많이 갖고 있어도 안 가져갈 수 있다.
 // 보관함에는 넉넉히 모아 둘 수 있지만, 한 여정에 가져가는 작은 물약은 최대 5개다.
@@ -37,7 +38,9 @@ export function normalizeShop(value){
   carry[id]=Math.min(wanted,stash[id],carryMax(id));
  }
  const gifts=[...new Set(Array.isArray(value?.gifts)?value.gifts.filter(g=>typeof g==='string'&&g.length<=40):[])].slice(-20);
- return {version:3,coins:Math.max(0,Math.min(9_999_999,coins)),stash,carry,gifts};
+ // 후원(실제 결제) 영수증 번호. 같은 결제를 두 번 지급하지 않으려고 남긴다. 한 번도 산 적 없으면 필드 자체가 없다.
+ const purchases=[...new Set(Array.isArray(value?.purchases)?value.purchases.filter(id=>typeof id==='string'&&id.length>0&&id.length<=80):[])].slice(-SHOP_PURCHASE_LOG);
+ return {version:3,coins:Math.max(0,Math.min(9_999_999,coins)),stash,carry,gifts,...(purchases.length?{purchases}:{})};
 }
 export function readShop(storage){
  if(!storage)return normalizeShop(fallback);

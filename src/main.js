@@ -75,6 +75,8 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,goldenFruitPotion,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
 import {SHOP_STOCK_MAX,SHOP_PRICES,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem} from './shop.js';
+import {SUPPORT_RELEASED,SUPPORT_PRODUCTS,supportRewardLines,supportPriceLabel,supportRoom} from './support.js';
+import {createBilling,completeSupportPurchase,recoverSupportPurchases} from './billing.js';
 import './shop.css';
 import './ranking.css';
 import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,upgradeLine,offeredForm,offeredFusion,slotsUsed,fusionLevel,canFuse,fuse,secondFusionOptions,secondFusionLevel,fuseSecond,evolveSolo,effectiveLevels,buildLevel,awakenOptions,awakenLevel,awaken} from './progression.js';
@@ -1081,6 +1083,7 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
  const betaBoosterGift=betaTesterMode?grantGift(runStorage,BETA_BOOSTER_GIFT,'sprout',1):{granted:false};
  const sproutGift=grantGift(runStorage,SORRY_GIFT,'sprout',1);
  const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
+ recoverSupport();
  const patchGift=grantGiftSet(runStorage,PATCH_GIFT,PATCH_GIFT_ITEMS);
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
  if(betaBoosterGift.granted){showBetaBoosterGift();return;}
@@ -1149,6 +1152,32 @@ function showDeveloperLab(){
 }
 // 보관함·가져가기를 한 줄로("작은 물약 3 · 다시 싹 1"). 비어 있으면 빈 문자열.
 const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[id].name} ${counts[id]}`).join(' · ');
+// 개발자 후원(실제 결제). 공개 전(SUPPORT_RELEASED=false)에는 개발 서버의 가짜 결제(?billing=mock)에서만 보인다.
+const billing=createBilling();
+let supportBusy=false,supportRecovered=false;
+const supportVisible=()=>SUPPORT_RELEASED||billing.status==='mock';
+function supportSection(shop){
+ if(!supportVisible())return '';
+ const canPay=billing.status==='ready'||billing.status==='mock';
+ const note=billing.status==='web'?'후원은 구글 플레이 안드로이드 앱에서 할 수 있어요.':billing.status==='not-ready'?'결제를 준비하고 있어요. 조금만 기다려 주세요.':billing.status==='mock'?'시험용 가짜 결제예요 · 돈이 나가지 않아요.':'구글 플레이로 결제돼요 · 받은 JP와 물약은 보관함에 바로 들어가요.';
+ return `<section class="support-panel"><h3>개발자 후원하기</h3><p class="support-lead">재밌게 즐기셨다면 한 번 응원해 주세요. 고마운 마음으로 JP와 물약을 함께 드려요.</p><ul class="support-list">${SUPPORT_PRODUCTS.map(p=>{const room=supportRoom(shop,p);return `<li><button type="button" data-support="${p.id}" ${!canPay||supportBusy||!room.ok?'disabled':''}><span class="support-icon" aria-hidden="true">${p.icon}</span><span class="support-text"><strong>${escapeHtml(p.title)}</strong><small>${escapeHtml(supportRewardLines(p).join(' · '))}</small>${room.ok?'':`<small class="support-full">보관함이 가득 차서 지금은 받을 수 없어요</small>`}</span><b class="support-price">${supportPriceLabel(p)}</b></button></li>`;}).join('')}</ul><p class="support-note">${note} 결제·환불은 구글 플레이 정책을 따라요.</p></section>`;
+}
+async function buySupport(back,id){
+ if(supportBusy)return;
+ const product=SUPPORT_PRODUCTS.find(p=>p.id===id);if(!product)return;
+ if(!supportRoom(readShop(runStorage),product).ok){showShop(back,'보관함이 가득 차서 지금은 받을 수 없어요 · 물약을 조금 쓰고 다시 와 주세요');return;}
+ supportBusy=true;showShop(back,'결제 창을 여는 중…');
+ const purchase=await billing.purchase(id);
+ if(!purchase?.ok){supportBusy=false;showShop(back,purchase?.reason==='cancelled'?'결제를 취소했어요':'결제를 마치지 못했어요 · 돈이 나갔다면 앱을 다시 켜면 받을 수 있어요');return;}
+ const result=await completeSupportPurchase(runStorage,billing,purchase);supportBusy=false;
+ showShop(back,result.status==='granted'?`${product.icon} 고마워요! ${supportRewardLines(product).join(' · ')}를 보관함에 넣었어요`:result.status==='duplicate'?'이미 받은 결제예요':'결제는 됐지만 아직 못 받았어요 · 보관함을 비우고 앱을 다시 켜면 받아요');
+}
+// 앱을 켤 때 한 번: 지난번에 지급이 끝나지 않은 결제(앱이 결제 직후 꺼진 경우)를 마무리한다.
+async function recoverSupport(){
+ if(supportRecovered||!(billing.status==='ready'||billing.status==='mock'))return;supportRecovered=true;
+ const granted=await recoverSupportPurchases(runStorage,billing);
+ if(granted.length)$('#toast').textContent=`지난 후원 ${granted.length}건을 보관함에 넣었어요 · 고마워요!`;
+}
 function showShop(back=showIntro,message=''){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
@@ -1168,10 +1197,12 @@ function showShop(back=showIntro,message=''){
   <section class="shop-stash"><h3>보관함 · 새 여정에 가져갈 개수</h3><ul>${stashRows}</ul>
    <p class="stash-note">새 여정을 시작할 때만 가방에 들어가요 · 이어하기에는 안 들어가요</p></section>
   </div>
-  <p class="shop-note">문지기 +50 JP · 오스틴 +200 JP · 게임 안에서 얻는 재화이며 실제 결제가 아닙니다.</p>
+  ${supportSection(shop)}
+  <p class="shop-note">문지기 +50 JP · 오스틴 +200 JP · ${supportVisible()?'물약은 게임 안에서 모은 JP로만 사요. 실제 돈은 후원에서만 쓰여요.':'게임 안에서 얻는 재화이며 실제 결제가 아닙니다.'}</p>
   <button id="shop-back" class="menu-item small-item">돌아가기</button></div>`;
  const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 보관함에 담았어요 · ${result.price.toLocaleString('ko-KR')} JP 사용`:result.reason==='full'?`보관함에는 작은 물약을 ${SHOP_STOCK_MAX}개까지 둘 수 있어요`:'JP가 부족해요');};
  $('#buy-one').onclick=()=>buy(1);$('#buy-ten').onclick=()=>buy(10);$('#shop-back').onclick=back;
+ document.querySelectorAll('[data-support]').forEach(button=>button.onclick=()=>buySupport(back,button.dataset.support));
  document.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
 }
 // 점검 사과 선물 안내. 한 번만 뜬다(grantGift가 같은 선물을 다시 주지 않는다).

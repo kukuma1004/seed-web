@@ -54,3 +54,18 @@
 }
 /* 확인(primary) 단추에 붙는 여백·최소 높이를 걷어 두 단추 높이를 맞춘다. */
 .gift-actions .menu-item.primary,.touch-mode .gift-actions .menu-item{margin:0;min-height:40px}
+/* 개발자 후원(실제 결제) — 물약 상점과 헷갈리지 않게 따뜻한 색 테두리로 따로 묶는다. */
+.support-panel{margin-top:10px;padding:12px;border:1px solid #f0a86a80;border-radius:16px;background:linear-gradient(150deg,#2a1b12,#15120e)}
+.support-panel h3{margin:0 0 4px;font-size:16px;color:#ffd7a8}
+.support-lead{margin:0 0 8px!important;font-size:11px!important;color:#d9c3a3!important;line-height:1.5!important}
+.support-list{display:grid;gap:6px;margin:0;padding:0;list-style:none}
+.support-list button{display:flex;align-items:center;gap:10px;width:100%;min-height:52px;margin:0;padding:8px 10px;border:1px solid #d9a066;border-radius:12px;background:#33220f;color:#ffe9c4;text-align:left;cursor:pointer}
+.support-list button:disabled{opacity:.45;cursor:not-allowed}
+.support-icon{font-size:24px;line-height:1}
+.support-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px}
+.support-text strong{font-size:14px}
+.support-text small{font-size:10px;color:#d6c2a0;line-height:1.35}
+.support-text .support-full{color:#ff9f8a}
+.support-price{font-size:15px;color:#ffd27c;white-space:nowrap;font-variant-numeric:tabular-nums}
+.support-note{margin:8px 0 0!important;font-size:10px!important;color:#b9a88c!important;line-height:1.5!important}
+@media(max-height:500px) and (orientation:landscape){.support-panel{padding:8px;margin-top:6px}.support-lead{display:none}.support-list{grid-template-columns:repeat(3,1fr)}.support-list button{flex-direction:column;align-items:flex-start;gap:4px;min-height:0}.support-icon{font-size:18px}.support-text strong{font-size:12px}}
