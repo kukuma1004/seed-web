@@ -87,7 +87,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  let themeId=normalizeTheme(theme);
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
- let twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
+ let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
  let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0;
  // 1묶음 상태: 고드름 창이 스스로 남긴 서리 표식 · 얼어붙은 그물이 남긴 선 · 되감는 번개가 기억한 길 · 꽃잎 후광이 센 벤 횟수.
  let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
@@ -136,14 +136,46 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
   if(TWIN_FORMS[id])return set(TWIN_FORMS[id].parts[0],nextLevel,{...opts,twin:true});
   const L=Math.max(1,Math.floor(nextLevel||1));
-  const kind=AWAKEN_FORMS[id]?.base||id;
+  // 손제작 재융합은 주 공격 부모(main)의 공격 규칙으로 싸우고, 수치(S)와 후속 효과는 재융합 id로 계산한다.
+  const curated=SECOND_FORMS[id]?.curated?SECOND_FORMS[id]:null;
+  const kind=AWAKEN_FORMS[id]?.base||curated?.main||id;
   const asTwin=Boolean(opts.twin);
-  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
+  if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   if((GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed')&&!comboGeo)comboGeo=buildComboProjectileGeometry(sourceForm());
   rebuildOrbit();
  }
- function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;return true;}
+ function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);return true;}
+ // 손제작 재융합의 후속 효과(forms.js CURATED_SECOND_LIST). 주 공격의 적중만 세고, 후속 효과의 적중은 다시 세지 않는다.
+ // 후속 적중은 다른 부모(followParent)의 이름으로 들어가 그 법칙의 소리·치명타·유물 보정을 받는다.
+ function secondFollow(e,metadata){
+  const f=S.follow;if(!f)return;
+  if(f.trigger==='kill'&&!e.dead)return;
+  if(f.trigger==='return'&&metadata.phase!=='return')return;
+  // 재사용 대기(cooldown) 동안은 세지도 않는다: 한 번 던진 창이 여러 적을 한꺼번에 꿰뚫어도 후속은 한 번(셋째로 꿰뚫은 적)만.
+  if(markClock<secondReadyAt)return;
+  if(f.trigger!=='kill'&&++secondHits<Math.max(1,f.every))return;
+  secondHits=0;secondReadyAt=markClock+(f.cooldown||0);secondPhase++;
+  const at=e.g.position.clone().setY(0),kind=secondRecipe.followParent,meta=(o,from)=>({kind,indirect:true,follow:true,direction:o.g.position.clone().sub(from).setY(0).normalize()});
+  if(f.effect==='blast'){
+   fx.explosion(at,f.law||'burst',Math.max(.7,f.radius*.5));
+   for(const o of near(at,f.radius+.8))if(!o.dead&&flat(o.g.position,at)<f.radius)support(o,f.damage,meta(o,at));
+  }else if(f.effect==='nova'){
+   fx.burst(at,'frost',14,.8);fx.pulse(at,'frost',f.radius*.55,.24);
+   for(const o of near(at,f.radius+.8))if(!o.dead&&flat(o.g.position,at)<f.radius&&support(o,f.damage,meta(o,at))&&!immovable(o))o.slow=Math.max(o.slow||0,f.slow);
+  }else if(f.effect==='arc'){
+   const touched=new Set([e]);let from=e,power=f.damage;
+   for(let j=0;j<f.jumps;j++){
+    const next=nearestEnemy(from.g.position,f.range,touched,true);if(!next)break;
+    fx.arc(from.g.position,next.g.position);touched.add(next);support(next,power,meta(next,from.g.position));power*=f.decay||1;from=next;
+   }
+   if(f.finish&&touched.size>=3){
+    const center=new V();for(const o of touched)center.add(o.g.position);center.divideScalar(touched.size).setY(0);
+    fx.explosion(center,'gravity',Math.max(.7,f.finishRadius*.5));
+    for(const o of near(center,f.finishRadius+.8))if(!o.dead&&flat(o.g.position,center)<f.finishRadius)support(o,f.finish,meta(o,center));
+   }
+  }
+ }
  const count=kind=>bolts.filter(b=>b.kind===kind).length;
  const nearestEnemy=(from,range,skip=new Set(),clearLine=false)=>{let best=null,bestDistance=range;for(const e of enemies()){if(e.dead||skip.has(e))continue;const d=flat(e.g.position,from);if(d<bestDistance&&(!clearLine||!blocked(from.clone().setY(0),e.g.position.clone().setY(0)))){best=e;bestDistance=d;}}return best;};
 
@@ -1042,7 +1074,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
        if(e.dead)continue;
        if(b.hitSet.size>=S.hitsPerLeg)break;
        b.hitSet.add(e);
-       if(!support(e,S.damage,{kind:'returnblade',direction:direction.clone()})){b.life=0;break;}
+       if(!support(e,S.damage,{kind:'returnblade',direction:direction.clone(),phase:b.returning?'return':'out'})){b.life=0;break;}
       }
      }
     }

@@ -105,7 +105,9 @@ const BASE_SIGNATURES=Object.freeze({
 const ALL_SIGNATURES=Object.freeze({
  ...BASE_SIGNATURES,
  ...Object.fromEntries(Object.values(GENERATED_FORMS).map(f=>[f.id,sig(`${f.name} · 개문`,`${f.name}의 핵심 탄을 양쪽으로 펼치고, 잠시 동안 더 자주 쏘며 깊게 관통합니다.`)])),
- ...Object.fromEntries(Object.values(SECOND_FORMS).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
+ // 손제작 재융합: 주 공격 부모의 궁극기 여는 기술을 쓰고, 궁극기 동안 후속 효과가 더 자주 터진다.
+ ...Object.fromEntries(Object.values(SECOND_FORMS).filter(f=>f.curated).map(f=>[f.id,sig(`${f.name} · ${BASE_SIGNATURES[f.main].name}`,`${BASE_SIGNATURES[f.main].desc} 궁극기 동안 ${f.follow.line}이 더 자주 일어납니다.`)])),
+ ...Object.fromEntries(Object.values(SECOND_FORMS).filter(f=>!f.curated).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.

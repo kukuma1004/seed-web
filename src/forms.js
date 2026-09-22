@@ -1,4 +1,4 @@
-import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS} from './combo-catalog.js';
+import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS,secondFusionOf as catalogSecondOf} from './combo-catalog.js';
 import {HIDDEN_LAWS} from './laws.js';
 
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
@@ -84,8 +84,39 @@ const secondForm=entry=>{
   passive:false,generated:true,second:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual});
 };
 // 2026-09-17: 재융합 990개는 숨긴다(이름·효과·세기를 자동으로 찍어낸 것). 세밀하게 다시 만들 때 되살린다.
-export const SECOND_FORMS=Object.freeze({});
-const SECOND_BY_PARTS=new Map(Object.values(SECOND_FORMS).map(f=>[[...f.parts].sort().join('+'),f.id]));
+// 2026-09-22: 손제작 재융합을 묶음으로 되살린다(COMBO_1090_MASTER_PLAN 6절).
+// 주 공격 = 부모 한쪽(main)의 공격을 그대로, 후속 = 다른 부모의 대표 효과가 조건(trigger)을 채울 때 한 번.
+// 두 부모의 피해·투사체·범위를 곱하지 않는다. 고정 ID는 조합 목록(combo-catalog)의 재융합 ID를 그대로 써서 저장이 깨지지 않는다.
+// follow.effect: blast(폭발) · arc(번개 잇기, finish면 셋 이상 이었을 때 가운데서 터짐) · nova(냉기로 얼림)
+// follow.trigger: nth(주 공격 적중 every번째마다) · kill(주 공격으로 쓰러뜨렸을 때) · return(돌아오는 길의 적중 every번째마다)
+// follow.damage는 Lv.1 기준이고 진화 레벨마다 주 공격과 같게 25%씩 오른다.
+const CATALOG_FIRST_BY_PAIR=new Map(FIRST_FUSIONS.map(f=>[pairKey(f.laws),f.id]));
+const curatedSecond=(main,other,name,desc,strength,weakness,follow)=>{
+ const a=CURATED_FORMS[main],b=CURATED_FORMS[other],entry=catalogSecondOf(CATALOG_FIRST_BY_PAIR.get(pairKey(a.requires)),CATALOG_FIRST_BY_PAIR.get(pairKey(b.requires)));
+ return Object.freeze({id:entry.id,name,parts:Object.freeze([main,other]),main,followParent:other,requires:entry.laws,pair:`${a.name} + ${b.name}`,
+  desc,strength,weakness,passive:false,second:true,curated:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual,follow:Object.freeze({...follow})});
+};
+const CURATED_SECOND_LIST=[
+ // 1묶음(공명형 5, 2026-09-22): 공개 1차 융합끼리, 역할이 겹치지 않게(줄 대상·근접 무리·제어·이동 보상·벽 활용 제어).
+ curatedSecond('thunderlance','blastlance','천둥 폭창','번개 창이 한 줄을 꿰뚫고, 꿰뚫은 적 셋째마다 그 자리에서 폭발합니다.','줄지어 오는 적일수록 폭발이 겹쳐 터짐','옆으로 흩어진 적과 엄폐물 뒤에는 약하고 발사가 느림',
+  {effect:'blast',trigger:'nth',every:3,cooldown:.6,damage:19,radius:1.5,law:'burst',surgeEvery:2,line:'꿰뚫은 자리 폭발'}),
+ curatedSecond('seedstorm','lightningpetal','번개 씨앗비','가까이 흩뿌린 씨앗이 적을 쓰러뜨리면, 그 자리에서 번개가 가까운 두 적에게 튑니다.','붙어 오는 무리를 번개로 연쇄 정리','사거리가 짧고, 쓰러뜨리지 못하는 보스에게는 번개가 튀지 않음',
+  {effect:'arc',trigger:'kill',every:1,cooldown:.25,damage:24,jumps:2,range:3.6,decay:.85,law:'chain',line:'쓰러뜨린 자리 번개'}),
+ curatedSecond('tidepull','stormanchor','해일 뇌우','해일핵이 적을 쓸어 오고, 네 번 맞힐 때마다 번개가 근처 적 셋을 이어 그 가운데에서 터집니다.','흩어진 적을 모아 한꺼번에 터뜨림','한 적에게 주는 피해가 낮고 문지기·보스는 끌려오지 않음',
+  {effect:'arc',trigger:'nth',every:4,cooldown:1.2,damage:6,jumps:3,range:3.4,decay:.9,finish:10,finishRadius:1.5,law:'chain',surgeEvery:2,line:'번개 잇기와 가운데 폭발'}),
+ curatedSecond('returnblade','returnflare','불씨 칼날','큰 칼날이 적의 열을 꿰뚫고 돌아오며, 돌아오는 길에 두 번 벨 때마다 불씨가 터집니다.','움직여 돌아오는 길을 무리 위로 끌면 폭발이 이어짐','가만히 서 있으면 돌아오는 길이 짧아 불씨가 적음',
+  {effect:'blast',trigger:'return',every:2,cooldown:.3,damage:22,radius:1.2,law:'burst',surgeEvery:1,line:'돌아오는 길의 불씨'}),
+ curatedSecond('frostkaleidoscope','frostbloom','서리꽃 만화경','벽에 튕기며 빨라지는 서리 조각이 다섯 번 맞힐 때마다, 맞은 자리에서 서리꽃이 터져 주변을 얼립니다.','벽이 많은 방에서 무리를 느리게 묶음','트인 곳에서는 조각이 덜 튕기고, 얼음은 보스에게 짧게만 듦',
+  {effect:'nova',trigger:'nth',every:5,cooldown:.6,damage:20,radius:1.6,slow:1.1,law:'frost',surgeEvery:3,line:'서리꽃 터짐'})
+];
+export const SECOND_FORMS=Object.freeze(Object.fromEntries(CURATED_SECOND_LIST.map(f=>[f.id,f])));
+// 재융합 묶음. 그림·사용자 승인 전까지 live:false(선택지에 안 나오고, 실험실에서만 시험). 기록: combo-batches/
+export const SECOND_BATCHES=Object.freeze({
+ '20260922-r1':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.map(f=>f.id))})
+});
+const HELD_SECOND=new Set(Object.values(SECOND_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
+export const isSecondHeldBack=id=>HELD_SECOND.has(id);
+const SECOND_BY_PARTS=new Map(Object.values(SECOND_FORMS).filter(f=>!HELD_SECOND.has(f.id)).map(f=>[[...f.parts].sort().join('+'),f.id]));
 export const secondFormOf=(a,b)=>a===b?null:SECOND_BY_PARTS.get([a,b].sort().join('+'))||null;
 
 // Solo evolutions: one law raised far enough becomes an attack of its own.
@@ -318,6 +349,9 @@ function awakenStats(id,s){
  return boosted;
 }
 function surgeStats(id,s){
+ // 손제작 재융합은 주 공격 부모의 궁극기 강화를 그대로 받고, 후속 효과는 더 자주(surgeEvery) 터진다.
+ const curated=SECOND_FORMS[id]?.curated&&SECOND_FORMS[id];
+ if(curated){const boosted=surgeStats(curated.main,s),follow={...s.follow,damage:s.follow.damage*SURGE_DAMAGE,every:curated.follow.surgeEvery||s.follow.every,cooldown:(s.follow.cooldown||0)*.5};return {...boosted,follow};}
  const isSecond=Boolean(SECOND_FORMS[id]),isGenerated=Boolean(GENERATED_FORMS[id]||isSecond);
  const generated=isGenerated?{bolts:s.bolts||4,pierce:(s.pierce||1)+1,portalDistance:(s.portalDistance||0)+(s.laws?.includes('portal')?1.2:0)}:{};
  const boosted={...s,...generated,...(SURGE[id]?.(s)||{}),surge:true};
@@ -327,6 +361,8 @@ function surgeStats(id,s){
 }
 function baseStats(id,level){
  const L=Math.max(1,Math.floor(level)),up=L-1,power=1+.25*up,faster=Math.max(.55,1-.05*up);
+ const curated=SECOND_FORMS[id]?.curated&&SECOND_FORMS[id];
+ if(curated)return {...baseStats(curated.main,level),secondOf:curated.id,follow:{...curated.follow,damage:curated.follow.damage*power,finish:(curated.follow.finish||0)*power}};
  if(SECOND_FORMS[id]){
   const form=SECOND_FORMS[id],primaryLaws=FORMS[form.parts[0]].requires,followUpLaws=FORMS[form.parts[1]].requires;
   return {interval:.98*faster*form.budget.interval,damage:46*power*form.budget.damage,speed:12.5,life:2.5,bolts:3,laws:primaryLaws,primaryLaws,followUpLaws,
@@ -407,6 +443,7 @@ function baseStats(id,level){
 // What the next form level changes, for the reward screen.
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
+ if(SECOND_FORMS[id]?.curated)return `재융합 Lv.${level} → ${level+1} · 피해 +25% · ${SECOND_FORMS[id].follow.line} +25%`;
  if(GENERATED_FORMS[id]||SECOND_FORMS[id])return `${SECOND_FORMS[id]?'재융합':'진화'} Lv.${level} → ${level+1} · 피해 +25%${next.pierce!==now.pierce?` · 관통 ${now.pierce} → ${next.pierce}`:''}${next.bounces!==now.bounces?` · 튕김 ${now.bounces} → ${next.bounces}`:''}`;
   const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통'],frostkaleidoscope:['bounces','튕김'],lightningpetal:['petals','전기 꽃잎'],returnflare:['homeRadius','귀환 폭발 반경'],comethalo:['comets','혜성 꽃봉오리'],stormanchor:['jumps','연쇄'],returningpetals:['petals','귀환 꽃잎'],gravitystake:['pierce','관통 깊이']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
