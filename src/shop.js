@@ -4,7 +4,9 @@ export const SHOP_KEY='seed-shop-v1';
 // The departure locker is intentionally larger than the in-run bag. Players can
 // buy the ten-pack even when a few gift potions are already stored, while only
 // five can enter a run at once.
-export const SHOP_STOCK_MAX=50;
+// 2026-09-22 사용자: "999개 모아 놓을 수 있게, 어차피 인게임에선 상한이 있잖아" — 보관함은 종류마다 999개.
+// 한 여정에 가져가는 개수(carryMax)와 가방 상한은 그대로라 전투 밸런스는 바뀌지 않는다.
+export const SHOP_STOCK_MAX=999;
 export const TONIC_CARRY_MAX=5;
 export const SHOP_PRICES=Object.freeze({1:200,10:1500});
 // 처음 오는 사람도 물약 하나는 살 수 있게 시작 자금을 준다(첫 판을 맨손으로 시작하지 않도록).
@@ -18,8 +20,7 @@ export const STASH_ITEMS=Object.freeze({
  tonic:Object.freeze({max:SHOP_STOCK_MAX,carryMax:TONIC_CARRY_MAX}),
  wind:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.wind.max}),
  shell:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.shell.max}),
- // 2026-09-22 사용자: 다시 싹 보관 최대 3 → 10(선물·후원이 막히지 않게). 새 여정에 가져가는 건 여전히 1개.
- sprout:Object.freeze({max:10,carryMax:1})
+ sprout:Object.freeze({max:SHOP_STOCK_MAX,carryMax:1})
 });
 export const STASH_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']);
 const carryMax=id=>Math.min(STASH_ITEMS[id].carryMax??STASH_ITEMS[id].max,ITEMS[id]?.max??STASH_ITEMS[id].max);

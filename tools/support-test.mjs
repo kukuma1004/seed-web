@@ -27,8 +27,8 @@ assert.deepEqual(normalizeShop({coins:10,purchases:['A','A','',7,'x'.repeat(81)]
  assert.equal(readShop(s).coins,STARTING_COINS+2500);
  assert.equal(grantSupportPurchase(s,'seed_support_9999','GPA.x').status,'unknown');
  assert.equal(grantSupportPurchase(s,'seed_support_500','').status,'unknown','주문 번호 없는 결제는 주지 않는다');
- // 다시 싹 보관 상한(10)을 넘으면 결제 전에 막는다(돈 낸 물건이 잘려 사라지지 않게).
- writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:9}});
+ // 보관 상한(999)을 넘으면 결제 전에 막는다(돈 낸 물건이 잘려 사라지지 않게).
+ writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:SHOP_STOCK_MAX-1}});
  assert.equal(supportRoom(readShop(s),supportProduct('seed_support_5000')).ok,false);
  assert.deepEqual(supportRoom(readShop(s),supportProduct('seed_support_5000')).full,['sprout']);
  assert.equal(grantSupportPurchase(s,'seed_support_5000','GPA.0000-0002').status,'full');
@@ -57,7 +57,7 @@ assert.equal((await createBilling({native:false,dev:false}).purchase('seed_suppo
  assert.equal(recovered.length,1);assert.equal(readShop(s).coins,STARTING_COINS+500+2500);assert.equal((await billing.pending()).length,0);
  assert.equal(await completeSupportPurchase(s,billing,crashed).then(r=>r.status),'duplicate','다시 불려도 두 번 주지 않는다');
  // 보관함이 가득 차면 소모하지 않고 남겨 둔다(구글은 3일 안에 확인 안 된 결제를 자동 환불).
- writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:10}});
+ writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:SHOP_STOCK_MAX}});
  const blocked=await billing.purchase('seed_support_5000');
  assert.equal((await completeSupportPurchase(s,billing,blocked)).status,'full');assert.equal((await billing.pending()).length,1);
 }
