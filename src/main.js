@@ -1085,10 +1085,11 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
  const tonicGift=grantGift(runStorage,SORRY_TONIC_GIFT,'tonic',3);
  recoverSupport();
  const patchGift=grantGiftSet(runStorage,PATCH_GIFT,PATCH_GIFT_ITEMS);
+ const adminRegift=adminMode&&!localAdminLab?grantGiftSet(runStorage,ADMIN_REGIFT,PATCH_GIFT_ITEMS):{granted:false};
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
  if(betaBoosterGift.granted){showBetaBoosterGift();return;}
  if(sproutGift.granted||tonicGift.granted){showGift();return;}
- if(patchGift.granted){showPatchGift();return;}
+ if(patchGift.granted||adminRegift.granted){showPatchGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
  const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
@@ -1221,6 +1222,8 @@ const SORRY_GIFT='sorry-20260917';
 const SORRY_TONIC_GIFT='sorry-tonics-20260917';
 // 2026-09-22 사용자: "잦은 패치로 미안하니까 창고에 보스 4종 물약 1세트 주자" — 계정(보관함)마다 한 번.
 const PATCH_GIFT='sorry-boss-potions-20260922',PATCH_GIFT_ITEMS=Object.freeze({potion:1,wind:1,shell:1,sprout:1});
+// 2026-09-22 사용자(운영자): 사과 선물이 '가져가기'로 자동 설정돼 여정에 바로 들고 들어가 버렸다 → 운영자 계정에 한 번 더.
+const ADMIN_REGIFT='admin-regift-boss-potions-20260922';
 function showPatchGift(){
  mode='gift';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
@@ -1228,7 +1231,7 @@ function showPatchGift(){
  $('#overlay').innerHTML=`<div class="menu-panel gift-panel gift-compact"><p class="eyebrow">SEED · 선물</p><h2>자주 고쳐서 미안해요</h2>
   <div class="gift-grid">${Object.keys(PATCH_GIFT_ITEMS).map(id=>`<div class="gift-item">${itemArt(id)}<div><strong>${escapeHtml(ITEMS[id].name)} 1개</strong><small>${escapeHtml(ITEMS[id].desc)}</small></div></div>`).join('')}</div>
   <p class="gift-line">요즘 업데이트가 잦았죠. 보스 물약 4종 1세트를 상점 보관함에 넣어 두었어요.</p>
-  <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
+  <p class="gift-line">보관함에 그대로 모아 둬요. 쓰고 싶을 때 상점에서 가져갈 개수를 고르면 새 여정에 들고 가요.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
  $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
 }
@@ -1238,7 +1241,7 @@ function showBetaBoosterGift(){
  $('#overlay').innerHTML=`<div class="menu-panel gift-panel"><p class="eyebrow">SEED · BETA BOOSTER</p><h2>함께 시험해 줘서 고마워요</h2>
   <div class="gift-item">${itemArt('sprout')}<div><strong>부활 물약 · ${ITEMS.sprout.name} 1개</strong><small>${escapeHtml(ITEMS.sprout.desc)}</small></div></div>
   <p class="gift-line">베타테스터 전용 부스터를 상점 보관함에 넣어 두었어요. 계정마다 한 번만 받을 수 있습니다.</p>
-  <p class="gift-line">새 여정을 시작할 때 가져가며, 쓰러지는 순간 자동으로 사용됩니다.</p>
+  <p class="gift-line">보관함에 모아 두었다가 상점에서 가져갈 개수를 고르면 새 여정에 들고 가요. 쓰러지는 순간 자동으로 사용됩니다.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
  $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
 }
@@ -1249,7 +1252,7 @@ function showGift(){
   <div class="gift-item">${itemArt('sprout')}<div><strong>부활 물약 · ${ITEMS.sprout.name} 1개</strong><small>${escapeHtml(ITEMS.sprout.desc)}</small></div></div>
   <div class="gift-item">${itemArt('tonic')}<div><strong>${ITEMS.tonic.name} 3개</strong><small>${escapeHtml(ITEMS.tonic.desc)}</small></div></div>
   <p class="gift-line">점검하느라 게임을 잠시 닫아서 미안해요. 선물 4개를 상점 보관함에 넣어 두었어요.</p>
-  <p class="gift-line">새 여정을 시작할 때 가져가요. 아껴 두고 싶으면 보관함에서 가져갈 개수를 0으로 바꾸면 돼요.</p>
+  <p class="gift-line">보관함에 그대로 모아 둬요. 쓰고 싶을 때 상점에서 가져갈 개수를 고르면 새 여정에 들고 가요.</p>
   <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
  $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
 }

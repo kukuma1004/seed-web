@@ -104,7 +104,9 @@ export function grantGiftSet(storage,giftId,items={}){
  const current=readShop(storage),entries=Object.entries(items).filter(([id])=>Object.hasOwn(STASH_ITEMS,id));
  if(!entries.length||current.gifts.includes(giftId))return {granted:false,shop:current};
  current.gifts.push(giftId);
- for(const [id,n] of entries){const before=current.stash[id];current.stash[id]=Math.min(STASH_ITEMS[id].max,before+count(n));current.carry[id]=current.carry[id]+(current.stash[id]-before);}
+ // 2026-09-22 사용자: "받으면 바로 창고에 들어가게" — 선물은 보관함에만 쌓고 '가져갈 개수'는 건드리지 않는다.
+ // (예전에는 가져가기도 같이 올라가서, 다음 여정을 시작하는 순간 선물이 가방으로 빠져나갔다.)
+ for(const [id,n] of entries)current.stash[id]=Math.min(STASH_ITEMS[id].max,current.stash[id]+count(n));
  writeShop(storage,current);
  return {granted:true,shop:readShop(storage)};
 }
@@ -113,7 +115,6 @@ export function grantGift(storage,giftId,id,n=1){
  if(!Object.hasOwn(STASH_ITEMS,id)||current.gifts.includes(giftId))return {granted:false,shop:current};
  current.gifts.push(giftId);
  current.stash[id]=Math.min(STASH_ITEMS[id].max,current.stash[id]+count(n));
- current.carry[id]=current.carry[id]+count(n);
  writeShop(storage,current);
  return {granted:true,shop:readShop(storage)};
 }

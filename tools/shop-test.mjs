@@ -45,10 +45,10 @@ assert.deepEqual(Object.keys(STASH_ITEMS),['potion','tonic','wind','shell','spro
 {
  const s=memory();
  const first=grantGift(s,'sorry-20260917','sprout',1);
- assert.equal(first.granted,true);assert.equal(first.shop.stash.sprout,1);assert.equal(first.shop.carry.sprout,1);
+ assert.equal(first.granted,true);assert.equal(first.shop.stash.sprout,1);assert.equal(first.shop.carry.sprout,0,'선물은 보관함에만(9/22) — 가져갈 개수는 플레이어가 고른다');
  assert.equal(grantGift(s,'sorry-20260917','sprout',1).granted,false,'같은 선물은 다시 주지 않는다');
  const tonics=grantGift(s,'sorry-tonics-20260917','tonic',3);
- assert.equal(tonics.granted,true);assert.equal(tonics.shop.stash.tonic,3);assert.equal(tonics.shop.carry.tonic,3);
+ assert.equal(tonics.granted,true);assert.equal(tonics.shop.stash.tonic,3);assert.equal(tonics.shop.carry.tonic,0);
  assert.equal(grantGift(s,'sorry-tonics-20260917','tonic',3).granted,false,'작은 물약도 한 번만 준다');
  assert.equal(readShop(s).stash.sprout,1);
  writeShop(s,{...readShop(s),stash:{tonic:0,sprout:3},carry:{tonic:0,sprout:3}});
@@ -96,7 +96,7 @@ assert.equal(STASH_ITEMS.sprout.max,999,'다시 싹도 보관은 999(9/22), 출�
  writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:SHOP_STOCK_MAX},carry:{...readShop(s).carry,sprout:1}});
  const gift=grantGiftSet(s,'sorry-boss-potions-20260922',set);
  assert.equal(gift.granted,true);
- for(const id of ['potion','wind','shell'])assert.equal(gift.shop.stash[id],1,id);
+ for(const id of ['potion','wind','shell']){assert.equal(gift.shop.stash[id],1,id);assert.equal(gift.shop.carry[id],0,`${id}: 받자마자 가방으로 가지 않는다`);}
  assert.equal(gift.shop.stash.sprout,SHOP_STOCK_MAX,'보관 상한을 넘지 않는다');
  assert.equal(grantGiftSet(s,'sorry-boss-potions-20260922',set).granted,false,'같은 세트는 다시 주지 않는다');
  assert.equal(grantGiftSet(s,'empty-gift',{nope:3}).granted,false,'모르는 물건만 있으면 주지 않는다');
