@@ -10,6 +10,33 @@ import {createCloudSync} from '../src/cloud-sync.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
 
+// 2026-09-22 신고(저장하고 나갔는데 예전으로 돌아옴): 두 기기의 저장 중 '더 최근에 저장한 판'을 고른다.
+// 예전에는 올리지 못한 작은 변경이 있는 기기 쪽 저장을 통째로 골라, 그 기기의 옛 판이 다른 기기의 최신 판을 덮었다.
+{
+ const {writeCheckpoint,clearCheckpoint,readCheckpoint}=await import('../src/run-save.js');
+ const run=(stage,kills)=>({version:1,cycle:1,stage,mode:'entry',region:'garden',hp:90,rules:['split'],mutated:[],kills,elapsed:60+stage*30});
+ const phone=memory(),pc=memory();
+ writeCheckpoint(pc,run(1,20),1000);            // PC에 남은 옛 판(1번째 방)
+ writeCheckpoint(phone,run(3,90),5000);         // 휴대폰에서 3번째 방까지 가고 저장하고 나감
+ const server=collectCloudSnapshot(phone,{revision:7,updatedAt:5000});
+ // PC를 켜면 PC 쪽에 올리지 못한 변경(새 소식 읽음 등)이 있어 PC 저장이 '이긴 쪽'이 된다.
+ const merged=mergeCloudSnapshots(collectCloudSnapshot(pc,{revision:6,updatedAt:6000}),server,{prefer:'local'});
+ assert.equal(merged.checkpoints.act1.stage,3,'PC의 옛 판이 휴대폰의 최신 판을 덮지 않는다');
+ applyCloudSnapshot(pc,merged);assert.equal(readCheckpoint(pc).stage,3,'PC에서도 최신 판을 이어한다');
+ // 휴대폰에서 판이 끝나(저장 지움) 올라간 뒤, PC의 옛 판이 되살아나지 않는다.
+ clearCheckpoint(phone,8000);
+ const ended=mergeCloudSnapshots(collectCloudSnapshot(pc,{revision:8,updatedAt:8100}),collectCloudSnapshot(phone,{revision:9,updatedAt:8000}),{prefer:'local'});
+ assert.equal(ended.checkpoints.act1.cleared,true,'끝난 판은 끝난 채로');applyCloudSnapshot(pc,ended);assert.equal(readCheckpoint(pc),null);
+ // 반대로 더 최근에 새로 시작한 판은 옛 '지운 표시'를 이긴다.
+ writeCheckpoint(pc,run(0,0),9000);
+ const fresh=mergeCloudSnapshots(collectCloudSnapshot(pc,{revision:10,updatedAt:9000}),collectCloudSnapshot(phone,{revision:9,updatedAt:8000}),{prefer:'remote'});
+ assert.equal(fresh.checkpoints.act1.stage,0,'새로 시작한 판이 이긴다');
+ // 시각이 없는 예전 저장끼리는 예전처럼 이긴 쪽 것을 쓴다.
+ const legacyA=normalizeCloudSnapshot({checkpoints:{act1:run(2,40)}}),legacyB=normalizeCloudSnapshot({checkpoints:{act1:run(4,80)}});
+ assert.equal(mergeCloudSnapshots(legacyA,legacyB,{prefer:'local'}).checkpoints.act1.stage,2);
+ assert.equal(mergeCloudSnapshots(legacyA,legacyB,{prefer:'remote'}).checkpoints.act1.stage,4);
+}
+
 // Only explicit game progress keys are allowed into the cloud snapshot.
 {
  const storage=memory({

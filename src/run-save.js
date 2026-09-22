@@ -73,8 +73,15 @@ export function withoutHidden(s){
  return next;
 }
 export function readCheckpoint(storage){try{const s=withoutHidden(JSON.parse(storage.getItem(SAVE_KEY)));return validCheckpoint(s)?s:null;}catch{return null;}}
-export function writeCheckpoint(storage,s){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify(s));return true;}catch{return false;}}
-export function clearCheckpoint(storage){try{storage.removeItem(SAVE_KEY);return true;}catch{return false;}}
+// savedAt(2026-09-22): 방 입구 저장마다 저장한 시각을 붙인다. 클라우드 병합이 두 기기 중 '더 최근에 저장한 판'을 고르게 하려는 것.
+// 예전에는 저장 전체를 한 기기 것으로 통째로 골라서, 올리지 못한 작은 변경이 남은 다른 기기의 옛 판이 최신 판을 덮었다
+// (사용자 신고: 저장하고 나갔는데 예전으로 돌아옴 · 저장하고 나가기가 안 됨).
+export function writeCheckpoint(storage,s,now=Date.now()){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify({...s,savedAt:now}));return true;}catch{return false;}}
+// 판이 끝나면 저장을 지우는 대신 '지운 시각'만 남긴다(게임은 저장 없음으로 읽는다). 끝난 옛 판이 다른 기기에서 되살아나지 않게 한다.
+export const checkpointTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
+export const isCheckpointTombstone=v=>Boolean(v&&v.cleared===true&&Number.isFinite(v.savedAt));
+export const checkpointStamp=v=>Number.isFinite(v?.savedAt)&&v.savedAt>0?v.savedAt:0;
+export function clearCheckpoint(storage,now=Date.now()){try{storage.setItem(SAVE_KEY,JSON.stringify(checkpointTombstone(now)));return true;}catch{return false;}}
 // A checkpoint represents the room entrance. Leaving halfway restarts the full
 // room, so gains made inside it must not survive while the enemies respawn.
 // Losses do survive: otherwise reloading heals damage and refunds drunk potions.

@@ -1,7 +1,7 @@
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
 import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS} from './garden.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
-import {SAVE_KEY,validCheckpoint,withoutHidden} from './run-save.js';
+import {SAVE_KEY,validCheckpoint,withoutHidden,isCheckpointTombstone,checkpointStamp} from './run-save.js';
 import {ACT2_STORAGE_KEYS} from './act2.js';
 import {QUALITY_KEY,clampLevel} from './quality.js';
 import {THEME_KEY,normalizeTheme} from './themes.js';
@@ -18,7 +18,10 @@ export const SYNC_KEYS=Object.freeze([
 ]);
 const syncSet=new Set(SYNC_KEYS);
 const json=(storage,key)=>{try{const raw=storage?.getItem(key);return raw==null?null:JSON.parse(raw);}catch{return null;}};
-const checkpoint=value=>{const cleaned=withoutHidden(value);return validCheckpoint(cleaned)?cleaned:null;};
+// 저장 기록 칸: 올바른 저장, 또는 판이 끝나 지운 표시({cleared,savedAt}), 아니면 없음(null).
+const checkpoint=value=>{if(isCheckpointTombstone(value))return {version:1,cleared:true,savedAt:value.savedAt};const cleaned=withoutHidden(value);return validCheckpoint(cleaned)?cleaned:null;};
+// 두 기기의 저장 중 더 최근에 저장(또는 지운) 쪽. 둘 다 시각이 없으면(예전 저장) 예전처럼 이긴 쪽 것을 쓴다.
+const newerCheckpoint=(a,b,fallback)=>{const sa=checkpointStamp(a),sb=checkpointStamp(b);return sa===sb?fallback:sa>sb?a:b;};
 const int=(value,min,max,fallback=0)=>Number.isInteger(value)?Math.max(min,Math.min(max,value)):fallback;
 
 export function normalizeCloudMeta(value){
@@ -64,6 +67,7 @@ export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={})
  return normalizeCloudSnapshot({
   ...winner,
   revision:Math.max(local.revision,remote.revision),updatedAt:Math.max(local.updatedAt,remote.updatedAt),
+  checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2)},
   discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
   account:{...winner.account,badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt)}
  });

@@ -5,7 +5,10 @@ import {createShield,blocksShield,tickShield} from '../src/shield.js';
 import {rewardOptions} from '../src/journey.js';
 let value=null;const storage={getItem:()=>value,setItem:(k,v)=>value=v,removeItem:()=>value=null};
 const s={version:1,cycle:2,stage:3,mode:'entry',region:'ruins',hp:70,rules:['reflect','split'],mutated:['split'],kills:200,elapsed:160};
-assert.ok(writeCheckpoint(storage,s));assert.deepEqual(readCheckpoint(storage),s);
+assert.ok(writeCheckpoint(storage,s,1234));{const {savedAt,...rest}=readCheckpoint(storage);assert.deepEqual(rest,s);assert.equal(savedAt,1234,'저장 시각이 붙는다');}
+// 판이 끝나 지우면 '지운 시각'만 남고, 게임은 저장 없음으로 읽는다.
+clearCheckpoint(storage,2000);assert.equal(readCheckpoint(storage),null);assert.equal(JSON.parse(value).cleared,true);assert.equal(JSON.parse(value).savedAt,2000);
+assert.ok(writeCheckpoint(storage,s));
 {
  const entry={...s,hp:80,kills:200,score:3000,choicesTaken:4,choiceKills:7,levels:{reflect:2,split:1},forms:{},inventory:{potion:1,tonic:2,wind:0,shell:1,sprout:0}};
  const safe=roomExitCheckpoint(entry,{hp:46,inventory:{potion:2,tonic:1,wind:1,shell:0,sprout:0}});

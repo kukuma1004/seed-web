@@ -8,7 +8,7 @@ const storage={value:null,getItem(){return this.value;},setItem(k,v){this.value=
 for(const form of Object.values(FORMS)){
  const checkpoint={...base,rules:[...form.requires],form:form.id,guideTarget:form.id,rerollUsed:true};
  assert.equal(writeCheckpoint(storage,checkpoint),true);
- assert.deepEqual(readCheckpoint(storage),checkpoint);
+ {const {savedAt,...saved}=readCheckpoint(storage);assert.deepEqual(saved,checkpoint);assert.ok(savedAt>0,'저장 시각');}
  assert.equal(validCheckpoint({...checkpoint,rules:[form.requires[0]]}),false);
 }
 assert.equal(validCheckpoint({...base,form:'toString'}),false);
