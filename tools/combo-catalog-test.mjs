@@ -11,9 +11,9 @@ assert.equal(new Set(SECOND_FUSIONS.map(v=>v.id)).size,990);
 assert.equal(new Set(SECOND_FUSIONS.map(v=>v.name)).size,990);
 assert.equal(Object.keys(FORMS).length,20,'실제 선택에는 손으로 다듬은 1차 융합만 (1묶음 5개는 그림이 나올 때까지 보류)');
 assert.equal(Object.keys(GENERATED_FORMS).length,9,'남은 자동 생성 1차 융합(차원 법칙 9칸)은 연구 목록에만 보관');
-// 자동 재융합 990개는 계속 차단. SECOND_FORMS에는 손으로 만든 재융합만 묶음으로 들어간다(2026-09-22 1묶음 5개, 보류).
+// 자동 재융합 990개는 계속 차단. SECOND_FORMS에는 손으로 만든 재융합만 묶음으로 들어간다(2026-09-22 공명형 1묶음 5 + 교차형 2묶음 5, 둘 다 보류).
 assert.ok(Object.values(SECOND_FORMS).every(v=>v.curated&&!v.generated),'자동 재융합은 실제 목록에 없음');
-assert.equal(Object.keys(SECOND_FORMS).length,5);
+assert.equal(Object.keys(SECOND_FORMS).length,10);
 assert.equal(COMBO_LAWS.length+FIRST_FUSIONS.length+SECOND_FUSIONS.length+Object.keys(SOLO_FORMS).length+Object.keys(AWAKEN_FORMS).length+Object.keys(TWIN_FORMS).length,1090,'전체 연구 도감은 1,090개');
 assert.ok(Object.values(FORMS).every(v=>!v.generated),'실제 선택에 자동 설명이 섞이지 않음');
 assert.equal(SECOND_FUSIONS.filter(v=>v.family==='resonance').length,360);
@@ -35,4 +35,4 @@ for(const file of Object.values(COMBO_ART)){
 }
 assert.match(comboArt(SECOND_FUSIONS[0]),/combo-core/);
 assert.match(comboProjectileArt(SECOND_FUSIONS[0]),/combo-projectiles-v1\.webp/);
-console.log('combo catalogue archive: 10 laws, 45 first, 990 second; live gate: 20 curated first, 0 generated second, 5 curated second held');
+console.log('combo catalogue archive: 10 laws, 45 first, 990 second; live gate: 20 curated first, 0 generated second, 10 curated second held (2 batches)');

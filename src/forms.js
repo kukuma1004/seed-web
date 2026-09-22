@@ -107,12 +107,26 @@ const CURATED_SECOND_LIST=[
  curatedSecond('returnblade','returnflare','불씨 칼날','큰 칼날이 적의 열을 꿰뚫고 돌아오며, 돌아오는 길에 두 번 벨 때마다 불씨가 터집니다.','움직여 돌아오는 길을 무리 위로 끌면 폭발이 이어짐','가만히 서 있으면 돌아오는 길이 짧아 불씨가 적음',
   {effect:'blast',trigger:'return',every:2,cooldown:.3,damage:22,radius:1.2,law:'burst',surgeEvery:1,line:'돌아오는 길의 불씨'}),
  curatedSecond('frostkaleidoscope','frostbloom','서리꽃 만화경','벽에 튕기며 빨라지는 서리 조각이 다섯 번 맞힐 때마다, 맞은 자리에서 서리꽃이 터져 주변을 얼립니다.','벽이 많은 방에서 무리를 느리게 묶음','트인 곳에서는 조각이 덜 튕기고, 얼음은 보스에게 짧게만 듦',
-  {effect:'nova',trigger:'nth',every:5,cooldown:.6,damage:20,radius:1.6,slow:1.1,law:'frost',surgeEvery:3,line:'서리꽃 터짐'})
+  {effect:'nova',trigger:'nth',every:5,cooldown:.6,damage:20,radius:1.6,slow:1.1,law:'frost',surgeEvery:3,line:'서리꽃 터짐'}),
+ // 2묶음(교차형·수렴형 5, 2026-09-22): 네 법칙이 모두 다르다. 첫 조합(주 공격)이 표식·자리·궤적을 만들고 둘째 조합이 그걸 터뜨린다.
+ // 역할이 몰리지 않게: 제어 1 · 다수전 1 · 이동 보상 1 · 단일 대상 1 · 모아 터뜨리기 1. 주 공격 무기도 1묶음과 겹치지 않게.
+ // (중력 말뚝·프리즘 가시·회귀 꽃비는 시뮬레이션 광역 수치가 너무 낮고, 중력 거울은 궁극기 중 후속이 안 나와 주 공격에서 뺐다.)
+ curatedSecond('collapse','frostkaleidoscope','서리 붕괴','붕괴의 씨앗이 두 번 맞힐 때마다 그 자리에 서리가 번져, 남은 적을 잠시 얼립니다.','보스에게 붕괴를 이어 맞히면 냉기 피해가 쌓임','씨앗이 터지기까지 느리고, 얼림은 보스·문지기에게 통하지 않음',
+  {effect:'nova',trigger:'nth',every:2,cooldown:1,damage:10,radius:1.8,slow:1,law:'frost',surgeEvery:1,line:'무너진 자리 서리'}),
+ curatedSecond('frostbloom','lightningpetal','서리 번개꽃','서리 꽃봉오리가 세 번 맞힐 때마다 그 자리에서 번개 꽃잎이 흩어진 적 셋에게 튑니다.','흩어져 다가오는 무리를 한꺼번에 건드림','한 적에게는 번개가 튈 곳이 없고, 꽃봉오리가 터지기까지 느림',
+  {effect:'arc',trigger:'nth',every:3,cooldown:.7,damage:15,jumps:3,range:3.6,decay:.85,law:'chain',surgeEvery:1,line:'터진 자리 번개꽃'}),
+ curatedSecond('returnflare','stormcrown','번개 불씨','돌아오는 불씨가 두 번 맞힐 때마다 번개가 가까운 적 둘에게 튑니다.','움직이며 불씨를 돌려받으면 번개가 계속 튐','제자리에 서 있으면 돌아오는 길이 짧아 번개가 드묾',
+  {effect:'arc',trigger:'return',every:2,cooldown:.3,damage:26,jumps:2,range:3.2,decay:.85,law:'chain',surgeEvery:1,line:'돌아오는 길 번개'}),
+ curatedSecond('blastlance','frostguard','눈꽃 창','폭발 창이 두 번 맞힐 때마다 맞은 자리에 눈꽃이 터져 둘레를 얼립니다.','보스처럼 한 적을 계속 맞힐 때 눈꽃이 자주 터짐','옆으로 흩어진 적에게는 창이 덜 맞고, 얼림은 보스·문지기에게 통하지 않음',
+  {effect:'nova',trigger:'nth',every:2,cooldown:.5,damage:12,radius:1.3,slow:.8,law:'frost',surgeEvery:1,line:'맞은 자리 눈꽃'}),
+ curatedSecond('stormanchor','comethalo','혜성 닻','뇌우 닻이 적을 끌어 모으고, 네 번 맞힐 때마다 모인 자리에 혜성이 터집니다.','끌어 모은 무리를 한 번에 크게 터뜨림','한 적에게는 느리고, 문지기·보스는 끌려오지 않음',
+  {effect:'blast',trigger:'nth',every:4,cooldown:1,damage:21,radius:1.7,law:'burst',surgeEvery:2,line:'모인 자리 혜성'})
 ];
 export const SECOND_FORMS=Object.freeze(Object.fromEntries(CURATED_SECOND_LIST.map(f=>[f.id,f])));
 // 재융합 묶음. 그림·사용자 승인 전까지 live:false(선택지에 안 나오고, 실험실에서만 시험). 기록: combo-batches/
 export const SECOND_BATCHES=Object.freeze({
- '20260922-r1':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.map(f=>f.id))})
+ '20260922-r1':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(0,5).map(f=>f.id))}),
+ '20260922-r2':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(5,10).map(f=>f.id))})
 });
 const HELD_SECOND=new Set(Object.values(SECOND_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
 export const isSecondHeldBack=id=>HELD_SECOND.has(id);

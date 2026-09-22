@@ -13,7 +13,7 @@ assert.equal(Object.keys(SOLO_FORMS).length,Object.keys(LAWS).length);
 for(const law of Object.keys(LAWS)){const id=soloFormOf(law);assert.ok(id&&isSoloForm(id),law);assert.deepEqual([...SOLO_FORMS[id].requires],[law]);}
 for(const f of Object.values(SOLO_FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.solo===true&&f.pair.includes('단독'));assert.ok(!Object.hasOwn(FORMS,f.id));}
 // 81 + 손제작 재융합 1묶음 5(2026-09-22, 보류 중이지만 도감·저장에는 있다).
-assert.equal(Object.keys(ALL_FORMS).length,86);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,86);
+assert.equal(Object.keys(ALL_FORMS).length,91);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,91);
 assert.equal(eligibleForms(Object.keys(LAWS)).length,20,'fusion offers never include solo evolutions or held-back batches');
 assert.equal(isFormEligible('fullbloom',['split']),false);assert.equal(canFuse(new Map([['split',9]]),'fullbloom'),false);
 assert.deepEqual(Object.keys(FORM_COMBAT).sort(),Object.keys(ALL_FORMS).sort());
