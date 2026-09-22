@@ -12,6 +12,7 @@ const reducedAtlases=Object.freeze({
  'enemy-batter-v1.webp':'mobile/enemy-batter-v1.webp','warden-act2-ace-v1.webp':'mobile/warden-act2-ace-v1.webp',
  'warden-act2-diamond-v1.webp':'mobile/warden-act2-diamond-v1.webp','warden-act2-slugger-v1.webp':'mobile/warden-act2-slugger-v1.webp',
  'boss-always-beginner-v1.webp':'mobile/boss-always-beginner-v1.webp',
+ 'enemy-relay-atlas-v1.webp':'mobile/enemy-relay-atlas-v1.webp',
  'enemy-act3-flight-atlas-v2.webp':'mobile/enemy-act3-flight-atlas-v2.webp','boss-act3-johan-atlas-v2.webp':'mobile/boss-act3-johan-atlas-v2.webp',
  'boss-johan-cannons-v1.webp':'mobile/boss-johan-cannons-v1.webp','boss-johan-core-v1.webp':'mobile/boss-johan-core-v1.webp',
  'boss-johan-thrusters-v1.webp':'mobile/boss-johan-thrusters-v1.webp','boss-johan-phase-v1.webp':'mobile/boss-johan-phase-v1.webp'

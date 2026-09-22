@@ -65,9 +65,9 @@ export const MIRROR_MOVEMENT_PROFILES=Object.freeze({
 
 export const MIRROR_TOWER=Object.freeze({
  name:'거울의 탑',
- milestoneFloors:Object.freeze([5,10,15,20]),
- endlessFrom:21,
- checkpointEvery:5,
+ milestoneFloors:Object.freeze([10,20,30,40,50,60,70,80,90,100]),
+ endlessFrom:101,
+ checkpointEvery:10,
  choiceEvery:1,
  arenaRadius:13,
  // The public ten-floor challenge should reward clean dodges rather than let
@@ -118,7 +118,7 @@ export function mirrorCloneLoadout(snapshot){
 }
 
 export function mirrorFloorRules(floor=1,{quality='normal'}={}){
- const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0,d=mirrorDifficultyFloor(n);
+ const n=Math.max(1,Math.floor(Number(floor)||1)),milestone=n%MIRROR_TOWER.checkpointEvery===0,d=mirrorDifficultyFloor(n),ascent=Math.min(9,Math.floor((n-1)/10));
  // Teach one behaviour at a time, then make the last four floors a real
  // mastery check instead of waiting until floor ten to reveal the feint.
  const tier=d<4?0:d<7?1:d<9?2:3;
@@ -127,10 +127,11 @@ export function mirrorFloorRules(floor=1,{quality='normal'}={}){
  return Object.freeze({
   floor:n,
   difficulty:d,
+  ascent,
   milestone,
   checkpoint:milestone,
   endless:n>=MIRROR_TOWER.endlessFrom,
-  arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:0,shrinks:false}),
+  arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:n<11?0:n<31?2:n<61?3:4,shrinks:false}),
   movement,
   concurrentAttackFamilies:d<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
   chainLength:d<4?1:d<8?2:3,
@@ -163,10 +164,10 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
   chainLength:tower.chainLength,
   ultimate:Object.freeze({...MIRROR_PATTERNS[lead],law:lead,id:`mirror-${MIRROR_PATTERNS[lead].id}`}),
   stats:Object.freeze({
-   hpScale:Number((2.25+Math.min(10,r)*.14+Math.min(5,(snapshot?.forms||[]).length)*.09).toFixed(2)),
-   moveSpeedScale:Number(Math.min(1.18,.86+r*.028).toFixed(3)),
-   hitDamageMaxHp:Number(Math.min(.13,.074+r*.0046).toFixed(3)),
-   attackSpeedScale:Number(Math.min(1.38,.98+r*.035).toFixed(3))
+   hpScale:Number((2.25+Math.min(10,r)*.14+Math.min(5,(snapshot?.forms||[]).length)*.09+tower.ascent*.15).toFixed(2)),
+   moveSpeedScale:Number((Math.min(1.18,.86+r*.028)+tower.ascent*.009).toFixed(3)),
+   hitDamageMaxHp:Number((Math.min(.13,.074+r*.0046)+tower.ascent*.002).toFixed(3)),
+   attackSpeedScale:Number((Math.min(1.38,.98+r*.035)+tower.ascent*.012).toFixed(3))
   }),
   tower,
   budget:tower.budget,
@@ -179,13 +180,32 @@ export const MIRROR_TRIAL_PROTOTYPE=Object.freeze({
  placement:'separate-challenge',
  unlock:'austin-defeated',
  copyMode:MIRROR_COPY_RULES.mode,
- localSliceFloors:10,
- releaseFloors:10,
- checkpoint:'every-five-floors',
+ localSliceFloors:100,
+ releaseFloors:100,
+ checkpoint:'every-ten-floors',
  released:true
 });
 
 export const MIRROR_RECORD_KEY='seed-mirror-tower-record-v1';
+export const MIRROR_CHECKPOINT_KEY='seed-mirror-tower-checkpoint-v1';
+export function normalizeMirrorCheckpoint(s){
+ try{
+  if(s?.cleared===true&&Number.isFinite(s.savedAt))return {version:1,cleared:true,savedAt:s.savedAt};
+  if(!s||s.version!==1||!Number.isInteger(s.floor)||s.floor<11||s.floor>91||s.floor%10!==1||!Number.isFinite(s.hp)||s.hp<=0||s.hp>100)return null;
+  if(!s.levels||typeof s.levels!=='object'||Array.isArray(s.levels)||Object.entries(s.levels).some(([id,n])=>!LAWS[id]||!Number.isInteger(n)||n<1||n>99))return null;
+  if(!s.forms||typeof s.forms!=='object'||Array.isArray(s.forms)||Object.entries(s.forms).some(([id,n])=>!ALL_FORMS[id]||!Number.isInteger(n)||n<1||n>999))return null;
+  if(!Array.isArray(s.rules)||s.rules.some(id=>!LAWS[id])||!Array.isArray(s.mutated)||s.mutated.some(id=>!LAWS[id]))return null;
+  return s;
+ }catch{return null;}
+}
+export function readMirrorCheckpoint(storage){
+ try{const value=normalizeMirrorCheckpoint(JSON.parse(storage?.getItem(MIRROR_CHECKPOINT_KEY)));return value?.cleared?null:value;}catch{return null;}
+}
+export function writeMirrorCheckpoint(storage,s,now=Date.now()){
+ if(!storage||!s||!normalizeMirrorCheckpoint({...s,version:1}))return false;
+ try{storage.setItem(MIRROR_CHECKPOINT_KEY,JSON.stringify({...s,version:1,savedAt:now}));return true;}catch{return false;}
+}
+export function clearMirrorCheckpoint(storage,now=Date.now()){try{storage?.setItem(MIRROR_CHECKPOINT_KEY,JSON.stringify({version:1,cleared:true,savedAt:now}));return true;}catch{return false;}}
 export function normalizeMirrorRecord(value){
  const floor=Math.max(0,Math.min(MIRROR_TRIAL_PROTOTYPE.releaseFloors,Math.floor(Number(value?.bestFloor)||0)));
  return Object.freeze({version:1,bestFloor:floor,clears:Math.max(0,Math.min(9999,Math.floor(Number(value?.clears)||0))),perfectDodges:Math.max(0,Math.min(1e7,Math.floor(Number(value?.perfectDodges)||0)))});

@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js';
+import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSeedBody} from './seed-body.js';
 import {createMotion} from './motion.js';
 import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan} from './mirror-trial.js';
@@ -15,6 +17,29 @@ export const MIRROR_PANELS=Object.freeze([
  Object.freeze({x:-5.4,z:0,w:.18,d:3.4}),Object.freeze({x:5.4,z:0,w:.18,d:3.4}),
  Object.freeze({x:0,z:-5.4,w:3.4,d:.18}),Object.freeze({x:0,z:5.4,w:3.4,d:.18})
 ]);
+
+// Obstacles enter after the opening ten floors. Keep the middle lane and both
+// outer loops wide enough for a dash; vary the formation between ten-floor sets.
+export function mirrorFloorObstacles(floor=1){
+ const n=Math.max(1,Math.floor(Number(floor)||1));if(n<11)return [];
+ const shift=(Math.floor((n-1)/10)%2?1:-1)*.65;
+ const side=[{x:-4.15,z:shift,w:1.25,d:1.65,h:1.8},{x:4.15,z:-shift,w:1.25,d:1.65,h:1.8}];
+ if(n>=31)side.push({x:shift,z:-2.8,w:1.6,d:1.15,h:1.8});
+ if(n>=61)side.push({x:-shift,z:3.05,w:1.6,d:1.15,h:1.8});
+ return side;
+}
+
+const mirrorCrystalTextures=new Map();
+export function buildMirrorObstacleArt(parent,obstacles,{camera,mobile=false}={}){
+ if(!obstacles.length)return;
+ const key=mobile?'mobile/':'';let texture=mirrorCrystalTextures.get(key);
+ if(!texture){texture=new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/${key}mirror-crystal-v1.webp`);texture.colorSpace=THREE.SRGBColorSpace;mirrorCrystalTextures.set(key,texture);}
+ const parts=[];
+ for(const o of obstacles){
+  const sprite=new THREE.PlaneGeometry(4.25,4.25);if(camera)sprite.applyQuaternion(camera.quaternion);sprite.translate(o.x,1.55,o.z);parts.push(sprite);
+ }
+ const geometry=mergeGeometries(parts);parts.forEach(g=>g.dispose());const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.06,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});const mesh=new THREE.Mesh(geometry,material);mesh.castShadow=false;mesh.receiveShadow=false;parent.add(mesh);
+}
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const AXIS_Y=new THREE.Vector3(0,1,0);
@@ -44,17 +69,16 @@ export function reflectMirrorPanels(previous,next,dir,panels=MIRROR_PANELS,paddi
 }
 
 export function createMirrorPanels(scene){
- const geometry=new THREE.OctahedronGeometry(.26,0),material=new THREE.MeshBasicMaterial({color:0xd3ccff,transparent:true,opacity:.64,depthWrite:false,toneMapped:false,blending:THREE.AdditiveBlending}),shardsPerPanel=7;
- const mesh=new THREE.InstancedMesh(geometry,material,MIRROR_PANELS.length*shardsPerPanel),matrix=new THREE.Matrix4(),quaternion=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();mesh.name='mirror-projectile-panels';mesh.castShadow=false;mesh.receiveShadow=false;
- let index=0;
+ const geometry=new RoundedBoxGeometry(1,1,1,1,.12),material=new THREE.MeshBasicMaterial({color:0x9cdef0,transparent:true,opacity:.47,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const trimGeometry=new THREE.BoxGeometry(1,1,1),trimMaterial=new THREE.MeshBasicMaterial({color:0xe9d5a8,toneMapped:false});
+ const mesh=new THREE.InstancedMesh(geometry,material,MIRROR_PANELS.length),trim=new THREE.InstancedMesh(trimGeometry,trimMaterial,MIRROR_PANELS.length*2),matrix=new THREE.Matrix4(),quaternion=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();mesh.name='mirror-projectile-panels';mesh.castShadow=false;mesh.receiveShadow=false;trim.castShadow=false;trim.receiveShadow=false;
+ let index=0,trimIndex=0;
  for(const panel of MIRROR_PANELS){
-  const alongX=panel.w>panel.d,long=alongX?panel.w:panel.d;quaternion.setFromAxisAngle(AXIS_Y,alongX?0:Math.PI/2);
-  for(let i=0;i<shardsPerPanel;i++){
-   const t=i/(shardsPerPanel-1)-.5,center=1-Math.abs(t)*.35;position.set(panel.x+(alongX?t*long:0),.7+(i%2)*.08,panel.z+(alongX?0:t*long));scale.set(.38*center,.88*center,.25);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(index++,matrix);
-  }
+  quaternion.identity();position.set(panel.x,.78,panel.z);scale.set(panel.w+.12,1.55,panel.d+.12);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(index++,matrix);
+  for(const y of [.08,1.48]){position.set(panel.x,y,panel.z);scale.set(panel.w+.18,.055,panel.d+.18);matrix.compose(position,quaternion,scale);trim.setMatrixAt(trimIndex++,matrix);}
  }
- mesh.instanceMatrix.needsUpdate=true;mesh.visible=false;scene.add(mesh);
- return Object.freeze({mesh,geometries:Object.freeze([geometry]),materials:Object.freeze([material]),setActive(active){mesh.visible=Boolean(active);}});
+ mesh.instanceMatrix.needsUpdate=trim.instanceMatrix.needsUpdate=true;mesh.visible=trim.visible=false;scene.add(mesh,trim);
+ return Object.freeze({mesh,trim,geometries:Object.freeze([geometry,trimGeometry]),materials:Object.freeze([material,trimMaterial]),setActive(active){mesh.visible=trim.visible=Boolean(active);}});
 }
 
 // The clone is slower than the seed in open space, but it cuts toward the

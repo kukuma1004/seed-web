@@ -5,6 +5,7 @@ import {GARDEN_KEY,emptyGarden,gardenEffects,autoPlantSeeds,chooseBranch,setActi
 import {SHOP_KEY} from '../src/shop.js';
 import {SAVE_KEY} from '../src/run-save.js';
 import {ACT2_STORAGE_KEYS} from '../src/act2.js';
+import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 
@@ -49,6 +50,19 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.equal(snapshot.version,CLOUD_SCHEMA);assert.equal(snapshot.revision,4);assert.equal(snapshot.shop.coins,750);assert.equal(snapshot.garden.harvests,3);
  const encoded=JSON.stringify(snapshot);assert.ok(!encoded.includes('SECRET_TOKEN')&&!encoded.includes('PRIVATE_QUEUE')&&!encoded.includes('unrelated'));
  assert.ok(SYNC_KEYS.includes(SAVE_KEY)&&SYNC_KEYS.includes(ACT2_STORAGE_KEYS[SAVE_KEY]));
+ assert.ok(SYNC_KEYS.includes(MIRROR_CHECKPOINT_KEY)&&SYNC_KEYS.includes(MIRROR_RECORD_KEY));
+}
+
+// The hundred-floor tower keeps its ten-floor entry across devices. A later
+// completion tombstone must beat an older copy of that checkpoint.
+{
+ const phone=memory(),pc=memory(),entry={floor:31,hp:63,levels:{reflect:3},forms:{},rules:['reflect'],mutated:['reflect'],choicesTaken:30,choiceKills:0,kills:200,elapsed:900};
+ assert.equal(writeMirrorCheckpoint(phone,entry,5000),true);
+ let merged=mergeCloudSnapshots(collectCloudSnapshot(pc,{revision:2}),collectCloudSnapshot(phone,{revision:3}),{prefer:'local'});
+ applyCloudSnapshot(pc,merged);assert.equal(readMirrorCheckpoint(pc)?.floor,31);
+ clearMirrorCheckpoint(phone,8000);
+ merged=mergeCloudSnapshots(collectCloudSnapshot(pc,{revision:4}),collectCloudSnapshot(phone,{revision:5}),{prefer:'local'});
+ applyCloudSnapshot(pc,merged);assert.equal(readMirrorCheckpoint(pc),null);
 }
 
 // A remote save wins ordinary conflicting state, while discoveries and entitlements are unioned.

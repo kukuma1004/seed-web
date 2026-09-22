@@ -1,12 +1,16 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {MIRROR_ARENA,MIRROR_BURST,MIRROR_PANELS,MIRROR_PROJECTILE_BASE_SPEED,mirrorAttackSequence,mirrorProjectileSpeed,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
+import {MIRROR_ARENA,MIRROR_BURST,MIRROR_PANELS,MIRROR_PROJECTILE_BASE_SPEED,mirrorAttackSequence,mirrorFloorObstacles,mirrorProjectileSpeed,mirrorSteering,mirrorVolley,reflectMirrorPanels,tickMirrorFighter} from '../src/mirror-fighter.js';
 import {mirrorPatternPlan} from '../src/mirror-trial.js';
 
 assert.equal(MIRROR_ARENA.shape,'circle');
 assert.equal(MIRROR_ARENA.radius,13,'기존 7.6 원형방보다 넓은 도주 공간');
 assert.ok(Math.hypot(MIRROR_ARENA.start.x,MIRROR_ARENA.start.z)>6,'전투 시작부터 생각할 거리 확보');
+assert.equal(mirrorFloorObstacles(10).length,0);
+assert.equal(mirrorFloorObstacles(11).length,2);
+assert.equal(mirrorFloorObstacles(31).length,3);
+assert.equal(mirrorFloorObstacles(61).length,4);
 
 const open=mirrorSteering({mirrorX:0,mirrorZ:-5,playerX:0,playerZ:5,strafeSign:1});
 assert.ok(open.z>0,'멀리 있는 씨앗에게 접근');

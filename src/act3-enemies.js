@@ -25,14 +25,27 @@ const craft=(kind)=>{
  return merge(p);
 };
 
+// A tapered hot core with a thin pink rim reads as hostile fire even without bloom.
+// Tail, rim and core are merged once; each projectile remains one shared mesh.
+const skyBolt=(boss=false)=>{
+ const radius=boss?.20:.16,parts=[];
+ parts.push(tint(new THREE.SphereGeometry(radius,8,5).scale(.74,.62,1.65),0xffeff8));
+ // A thicker rim survives the low-resolution mobile render without bloom;
+ // it stays joined to the pale head instead of reading as a second tiny ring.
+ parts.push(tint(new THREE.TorusGeometry(radius*1.04,radius*.22,4,12).rotateX(Math.PI/2).scale(.78,1,1.5),boss?0xff64d3:0xff6398));
+ parts.push(tint(new THREE.ConeGeometry(radius*.53,boss?1.18:.92,6).rotateX(-Math.PI/2).translate(0,0,boss?-.64:-.5),boss?0xc76faa:0xcc647f));
+ parts.push(tint(new THREE.ConeGeometry(radius*.29,.63,5).rotateX(-Math.PI/2).translate(0,.018,-.36),0xffbed6));
+ return merge(parts);
+};
+
 export const ACT3_GEOMETRIES=Object.freeze({
  scout:craft('scout'),diver:craft('diver'),bomber:craft('bomber'),carrier:craft('carrier'),warden:craft('warden'),boss:craft('boss'),
- tellRing:new THREE.RingGeometry(.78,1,24),tellLine:new THREE.PlaneGeometry(.22,11),bolt:merge([tint(new THREE.OctahedronGeometry(.24,0).scale(.65,.65,1.45),0xd7f7ff),tint(new THREE.ConeGeometry(.12,.65,5).rotateX(-Math.PI/2).translate(0,0,.45),0x66d9ff)]),
- bossBolt:merge([tint(new THREE.OctahedronGeometry(.29,0).scale(.72,.72,1.42),0xff9cf4),tint(new THREE.TorusGeometry(.27,.045,4,12).rotateX(Math.PI/2),0x8deaff)])
+ tellRing:new THREE.RingGeometry(.935,1,32),tellLine:new THREE.PlaneGeometry(.075,11),bolt:skyBolt(),
+ bossBolt:skyBolt(true)
 });
 export const ACT3_MATERIALS=Object.freeze({
  craft:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.46,metalness:.18,emissive:0x132e38,emissiveIntensity:.38}),
- warning:new THREE.MeshBasicMaterial({color:0xffa65c,transparent:true,opacity:.68,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
+ warning:new THREE.MeshBasicMaterial({color:0xffa65c,transparent:true,opacity:.48,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
  bossWarning:new THREE.MeshBasicMaterial({color:0xe175ff,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
  bolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),bossBolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false})
 });
