@@ -1152,15 +1152,25 @@ function showDeveloperLab(){
 }
 // 보관함·가져가기를 한 줄로("작은 물약 3 · 다시 싹 1"). 비어 있으면 빈 문자열.
 const itemCounts=counts=>STASH_ORDER.filter(id=>counts?.[id]).map(id=>`${ITEMS[id].name} ${counts[id]}`).join(' · ');
-// 개발자 후원(실제 결제). 공개 전(SUPPORT_RELEASED=false)에는 개발 서버의 가짜 결제(?billing=mock)에서만 보인다.
+// 개발자 후원(실제 결제). 공개 전(SUPPORT_RELEASED=false)에는 개발 서버의 가짜 결제(?billing=mock)와
+// 안드로이드 앱의 관리자 계정(라이선스 테스터로 결제 시험)에서만 보인다.
 const billing=createBilling();
-let supportBusy=false,supportRecovered=false;
-const supportVisible=()=>SUPPORT_RELEASED||billing.status==='mock';
+let supportBusy=false,supportRecovered=false,supportCatalog=null,supportCatalogLoading=false,lastShopBack=showIntro;
+const supportCanPay=()=>billing.status==='ready'||billing.status==='mock';
+const supportVisible=()=>SUPPORT_RELEASED||billing.status==='mock'||(adminMode&&billing.status==='ready');
+// 스토어 가격표(구글 플레이에 등록된 상품만). 불러오면 열려 있는 상점을 다시 그린다.
+async function loadSupportCatalog(){
+ if(supportCatalog||supportCatalogLoading||!supportCanPay())return;supportCatalogLoading=true;
+ const list=await billing.products().catch(()=>[]);supportCatalogLoading=false;
+ supportCatalog=new Map(list.filter(p=>p?.id).map(p=>[p.id,p.priceLabel||'']));
+ if(document.querySelector('.shop-panel')&&!supportBusy)showShop(lastShopBack);
+}
 function supportSection(shop){
  if(!supportVisible())return '';
- const canPay=billing.status==='ready'||billing.status==='mock';
+ if(!supportCatalog)loadSupportCatalog();
+ const canPay=supportCanPay()&&Boolean(supportCatalog);
  const note=billing.status==='web'?'후원은 구글 플레이 안드로이드 앱에서 할 수 있어요.':billing.status==='not-ready'?'결제를 준비하고 있어요. 조금만 기다려 주세요.':billing.status==='mock'?'시험용 가짜 결제예요 · 돈이 나가지 않아요.':'구글 플레이로 결제돼요 · 받은 JP와 물약은 보관함에 바로 들어가요.';
- return `<section class="support-panel"><h3>개발자 후원하기</h3><p class="support-lead">재밌게 즐기셨다면 한 번 응원해 주세요. 고마운 마음으로 JP와 물약을 함께 드려요.</p><ul class="support-list">${SUPPORT_PRODUCTS.map(p=>{const room=supportRoom(shop,p);return `<li><button type="button" data-support="${p.id}" ${!canPay||supportBusy||!room.ok?'disabled':''}><span class="support-icon" aria-hidden="true">${p.icon}</span><span class="support-text"><strong>${escapeHtml(p.title)}</strong><small>${escapeHtml(supportRewardLines(p).join(' · '))}</small>${room.ok?'':`<small class="support-full">보관함이 가득 차서 지금은 받을 수 없어요</small>`}</span><b class="support-price">${supportPriceLabel(p)}</b></button></li>`;}).join('')}</ul><p class="support-note">${note} 결제·환불은 구글 플레이 정책을 따라요.</p></section>`;
+ return `<section class="support-panel"><h3>개발자 후원하기</h3><p class="support-lead">재밌게 즐기셨다면 한 번 응원해 주세요. 고마운 마음으로 JP와 물약을 함께 드려요.</p><ul class="support-list">${SUPPORT_PRODUCTS.map(p=>{const room=supportRoom(shop,p),listed=!supportCatalog||supportCatalog.has(p.id),price=supportCatalog?.get(p.id)||supportPriceLabel(p);return `<li><button type="button" data-support="${p.id}" ${!canPay||supportBusy||!room.ok||!listed?'disabled':''}><span class="support-icon" aria-hidden="true">${p.icon}</span><span class="support-text"><strong>${escapeHtml(p.title)}</strong><small>${escapeHtml(supportRewardLines(p).join(' · '))}</small>${room.ok?'':`<small class="support-full">보관함이 가득 차서 지금은 받을 수 없어요</small>`}${listed?'':`<small class="support-full">스토어에 아직 준비되지 않은 상품이에요</small>`}</span><b class="support-price">${escapeHtml(price)}</b></button></li>`;}).join('')}</ul><p class="support-note">${supportCanPay()&&!supportCatalog?'스토어 가격을 불러오는 중… ':''}${note} 결제·환불은 구글 플레이 정책을 따라요.</p></section>`;
 }
 async function buySupport(back,id){
  if(supportBusy)return;
@@ -1168,18 +1178,18 @@ async function buySupport(back,id){
  if(!supportRoom(readShop(runStorage),product).ok){showShop(back,'보관함이 가득 차서 지금은 받을 수 없어요 · 물약을 조금 쓰고 다시 와 주세요');return;}
  supportBusy=true;showShop(back,'결제 창을 여는 중…');
  const purchase=await billing.purchase(id);
- if(!purchase?.ok){supportBusy=false;showShop(back,purchase?.reason==='cancelled'?'결제를 취소했어요':'결제를 마치지 못했어요 · 돈이 나갔다면 앱을 다시 켜면 받을 수 있어요');return;}
+ if(!purchase?.ok){supportBusy=false;if(purchase?.reason==='owned'){supportRecovered=false;recoverSupport();}showShop(back,purchase?.reason==='cancelled'?'결제를 취소했어요':purchase?.reason==='pending'?'결제가 대기 중이에요 · 결제가 끝나면 앱을 다시 켤 때 받아요':purchase?.reason==='owned'?'마무리되지 않은 결제가 있어 먼저 받는 중이에요':'결제를 마치지 못했어요 · 돈이 나갔다면 앱을 다시 켜면 받을 수 있어요');return;}
  const result=await completeSupportPurchase(runStorage,billing,purchase);supportBusy=false;
  showShop(back,result.status==='granted'?`${product.icon} 고마워요! ${supportRewardLines(product).join(' · ')}를 보관함에 넣었어요`:result.status==='duplicate'?'이미 받은 결제예요':'결제는 됐지만 아직 못 받았어요 · 보관함을 비우고 앱을 다시 켜면 받아요');
 }
 // 앱을 켤 때 한 번: 지난번에 지급이 끝나지 않은 결제(앱이 결제 직후 꺼진 경우)를 마무리한다.
 async function recoverSupport(){
- if(supportRecovered||!(billing.status==='ready'||billing.status==='mock'))return;supportRecovered=true;
+ if(supportRecovered||!supportCanPay()||!(SUPPORT_RELEASED||adminMode||billing.status==='mock'))return;supportRecovered=true;
  const granted=await recoverSupportPurchases(runStorage,billing);
- if(granted.length)$('#toast').textContent=`지난 후원 ${granted.length}건을 보관함에 넣었어요 · 고마워요!`;
+ if(granted.length){$('#toast').textContent=`지난 후원 ${granted.length}건을 보관함에 넣었어요 · 고마워요!`;if(document.querySelector('.shop-panel'))showShop(lastShopBack);}
 }
 function showShop(back=showIntro,message=''){
- mode='ready';touch.reset();keys.clear();
+ lastShopBack=back;mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic+10>SHOP_STOCK_MAX;
  // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.

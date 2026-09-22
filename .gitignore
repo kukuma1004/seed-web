@@ -35,6 +35,7 @@ tools/*
 !tools/touch-input-test.mjs
 !tools/audio-test.mjs
 !tools/second-fusion-test.mjs
+!tools/support-test.mjs
 !tools/themes-test.mjs
 !tools/run-save-test.mjs
 !tools/forms-test.mjs

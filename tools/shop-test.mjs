@@ -54,7 +54,7 @@ assert.deepEqual(Object.keys(STASH_ITEMS),['potion','tonic','wind','shell','spro
  writeShop(s,{...readShop(s),stash:{tonic:0,sprout:3},carry:{tonic:0,sprout:3}});
  assert.equal(readShop(s).carry.sprout,1,'다시 싹은 한 판에 1개만');
  assert.deepEqual(claimCarry(s),{sprout:1});assert.equal(readShop(s).stash.sprout,2);
-assert.equal(STASH_ITEMS.sprout.max,3);
+assert.equal(STASH_ITEMS.sprout.max,10,'다시 싹 보관 최대 10(9/22)');
  assert.equal(stashTotal(readShop(s)),2);assert.equal(carryTotal(readShop(s)),1);
 }
 
@@ -76,7 +76,7 @@ assert.equal(STASH_ITEMS.sprout.max,3);
  stashItem(s,'potion',1);stashItem(s,'shell',1);
  assert.equal(setCarry(s,'wind',1).carry.wind,1);
  assert.deepEqual(claimCarry(s),{wind:1});assert.equal(readShop(s).stash.wind,0);
- assert.equal(stashItem(s,'sprout',99).shop.stash.sprout,3);
+ assert.equal(stashItem(s,'sprout',99).shop.stash.sprout,10);
  assert.equal(stashItem(s,'unknown',1).stored,0);
 }
 
@@ -92,11 +92,11 @@ assert.equal(STASH_ITEMS.sprout.max,3);
 // 9/22 잦은 패치 사과 선물: 보스 물약 4종 한 세트가 한 번에, 한 번만. 이미 가득 찬 칸은 넘치지 않는다.
 {
  const s=memory(),set={potion:1,wind:1,shell:1,sprout:1};
- writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:3},carry:{...readShop(s).carry,sprout:1}});
+ writeShop(s,{...readShop(s),stash:{...readShop(s).stash,sprout:10},carry:{...readShop(s).carry,sprout:1}});
  const gift=grantGiftSet(s,'sorry-boss-potions-20260922',set);
  assert.equal(gift.granted,true);
  for(const id of ['potion','wind','shell'])assert.equal(gift.shop.stash[id],1,id);
- assert.equal(gift.shop.stash.sprout,3,'다시 싹 보관 상한 3을 넘지 않는다');
+ assert.equal(gift.shop.stash.sprout,10,'다시 싹 보관 상한 10을 넘지 않는다');
  assert.equal(grantGiftSet(s,'sorry-boss-potions-20260922',set).granted,false,'같은 세트는 다시 주지 않는다');
  assert.equal(grantGiftSet(s,'empty-gift',{nope:3}).granted,false,'모르는 물건만 있으면 주지 않는다');
 }

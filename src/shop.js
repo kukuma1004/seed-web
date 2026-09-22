@@ -18,7 +18,8 @@ export const STASH_ITEMS=Object.freeze({
  tonic:Object.freeze({max:SHOP_STOCK_MAX,carryMax:TONIC_CARRY_MAX}),
  wind:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.wind.max}),
  shell:Object.freeze({max:SHOP_STOCK_MAX,carryMax:ITEMS.shell.max}),
- sprout:Object.freeze({max:3,carryMax:1})
+ // 2026-09-22 사용자: 다시 싹 보관 최대 3 → 10(선물·후원이 막히지 않게). 새 여정에 가져가는 건 여전히 1개.
+ sprout:Object.freeze({max:10,carryMax:1})
 });
 export const STASH_ORDER=Object.freeze(['potion','tonic','wind','shell','sprout']);
 const carryMax=id=>Math.min(STASH_ITEMS[id].carryMax??STASH_ITEMS[id].max,ITEMS[id]?.max??STASH_ITEMS[id].max);
