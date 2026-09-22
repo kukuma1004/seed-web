@@ -31,6 +31,11 @@ assert.equal(mirrorVolley('gravity',4)[0].gravity,true,'중력 조합은 플레�
  assert.match(main,/if\(follow\)damageEnemy\(e,shotDamage\*MIRROR_BURST\.followDamage/,'같은 연사의 이어지는 명중은 약하게');
  assert.match(main,/!p\.fragment&&!follow&&shots\.length<MAX_SHOTS/,'이어지는 명중은 분열 조각을 만들지 않는다');
  assert.match(main,/mirrorSession\?Math\.max\(viewLayout\.followZ,MIRROR_VIEW\.followZ\)/,'거울의 탑 카메라는 씨앗을 더 따라간다');}
+// 2026-09-22: 어떤 판이든 일시정지에서 나갈 수 있다(거울의 탑은 버튼이 숨겨져 있었고, 실험실은 저장 기록이 없어 멈춰 있었다).
+{const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+ assert.doesNotMatch(main,/\$\('#save-exit'\),Boolean\(mirrorSession\)/,'거울의 탑에서도 나가기 버튼이 보인다');
+ assert.match(main,/if\(developerRun\|\|mirrorSession\)\{leavePausedRun\(\);return;\}/,'저장하지 않는 판은 바로 나간다');
+ assert.match(main,/!readCheckpoint\(actStore\(\)\)&&!exitWithoutSaveArmed/,'저장 기록이 없어도 두 번째에는 나간다');}
 assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProjectileSpeed(1),'거울 탄환은 첫 층부터 빠르고 층에 따라 조금 더 빨라진다');
 
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),mirrorBoltSource=main.slice(main.indexOf('function mirrorBolt'),main.indexOf('function mirrorPerfectDodge'));

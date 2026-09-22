@@ -669,7 +669,18 @@ function saveLeaveState(){
  const entry=readCheckpoint(actStore()),safe=roomExitCheckpoint(entry,{hp,inventory});
  return safe?writeCheckpoint(actStore(),safe):false;
 }
-$('#save-exit').onclick=()=>{if(!readCheckpoint(actStore())){$('#toast').textContent='저장 기록이 없습니다. 이 브라우저의 저장 공간을 확인해 주세요.';return;}saveLeaveState();touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;showIntro();};
+// 일시정지 → 나가기. 2026-09-22 사용자: "저장이 안 되는데, 중간에 못 끄네" — 거울의 탑은 버튼이 숨겨져 있었고,
+// 개발자 실험실·연습장은 저장 기록이 없어 눌러도 안내만 뜨고 나가지지 않았다. 이제 어떤 판이든 나갈 수 있다.
+// 저장하는 판: 방 입구 저장으로 나간다. 저장하지 않는 판(거울의 탑·실험실·연습장): 저장 없이 바로 나간다.
+// 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
+let exitWithoutSaveArmed=false;
+function saveExitLabel(){return mirrorSession?'거울의 탑에서 나가기 · 이 도전은 저장되지 않아요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
+function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
+$('#save-exit').onclick=()=>{
+ if(developerRun||mirrorSession){leavePausedRun();return;}
+ if(!readCheckpoint(actStore())&&!exitWithoutSaveArmed){exitWithoutSaveArmed=true;$('#toast').textContent='저장 기록이 없어 이번 판은 이어할 수 없어요 · 한 번 더 누르면 저장하지 않고 나가요';$('#save-exit').textContent=saveExitLabel();return;}
+ saveLeaveState();leavePausedRun();
+};
 function wave(){
  audio.setScene(mirrorSession||inAustinRoom()?'boss':'combat');
  for(const f of fallen)releaseEnemy(f.e);fallen.length=0;potionCD=0;relicRewardPending=false;
@@ -1404,7 +1415,7 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
    :'가져온 물약 없이 출발해요 · 출발 상점에서 준비할 수 있어요';
  }}
 
-function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused)pauseBuild.show(levels,heldForms);else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
+function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused){exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms);}else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
 window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
 document.addEventListener('visibilitychange',()=>{if(document.hidden)saveLeaveState();if(document.hidden&&!paused&&(mode==='playing'||mode==='evolving'))togglePause();if(!document.hidden)enforceCurrentWebAccess().catch(()=>{});});
@@ -1491,7 +1502,7 @@ function presentFrame(time){
  contactShadows.update(player,enemies,fallen);player.userData.updateEvolutionArt?.(time,activeGauge.plan?.state==='OVERDRIVE');
  trackOverhead();
  const hudInterval=1/(mobileDevice?20:30),hudDue=time-hudLast>=hudInterval||mode!==hudMode||paused!==hudPaused;if(!hudDue)return;hudLast=time;hudMode=mode;hudPaused=paused;
- const dm=dashMeter(dashState),dashExit=!mirrorSession&&canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm,{exit:dashExit});setHidden($('#save-exit'),Boolean(mirrorSession)||!(paused&&(mode==='playing'||mode==='evolving')));
+ const dm=dashMeter(dashState),dashExit=!mirrorSession&&canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm,{exit:dashExit});setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
  const dashPips=$('#dash-pips'),dashPipKey=`${dm.charges}/${dm.maxCharges}`;setHidden(dashPips,dm.maxCharges<2);if(dashPips&&dashPips.__key!==dashPipKey){dashPips.innerHTML=Array.from({length:dm.maxCharges},(_,i)=>`<i class="${i<dm.charges?'ready':''}"></i>`).join('');dashPips.__key=dashPipKey;}
  // 메뉴·정원 화면에서는 전투 HUD를 감춘다(정원이 그대로 보이게).
  const menuMode=['ready','garden','training-setup','training-result','ranking','discoveries','notes','maintenance','gift'].includes(mode);
