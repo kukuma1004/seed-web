@@ -5,7 +5,17 @@ import {SUPPORT_PRODUCTS,supportProduct,supportPriceLabel,grantSupportPurchase} 
 // - 안드로이드: 구글 플레이 결제(@capgo/native-purchases)를 붙여 'ready'. plugin:null이면 'not-ready'.
 // - 개발 서버(vite dev)에서 주소에 ?billing=mock: 돈이 나가지 않는 가짜 결제(시험용). 배포판에는 절대 안 켜진다.
 // 구매 한 건 = {productId, orderId, token}. orderId는 구글 주문 번호(GPA.…), token은 소모 처리에 쓰는 값.
-export function createBilling({native=Boolean(globalThis.Capacitor?.isNativePlatform?.()),dev=Boolean(import.meta.env?.DEV),search=globalThis.location?.search||'',plugin=native?googlePlayPlugin():null}={}){
+// 주의(2026-09-22 사고): 매개변수 기본값 안에 ?.() 를 쓰면 빌드(esbuild)가 변수 범위를 잘못 옮겨
+// 배포판에서 'ReferenceError: s is not defined'로 첫 화면이 멈췄다. 기본값 계산은 함수 몸통에서 평범하게 한다.
+function nativePlatform(){
+ const capacitor=globalThis.Capacitor;
+ return Boolean(capacitor&&typeof capacitor.isNativePlatform==='function'&&capacitor.isNativePlatform());
+}
+export function createBilling(options={}){
+ const native=options.native===undefined?nativePlatform():Boolean(options.native);
+ const dev=options.dev===undefined?Boolean(import.meta.env&&import.meta.env.DEV):Boolean(options.dev);
+ const search=options.search===undefined?((globalThis.location&&globalThis.location.search)||''):String(options.search);
+ const plugin=options.plugin===undefined?(native?googlePlayPlugin():null):options.plugin;
  if(dev&&new URLSearchParams(search).get('billing')==='mock')return mockBilling();
  if(native&&plugin)return pluginBilling(plugin);
  const status=native?'not-ready':'web';
