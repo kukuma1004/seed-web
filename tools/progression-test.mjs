@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {LAWS} from '../src/laws.js';
-import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,totalLevel,upgradeLine} from '../src/progression.js';
+import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,totalLevel,upgradeLine,baseShotLevels,fuse,canFuse} from '../src/progression.js';
+import {FORMS} from '../src/forms.js';
 import {validCheckpoint} from '../src/run-save.js';
 
 // Choices get further apart, never closer.
@@ -66,4 +67,19 @@ assert.equal(validCheckpoint({...base,levels:{reflect:1.5}}),false);
 assert.equal(validCheckpoint({...base,levels:[1,2]}),false);
 assert.equal(validCheckpoint({...base,choicesTaken:-1}),false);
 assert.equal(validCheckpoint({...base,hp:103}),true,'garden max-health growth remains resumable');
+// 2026-09-22 사용자 결정: 관통을 조합·진화에 넣어도 기본 탄 관통과 치명타 확률은 남는다(다른 법칙은 진화로 넘어감).
+{
+ const pierceFusion=Object.entries(FORMS).find(([,f])=>f.requires?.length===2&&f.requires.includes('pierce')&&!f.twin);
+ assert.ok(pierceFusion,'관통이 든 1차 융합이 있다');
+ const [fid,form]=pierceFusion,other=form.requires.find(id=>id!=='pierce');
+ const levels=new Map([['pierce',3],[other,4]]),forms=new Map();
+ assert.ok(canFuse(levels,fid)&&fuse(levels,forms,fid),`${form.name} 융합`);
+ assert.equal(levels.has('pierce'),false,'슬롯에서는 관통이 빠진다');
+ const shot=baseShotLevels(levels,forms);
+ assert.equal(shot.get('pierce'),forms.get(fid),'기본 탄 관통은 진화 레벨로 남는다');
+ assert.equal(shot.has(other),false,'다른 법칙은 기본 탄에서 빠진다(진화로 넘어감)');
+ assert.ok(lawStats(shot).critChance>=lawStats(new Map([['pierce',3]])).critChance,'치명타 확률이 사라지지 않고 유지되거나 오른다');
+ assert.equal(baseShotLevels(new Map([['pierce',2]]),forms).get('pierce'),2,'관통을 슬롯에도 들고 있으면 그 레벨 그대로');
+ assert.equal(baseShotLevels(new Map([['split',2]]),new Map()).has('pierce'),false,'관통이 없으면 생기지 않는다');
+}
 console.log('Progression: widening choice gauge, stacked uncapped levels, full-slot upgrades, capped counts, save migration passed.');

@@ -164,6 +164,13 @@ export function fuseSecond(forms,option){
  forms.set(option.id,(forms.get(option.id)||0)+gained);return true;
 }
 // Every law the seed carries, including those living inside its forms, at the strongest level seen.
+// 기본 씨앗 탄이 쓰는 법칙 레벨(2026-09-22 사용자 결정): 관통은 조합·진화에 들어가도 기본 탄에 남는다
+// (관통 수와 치명타 확률 그대로, 레벨은 그 진화의 레벨). 다른 법칙은 지금처럼 진화에 넘어가 기본 탄에서 빠진다.
+export function baseShotLevels(levels,forms=new Map()){
+ if((levels.get('pierce')||0)>0)return levels;
+ const kept=effectiveLevels(levels,forms).get('pierce')||0;
+ return kept?new Map([...levels,['pierce',kept]]):levels;
+}
 export function effectiveLevels(levels,forms=new Map()){
  const merged=new Map(levels);
  for(const [id,level] of forms)for(const law of ALL_FORMS[id]?.requires||[])merged.set(law,Math.max(merged.get(law)||0,level));
