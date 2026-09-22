@@ -94,7 +94,7 @@ const CATALOG_FIRST_BY_PAIR=new Map(FIRST_FUSIONS.map(f=>[pairKey(f.laws),f.id])
 const curatedSecond=(main,other,name,desc,strength,weakness,follow)=>{
  const a=CURATED_FORMS[main],b=CURATED_FORMS[other],entry=catalogSecondOf(CATALOG_FIRST_BY_PAIR.get(pairKey(a.requires)),CATALOG_FIRST_BY_PAIR.get(pairKey(b.requires)));
  return Object.freeze({id:entry.id,name,parts:Object.freeze([main,other]),main,followParent:other,requires:entry.laws,pair:`${a.name} + ${b.name}`,
-  desc,strength,weakness,passive:false,second:true,curated:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual,follow:Object.freeze({...follow})});
+  desc,strength,weakness,passive:Boolean(a.passive),second:true,curated:true,family:entry.family,sharedLaw:entry.sharedLaw,budget:entry.budget,visual:entry.visual,follow:Object.freeze({...follow})});
 };
 const CURATED_SECOND_LIST=[
  // 1묶음(공명형 5, 2026-09-22): 공개 1차 융합끼리, 역할이 겹치지 않게(줄 대상·근접 무리·제어·이동 보상·벽 활용 제어).
@@ -120,13 +120,26 @@ const CURATED_SECOND_LIST=[
  curatedSecond('blastlance','frostguard','눈꽃 창','폭발 창이 두 번 맞힐 때마다 맞은 자리에 눈꽃이 터져 둘레를 얼립니다.','보스처럼 한 적을 계속 맞힐 때 눈꽃이 자주 터짐','옆으로 흩어진 적에게는 창이 덜 맞고, 얼림은 보스·문지기에게 통하지 않음',
   {effect:'nova',trigger:'nth',every:2,cooldown:.5,damage:12,radius:1.3,slow:.8,law:'frost',surgeEvery:1,line:'맞은 자리 눈꽃'}),
  curatedSecond('stormanchor','comethalo','혜성 닻','뇌우 닻이 적을 끌어 모으고, 네 번 맞힐 때마다 모인 자리에 혜성이 터집니다.','끌어 모은 무리를 한 번에 크게 터뜨림','한 적에게는 느리고, 문지기·보스는 끌려오지 않음',
-  {effect:'blast',trigger:'nth',every:4,cooldown:1,damage:21,radius:1.7,law:'burst',surgeEvery:2,line:'모인 자리 혜성'})
+  {effect:'blast',trigger:'nth',every:4,cooldown:1,damage:21,radius:1.7,law:'burst',surgeEvery:2,line:'모인 자리 혜성'}),
+ // 3묶음(공명 1 · 교차 4, 2026-09-23): 아직 주 공격으로 안 쓴 공전·연쇄 무기를 살리고, 주 공격 무기는 전체 묶음에서 최대 두 번까지.
+ // 역할: 단일 대상 1 · 다수 제어 1 · 다수 정리 1 · 이동 보상 1 · 벽 활용 1. (공전 무기를 주 공격으로 쓰면 궤도가 돌지 않아 이번엔 뺐다.)
+ curatedSecond('returningpetals','chainburst','꽃비 폭죽','오가는 꽃잎이 세 번 벨 때마다 그 자리에서 작은 폭발이 연달아 터집니다.','보스처럼 한 적을 오래 벨 때 폭발이 계속 쌓임','꽃잎이 흩어진 무리 사이로 빠지면 폭발이 드묾',
+  {effect:'blast',trigger:'nth',every:3,cooldown:.45,damage:16,radius:1.2,law:'burst',surgeEvery:1,line:'벤 자리 폭죽'}),
+ curatedSecond('chainburst','frostbloom','서리 연폭','연쇄 폭발이 네 번 터질 때마다 그 자리에 서리가 번져 무리를 얼립니다.','몰려오는 무리를 터뜨리고 붙잡아 둠','한 적에게는 느리고, 얼림은 보스·문지기에게 통하지 않음',
+  {effect:'nova',trigger:'nth',every:4,cooldown:.9,damage:12,radius:1.8,slow:1,law:'frost',surgeEvery:2,line:'터진 자리 서리'}),
+ curatedSecond('lightningpetal','blastlance','꽃잎 폭뢰','번개 꽃잎이 세 번 맞힐 때마다 그 자리에서 창끝 폭발이 터집니다.','붙어 오는 무리를 연달아 터뜨림','사거리가 짧아 멀리 있는 적에게는 닿지 않음',
+  {effect:'blast',trigger:'nth',every:3,cooldown:.4,damage:14,radius:1.4,law:'burst',surgeEvery:1,line:'맞힌 자리 폭발'}),
+ curatedSecond('returnblade','frostguard','서리 칼날','돌아오는 칼날이 두 번 벨 때마다 그 자리에 서리가 번져 둘레를 얼립니다.','움직이며 칼날을 돌려받으면 지나간 길이 얼어붙음','제자리에 서 있으면 돌아오는 길이 짧아 서리가 드묾',
+  {effect:'nova',trigger:'return',every:2,cooldown:.35,damage:14,radius:1.4,slow:.9,law:'frost',surgeEvery:1,line:'돌아오는 길 서리'}),
+ curatedSecond('frostkaleidoscope','comethalo','혜성 만화경','벽을 튕기는 서리 만화경이 네 번 맞힐 때마다 그 자리에 혜성이 터집니다.','벽 많은 방에서 튕긴 자리마다 폭발','트인 방에서는 덜 튕기고, 한 번에 주는 피해는 낮음',
+  {effect:'blast',trigger:'nth',every:4,cooldown:.7,damage:18,radius:1.5,law:'burst',surgeEvery:2,line:'튕긴 자리 혜성'})
 ];
 export const SECOND_FORMS=Object.freeze(Object.fromEntries(CURATED_SECOND_LIST.map(f=>[f.id,f])));
 // 재융합 묶음. 그림·사용자 승인 전까지 live:false(선택지에 안 나오고, 실험실에서만 시험). 기록: combo-batches/
 export const SECOND_BATCHES=Object.freeze({
  '20260922-r1':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(0,5).map(f=>f.id))}),
- '20260922-r2':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(5,10).map(f=>f.id))})
+ '20260922-r2':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(5,10).map(f=>f.id))}),
+ '20260923-r3':Object.freeze({live:false,ids:Object.freeze(CURATED_SECOND_LIST.slice(10,15).map(f=>f.id))})
 });
 const HELD_SECOND=new Set(Object.values(SECOND_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
 export const isSecondHeldBack=id=>HELD_SECOND.has(id);

@@ -9,16 +9,20 @@ import {averageDps,bossDps} from './balance-sim.mjs';
 
 // 2026-09-22 손제작 재융합. 주 공격 = 부모 한쪽의 공격 그대로, 후속 = 다른 부모의 대표 효과가 조건을 채울 때.
 // 1묶음(20260922-r1) 공명형 5: 두 부모가 법칙 하나를 공유. 2묶음(20260922-r2) 교차형 5: 네 법칙이 모두 다르다.
+// 3묶음(20260923-r3) 공명 1 · 교차 4.
 const entries=Object.values(SECOND_FORMS);
-assert.equal(entries.length,10,'두 묶음 열 개');
+assert.equal(entries.length,15,'세 묶음 열다섯 개');
 const batchOf=id=>Object.entries(SECOND_BATCHES).find(([,b])=>b.ids.includes(id))?.[0];
-assert.deepEqual(Object.keys(SECOND_BATCHES),['20260922-r1','20260922-r2']);
+assert.deepEqual(Object.keys(SECOND_BATCHES),['20260922-r1','20260922-r2','20260923-r3']);
 assert.ok(Object.values(SECOND_BATCHES).every(b=>b.ids.length===5),'묶음마다 다섯 개');
 assert.ok(entries.every(f=>batchOf(f.id)),'모든 재융합은 한 묶음에 속한다');
-assert.ok(entries.every(f=>f.curated&&(batchOf(f.id)==='20260922-r1'?f.family==='resonance':f.family==='convergence')),'1묶음은 공명형, 2묶음은 교차형');
-assert.equal(new Set(entries.map(f=>f.name)).size,10,'이름이 겹치지 않는다');
+assert.ok(entries.every(f=>f.curated&&(batchOf(f.id)==='20260922-r1'?f.family==='resonance':batchOf(f.id)==='20260922-r2'?f.family==='convergence':true)),'1묶음은 공명형, 2묶음은 교차형');
+assert.deepEqual(entries.filter(f=>batchOf(f.id)==='20260923-r3').map(f=>f.family).sort(),['convergence','convergence','convergence','convergence','resonance'],'3묶음은 공명 1 · 교차 4');
+assert.equal(new Set(entries.map(f=>f.name)).size,15,'이름이 겹치지 않는다');
 assert.ok(entries.every(f=>!f.name.includes('×')),'자동 생성식 "A × B" 이름이 아니다');
-assert.equal(new Set(entries.map(f=>f.main)).size,10,'주 공격 무기가 묶음끼리도 겹치지 않는다');
+// 주 공격 무기: 한 묶음 안에서는 겹치지 않고, 전체 묶음 통틀어 한 무기는 최대 두 번(공개 1차 융합이 20개뿐이라).
+for(const id of Object.keys(SECOND_BATCHES))assert.equal(new Set(SECOND_BATCHES[id].ids.map(sid=>SECOND_FORMS[sid].main)).size,5,`${id}: 묶음 안 주 공격 무기 중복 없음`);
+{const uses=new Map();for(const f of entries)uses.set(f.main,(uses.get(f.main)||0)+1);assert.ok([...uses.values()].every(n=>n<=2),'한 무기가 주 공격으로 세 번 이상 쓰이지 않는다');}
 for(const form of entries){
   assert.equal(form.parts.length,2,form.id);
   assert.ok(form.parts.every(id=>Object.hasOwn(FORMS,id)),`${form.id}: 두 부모는 공개 1차 융합`);
@@ -150,6 +154,20 @@ const byName=name=>entries.find(f=>f.name===name);
   assert.ok(combat.state().secondPhase>=1,'번개 꽃잎');assert.ok(calls.some(c=>c.follow&&c.kind==='lightningpetal'));combat.dispose();
 }
 
+// 3묶음: 서리 칼날은 돌아오는 길에만, 나머지는 N번째 적중마다.
+{
+  const form=byName('서리 칼날'),{combat,calls,foes}=arena(form,[[0,-2.5],[.4,-3.2],[-.4,-3.6]]);
+  combat.fire(new V(),new V(0,0,-1));step(combat,.4);
+  assert.equal(combat.state().secondPhase,0,'나가는 길에는 서리 없음');
+  step(combat,1.6);
+  assert.ok(combat.state().secondPhase>=1&&calls.some(c=>c.follow&&c.kind==='frostguard'),'돌아오는 길에 서리');assert.ok(foes.some(e=>e.slow>0));combat.dispose();
+}
+for(const [name,follow] of [['꽃비 폭죽','chainburst'],['서리 연폭','frostbloom'],['꽃잎 폭뢰','blastlance'],['혜성 만화경','comethalo']]){
+  const form=byName(name),{combat,calls}=arena(form,Array.from({length:7},(_,i)=>[Math.cos(i*.9)*1.1,-2.4+Math.sin(i*.9)*1.1]));
+  for(let i=0;i<12&&combat.state().secondPhase===0;i++){combat.fire(new V(),new V(0,0,-1));step(combat,.7);}
+  assert.ok(combat.state().secondPhase>=1,`${name}: 후속이 터진다`);assert.ok(calls.some(c=>c.follow&&c.kind===follow&&c.indirect),`${name}: 후속 적중은 ${follow} 이름·간접 피해`);combat.dispose();
+}
+
 // 밸런스: 같은 시드·세 전장. 재융합은 두 부모를 곱하지 않고 주 공격보다 조금(1.05~1.4배) 세며,
 // 기존 1차 융합 중앙값 대비 다수전 0.7~2.2배 안(1차 융합 상한 2.1배와 비슷한 선).
 const median=l=>{const s=[...l].sort((a,b)=>a-b),m=s.length/2;return s.length%2?s[Math.floor(m)]:(s[m-1]+s[m])/2;};
@@ -157,10 +175,10 @@ const tactical=new Set(['gravitymirror','chainburst','blastlance','frostkaleidos
 for(const level of [4,9]){
   const middle=median(Object.keys(CURATED_FORMS).filter(id=>!tactical.has(id)).map(id=>averageDps(id,level,{shots:CURATED_FORMS[id].passive})));
   for(const form of entries){
-    const dps=averageDps(form.id,level),main=averageDps(form.main,level);
+    const dps=averageDps(form.id,level,{shots:form.passive}),main=averageDps(form.main,level,{shots:CURATED_FORMS[form.main].passive});
     assert.ok(dps>=middle*.7&&dps<=middle*2.2,`Lv${level} ${form.name}: 다수전 ${(dps/middle).toFixed(2)}배가 재융합 범위 밖`);
     if(form.follow.trigger!=='kill')assert.ok(dps>=main*1.05&&dps<=main*1.4,`Lv${level} ${form.name}: 주 공격 대비 ${(dps/main).toFixed(2)}배`);
     assert.ok(bossDps(form.id,level)<=bossDps(form.main,level)*1.35,`Lv${level} ${form.name}: 보스 피해가 너무 오름`);
   }
 }
-console.log('재융합 1·2묶음: 공명형 5·교차형 5·고정 ID·보류 게이트·두 칸 압축·저장, 주 공격+조건부 후속(한 번 던질 때 한 번·쓰러뜨릴 때·돌아오는 길·얼림·번개 잇기·모인 자리 폭발), 밸런스 범위 통과');
+console.log('재융합 1·2·3묶음: 공명형 5·교차형 5·섞음 5·고정 ID·보류 게이트·두 칸 압축·저장, 주 공격+조건부 후속(한 번 던질 때 한 번·쓰러뜨릴 때·돌아오는 길·얼림·번개 잇기·모인 자리 폭발), 밸런스 범위 통과');
