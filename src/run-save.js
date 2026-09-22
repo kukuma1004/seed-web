@@ -22,7 +22,7 @@ export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
 const validCount=v=>v===undefined||(Number.isInteger(v)&&v>=0&&v<100000);
 export function validCheckpoint(s){
- if(!validLevels(s)||!validCount(s?.choicesTaken)||!validCount(s?.choiceKills))return false;
+ if(!validLevels(s)||!validCount(s?.choicesTaken)||!validCount(s?.choiceKills)||!validCount(s?.banked))return false;
  if(s?.forms!==undefined){
   if(!s.forms||typeof s.forms!=='object'||Array.isArray(s.forms))return false;
   const entries=Object.entries(s.forms);

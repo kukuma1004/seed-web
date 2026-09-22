@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {LAWS} from '../src/laws.js';
-import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,totalLevel,upgradeLine,baseShotLevels,fuse,canFuse} from '../src/progression.js';
+import {SLOT_CAP,killsForChoice,levelOf,damageScale,lawStats,offerChoices,chooseLaw,levelsFromSave,levelsToSave,totalLevel,upgradeLine,baseShotLevels,fuse,canFuse,consumedUpgrades,FUSION_BONUS_KEEP} from '../src/progression.js';
 import {FORMS} from '../src/forms.js';
 import {validCheckpoint} from '../src/run-save.js';
 
@@ -84,5 +84,18 @@ assert.equal(validCheckpoint({...base,hp:103}),true,'garden max-health growth re
  // 9/22 버그로 기본 탄용 관통이 rules에 섞여 저장된 판: 레벨 기록이 없는 관통은 되살리지 않는다.
  assert.deepEqual([...levelsFromSave({rules:['frost','pierce','chain'],levels:{frost:2,chain:1},mutated:['frost','pierce']})],[['frost',2],['chain',1]]);
  assert.deepEqual([...levelsFromSave({rules:['pierce'],mutated:['pierce']})],[['pierce',2]],'레벨 기록이 없던 아주 옛 저장은 예전처럼');
+}
+// 2026-09-23 사용자 "조금은 딜이 나와야": 조합·진화로 빠지는 재료 법칙의 '모든 탄 피해' 강화는 절반이 남는다.
+{
+ assert.equal(FUSION_BONUS_KEEP,.5);
+ const before=new Map([['frost',2],['pierce',3],['chain',3]]);
+ assert.equal(damageScale(before),1.5,'빙결 2·관통 3·연쇄 3 = +50%');
+ const gain=consumedUpgrades(before,['pierce','chain']);assert.equal(gain,4);
+ const after=new Map([['frost',2]]);
+ assert.ok(Math.abs(damageScale(after)-1.1)<1e-9,'저금이 없으면 +10%로 떨어진다(예전)');
+ assert.ok(Math.abs(damageScale(after,gain)-1.3)<1e-9,'합친 두 법칙의 +40% 중 절반(+20%)이 남아 +30%');
+ assert.ok(damageScale(after,gain)<damageScale(before),'합쳐도 합치기 전보다 세지지는 않는다(진화 무기 자체가 따로 강해짐)');
+ assert.equal(consumedUpgrades(new Map([['split',1]]),['split','burst']),0,'Lv.1 법칙은 저금할 강화가 없다');
+ assert.equal(damageScale(new Map(),-5),1,'음수 저금은 무시');
 }
 console.log('Progression: widening choice gauge, stacked uncapped levels, full-slot upgrades, capped counts, save migration passed.');

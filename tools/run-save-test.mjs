@@ -20,6 +20,8 @@ assert.ok(writeCheckpoint(storage,s));
  assert.equal(roomExitCheckpoint(null,{hp:50,inventory:{}}),null);
 }
 assert.equal(validCheckpoint({...s,hp:0}),false);assert.equal(validCheckpoint({...s,stage:8}),false);
+// 조합 저금(모든 탄 피해 절반 유지, 9/23): 0 이상의 정수만. 옛 저장에는 없다.
+assert.equal(validCheckpoint({...s,banked:6}),true);assert.equal(validCheckpoint({...s,banked:-1}),false);assert.equal(validCheckpoint({...s,banked:1.5}),false);
 // 2026-09-22 신고: 칭호·정원 생명력 강화로 최대 생명력이 110을 넘으면 방 입구 저장이 무효가 되어 '저장하고 나가기'가 멈췄다.
 // 저장 상한은 실제로 오를 수 있는 최대 생명력(정원 +5%, 칭호 +20)보다 커야 한다.
 {

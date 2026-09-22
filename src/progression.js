@@ -14,7 +14,11 @@ export function totalUpgrades(levels){let n=0;for(const v of levels.values())n+=
 export function totalLevel(levels){let n=0;for(const v of levels.values())n+=v;return n;}
 
 // Every upgrade beyond the first level of any law adds 10% to all shot damage.
-export function damageScale(levels){return 1+.1*totalUpgrades(levels);}
+// 조합·진화로 재료 법칙이 슬롯에서 빠지면 그 법칙이 쌓은 +10%도 사라졌다. 2026-09-23 사용자: "조금은 딜이 나와야 액션감이 있지,
+// 적당한 밸런스를 맞춰봐" → 합치는 순간의 재료 강화 수를 '저금'(banked)해 두고 그 절반을 그 판 끝까지 남긴다.
+export const FUSION_BONUS_KEEP=.5;
+export function consumedUpgrades(levels,laws){let n=0;for(const law of laws||[])n+=Math.max(0,(levels.get(law)||0)-1);return n;}
+export function damageScale(levels,banked=0){return 1+.1*(totalUpgrades(levels)+FUSION_BONUS_KEEP*Math.max(0,Number(banked)||0));}
 
 export function lawStats(levels){
  const lv=id=>levelOf(levels,id);
