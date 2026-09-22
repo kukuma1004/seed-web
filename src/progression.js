@@ -95,8 +95,12 @@ export function chooseLaw(levels,id,forms=new Map()){
 // Saves before levels existed stored a mutated list: a mutated law was level two.
 export function levelsFromSave(save){
  const levels=new Map();
+ // 레벨 기록이 있는 저장에서 레벨이 없는(또는 0인) 법칙은 들고 있지 않은 법칙이다. 9/22 관통 유지 버그 때
+ // 기본 탄용 관통이 rules에 섞여 저장됐는데, 예전처럼 1레벨로 되살리면 없는 관통이 슬롯을 차지한다.
+ const recorded=save?.levels&&typeof save.levels==='object'&&Object.keys(save.levels).length>0;
  for(const id of save?.rules||[]){
   const stored=save?.levels?.[id];
+  if(recorded&&!(Number.isInteger(stored)&&stored>=1))continue;
   levels.set(id,Number.isInteger(stored)&&stored>=1?stored:(save?.mutated||[]).includes(id)?2:1);
  }
  return levels;

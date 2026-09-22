@@ -81,5 +81,8 @@ assert.equal(validCheckpoint({...base,hp:103}),true,'garden max-health growth re
  assert.ok(lawStats(shot).critChance>=lawStats(new Map([['pierce',3]])).critChance,'치명타 확률이 사라지지 않고 유지되거나 오른다');
  assert.equal(baseShotLevels(new Map([['pierce',2]]),forms).get('pierce'),2,'관통을 슬롯에도 들고 있으면 그 레벨 그대로');
  assert.equal(baseShotLevels(new Map([['split',2]]),new Map()).has('pierce'),false,'관통이 없으면 생기지 않는다');
+ // 9/22 버그로 기본 탄용 관통이 rules에 섞여 저장된 판: 레벨 기록이 없는 관통은 되살리지 않는다.
+ assert.deepEqual([...levelsFromSave({rules:['frost','pierce','chain'],levels:{frost:2,chain:1},mutated:['frost','pierce']})],[['frost',2],['chain',1]]);
+ assert.deepEqual([...levelsFromSave({rules:['pierce'],mutated:['pierce']})],[['pierce',2]],'레벨 기록이 없던 아주 옛 저장은 예전처럼');
 }
 console.log('Progression: widening choice gauge, stacked uncapped levels, full-slot upgrades, capped counts, save migration passed.');
