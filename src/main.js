@@ -1100,11 +1100,11 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
  const patchGift=grantGiftSet(runStorage,PATCH_GIFT,PATCH_GIFT_ITEMS);
  const adminRegift=adminMode&&!localAdminLab?grantGiftSet(runStorage,ADMIN_REGIFT,PATCH_GIFT_ITEMS):{granted:false};
  const chuseokGift=grantGiftSet(runStorage,CHUSEOK_GIFT,CHUSEOK_GIFT_ITEMS);
- if(chuseokGift.granted)cloud.syncNow().catch(()=>null);
+ if(chuseokGift.granted){chuseokGiftPending=true;cloud.syncNow().catch(()=>null);}
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
+ if(chuseokGiftPending&&firstGiftPopup('chuseok')){chuseokGiftPending=false;showChuseokGift();return;}
  if(betaBoosterGift.granted&&firstGiftPopup('beta')){showBetaBoosterGift();return;}
  if((sproutGift.granted||tonicGift.granted)&&firstGiftPopup('sorry')){showGift();return;}
- if(chuseokGift.granted&&firstGiftPopup('chuseok')){showChuseokGift();return;}
  if((patchGift.granted||adminRegift.granted)&&firstGiftPopup('patch')){showPatchGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
@@ -1240,6 +1240,7 @@ const SORRY_TONIC_GIFT='sorry-tonics-20260917';
 // 2026-09-22 사용자: "잦은 패치로 미안하니까 창고에 보스 4종 물약 1세트 주자" — 계정(보관함)마다 한 번.
 const PATCH_GIFT='sorry-boss-potions-20260922',PATCH_GIFT_ITEMS=Object.freeze({potion:1,wind:1,shell:1,sprout:1});
 const CHUSEOK_GIFT='chuseok-2026-boss-potions',CHUSEOK_GIFT_ITEMS=Object.freeze({potion:5,wind:5,shell:5,sprout:5});
+let chuseokGiftPending=false;
 // 2026-09-22 사용자(운영자): 사과 선물이 '가져가기'로 자동 설정돼 여정에 바로 들고 들어가 버렸다 → 운영자 계정에 한 번 더.
 const ADMIN_REGIFT='admin-regift-boss-potions-20260922';
 // 선물 창은 앱을 켤 때마다 종류별로 한 번만 띄운다(9/22 아이폰: '확인'을 눌러도 선물 창이 다시 떠 안 눌리는 것처럼 보였다 —
