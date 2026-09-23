@@ -7,19 +7,20 @@ export const AUSTIN_CLEAR_TITLE='정시를 정복한 자';
 export const AUSTIN_CLEAR_MOVE_SPEED=.1;
 export const ALWAYS_BEGINNER_TITLE='초심을 지킨 자';
 export const CODEX_TITLE='정원의 기록자';
+export const CODEX_COMPLETE_TITLE='정원의 완성자';
 export const FIRST_GARDEN_TITLE='첫 정원의 선구자';
 export const AUSTIN_MOVE_SPEED=.05;
 export const ALWAYS_BEGINNER_MAX_HP=10;
 // 항상초심을 열 번 이겨 2막을 완주한 씨앗(2026-09-21). 최대 생명력 +20이고 '초심을 지킨 자'의 +10과 더해지지 않는다.
 export const ALWAYS_CLEAR_TITLE='초심을 완성한 자';
 export const ALWAYS_CLEAR_MAX_HP=20;
-// 도감 칭호는 진화 10개를 발견하면 받는다. 그 뒤로 10개마다 다섯 능력(공격력·이동·치명타·쿨타임·최대 생명력)이
-// 모두 0.5%씩 오르고, 최대 10%까지 쌓인다(2026-09-21). 찐보스 성장점(능력마다 최대 5%)과 따로 더해진다.
-export const CODEX=Object.freeze({titleAt:10,step:10,statPerStep:.005,maxStat:.1});
+// 현재 도감은 153종이다. 10종마다 +0.5%에 30종마다 +0.5%를 더해
+// 150종에서 다섯 능력 모두 +10%에 닿는다. 정원 성장과는 따로 더한다.
+export const CODEX=Object.freeze({titleAt:10,step:10,statPerStep:.005,milestoneStep:30,milestoneBonus:.005,maxStat:.1,completeAt:153});
 
 const percent=v=>`${Math.round(v*1000)/10}%`;
 export function codexSteps(discovered=0){return discovered>=CODEX.titleAt?Math.floor(discovered/CODEX.step):0;}
-export function codexBonus(discovered=0){return Math.min(CODEX.maxStat,codexSteps(discovered)*CODEX.statPerStep);}
+export function codexBonus(discovered=0){return Math.min(CODEX.maxStat,codexSteps(discovered)*CODEX.statPerStep+Math.floor(Math.max(0,Number(discovered)||0)/CODEX.milestoneStep)*CODEX.milestoneBonus);}
 
 export function titleState({austin=false,austinClear=false,alwaysBeginner=false,alwaysClear=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
  const n=Math.max(0,Math.floor(Number(discovered)||0)),codex=n>=CODEX.titleAt,codexStat=codexBonus(n);
@@ -30,9 +31,10 @@ export function titleState({austin=false,austinClear=false,alwaysBeginner=false,
  if(alwaysClear)titles.push({id:'alwaysclear',name:ALWAYS_CLEAR_TITLE,perk:`항상초심 10회 완주 · 최대 생명력 +${ALWAYS_CLEAR_MAX_HP}${alwaysBeginner?` ('${ALWAYS_BEGINNER_TITLE}'와 겹치지 않음)`:''}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_CLEAR_MAX_HP});
  if(alwaysBeginner)titles.push({id:'alwaysbeginner',name:ALWAYS_BEGINNER_TITLE,perk:`최대 생명력 +${ALWAYS_BEGINNER_MAX_HP}${alwaysClear?` ('${ALWAYS_CLEAR_TITLE}'에 포함)`:''}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_BEGINNER_MAX_HP});
  if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 공격력·이속·치명타·순환·최대 생명력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
+ if(n>=CODEX.completeAt)titles.push({id:'codexcomplete',name:CODEX_COMPLETE_TITLE,perk:`도감 ${CODEX.completeAt}종 완성 · 기념 칭호`,shotSpeed:0,moveSpeed:0,maxHp:0});
  const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
- const goal=!codex?CODEX.titleAt:codexStat<CODEX.maxStat?(codexSteps(n)+1)*CODEX.step:null;
- const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:codex?`모든 능력 +${percent(CODEX.statPerStep)}`:`칭호 '${CODEX_TITLE}'`}:null;
+ const goal=!codex?CODEX.titleAt:codexStat<CODEX.maxStat?(codexSteps(n)+1)*CODEX.step:n<CODEX.completeAt?CODEX.completeAt:null;
+ const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:!codex?`칭호 '${CODEX_TITLE}'`:goal===CODEX.completeAt?`칭호 '${CODEX_COMPLETE_TITLE}'`:`모든 능력 +${percent(codexBonus(goal)-codexBonus(n))}`}:null;
  const sources=titles.filter(title=>title.shotSpeed>0).map(({id,name,shotSpeed})=>({id,name,shotSpeed}));
  // 오스틴 두 칭호의 이동 속도는 더하지 않고 큰 쪽 하나만 쓴다.
  const moveSpeedBonus=Math.max(austin?AUSTIN_MOVE_SPEED:0,austinClear?AUSTIN_CLEAR_MOVE_SPEED:0),shotSpeedBonus=0,maxHpBonus=Math.max(alwaysBeginner?ALWAYS_BEGINNER_MAX_HP:0,alwaysClear?ALWAYS_CLEAR_MAX_HP:0);
@@ -42,6 +44,7 @@ export function titleState({austin=false,austinClear=false,alwaysBeginner=false,
 // What changed when the discovery count went from `before` to `after`, as one line for the toast (null if nothing).
 export function codexNews(before,after){
  if(before<CODEX.titleAt&&after>=CODEX.titleAt)return `도감 ${CODEX.titleAt}개 달성 · 칭호 '${CODEX_TITLE}' · 모든 능력 +${percent(codexBonus(after))}`;
+ if(before<CODEX.completeAt&&after>=CODEX.completeAt)return `도감 ${CODEX.completeAt}종 완성 · 칭호 '${CODEX_COMPLETE_TITLE}' 획득${codexBonus(after)>codexBonus(before)?` · 모든 능력 +${percent(codexBonus(after))}`:''}`;
  const previous=codexBonus(before),next=codexBonus(after);
  if(next>previous)return `도감 ${after}개 달성 · 모든 능력 +${percent(next)}`;
  return null;

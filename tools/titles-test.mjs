@@ -10,25 +10,30 @@ const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 {const s=titleState({austin:true,discovered:3});assert.equal(s.titles.length,1);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.shotSpeed,1);assert.equal(s.shown,s.titles[0].name);}
 // Always Beginner: a flat +10 max HP that does not scale with garden percentages.
 {const s=titleState({alwaysBeginner:true,discovered:3});assert.equal(s.titles.length,1);assert.equal(s.titles[0].name,ALWAYS_BEGINNER_TITLE);assert.equal(s.maxHpBonus,ALWAYS_BEGINNER_MAX_HP);assert.equal(s.maxHp,110);}
-// 도감 칭호: 10개에서 받고, 10개마다 다섯 능력이 모두 +0.5%씩(최대 10%).
-for(const [n,steps] of [[9,0],[10,1],[19,1],[20,2],[55,5]]){assert.equal(codexSteps(n),steps,`${n}`);close(titleState({discovered:n}).codexBonus,Math.min(CODEX.maxStat,steps*CODEX.statPerStep));}
-close(codexBonus(9),0);close(codexBonus(10),.005);close(codexBonus(200),.1);close(codexBonus(500),.1,'상한 10%');
+// 도감 칭호: 10종마다 +0.5%, 30종마다 추가 +0.5%. 150/153종에서 +10%.
+for(const [n,steps] of [[9,0],[10,1],[19,1],[20,2],[55,5]])assert.equal(codexSteps(n),steps,`${n}`);
+for(const [n,bonus] of [[9,0],[10,.005],[20,.01],[29,.01],[30,.02],[55,.03],[60,.04],[90,.06],[120,.08],[149,.09],[150,.1],[153,.1],[200,.1],[500,.1]])close(titleState({discovered:n}).codexBonus,bonus);
 assert.equal(titleState({discovered:10}).titles[0].id,'codex');assert.equal(titleState({discovered:34}).next.need,6);
+assert.match(titleState({discovered:29,total:153}).next.reward,/\+1%/);
+assert.match(titleState({discovered:119,total:153}).next.reward,/\+1%/);
+assert.deepEqual(titleState({discovered:150,total:153}).next,{at:153,need:3,reward:"칭호 '정원의 완성자'"});
+assert.equal(titleState({discovered:153,total:153}).next,null);
+assert.ok(titleState({discovered:153,total:153}).titles.some(title=>title.id==='codexcomplete'&&title.shotSpeed===0&&title.moveSpeed===0&&title.maxHp===0));
 // Both titles add up, Austin is the one shown above the seed.
-{const s=titleState({austin:true,discovered:41});assert.equal(s.titles.length,2);assert.equal(s.shown,s.titles[0].name);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.codexBonus,4*CODEX.statPerStep);}
+{const s=titleState({austin:true,discovered:41});assert.equal(s.titles.length,2);assert.equal(s.shown,s.titles[0].name);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.codexBonus,.025);}
 // Equipping changes only the displayed name; every earned perk remains active.
 {const base=titleState({austin:true,discovered:50,equipped:'codex'}),other=titleState({austin:true,discovered:50,equipped:'austin'});assert.equal(base.equipped,'codex');assert.equal(base.shown,'정원의 기록자');close(base.codexBonus,other.codexBonus);close(base.moveSpeed,other.moveSpeed);assert.equal(base.shotSpeedSources.length,0,'도감 칭호는 더 이상 탄속을 올리지 않는다');}
 {const base=titleState({austin:true,alwaysBeginner:true,discovered:50,equipped:'austin'}),other=titleState({austin:true,alwaysBeginner:true,discovered:50,equipped:'alwaysbeginner'});assert.equal(other.shown,ALWAYS_BEGINNER_TITLE);assert.equal(base.maxHp,other.maxHp);assert.equal(other.maxHp,110);}
 // The old-board honor is shown first but never changes combat power.
-{const s=titleState({austin:true,discovered:41,badges:[FIRST_GARDEN_BADGE]});assert.equal(s.shown,FIRST_GARDEN_TITLE);assert.equal(s.titles.length,3);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.codexBonus,4*CODEX.statPerStep);}
+{const s=titleState({austin:true,discovered:41,badges:[FIRST_GARDEN_BADGE]});assert.equal(s.shown,FIRST_GARDEN_TITLE);assert.equal(s.titles.length,3);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.codexBonus,.025);}
 // No goal past what the codex holds.
 {const total=Object.keys(ALL_FORMS).length;assert.equal(titleState({discovered:total,total}).next,null);assert.ok(titleState({discovered:20,total}).next);}
-// 도감 칭호 효과는 +10%(도감 200개)에서 멈춘다. 도감이 더 늘어도 그대로다.
-close(titleState({discovered:200}).codexBonus,CODEX.maxStat);close(titleState({discovered:1090}).codexBonus,CODEX.maxStat);assert.equal(titleState({discovered:200,total:1090}).next,null);
+// 도감 칭호 효과는 +10%(도감 150개)에서 멈춘다. 도감이 더 늘어도 그대로다.
+close(titleState({discovered:150}).codexBonus,CODEX.maxStat);close(titleState({discovered:1090}).codexBonus,CODEX.maxStat);assert.equal(titleState({discovered:153,total:153}).next,null);
 // News only when a threshold is crossed.
 assert.match(codexNews(9,10),/칭호/);assert.match(codexNews(19,20),/1%/);assert.equal(codexNews(10,11),null);assert.equal(codexNews(5,6),null);
 assert.equal(codexNews(200,220),null,'상한 뒤에는 새 소식이 없다');
-assert.match(codexNews(79,80),/4%/);assert.equal(codexNews(209,210),null,'상한 뒤에는 더 오른다는 알림을 띄우지 않습니다.');
+assert.match(codexNews(29,30),/2%/);assert.match(codexNews(79,80),/5%/);assert.match(codexNews(149,150),/10%/);assert.match(codexNews(150,153),/정원의 완성자/);assert.doesNotMatch(codexNews(150,153),/능력/);
 // 2026-09-21: 오스틴 10회 완주 칭호. 이동 속도 +10%이고 '정시를 깨운 자' +5%와 더해지지 않는다.
 {
  const clearOnly=titleState({austinClear:true}),both=titleState({austin:true,austinClear:true}),austinOnly=titleState({austin:true});
@@ -47,4 +52,4 @@ assert.match(codexNews(79,80),/4%/);assert.equal(codexNews(209,210),null,'상한
  const all=titleState({austin:true,austinClear:true,alwaysBeginner:true,alwaysClear:true});
  assert.ok(Math.abs(all.moveSpeedBonus-.1)<1e-9&&all.maxHpBonus===20,'두 막의 완주 칭호는 서로 다른 능력이라 함께 적용된다');
 }
-console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 2막 완주 생명력 +20(중복 없음), 도감 10개에서 칭호와 10개마다 모든 능력 +0.5%(최대 10%), 목표·겹침·새 소식 통과');
+console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 2막 완주 생명력 +20(중복 없음), 도감 10종마다 +0.5%와 30종마다 추가 +0.5%(150종에서 최대 10%), 목표·겹침·새 소식 통과');

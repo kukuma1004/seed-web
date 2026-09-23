@@ -449,7 +449,7 @@ if(localInspection&&new URLSearchParams(location.search).has('gardenLab'))garden
 ]});
 let gardenFx=gardenEffects(garden),lastHarvest=null;
 const gardenStats=()=>gardenFx.mastery;
-// 도감 칭호: 10개마다 다섯 능력 모두 +0.5%(최대 +10%). 정원 숙련과 같은 자리에 더한다.
+// 도감 칭호: 10종마다 +0.5%, 30종마다 추가 +0.5%(150종에서 최대 +10%). 정원 숙련과 더한다.
 const codexRate=()=>mirrorSession?0:(seedTitle?.state().codexBonus||0);
 const masteryRate=id=>mirrorSession?0:((gardenStats()?.points?.[id]||0)*MASTERY_STEP)+codexRate();
 let seedTitle=null;
@@ -1038,14 +1038,14 @@ function showSeasonPause(){
  $('#season-ranking').onclick=()=>showRanking('online');$('#season-account').onclick=()=>showAccount();
 }
 // 프로필 '내 능력치'(2026-09-22 사용자: 도감을 채우면 모든 능력이 오른다는데 뭐가 오르는지 모르겠다).
-// 정원 숙련(보스를 이길 때 0.1%씩)·도감 칭호(10개마다 0.5%, 최대 10%)·칭호 보너스가 더해진 영구 능력을 다섯 줄로 보여 준다.
+// 정원 숙련·도감 칭호(10개마다 0.5%, 30개마다 추가 0.5%)·칭호 보너스를 다섯 줄로 보여 준다.
 function permanentStatsProfile(titleInfo){
  const pts=gardenStats()?.points||{},codex=titleInfo.codexBonus||0,pct=v=>`${Math.round(v*1000)/10}%`;
  const row=(id,extra=[])=>{const garden=(pts[id]||0)*MASTERY_STEP,total=garden+codex,parts=[garden?`정원 ${pct(garden)}`:'',codex?`도감 ${pct(codex)}`:'',...extra].filter(Boolean);
   return `<li><b>${escapeHtml(MASTERY[id].name)}</b><em>${total?'+'+pct(total):'0%'}</em><small>${escapeHtml(MASTERY[id].desc)}${parts.length?' · '+parts.join(' · '):''}</small></li>`;};
  const moveTitle=titleInfo.moveSpeedBonus?[`칭호 이속 ${pct(titleInfo.moveSpeedBonus)}`]:[];
  const hpNow=Math.round(100*(1+(pts.maxHp||0)*MASTERY_STEP+codex)+(titleInfo.maxHpBonus||0));
- return `<section class="stat-profile"><div class="title-profile-head"><strong>내 능력치</strong><span>최대 생명력 ${hpNow}</span></div><ul>${row('power')}${row('move',moveTitle)}${row('critical')}${row('cooldown')}${row('maxHp',titleInfo.maxHpBonus?[`칭호 +${titleInfo.maxHpBonus}`]:[])}</ul><small>정원 숙련은 보스를 이길 때마다 0.1~0.3%씩, 도감은 10개마다 다섯 능력 모두 +0.5%(최대 +10%). 거울의 탑에서는 적용되지 않아요.</small></section>`;
+ return `<section class="stat-profile"><div class="title-profile-head"><strong>내 능력치</strong><span>최대 생명력 ${hpNow}</span></div><ul>${row('power')}${row('move',moveTitle)}${row('critical')}${row('cooldown')}${row('maxHp',titleInfo.maxHpBonus?[`칭호 +${titleInfo.maxHpBonus}`]:[])}</ul><small>정원 숙련은 보스를 이길 때마다 0.1~0.3%씩, 도감은 10종마다 다섯 능력 +0.5%, 30종마다 추가 +0.5%(150종에서 최대 +10%). 거울의 탑에서는 적용되지 않아요.</small></section>`;
 }
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
