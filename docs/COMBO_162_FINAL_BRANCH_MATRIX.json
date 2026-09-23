@@ -1,0 +1,1484 @@
+{
+  "version": 1,
+  "source": "SEED_FINAL_EVOLUTIONS_72_DRAFT_v1.json",
+  "scope": "9 basic + 9 solo + 36 fusion + 72 fusion-and-solo + 36 solo twins = 162 identities",
+  "releaseRule": "design_only branches are never in the selection pool or player codex",
+  "pairs": [
+    {
+      "fusion": "comethalo",
+      "laws": [
+        "orbit",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-001",
+          "id": "final-comethalo-burst",
+          "status": "design_only",
+          "name": "궤도박격",
+          "conceptName": "궤도박격",
+          "fusion": "comethalo",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "공전하며 충전한 큰 씨앗이 한 발씩 출격해, 착탄 지점에서 크게 폭발한다.",
+          "proposedBehavior": "공전하며 충전한 큰 씨앗이 한 발씩 출격해, 착탄 지점에서 크게 폭발한다.",
+          "visual": "궤도에서 큰 핵이 빠져나가고, 착탄 때 한 번 굵은 꽃받침 모양으로 터진다.",
+          "role": "적이 뭉친 지점에 집중하는 순간 범위 공격",
+          "tradeoff": "출격 사이의 빈 궤도와 공격 공백이 있다."
+        },
+        {
+          "designId": "CE-002",
+          "id": "final-comethalo-orbit",
+          "status": "design_only",
+          "name": "맥동위성",
+          "conceptName": "맥동위성",
+          "fusion": "comethalo",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "위성들이 플레이어 곁의 궤도를 유지하면서, 각자의 위치에서 작은 폭발을 교대로 일으킨다.",
+          "proposedBehavior": "위성들이 플레이어 곁의 궤도를 유지하면서, 각자의 위치에서 작은 폭발을 교대로 일으킨다.",
+          "visual": "원형 궤도를 따라 짧은 폭발이 박자처럼 돈다.",
+          "role": "접근하는 적을 상대하는 근거리 지속 공격",
+          "tradeoff": "먼 적에게는 위성의 공격이 닿지 않는다."
+        }
+      ],
+      "contrast": "충전해서 보내는 큰 한 발 / 머물며 터지는 여러 박자",
+      "guardrail": "위성 충돌과 폭발 피해를 이중으로 계산하는지 확인한다. 동시 위성 수와 순차 폭발 수를 고정한다."
+    },
+    {
+      "fusion": "sunmirror",
+      "laws": [
+        "reflect",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-003",
+          "id": "final-sunmirror-burst",
+          "status": "design_only",
+          "name": "도화선당구",
+          "conceptName": "도화선당구",
+          "fusion": "sunmirror",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "반사할수록 씨앗의 금이 깊어지고, 마지막 반사 또는 수명 종료 때 모은 힘을 한 번에 터뜨린다.",
+          "proposedBehavior": "반사할수록 씨앗의 금이 깊어지고, 마지막 반사 또는 수명 종료 때 모은 힘을 한 번에 터뜨린다.",
+          "visual": "꺾인 궤적 끝에서 부푼 핵이 단 한 번 파열한다.",
+          "role": "벽과 반사면을 활용하는 축적형 폭발",
+          "tradeoff": "최종 폭발까지 시간이 걸리고 위치가 빗나갈 수 있다."
+        },
+        {
+          "designId": "CE-004",
+          "id": "final-sunmirror-reflect",
+          "status": "design_only",
+          "name": "충격리코셰",
+          "conceptName": "충격리코셰",
+          "fusion": "sunmirror",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "탄이 반사할 때마다 그 접점에 짧은 폭발을 남기고, 곧바로 다음 방향으로 튀어 간다.",
+          "proposedBehavior": "탄이 반사할 때마다 그 접점에 짧은 폭발을 남기고, 곧바로 다음 방향으로 튀어 간다.",
+          "visual": "각진 궤적의 꼭짓점마다 작은 충격 표시가 찍힌다.",
+          "role": "여러 충돌 지점을 나누어 압박하는 공격",
+          "tradeoff": "폭발 하나의 위력과 반경은 작게 잡는다."
+        }
+      ],
+      "contrast": "끝에서 한 번 터짐 / 꺾일 때마다 나누어 터짐",
+      "guardrail": "반사 횟수 상한을 둔다. 생성된 폭발은 새 반사를 발생시키지 않는다."
+    },
+    {
+      "fusion": "blastlance",
+      "laws": [
+        "pierce",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-005",
+          "id": "final-blastlance-burst",
+          "status": "design_only",
+          "name": "심부폭약",
+          "conceptName": "심부폭약",
+          "fusion": "blastlance",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "관통한 적에게 폭약 표식을 하나씩 남기고, 짧은 지연 뒤 표식이 각각 폭발한다.",
+          "proposedBehavior": "관통한 적에게 폭약 표식을 하나씩 남기고, 짧은 지연 뒤 표식이 각각 폭발한다.",
+          "visual": "적 내부에 금 간 핵이 잠깐 보인 뒤 껍질이 바깥으로 벌어진다.",
+          "role": "여러 적에게 미리 피해를 예약하는 공격",
+          "tradeoff": "즉시 처치력은 낮고 표식을 남길 적이 필요하다."
+        },
+        {
+          "designId": "CE-006",
+          "id": "final-blastlance-pierce",
+          "status": "design_only",
+          "name": "발파장창",
+          "conceptName": "발파장창",
+          "fusion": "blastlance",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "긴 창이 적을 끊김 없이 관통하며, 통과한 접점 양옆으로 짧은 폭압을 펼친다.",
+          "proposedBehavior": "긴 창이 적을 끊김 없이 관통하며, 통과한 접점 양옆으로 짧은 폭압을 펼친다.",
+          "visual": "직선 창끝과 좌우로 벌어지는 짧은 날개 모양 충격파가 보인다.",
+          "role": "전방 통로를 빠르게 뚫는 공격",
+          "tradeoff": "창의 진행선에서 멀어지면 피해가 급격히 줄어든다."
+        }
+      ],
+      "contrast": "적에게 남기는 지연 폭발 / 진행하는 창에 붙은 즉시 폭발",
+      "guardrail": "한 발당 표식 수와 접점 폭발 수를 제한한다. 동일 적의 중복 접촉으로 폭발이 매 프레임 발생하면 안 된다."
+    },
+    {
+      "fusion": "collapse",
+      "laws": [
+        "gravity",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-007",
+          "id": "bigcrunch",
+          "status": "implemented_existing",
+          "name": "대붕괴",
+          "conceptName": "압축파열",
+          "fusion": "collapse",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "넓은 붕괴 씨앗을 빠르게 쏘며, 14초마다 가까운 적 둘의 자리에 붕괴 우물을 심습니다.",
+          "proposedBehavior": "짧게 적을 한 점으로 끌어모은 뒤 중력핵을 닫으며 한 번 크게 폭발한다.",
+          "visual": "안으로 오므라드는 핵이 한순간 반전해 바깥으로 터진다.",
+          "role": "군집을 모아서 처리하는 순간 폭발",
+          "tradeoff": "끌어모으는 준비 시간이 있고 이동에 강한 적에게는 덜 유리하다."
+        },
+        {
+          "designId": "CE-008",
+          "id": "pulsegravity",
+          "status": "implemented_existing",
+          "name": "맥동중력핵",
+          "conceptName": "맥동중력핵",
+          "fusion": "collapse",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "중력 씨앗이 떨어진 자리에 오래 남아 적을 끌어모으고 세 번 맥동한 뒤 작게 닫힙니다. 보스는 끌리지 않지만 맥동 피해를 받습니다.",
+          "proposedBehavior": "중력장을 유지하며 가까운 적을 붙잡고, 중심에서 작은 폭발을 일정 간격으로 반복한다.",
+          "visual": "안쪽으로 흐르는 선과 중심의 짧은 맥박이 유지된다.",
+          "role": "한 구역에 적을 머물게 하는 지속 압박",
+          "tradeoff": "적이 영역을 벗어나면 효율이 낮아진다."
+        }
+      ],
+      "contrast": "모았다가 해방 / 붙잡은 채 맥동",
+      "guardrail": "중력장이 다른 중력장을 생성하지 않는다. 이동 면역 적에는 별도의 비이동 피드백을 쓴다."
+    },
+    {
+      "fusion": "chainburst",
+      "laws": [
+        "chain",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-009",
+          "id": "final-chainburst-burst",
+          "status": "design_only",
+          "name": "결속기폭",
+          "conceptName": "결속기폭",
+          "fusion": "chainburst",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "연쇄로 연결한 적들에게 폭약을 예약하고, 마지막 연결이 끝나면 함께 폭발시킨다.",
+          "proposedBehavior": "연쇄로 연결한 적들에게 폭약을 예약하고, 마지막 연결이 끝나면 함께 폭발시킨다.",
+          "visual": "짧은 연결선이 닫힌 직후 여러 표식이 같은 박자로 터진다.",
+          "role": "여러 적을 한 번에 정리하는 동시 폭발",
+          "tradeoff": "연결이 끝나기 전에는 큰 피해가 나오지 않는다."
+        },
+        {
+          "designId": "CE-010",
+          "id": "final-chainburst-chain",
+          "status": "design_only",
+          "name": "폭압계전",
+          "conceptName": "폭압계전",
+          "fusion": "chainburst",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "작은 폭발이 한 적에서 다음 적으로 차례대로 넘어가며, 공격 지점 자체가 이동한다.",
+          "proposedBehavior": "작은 폭발이 한 적에서 다음 적으로 차례대로 넘어가며, 공격 지점 자체가 이동한다.",
+          "visual": "앞선 폭발이 사라진 뒤 다음 적에서 새 충격 고리가 열린다.",
+          "role": "흩어진 적들을 따라가는 순차 공격",
+          "tradeoff": "한 적에게 모든 단계가 반복해서 몰리지 않도록 한다."
+        }
+      ],
+      "contrast": "연결 후 동시 기폭 / 폭발 자체가 순서대로 이동",
+      "guardrail": "연쇄 대상 목록은 단계별 재귀 생성이 아닌 유한한 작업으로 처리한다. 폭발 피해가 연쇄를 재시작하지 않게 한다."
+    },
+    {
+      "fusion": "frostbloom",
+      "laws": [
+        "burst",
+        "frost"
+      ],
+      "branches": [
+        {
+          "designId": "CE-011",
+          "id": "final-frostbloom-burst",
+          "status": "design_only",
+          "name": "빙각파열",
+          "conceptName": "빙각파열",
+          "fusion": "frostbloom",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "착탄한 씨앗이 주변을 먼저 냉각한 뒤, 얼어붙은 껍질을 깨뜨리며 큰 폭발을 낸다.",
+          "proposedBehavior": "착탄한 씨앗이 주변을 먼저 냉각한 뒤, 얼어붙은 껍질을 깨뜨리며 큰 폭발을 낸다.",
+          "visual": "얇은 성에가 핵을 덮고, 잠깐 멎은 뒤 굵게 깨진다.",
+          "role": "냉각을 준비 동작으로 쓰는 강한 파열",
+          "tradeoff": "냉각과 파열 사이에 적이 빠져나갈 수 있다."
+        },
+        {
+          "designId": "CE-012",
+          "id": "icegarden",
+          "status": "implemented_existing",
+          "name": "얼음 정원",
+          "conceptName": "서리폭진",
+          "fusion": "frostbloom",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "봉오리가 늘고 더 빨리 부서지며, 10초마다 가까운 적 여섯에게 봉오리를 떨어뜨립니다.",
+          "proposedBehavior": "폭발이 얇은 서리 고리로 퍼져 나가며 적을 냉각하고, 끝자리에 짧은 냉각 지대를 남긴다.",
+          "visual": "채워진 발광 원이 아니라 바깥으로 펴지는 얇은 결정 테두리가 보인다.",
+          "role": "넓게 다가오는 적을 늦추는 구역 제어",
+          "tradeoff": "직접 폭발 피해보다 냉각에 비중을 둔다."
+        }
+      ],
+      "contrast": "얼린 다음 깨는 피해 / 터뜨려서 퍼뜨리는 냉각",
+      "guardrail": "시각용 얼음 파편은 공격탄으로 세지 않는다. 보스 빙결 및 냉각 중첩 규칙을 먼저 적용한다."
+    },
+    {
+      "fusion": "seedstorm",
+      "laws": [
+        "split",
+        "burst"
+      ],
+      "branches": [
+        {
+          "designId": "CE-013",
+          "id": "final-seedstorm-burst",
+          "status": "design_only",
+          "name": "집속종자탄",
+          "conceptName": "집속종자탄",
+          "fusion": "seedstorm",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "갈라진 소수의 폭약 씨앗이 착탄점 주변에 모여 박힌 뒤, 짧은 지연 후 함께 폭발한다.",
+          "proposedBehavior": "갈라진 소수의 폭약 씨앗이 착탄점 주변에 모여 박힌 뒤, 짧은 지연 후 함께 폭발한다.",
+          "visual": "좁은 구역에 꽂힌 몇 개의 핵이 동시에 열리는 집속 장면이 핵심이다.",
+          "role": "좁은 범위에 폭발을 집중하는 공격",
+          "tradeoff": "움직임이 빠른 적은 기폭 전에 구역을 벗어날 수 있다."
+        },
+        {
+          "designId": "CE-014",
+          "id": "bloomtempest",
+          "status": "implemented_existing",
+          "name": "씨앗 대폭풍",
+          "conceptName": "파열산개",
+          "fusion": "seedstorm",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.",
+          "proposedBehavior": "첫 착탄의 폭발을 신호로 씨앗이 넓게 갈라지고, 뻗어 나온 파편들이 주된 후속 공격을 맡는다.",
+          "visual": "한 번의 짧은 파열 뒤 날카로운 여러 갈래가 넓은 부채로 펼쳐진다.",
+          "role": "전면과 주변으로 흩어진 적을 넓게 공격",
+          "tradeoff": "파편 하나의 위력은 낮고 먼 곳에서는 공격이 분산된다."
+        }
+      ],
+      "contrast": "분열 후 모아서 폭발 / 폭발 후 넓게 분열",
+      "guardrail": "분열은 한 세대만 허용한다. 파편은 다시 폭발·분열을 일으키지 않는 것을 초안 기본값으로 한다."
+    },
+    {
+      "fusion": "returnflare",
+      "laws": [
+        "burst",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-015",
+          "id": "final-returnflare-burst",
+          "status": "design_only",
+          "name": "귀환기폭",
+          "conceptName": "귀환기폭",
+          "fusion": "returnflare",
+          "addedSolo": "flarebloom",
+          "addedLaw": "burst",
+          "behavior": "되돌아온 씨앗이 플레이어 전방의 회수 지점에 닿는 순간, 한 번 크게 폭발한다.",
+          "proposedBehavior": "되돌아온 씨앗이 플레이어 전방의 회수 지점에 닿는 순간, 한 번 크게 폭발한다.",
+          "visual": "가느다란 귀환 꼬리가 전방의 큰 파열 한 번으로 끝난다.",
+          "role": "이동으로 회수 폭발의 위치를 조절하는 공격",
+          "tradeoff": "귀환까지 기다려야 하고 회수 위치를 잘 잡아야 한다."
+        },
+        {
+          "designId": "CE-016",
+          "id": "final-returnflare-recall",
+          "status": "design_only",
+          "name": "쌍박자폭탄",
+          "conceptName": "쌍박자폭탄",
+          "fusion": "returnflare",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "왕복탄이 바깥쪽 전환점에서 한 번, 귀환 중 첫 적 접촉점에서 한 번 작게 폭발한다.",
+          "proposedBehavior": "왕복탄이 바깥쪽 전환점에서 한 번, 귀환 중 첫 적 접촉점에서 한 번 작게 폭발한다.",
+          "visual": "먼 곳과 돌아오는 길에 두 번 구별되는 충격 장면이 나타난다.",
+          "role": "공격과 복귀 양쪽에 대응하는 왕복 공격",
+          "tradeoff": "두 폭발의 피해 예산을 나누며 두 번째 접촉은 놓칠 수 있다."
+        }
+      ],
+      "contrast": "회수 지점의 큰 한 번 / 왕복 중 떨어진 두 번",
+      "guardrail": "회수 지점과 전방 방향을 일관되게 정의한다. 귀환 접촉 폭발은 한 번만 발동한다."
+    },
+    {
+      "fusion": "mirrorguard",
+      "laws": [
+        "orbit",
+        "reflect"
+      ],
+      "branches": [
+        {
+          "designId": "CE-017",
+          "id": "final-mirrorguard-orbit",
+          "status": "design_only",
+          "name": "접이궤도",
+          "conceptName": "접이궤도",
+          "fusion": "mirrorguard",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "플레이어 주변의 공전 날이 반사면에 닿으면 궤도를 안쪽으로 접고 회전 방향을 뒤집는다.",
+          "proposedBehavior": "플레이어 주변의 공전 날이 반사면에 닿으면 궤도를 안쪽으로 접고 회전 방향을 뒤집는다.",
+          "visual": "원형 고리가 순간 타원으로 찌그러지고 반대 방향으로 펴진다.",
+          "role": "좁은 공간에서도 플레이어 주변을 지키는 회전 공격",
+          "tradeoff": "궤도가 접힌 동안 공격 범위가 짧아진다."
+        },
+        {
+          "designId": "CE-018",
+          "id": "mirrorhall",
+          "status": "implemented_existing",
+          "name": "거울의 전당",
+          "conceptName": "반사수레",
+          "fusion": "mirrorguard",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).",
+          "proposedBehavior": "작은 위성 고리를 두른 중심탄이 반사하며 이동하고, 고리 전체가 새 방향으로 따라간다.",
+          "visual": "작은 바퀴 같은 탄이 각진 경로로 튀어 이동한다.",
+          "role": "반사 경로에 회전 공격 범위를 싣는 이동형 공격",
+          "tradeoff": "플레이어 곁을 상시 지켜 주는 무기는 아니다."
+        }
+      ],
+      "contrast": "제자리 궤도가 접힘 / 궤도째 들고 다니는 반사탄",
+      "guardrail": "반사수레는 위성별 독립 경로 탐색을 피하고 중심탄의 경로를 공유한다. 접이궤도 전환에 재발동 간격을 둔다."
+    },
+    {
+      "fusion": "spearring",
+      "laws": [
+        "orbit",
+        "pierce"
+      ],
+      "branches": [
+        {
+          "designId": "CE-019",
+          "id": "final-spearring-orbit",
+          "status": "design_only",
+          "name": "궤도절삭",
+          "conceptName": "궤도절삭",
+          "fusion": "spearring",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "공전하는 긴 날이 적에 막히지 않고 원을 계속 그리며, 지나가는 적들을 쓸어 낸다.",
+          "proposedBehavior": "공전하는 긴 날이 적에 막히지 않고 원을 계속 그리며, 지나가는 적들을 쓸어 낸다.",
+          "visual": "두꺼운 구체 대신 초승달 형태의 긴 궤도 날이 보인다.",
+          "role": "플레이어 근처의 밀집한 적을 지속 절삭",
+          "tradeoff": "회전 반경 밖의 적에게는 닿지 않는다."
+        },
+        {
+          "designId": "CE-020",
+          "id": "final-spearring-pierce",
+          "status": "design_only",
+          "name": "나선천공",
+          "conceptName": "나선천공",
+          "fusion": "spearring",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "전진하는 관통창의 머리 주위를 작은 날들이 돌며, 좁은 나선 통로를 뚫는다.",
+          "proposedBehavior": "전진하는 관통창의 머리 주위를 작은 날들이 돌며, 좁은 나선 통로를 뚫는다.",
+          "visual": "직선 창끝을 감싼 짧은 나선이 앞으로 이동한다.",
+          "role": "멀리 늘어선 적을 깊게 관통하는 공격",
+          "tradeoff": "좁은 전방에 집중되어 측면 대응은 약하다."
+        }
+      ],
+      "contrast": "플레이어 주변을 원으로 절삭 / 전방을 나선으로 천공",
+      "guardrail": "회전 장식과 실제 타격 판정을 분리한다. 동일 적을 계속 스치는 경우 정해진 타격 간격을 사용한다."
+    },
+    {
+      "fusion": "accretiondisk",
+      "laws": [
+        "orbit",
+        "gravity"
+      ],
+      "branches": [
+        {
+          "designId": "CE-021",
+          "id": "final-accretiondisk-orbit",
+          "status": "design_only",
+          "name": "쌍성회랑",
+          "conceptName": "쌍성회랑",
+          "fusion": "accretiondisk",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "마주 보는 두 공전핵이 번갈아 주변 적을 자기 쪽으로 당겨, 움직이는 공격 통로를 만든다.",
+          "proposedBehavior": "마주 보는 두 공전핵이 번갈아 주변 적을 자기 쪽으로 당겨, 움직이는 공격 통로를 만든다.",
+          "visual": "두 핵 사이에서 얇은 당김 표시가 교대로 켜진다.",
+          "role": "플레이어 주변에서 적의 위치를 계속 흔드는 공격",
+          "tradeoff": "고정된 한 점에 적을 오래 묶는 힘은 약하다."
+        },
+        {
+          "designId": "CE-022",
+          "id": "final-accretiondisk-gravity",
+          "status": "design_only",
+          "name": "포획성운",
+          "conceptName": "포획성운",
+          "fusion": "accretiondisk",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "한 지점의 중력핵이 적을 모으고, 외곽을 도는 위성이 포획 구역 안의 적을 공격한다.",
+          "proposedBehavior": "한 지점의 중력핵이 적을 모으고, 외곽을 도는 위성이 포획 구역 안의 적을 공격한다.",
+          "visual": "작은 중심핵과 그 주위를 도는 선명한 바깥 고리로 구분한다.",
+          "role": "한 구역에 적을 모아 두고 처리",
+          "tradeoff": "플레이어가 멀어지면 해당 구역의 활용도가 떨어진다."
+        }
+      ],
+      "contrast": "움직이는 당김의 두 중심 / 고정된 포획 중심 하나",
+      "guardrail": "겹치는 중력은 무제한 합산하지 않는다. 이동 면역 적에 대해 위성의 실제 타격은 별도로 유지한다."
+    },
+    {
+      "fusion": "stormcrown",
+      "laws": [
+        "orbit",
+        "chain"
+      ],
+      "branches": [
+        {
+          "designId": "CE-023",
+          "id": "final-stormcrown-orbit",
+          "status": "design_only",
+          "name": "궤도맥동",
+          "conceptName": "궤도맥동",
+          "fusion": "stormcrown",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "공전하는 위성이 현재 위치를 기준으로 짧은 연쇄를 번갈아 내보내, 공격 방향을 회전시킨다.",
+          "proposedBehavior": "공전하는 위성이 현재 위치를 기준으로 짧은 연쇄를 번갈아 내보내, 공격 방향을 회전시킨다.",
+          "visual": "고리 위의 점등 위치가 돌고 거기서 짧은 마디가 뻗는다.",
+          "role": "플레이어 주변의 다양한 방향에 대응",
+          "tradeoff": "위성 위치에 따라 닿는 대상이 달라지고 먼 적은 놓친다."
+        },
+        {
+          "designId": "CE-024",
+          "id": "tempestcrown",
+          "status": "implemented_existing",
+          "name": "뇌신의 왕관",
+          "conceptName": "위성릴레이",
+          "fusion": "stormcrown",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "구슬이 늘어 더 자주, 더 멀리 치고, 10초마다 주변 모든 적에게 번개를 내리꽂습니다.",
+          "proposedBehavior": "공격 씨앗이 한 적 주위를 짧게 한 바퀴 돈 뒤 다음 적으로 옮겨 가는 일을 이어 간다.",
+          "visual": "작은 원이 적 하나에서 다음 적으로 이사하듯 이동한다.",
+          "role": "흩어진 적을 방문하며 짧게 집중 공격",
+          "tradeoff": "대상을 옮기는 동안 모든 적을 동시에 공격하지 못한다."
+        }
+      ],
+      "contrast": "도는 발사대에서 연결 / 원을 그리는 공격체 자체가 이동",
+      "guardrail": "위성릴레이는 동시 중심을 늘리지 않는다. 각 방문 시간과 최대 방문 수를 제한한다."
+    },
+    {
+      "fusion": "frostguard",
+      "laws": [
+        "orbit",
+        "frost"
+      ],
+      "branches": [
+        {
+          "designId": "CE-025",
+          "id": "frostarmada",
+          "status": "implemented_existing",
+          "name": "서리 함대",
+          "conceptName": "빙륜절삭",
+          "fusion": "frostguard",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.",
+          "proposedBehavior": "날카로운 얼음날이 빠르게 공전하면서 적을 베고, 같은 적을 다시 스칠수록 성에를 쌓는다.",
+          "visual": "각진 초승달 날과 짧게 남는 결정 자국이 보인다.",
+          "role": "근접 적에게 타격과 냉각을 누적",
+          "tradeoff": "상태 효과가 충분히 쌓이기 전에 적이 궤도를 벗어날 수 있다."
+        },
+        {
+          "designId": "CE-026",
+          "id": "final-frostguard-frost",
+          "status": "design_only",
+          "name": "회전동토",
+          "conceptName": "회전동토",
+          "fusion": "frostguard",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "빈틈이 있는 서리 띠가 플레이어 주변을 천천히 돌며, 띠가 지나가는 적을 강하게 냉각한다.",
+          "proposedBehavior": "빈틈이 있는 서리 띠가 플레이어 주변을 천천히 돌며, 띠가 지나가는 적을 강하게 냉각한다.",
+          "visual": "채워진 원 대신 끊어진 결정 띠와 회전하는 틈이 보인다.",
+          "role": "접근 방향을 늦추고 이동 공간을 만드는 제어",
+          "tradeoff": "직접 피해는 낮고 회전하는 틈으로 적이 접근할 수 있다."
+        }
+      ],
+      "contrast": "빠른 날의 접촉 누적 / 느린 띠의 접근 억제",
+      "guardrail": "띠의 장식 조각을 각각 공격 개체로 만들지 않는다. 냉각은 동일 규칙의 최대치만 적용한다."
+    },
+    {
+      "fusion": "halobloom",
+      "laws": [
+        "orbit",
+        "split"
+      ],
+      "branches": [
+        {
+          "designId": "CE-027",
+          "id": "final-halobloom-orbit",
+          "status": "design_only",
+          "name": "겹고리군락",
+          "conceptName": "겹고리군락",
+          "fusion": "halobloom",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "공전 씨앗이 갈라져 안쪽과 바깥쪽의 반대 방향 궤도를 만들고, 두 거리에서 공격한다.",
+          "proposedBehavior": "공전 씨앗이 갈라져 안쪽과 바깥쪽의 반대 방향 궤도를 만들고, 두 거리에서 공격한다.",
+          "visual": "엇갈려 도는 두 고리와 그 사이의 빈 공간이 특징이다.",
+          "role": "플레이어 주변의 두 공격 거리를 유지",
+          "tradeoff": "동시에 넓은 면을 채우지 않고 고리 사이에는 틈이 있다."
+        },
+        {
+          "designId": "CE-028",
+          "id": "final-halobloom-split",
+          "status": "design_only",
+          "name": "회전산개",
+          "conceptName": "회전산개",
+          "fusion": "halobloom",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "짧게 회전하는 발사핵이 씨앗 조각을 접선 방향으로 차례차례 떼어 내며 넓게 퍼뜨린다.",
+          "proposedBehavior": "짧게 회전하는 발사핵이 씨앗 조각을 접선 방향으로 차례차례 떼어 내며 넓게 퍼뜨린다.",
+          "visual": "하나의 회전핵에서 나선형 부채가 벗겨져 나간다.",
+          "role": "여러 방향으로 퍼지는 중거리 공격",
+          "tradeoff": "지속적인 방어 고리는 남지 않는다."
+        }
+      ],
+      "contrast": "갈라진 씨앗이 궤도에 남음 / 회전하면서 궤도 밖으로 흩어짐",
+      "guardrail": "두 궤도를 합친 씨앗 총수를 고정한다. 산개한 조각은 재분열하거나 새 발사핵을 만들지 않는다."
+    },
+    {
+      "fusion": "ebbring",
+      "laws": [
+        "orbit",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-029",
+          "id": "final-ebbring-orbit",
+          "status": "design_only",
+          "name": "호흡궤도",
+          "conceptName": "호흡궤도",
+          "fusion": "ebbring",
+          "addedSolo": "starring",
+          "addedLaw": "orbit",
+          "behavior": "위성 고리가 바깥으로 팽창했다가 플레이어 쪽으로 수축하며, 넓은 거리와 가까운 거리를 번갈아 훑는다.",
+          "proposedBehavior": "위성 고리가 바깥으로 팽창했다가 플레이어 쪽으로 수축하며, 넓은 거리와 가까운 거리를 번갈아 훑는다.",
+          "visual": "커졌다가 접히는 고리의 호흡이 한눈에 보인다.",
+          "role": "접근 전후의 여러 거리를 리듬 있게 공격",
+          "tradeoff": "팽창과 수축 사이에 특정 거리의 공격 공백이 생긴다."
+        },
+        {
+          "designId": "CE-030",
+          "id": "final-ebbring-recall",
+          "status": "design_only",
+          "name": "귀소나선",
+          "conceptName": "귀소나선",
+          "fusion": "ebbring",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "전방으로 보낸 씨앗이 돌아오면서 플레이어 주위를 좁아지는 나선으로 감고 회수된다.",
+          "proposedBehavior": "전방으로 보낸 씨앗이 돌아오면서 플레이어 주위를 좁아지는 나선으로 감고 회수된다.",
+          "visual": "긴 출격선이 귀환 말미의 짧은 나선으로 이어진다.",
+          "role": "멀리 공격한 뒤 주변을 한 번 정리",
+          "tradeoff": "귀환과 나선 정리까지 한 주기가 필요하다."
+        }
+      ],
+      "contrast": "계속 숨 쉬는 고리 / 출격 후 한 번 말려 들어오는 나선",
+      "guardrail": "플레이어 이동 중에도 회수 완료가 가능하도록 귀환 시간 상한과 종료 조건을 둔다."
+    },
+    {
+      "fusion": "refractlance",
+      "laws": [
+        "pierce",
+        "reflect"
+      ],
+      "branches": [
+        {
+          "designId": "CE-031",
+          "id": "final-refractlance-reflect",
+          "status": "design_only",
+          "name": "각도연장",
+          "conceptName": "각도연장",
+          "fusion": "refractlance",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "적은 관통하고 벽에서는 여러 번 반사해, 긴 꺾은선 경로로 전장을 가로지른다.",
+          "proposedBehavior": "적은 관통하고 벽에서는 여러 번 반사해, 긴 꺾은선 경로로 전장을 가로지른다.",
+          "visual": "짧게 남는 각진 선분이 여러 공격 방향을 보여 준다.",
+          "role": "벽과 적 배치가 복잡한 곳의 다방향 공격",
+          "tradeoff": "열린 전장에서는 반사의 장점을 덜 누릴 수 있다."
+        },
+        {
+          "designId": "CE-032",
+          "id": "final-refractlance-pierce",
+          "status": "design_only",
+          "name": "굴절송곳",
+          "conceptName": "굴절송곳",
+          "fusion": "refractlance",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "첫 반사 뒤 씨앗이 길고 가는 창으로 펴지며, 그 반사 방향의 늘어선 적들을 깊게 관통한다.",
+          "proposedBehavior": "첫 반사 뒤 씨앗이 길고 가는 창으로 펴지며, 그 반사 방향의 늘어선 적들을 깊게 관통한다.",
+          "visual": "작은 꺾임 한 번 뒤 긴 창 형태로 변하는 장면이 핵심이다.",
+          "role": "반사 방향 하나에 힘을 모으는 관통 공격",
+          "tradeoff": "첫 반사면과 방향에 따라 효율이 크게 달라진다."
+        }
+      ],
+      "contrast": "반사 여러 번으로 방향 확장 / 반사 한 번을 기점으로 창 전개",
+      "guardrail": "반사면이 없는 구역의 대체 조건을 기존 반사 규칙과 대조한다. 적 관통과 벽 반사를 같은 접촉으로 처리하지 않는다."
+    },
+    {
+      "fusion": "gravitymirror",
+      "laws": [
+        "reflect",
+        "gravity"
+      ],
+      "branches": [
+        {
+          "designId": "CE-033",
+          "id": "final-gravitymirror-reflect",
+          "status": "design_only",
+          "name": "낙성반사",
+          "conceptName": "낙성반사",
+          "fusion": "gravitymirror",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "탄이 튕긴 자리에 짧은 중력점을 남겨, 적들을 지나온 반사 경로 쪽으로 끌어당긴다.",
+          "proposedBehavior": "탄이 튕긴 자리에 짧은 중력점을 남겨, 적들을 지나온 반사 경로 쪽으로 끌어당긴다.",
+          "visual": "각진 궤적의 접점에만 작은 오므라드는 표시가 남는다.",
+          "role": "반사 경로를 따라 여러 위치를 흔드는 공격",
+          "tradeoff": "중력점의 지속 시간과 반경은 짧고 작다."
+        },
+        {
+          "designId": "CE-034",
+          "id": "final-gravitymirror-gravity",
+          "status": "design_only",
+          "name": "중력핀볼",
+          "conceptName": "중력핀볼",
+          "fusion": "gravitymirror",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "작은 중력장으로 적들을 모으고, 그 안에서 핵이 적의 접촉면에 반사되며 튄다.",
+          "proposedBehavior": "작은 중력장으로 적들을 모으고, 그 안에서 핵이 적의 접촉면에 반사되며 튄다.",
+          "visual": "한 구역 안에서 짧고 빠른 각진 궤적이 반복된다.",
+          "role": "포획 구역 내부의 밀집 적을 집중 공격",
+          "tradeoff": "한 적뿐일 때 반사 접점이 부족해질 수 있다."
+        }
+      ],
+      "contrast": "반사가 남기는 여러 당김점 / 당김 구역 안의 반사",
+      "guardrail": "중력점 개수와 핀볼 수명에 상한을 둔다. 동일 적 접촉 후 즉시 재충돌하는 현상을 방지한다."
+    },
+    {
+      "fusion": "thundermirror",
+      "laws": [
+        "reflect",
+        "chain"
+      ],
+      "branches": [
+        {
+          "designId": "CE-035",
+          "id": "final-thundermirror-reflect",
+          "status": "design_only",
+          "name": "굴절전도",
+          "conceptName": "굴절전도",
+          "fusion": "thundermirror",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "주탄이 실제 반사 경로로 움직이고, 반사할 때마다 접점 근처에서 짧은 연쇄를 한 번만 낸다.",
+          "proposedBehavior": "주탄이 실제 반사 경로로 움직이고, 반사할 때마다 접점 근처에서 짧은 연쇄를 한 번만 낸다.",
+          "visual": "굵은 꺾은선 옆으로 짧은 연결 마디가 덧붙는다.",
+          "role": "반사 지점 주변으로 공격 범위를 보충",
+          "tradeoff": "반사가 잘 일어나지 않으면 보조 연쇄도 줄어든다."
+        },
+        {
+          "designId": "CE-036",
+          "id": "final-thundermirror-chain",
+          "status": "design_only",
+          "name": "반사계전",
+          "conceptName": "반사계전",
+          "fusion": "thundermirror",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "공격이 적을 옮겨 갈 때, 입사 방향을 반영한 반사 방향 안에 있는 다음 적을 골라 이어진다.",
+          "proposedBehavior": "공격이 적을 옮겨 갈 때, 입사 방향을 반영한 반사 방향 안에 있는 다음 적을 골라 이어진다.",
+          "visual": "적 사이의 연결선이 한쪽으로 꺾이는 지그재그 맥을 만든다.",
+          "role": "적 배치와 각도를 활용하는 방향성 연쇄",
+          "tradeoff": "반사 방향 안에 후속 적이 없으면 연결이 일찍 끝난다."
+        }
+      ],
+      "contrast": "물리 탄의 반사에 연쇄를 덧붙임 / 반사 방향이 연쇄 대상을 결정",
+      "guardrail": "반사계전은 무제한 경로 탐색을 하지 않는다. 한 단계의 후보 수와 연결 수를 제한하고 같은 적 재방문을 막는다."
+    },
+    {
+      "fusion": "frostkaleidoscope",
+      "laws": [
+        "reflect",
+        "frost"
+      ],
+      "branches": [
+        {
+          "designId": "CE-037",
+          "id": "final-frostkaleidoscope-reflect",
+          "status": "design_only",
+          "name": "서리도장",
+          "conceptName": "서리도장",
+          "fusion": "frostkaleidoscope",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "튕기는 결정탄이 반사 접점마다 짧은 서리 자국을 찍어, 그 자리를 지나는 적을 냉각한다.",
+          "proposedBehavior": "튕기는 결정탄이 반사 접점마다 짧은 서리 자국을 찍어, 그 자리를 지나는 적을 냉각한다.",
+          "visual": "꺾이는 자리마다 작고 각진 서리 도장이 남는다.",
+          "role": "여러 길목에 짧은 냉각 흔적을 남기는 공격",
+          "tradeoff": "서리 자국 밖의 적은 제어하지 못한다."
+        },
+        {
+          "designId": "CE-038",
+          "id": "final-frostkaleidoscope-frost",
+          "status": "design_only",
+          "name": "빙각반사면",
+          "conceptName": "빙각반사면",
+          "fusion": "frostkaleidoscope",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "적을 냉각해 결정 껍질을 만들고, 그 껍질에 닿은 이 무기의 다음 탄을 새로운 방향으로 반사시킨다.",
+          "proposedBehavior": "적을 냉각해 결정 껍질을 만들고, 그 껍질에 닿은 이 무기의 다음 탄을 새로운 방향으로 반사시킨다.",
+          "visual": "적에 붙은 작은 결정 면이 반사 순간 한 번 또렷해진다.",
+          "role": "적을 일시적인 반사 발판으로 만드는 제어",
+          "tradeoff": "결정 상태를 준비해야 하며 다른 무기까지 반사시키지는 않는다."
+        }
+      ],
+      "contrast": "반사가 냉각 흔적을 남김 / 냉각된 적이 반사면이 됨",
+      "guardrail": "결정 껍질은 이 무기에만 영향을 주는 표식으로 시험한다. 이동·빙결 면역 적에도 반사 표식 허용 여부를 별도 정의한다."
+    },
+    {
+      "fusion": "prism",
+      "laws": [
+        "reflect",
+        "split"
+      ],
+      "branches": [
+        {
+          "designId": "CE-039",
+          "id": "final-prism-reflect",
+          "status": "design_only",
+          "name": "파편당구",
+          "conceptName": "파편당구",
+          "fusion": "prism",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "처음 갈라진 소수의 탄이 각자 여러 번 반사하며, 서로 다른 각진 경로를 오래 그린다.",
+          "proposedBehavior": "처음 갈라진 소수의 탄이 각자 여러 번 반사하며, 서로 다른 각진 경로를 오래 그린다.",
+          "visual": "서로 다른 방향으로 꺾이는 몇 줄의 선이 핵심이다.",
+          "role": "좁은 공간에서 여러 반사 경로를 유지",
+          "tradeoff": "각 탄의 순간 위력은 나누어지고 열린 공간에서는 약해진다."
+        },
+        {
+          "designId": "CE-040",
+          "id": "infiniteprism",
+          "status": "implemented_existing",
+          "name": "무한 프리즘",
+          "conceptName": "거울산개",
+          "fusion": "prism",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "가시가 한 번 더 갈라지고, 10초마다 열두 방향으로 수정 가시를 흩뿌립니다.",
+          "proposedBehavior": "한 발이 첫 반사 지점에서 넓은 부채로 갈라지고, 분열탄은 더 반사하지 않고 뻗는다.",
+          "visual": "한 개의 꺾임에서 여러 직선이 펼쳐지는 부채꼴이 보인다.",
+          "role": "한 반사 지점을 넓은 공격 출발점으로 활용",
+          "tradeoff": "반사 이후에는 경로를 다시 바꾸지 못한다."
+        }
+      ],
+      "contrast": "분열한 뒤 오래 반사 / 반사한 뒤 한 번 넓게 분열",
+      "guardrail": "분열과 반사가 서로 새 탄을 계속 생성하지 않게 한다. 각 가지의 분열 가능 횟수는 0 또는 1로 명시한다."
+    },
+    {
+      "fusion": "echolane",
+      "laws": [
+        "reflect",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-041",
+          "id": "final-echolane-reflect",
+          "status": "design_only",
+          "name": "회귀당구",
+          "conceptName": "회귀당구",
+          "fusion": "echolane",
+          "addedSolo": "mirrormaze",
+          "addedLaw": "reflect",
+          "behavior": "몇 차례 튕기며 공격한 뒤, 마지막 지점에서 플레이어를 향해 직접 귀환한다.",
+          "proposedBehavior": "몇 차례 튕기며 공격한 뒤, 마지막 지점에서 플레이어를 향해 직접 귀환한다.",
+          "visual": "각진 출격 경로와 하나의 매끄러운 귀환선이 대비된다.",
+          "role": "넓게 튕긴 뒤 빠르게 회수하는 공격",
+          "tradeoff": "귀환길은 지나온 반사 경로를 다시 훑지 않는다."
+        },
+        {
+          "designId": "CE-042",
+          "id": "final-echolane-recall",
+          "status": "design_only",
+          "name": "되짚는궤적",
+          "conceptName": "되짚는궤적",
+          "fusion": "echolane",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "나갈 때 반사한 지점들을 기억하고, 돌아올 때 그 꼭짓점들을 역순으로 밟아 되짚는다.",
+          "proposedBehavior": "나갈 때 반사한 지점들을 기억하고, 돌아올 때 그 꼭짓점들을 역순으로 밟아 되짚는다.",
+          "visual": "같은 꺾은선을 반대 방향으로 지우며 돌아오는 장면이 특징이다.",
+          "role": "이미 공격한 통로를 다시 공략",
+          "tradeoff": "플레이어가 이동하면 마지막 회수 구간이 늘어날 수 있다."
+        }
+      ],
+      "contrast": "반사 후 지름길 귀환 / 반사 경로 그대로 역주행",
+      "guardrail": "저장하는 꼭짓점 수를 제한한다. 역주행 후에는 현재 플레이어 위치로 회수하고 정해진 시간 안에 종료한다."
+    },
+    {
+      "fusion": "gravitystake",
+      "laws": [
+        "pierce",
+        "gravity"
+      ],
+      "branches": [
+        {
+          "designId": "CE-043",
+          "id": "final-gravitystake-pierce",
+          "status": "design_only",
+          "name": "견인창",
+          "conceptName": "견인창",
+          "fusion": "gravitystake",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "전진하는 관통창이 가까운 적들을 자신의 좁은 진행선 쪽으로 끌어당기며 뚫고 나간다.",
+          "proposedBehavior": "전진하는 관통창이 가까운 적들을 자신의 좁은 진행선 쪽으로 끌어당기며 뚫고 나간다.",
+          "visual": "긴 창 옆의 짧은 선들이 진행선 안쪽으로 기운다.",
+          "role": "움직이는 좁은 전방 통로에 적을 맞추는 공격",
+          "tradeoff": "한 발이 지나가면 그 자리에 중력장은 남지 않는다."
+        },
+        {
+          "designId": "CE-044",
+          "id": "final-gravitystake-gravity",
+          "status": "design_only",
+          "name": "중력봉합",
+          "conceptName": "중력봉합",
+          "fusion": "gravitystake",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "관통한 직선 경로를 짧게 고정해, 주변 적을 그 선 쪽으로 당기는 흡인 통로를 남긴다.",
+          "proposedBehavior": "관통한 직선 경로를 짧게 고정해, 주변 적을 그 선 쪽으로 당기는 흡인 통로를 남긴다.",
+          "visual": "두 끝점 사이의 가느다란 선을 향해 주변 표시가 모인다.",
+          "role": "직선 길목을 유지하며 후속 공격을 돕는 제어",
+          "tradeoff": "고정한 통로 바깥의 전장 변화에는 대응이 느리다."
+        }
+      ],
+      "contrast": "창과 함께 이동하는 당김 / 창이 지나간 뒤 남는 당김",
+      "guardrail": "통로는 많은 중력점이 아닌 한 선분 구역으로 설계한다. 당김을 받는 적 수와 지속 시간을 제한한다."
+    },
+    {
+      "fusion": "thunderlance",
+      "laws": [
+        "pierce",
+        "chain"
+      ],
+      "branches": [
+        {
+          "designId": "CE-045",
+          "id": "skyspear",
+          "status": "implemented_existing",
+          "name": "하늘가르기 창",
+          "conceptName": "전도장창",
+          "fusion": "thunderlance",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "창이 더 깊이 꿰뚫고 번개가 더 멀리 뛰며, 10초마다 천둥 창 다섯 자루를 부채꼴로 던집니다.",
+          "proposedBehavior": "주 관통창이 계속 전진하고, 적을 뚫은 접점에서 옆의 적에게 짧은 연결 공격을 보낸다.",
+          "visual": "굵은 직선 줄기에 짧은 옆가지가 붙는다.",
+          "role": "전방 돌파와 가까운 측면 적 처리",
+          "tradeoff": "주 경로가 적을 지나지 않으면 옆가지도 발생하지 않는다."
+        },
+        {
+          "designId": "CE-046",
+          "id": "final-thunderlance-chain",
+          "status": "design_only",
+          "name": "맥관경로",
+          "conceptName": "맥관경로",
+          "fusion": "thunderlance",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "적과 적을 잇는 연쇄 구간 자체가 관통선이 되어, 두 대상 사이에 선 다른 적까지 맞힌다.",
+          "proposedBehavior": "적과 적을 잇는 연쇄 구간 자체가 관통선이 되어, 두 대상 사이에 선 다른 적까지 맞힌다.",
+          "visual": "가는 전기줄이 아니라 마디로 이어진 날카로운 선분들이 보인다.",
+          "role": "적 배치가 촘촘한 구역의 연결선 공격",
+          "tradeoff": "대상 간 선분 밖의 적에게는 닿지 않는다."
+        }
+      ],
+      "contrast": "관통 줄기에서 짧은 연쇄 / 연쇄의 연결선 전체가 관통",
+      "guardrail": "중간에 맞은 적이 새 연쇄를 시작하지 않게 한다. 연결 수와 선분별 타격 목록을 별도로 관리한다."
+    },
+    {
+      "fusion": "icicle",
+      "laws": [
+        "pierce",
+        "frost"
+      ],
+      "branches": [
+        {
+          "designId": "CE-047",
+          "id": "final-icicle-pierce",
+          "status": "design_only",
+          "name": "빙맥송곳",
+          "conceptName": "빙맥송곳",
+          "fusion": "icicle",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "가늘고 긴 얼음창이 늘어선 적들을 깊게 관통하며, 직접 맞은 적에게 집중적으로 냉각을 쌓는다.",
+          "proposedBehavior": "가늘고 긴 얼음창이 늘어선 적들을 깊게 관통하며, 직접 맞은 적에게 집중적으로 냉각을 쌓는다.",
+          "visual": "긴 결정 창과 관통 접점의 짧은 서리 균열로 표현한다.",
+          "role": "정렬된 적과 단일 표적의 직접 공격",
+          "tradeoff": "창을 비켜난 적은 냉각하지 못한다."
+        },
+        {
+          "designId": "CE-048",
+          "id": "final-icicle-frost",
+          "status": "design_only",
+          "name": "동토길",
+          "conceptName": "동토길",
+          "fusion": "icicle",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "관통탄이 지나간 좁은 길에 서리를 남겨, 이후 그 길을 건너는 적도 냉각한다.",
+          "proposedBehavior": "관통탄이 지나간 좁은 길에 서리를 남겨, 이후 그 길을 건너는 적도 냉각한다.",
+          "visual": "바닥에 짧게 남는 가느다란 결정 길이 보인다.",
+          "role": "길목과 접근 경로를 막는 지속 냉각",
+          "tradeoff": "직접 피해는 낮고 길 바깥의 적에게 영향이 적다."
+        }
+      ],
+      "contrast": "맞은 적을 차갑게 / 지나간 길을 차갑게",
+      "guardrail": "서리 길은 많은 개별 장판 대신 제한된 선분 구역으로 관리한다. 장식 균열에는 별도 충돌을 주지 않는다."
+    },
+    {
+      "fusion": "pierceshower",
+      "laws": [
+        "pierce",
+        "split"
+      ],
+      "branches": [
+        {
+          "designId": "CE-049",
+          "id": "final-pierceshower-pierce",
+          "status": "design_only",
+          "name": "갈래창끝",
+          "conceptName": "갈래창끝",
+          "fusion": "pierceshower",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "갈라진 창날들이 좁은 평행 간격을 유지한 채 앞으로 나가, 긴 한 통로를 함께 뚫는다.",
+          "proposedBehavior": "갈라진 창날들이 좁은 평행 간격을 유지한 채 앞으로 나가, 긴 한 통로를 함께 뚫는다.",
+          "visual": "촘촘히 나란한 세 갈래 같은 실루엣을 우선 시험한다.",
+          "role": "좁은 전방에 분산을 억제한 집중 관통",
+          "tradeoff": "공격 폭이 넓지 않아 측면의 적을 놓친다."
+        },
+        {
+          "designId": "CE-050",
+          "id": "final-pierceshower-split",
+          "status": "design_only",
+          "name": "천공부채",
+          "conceptName": "천공부채",
+          "fusion": "pierceshower",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "주 탄이 늘어선 적들을 뚫고 들어간 뒤 분열해, 그 지점부터 관통 파편을 넓게 퍼뜨린다.",
+          "proposedBehavior": "주 탄이 늘어선 적들을 뚫고 들어간 뒤 분열해, 그 지점부터 관통 파편을 넓게 퍼뜨린다.",
+          "visual": "직선 하나가 적 무리 안쪽에서 넓은 부채로 열린다.",
+          "role": "앞줄 뒤의 넓은 적 무리를 공략",
+          "tradeoff": "분열 전까지의 공격 범위는 좁다."
+        }
+      ],
+      "contrast": "처음부터 좁고 평행하게 / 깊이 들어간 뒤 넓게",
+      "guardrail": "분열 깊이와 자식 탄의 관통 횟수에 각각 상한을 둔다. 갈래가 같은 적에 겹칠 때의 피해 규칙을 정한다."
+    },
+    {
+      "fusion": "returnblade",
+      "laws": [
+        "recall",
+        "pierce"
+      ],
+      "branches": [
+        {
+          "designId": "CE-051",
+          "id": "final-returnblade-pierce",
+          "status": "design_only",
+          "name": "왕복천공",
+          "conceptName": "왕복천공",
+          "fusion": "returnblade",
+          "addedSolo": "glassspear",
+          "addedLaw": "pierce",
+          "behavior": "관통창이 전방에 늘어선 적들을 뚫고, 현재 플레이어 위치를 향해 짧고 곧은 길로 다시 관통하며 돌아온다.",
+          "proposedBehavior": "관통창이 전방에 늘어선 적들을 뚫고, 현재 플레이어 위치를 향해 짧고 곧은 길로 다시 관통하며 돌아온다.",
+          "visual": "나가는 직선과 돌아오는 직선이 또렷하게 대비된다.",
+          "role": "정렬된 적을 왕복으로 다시 공격",
+          "tradeoff": "측면을 크게 우회해 공격하지는 않는다."
+        },
+        {
+          "designId": "CE-052",
+          "id": "thousandblades",
+          "status": "implemented_existing",
+          "name": "천 개의 칼날",
+          "conceptName": "등뒤회수",
+          "fusion": "returnblade",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "칼날이 늘고 왕복마다 더 많이 베며, 10초마다 여덟 방향으로 칼날을 던집니다.",
+          "proposedBehavior": "적 뒤까지 관통한 탄이 넓게 휘어 돌아오며, 측면과 후방에서 다시 관통한다.",
+          "visual": "직선 출격 뒤 긴 초승달 모양 귀환선을 만든다.",
+          "role": "플레이어 이동과 넓은 귀환각을 활용한 우회 공격",
+          "tradeoff": "귀환이 길어 회수 주기가 느려진다."
+        }
+      ],
+      "contrast": "짧고 곧은 왕복 / 뒤를 감싸는 넓은 귀환",
+      "guardrail": "왕복 각 구간의 동일 적 타격 횟수를 분리한다. 귀환 곡선이 끝없이 표적을 추적하지 않게 한다."
+    },
+    {
+      "fusion": "stormanchor",
+      "laws": [
+        "chain",
+        "gravity"
+      ],
+      "branches": [
+        {
+          "designId": "CE-053",
+          "id": "final-stormanchor-gravity",
+          "status": "design_only",
+          "name": "중력삼각대",
+          "conceptName": "중력삼각대",
+          "fusion": "stormanchor",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "연쇄로 선택한 적들 사이에 포획 중심을 만들고, 그 적들을 공통 중심으로 끌어당긴다.",
+          "proposedBehavior": "연쇄로 선택한 적들 사이에 포획 중심을 만들고, 그 적들을 공통 중심으로 끌어당긴다.",
+          "visual": "선택된 마디 사이에 삼각대 같은 얇은 형태와 중심점이 생긴다.",
+          "role": "흩어진 소수의 적을 한곳에 정렬",
+          "tradeoff": "대상이 적으면 모양과 당김의 활용도가 달라진다."
+        },
+        {
+          "designId": "CE-054",
+          "id": "final-stormanchor-chain",
+          "status": "design_only",
+          "name": "흐르는우물",
+          "conceptName": "흐르는우물",
+          "fusion": "stormanchor",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "연쇄가 다음 적으로 넘어갈 때마다 중력장의 중심도 그 적에게 옮겨 가며 주변을 짧게 당긴다.",
+          "proposedBehavior": "연쇄가 다음 적으로 넘어갈 때마다 중력장의 중심도 그 적에게 옮겨 가며 주변을 짧게 당긴다.",
+          "visual": "작은 우물이 적 사이를 뛰어 이동하고 이전 우물은 바로 사라진다.",
+          "role": "여러 위치에 순서대로 짧은 제어를 가하는 공격",
+          "tradeoff": "한 지점에 중력장을 오래 유지하지 않는다."
+        }
+      ],
+      "contrast": "여러 적이 공유하는 중심 / 연결을 따라 이사하는 중심",
+      "guardrail": "중력삼각대는 두 대상이면 중점, 한 대상이면 해당 위치를 사용한다. 흐르는우물은 동시에 하나의 장만 유지한다."
+    },
+    {
+      "fusion": "coldwell",
+      "laws": [
+        "frost",
+        "gravity"
+      ],
+      "branches": [
+        {
+          "designId": "CE-055",
+          "id": "final-coldwell-gravity",
+          "status": "design_only",
+          "name": "서리소용돌이",
+          "conceptName": "서리소용돌이",
+          "fusion": "coldwell",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "적을 중심으로 계속 끌어당기고, 중심에 가까이 머문 적일수록 더 빠르게 냉각한다.",
+          "proposedBehavior": "적을 중심으로 계속 끌어당기고, 중심에 가까이 머문 적일수록 더 빠르게 냉각한다.",
+          "visual": "안쪽으로 좁아지는 선과 중심부의 결정 밀도로 구역을 보여 준다.",
+          "role": "지속 포획과 중심부 냉각",
+          "tradeoff": "끌리지 않는 적과 빠르게 벗어나는 적에게 효율이 줄어든다."
+        },
+        {
+          "designId": "CE-056",
+          "id": "final-coldwell-frost",
+          "status": "design_only",
+          "name": "해빙수축",
+          "conceptName": "해빙수축",
+          "fusion": "coldwell",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "냉각 영역에서 적의 움직임을 먼저 묶고, 빙결이 풀리는 순간 짧은 중력 수축으로 위치를 모은다.",
+          "proposedBehavior": "냉각 영역에서 적의 움직임을 먼저 묶고, 빙결이 풀리는 순간 짧은 중력 수축으로 위치를 모은다.",
+          "visual": "굳어 있던 결정 테두리가 끝에 한 번 안쪽으로 접힌다.",
+          "role": "정지와 재배치를 시간차로 쓰는 제어",
+          "tradeoff": "끌어당김이 끝부분에 있어 즉시 모으지는 못한다."
+        }
+      ],
+      "contrast": "먼저 당겨서 얼림 / 먼저 얼린 뒤 당김",
+      "guardrail": "영구 빙결 루프를 만들지 않는다. 이동 면역·빙결 면역 대상의 지속 피해와 시각 피드백을 별도로 확인한다."
+    },
+    {
+      "fusion": "pullgarden",
+      "laws": [
+        "gravity",
+        "split"
+      ],
+      "branches": [
+        {
+          "designId": "CE-057",
+          "id": "final-pullgarden-gravity",
+          "status": "design_only",
+          "name": "수렴산탄",
+          "conceptName": "수렴산탄",
+          "fusion": "pullgarden",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "핵에서 갈라진 파편들이 잠깐 바깥으로 퍼졌다가 같은 중력 중심으로 떨어져 들어오며 적을 압축 공격한다.",
+          "proposedBehavior": "핵에서 갈라진 파편들이 잠깐 바깥으로 퍼졌다가 같은 중력 중심으로 떨어져 들어오며 적을 압축 공격한다.",
+          "visual": "밖으로 열린 여러 갈래가 중앙 한 점으로 닫힌다.",
+          "role": "한 지점으로 다시 집중되는 분열 공격",
+          "tradeoff": "준비와 수렴 사이에 표적이 중심을 벗어날 수 있다."
+        },
+        {
+          "designId": "CE-058",
+          "id": "final-pullgarden-split",
+          "status": "design_only",
+          "name": "분산중력장",
+          "conceptName": "분산중력장",
+          "fusion": "pullgarden",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "나뉜 씨앗들이 서로 떨어진 곳에 작은 중력장을 만들고, 각자 가까운 적을 붙잡는다.",
+          "proposedBehavior": "나뉜 씨앗들이 서로 떨어진 곳에 작은 중력장을 만들고, 각자 가까운 적을 붙잡는다.",
+          "visual": "큰 원 하나가 아니라 떨어져 있는 작은 핵 몇 개로 구분된다.",
+          "role": "여러 길목을 동시에 짧게 억제",
+          "tradeoff": "각 중력장은 작고 약하며 전체 범위를 채우지 않는다."
+        }
+      ],
+      "contrast": "흩어졌다가 한곳으로 / 흩어진 자리에 각각 남음",
+      "guardrail": "파편 수와 중력장 수를 함께 제한한다. 겹친 장의 당김은 정해진 규칙 하나로 결합하며 무한 합산하지 않는다."
+    },
+    {
+      "fusion": "tidepull",
+      "laws": [
+        "gravity",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-059",
+          "id": "maelstrom",
+          "status": "implemented_existing",
+          "name": "대소용돌이",
+          "conceptName": "이동특이점",
+          "fusion": "tidepull",
+          "addedSolo": "blackhole",
+          "addedLaw": "gravity",
+          "behavior": "해일핵이 늘고 더 넓게 붙잡으며, 10초마다 네 방향으로 해일을 보냅니다.",
+          "proposedBehavior": "중력핵이 돌아오면서 주변의 적을 자기 쪽으로 당겨, 이동하는 포획 구역을 만든다.",
+          "visual": "귀환하는 작은 핵 쪽으로 주변 표시가 기울어진다.",
+          "role": "귀환 경로를 따라 적의 위치를 바꾸는 공격",
+          "tradeoff": "플레이어 가까이 적을 끌어올 수 있어 이동 판단이 중요하다."
+        },
+        {
+          "designId": "CE-060",
+          "id": "final-tidepull-recall",
+          "status": "design_only",
+          "name": "중력투석",
+          "conceptName": "중력투석",
+          "fusion": "tidepull",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "멀어지며 감속한 중량탄이 플레이어 쪽의 중력에 끌려 점점 빠르게 귀환하며, 돌아오는 한 번에 힘을 싣는다.",
+          "proposedBehavior": "멀어지며 감속한 중량탄이 플레이어 쪽의 중력에 끌려 점점 빠르게 귀환하며, 돌아오는 한 번에 힘을 싣는다.",
+          "visual": "느려지는 바깥쪽 탄과 짧고 굵어지는 귀환 꼬리의 대비가 핵심이다.",
+          "role": "느린 준비 뒤 빠른 회수 타격",
+          "tradeoff": "외곽에 머무는 준비 구간이 있고 귀환 타이밍을 놓칠 수 있다."
+        }
+      ],
+      "contrast": "돌아오는 장이 적을 끌고 이동 / 중력이 탄 자체의 귀환을 가속",
+      "guardrail": "중력투석의 피해를 무제한 속도 비례로 두지 않는다. 이동특이점의 보스 강제 이동 및 회수 시 접촉 안전성을 검토한다."
+    },
+    {
+      "fusion": "frostnet",
+      "laws": [
+        "chain",
+        "frost"
+      ],
+      "branches": [
+        {
+          "designId": "CE-061",
+          "id": "final-frostnet-chain",
+          "status": "design_only",
+          "name": "서리계전",
+          "conceptName": "서리계전",
+          "fusion": "frostnet",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "냉각이 한 적에서 다음 적으로 차례대로 넘어가고, 마지막 대상에 가장 강한 결정을 남긴다.",
+          "proposedBehavior": "냉각이 한 적에서 다음 적으로 차례대로 넘어가고, 마지막 대상에 가장 강한 결정을 남긴다.",
+          "visual": "성에 마디가 한 명씩 켜진 뒤 마지막에서 굵게 닫힌다.",
+          "role": "흩어진 적을 빠르게 방문하는 냉각 전달",
+          "tradeoff": "모든 적을 동시에 완전히 묶지는 않는다."
+        },
+        {
+          "designId": "CE-062",
+          "id": "final-frostnet-frost",
+          "status": "design_only",
+          "name": "동결동기화",
+          "conceptName": "동결동기화",
+          "fusion": "frostnet",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "연쇄로 여러 적에게 표식을 연결한 뒤, 짧은 지연 후 표식 대상의 냉각·빙결을 동시에 발동한다.",
+          "proposedBehavior": "연쇄로 여러 적에게 표식을 연결한 뒤, 짧은 지연 후 표식 대상의 냉각·빙결을 동시에 발동한다.",
+          "visual": "얇은 표식선이 연결되고 마지막에 같은 박자로 결정이 닫힌다.",
+          "role": "여러 적의 움직임을 같은 순간에 멈추는 제어",
+          "tradeoff": "발동까지의 공백이 있고 상태 이상 저항에 영향을 받는다."
+        }
+      ],
+      "contrast": "순서대로 차가워짐 / 연결한 뒤 동시에 차가워짐",
+      "guardrail": "연쇄 종료와 동시 상태 효과 발동을 한 작업으로 관리한다. 매 타격마다 빙결 시간을 초기화하지 않는다."
+    },
+    {
+      "fusion": "lightningpetal",
+      "laws": [
+        "split",
+        "chain"
+      ],
+      "branches": [
+        {
+          "designId": "CE-063",
+          "id": "final-lightningpetal-chain",
+          "status": "design_only",
+          "name": "가지맥",
+          "conceptName": "가지맥",
+          "fusion": "lightningpetal",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "한 줄로 이어지던 연쇄가 정해진 지점에서 한 번 두 갈래로 갈라져, 두 끝을 향해 짧게 이어진다.",
+          "proposedBehavior": "한 줄로 이어지던 연쇄가 정해진 지점에서 한 번 두 갈래로 갈라져, 두 끝을 향해 짧게 이어진다.",
+          "visual": "하나의 줄기가 Y자로 갈라지는 장면을 분명히 보여 준다.",
+          "role": "주된 적 무리에서 두 방향으로 연결 확장",
+          "tradeoff": "두 가지의 연결 길이는 짧고 다시 갈라지지 않는다."
+        },
+        {
+          "designId": "CE-064",
+          "id": "final-lightningpetal-split",
+          "status": "design_only",
+          "name": "군집전도",
+          "conceptName": "군집전도",
+          "fusion": "lightningpetal",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "처음부터 여러 씨앗이 산개하고, 각 씨앗이 맞힌 적에서 가까운 다음 적으로 짧게 한 번씩 전달한다.",
+          "proposedBehavior": "처음부터 여러 씨앗이 산개하고, 각 씨앗이 맞힌 적에서 가까운 다음 적으로 짧게 한 번씩 전달한다.",
+          "visual": "떨어진 작은 탄들에서 각각 짧은 연결 마디가 생긴다.",
+          "role": "넓은 구역에 여러 연쇄 출발점을 배치",
+          "tradeoff": "각 탄과 짧은 전달의 위력은 나누어진다."
+        }
+      ],
+      "contrast": "연쇄 중간에 가지가 생김 / 여러 분열탄에서 연쇄가 시작",
+      "guardrail": "분열과 연쇄가 서로를 재귀 호출하지 않는다. 가지 수와 전체 방문 수를 한 발의 총 예산 안에 묶는다."
+    },
+    {
+      "fusion": "rewindbolt",
+      "laws": [
+        "chain",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-065",
+          "id": "final-rewindbolt-chain",
+          "status": "design_only",
+          "name": "닫힌회로",
+          "conceptName": "닫힌회로",
+          "fusion": "rewindbolt",
+          "addedSolo": "thunderweb",
+          "addedLaw": "chain",
+          "behavior": "여러 적을 순서대로 연결한 뒤 첫 대상에 마지막 맥박을 한 번 돌려주고 플레이어에게 귀환한다.",
+          "proposedBehavior": "여러 적을 순서대로 연결한 뒤 첫 대상에 마지막 맥박을 한 번 돌려주고 플레이어에게 귀환한다.",
+          "visual": "적 사이의 열린 연결이 끝에 한 번 닫힌 회로가 된다.",
+          "role": "여러 적을 방문하면서 첫 대상에도 마무리 공격",
+          "tradeoff": "첫 대상이 사라지면 그 맥박을 재분배하지 않고 종료한다."
+        },
+        {
+          "designId": "CE-066",
+          "id": "final-rewindbolt-recall",
+          "status": "design_only",
+          "name": "징검귀환",
+          "conceptName": "징검귀환",
+          "fusion": "rewindbolt",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "전방으로 보낸 탄이 돌아올 때 플레이어에 더 가까운 적들을 차례로 경유하며 지그재그로 복귀한다.",
+          "proposedBehavior": "전방으로 보낸 탄이 돌아올 때 플레이어에 더 가까운 적들을 차례로 경유하며 지그재그로 복귀한다.",
+          "visual": "멀리서 가까이로 줄어드는 계단형 귀환선이 보인다.",
+          "role": "귀환길에 끼어 있는 적을 순서대로 처리",
+          "tradeoff": "귀환 방향에 적이 없으면 바로 돌아오며 추가 공격은 없다."
+        }
+      ],
+      "contrast": "바깥에서 회로를 닫고 귀환 / 귀환 과정 자체가 연쇄",
+      "guardrail": "닫힌회로의 첫 대상 재방문은 마지막 한 번만 허용한다. 징검귀환의 각 경유지는 플레이어와의 거리가 줄어야 한다."
+    },
+    {
+      "fusion": "rimepetal",
+      "laws": [
+        "frost",
+        "split"
+      ],
+      "branches": [
+        {
+          "designId": "CE-067",
+          "id": "final-rimepetal-frost",
+          "status": "design_only",
+          "name": "결정정원",
+          "conceptName": "결정정원",
+          "fusion": "rimepetal",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "갈라진 씨앗들이 바닥에 박혀 결정으로 자라고, 떨어진 몇 개의 좁은 길목을 서리로 덮는다.",
+          "proposedBehavior": "갈라진 씨앗들이 바닥에 박혀 결정으로 자라고, 떨어진 몇 개의 좁은 길목을 서리로 덮는다.",
+          "visual": "둥근 장판 대신 방향이 다른 짧은 결정 가지들이 자란다.",
+          "role": "적의 진입 경로를 나누어 늦추는 제어",
+          "tradeoff": "결정 사이에는 이동 가능한 틈이 남는다."
+        },
+        {
+          "designId": "CE-068",
+          "id": "final-rimepetal-split",
+          "status": "design_only",
+          "name": "서리산탄",
+          "conceptName": "서리산탄",
+          "fusion": "rimepetal",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "착탄한 얼음 씨앗이 여러 가느다란 결정탄으로 갈라지고, 각 탄이 직접 맞힌 적을 냉각한다.",
+          "proposedBehavior": "착탄한 얼음 씨앗이 여러 가느다란 결정탄으로 갈라지고, 각 탄이 직접 맞힌 적을 냉각한다.",
+          "visual": "단단한 핵이 부채꼴의 바늘들로 나뉘어 전진한다.",
+          "role": "여러 적에게 직접 냉각 타격을 분산",
+          "tradeoff": "바닥에 지속 제어 구역은 남지 않는다."
+        }
+      ],
+      "contrast": "갈라져 자리에 자람 / 갈라져 앞으로 날아감",
+      "guardrail": "결정정원은 통행을 막는 새 물리 벽이 아닌 냉각 구역으로 시험한다. 얼음 조각의 재분열은 허용하지 않는다."
+    },
+    {
+      "fusion": "rimeback",
+      "laws": [
+        "frost",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-069",
+          "id": "final-rimeback-frost",
+          "status": "design_only",
+          "name": "서리인장",
+          "conceptName": "서리인장",
+          "fusion": "rimeback",
+          "addedSolo": "winterbreath",
+          "addedLaw": "frost",
+          "behavior": "나갈 때 맞힌 적에게 냉각 표식을 남기고, 돌아오는 탄이 같은 적을 다시 맞히면 빙결을 완성한다.",
+          "proposedBehavior": "나갈 때 맞힌 적에게 냉각 표식을 남기고, 돌아오는 탄이 같은 적을 다시 맞히면 빙결을 완성한다.",
+          "visual": "반쪽 결정 표식이 왕복 명중 때 닫히는 장면이 보인다.",
+          "role": "왕복 재명중으로 특정 적을 묶는 제어",
+          "tradeoff": "귀환이 표식을 비켜 가면 빙결까지 이어지지 않는다."
+        },
+        {
+          "designId": "CE-070",
+          "id": "final-rimeback-recall",
+          "status": "design_only",
+          "name": "서리끌",
+          "conceptName": "서리끌",
+          "fusion": "rimeback",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "되돌아오는 탄이 짧은 서리 흔적을 끌고 와, 귀환길을 지나거나 추격하는 적을 늦춘다.",
+          "proposedBehavior": "되돌아오는 탄이 짧은 서리 흔적을 끌고 와, 귀환길을 지나거나 추격하는 적을 늦춘다.",
+          "visual": "귀환 탄 뒤에 길지 않은 결정 띠가 생겼다가 곧 사라진다.",
+          "role": "이동과 회수를 함께 써서 추격을 억제",
+          "tradeoff": "흔적은 짧아 오래 남는 방어 구역이 되지 않는다."
+        }
+      ],
+      "contrast": "같은 적을 왕복해서 얼림 / 귀환길 자체를 차갑게 만듦",
+      "guardrail": "표식 수명과 왕복 명중 구분을 명시한다. 서리끌의 흔적은 한정된 선분 수로 유지한다."
+    },
+    {
+      "fusion": "returningpetals",
+      "laws": [
+        "split",
+        "recall"
+      ],
+      "branches": [
+        {
+          "designId": "CE-071",
+          "id": "final-returningpetals-split",
+          "status": "design_only",
+          "name": "귀소군락",
+          "conceptName": "귀소군락",
+          "fusion": "returningpetals",
+          "addedSolo": "fullbloom",
+          "addedLaw": "split",
+          "behavior": "부채꼴로 갈라진 씨앗들이 각자 다른 길로 돌아오며, 넓은 구역을 여러 번 나누어 훑는다.",
+          "proposedBehavior": "부채꼴로 갈라진 씨앗들이 각자 다른 길로 돌아오며, 넓은 구역을 여러 번 나누어 훑는다.",
+          "visual": "여러 귀환 곡선이 플레이어에게 시차를 두고 모인다.",
+          "role": "폭넓은 왕복 경로로 여러 적을 공격",
+          "tradeoff": "공격이 흩어져 한 점에 집중되지는 않는다."
+        },
+        {
+          "designId": "CE-072",
+          "id": "final-returningpetals-recall",
+          "status": "design_only",
+          "name": "재결합창",
+          "conceptName": "재결합창",
+          "fusion": "returningpetals",
+          "addedSolo": "rewind",
+          "addedLaw": "recall",
+          "behavior": "나갈 때 나뉜 씨앗들이 돌아오는 길의 한 지점에서 다시 합쳐져, 하나의 굵은 회수탄으로 마무리한다.",
+          "proposedBehavior": "나갈 때 나뉜 씨앗들이 돌아오는 길의 한 지점에서 다시 합쳐져, 하나의 굵은 회수탄으로 마무리한다.",
+          "visual": "여러 가는 선이 중간에서 한 굵은 핵으로 조립된다.",
+          "role": "넓은 출격 후 좁고 강한 회수 마무리",
+          "tradeoff": "재결합 뒤에는 넓은 구역을 동시에 공격하지 못한다."
+        }
+      ],
+      "contrast": "끝까지 따로 돌아옴 / 돌아오다가 하나로 합쳐짐",
+      "guardrail": "재결합된 탄과 기존 조각이 동시에 피해를 내지 않게 한다. 회수탄은 자동으로 관통·폭발 속성을 얻지 않는다."
+    }
+  ]
+}

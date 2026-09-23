@@ -178,18 +178,21 @@ const SOLO_ALL=Object.freeze(Object.fromEntries([
 // 숨긴 법칙(차원)의 단독 진화는 뺀다.
 export const SOLO_FORMS=Object.freeze(Object.fromEntries(Object.entries(SOLO_ALL).filter(([,f])=>!HIDDEN_LAWS.includes(f.requires[0]))));
 // Every first evolution the seed can hold: twenty authored first fusions and nine solo evolutions.
-// Awakened evolutions (2026-09-15): a fusion joined with the solo evolution of one of its laws, or the two solo evolutions
-// of its laws, becomes that fusion's awakened self in one slot. It attacks as the fusion with part of the ultimate's boost
+// An awakened evolution is a fusion joined with ONE specified solo evolution of its laws.
+// The other branch is a distinct recipe. Two solo evolutions always make a twin instead.
+// It attacks as the fusion with part of the ultimate's boost
 // built in (AWAKEN_BOOST) and repeats the fusion's opening move every AWAKEN.openingEvery seconds while enemies are near.
 export const AWAKEN=Object.freeze({openingEvery:10,openingRange:12,surgeOpeningEvery:1.2,damage:1.25,interval:.8});
-export const AWAKEN_OPENING_EVERY=Object.freeze({bigcrunch:14});
+export const AWAKEN_OPENING_EVERY=Object.freeze({bigcrunch:14,pulsegravity:12});
 export const awakenOpeningEvery=(id,twin=false)=>twin?AWAKEN.openingEvery:AWAKEN_OPENING_EVERY[id]??AWAKEN.openingEvery;
 // The mirror's opening turns every enemy shot at once, so it does not repeat during the ultimate.
 export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
 export const awakenSurgeOpening=(id,twin=false)=>twin?TWIN.surgeOpeningEvery:AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
-const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,requires:CURATED_FORMS[base].requires,pair:`${CURATED_FORMS[base].name} 각성`,desc,strength,weakness,passive:CURATED_FORMS[base].passive,awakened:true});
+const AWAKEN_SOLO=Object.freeze({bigcrunch:'flarebloom',pulsegravity:'blackhole',frostarmada:'starring',thousandblades:'rewind',infiniteprism:'fullbloom',skyspear:'glassspear',icegarden:'winterbreath',tempestcrown:'thunderweb',maelstrom:'blackhole',bloomtempest:'fullbloom',mirrorhall:'mirrormaze'});
+const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,addedSolo:AWAKEN_SOLO[id],requires:CURATED_FORMS[base].requires,pair:`${CURATED_FORMS[base].name} + ${SOLO_ALL[AWAKEN_SOLO[id]].name}`,desc,strength,weakness,passive:CURATED_FORMS[base].passive,awakened:true});
 export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bigcrunch','collapse','대붕괴','넓은 붕괴 씨앗을 빠르게 쏘며, 14초마다 가까운 적 둘의 자리에 붕괴 우물을 심습니다.','모인 적을 강한 붕괴로 정리','우물 사이의 공백과 느린 탄을 빠른 적이 파고듦'),
+ awaken('pulsegravity','collapse','맥동중력핵','중력 씨앗이 떨어진 자리에 오래 남아 적을 끌어모으고 세 번 맥동한 뒤 작게 닫힙니다. 보스는 끌리지 않지만 맥동 피해를 받습니다.','한 자리를 지속해서 압박하고 후속 탄을 맞히기 쉬움','순간 폭발이 약하고 빠르게 자리를 바꾸는 적에 취약'),
  awaken('frostarmada','frostguard','서리 함대','위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.','근접 제압과 탄막 방어의 완성형','사거리는 여전히 짧음'),
  awaken('thousandblades','returnblade','천 개의 칼날','칼날이 늘고 왕복마다 더 많이 베며, 10초마다 여덟 방향으로 칼날을 던집니다.','사방의 적을 왕복으로 갈아냄','씨앗이 멈춰 있으면 경로가 단조로움'),
  awaken('infiniteprism','prism','무한 프리즘','가시가 한 번 더 갈라지고, 10초마다 열두 방향으로 수정 가시를 흩뿌립니다.','벽 많은 방을 가시로 가득 채움','트인 곳에서는 갈라질 벽이 적음'),
@@ -200,9 +203,9 @@ export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
  awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).','탄막을 통째로 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함')
 ].map(f=>[f.id,f])));
-// Twin awakenings: all 35 non-curated pairs of solo evolutions awaken too.
+// Twin awakenings: all 36 pairs of the nine playable solo evolutions have their own identity.
 // Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
-// Together with the curated awakenings every one of the 45 solo pairs now leads somewhere.
+// The ten pairs that once routed to a fusion awakening are separate twins too.
 export const TWIN=Object.freeze({damage:.7,surgeOpeningEvery:1.5});
 const TWIN_TRAITS=Object.freeze({
  mirrormaze:Object.freeze({word:'굴절',effect:'reflect',bonus:.03}),
@@ -248,6 +251,16 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
  twin('boomerangflare','flarebloom','rewind','되돌아오는 불꽃','왕복하는 잎이 길을 쓸고, 모인 곳엔 불꽃 다발이 떨어집니다.'),
  twin('frostrewind','rewind','winterbreath','서리 되감기','숨결로 멈춘 적 위를 잎이 여러 번 오가며 벱니다.'),
  twin('frozenhole','blackhole','winterbreath','얼어붙은 블랙홀','블랙홀로 붙잡은 무리를 숨결로 얼려 더 아프게 합니다.'),
+ twin('prismsiblings','mirrormaze','fullbloom','거울 꽃쌍둥이','거울탄이 벽을 튕겨 각도를 만들고, 꽃잎은 맞은 적을 중심으로 퍼집니다. 벽이 없는 곳에서도 꽃잎 공격은 남습니다.'),
+ twin('mirrorring','mirrormaze','starring','거울 성환','씨앗 주위의 고리가 가까운 탄막을 막고, 거울탄은 벽을 이용해 먼 적을 노립니다.'),
+ twin('burstpetals','fullbloom','flarebloom','꽃불 쌍둥이','불꽃 다발이 무리 한가운데 떨어지고, 꽃잎은 그 지점에서 주변 적에게 퍼집니다.'),
+ twin('lightningring','thunderweb','starring','뇌환 쌍둥이','가까운 적은 고리로 베고, 고리에 닿지 않는 무리는 번개가 차례로 이어 갑니다.'),
+ twin('spearthunder','thunderweb','glassspear','천둥 창쌍둥이','유리 창날이 한 줄을 뚫는 동안 번개는 줄 밖의 적에게 옮겨 갑니다.'),
+ twin('winterring','starring','winterbreath','동토 성환','서리 숨결이 전방을 늦추고, 빈 옆과 뒤를 별의 고리가 짧게 지킵니다.'),
+ twin('returningspear','glassspear','rewind','왕복 창쌍둥이','긴 창날이 먼 줄을 뚫고, 되감기 잎은 씨앗이 움직인 길을 왕복합니다.'),
+ twin('emberhole','flarebloom','blackhole','불씨 특이점','블랙홀이 적을 한 점에 붙잡고, 불꽃 다발은 그 자리에 지연 낙하합니다.'),
+ twin('winterflare','flarebloom','winterbreath','서리 불꽃쌍둥이','앞쪽을 숨결로 늦춘 다음, 멈칫한 무리에 불꽃 다발이 떨어집니다.'),
+ twin('tidalhole','rewind','blackhole','되감는 특이점','블랙홀이 적을 묶는 동안 되감기 잎이 씨앗과 그 지점을 여러 번 오갑니다.'),
  twin('portal-mirror','mirrormaze','riftseed','차원경','거울탄이 별문을 드나들며 예상 밖의 각도에서 다시 튕깁니다.'),
  twin('portal-bloom','fullbloom','riftseed','문 너머 만개','별문 출구마다 꽃잎이 피어 뒷줄까지 번집니다.'),
  twin('portal-web','thunderweb','riftseed','차원 번개','별문을 건넌 번개가 떨어진 적 사이를 다시 연결합니다.'),
@@ -261,15 +274,18 @@ const TWIN_ALL=Object.freeze(Object.fromEntries([
 // 숨긴 법칙(차원)이 들어간 쌍둥이 각성은 뺀다.
 export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL).filter(([,f])=>!f.requires.some(id=>HIDDEN_LAWS.includes(id)))));
 // Every evolution the seed can hold: twenty authored first fusions, nine solo evolutions,
-// ten curated awakenings and 26 twin awakenings (65).
+// ten curated fusion+solo awakenings and 36 solo+solo twins.
 export const ALL_FORMS=Object.freeze({...FORMS,...CANDIDATE_FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
+// The player-facing book excludes archived second fusions and held first fusions.
+// Legacy ids remain in ALL_FORMS so saved runs and prior discovery records still load.
+export const DISCOVERY_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
 // The attacks an evolution fights with, one combat each: a twin has two, everything else one.
 export const attackPartsOf=id=>TWIN_FORMS[id]?[...TWIN_FORMS[id].parts]:[AWAKEN_FORMS[id]?.base||id];
 // The attack an evolution fights with: an awakened evolution uses its fusion's attack, everything else its own.
 export const baseFormOf=id=>AWAKEN_FORMS[id]?.base||TWIN_FORMS[id]?.base||id;
-export const awakenedFormOf=fusion=>Object.values(AWAKEN_FORMS).find(f=>f.base===fusion)?.id||null;
+export const awakenedFormOf=(fusion,solo=null)=>Object.values(AWAKEN_FORMS).find(f=>f.base===fusion&&(!solo||f.addedSolo===solo))?.id||null;
 export const isSoloForm=id=>Object.hasOwn(SOLO_FORMS,id);
 export const soloFormOf=law=>Object.values(SOLO_FORMS).find(f=>f.requires[0]===law)?.id||null;
 // Laws still in their own slot that are high enough to evolve alone.
@@ -308,7 +324,13 @@ export function formStats(id,level=1,{surge=false,twin=false}={}){
  if(TWIN_FORMS[id])return {...formStats(TWIN_FORMS[id].parts[0],level,{surge,twin:true}),parts:TWIN_FORMS[id].parts};
  if(twin){const s=formStats(id,level,{surge});if(!(s.damage>0))return s;const out={...s,twin:true};for(const key of DAMAGE_KEYS)if(typeof out[key]==='number')out[key]*=TWIN.damage;return out;}
  const awakened=AWAKEN_FORMS[id];
- if(awakened){const base=baseStats(awakened.base,level);if(!(base.damage>0))return base;const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
+ if(awakened){const base=baseStats(awakened.base,level);if(!(base.damage>0))return base;
+  if(id==='pulsegravity'){
+   const pulse={...base,interval:base.interval*.88,damage:base.damage*.30,pulseDamage:base.damage*.24,
+    radius:Math.max(2.4,base.radius-.35),wells:2,awakened:true,pulseWell:true};
+   return surge?surgeStats(awakened.base,pulse):pulse;
+  }
+  const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
  const base=baseStats(id,level);
  return surge&&base.damage>0?surgeStats(id,base):base;
 }
@@ -363,7 +385,7 @@ const SURGE=Object.freeze({
 });
 // While an ultimate runs every hit is heavier too (2026-09-15: players waited long and enemies still did not die).
 export const SURGE_DAMAGE=1.6;
-const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','chainDamage','emberDamage','returnDamage','homeDamage','blast','finish'];
+const DAMAGE_KEYS=['damage','nova','shatter','pop','tick','ram','jumpDamage','petalDamage','chainDamage','emberDamage','returnDamage','homeDamage','blast','finish','pulseDamage'];
 // Awakened: a lasting share of the surge. Counts grow a little, attacks come a little faster and hit a little harder;
 // the ultimate still adds the full surge on top.
 const AWAKEN_BOOST=Object.freeze({

@@ -110,6 +110,7 @@ const ALL_SIGNATURES=Object.freeze({
  ...Object.fromEntries(Object.values(SECOND_FORMS).filter(f=>!f.curated).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
+ pulsegravity:sig('맥동 특이점','가까운 두 적의 자리에서 중력핵이 오래 맥동합니다. 궁극기 동안 재생 주기가 빨라지지만 보스의 이동 면역은 유지됩니다.'),
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
  ...Object.fromEntries(Object.values(TWIN_FORMS).map(f=>[f.id,sig(`${BASE_SIGNATURES[f.parts[0]].name} × ${BASE_SIGNATURES[f.parts[1]].name}`,`두 기술을 한꺼번에 펼칩니다. ${BASE_SIGNATURES[f.parts[0]].name}: ${BASE_SIGNATURES[f.parts[0]].desc} ${BASE_SIGNATURES[f.parts[1]].name}: ${BASE_SIGNATURES[f.parts[1]].desc} 궁극기 동안 1.5초마다 되풀이됩니다.`)]))
 });

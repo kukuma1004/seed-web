@@ -872,7 +872,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
  }
 
- function plant(pos){if(wells.length>=S.wells)wells.shift();wells.push({pos:pos.clone(),life:.8,pulse:0});fx.flame(pos,'gravity',18,S.radius*.42);fx.burst(pos,'gravity',24,S.radius*.34);}
+ function plant(pos){if(wells.length>=S.wells)wells.shift();
+  wells.push({pos:pos.clone(),life:S.pulseWell?1.65:.8,pulse:S.pulseWell?.18:0});
+  if(S.pulseWell){fx.pulse(pos,'gravity',S.radius*.45,.3);fx.burst(pos,'gravity',12,S.radius*.2);}
+  else{fx.flame(pos,'gravity',18,S.radius*.42);fx.burst(pos,'gravity',24,S.radius*.34);}
+ }
 
  function updateOrbit(dt){
   if(active==='halobloom'){
@@ -1492,9 +1496,20 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    shatters.splice(i,1);
   }
   for(let i=wells.length-1;i>=0;i--){const w=wells[i];w.life-=dt;w.pulse-=dt;
-   if(w.pulse<=0){fx.pulse(w.pos,'gravity',Math.max(.3,w.life*3),.2);w.pulse=.16;}
+   if(w.pulse<=0){
+    fx.pulse(w.pos,'gravity',S.pulseWell?S.radius*.55:Math.max(.3,w.life*3),.2);
+    w.pulse=S.pulseWell?.5:.16;
+    if(S.pulseWell)for(const e of enemies())if(!e.dead&&flat(e.g.position,w.pos)<S.radius)
+     support(e,S.pulseDamage,{kind:'collapse',indirect:true,direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
+   }
    for(const e of enemies())if(!e.dead&&!immovable(e)){const d=w.pos.clone().sub(e.g.position).setY(0);if(d.length()<S.radius){e.g.position.addScaledVector(d,dt*2);constrain(e.g.position,.65);}}
-   if(w.life<=0){fx.burst(w.pos,'burst',32,1.8);fx.pulse(w.pos,'burst',S.radius,.4);for(const e of enemies())if(!e.dead&&flat(e.g.position,w.pos)<S.radius)support(e,S.damage,{kind:'collapse',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});wells.splice(i,1);}
+   if(w.life<=0){
+    fx.burst(w.pos,S.pulseWell?'gravity':'burst',S.pulseWell?12:32,S.pulseWell?.7:1.8);
+    fx.pulse(w.pos,S.pulseWell?'gravity':'burst',S.radius,S.pulseWell?.22:.4);
+    for(const e of enemies())if(!e.dead&&flat(e.g.position,w.pos)<S.radius)
+     support(e,S.damage,{kind:'collapse',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
+    wells.splice(i,1);
+   }
   }
  }
 
@@ -1535,7 +1550,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    return;
   }
   switch(active){
-   case 'collapse':{const spots=nearest(statId==='bigcrunch'?2:3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
+   case 'collapse':{const spots=nearest(statId==='bigcrunch'||statId==='pulsegravity'?2:3);if(!spots.length)plant(pos.clone().addScaledVector(dir,3));for(const e of spots)plant(e.g.position.clone().setY(0));break;}
    case 'frostguard':{
     const radius=S.novaRadius+2;fx.pulse(pos,'frost',radius,.6);
     for(const e of enemies())if(!e.dead&&flat(e.g.position,pos)<radius){if(support(e,S.nova*2,{kind:'frostguard',indirect:true,direction:e.g.position.clone().sub(pos).setY(0).normalize()}))e.slow=Math.max(e.slow||0,4);}

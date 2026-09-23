@@ -46,7 +46,8 @@ export function formArt(id,extra=''){
   return `<span class="form-art awakened-art twin-art ${extra}" aria-hidden="true"><i style="${soloStyle(a)}"></i><i style="${soloStyle(b)}"></i></span>`;
  }
  if(Object.hasOwn(AWAKEN_FORMS,id)){
-  const style=AWAKEN_ATLAS?tileStyle(AWAKEN_ATLAS,AWAKEN_TILES[id]):tileStyle(FUSION_ATLAS,TILES[AWAKEN_FORMS[id].base]);
+  if(id==='pulsegravity')return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="background-image:url('${BASE}assets/seed-pulsegravity-v1-ui.webp');background-size:125%;background-position:center"></span>`;
+  const style=AWAKEN_TILES[id]!==undefined?tileStyle(AWAKEN_ATLAS,AWAKEN_TILES[id]):tileStyle(FUSION_ATLAS,TILES[AWAKEN_FORMS[id].base]);
   return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="${style}"></span>`;
  }
  if(Object.hasOwn(GENERATED_FORMS,id))return comboArt(FIRST_FUSION_BY_ID[id],`form-art ${extra}`);

@@ -196,18 +196,18 @@ export function evolveSolo(levels,forms,id){
 export function buildLevel(levels,forms=new Map()){let n=totalLevel(levels);for(const v of forms.values())n+=v;return n;}
 
 // ---------------- awakening ----------------
-// Two held evolutions of the same fusion family awaken into one slot: the fusion with the solo evolution of one of its laws,
-// or both solo evolutions of its laws. With the awakened evolution already held, one more of those parts feeds it instead.
+// A fusion plus its designated solo makes one branch of a final evolution.
+// Two solo evolutions always make a distinct twin, including pairs with an existing fusion awakening.
+// With the awakened evolution already held, its same solo or base fusion feeds it instead.
 // Level: the stronger part plus a third of the weaker (rounded up), so both investments count. Feeding adds a third.
 export function awakenOptions(forms=new Map()){
  const out=[];
  for(const a of Object.values(AWAKEN_FORMS)){
-  const solos=FORMS[a.base].requires.map(soloFormOf),parts=[a.base,...solos].filter(id=>forms.has(id));
+  const parts=[a.base,a.addedSolo].filter(id=>forms.has(id));
   if(forms.has(a.id)){for(const id of parts)out.push({id:a.id,from:[id]});continue;}
-  if(forms.has(a.base))for(const solo of solos)if(forms.has(solo))out.push({id:a.id,from:[a.base,solo]});
-  if(solos.every(solo=>forms.has(solo)))out.push({id:a.id,from:solos});
+  if(parts.length===2)out.push({id:a.id,from:[a.base,a.addedSolo]});
  }
- // Twins: two solo evolutions with no fusion recipe between their laws.
+ // Twins: every unordered pair of the nine solo evolutions.
  for(const t of Object.values(TWIN_FORMS)){
   const parts=t.parts.filter(id=>forms.has(id));
   if(forms.has(t.id)){for(const id of parts)out.push({id:t.id,from:[id]});continue;}
