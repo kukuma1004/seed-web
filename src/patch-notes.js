@@ -4,6 +4,13 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-23-d',date:'9월 23일',title:'웹 다시 열림',
+  lines:[
+   '웹에서도 다시 누구나 플레이할 수 있어요. Google 계정이나 게스트로 시작하면 돼요.',
+   '저장된 정원·도감·기록은 그대로 이어져요.'
+  ]
+ },
+ {
   id:'2026-09-23-c',date:'9월 23일',title:'요한 온라인 랭킹 · 시즌 1',
   lines:[
    '3막 폭풍비행사 요한의 기록도 온라인 랭킹에 올라가요. 보스별 순위에서 따로 볼 수 있어요.',

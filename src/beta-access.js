@@ -1,8 +1,9 @@
 import {Capacitor} from '@capacitor/core';
 
+// 2026-09-23 사용자: "다시 웹버전은 예전처럼 접근 풀자" — 공개 웹을 다시 누구나(구글·게스트 로그인) 플레이할 수 있게 연다.
 // Flip this only when the Play closed test is actually available. The native app and local QA
 // are never locked; this applies solely to the public GitHub Pages copy students currently open.
-export const PUBLIC_WEB_BETA_LOCKED=true;
+export const PUBLIC_WEB_BETA_LOCKED=false;
 
 export function publicWebBetaLocked(locationLike=globalThis.location){
  const host=locationLike?.hostname||'';
