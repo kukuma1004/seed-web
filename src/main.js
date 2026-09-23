@@ -1099,9 +1099,12 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
  recoverSupport();
  const patchGift=grantGiftSet(runStorage,PATCH_GIFT,PATCH_GIFT_ITEMS);
  const adminRegift=adminMode&&!localAdminLab?grantGiftSet(runStorage,ADMIN_REGIFT,PATCH_GIFT_ITEMS):{granted:false};
+ const chuseokGift=grantGiftSet(runStorage,CHUSEOK_GIFT,CHUSEOK_GIFT_ITEMS);
+ if(chuseokGift.granted)cloud.syncNow().catch(()=>null);
  if(cloudRewards.length){showCloudGift(cloudRewards);return;}
  if(betaBoosterGift.granted&&firstGiftPopup('beta')){showBetaBoosterGift();return;}
  if((sproutGift.granted||tonicGift.granted)&&firstGiftPopup('sorry')){showGift();return;}
+ if(chuseokGift.granted&&firstGiftPopup('chuseok')){showChuseokGift();return;}
  if((patchGift.granted||adminRegift.granted)&&firstGiftPopup('patch')){showPatchGift();return;}
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
@@ -1236,12 +1239,23 @@ const SORRY_GIFT='sorry-20260917';
 const SORRY_TONIC_GIFT='sorry-tonics-20260917';
 // 2026-09-22 사용자: "잦은 패치로 미안하니까 창고에 보스 4종 물약 1세트 주자" — 계정(보관함)마다 한 번.
 const PATCH_GIFT='sorry-boss-potions-20260922',PATCH_GIFT_ITEMS=Object.freeze({potion:1,wind:1,shell:1,sprout:1});
+const CHUSEOK_GIFT='chuseok-2026-boss-potions',CHUSEOK_GIFT_ITEMS=Object.freeze({potion:5,wind:5,shell:5,sprout:5});
 // 2026-09-22 사용자(운영자): 사과 선물이 '가져가기'로 자동 설정돼 여정에 바로 들고 들어가 버렸다 → 운영자 계정에 한 번 더.
 const ADMIN_REGIFT='admin-regift-boss-potions-20260922';
 // 선물 창은 앱을 켤 때마다 종류별로 한 번만 띄운다(9/22 아이폰: '확인'을 눌러도 선물 창이 다시 떠 안 눌리는 것처럼 보였다 —
 // 저장이 늦거나 실패해 같은 선물이 또 '새로 받음'으로 잡히면 창이 계속 반복될 수 있어서 막는다).
 const giftPopupsShown=new Set();
 function firstGiftPopup(kind){if(giftPopupsShown.has(kind))return false;giftPopupsShown.add(kind);return true;}
+function showChuseokGift(){
+ mode='gift';touch.reset();keys.clear();
+ $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
+ $('#overlay').innerHTML=`<div class="menu-panel gift-panel gift-compact"><p class="eyebrow">SEED · 추석 선물</p><h2>풍성한 여정 되세요</h2>
+  <div class="gift-grid">${Object.entries(CHUSEOK_GIFT_ITEMS).map(([id,n])=>`<div class="gift-item">${itemArt(id)}<div><strong>${escapeHtml(ITEMS[id].name)} ${n}개</strong><small>${escapeHtml(ITEMS[id].desc)}</small></div></div>`).join('')}</div>
+  <p class="gift-line">보스 물약 4종을 각각 5개씩 창고에 넣었어요. 다시 싹도 창고에는 5개를 보관할 수 있어요.</p>
+  <p class="gift-line">여정에 가져갈 때는 종류별 소지 한도가 적용됩니다. 다시 싹은 한 번에 1개만 가져갈 수 있어요.</p>
+  <div class="gift-actions"><button id="gift-shop" class="menu-item"><strong>상점 보관함 보기</strong></button><button id="gift-ok" class="menu-item primary"><strong>확인</strong></button></div></div>`;
+ $('#gift-ok').onclick=showIntro;$('#gift-shop').onclick=()=>showShop(showIntro);
+}
 function showPatchGift(){
  mode='gift';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;

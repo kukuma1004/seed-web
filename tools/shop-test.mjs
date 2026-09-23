@@ -101,4 +101,16 @@ assert.equal(STASH_ITEMS.sprout.max,999,'다시 싹도 보관은 999(9/22), 출�
  assert.equal(grantGiftSet(s,'sorry-boss-potions-20260922',set).granted,false,'같은 세트는 다시 주지 않는다');
  assert.equal(grantGiftSet(s,'empty-gift',{nope:3}).granted,false,'모르는 물건만 있으면 주지 않는다');
 }
+// 추석 선물은 보스 물약 4종을 각각 5개씩 창고에만 쌓고, 다시 싹 여정 소지 한도는 그대로 둔다.
+{
+ const s=memory(),set={potion:5,wind:5,shell:5,sprout:5};
+ const gift=grantGiftSet(s,'chuseok-2026-boss-potions',set);
+ assert.equal(gift.granted,true);
+ for(const id of Object.keys(set)){
+  assert.equal(gift.shop.stash[id],5,`${id}: 창고에 5개`);
+  assert.equal(gift.shop.carry[id],0,`${id}: 여정 가져가기 자동 변경 없음`);
+ }
+ assert.equal(grantGiftSet(s,'chuseok-2026-boss-potions',set).granted,false,'기기당 한 번만 지급');
+ assert.equal(setCarry(s,'sprout',5).carry.sprout,1,'다시 싹 여정 소지 한도는 1개');
+}
 console.log('상점 보관함: 구매·가져갈 개수 고르기·새 여정에서만 꺼내기·다시 싹 선물 한 번·예전 저장 옮기기 통과');
