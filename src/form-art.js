@@ -1,6 +1,7 @@
 import {CURATED_FORMS,SOLO_FORMS,GENERATED_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS} from './forms.js';
 import {FIRST_FUSIONS,FIRST_FUSION_BY_ID} from './combo-catalog.js';
 import {comboArt} from './combo-art.js';
+import {finalArt} from './final-identity-art.js';
 // One authored illustration for each completed form, in a 4 by 3 atlas.
 const TILES={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
 // Solo evolutions use their own painted 4 by 3 atlas. The last three cells stay empty.
@@ -42,10 +43,10 @@ export function formArt(id,extra=''){
  if(Object.hasOwn(SECOND_FORMS,id))return comboArt(SECOND_FORMS[id],`form-art ${extra}`);
  // Twin awakenings: both solo paintings, split on the diagonal, in the awakened golden frame (until their own art exists).
  if(Object.hasOwn(TWIN_FORMS,id)){
-  const [a,b]=TWIN_FORMS[id].parts;
-  return `<span class="form-art awakened-art twin-art ${extra}" aria-hidden="true"><i style="${soloStyle(a)}"></i><i style="${soloStyle(b)}"></i></span>`;
+  return finalArt(id,extra);
  }
  if(Object.hasOwn(AWAKEN_FORMS,id)){
+  if(AWAKEN_FORMS[id].finalCandidate)return finalArt(id,extra);
   if(id==='pulsegravity')return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="background-image:url('${BASE}assets/seed-pulsegravity-v1-ui.webp');background-size:125%;background-position:center"></span>`;
   const style=AWAKEN_TILES[id]!==undefined?tileStyle(AWAKEN_ATLAS,AWAKEN_TILES[id]):tileStyle(FUSION_ATLAS,TILES[AWAKEN_FORMS[id].base]);
   return `<span class="form-art awakened-art ${extra}" aria-hidden="true" style="${style}"></span>`;

@@ -1,6 +1,8 @@
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN_FORMS,TWIN_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 import {activeUltimateEvolutions} from './evolution-family.js';
+import {FINAL_BRANCH_PATTERNS} from './final-branch-patterns.js';
+import {TWIN_INTERACTIONS} from './twin-interactions.js';
 
 // One active button, three states, all derived from the evolutions the seed holds:
 // LOCKED (no evolution) · SIGNATURE (one: that evolution's own move) · OVERDRIVE (two or more: the two strongest together).
@@ -39,6 +41,11 @@ export const ULTIMATE_ARCHETYPES=Object.freeze({
 });
 
 export function ultimateArchetype(ids=[]){
+ if(ids.length===1&&FINAL_BRANCH_PATTERNS[ids[0]]){
+  const {motion,law}=FINAL_BRANCH_PATTERNS[ids[0]];
+  const family={mortar:'BURST',satellite:'ORBIT',ricochet:'DOMAIN',mark:'DOMAIN',sweep:'BEAM',spiral:'RAIN',field:law==='frost'?'TIME_STOP':'BLACKHOLE',fan:'RAIN',return:'RAIN',relay:'RAIN'}[motion];
+  if(family)return ULTIMATE_ARCHETYPES[family];
+ }
  const tags=overdriveTags(ids);
  if(tags.includes('CONTROL'))return ULTIMATE_ARCHETYPES.BLACKHOLE;
  if(tags.includes('FROST'))return ULTIMATE_ARCHETYPES.TIME_STOP;
@@ -109,10 +116,12 @@ const ALL_SIGNATURES=Object.freeze({
  ...Object.fromEntries(Object.values(SECOND_FORMS).filter(f=>f.curated).map(f=>[f.id,sig(`${f.name} · ${BASE_SIGNATURES[f.main].name}`,`${BASE_SIGNATURES[f.main].desc} 궁극기 동안 ${f.follow.line}이 더 자주 일어납니다.`)])),
  ...Object.fromEntries(Object.values(SECOND_FORMS).filter(f=>!f.curated).map(f=>[f.id,sig(`${f.name} · ${f.family==='resonance'?'공명 폭주':'교차 붕괴'}`,f.family==='resonance'?'모든 적중을 공명 주기로 세어 세 번째 탄마다 두 후속 법칙을 함께 증폭합니다.':'표식과 소비 탄을 빠르게 번갈아 쏘고, 교차 폭발 피해와 법칙 반응을 강화합니다.')])),
  // Awakened evolutions keep their fusion's opening move and repeat it every 1.2 seconds while the ultimate lasts.
- ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
+ ...Object.fromEntries(Object.values(AWAKEN_FORMS).map(f=>[f.id,f.finalCandidate
+  ?sig(FINAL_BRANCH_PATTERNS[f.id].ultimate,`${f.name}: ${f.desc} 궁극기 시작 때 이 전투 패턴을 여러 방향에 펼치고, 지속 시간 동안 더 자주 발동합니다.`)
+  :sig(`각성 ${BASE_SIGNATURES[f.base].name}`,`${BASE_SIGNATURES[f.base].desc} 궁극기 동안 이 기술이 1.2초마다 되풀이됩니다.`)])),
  pulsegravity:sig('맥동 특이점','가까운 두 적의 자리에서 중력핵이 오래 맥동합니다. 궁극기 동안 재생 주기가 빨라지지만 보스의 이동 면역은 유지됩니다.'),
  // Twin awakenings open with both solo moves at once and repeat them every 1.5 seconds while the ultimate lasts.
- ...Object.fromEntries(Object.values(TWIN_FORMS).map(f=>[f.id,sig(`${BASE_SIGNATURES[f.parts[0]].name} × ${BASE_SIGNATURES[f.parts[1]].name}`,`두 기술을 한꺼번에 펼칩니다. ${BASE_SIGNATURES[f.parts[0]].name}: ${BASE_SIGNATURES[f.parts[0]].desc} ${BASE_SIGNATURES[f.parts[1]].name}: ${BASE_SIGNATURES[f.parts[1]].desc} 궁극기 동안 1.5초마다 되풀이됩니다.`)]))
+ ...Object.fromEntries(Object.values(TWIN_FORMS).map(f=>[f.id,sig(TWIN_INTERACTIONS[f.id]?.name||`${BASE_SIGNATURES[f.parts[0]].name} × ${BASE_SIGNATURES[f.parts[1]].name}`,`두 기술을 한꺼번에 펼칩니다. ${TWIN_INTERACTIONS[f.id]?.rule||f.desc} 궁극기 동안 두 단독 기술이 번갈아 되풀이됩니다.`)]))
 });
 // 숨긴 법칙(차원)·자동 조합·재융합의 기술은 정의만 남기고, 게임에 보이는 법칙과 진화만 내보낸다.
 export const LAW_TAGS=Object.freeze(Object.fromEntries(Object.entries(ALL_LAW_TAGS).filter(([id])=>Object.hasOwn(LAWS,id))));

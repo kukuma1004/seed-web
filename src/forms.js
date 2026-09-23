@@ -1,5 +1,8 @@
 import {FIRST_FUSIONS,FIRST_FUSION_BY_ID,SECOND_FUSIONS,secondFusionOf as catalogSecondOf} from './combo-catalog.js';
 import {HIDDEN_LAWS} from './laws.js';
+import FINAL_MANIFEST from './final-identity-manifest.json' with {type:'json'};
+import {FINAL_BRANCH_PATTERNS} from './final-branch-patterns.js';
+import {TWIN_INTERACTIONS} from './twin-interactions.js';
 
 // Final forms: two held laws fuse into one attack with its own shape, range and weakness.
 // Hand-authored fusions keep bespoke attacks. Unreleased pairs stay in the
@@ -190,7 +193,7 @@ export const AWAKEN_SURGE_OPENING=Object.freeze({mirrorhall:Infinity});
 export const awakenSurgeOpening=(id,twin=false)=>twin?TWIN.surgeOpeningEvery:AWAKEN_SURGE_OPENING[id]??AWAKEN.surgeOpeningEvery;
 const AWAKEN_SOLO=Object.freeze({bigcrunch:'flarebloom',pulsegravity:'blackhole',frostarmada:'starring',thousandblades:'rewind',infiniteprism:'fullbloom',skyspear:'glassspear',icegarden:'winterbreath',tempestcrown:'thunderweb',maelstrom:'blackhole',bloomtempest:'fullbloom',mirrorhall:'mirrormaze'});
 const awaken=(id,base,name,desc,strength,weakness)=>Object.freeze({id,name,base,addedSolo:AWAKEN_SOLO[id],requires:CURATED_FORMS[base].requires,pair:`${CURATED_FORMS[base].name} + ${SOLO_ALL[AWAKEN_SOLO[id]].name}`,desc,strength,weakness,passive:CURATED_FORMS[base].passive,awakened:true});
-export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
+const EXISTING_AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bigcrunch','collapse','대붕괴','넓은 붕괴 씨앗을 빠르게 쏘며, 14초마다 가까운 적 둘의 자리에 붕괴 우물을 심습니다.','모인 적을 강한 붕괴로 정리','우물 사이의 공백과 느린 탄을 빠른 적이 파고듦'),
  awaken('pulsegravity','collapse','맥동중력핵','중력 씨앗이 떨어진 자리에 오래 남아 적을 끌어모으고 세 번 맥동한 뒤 작게 닫힙니다. 보스는 끌리지 않지만 맥동 피해를 받습니다.','한 자리를 지속해서 압박하고 후속 탄을 맞히기 쉬움','순간 폭발이 약하고 빠르게 자리를 바꾸는 적에 취약'),
  awaken('frostarmada','frostguard','서리 함대','위성이 늘고 냉기가 훨씬 자주 터지며, 10초마다 넓은 냉기가 주변을 오래 얼립니다.','근접 제압과 탄막 방어의 완성형','사거리는 여전히 짧음'),
@@ -203,6 +206,20 @@ export const AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
  awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 날아오는 적 탄환을 모두 되받아칩니다(문지기 탄 제외).','탄막을 통째로 공격으로 바꿈','탄을 쏘지 않는 근접 무리에게는 약함')
 ].map(f=>[f.id,f])));
+const FINAL_CANDIDATES=Object.freeze(Object.fromEntries(FINAL_MANIFEST.entries.filter(entry=>entry.kind==='final')
+ .filter(branch=>branch.status!=='implemented_existing')
+ .map(branch=>{
+  const base=CURATED_FORMS[branch.fusion],pattern=FINAL_BRANCH_PATTERNS[branch.id];
+  if(!base||!pattern||!SOLO_ALL[branch.addedSolo])throw new Error(`Incomplete final branch ${branch.id}`);
+  return [branch.id,Object.freeze({id:branch.id,name:branch.name,base:base.id,addedSolo:branch.addedSolo,
+   requires:base.requires,pair:`${base.name} + ${SOLO_ALL[branch.addedSolo].name}`,
+   desc:branch.behavior,strength:branch.role,weakness:branch.tradeoff,passive:base.passive,
+   awakened:true,finalCandidate:true,pattern:pattern.motion})];
+ })));
+// All 72 have authored combat/visual data and can be inspected in the admin lab.
+// New branches remain out of ordinary rewards until real mobile and balance QA.
+export const AWAKEN_FORMS=Object.freeze({...EXISTING_AWAKEN_FORMS,...FINAL_CANDIDATES});
+export const LIVE_AWAKEN_FORMS=EXISTING_AWAKEN_FORMS;
 // Twin awakenings: all 36 pairs of the nine playable solo evolutions have their own identity.
 // Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
 // The ten pairs that once routed to a fusion awakening are separate twins too.
@@ -222,7 +239,7 @@ const TWIN_TRAITS=Object.freeze({
 const twin=(id,a,b,name,desc)=>{
  const A=SOLO_ALL[a],B=SOLO_ALL[b],parts=Object.freeze([a,b]),ta=TWIN_TRAITS[a],tb=TWIN_TRAITS[b];
  const synergy=Object.freeze({name:`${ta.word}·${tb.word} 공명`,window:2.6,bonus:.08+ta.bonus+tb.bonus,effects:Object.freeze([ta.effect,tb.effect])});
- return Object.freeze({id,name:`${name} 각성`,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc,strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
+ return Object.freeze({id,name:`${name} 각성`,parts,base:parts.find(p=>p==='starring')||a,requires:Object.freeze([A.requires[0],B.requires[0]]),pair:`${A.name} + ${B.name}`,desc:`${desc} ${TWIN_INTERACTIONS[id]?.rule||''}`.trim(),strength:`${A.strength} · ${B.strength}`,weakness:'두 공격의 약점은 각각 그대로',synergy,passive:false,awakened:true,twin:true});
 };
 const TWIN_ALL=Object.freeze(Object.fromEntries([
  twin('lightningmirror','mirrormaze','thunderweb','번개 거울방','튕기는 거울탄과 적 사이를 뛰는 번개가 한 칸에서 함께 나갑니다.'),
@@ -278,7 +295,7 @@ export const TWIN_FORMS=Object.freeze(Object.fromEntries(Object.entries(TWIN_ALL
 export const ALL_FORMS=Object.freeze({...FORMS,...CANDIDATE_FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS,...SECOND_FORMS});
 // The player-facing book excludes archived second fusions and held first fusions.
 // Legacy ids remain in ALL_FORMS so saved runs and prior discovery records still load.
-export const DISCOVERY_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...AWAKEN_FORMS,...TWIN_FORMS});
+export const DISCOVERY_FORMS=Object.freeze({...FORMS,...SOLO_FORMS,...LIVE_AWAKEN_FORMS,...TWIN_FORMS});
 export const isAwakenedForm=id=>Object.hasOwn(AWAKEN_FORMS,id)||Object.hasOwn(TWIN_FORMS,id);
 export const isTwinForm=id=>Object.hasOwn(TWIN_FORMS,id);
 // The attacks an evolution fights with, one combat each: a twin has two, everything else one.
@@ -329,6 +346,12 @@ export function formStats(id,level=1,{surge=false,twin=false}={}){
    const pulse={...base,interval:base.interval*.88,damage:base.damage*.30,pulseDamage:base.damage*.24,
     radius:Math.max(2.4,base.radius-.35),wells:2,awakened:true,pulseWell:true};
    return surge?surgeStats(awakened.base,pulse):pulse;
+  }
+  if(awakened.finalCandidate){
+   // The branch layer contributes its own hits. Keep the inherited weapon below
+   // the parent fusion's raw output so the extra pattern is a trade, not free DPS.
+   const authored={...base,interval:base.interval*.94,damage:base.damage*.8,awakened:true,finalBranch:true};
+   return surge?surgeStats(awakened.base,authored):authored;
   }
   const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
  const base=baseStats(id,level);

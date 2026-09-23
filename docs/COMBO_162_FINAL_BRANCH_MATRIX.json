@@ -2,7 +2,7 @@
   "version": 1,
   "source": "SEED_FINAL_EVOLUTIONS_72_DRAFT_v1.json",
   "scope": "9 basic + 9 solo + 36 fusion + 72 fusion-and-solo + 36 solo twins = 162 identities",
-  "releaseRule": "design_only branches are never in the selection pool or player codex",
+  "releaseRule": "implemented_held branches are testable in the admin lab but excluded from normal selections and player codex until mobile and balance QA",
   "pairs": [
     {
       "fusion": "comethalo",
@@ -14,7 +14,7 @@
         {
           "designId": "CE-001",
           "id": "final-comethalo-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "궤도박격",
           "conceptName": "궤도박격",
           "fusion": "comethalo",
@@ -29,7 +29,7 @@
         {
           "designId": "CE-002",
           "id": "final-comethalo-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "맥동위성",
           "conceptName": "맥동위성",
           "fusion": "comethalo",
@@ -55,7 +55,7 @@
         {
           "designId": "CE-003",
           "id": "final-sunmirror-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "도화선당구",
           "conceptName": "도화선당구",
           "fusion": "sunmirror",
@@ -70,7 +70,7 @@
         {
           "designId": "CE-004",
           "id": "final-sunmirror-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "충격리코셰",
           "conceptName": "충격리코셰",
           "fusion": "sunmirror",
@@ -96,7 +96,7 @@
         {
           "designId": "CE-005",
           "id": "final-blastlance-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "심부폭약",
           "conceptName": "심부폭약",
           "fusion": "blastlance",
@@ -111,7 +111,7 @@
         {
           "designId": "CE-006",
           "id": "final-blastlance-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "발파장창",
           "conceptName": "발파장창",
           "fusion": "blastlance",
@@ -178,7 +178,7 @@
         {
           "designId": "CE-009",
           "id": "final-chainburst-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "결속기폭",
           "conceptName": "결속기폭",
           "fusion": "chainburst",
@@ -193,7 +193,7 @@
         {
           "designId": "CE-010",
           "id": "final-chainburst-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "폭압계전",
           "conceptName": "폭압계전",
           "fusion": "chainburst",
@@ -219,7 +219,7 @@
         {
           "designId": "CE-011",
           "id": "final-frostbloom-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "빙각파열",
           "conceptName": "빙각파열",
           "fusion": "frostbloom",
@@ -260,7 +260,7 @@
         {
           "designId": "CE-013",
           "id": "final-seedstorm-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "집속종자탄",
           "conceptName": "집속종자탄",
           "fusion": "seedstorm",
@@ -301,7 +301,7 @@
         {
           "designId": "CE-015",
           "id": "final-returnflare-burst",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "귀환기폭",
           "conceptName": "귀환기폭",
           "fusion": "returnflare",
@@ -316,7 +316,7 @@
         {
           "designId": "CE-016",
           "id": "final-returnflare-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "쌍박자폭탄",
           "conceptName": "쌍박자폭탄",
           "fusion": "returnflare",
@@ -342,7 +342,7 @@
         {
           "designId": "CE-017",
           "id": "final-mirrorguard-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "접이궤도",
           "conceptName": "접이궤도",
           "fusion": "mirrorguard",
@@ -383,7 +383,7 @@
         {
           "designId": "CE-019",
           "id": "final-spearring-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "궤도절삭",
           "conceptName": "궤도절삭",
           "fusion": "spearring",
@@ -398,7 +398,7 @@
         {
           "designId": "CE-020",
           "id": "final-spearring-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "나선천공",
           "conceptName": "나선천공",
           "fusion": "spearring",
@@ -424,7 +424,7 @@
         {
           "designId": "CE-021",
           "id": "final-accretiondisk-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "쌍성회랑",
           "conceptName": "쌍성회랑",
           "fusion": "accretiondisk",
@@ -439,7 +439,7 @@
         {
           "designId": "CE-022",
           "id": "final-accretiondisk-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "포획성운",
           "conceptName": "포획성운",
           "fusion": "accretiondisk",
@@ -465,7 +465,7 @@
         {
           "designId": "CE-023",
           "id": "final-stormcrown-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "궤도맥동",
           "conceptName": "궤도맥동",
           "fusion": "stormcrown",
@@ -521,7 +521,7 @@
         {
           "designId": "CE-026",
           "id": "final-frostguard-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "회전동토",
           "conceptName": "회전동토",
           "fusion": "frostguard",
@@ -547,7 +547,7 @@
         {
           "designId": "CE-027",
           "id": "final-halobloom-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "겹고리군락",
           "conceptName": "겹고리군락",
           "fusion": "halobloom",
@@ -562,7 +562,7 @@
         {
           "designId": "CE-028",
           "id": "final-halobloom-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "회전산개",
           "conceptName": "회전산개",
           "fusion": "halobloom",
@@ -588,7 +588,7 @@
         {
           "designId": "CE-029",
           "id": "final-ebbring-orbit",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "호흡궤도",
           "conceptName": "호흡궤도",
           "fusion": "ebbring",
@@ -603,7 +603,7 @@
         {
           "designId": "CE-030",
           "id": "final-ebbring-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "귀소나선",
           "conceptName": "귀소나선",
           "fusion": "ebbring",
@@ -629,7 +629,7 @@
         {
           "designId": "CE-031",
           "id": "final-refractlance-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "각도연장",
           "conceptName": "각도연장",
           "fusion": "refractlance",
@@ -644,7 +644,7 @@
         {
           "designId": "CE-032",
           "id": "final-refractlance-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "굴절송곳",
           "conceptName": "굴절송곳",
           "fusion": "refractlance",
@@ -670,7 +670,7 @@
         {
           "designId": "CE-033",
           "id": "final-gravitymirror-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "낙성반사",
           "conceptName": "낙성반사",
           "fusion": "gravitymirror",
@@ -685,7 +685,7 @@
         {
           "designId": "CE-034",
           "id": "final-gravitymirror-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "중력핀볼",
           "conceptName": "중력핀볼",
           "fusion": "gravitymirror",
@@ -711,7 +711,7 @@
         {
           "designId": "CE-035",
           "id": "final-thundermirror-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "굴절전도",
           "conceptName": "굴절전도",
           "fusion": "thundermirror",
@@ -726,7 +726,7 @@
         {
           "designId": "CE-036",
           "id": "final-thundermirror-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "반사계전",
           "conceptName": "반사계전",
           "fusion": "thundermirror",
@@ -752,7 +752,7 @@
         {
           "designId": "CE-037",
           "id": "final-frostkaleidoscope-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리도장",
           "conceptName": "서리도장",
           "fusion": "frostkaleidoscope",
@@ -767,7 +767,7 @@
         {
           "designId": "CE-038",
           "id": "final-frostkaleidoscope-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "빙각반사면",
           "conceptName": "빙각반사면",
           "fusion": "frostkaleidoscope",
@@ -793,7 +793,7 @@
         {
           "designId": "CE-039",
           "id": "final-prism-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "파편당구",
           "conceptName": "파편당구",
           "fusion": "prism",
@@ -834,7 +834,7 @@
         {
           "designId": "CE-041",
           "id": "final-echolane-reflect",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "회귀당구",
           "conceptName": "회귀당구",
           "fusion": "echolane",
@@ -849,7 +849,7 @@
         {
           "designId": "CE-042",
           "id": "final-echolane-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "되짚는궤적",
           "conceptName": "되짚는궤적",
           "fusion": "echolane",
@@ -875,7 +875,7 @@
         {
           "designId": "CE-043",
           "id": "final-gravitystake-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "견인창",
           "conceptName": "견인창",
           "fusion": "gravitystake",
@@ -890,7 +890,7 @@
         {
           "designId": "CE-044",
           "id": "final-gravitystake-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "중력봉합",
           "conceptName": "중력봉합",
           "fusion": "gravitystake",
@@ -931,7 +931,7 @@
         {
           "designId": "CE-046",
           "id": "final-thunderlance-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "맥관경로",
           "conceptName": "맥관경로",
           "fusion": "thunderlance",
@@ -957,7 +957,7 @@
         {
           "designId": "CE-047",
           "id": "final-icicle-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "빙맥송곳",
           "conceptName": "빙맥송곳",
           "fusion": "icicle",
@@ -972,7 +972,7 @@
         {
           "designId": "CE-048",
           "id": "final-icicle-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "동토길",
           "conceptName": "동토길",
           "fusion": "icicle",
@@ -998,7 +998,7 @@
         {
           "designId": "CE-049",
           "id": "final-pierceshower-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "갈래창끝",
           "conceptName": "갈래창끝",
           "fusion": "pierceshower",
@@ -1013,7 +1013,7 @@
         {
           "designId": "CE-050",
           "id": "final-pierceshower-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "천공부채",
           "conceptName": "천공부채",
           "fusion": "pierceshower",
@@ -1039,7 +1039,7 @@
         {
           "designId": "CE-051",
           "id": "final-returnblade-pierce",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "왕복천공",
           "conceptName": "왕복천공",
           "fusion": "returnblade",
@@ -1080,7 +1080,7 @@
         {
           "designId": "CE-053",
           "id": "final-stormanchor-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "중력삼각대",
           "conceptName": "중력삼각대",
           "fusion": "stormanchor",
@@ -1095,7 +1095,7 @@
         {
           "designId": "CE-054",
           "id": "final-stormanchor-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "흐르는우물",
           "conceptName": "흐르는우물",
           "fusion": "stormanchor",
@@ -1121,7 +1121,7 @@
         {
           "designId": "CE-055",
           "id": "final-coldwell-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리소용돌이",
           "conceptName": "서리소용돌이",
           "fusion": "coldwell",
@@ -1136,7 +1136,7 @@
         {
           "designId": "CE-056",
           "id": "final-coldwell-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "해빙수축",
           "conceptName": "해빙수축",
           "fusion": "coldwell",
@@ -1162,7 +1162,7 @@
         {
           "designId": "CE-057",
           "id": "final-pullgarden-gravity",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "수렴산탄",
           "conceptName": "수렴산탄",
           "fusion": "pullgarden",
@@ -1177,7 +1177,7 @@
         {
           "designId": "CE-058",
           "id": "final-pullgarden-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "분산중력장",
           "conceptName": "분산중력장",
           "fusion": "pullgarden",
@@ -1218,7 +1218,7 @@
         {
           "designId": "CE-060",
           "id": "final-tidepull-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "중력투석",
           "conceptName": "중력투석",
           "fusion": "tidepull",
@@ -1244,7 +1244,7 @@
         {
           "designId": "CE-061",
           "id": "final-frostnet-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리계전",
           "conceptName": "서리계전",
           "fusion": "frostnet",
@@ -1259,7 +1259,7 @@
         {
           "designId": "CE-062",
           "id": "final-frostnet-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "동결동기화",
           "conceptName": "동결동기화",
           "fusion": "frostnet",
@@ -1285,7 +1285,7 @@
         {
           "designId": "CE-063",
           "id": "final-lightningpetal-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "가지맥",
           "conceptName": "가지맥",
           "fusion": "lightningpetal",
@@ -1300,7 +1300,7 @@
         {
           "designId": "CE-064",
           "id": "final-lightningpetal-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "군집전도",
           "conceptName": "군집전도",
           "fusion": "lightningpetal",
@@ -1326,7 +1326,7 @@
         {
           "designId": "CE-065",
           "id": "final-rewindbolt-chain",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "닫힌회로",
           "conceptName": "닫힌회로",
           "fusion": "rewindbolt",
@@ -1341,7 +1341,7 @@
         {
           "designId": "CE-066",
           "id": "final-rewindbolt-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "징검귀환",
           "conceptName": "징검귀환",
           "fusion": "rewindbolt",
@@ -1367,7 +1367,7 @@
         {
           "designId": "CE-067",
           "id": "final-rimepetal-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "결정정원",
           "conceptName": "결정정원",
           "fusion": "rimepetal",
@@ -1382,7 +1382,7 @@
         {
           "designId": "CE-068",
           "id": "final-rimepetal-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리산탄",
           "conceptName": "서리산탄",
           "fusion": "rimepetal",
@@ -1408,7 +1408,7 @@
         {
           "designId": "CE-069",
           "id": "final-rimeback-frost",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리인장",
           "conceptName": "서리인장",
           "fusion": "rimeback",
@@ -1423,7 +1423,7 @@
         {
           "designId": "CE-070",
           "id": "final-rimeback-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "서리끌",
           "conceptName": "서리끌",
           "fusion": "rimeback",
@@ -1449,7 +1449,7 @@
         {
           "designId": "CE-071",
           "id": "final-returningpetals-split",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "귀소군락",
           "conceptName": "귀소군락",
           "fusion": "returningpetals",
@@ -1464,7 +1464,7 @@
         {
           "designId": "CE-072",
           "id": "final-returningpetals-recall",
-          "status": "design_only",
+          "status": "implemented_held",
           "name": "재결합창",
           "conceptName": "재결합창",
           "fusion": "returningpetals",

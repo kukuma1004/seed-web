@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {FORMS,CURATED_FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,SOLO_FORMS,ALL_FORMS,AWAKEN_FORMS,LIVE_AWAKEN_FORMS,TWIN_FORMS,SOLO_LEVEL,formStats,soloFormOf} from '../src/forms.js';
 import {averageDps,bossDps,simulate,SCENES} from './balance-sim.mjs';
 
 // Balance is measured, not guessed: every evolution fights the same three crowds (see balance-sim.mjs).
@@ -170,7 +170,7 @@ assert.equal(formStats('tidepull',SOLO_LEVEL-1,{surge:true}).vortices,3,'tide ul
 // One signature (3 seconds) is worth 12-32 seconds of that evolution's normal damage. The gauge is slow (a whole crowd plus a
 // 20 s cooldown), so the payoff must be decisive (2026-09-15: SURGE_DAMAGE 1.6 after players felt enemies survived it).
 const SIGNATURE_SECONDS=3;
-for(const id of Object.keys(ALL_FORMS)){
+for(const id of Object.keys(ALL_FORMS).filter(id=>!ALL_FORMS[id].finalCandidate)){
  const shots=ALL_FORMS[id].passive;let normal=0,boosted=0;
  for(const scene of Object.keys(SCENES)){
   normal+=simulate(id,SOLO_LEVEL-1,{scene,seconds:10,shots}).damage;
@@ -192,7 +192,7 @@ for(const id of Object.keys(ALL_FORMS)){
 }
 // Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:
 // about as strong as the pair, never a runaway (0.7x-1.5x), and the level rule is the one progression.js uses.
-for(const a of Object.values(AWAKEN_FORMS)){
+for(const a of Object.values(LIVE_AWAKEN_FORMS)){
  const L=SOLO_LEVEL-1,shots=a.passive,pair=averageDps(a.base,L,{shots})+Math.max(...a.requires.map(soloFormOf).map(id=>averageDps(id,L,{shots})));
  const ratio=averageDps(a.id,L+Math.ceil(L/3),{shots})/pair;
  assert.ok(ratio>=.7&&ratio<=1.5,`${a.id}: awakened is ${ratio.toFixed(2)} of fusion + solo`);

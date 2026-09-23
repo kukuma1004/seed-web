@@ -27,9 +27,9 @@ for(const id of Object.keys(SOLO_FORMS))assert.match(formArt(id),new RegExp(SOLO
 for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(`${FUSION_ATLAS}|${COMBO_ART.cores}|${FIRST_CANDIDATE_ATLAS}`));
 for(const id of Object.keys(SECOND_FORMS))assert.match(formArt(id),new RegExp(SECOND_ATLAS));
 for(const id of Object.keys(GENERATED_FORMS))assert.match(formArt(id),new RegExp(COMBO_ART.cores));
-for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(id==='pulsegravity'?'seed-pulsegravity-v1-ui.webp':AWAKEN_ATLAS));
+for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AWAKEN_FORMS[id].finalCandidate?'seed-final-identity-atlas-v1-':id==='pulsegravity'?'seed-pulsegravity-v1-ui.webp':AWAKEN_ATLAS));
 assert.ok(fs.statSync(new URL('../public/assets/seed-pulsegravity-v1-ui.webp',import.meta.url)).size<120_000,'new final-branch art stays mobile-sized');
-for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),/twin-art/);if(!TWIN_FORMS[id].parts.includes('riftseed'))assert.match(formArt(id),new RegExp(SOLO_ATLAS));}
+for(const id of Object.keys(TWIN_FORMS))assert.match(formArt(id),/twin-identity-art.*seed-final-identity-atlas-v1-/);
 assert.equal(new Set(Object.keys(SOLO_FORMS).map(formArt)).size,Object.keys(SOLO_FORMS).length);
 for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','frost','chain','portal'])assert.match(lawArt(id),new RegExp(LAW_ATLAS));
 assert.equal(LAW_ATLAS,'seed-law-atlas-v4-ui.webp');

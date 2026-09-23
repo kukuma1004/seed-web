@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,TWIN,ALL_FORMS,AWAKEN,awakenOpeningEvery,baseFormOf,isAwakenedForm,isTwinForm,attackPartsOf,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,LIVE_AWAKEN_FORMS,TWIN_FORMS,TWIN,ALL_FORMS,AWAKEN,awakenOpeningEvery,baseFormOf,isAwakenedForm,isTwinForm,attackPartsOf,awakenedFormOf,formStats,formUpgradeLine} from '../src/forms.js';
 import {awakenOptions,awakenLevel,awaken,slotsUsed,chooseLaw,formOffer} from '../src/progression.js';
 import {createFormCombat} from '../src/form-combat.js';
 import {evolutionFamily,isOrbitEvolution,activeUltimateEvolutions} from '../src/evolution-family.js';
@@ -9,11 +9,12 @@ import {buildRecord,parseBuild} from '../src/ranking-build.js';
 const V=THREE.Vector3;
 
 // Existing ten stay intact; the opposite gravity branch is the first new final form.
-assert.equal(Object.keys(AWAKEN_FORMS).length,11,'기존 10종과 신규 중력 분기 1종');
-assert.ok(Object.values(AWAKEN_FORMS).every(a=>Object.hasOwn(FORMS,a.base)),'모든 각성의 기반 조합은 실제 선택에 남아 있음');
+assert.equal(Object.keys(AWAKEN_FORMS).length,72,'36쌍의 완성 각성 두 갈래');
+assert.equal(Object.keys(LIVE_AWAKEN_FORMS).length,11,'기존 검수 갈래만 일반 선택지에 남는다');
+assert.ok(Object.values(AWAKEN_FORMS).every(a=>Object.hasOwn(CURATED_FORMS,a.base)),'모든 각성은 손설계 융합을 사용');
 for(const a of Object.values(AWAKEN_FORMS)){
- assert.ok(FORMS[a.base]&&awakenedFormOf(a.base,a.addedSolo)===a.id&&baseFormOf(a.id)===a.base&&isAwakenedForm(a.id));
- assert.deepEqual([...a.requires],[...FORMS[a.base].requires]);assert.equal(a.passive,FORMS[a.base].passive);
+ assert.ok(CURATED_FORMS[a.base]&&awakenedFormOf(a.base,a.addedSolo)===a.id&&baseFormOf(a.id)===a.base&&isAwakenedForm(a.id));
+ assert.deepEqual([...a.requires],[...CURATED_FORMS[a.base].requires]);assert.equal(a.passive,CURATED_FORMS[a.base].passive);
  assert.ok(a.name&&a.desc&&a.strength&&a.weakness&&SIGNATURES[a.id]?.name);
 }
 assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,Object.keys(ALL_FORMS).length);
@@ -80,7 +81,8 @@ for(const a of Object.values(AWAKEN_FORMS)){
   const volley=s=>s.damage*(s.vortices||1);
   if(a.id==='pulsegravity'){
    assert.ok(awake.pulseWell&&awake.pulseDamage>0&&awake.damage<fusion.damage*.5,'other branch trades burst for repeated gravity damage');
-  }else assert.ok(volley(awake)>=volley(fusion)*.85,a.id);
+  }else if(a.finalCandidate)assert.ok(awake.finalBranch&&awake.damage<fusion.damage&&awake.damage>fusion.damage*.6,a.id);
+  else assert.ok(volley(awake)>=volley(fusion)*.85,a.id);
  if(Number.isFinite(fusion.interval))assert.ok(awake.interval<fusion.interval&&surged.interval<awake.interval,a.id);
  assert.ok(surged.damage>awake.damage,a.id);assert.match(formUpgradeLine(a.id,5),/진화 Lv\.5 → 6/);
 }
@@ -117,4 +119,4 @@ assert.equal(activeState(new Map([['bigcrunch',9]])).state,'SIGNATURE');
 }
 // Saved builds and rankings keep awakened evolutions.
 assert.deepEqual(parseBuild(buildRecord({forms:new Map([['maelstrom',8]])})).forms,[['maelstrom',8]]);
-console.log('Awakening: eleven distinct fusion+solo branches and 36 separate solo+solo twins, feeding, level rule, lasting surge share, families, opening move and saved builds passed.');
+console.log('Awakening: 72 authored fusion+solo branches (11 live), 36 twins, recipe separation, combat rhythm and saved builds passed.');

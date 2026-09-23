@@ -39,7 +39,7 @@ assert.match(main,/if\(localAdminLab\|\|account\.user\(\)\)showIntro\(\);else sh
 assert.match(main,/accountCanRank\(\{native:account\.native,admin:adminMode,tester:betaTesterMode/,'등록된 PC 웹 테스터(와 관리자)도 베타 랭킹에 참여할 수 있어야 합니다.');
 assert.match(main,/betaTesterMode\?grantGift\(runStorage,BETA_BOOSTER_GIFT,'sprout',1\)/,'베타테스터는 계정마다 다시 싹 부스터를 한 번 받아야 합니다.');
 assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
-assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*현재 공개된 진화 \$\{Object\.keys\(FORMS\)\.length\}종/,'전투 실험실은 현재 공개된 융합·단독·완성·쌍둥이 진화를 하드코딩된 개수 없이 모두 제공해야 합니다.');
+assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*검사 가능한 \$\{Object\.keys\(FORMS\)\.length\}종/,'전투 실험실은 공개·보류·옛 기록을 구분하고 하드코딩된 개수 없이 제공해야 합니다.');
 assert.match(main,/developerRun\)return true;[\s\S]*writeCheckpoint/,'개발자 실험은 기존 이어하기 저장을 덮어쓰지 않아야 합니다.');
 assert.match(main,/if\(developerRun\)\{\$\('#overlay'\)[\s\S]*점수·보상·도감·정원·저장/,'개발자 실험 종료는 랭킹과 정원 기록을 만들지 않아야 합니다.');
 const auth=fs.readFileSync(new URL('../src/account-auth.js',import.meta.url),'utf8');

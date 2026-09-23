@@ -1,6 +1,6 @@
 import fs from 'node:fs';
 import path from 'node:path';
-import {CURATED_FORMS,SOLO_FORMS,AWAKEN_FORMS} from '../src/forms.js';
+import {CURATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,LIVE_AWAKEN_FORMS} from '../src/forms.js';
 
 // The attached draft is reference material, not a runnable content table.
 // Resolve every proposal against the game's actual ids before reviewing a batch.
@@ -22,7 +22,7 @@ const pairs=draft.fusion_pairs.map(item=>{
   const implemented=awakenings.get(`${fusion.id}+${addedSolo.id}`);
   return {
    designId:branch.id,id:implemented?.id||`final-${fusion.id}-${addedLaw}`,
-   status:implemented?'implemented_existing':'design_only',
+   status:implemented?(LIVE_AWAKEN_FORMS[implemented.id]?'implemented_existing':'implemented_held'):'design_only',
    name:implemented?.name||branch.name_ko,conceptName:branch.name_ko,
    fusion:fusion.id,addedSolo:addedSolo.id,addedLaw,
    behavior:implemented?.desc||branch.behavior,
@@ -34,9 +34,9 @@ const pairs=draft.fusion_pairs.map(item=>{
  return {fusion:fusion.id,laws:[...fusion.requires],branches,contrast:item.branch_contrast,guardrail:item.test_and_guardrail};
 });
 if(pairs.length!==36||pairs.reduce((n,p)=>n+p.branches.length,0)!==72)throw new Error('Expected 36 pairs and 72 branches');
-if(pairs.flatMap(p=>p.branches).filter(b=>b.status==='implemented_existing').length!==Object.keys(AWAKEN_FORMS).length)throw new Error('Implemented awakenings did not map exactly once');
+if(pairs.flatMap(p=>p.branches).filter(b=>b.status!=='design_only').length!==Object.keys(AWAKEN_FORMS).length)throw new Error('Implemented awakenings did not map exactly once');
 const matrix={version:1,source:path.basename(source instanceof URL?source.pathname:source),scope:'9 basic + 9 solo + 36 fusion + 72 fusion-and-solo + 36 solo twins = 162 identities',
- releaseRule:'design_only branches are never in the selection pool or player codex',pairs};
+ releaseRule:'implemented_held branches are testable in the admin lab but excluded from normal selections and player codex until mobile and balance QA',pairs};
 fs.writeFileSync(output,JSON.stringify(matrix,null,2)+'\n','utf8');
 const implemented=pairs.flatMap(p=>p.branches).filter(b=>b.status==='implemented_existing').length;
-console.log(`Wrote ${pairs.length} pairs, 72 branches (${implemented} implemented, ${72-implemented} design-only) to ${output}`);
+console.log(`Wrote ${pairs.length} pairs, 72 branches (${implemented} live, ${72-implemented} held for QA) to ${output}`);

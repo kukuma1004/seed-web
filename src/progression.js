@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {FORMS,ALL_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,secondFormOf,soloLevel,soloFormOf} from './forms.js';
+import {FORMS,ALL_FORMS,SOLO_FORMS,LIVE_AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,secondFormOf,soloLevel,soloFormOf} from './forms.js';
 
 // Laws are stacked, never swapped: six slots, and every pick after that deepens a held law.
 // Levels have no ceiling; counts that would flood the screen are capped, damage keeps growing.
@@ -202,7 +202,7 @@ export function buildLevel(levels,forms=new Map()){let n=totalLevel(levels);for(
 // Level: the stronger part plus a third of the weaker (rounded up), so both investments count. Feeding adds a third.
 export function awakenOptions(forms=new Map()){
  const out=[];
- for(const a of Object.values(AWAKEN_FORMS)){
+ for(const a of Object.values(LIVE_AWAKEN_FORMS)){
   const parts=[a.base,a.addedSolo].filter(id=>forms.has(id));
   if(forms.has(a.id)){for(const id of parts)out.push({id:a.id,from:[id]});continue;}
   if(parts.length===2)out.push({id:a.id,from:[a.base,a.addedSolo]});

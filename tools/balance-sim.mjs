@@ -2,7 +2,7 @@
 // Enemies do not die (huge health) and walk slowly toward the seed, so the numbers compare attack shapes, not kill luck.
 import * as THREE from 'three';
 import {createFormCombat} from '../src/form-combat.js';
-import {TWIN_FORMS} from '../src/forms.js';
+import {TWIN_FORMS,AWAKEN_FORMS} from '../src/forms.js';
 import {arenaFor,constrainToArena,reflectArenaBoundary} from '../src/arena.js';
 const V=THREE.Vector3;
 // 이동이 곧 화력인 조합: 혜성 화관(충전)과 되감는 번개(길 되감기).
@@ -22,7 +22,7 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
  const parts=TWIN_FORMS[id]?TWIN_FORMS[id].parts:[id];
  // 이동을 공격 자원으로 쓰는 조합은 비교표에서 의도된 플레이(작은 원을 계속 돎)로 잰다.
  // 멈췄을 때의 약점은 각 조합의 전용 검사에서 따로 확인한다.
- const movingPlay=!still&&parts.some(part=>MOVEMENT_FORMS.has(part));
+ const movingPlay=!still&&parts.some(part=>MOVEMENT_FORMS.has(AWAKEN_FORMS[part]?.base||part));
  // 한 덩이 엄폐물: 줄지어 선 적 너머(z=-6)에 벽이 있어 꺾이는 무기가 보상을 받는다.
  const cover={x:0,z:-6,w:8,d:1.2};
  const hitsCover=(a,b)=>walls&&Math.min(a.z,b.z)<=cover.z+cover.d/2&&Math.max(a.z,b.z)>=cover.z-cover.d/2&&Math.abs((a.x+b.x)/2-cover.x)<=cover.w/2;

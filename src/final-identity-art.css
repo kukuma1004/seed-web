@@ -1,0 +1,10 @@
+/* Three authored 6 × 6 sheets replace 108 individual card requests. */
+.form-art.final-identity-art{
+  background-size:600% 600%;background-repeat:no-repeat;background-color:#091d25;
+  border:1px solid #e6c883;border-radius:10px;
+  box-shadow:inset 0 0 0 1px #fff1b74d,0 4px 16px #020a1099;
+}
+.form-art.final-identity-art.twin-identity-art{
+  border-color:#d7e6cc;box-shadow:inset 0 0 0 1px #edffdf59,0 4px 16px #020a1099;
+}
+.book-entry.unknown .form-art.final-identity-art{filter:grayscale(1) brightness(.38)}

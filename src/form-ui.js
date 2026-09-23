@@ -1,4 +1,4 @@
-import {FORMS,SOLO_FORMS,SOLO_LEVEL,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,ALL_FORMS,DISCOVERY_FORMS,awakenOpeningEvery} from './forms.js';
+import {FORMS,SOLO_FORMS,SOLO_LEVEL,LIVE_AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS,ALL_FORMS,DISCOVERY_FORMS,awakenOpeningEvery} from './forms.js';
 import {formArt} from './form-art.js';
 import {SIGNATURES} from './actives.js';
 import {comboProjectilePreview} from './combo-projectile.js';
@@ -58,7 +58,7 @@ export function discoveryBook(profile,titles=null){
  <div class="book-scroll">
  ${section('완성 진화 · 두 법칙을 합치기',Object.values(FORMS))}
  ${section(`단독 진화 · 한 법칙을 Lv.${SOLO_LEVEL}까지`,Object.values(SOLO_FORMS))}
- ${section('융합 각성 · 융합 + 지정된 단독 진화',Object.values(AWAKEN_FORMS))}
+ ${section('융합 각성 · 융합 + 지정된 단독 진화',Object.values(LIVE_AWAKEN_FORMS))}
  ${section('쌍둥이 각성 · 두 단독 진화',Object.values(TWIN_FORMS))}
  </div>
  <p class="form-note">찾은 진화를 누르면 자세한 설명을 볼 수 있어요 · 발견은 쓰러져도 같은 기기·브라우저에 남습니다</p><button id="close-discoveries" class="primary">돌아가기</button>

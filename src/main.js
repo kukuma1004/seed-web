@@ -20,10 +20,12 @@ const DIRECT_FORMS=new Set(['returnblade','prism','thunderlance','seedstorm','mi
 import {readDiscoveries,writeDiscoveries,recordDiscovery,growthGuide,rerollUnlocked} from './discoveries.js';
 import {createCombatAnalysis,recordPersonalBests,combatGrade} from './combat-analysis.js';
 import {createFormCombat} from './form-combat.js';
+import {createTwinInteractionEngine} from './twin-interactions.js';
 import {formCard,soloCard,awakenCard,secondFusionCard,discoveryBook,formLawHint} from './form-ui.js';
 import {buildArenaBoundary,arenaFor,constrainToArena,reflectArenaBoundary,safeArenaSpawn,shouldBuildArenaBoundary} from './arena.js';
 import {escortWave,escortTypes} from './boss-escorts.js';
 import './forms.css';
+import './final-identity-art.css';
 import './combo-art.css';
 import './dash-evolution.css';
 import {ACTOR_ART_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt} from './actor-art.js';
@@ -481,7 +483,8 @@ function requireName(){const input=$('#player-name'),name=cleanName(input?input.
  if(!name){if(input){input.classList.add('need');input.focus();setText($('#name-hint'),nameRejected?'그 별명은 쓸 수 없어요 · 친구가 봐도 괜찮은 별명으로 바꿔 주세요':'이름을 먼저 적어 주세요 · 이 이름으로 랭킹에 올라가요');}return false;}
  const consent=$('#ranking-terms');if(!rankingTermsAccepted(runStorage)&&!consent?.checked){if(consent)consent.focus();setText($('#name-hint'),'명예의 전당 이용규칙을 읽고 동의해 주세요');return false;}
  setRankingTermsAccepted(runStorage,true);playerName=saveName(runStorage,name);return true;}
-let saveOK=false,profile=readDiscoveries(runStorage);const titleAccount=readAccountProfile(runStorage);seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),austinClear:profile.bosses.includes('austinclear'),alwaysClear:profile.bosses.includes('alwaysclear'),alwaysBeginner:profile.bosses.includes('alwaysbeginner'),discovered:profile.forms.length,total:Object.keys(FORMS).length,badges:titleAccount.badges,equipped:titleAccount.equippedTitle});
+const discoveredCount=p=>p.forms.filter(id=>DISCOVERY_FORMS[id]).length;
+let saveOK=false,profile=readDiscoveries(runStorage);const titleAccount=readAccountProfile(runStorage);seedTitle=createSeedTitle(player,{austin:profile.bosses.includes('austin'),austinClear:profile.bosses.includes('austinclear'),alwaysClear:profile.bosses.includes('alwaysclear'),alwaysBeginner:profile.bosses.includes('alwaysbeginner'),discovered:discoveredCount(profile),total:Object.keys(DISCOVERY_FORMS).length,badges:titleAccount.badges,equipped:titleAccount.equippedTitle});
 const bossPet=createBossPet(scene,{profile,id:readBossPet(runStorage,profile).id,reducedTextures:mobileDevice||qualityLevel===0});
 const sourceName=id=>id==='seed'?'기본 씨앗':FORMS[id]?.name||LAWS[id]?.name||'연계 효과';
 function renderRoomAnalysis(report,{training=false}={}){
@@ -497,11 +500,11 @@ function combatAnalysisSummary(report){
 }
 function finishRoomAnalysis(training=false,show=false){
  const report=combatAnalysis.finish(elapsed);if(!report)return null;lastRoomAnalysis=report;if(show)renderRoomAnalysis(report,{training});else $('#room-analysis').hidden=true;
- if(!developerRun&&!training){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(profile.forms.length);}
+ if(!developerRun&&!training){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(discoveredCount(profile));}
  return report;
 }
 function buildRoomBoundary(){if(!shouldBuildArenaBoundary(region))return;const stadiumRoom=isAct2(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:mats,stadiumRoom);}
-function remember(kind,id){if(developerRun)return {profile,saved:true};const before=profile.forms.length;const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);seedTitle.setDiscovered(profile.forms.length);const news=codexNews(before,profile.forms.length);if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
+function remember(kind,id){if(developerRun)return {profile,saved:true};const before=discoveredCount(profile);const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);seedTitle.setDiscovered(discoveredCount(profile));const news=codexNews(before,discoveredCount(profile));if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}
  // 관통을 조합·진화에 넣어도 기본 탄의 관통 수·치명타는 남는다(9/22). 슬롯 법칙(chosen)에는 넣지 않는다 —
  // 넣었더니 슬롯 줄에 '관통 Lv.0'이 자리를 차지하고, 없는 관통으로 조합이 열리고, 저장에도 섞였다.
@@ -582,25 +585,17 @@ function offerForm(force=false,onDone=finishChoice){
  document.querySelectorAll('[data-form]').forEach(b=>b.onclick=()=>{if(mode!=='forms')return;const id=b.dataset.form,kept=Math.round(consumedUpgrades(levels,FORMS[id]?.requires)*FUSION_BONUS_KEEP*10);if(!bankAndFuse(id))return;remember('forms',id);syncLaws();syncForms();growth.select(effectiveLaws(),mutated);vfx.evolution(player.position,FORMS[id].requires[0]);audio.play('fusion');if(!offerSecondFusion(onDone))onDone();$('#toast').textContent=`${FORMS[id].name} Lv.${heldForms.get(id)} · 두 법칙이 한 칸으로 합쳐졌습니다${kept?` · 모든 탄 피해 +${kept}% 유지`:''}`;});
  $('#keep-form').onclick=onDone;return true;
 }
-const twinMarks=new WeakMap();
+const twinMarks=new WeakMap(),twinInteractions=createTwinInteractionEngine();
 function twinResonance(e,amount,meta,scale){
  const twin=TWIN_FORMS[meta.evolution];if(!twin)return;
  const last=twinMarks.get(e),now=elapsed;
  if(!last||last.id!==twin.id||last.kind===meta.kind||now-last.time>twin.synergy.window){twinMarks.set(e,{id:twin.id,kind:meta.kind,time:now});return;}
  twinMarks.delete(e);const bonus=amount*twin.synergy.bonus*scale;if(!(bonus>0))return;
- damageEnemy(e,bonus,false,false,meta);const pos=e.g.position,direction=pos.clone().sub(player.position).setY(0).normalize();
- vfx.burst(pos,'awaken',10,.75);
- for(const effect of twin.synergy.effects){
-  if(effect==='frost')e.slow=Math.max(e.slow||0,1.6);
-  else if(effect==='gravity'){if(wells.length>=6)wells.shift();wells.push({pos:pos.clone(),life:.65,pulse:0});}
-   else if(effect==='burst'){vfx.explosion(pos,'burst',.9);for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(pos)<1.25)damageEnemy(other,bonus*.35,false,false,meta);}
-   else if(effect==='chain'){const other=enemies.filter(o=>o!==e&&!o.dead).sort((a,b)=>a.g.position.distanceTo(pos)-b.g.position.distanceTo(pos))[0];if(other&&other.g.position.distanceTo(pos)<4){vfx.arc(pos,other.g.position);damageEnemy(other,bonus*.35,false,false,meta);}}
-   else if(effect==='split'){for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(pos)<1.1)damageEnemy(other,bonus*.25,false,false,meta);vfx.burst(pos,'split',8,.55);}
-  else if(effect==='reflect')vfx.reflect(pos,direction);
-  else if(effect==='orbit'&&!isBoss(e)&&e.type!=='turret'){e.g.position.addScaledVector(direction,.22);collide(e.g.position,.4);}
-   else if(effect==='pierce'&&isBoss(e))damageEnemy(e,bonus*.2,false,false,meta);
-  else if(effect==='recall')vfx.trail(player.position.clone().setY(.7),pos.clone().setY(.7),'recall',false);
- }
+ damageEnemy(e,bonus,false,false,meta);
+ // The two solo attacks still earn one shared resonance hit, but the follow-up
+ // is authored per pair instead of stacking both generic law effects.
+ twinInteractions.apply({id:twin.id,target:e,enemies,player:player.position,now,bonus,
+  damage:(other,extra)=>damageEnemy(other,extra,false,false,meta),fx:vfx,isBoss,collide});
 }
 function formHit(e,amount,meta){
  const consumed=FORMS[meta.kind].requires;
@@ -1051,7 +1046,7 @@ function permanentStatsProfile(titleInfo){
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
- const gardenLine=gardenSummary(),knownForms=adminMode?Object.keys(FORMS).length:profile.forms.length;
+ const gardenLine=gardenSummary(),knownForms=adminMode?Object.keys(DISCOVERY_FORMS).length:profile.forms.filter(id=>DISCOVERY_FORMS[id]).length;
  const permanentStats=[titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.shotSpeedBonus?`탄속 +${Math.round(titleInfo.shotSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
  const act1Best=readRanking(runStorage)[0]||null,act2Best=readRanking(actStorage(runStorage,2))[0]||null,act3Best=readRanking(act3Storage(runStorage))[0]||null;
  const recordProfile=`<section class="account-records"><header><strong>막별 최고 기록</strong><button type="button" id="account-ranking">전체 보기</button></header><div><span><b>오스틴</b><em>${act1Best?formatScore(act1Best.score)+'점':'도전 전'}</em></span><span><b>항상초심</b><em>${act2Best?formatScore(act2Best.score)+'점':'도전 전'}</em></span><span><b>요한</b><em>${act3Best?formatScore(act3Best.score)+'점':'도전 전'}</em></span></div></section>`;
@@ -1062,7 +1057,7 @@ function showAccount(error=''){
  $('#overlay').innerHTML=`<div class="menu-panel account-panel"><p class="eyebrow">SEED · PROFILE & ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 프로필':'어떻게 시작할까요'}</h2>
   <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
   ${user?`<div class="account-status"><strong>${escapeHtml(account.label())}</strong><span>${user.isAnonymous?'나중에 Google 또는 Apple 계정에 연결하면 현재 기록을 그대로 지킬 수 있어요.':'이 UID로 여러 기기의 기록을 이어갑니다.'}</span>${badgeLine?`<em class="account-badge">✦ ${escapeHtml(badgeLine)}</em>`:''}<small>UID ${escapeHtml(user.uid)}</small></div>`:''}
-  <section class="profile-collection"><button type="button" id="profile-garden"><span class="profile-collection-icon" aria-hidden="true">♧</span><span><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></span><em>›</em></button><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 전체 공개 · ':''}${knownForms}/${Object.keys(FORMS).length} 발견</small></span><em>›</em></button></section>
+  <section class="profile-collection"><button type="button" id="profile-garden"><span class="profile-collection-icon" aria-hidden="true">♧</span><span><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></span><em>›</em></button><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 공개 도감 · ':''}${knownForms}/${Object.keys(DISCOVERY_FORMS).length} 발견</small></span><em>›</em></button></section>
   ${recordProfile}
   ${permanentStatsProfile(titleInfo)}
   ${titleProfile}

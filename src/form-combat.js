@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
+import {createFinalBranchCombat} from './final-branch-combat.js';
+import {finalProjectileStyle} from './final-identity-art.js';
 import {buildComboProjectileGeometry,projectileAudioEvent} from './combo-projectile.js';
 
 // Ordinary prism is allowed to grow as it finds walls. Infinite Prism already
@@ -97,6 +99,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // 3묶음 상태: 창날 고리의 빠진 창·발사 시계 · 강착 원반 부스러기 · 서리 되감기 표식 · 차가운 소용돌이 · 서리꽃 겹침.
  let spearGone=[],spearClock=0,debris=0,rimeMarks=new WeakMap(),coldWells=[],petalStacks=new WeakMap();
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
+ const finalLayer=createFinalBranchCombat({player,enemies,nearby,deal:(e,damage,metadata)=>support(e,damage,metadata),boundary,reflector,blocked,constrain,fx});
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
  const sourceForm=()=>SECOND_FORMS[statId]||AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
@@ -125,23 +128,24 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // visible projectile carries both parents' shapes. Only the equipped recipe
  // exists in memory; support particles and orbit bodies keep their own art.
  function curatedProjectileGeometry(geo){
+  if(AWAKEN_FORMS[statId]?.finalCandidate&&comboGeo)return comboGeo;
   if(!secondRecipe||!comboGeo)return null;
   const primary={collapse:'collapse',seedstorm:'seed',tidepull:'tide',returnblade:'blade',
    frostkaleidoscope:'frostMirror',frostbloom:'bloom',returnflare:'returnFlare',
    returningpetals:'returnPetal',lightningpetal:'lightningPetal',gravitystake:'gravityStake'}[active];
   return primary&&geo===geos[primary]?comboGeo:null;
  }
- function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();if(visual)ob.userData.curatedSecond=secondRecipe.id;applyProjectileScale(ob);group.add(ob);return ob;}
+ function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();if(visual&&secondRecipe)ob.userData.curatedSecond=secondRecipe.id;if(visual&&AWAKEN_FORMS[statId]?.finalCandidate)ob.userData.finalBranch=statId;applyProjectileScale(ob);group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:active==='spearring'?S.spears:active==='accretiondisk'?S.vortices:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
-  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
+  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(AWAKEN_FORMS[statId]?.finalCandidate&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -153,10 +157,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const asTwin=Boolean(opts.twin);
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
-  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed')&&!comboGeo)comboGeo=buildComboProjectileGeometry(sourceForm());
+  if(AWAKEN_FORMS[id]?.finalCandidate)finalLayer.set(id,S.damage,L,Boolean(ALL_FORMS[kind]?.passive),kind);
+  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'||AWAKEN_FORMS[id]?.finalCandidate)&&!comboGeo)comboGeo=buildComboProjectileGeometry(AWAKEN_FORMS[id]?.finalCandidate?finalProjectileStyle(id):sourceForm());
   rebuildOrbit();
  }
- function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);return true;}
+ function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);if(AWAKEN_FORMS[statId]?.finalCandidate&&metadata.phase!=='final')finalLayer.onHit(e,metadata);return true;}
  // 손제작 재융합의 후속 효과(forms.js CURATED_SECOND_LIST). 주 공격의 적중만 세고, 후속 효과의 적중은 다시 세지 않는다.
  // 후속 적중은 다른 부모(followParent)의 이름으로 들어가 그 법칙의 소리·치명타·유물 보정을 받는다.
  function secondFollow(e,metadata){
@@ -191,7 +196,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  const nearestEnemy=(from,range,skip=new Set(),clearLine=false)=>{let best=null,bestDistance=range;for(const e of enemies()){if(e.dead||skip.has(e))continue;const d=flat(e.g.position,from);if(d<bestDistance&&(!clearLine||!blocked(from.clone().setY(0),e.g.position.clone().setY(0)))){best=e;bestDistance=d;}}return best;};
 
  // force: an active's opening move may go past the usual on-screen caps (still bounded by its own loop).
- function fire(pos,dir,target=null,force=false){
+ function fireBase(pos,dir,target=null,force=false){
   if(!active||sourceForm().passive)return Infinity;
   const aim=dir.clone().setY(0).normalize();
   const full=(kind,cap)=>!force&&count(kind)>=cap;
@@ -362,6 +367,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     }
    }
   return Infinity;
+ }
+ function fire(pos,dir,target=null,force=false){
+  const interval=fireBase(pos,dir,target,force);
+  if(!force&&Number.isFinite(interval)&&AWAKEN_FORMS[statId]?.finalCandidate)finalLayer.onFire(pos,dir,target);
+  return interval;
  }
 
  // Hitscan: a straight bolt that stops at cover or the room edge, pierces a line, then jumps.
@@ -1020,6 +1030,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
 
  function update(dt){
   markClock+=dt;
+  if(AWAKEN_FORMS[statId]?.finalCandidate)finalLayer.update(dt);
   mirrorParryCooldown=Math.max(0,mirrorParryCooldown-dt);
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
   if(awakened())awakenOpening(dt);
@@ -1514,14 +1525,19 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  }
 
  // ---------------- active (signature / overdrive) ----------------
+ // These parents already strike several targets on each opening. A completed
+ // branch adds its own opener, so their parent volley repeats at a measured
+ // cadence instead of multiplying six detonations every 1.2 seconds.
+ const deliberateBranchOpenings=new Set(['gravitymirror','returnflare','halobloom','gravitystake','icicle','pullgarden','lightningpetal']);
+ const surgeOpeningCadence=()=>AWAKEN_FORMS[statId]?.finalCandidate&&deliberateBranchOpenings.has(active)?2.6:awakenSurgeOpening(statId,twin);
  // surge(seconds): the opening move happens now, then the boosted stat sheet lasts `seconds`.
  // Damage from the surge still goes through hit(); the caller decides whether it may charge anything.
   const OPENING_FX={collapse:'gravity',frostguard:'frost',returnblade:'recall',prism:'reflect',thunderlance:'chain',frostbloom:'frost',stormcrown:'chain',tidepull:'gravity',seedstorm:'split',mirrorguard:'reflect',gravitymirror:'gravity',chainburst:'burst',blastlance:'burst',frostkaleidoscope:'frost',lightningpetal:'chain',returnflare:'recall',comethalo:'orbit',stormanchor:'gravity',returningpetals:'recall',gravitystake:'gravity',icicle:'frost',halobloom:'split',frostnet:'frost',rewindbolt:'recall',refractlance:'pierce',thundermirror:'chain',sunmirror:'burst',pierceshower:'split',ebbring:'recall',pullgarden:'gravity',spearring:'pierce',accretiondisk:'gravity',rimeback:'frost',coldwell:'frost',rimepetal:'frost',echolane:'reflect',mirrormaze:'reflect',fullbloom:'split',thunderweb:'chain',starring:'orbit',glassspear:'pierce',flarebloom:'burst',rewind:'recall',blackhole:'gravity',winterbreath:'frost'};
  function surge(seconds,{aim=null}={}){
   if(!active||!(seconds>0))return false;
   surgeTime=Math.max(surgeTime,seconds);refresh();rebuildOrbit();
-  if(awakened())awakenTimer=awakenSurgeOpening(statId,twin);
-  opening(aim);
+  if(awakened())awakenTimer=surgeOpeningCadence();
+  opening(aim,true);
   return true;
  }
  // Awakened: the opening move returns on its own every AWAKEN.openingEvery seconds (every surgeOpeningEvery during the ultimate),
@@ -1530,13 +1546,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   awakenTimer-=dt;if(awakenTimer>0)return;
   const target=nearestEnemy(player.position,AWAKEN.openingRange);
   if(!target){awakenTimer=0;return;}
-  awakenTimer=surgeTime>0?awakenSurgeOpening(statId,twin):awakenOpeningEvery(statId,twin);
+  awakenTimer=surgeTime>0?surgeOpeningCadence():awakenOpeningEvery(statId,twin);
   opening(target.g.position.clone().sub(player.position).setY(0));
  }
  function calm(){if(surgeTime<=0)return;surgeTime=0;refresh();rebuildOrbit();}
- function opening(aim){
+ function opening(aim,finalBurst=false){
   const pos=player.position.clone().setY(0);
   const dir=aim&&aim.lengthSq()>1e-6?aim.clone().setY(0).normalize():new V(0,0,-1);
+  // The new branch finale is a single decisive accent at activation. Its
+  // parent opening still repeats during surge, without stacking 61 new
+  // patterns every 1.2 seconds on top of it.
+  if(AWAKEN_FORMS[statId]?.finalCandidate&&(finalBurst||surgeTime<=0))finalLayer.onOpening(pos,dir);
   const around=n=>Array.from({length:n},(_,i)=>dir.clone().applyAxisAngle(Y,i*Math.PI*2/n));
   const nearest=(n,range=10)=>enemies().filter(e=>!e.dead&&flat(e.g.position,pos)<range).sort((a,b)=>flat(a.g.position,pos)-flat(b.g.position,pos)).slice(0,n);
   if(awakened()){fx.pulse(pos,'awaken',3.2,.55);fx.burst(pos,'awaken',36,2.2);}
@@ -1659,6 +1679,6 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   return out;
  }
  return {set,setTheme,fire,update,clear,surge,calm,auraBolts,audioEvent:()=>projectileAudioEvent(sourceForm()),
-  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
+  state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,final:finalLayer.state(),debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
   dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }
