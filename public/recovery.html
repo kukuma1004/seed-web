@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ko">
+<head>
+ <meta charset="utf-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1">
+ <title>SEED 기록 확인</title>
+ <style>
+  :root{color-scheme:dark;font-family:system-ui,-apple-system,sans-serif;background:#101c1d;color:#ecf5e9}
+  body{max-width:620px;margin:0 auto;padding:24px 18px;line-height:1.6}
+  h1{font-size:1.5rem;margin:.4em 0}p{color:#c6d7cd}.card{padding:18px;background:#1b2d2c;border:1px solid #537165;border-radius:14px;margin:18px 0}
+  dl{display:grid;grid-template-columns:1fr auto;gap:8px 18px;margin:0}dt{color:#c6d7cd}dd{margin:0;font-weight:700}
+  button{width:100%;padding:14px;border:0;border-radius:10px;background:#ccecae;color:#193124;font:inherit;font-weight:700;cursor:pointer}
+  small{display:block;color:#b9c9bd;margin-top:16px}a{color:#ccecae}
+ </style>
+</head>
+<body>
+ <h1>SEED 기록 확인</h1>
+ <p>게임을 시작하거나 클라우드에 접속하지 않고, 이 브라우저에 남아 있는 기록만 확인합니다. 예전에 플레이한 PC의 같은 브라우저에서 열어 주세요.</p>
+ <div class="card"><dl id="report"><dt>확인 중</dt><dd>…</dd></dl></div>
+ <button id="download" type="button">이 기기에 남은 기록 파일로 보관</button>
+ <small>파일에는 게임 진행과 계정 식별값이 들어 있습니다. 공개 채팅이나 게시판에는 올리지 말고, 복구가 필요할 때 관리자에게만 전달해 주세요. 이 페이지는 저장값을 변경하지 않습니다.</small>
+ <p><a href="./">게임으로 돌아가기</a></p>
+ <script>
+  const keys=['seed-discoveries-v1','seed-garden-v1','seed-shop-v1','seed-run-checkpoint-v1','seed-run-checkpoint-act2-v1','seed-run-checkpoint-act3-v1','seed-checkpoint-backup-v1','seed-mirror-tower-checkpoint-v1','seed-mirror-tower-record-v1','seed-account-profile-v1','seed-boss-pet-v1','seed-cloud-owner-v1','seed-cloud-meta-v1','seed-ranking-v2','seed-ranking-act2-v1','seed-ranking-act3-v1'];
+  const saved={};for(const key of keys)try{const value=localStorage.getItem(key);if(value!==null)saved[key]=value;}catch{}
+  const parse=key=>{try{return JSON.parse(saved[key]||'null')||{};}catch{return {};}};
+  const discoveries=parse('seed-discoveries-v1'),garden=parse('seed-garden-v1'),run=parse('seed-run-checkpoint-v1'),backup=parse('seed-checkpoint-backup-v1');
+  const rows=[['저장 항목',Object.keys(saved).length+'개'],['발견한 조합',Array.isArray(discoveries.forms)?discoveries.forms.length+'개':'기록 없음'],['오스틴 발견',Array.isArray(discoveries.bosses)&&discoveries.bosses.includes('austin')?'있음':'기록 없음'],['정원 보스 격파',Number.isInteger(garden.bossWins)?garden.bossWins+'회':'기록 없음'],['1막 이어하기',run&&run.cleared?'종료됨':Number.isInteger(run.stage)?(run.stage+1)+'번째 방':'기록 없음'],['밀린 판 백업',backup&&typeof backup==='object'?Object.keys(backup).length+'개':'기록 없음']];
+  const report=document.getElementById('report');report.replaceChildren();for(const [label,value] of rows){const dt=document.createElement('dt'),dd=document.createElement('dd');dt.textContent=label;dd.textContent=value;report.append(dt,dd);}
+  document.getElementById('download').onclick=()=>{const blob=new Blob([JSON.stringify({format:'seed-local-recovery-v1',exportedAt:new Date().toISOString(),origin:location.origin,storage:saved},null,2)],{type:'application/json'}),url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download='SEED-record-'+new Date().toISOString().slice(0,10)+'.json';link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);};
+ </script>
+</body>
+</html>

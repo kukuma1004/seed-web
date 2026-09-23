@@ -1,6 +1,6 @@
 // Offline play: after one visit with internet, the whole game (code, images, icons) is kept on the device.
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
-const CACHE='seed-play-v32';
+const CACHE='seed-play-v33';
 const ROOT=new URL('./',self.location).href;
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-192.png',ROOT+'icons/seed-512.png'];
 const FORCE_GATE_REFRESH='closed-beta-1.1-auth-refresh';
@@ -34,7 +34,7 @@ self.addEventListener('activate',event=>event.waitUntil((async()=>{
  await Promise.all((await caches.keys()).filter(k=>k.startsWith('seed-play-')&&k!==CACHE).map(k=>caches.delete(k)));
  await self.clients.claim();
  const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
- await Promise.allSettled(windows.map(client=>client.navigate(`${ROOT}?gate=${FORCE_GATE_REFRESH}`)));
+ await Promise.allSettled(windows.filter(client=>{const path=new URL(client.url).pathname;return path===new URL(ROOT).pathname||path.endsWith('/index.html');}).map(client=>client.navigate(`${ROOT}?gate=${FORCE_GATE_REFRESH}`)));
  syncOfflineCopy();
 })()));
 self.addEventListener('fetch',event=>{
@@ -47,7 +47,8 @@ self.addEventListener('fetch',event=>{
  }
  if(request.mode==='navigate'){
   // Online: always the newest page, and top up the offline copy. Offline: the stored page.
-  event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(ROOT,copy)).then(()=>syncOfflineCopy()));}return response;}).catch(()=>caches.match(ROOT)));
+  const path=new URL(request.url).pathname,gamePage=path===new URL(ROOT).pathname||path.endsWith('/index.html');
+  event.respondWith(fetch(request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(gamePage?ROOT:request,copy)).then(()=>syncOfflineCopy()));}return response;}).catch(()=>caches.match(request,{ignoreSearch:true,ignoreVary:true}).then(hit=>hit||caches.match(ROOT))));
  }else{
   event.respondWith(caches.match(request,{ignoreSearch:true,ignoreVary:true}).then(hit=>hit||fetch(request).then(response=>{if(response.ok){const copy=response.clone();event.waitUntil(caches.open(CACHE).then(cache=>cache.put(request,copy)));}return response;})));
  }

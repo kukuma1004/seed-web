@@ -20,18 +20,22 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   removeItem(key){raw?.removeItem(key);if(isSyncKey(key))markDirty();}
  };
 
- async function firebase(path,{method='GET',body}={}){
+ async function firebase(path,{method='GET',body,etag=false,ifMatch=null}={}){
   const session=await account.tokenSession();if(!session?.uid||!session.idToken)throw new Error('AUTH_REQUIRED');
-  const response=await fetchImpl(`${base}/${path}.json?auth=${encode(session.idToken)}`,{method,headers:body===undefined?undefined:{'Content-Type':'application/json'},body:body===undefined?undefined:JSON.stringify(body)});
+  const headers={};if(body!==undefined)headers['Content-Type']='application/json';
+  if(etag)headers['X-Firebase-ETag']='true';
+  if(ifMatch)headers['if-match']=ifMatch;
+  const response=await fetchImpl(`${base}/${path}.json?auth=${encode(session.idToken)}`,{method,headers:Object.keys(headers).length?headers:undefined,body:body===undefined?undefined:JSON.stringify(body)});
   if(!response.ok)await requestError(response);
-  return response.status===204?null:response.json();
+  const value=response.status===204?null:await response.json();
+  return etag?{value,etag:response.headers?.get?.('etag')||null}:value;
  }
 
- async function perform({startup=false}={}){
+ async function perform({startup=false,conflictRetries=2,carriedRewards=[]}={}){
   const session=await account.tokenSession();if(!session?.uid)return {ok:false,reason:'signed-out',changed:false,rewards:[]};
   const uid=session.uid,previousOwner=owner(),m=meta(),migration=account.pendingMigration?.(),migrating=Boolean(migration?.fromUid&&migration?.toUid===uid&&(!previousOwner||previousOwner===migration.fromUid));
-  let remote=null,rewards=null;
-  try{[remote,rewards]=await Promise.all([firebase(`seedUsers/${uid}/save`),firebase(`seedUserRewards/${uid}`)]);}catch(error){return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
+  let remote=null,remoteEtag=null,rewards=null;
+  try{const [save,result]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true}),firebase(`seedUserRewards/${uid}`)]);remote=save.value;remoteEtag=save.etag;rewards=result;}catch(error){return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
   // 2026-09-21: 서버에서 받아 오는 동안 새로 저장한 것이 있으면 그것도 '올려야 할 것'으로 본다.
   // (예전에는 시작할 때 읽은 표시만 봐서, 그 사이 저장을 서버의 옛 저장으로 덮어쓸 수 있었다.)
   const fresh=meta(),local=collectCloudSnapshot(raw,{revision:fresh.localRevision,updatedAt:fresh.updatedAt||now()});
@@ -41,7 +45,7 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:migrating||localDirty?'local':'remote'});
   else if(sameOwner||migrating)merged=local;
   else merged=normalizeCloudSnapshot({version:1,updatedAt:now()});
-  const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=rewardResult.applied;
+  const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=[...carriedRewards,...rewardResult.applied];
   // 2026-09-23: 이 기기에만 있던 것(도감·더 최근 판)이 병합에 들어갔으면, 이 기기에 새 저장이 없어도 올린다.
   // 예전에는 올리지 않아서, 다른 기기가 그 도감을 받지 못한 채 계속 옛 저장을 보았다.
   const shouldUpload=!remote||migrating||localDirty||lastRewards.length>0||(sameOwner&&snapshotAdds(merged,remote));
@@ -49,8 +53,13 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   merged={...merged,revision:nextRevision,updatedAt:shouldUpload?now():(Number(remote?.updatedAt)||merged.updatedAt)};
   if(sameOwner)rememberReplacedRuns(raw,replacedRuns(local,merged),now());
   active=false;const changed=applyCloudSnapshot(raw,merged);active=true;
-  if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged});}
-  catch(error){dirty=true;return {ok:false,reason:'upload',error,changed,rewards:lastRewards};}
+  if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged,ifMatch:remoteEtag});}
+  catch(error){
+   // Another device saved between our read and write. Fetch and merge its new
+   // state instead of blindly replacing it with the stale snapshot.
+   if(error.status===412&&conflictRetries>0)return perform({startup,conflictRetries:conflictRetries-1,carriedRewards:lastRewards});
+   dirty=true;if(error.status===412)schedule();return {ok:false,reason:error.status===412?'conflict':'upload',error,changed,rewards:lastRewards};
+  }
   // 2026-09-21: 올리는 사이에 저장한 것(방 저장·코인 등)은 이번 업로드에 들어가지 않았다. 예전에는 여기서 '다 올림'으로
   // 덮어써서, 다음 실행 때 서버의 옛 저장이 기기의 최신 저장을 이겨 진행이 되돌아갔다. 그 경우 '아직 안 올림'으로 남기고 곧 다시 올린다.
   const wroteDuring=meta().localRevision>fresh.localRevision;

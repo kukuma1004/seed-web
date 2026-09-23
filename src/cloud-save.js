@@ -1,5 +1,5 @@
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
-import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS} from './garden.js';
+import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS,MASTERY_KEYS,MAX_RECORDS} from './garden.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
 import {SAVE_KEY,validCheckpoint,withoutHidden,isCheckpointTombstone,checkpointStamp} from './run-save.js';
 import {ACT2_STORAGE_KEYS} from './act2.js';
@@ -64,6 +64,31 @@ export function normalizeCloudSnapshot(value){
 }
 
 const union=(a,b,limit=100)=>[...new Set([...(a||[]),...(b||[])])].slice(0,limit);
+// Coins and carried items can be spent, so their latest value wins. Boss wins,
+// mastery and completed journeys only grow: a fresh installation must not erase
+// them when it becomes the most recently used device.
+export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={}){
+ const local=normalizeGarden(localValue),remote=normalizeGarden(remoteValue);
+ const winner=prefer==='local'?local:remote,other=prefer==='local'?remote:local;
+ const mastery={...winner.mastery};
+ for(const id of MASTERY_KEYS)mastery[id]=Math.max(local.mastery[id],remote.mastery[id]);
+ const records=[],seen=new Set();
+ for(const record of [...winner.records,...other.records]){
+  const key=JSON.stringify(record);
+  if(seen.has(key))continue;
+  seen.add(key);records.push(record);
+  if(records.length>=MAX_RECORDS)break;
+ }
+ const plots=winner.plots.map((plot,index)=>{
+  const older=other.plots[index];
+  if(!plot)return older;
+  if(older&&plot.seed===older.seed&&plot.branch===older.branch&&older.growth>plot.growth)return {...plot,growth:older.growth};
+  return plot;
+ });
+ return normalizeGarden({...winner,mastery,records,plots,
+  bossWins:Math.max(local.bossWins,remote.bossWins),
+  harvests:Math.max(local.harvests,remote.harvests)});
+}
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);
  const winner=prefer==='local'?local:remote;
@@ -72,6 +97,7 @@ export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={})
  return normalizeCloudSnapshot({
   ...winner,
   revision:Math.max(local.revision,remote.revision),updatedAt:Math.max(local.updatedAt,remote.updatedAt),
+  garden:mergeGardenProgress(local.garden,remote.garden,{prefer}),
   checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2),act3:newerCheckpoint(local.checkpoints.act3,remote.checkpoints.act3,winner.checkpoints.act3)},
   mirror:{checkpoint:newerCheckpoint(local.mirror.checkpoint,remote.mirror.checkpoint,winner.mirror.checkpoint),record:{bestFloor:Math.max(local.mirror.record.bestFloor,remote.mirror.record.bestFloor),clears:Math.max(local.mirror.record.clears,remote.mirror.record.clears),perfectDodges:Math.max(local.mirror.record.perfectDodges,remote.mirror.record.perfectDodges)}},
   discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
@@ -121,7 +147,7 @@ export function applyCloudSnapshot(storage,value){
 // 그런 경우 덮이기 전 판을 이 기기에만 따로 남겨 두고(동기화하지 않음), 던전 화면에서 되살릴 수 있게 한다.
 // 끝난 판 표시(지운 표시)로 바뀐 경우는 남기지 않는다(끝난 판을 다시 살리는 길이 되지 않게).
 export const CHECKPOINT_BACKUP_KEY='seed-checkpoint-backup-v1';
-export const CHECKPOINT_BACKUP_DAYS=14;
+export const CHECKPOINT_BACKUP_DAYS=90;
 const runOf=value=>value&&!isCheckpointTombstone(value)&&validCheckpoint(value)?value:null;
 const runTime=value=>Number.isFinite(value?.elapsed)?value.elapsed:0;
 export function replacedRuns(localValue,nextValue){

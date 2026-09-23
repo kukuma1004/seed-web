@@ -8,7 +8,7 @@ import {ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT3_STORAGE_KEYS,act3Storage,ACT3_REGION} from '../src/act3.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
 import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
-import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
+import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
@@ -87,6 +87,23 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.equal(merged.account.equippedTitle,'austin');
 }
 
+// A phone that starts fresh after the PC cannot delete five Austin victories,
+// permanent garden growth, or completed-journey evidence on the PC.
+{
+ const pcGarden={...emptyGarden(),bossWins:5,harvests:7,mastery:{power:3,move:2,critical:1,cooldown:0,maxHp:0},records:[{law:'split',score:4200,kills:90,journey:5,boss:'austin'}]};
+ const phoneGarden={...emptyGarden(),bossWins:0,harvests:1,records:[{law:'chain',score:300,kills:8,journey:1,boss:null}]};
+ const merged=mergeGardenProgress(pcGarden,phoneGarden,{prefer:'remote'});
+ assert.equal(merged.bossWins,5);assert.equal(merged.harvests,7);
+ assert.equal(merged.mastery.power,3);assert.equal(merged.mastery.move,2);
+ assert.equal(merged.records.length,2);assert.equal(merged.records[1].boss,'austin');
+ const pc=normalizeCloudSnapshot({garden:pcGarden,discoveries:{version:1,forms:['collapse'],bosses:['austin']}});
+ const phone=normalizeCloudSnapshot({garden:phoneGarden,discoveries:{version:1,forms:[],bosses:[]}});
+ const whole=mergeCloudSnapshots(pc,phone,{prefer:'remote'});
+ assert.equal(whole.garden.bossWins,5);
+ assert.ok(whole.discoveries.forms.includes('collapse')&&whole.discoveries.bosses.includes('austin'));
+ assert.equal(snapshotAdds(whole,phone),true,'recovered progress must be uploaded to the other device');
+}
+
 // A defeated-boss pet is a cosmetic selection shared across devices. Later
 // unequips must beat an older equipped copy, without losing the boss unlock.
 {
@@ -152,6 +169,27 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const again=await cloud.syncNow();assert.equal(again.rewards.length,0);assert.equal(JSON.parse(storage.getItem(SHOP_KEY)).coins,3150);
 }
 
+// A concurrent phone write between GET and PUT must be merged, not replaced.
+{
+ const storage=memory({[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['collapse'],bosses:['austin'],records:{}})});
+ const account={ready:async()=>({uid:'race'}),user:()=>({uid:'race'}),tokenSession:async()=>({uid:'race',idToken:'token'})};
+ let remote=normalizeCloudSnapshot({revision:1,updatedAt:100,discoveries:{version:1,forms:[],bosses:[],records:{}}}),tag='v1',raced=false,puts=0;
+ const fetchImpl=async(url,options={})=>{
+  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){
+   puts++;
+   if(!raced){raced=true;remote=normalizeCloudSnapshot({revision:2,updatedAt:200,discoveries:{version:1,forms:['prism'],bosses:[],records:{}}});tag='v2';return {ok:false,status:412,json:async()=>remote};}
+   assert.equal(options.headers['if-match'],'v2');remote=JSON.parse(options.body);tag='v3';return {ok:true,status:200,json:async()=>remote};
+  }
+  return {ok:true,status:200,headers:{get:name=>name==='etag'?tag:null},json:async()=>remote};
+ };
+ const cloud=createCloudSync({storage,account,fetchImpl,now:()=>300,debounceMs:60_000});
+ const result=await cloud.start();
+ assert.equal(result.ok,true);assert.equal(puts,2);
+ assert.deepEqual(new Set(remote.discoveries.forms),new Set(['collapse','prism']));
+ assert.ok(remote.discoveries.bosses.includes('austin'));
+}
+
 // A beta applicant can already own a Google UID from the web form. If an Android
 // guest then selects that account, the durable auth marker must claim the local
 // save for the existing Google UID instead of replacing it with an empty save.
@@ -212,8 +250,10 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const pc=memory();
  writeCheckpoint(pc,run(2,3000,5),1000);
  pc.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:['icicle','frostnet'],bosses:['warden','austin'],records:{}}));
+ pc.setItem(GARDEN_KEY,JSON.stringify({...emptyGarden(),bossWins:5,mastery:{power:3,move:2,critical:1,cooldown:0,maxHp:0},records:[{law:'split',score:4200,kills:90,journey:5,boss:'austin'}]}));
  pc.setItem('seed-cloud-owner-v1','uid');pc.setItem('seed-cloud-meta-v1',JSON.stringify({version:1,ownerUid:'uid',localRevision:5,syncedRevision:5,updatedAt:1000}));
  const phone=memory();writeCheckpoint(phone,run(0,120,0),9000);phone.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:['icicle'],bosses:['warden'],records:{}}));
+ phone.setItem(GARDEN_KEY,JSON.stringify(emptyGarden()));
  const state={save:collectCloudSnapshot(phone,{revision:9,updatedAt:9000}),puts:0};
  const account={ready:async()=>({uid:'uid'}),user:()=>({uid:'uid'}),tokenSession:async()=>({uid:'uid',idToken:'t'})};
  const fetchImpl=async(url,options={})=>{
@@ -228,6 +268,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.equal(backup?.checkpoint.austins,5,'덮인 PC 판(오스틴 5번)은 따로 남는다');
  assert.equal(state.puts,1,'PC에만 있던 도감을 올린다');
  assert.deepEqual([...state.save.discoveries.forms].sort(),['frostnet','icicle']);assert.ok(state.save.discoveries.bosses.includes('austin'));
+ assert.equal(state.save.garden.bossWins,5,'PC의 보스 격파 횟수도 전화기 쪽 최신 저장에 밀리지 않는다');
+ assert.equal(state.save.garden.records[0].boss,'austin','완료한 여정 기록을 남긴다');
  assert.ok(!JSON.stringify(state.save).includes(CHECKPOINT_BACKUP_KEY),'남긴 판은 서버로 가지 않는다');
  // 되살리기: 남긴 판을 지금 시각으로 다시 저장하면 가장 최근 판이 되어 다른 기기에도 간다.
  writeCheckpoint(cloud.storage,backup.checkpoint,11_000);forgetCheckpointBackup(pc,'act1',11_000);
@@ -239,9 +281,9 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  // 병합이 서버와 같으면(순서만 다름) 올리지 않는다.
  const a=normalizeCloudSnapshot({discoveries:{version:1,forms:['icicle','frostnet'],bosses:[],records:{}}}),b=normalizeCloudSnapshot({discoveries:{version:1,forms:['frostnet','icicle'],bosses:[],records:{}}});
  assert.equal(snapshotAdds(a,b),false);
- // 14일이 지난 남긴 판은 사라진다.
+ // PC를 바로 확인할 수 없는 테스터를 위해 90일 동안 밀린 판을 남긴다.
  const old=memory({[CHECKPOINT_BACKUP_KEY]:JSON.stringify({act1:{at:0,checkpoint:{...run(2,3000,5),savedAt:1}}})});
- assert.equal(readCheckpointBackups(old,1000).act1?.checkpoint.austins,5);assert.deepEqual(readCheckpointBackups(old,15*864e5),{});
+ assert.equal(readCheckpointBackups(old,89*864e5).act1?.checkpoint.austins,5);assert.deepEqual(readCheckpointBackups(old,91*864e5),{});
 }
 
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');

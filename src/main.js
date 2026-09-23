@@ -998,7 +998,7 @@ function showBetaLock(){
   <div class="beta-test-path"><strong>이미 등록된 테스터인가요?</strong><span>테스트에 등록된 Google 계정으로 열어야 설치할 수 있어요.</span><a class="account-button beta-install" href="${BETA_TEST_URL}" target="_blank" rel="noopener"><span><b>Google Play 테스트 참여·설치</b><small>공식 비공개 테스트 링크</small></span></a></div>
   <p class="account-note">${BETA_NOTICE.detail} <a href="${import.meta.env.BASE_URL}privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a></p>
   <a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div>`;
- $('#beta-admin').onclick=async()=>{if(linked){await account.signOut();cloud.signOutCleanup();}showAccount();};
+ $('#beta-admin').onclick=async()=>{if(linked){const saved=await cloud.syncNow();if(!saved.ok){showAccount('이 기기의 기록을 아직 저장하지 못했어요. 인터넷 연결을 확인한 뒤 계정을 바꿔 주세요.');return;}await account.signOut();cloud.signOutCleanup();}showAccount();};
 }
 // A tab can stay open for hours without reloading. Recheck the live gate while it
 // is running so an already-open game cannot keep playing after the web closes.
@@ -1086,7 +1086,7 @@ function showAccount(error=''){
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
  document.querySelectorAll('[data-equip-pet]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipPet,save=writeBossPet(runStorage,profile,id);if(!save.saved)return;bossPet.equip(id,profile);showAccount();});
  if($('.pet-unequip'))$('.pet-unequip').onclick=()=>{writeBossPet(runStorage,profile,null);bossPet.equip(null,profile);showAccount();};
- if($('#account-signout'))$('#account-signout').onclick=async()=>{try{await cloud.syncNow().catch(()=>null);await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
+ if($('#account-signout'))$('#account-signout').onclick=async()=>{try{const saved=await cloud.syncNow();if(!saved.ok){showAccount('이 기기의 기록을 아직 저장하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');return;}await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
 function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;mirrorReadyRing.visible=false;combatAnalysis.cancel();$('#room-analysis').hidden=true;developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
