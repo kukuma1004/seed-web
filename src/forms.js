@@ -464,7 +464,7 @@ function baseStats(id,level){
   case 'refractlance':return {interval:1.15*faster,damage:44*power,length:Math.min(13,9+.5*up),pierce:Math.min(9,5+Math.floor(up*.6)),folds:Math.min(3,1+Math.floor(up/3)),foldGain:.22};
   // 2묶음
   case 'thundermirror':return {interval:1.12*faster,damage:46*power,echoes:Math.min(7,3+Math.floor(up/2)),decay:.9,reach:10,range:Math.min(5,4.2+.08*up),soloEcho:.7};
-  case 'sunmirror':return {interval:1.2*faster,damage:24*power,blast:56*power,radius:1.5,chargeRadius:.18,chargeGain:.35,maxCharge:Math.min(10,6+Math.floor(up/2)),absorb:.95,speed:7.5,life:1.7,bolts:2};
+  case 'sunmirror':return {interval:1.2*faster,damage:24*power,blast:56*power,radius:1.5,chargeRadius:.18,chargeGain:.35,maxCharge:Math.min(10,6+Math.floor(up/2)),absorb:.68,speed:7.5,life:1.7,bolts:2};
   case 'pierceshower':return {interval:1.1*faster,damage:26*power,length:Math.min(12,9+.4*up),pierce:Math.min(8,4+Math.floor(up/2)),petalDamage:16*power,spread:2,petalSpeed:11,petalLife:.45};
   case 'ebbring':return {interval:Infinity,damage:36*power,blades:Math.min(6,3+Math.floor(up/2)),radius:1.35,calmRadius:.75,calmScale:.55,ebb:1.5,cooldown:.3,stretch:.45};
   case 'pullgarden':return {interval:1.35*faster,damage:8*power,bloom:30*power,fields:Math.min(4,2+Math.floor(up/3)),fieldRadius:1.5,life:2.6,pull:1.3,range:8,flight:.5,tickEvery:.5,bloomAt:2,bloomRadius:1.7};

@@ -22,8 +22,8 @@ export const ORBIT_VISUALS=Object.freeze({
  comethalo:Object.freeze({geometry:'cometBud',material:'storm',motion:'charged-comet'}),
  halobloom:Object.freeze({geometry:'haloPetal',material:'seed',motion:'counting-halo'}),
  ebbring:Object.freeze({geometry:'ebbBlade',material:'tide',motion:'ebbing-ring'}),
- spearring:Object.freeze({geometry:'gravityStake',material:'blade',motion:'launching-spears'}),
- accretiondisk:Object.freeze({geometry:'vortex',material:'core',motion:'feeding-disk'})
+ spearring:Object.freeze({geometry:'spearRing',material:'blade',motion:'launching-spears'}),
+ accretiondisk:Object.freeze({geometry:'accretionDisk',material:'core',motion:'feeding-disk'})
 });
 
 // Orbit paths are intentionally different silhouettes. They are also pure so
@@ -73,8 +73,9 @@ export function orbitPose(id,index,count,angle,time,S){
 // frequent mobile garbage-collection pauses once split forms filled the room.
 export function segmentDistance(a,b,p){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz,t=length?THREE.MathUtils.clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/length,0,1):0,ox=a.x+dx*t-p.x,oz=a.z+dz*t-p.z;return Math.hypot(ox,oz);}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const bossReach=(e,normal,boss)=>['warden','austin','act2warden','alwaysbeginner'].includes(e.type)?boss:normal;
-const immovable=e=>['warden','austin','act2warden','alwaysbeginner','turret'].includes(e.type);
+const FORM_BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed']);
+const bossReach=(e,normal,boss)=>FORM_BOSSES.has(e.type)?boss:normal;
+const immovable=e=>FORM_BOSSES.has(e.type)||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
@@ -140,7 +141,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -235,24 +236,24 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    case 'pierceshower':{pierceShower(pos,aim);return S.interval;}
    case 'rimeback':{
     if(full('rimeback',S.bolts))return S.interval;
-    const ob=spawnMesh(geos.blade,mats.ice,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.9,.9,.9);
+    const ob=spawnMesh(geos.rimeback,mats.ice,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.9,.9,.9);
     bolts.push({kind:'rimeback',ob,dir:aim.clone(),age:0,returning:false,hitSet:new Set(),life:4});
     fx.muzzle(pos,aim,'frost');return S.interval;
    }
    case 'coldwell':{
     if(full('coldwell',2))return S.interval;
     const to=target?new V(target.x,0,target.z):pos.clone().addScaledVector(aim,5),offset=to.clone().sub(pos).setY(0);if(offset.length()>S.range)offset.setLength(S.range);
-    bolts.push({kind:'coldwell',ob:spawnMesh(geos.vortex,mats.ice,pos),from:pos.clone().setY(0),to:pos.clone().setY(0).add(offset),t:0,life:4});
+    bolts.push({kind:'coldwell',ob:spawnMesh(geos.coldwell,mats.ice,pos),from:pos.clone().setY(0),to:pos.clone().setY(0).add(offset),t:0,life:4});
     fx.muzzle(pos,aim,'frost');return S.interval;
    }
    case 'rimepetal':{
     if(full('rimepetal',S.bolts))return S.interval;
-    const ob=spawnMesh(geos.bloom,mats.ice,pos);ob.rotation.x=-Math.PI/2;
+    const ob=spawnMesh(geos.rimeBud,mats.ice,pos);ob.rotation.x=-Math.PI/2;
     bolts.push({kind:'rimepetal',ob,dir:aim,life:S.life});fx.muzzle(pos,aim,'frost');return S.interval;
    }
    case 'echolane':{
     if(full('echolane',S.bolts))return S.interval;
-    const ob=spawnMesh(geos.frostMirror,mats.mirror,pos);ob.rotation.x=-Math.PI/2;
+    const ob=spawnMesh(geos.echoOrb,mats.lens,pos);ob.rotation.x=-Math.PI/2;
     bolts.push({kind:'echolane',ob,dir:aim.clone(),out:aim.clone(),toSeed:false,pass:0,passed:new Set(),life:S.life});
     fx.muzzle(pos,aim,'reflect');return S.interval;
    }
@@ -447,18 +448,20 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    support(next,damage,{kind:'frostnet',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
    route.push(next.g.position.clone().setY(0));from=next;
   }
-  // A lone Austin anchors one short frost thread. It hurts only while he
+  // A lone act boss anchors one short frost thread. It hurts only while he
   // crosses that thread; it never freezes or holds a boss in place.
   if(route.length<S.minLinks){
-   if(route.length!==1||from.type!=='austin')return;
+   if(route.length!==1||!FORM_BOSSES.has(from.type))return;
    const start=pos.clone().setY(0),end=route[0];
    frostLines.push({a:start,b:end,life:Math.min(1.5,S.webLife),tick:0,bossThread:true});
+   if(frostLines.length>24)frostLines.splice(0,frostLines.length-24);
    fx.frostWeb(start,end);return;
   }
   for(let i=1;i<route.length;i++){
    frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
    fx.frostWeb(route[i-1],route[i]);
   }
+  if(frostLines.length>24)frostLines.splice(0,frostLines.length-24);
  }
  function updateFrostLines(dt){
   for(const line of frostLines){
@@ -468,7 +471,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    fx.frostWeb(line.a,line.b);
    for(const e of enemies()){
     if(e.dead||segmentDistance(line.a,line.b,e.g.position)>=bossReach(e,.72,1.2))continue;
-    support(e,S.webDamage*(line.bossThread&&e.type==='austin'?2.2:1),{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
+    support(e,S.webDamage*(line.bossThread&&FORM_BOSSES.has(e.type)?2.2:1),{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
     if(!immovable(e))e.slow=Math.max(e.slow||0,S.webSlow);
    }
   }
@@ -653,8 +656,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    .sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
   let struck=0;
   for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.lance,{kind:'spearring',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;}
-  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.8),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.8),'pierce',false);
-  fx.pulse(end,'pierce',.5,.2);sound('reflect');
+  fx.lance(start,end,'spearring');
+  fx.pulse(start,'pierce',S.radius*.6,.2);fx.pulse(end,'pierce',.5,.2);sound('reflect');
  }
  // Orbit + gravity: the disk throws its debris at the nearest enemies.
  function ventDebris(){
@@ -668,10 +671,23 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    bolts.push({kind:'debris',ob,dir,life:S.debrisLife});
   }
  }
+ // Frost + gravity: keep one small, shared-geometry floor marker per active well.
+ function shatterColdWell(w){
+  const frozen=[...w.frozen].filter(e=>!e.dead).length,blast=S.shatter*(1+S.frozenGain*frozen);
+  fx.explosion(w.pos,'frost',S.radius,frozen>=2);sound('frostHit');
+  for(const e of near(w.pos,S.radius+.8))if(!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.5))support(e,blast*(w.frozen.has(e)?1.4:1),{kind:'coldwell',indirect:true,phase:'shatter',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
+  w.ob.removeFromParent();
+ }
+ function makeColdWell(pos){
+  const ob=spawnMesh(geos.coldwell,mats.ice,pos,.18);applyProjectileScale(ob,S.radius*2.3,.75,S.radius*2.3);
+  coldWells.push({pos:pos.clone().setY(0),hold:S.hold,tick:0,held:new Map(),frozen:new Set(),ob});
+  while(coldWells.length>S.wells)shatterColdWell(coldWells.shift());
+  fx.pulse(pos,'frost',S.radius*.8,.35);
+ }
  // Frost + gravity: a cold well pulls, freezes whoever it held long enough, then shatters by that count.
  function updateColdWells(dt){
   for(const w of coldWells){
-   w.hold-=dt;w.tick-=dt;
+   w.hold-=dt;w.tick-=dt;w.ob.rotation.y+=dt*1.8;
    const inside=near(w.pos,S.radius+.8).filter(e=>!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.4));
    for(const e of inside){
     if(!immovable(e)){
@@ -683,11 +699,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     e.slow=Math.max(e.slow||0,w.frozen.has(e)?S.slow*1.5:S.slow*.5);
    }
    if(w.tick<=0){w.tick=S.tickEvery;fx.flame(w.pos,'frost',8,S.radius*.3);for(const e of inside)support(e,S.damage,{kind:'coldwell',indirect:true,phase:'tick',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});}
-   if(w.hold<=0){
-    const frozen=[...w.frozen].filter(e=>!e.dead).length,blast=S.shatter*(1+S.frozenGain*frozen);
-    fx.explosion(w.pos,'frost',S.radius,frozen>=2);sound('frostHit');
-    for(const e of near(w.pos,S.radius+.8))if(!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.5))support(e,blast*(w.frozen.has(e)?1.4:1),{kind:'coldwell',indirect:true,phase:'shatter',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
-   }
+   if(w.hold<=0)shatterColdWell(w);
   }
   coldWells=coldWells.filter(w=>w.hold>0);
  }
@@ -698,7 +710,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let i=0;i<S.petals;i++){
    if(count('rimeshard')>=36)break;
    const a=(i-(S.petals-1)/2)*(Math.PI*1.2/Math.max(1,S.petals-1));
-   const ob=spawnMesh(geos.starPetal,mats.ice,first.g.position);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.6,.6,.6);
+   const ob=spawnMesh(geos.rimeShard,mats.ice,first.g.position);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.6,.6,.6);
    bolts.push({kind:'rimeshard',ob,dir:dir.clone().applyAxisAngle(Y,a),life:S.petalLife,passed:new Set([first])});
   }
  }
@@ -1272,8 +1284,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     b.ob.position.lerpVectors(b.from,b.to,k).setY(.7+Math.sin(Math.PI*k)*2);b.ob.rotation.y+=dt*6;
     fx.trail(previous,b.ob.position,'frost',false);
     if(k<1)continue;
-    b.life=0;coldWells.push({pos:b.to.clone(),hold:S.hold,tick:0,held:new Map(),frozen:new Set()});while(coldWells.length>S.wells+1)coldWells.shift();
-    fx.pulse(b.to,'frost',S.radius,.5);continue;
+    b.life=0;makeColdWell(b.to);continue;
    }
    if(b.kind==='rimepetal'){
     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*8;
@@ -1290,10 +1301,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
    if(b.kind==='echolane'){
     // 벽에 닿으면 씨앗에게로, 씨앗을 스치면 다시 벽으로. 오갈 때마다 세진다.
-    if(b.toSeed){b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();if(flat(b.ob.position,player.position)<.7){if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=false;b.pass++;b.passed.clear();b.dir.copy(b.out);fx.reflect(b.ob.position,b.dir);}}
+    if(b.toSeed){b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();if(flat(b.ob.position,player.position)<.7){if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=false;b.pass++;b.passed.clear();b.dir.copy(b.out);fx.reflect(b.ob.position,b.dir);fx.pulse(b.ob.position,'reflect',.38+b.pass*.08,.18);}}
     b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
     const wall=!b.toSeed&&(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position));
-    if(wall){b.ob.position.copy(previous);if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=true;b.pass++;b.passed.clear();fx.reflect(b.ob.position,b.dir);sound('reflect');}
+    if(wall){b.ob.position.copy(previous);if(b.pass>=S.passes){b.life=0;continue;}b.toSeed=true;b.pass++;b.passed.clear();fx.reflect(b.ob.position,b.dir);fx.pulse(b.ob.position,'reflect',.38+b.pass*.08,.18);sound('reflect');}
+    applyProjectileScale(b.ob,1+Math.min(.28,b.pass*.07));
     const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
     if(e){b.passed.add(e);if(!support(e,S.damage*(1+S.gain*b.pass),{kind:'echolane',direction:b.dir.clone()}))b.life=0;}
     fx.trail(previous,b.ob.position,'reflect',b.pass>0);continue;
@@ -1604,7 +1616,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    case 'spearring':{for(const e of nearest(3,S.length))spearLaunch(e);spearClock=S.launchEvery;break;}
    case 'accretiondisk':{debris=Math.max(debris,S.capacity*3);ventDebris();break;}
    case 'rimeback':for(const d of around(6))fire(pos,d,null,true);break;
-   case 'coldwell':{const spots=nearest(2,S.range);if(!spots.length)spots.push({g:{position:pos.clone().addScaledVector(dir,3)}});for(const e of spots)coldWells.push({pos:e.g.position.clone().setY(0),hold:S.hold,tick:0,held:new Map(),frozen:new Set()});break;}
+   case 'coldwell':{const spots=nearest(2,S.range);if(!spots.length)spots.push({g:{position:pos.clone().addScaledVector(dir,3)}});for(const e of spots)makeColdWell(e.g.position);break;}
    case 'rimepetal':for(const e of nearest(2,10))rimeBloom(e,e.g.position.clone().sub(pos).setY(0).normalize());break;
    case 'echolane':for(const d of around(4))fire(pos,d,null,true);break;
    case 'pullgarden':{const spots=nearest(4,S.range);if(!spots.length)plantGardens(pos.clone().addScaledVector(dir,3).setY(0),S.fields);for(const e of spots)plantGardens(e.g.position.clone().setY(0),1);break;}

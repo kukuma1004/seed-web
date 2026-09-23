@@ -205,5 +205,46 @@ export function createFormVisuals(){
   paint(leaf(.28,.11,.04,.03,4),C.ivory).rotateZ(-.6).translate(-.13,-.16,.025),
   paint(new THREE.ConeGeometry(.042,.3,4),C.jade).rotateZ(Math.PI).translate(0,-.29,.01)
  ]);
+ // 3묶음: 여섯 공격은 빌려 쓰던 잎·소용돌이 대신 한 메시짜리 고유 실루엣을 쓴다.
+ geos.spearRing=join('spear-ring-needle',[
+  paint(new THREE.ConeGeometry(.075,.78,4),C.ivory).rotateX(Math.PI/2).translate(0,0,.15),
+  paint(new THREE.ConeGeometry(.11,.3,4),C.gold).rotateX(-Math.PI/2).translate(0,0,-.31),
+  paint(leaf(.39,.105,.015,.024,4),C.jade).rotateZ(-.6).translate(-.11,0,-.13),
+  paint(leaf(.39,.105,-.015,.024,4),C.jade).rotateZ(.6).translate(.11,0,-.13)
+ ]);
+ geos.accretionDisk=join('accretion-disk',[
+  paint(new THREE.TorusGeometry(.31,.058,4,14),C.violet).rotateX(Math.PI/2),
+  paint(new THREE.TorusGeometry(.2,.026,3,12),C.gold).rotateX(Math.PI/2).translate(0,.025,0),
+  paint(new THREE.OctahedronGeometry(.14,0).scale(1,.55,1),C.deep),
+  paint(new THREE.OctahedronGeometry(.055,0),C.ice).translate(.28,.055,.09)
+ ]);
+ geos.rimeback=join('returning-rime-leaf',[
+  paint(crescent(.82,4),C.blue).rotateZ(-.12),
+  paint(leaf(.53,.19,.1,.055,5),C.ice).rotateZ(-.75).translate(-.16,.035,.065),
+  paint(leaf(.31,.065,.025,.026,4),C.ivory).rotateZ(-.65).translate(-.09,.05,.11),
+  paint(new THREE.OctahedronGeometry(.085,0),C.jade).translate(.16,-.21,.07)
+ ]);
+ geos.coldwell=join('cold-well-core',[
+  paint(new THREE.TorusGeometry(.28,.053,4,12),C.blue).rotateX(Math.PI/2),
+  paint(new THREE.TorusGeometry(.17,.03,3,10),C.ivory).rotateX(Math.PI/2).translate(0,.03,0),
+  paint(new THREE.OctahedronGeometry(.13,0).scale(.8,1.6,.8),C.ice),
+  paint(new THREE.OctahedronGeometry(.065,0),C.violet).translate(.28,.06,0)
+ ]);
+ geos.rimeBud=join('rime-petal-bud',[
+  paint(new THREE.OctahedronGeometry(.16,0).scale(.9,1.25,.9),C.blue),
+  ...Array.from({length:4},(_,i)=>paint(leaf(.4,.16,.035,.04,4),i%2?C.ivory:C.ice).translate(0,.14,.09).rotateZ(i*Math.PI/2)),
+  paint(new THREE.OctahedronGeometry(.06,0),C.gold).translate(0,0,.11)
+ ]);
+ geos.rimeShard=join('rime-petal-shard',[
+  paint(leaf(.52,.25,.045,.065,5),C.ice),
+  paint(leaf(.37,.11,.02,.035,4),C.ivory).translate(0,.015,.07),
+  paint(new THREE.ConeGeometry(.04,.22,4),C.blue).rotateZ(Math.PI).translate(0,-.28,0)
+ ]);
+ geos.echoOrb=join('echo-lane-orb',[
+  paint(new THREE.OctahedronGeometry(.19,0),C.violet),
+  paint(new THREE.TorusGeometry(.28,.032,4,12),C.ice),
+  paint(new THREE.TorusGeometry(.36,.018,3,12),C.gold).rotateY(.35),
+  paint(new THREE.OctahedronGeometry(.065,0),C.ivory).translate(0,0,.19)
+ ]);
  return {mats,geos};
 }

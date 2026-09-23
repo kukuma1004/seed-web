@@ -187,7 +187,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     counters.lance++;
     const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
     if(length<.05)return;
-    const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle',accent=ice?'frost':kind==='shower'?'split':'reflect';
+    const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle',accent=ice?'frost':kind==='shower'?'split':kind==='spearring'?'pierce':'reflect';
     workA.set(from.x,.79,from.z);workB.set(to.x,.79,to.z);
     segment(workA,workB,accent,folded?.13:.11,.19);
     workC.copy(workA).lerp(workB,ice?.38:.5);

@@ -77,6 +77,37 @@ assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
  assert.match(f.combat.audioEvent(),/^shot/);assert.equal(f.combat.state().bolts,1);f.combat.dispose();
 }
 
+// The held third batch has authored shapes in combat, not only on selection
+// cards. Its frost field stays visible, never holds an act boss, and keeps at
+// most two persistent meshes even if the player fires again during the field.
+{
+ const visualNames={spearRing:'seed-form-spear-ring-needle',accretionDisk:'seed-form-accretion-disk',rimeback:'seed-form-returning-rime-leaf',coldwell:'seed-form-cold-well-core',rimeBud:'seed-form-rime-petal-bud',rimeShard:'seed-form-rime-petal-shard',echoOrb:'seed-form-echo-lane-orb'};
+ const visuals=createFormVisuals();
+ for(const [id,name] of Object.entries(visualNames)){
+  const g=visuals.geos[id];assert.equal(g.name,name);
+  assert.ok(g.getAttribute('position').count<=696,`${id}: projectile exceeds the mobile triangle budget`);
+ }
+ for(const geo of Object.values(visuals.geos))geo.dispose();for(const mat of Object.values(visuals.mats))mat.dispose();
+ for(const [id,name] of [['spearring',visualNames.spearRing],['accretiondisk',visualNames.accretionDisk],['rimeback',visualNames.rimeback],['coldwell',visualNames.coldwell],['rimepetal',visualNames.rimeBud],['echolane',visualNames.echoOrb]]){
+  const f=fixture([enemy(2)]);f.combat.set(id,4);if(!['spearring','accretiondisk'].includes(id))f.combat.fire(vec(),vec(1),vec(2));
+  const meshes=[];f.scene.traverse(o=>{if(o.isMesh&&o.geometry.name===name)meshes.push(o);});
+  assert.ok(meshes.length,`${id}: authored attack silhouette is absent from combat`);f.combat.dispose();
+ }
+ const boss=enemy(3,0,'tempestcarrier'),ordinary=enemy(4.2,.2),f=fixture([boss,ordinary]);
+ f.combat.set('coldwell',9);for(let i=0;i<3;i++){f.combat.fire(vec(),vec(1),vec(3));step(f.combat,.52);}
+ assert.ok(f.combat.state().coldWells<=2,'cold wells exceed their floor-mesh budget');
+ assert.equal(boss.g.position.x,3,'act-three boss must not be pulled by a frost field');
+ assert.ok(ordinary.g.position.x<4.2,'ordinary foes still get pulled');
+ assert.ok(f.calls.some(c=>c.kind==='coldwell'&&c.phase==='shatter'),'replaced wells must shatter instead of losing their damage');
+ f.combat.clear();assert.equal(f.combat.state().coldWells,0);f.combat.dispose();
+ const net=fixture([enemy(2,0,'act3warden')]);net.combat.set('frostnet');net.combat.fire(vec(),vec(1));
+ assert.equal(net.combat.state().frostLines,1,'a lone act-three boss should leave a short damaging thread');
+ step(net.combat,.05);assert.equal(net.combat.state().frostLines,1);net.combat.dispose();
+ const crowd=fixture(Array.from({length:8},(_,i)=>enemy(2+i*.45)));crowd.combat.set('frostnet',9);
+ for(let i=0;i<12;i++){crowd.combat.fire(vec(),vec(1));assert.ok(crowd.combat.state().frostLines<=24,'surge frost web must stay within its floor-line budget');}
+ crowd.combat.dispose();
+}
+
 // Themes are cosmetic: switching one never changes the immutable combat stats.
 {
  const f=fixture();f.combat.set('collapse');const before=FORM_COMBAT.collapse.damage;

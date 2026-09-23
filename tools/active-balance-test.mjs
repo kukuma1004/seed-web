@@ -115,6 +115,9 @@ for(const level of [SOLO_LEVEL-1,9]){
  {
   const quiet=averageDps('sunmirror',level),fire=averageDps('sunmirror',level,{shots:true});
   assert.ok(fire>quiet*1.25,`level ${level}: 태양 거울이 탄막 보상을 잃음 (${Math.round(fire)} vs ${Math.round(quiet)})`);
+  const ordinary=simulate('sunmirror',level,{shots:true,seconds:20}),boss=simulate('sunmirror',level,{shots:true,seconds:20,enemyType:'austin'});
+  assert.ok(ordinary.interceptions>0&&ordinary.interceptions<=60,`level ${level}: 태양 거울이 일반 탄막 절반 이상을 지움 (${ordinary.interceptions}/120)`);
+  assert.equal(boss.interceptions,0,`level ${level}: 태양 거울이 보스 탄막을 지움`);
  }
  // 꿰뚫는 꽃비: 무리용이라 혼자 있는 적에게는 약하다.
  assert.ok(crowd('pierceshower')>bossDps('pierceshower',level)*3,`level ${level}: 꿰뚫는 꽃비가 무리 특화를 잃음`);
