@@ -98,7 +98,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
- const sourceForm=()=>AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
+ const sourceForm=()=>SECOND_FORMS[statId]||AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
 
  function applyTheme(){
   for(const [name,base] of originalMats){
@@ -120,7 +120,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   if(!awakenedMats.has(mat)){const gold=mat.clone();if(gold.emissive){gold.emissive.setHex(0xffb84f);gold.emissiveIntensity=Math.max(.38,gold.emissiveIntensity||0);}gold.roughness=Math.max(.18,(gold.roughness??.5)*.72);awakenedMats.set(mat,gold);}
   return awakenedMats.get(mat);
  }
- function spawnMesh(geo,mat,pos,y=.7){const ob=new THREE.Mesh(geo,combatMaterial(mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();applyProjectileScale(ob);group.add(ob);return ob;}
+ // Curated second fusions keep their parent's attack and collision, but the
+ // visible projectile carries both parents' shapes. Only the equipped recipe
+ // exists in memory; support particles and orbit bodies keep their own art.
+ function curatedProjectileGeometry(geo){
+  if(!secondRecipe||!comboGeo)return null;
+  const primary={collapse:'collapse',seedstorm:'seed',tidepull:'tide',returnblade:'blade',
+   frostkaleidoscope:'frostMirror',frostbloom:'bloom',returnflare:'returnFlare',
+   returningpetals:'returnPetal',lightningpetal:'lightningPetal',gravitystake:'gravityStake'}[active];
+  return primary&&geo===geos[primary]?comboGeo:null;
+ }
+ function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();if(visual)ob.userData.curatedSecond=secondRecipe.id;applyProjectileScale(ob);group.add(ob);return ob;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
@@ -142,7 +152,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const asTwin=Boolean(opts.twin);
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
-  if((GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed')&&!comboGeo)comboGeo=buildComboProjectileGeometry(sourceForm());
+  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed')&&!comboGeo)comboGeo=buildComboProjectileGeometry(sourceForm());
   rebuildOrbit();
  }
  function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);return true;}

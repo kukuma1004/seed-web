@@ -1,6 +1,31 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {austinActionPose,alwaysActionPose,johanActionPose} from '../src/boss-action-rig.js';
+import {austinActionPose,alwaysActionPose,johanActionPose,bossBodyMotion,createBossMotionTracker} from '../src/boss-action-rig.js';
+
+const body={position:{y:0}};
+const still=bossBodyMotion({type:'alwaysbeginner',body,state:'recover',time:0,vx:0,vz:0});
+const running=bossBodyMotion({type:'alwaysbeginner',body,state:'stalk',time:.3,vx:9,vz:3,travel:2});
+assert.ok(Math.abs(still.roll)<1e-8);
+assert.ok(running.roll<0&&Math.abs(running.roll)<=.13,'running bank stays subtle and directional');
+assert.ok(Math.abs(running.y)<.08,'footfall stays within the existing visual silhouette');
+assert.ok(Math.abs(bossBodyMotion({type:'tempestcarrier',body,state:'stalk',time:1,vx:100,vz:0}).roll)<=.13,'flight bank clamps sudden motion');
+assert.ok(Math.abs(bossBodyMotion({type:'alwaysbeginner',body:{position:{y:.7}},state:'recover',time:0}).y)<.02,'recovery returns to the floor instead of accumulating bob');
+
+function fakeBoss(type){return {type,state:'recover',g:{position:{x:0,z:0}},body:{position:{y:0},rotation:{x:0,z:0},scale:{x:1,y:1}},artRoll:0};}
+for(const type of ['austin','alwaysbeginner','tempestcarrier']){
+ const actor=fakeBoss(type),update=createBossMotionTracker(actor);let maxHeight=0,maxPitch=0;
+ for(let frame=0;frame<3600;frame++){
+  if(frame>=600&&frame<2400)actor.g.position.z+=.035;
+  update(frame/60);
+  // Repeated visual refreshes without a fresh combat tick must also be safe.
+  if(frame%17===0)update(frame/60);
+  maxHeight=Math.max(maxHeight,Math.abs(actor.body.position.y));
+  maxPitch=Math.max(maxPitch,Math.abs(actor.body.rotation.x));
+ }
+ assert.ok(maxHeight<.09,`${type} height does not drift over a 60-second fight`);
+ assert.ok(maxPitch<.1,`${type} pitch does not drift over a 60-second fight`);
+ assert.ok(Math.abs(actor.body.position.y)<.025&&Math.abs(actor.body.rotation.x)<.025,`${type} settles after movement`);
+}
 
 assert.equal(austinActionPose({state:'stalk'}).visible,false);
 const tell=austinActionPose({state:'jabTell',timer:.2,dashes:0});

@@ -34,6 +34,13 @@ export function activeColors(forms=[],theme='botanical'){
  for(const id of forms)for(const law of ALL_FORMS[id]?.requires||[]){const color=LAWS[law]?.color;if(color!=null&&!colors.includes(color))colors.push(color);}
  const base=colors.length?colors:[0x76ffd0];return base.map((value,index)=>themeColor(theme,`${forms.join('+')}:${index}`,value));
 }
+// A curated second fusion inherits a real attack, but its ultimate stage also
+// previews the conditional follow-up: blast, frost bloom or chained lightning.
+// The choreography only changes transforms of the five existing draw batches.
+export function comboSignatureStyle(forms=[]){
+ for(const id of forms){const follow=ALL_FORMS[id]?.follow;if(follow)return follow.effect==='nova'?'FROST_BLOOM':follow.effect==='arc'?'CHAIN_LINK':'IMPACT_BURST';}
+ return null;
+}
 const waveDepth=(type,age,rift)=>type==='DOMAIN'?3.15+Math.sin(age*1.8)*.16:type==='ORBIT'?2.55+Math.sin(age*4)*.22:type==='TIME_STOP'?2.8:rift?2.65+Math.sin(age*3)*.18:2.35+Math.sin(age*2.2)*.12;
 
 // Seven ultimate silhouettes, authored once and drawn through the same five
@@ -79,7 +86,7 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2,
  const tint=(material,hex,strength)=>{material.color.setHex(hex).multiplyScalar(strength);};
 
  function begin(mode,plan,pos,time){
-  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',theme:themeId,time,total:time,age:0,colors:activeColors(plan.forms,themeId),serial};
+  serial++;effect={mode,state:plan.state,forms:[...plan.forms],tags:[...(plan.tags||[])],archetype:plan.archetype||'BURST',comboStyle:comboSignatureStyle(plan.forms),theme:themeId,time,total:time,age:0,colors:activeColors(plan.forms,themeId),serial};
   if(sigilTex!==glowTex){const glyph=(ARCHETYPE_VFX[effect.archetype]||ARCHETYPE_VFX.BURST).glyph;sigilTex.offset.set((glyph%4)*.25,glyph<4?.5:0);}
   group.position.set(pos.x,0,pos.z);group.visible=true;return effect;
  }
@@ -105,8 +112,10 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2,
    const haloBase=profile.halo*(1+(type==='BURST'||type==='BLACKHOLE'?beat*.1:0));
    halo.material.opacity=1;tint(halo.material,primary,1.6*k*intro*tail);halo.scale.setScalar(haloBase*(.7+.3*intro)*(type==='TIME_STOP'?1+beat*.045:breathe));halo.rotation.y=effect.age*(type==='TIME_STOP'?.12:type==='ORBIT'?2.8:1.4);
    wave.material.opacity=over||rift||['RAIN','ORBIT','DOMAIN','BLACKHOLE','TIME_STOP'].includes(type)?1:0;tint(wave.material,secondary,(rift?.95:.7)*intro*tail);
-   const wavePulse=type==='BLACKHOLE'?.9+.12*Math.cos(effect.age*4):type==='TIME_STOP'?1+beat*.06:1+.035*Math.sin(effect.age*3);
-   wave.scale.set((rift&&type!=='DOMAIN'?1.35:profile.waveX)*wavePulse,1,(rift&&type!=='DOMAIN'?waveDepth(type,effect.age,true):profile.waveZ)*wavePulse);wave.rotation.y=-effect.age*(type==='TIME_STOP'?.08:rift?2.1:type==='ORBIT'?2.6:.9);
+   const wavePulse=effect.comboStyle==='IMPACT_BURST'?.82+.28*beat:effect.comboStyle==='FROST_BLOOM'?1.1-.14*beat:effect.comboStyle==='CHAIN_LINK'?1+.12*Math.sin(effect.age*8):type==='BLACKHOLE'?.9+.12*Math.cos(effect.age*4):type==='TIME_STOP'?1+beat*.06:1+.035*Math.sin(effect.age*3);
+   const waveX=effect.comboStyle==='CHAIN_LINK'?profile.waveX*1.34:effect.comboStyle==='FROST_BLOOM'?profile.waveX*.87:rift&&type!=='DOMAIN'?1.35:profile.waveX;
+   const waveZ=effect.comboStyle==='CHAIN_LINK'?profile.waveZ*.72:effect.comboStyle==='FROST_BLOOM'?profile.waveZ*1.14:rift&&type!=='DOMAIN'?waveDepth(type,effect.age,true):profile.waveZ;
+   wave.scale.set(waveX*wavePulse,1,waveZ*wavePulse);wave.rotation.y=effect.comboStyle==='CHAIN_LINK'?Math.round(effect.age*6)*Math.PI/3:effect.comboStyle==='FROST_BLOOM'?-effect.age*.3:-effect.age*(type==='TIME_STOP'?.08:rift?2.1:type==='ORBIT'?2.6:.9);
    const beamWide=profile.beamX*(type==='BLACKHOLE'?1+.12*Math.sin(effect.age*4):1),beamTall=profile.beamY*(.72+.28*intro)*(type==='BEAM'?1+beat*.16:1);
    beam.material.opacity=1;tint(beam.material,over?secondary:primary,(over?.9:.7)*intro*tail);beam.scale.set(beamWide,beamTall,beamWide);
   }else{
@@ -157,7 +166,7 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2,
  function clear(){effect=null;group.visible=false;for(const ob of [floor,halo,wave,beam])ob.material.opacity=0;motes.count=0;}
  function setTheme(id){themeId=normalizeTheme(id);if(effect){effect.theme=themeId;effect.colors=activeColors(effect.forms,themeId);}return themeId;}
  function setQuality(level){qualityLevel=Math.max(0,Math.min(2,level|0));return qualityLevel;}
- function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,theme:effect?.theme||themeId,quality:qualityLevel,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
+ function state(){return {visible:group.visible,mode:effect?.mode||null,state:effect?.state||null,forms:effect?.forms||[],archetype:effect?.archetype||null,comboStyle:effect?.comboStyle||null,theme:effect?.theme||themeId,quality:qualityLevel,time:effect?.time||0,drawCalls:group.children.length,instances:group.visible?motes.count:0,serial};}
  function dispose(){group.removeFromParent();const geos=new Set([floor.geometry,haloGeo,beam.geometry,moteGeo]);for(const g of geos)g.dispose();for(const ob of [floor,halo,wave,beam,motes])ob.material.dispose();for(const t of textures)t.dispose();}
  return {start,finish,update,clear,setTheme,setQuality,state,dispose};
 }

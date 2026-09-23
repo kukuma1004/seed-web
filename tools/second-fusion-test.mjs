@@ -71,12 +71,20 @@ assert.equal(secondFusionOptions(new Map([['thunderlance',4],['blastlance',4]]))
 const V=THREE.Vector3;
 function arena(form,positions,{hp=1e9}={}){
   const foes=positions.map(([x,z],i)=>({type:'swarm',hp,maxHp:hp,dead:false,g:{position:new V(x,0,z)},i,slow:0}));const calls=[];
-  const combat=createFormCombat(new THREE.Scene(),{player:{position:new V()},enemies:()=>foes.filter(e=>!e.dead),
+  const scene=new THREE.Scene(),combat=createFormCombat(scene,{player:{position:new V()},enemies:()=>foes.filter(e=>!e.dead),
     hit:(e,damage,meta)=>{calls.push({damage,...meta});e.hp-=damage;if(e.hp<=0)e.dead=true;return true;},blocked:()=>false,boundary:()=>false,constrain:()=>{},vfx:null});
-  combat.set(form.id,4);return {combat,foes,calls};
+  combat.set(form.id,4);return {combat,foes,calls,scene};
 }
 const step=(combat,seconds)=>{for(let t=0;t<seconds;t+=.02)combat.update(.02);};
 const byName=name=>entries.find(f=>f.name===name);
+for(const name of ['해일 폭창','서리 붕괴','불씨 칼날','서리 씨앗비']){
+ const form=byName(name),{combat,scene}=arena(form,[[0,-3]]);
+ combat.fire(new V(),new V(0,0,-1));
+ const visible=[];scene.traverse(object=>{if(object.userData.curatedSecond===form.id)visible.push(object);});
+ assert.ok(visible.length,`${name}: 주 공격이 부모 전용 탄을 그대로 쓰지 않고 재융합 탄을 보인다`);
+ assert.ok(visible.every(object=>object.geometry.name===`seed-combo-projectile-${form.id}`));
+ combat.clear();
+}
 {
   // 천둥 폭창: 한 줄 여덟 적을 한 번에 꿰뚫어도 폭발은 한 번(대기시간), 폭발 적중은 폭발 창 이름으로.
   const form=byName('천둥 폭창'),{combat,calls}=arena(form,Array.from({length:8},(_,i)=>[0,-1.5-i*.8]));

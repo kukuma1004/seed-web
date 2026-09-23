@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {ARCHETYPE_VFX,MOTE_CELLS,ULTIMATE_ARCHETYPE_ART,activeColors,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
+import {ARCHETYPE_VFX,MOTE_CELLS,ULTIMATE_ARCHETYPE_ART,activeColors,comboSignatureStyle,createActiveVFX,glowFalloff,haloBand,beamFalloff} from '../src/active-vfx.js';
 
 // Light, not stickers: the gradients fade to black (no light under additive blending) at their edges.
 assert.ok(glowFalloff(.5,.5)>.95&&glowFalloff(0,.5)===0&&glowFalloff(.95,.95)===0,'floor glow fades out before the rim');
@@ -9,6 +9,10 @@ assert.ok(beamFalloff(.5,0)>.9&&beamFalloff(.5,1)===0,'beam fades out toward the
 assert.ok(haloBand(0,.5)>.9&&haloBand(0,0)<.1&&haloBand(0,1)<.1,'halo is a thin band');
 import {ALL_FORMS} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
+import {SECOND_FORMS} from '../src/forms.js';
+
+const secondStyles=new Set(Object.values(SECOND_FORMS).map(form=>comboSignatureStyle([form.id])));
+assert.deepEqual(secondStyles,new Set(['IMPACT_BURST','FROST_BLOOM','CHAIN_LINK']));
 
 const expectedColors=[...new Set(['collapse','prism'].flatMap(id=>ALL_FORMS[id].requires).map(id=>LAWS[id].color))];
 assert.deepEqual(activeColors(['collapse','prism']),expectedColors);
@@ -71,6 +75,14 @@ for(const mobile of [false,true]){
   fx.start({state:'SIGNATURE',forms:['f09-reflect-portal'],tags:['BOUNCE','RIFT'],seconds:3},player);fx.update(.2,player);
   const riftWave=root.getObjectByName('active-wave');assert.ok(riftWave.visible&&Math.abs(riftWave.scale.x-riftWave.scale.z)>1,'rift signatures open an oval gate instead of another circular blast');
   fx.clear();
+  const styleProfiles=new Set();
+  for(const form of Object.values(SECOND_FORMS).filter((form,index,all)=>all.findIndex(other=>other.follow.effect===form.follow.effect)===index)){
+    fx.start({state:'SIGNATURE',forms:[form.id],tags:[],archetype:'BURST',seconds:3},player);fx.update(.2,player);
+    assert.equal(fx.state().comboStyle,comboSignatureStyle([form.id]));
+    assert.equal(fx.state().drawCalls,5,'재융합 궁극기도 기존 다섯 묶음만 그린다');
+    const wave=root.getObjectByName('active-wave');styleProfiles.add([wave.scale.x,wave.scale.z,wave.rotation.y].map(n=>n.toFixed(2)).join('|'));fx.clear();
+  }
+  assert.equal(styleProfiles.size,3,'폭발·서리·연쇄 재융합 궁극기 무대가 서로 다르다');
   assert.equal(fx.state().instances,0);
   fx.dispose();
   assert.equal(scene.children.length,0);

@@ -6,6 +6,7 @@ import {SHOP_KEY} from '../src/shop.js';
 import {SAVE_KEY} from '../src/run-save.js';
 import {ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
+import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 
@@ -72,6 +73,25 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const merged=mergeCloudSnapshots(local,remote,{prefer:'remote'});
  assert.equal(merged.shop.coins,900);assert.deepEqual(new Set(merged.discoveries.forms),new Set(['prism','collapse']));assert.deepEqual(new Set(merged.account.badges),new Set(['local','remote']));
  assert.equal(merged.account.equippedTitle,'austin');
+}
+
+// A defeated-boss pet is a cosmetic selection shared across devices. Later
+// unequips must beat an older equipped copy, without losing the boss unlock.
+{
+ const phone=memory(),pc=memory();
+ const profile={bosses:['austin']};
+ phone.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:[],bosses:['austin']}));
+ pc.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:[],bosses:['austin']}));
+ assert.equal(writeBossPet(phone,profile,'austin',5000).saved,true);
+ let merged=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone),{prefer:'local'});
+ applyCloudSnapshot(pc,merged);
+ assert.ok(SYNC_KEYS.includes(BOSS_PET_KEY));
+ assert.equal(readBossPet(pc,profile).id,'austin');
+ writeBossPet(pc,profile,null,7000);
+ merged=mergeCloudSnapshots(collectCloudSnapshot(phone),collectCloudSnapshot(pc),{prefer:'local'});
+ applyCloudSnapshot(phone,merged);
+ assert.equal(readBossPet(phone,profile).id,null);
+ assert.equal(merged.bossPet.updatedAt,7000);
 }
 
 // Founding rewards apply once even if the same grant is downloaded repeatedly.
