@@ -14,7 +14,7 @@ for(const law of Object.keys(LAWS)){const id=soloFormOf(law);assert.ok(id&&isSol
 for(const f of Object.values(SOLO_FORMS)){assert.ok(f.name&&f.desc&&f.strength&&f.weakness&&f.solo===true&&f.pair.includes('단독'));assert.ok(!Object.hasOwn(FORMS,f.id));}
 // Runtime includes held and legacy ids for save compatibility; the player-facing taxonomy is tested separately.
 assert.equal(Object.keys(ALL_FORMS).length,173);assert.equal(new Set(Object.values(ALL_FORMS).map(f=>f.name)).size,173);
-assert.equal(eligibleForms(Object.keys(LAWS)).length,30,'fusion offers include the approved batches, never solo evolutions or held-back batches');
+assert.equal(eligibleForms(Object.keys(LAWS)).length,36,'fusion offers include all curated pairs, never solo evolutions');
 assert.equal(isFormEligible('fullbloom',['split']),false);assert.equal(canFuse(new Map([['split',9]]),'fullbloom'),false);
 assert.deepEqual(Object.keys(FORM_COMBAT).sort(),Object.keys(ALL_FORMS).sort());
 

@@ -10,7 +10,7 @@ const V=THREE.Vector3;
 
 // Existing ten stay intact; the opposite gravity branch is the first new final form.
 assert.equal(Object.keys(AWAKEN_FORMS).length,72,'36쌍의 완성 각성 두 갈래');
-assert.equal(Object.keys(LIVE_AWAKEN_FORMS).length,11,'기존 검수 갈래만 일반 선택지에 남는다');
+assert.equal(Object.keys(LIVE_AWAKEN_FORMS).length,72,'완성 갈래 모두 일반 선택지에 나온다');
 assert.ok(Object.values(AWAKEN_FORMS).every(a=>Object.hasOwn(CURATED_FORMS,a.base)),'모든 각성은 손설계 융합을 사용');
 for(const a of Object.values(AWAKEN_FORMS)){
  assert.ok(CURATED_FORMS[a.base]&&awakenedFormOf(a.base,a.addedSolo)===a.id&&baseFormOf(a.id)===a.base&&isAwakenedForm(a.id));
@@ -119,4 +119,4 @@ assert.equal(activeState(new Map([['bigcrunch',9]])).state,'SIGNATURE');
 }
 // Saved builds and rankings keep awakened evolutions.
 assert.deepEqual(parseBuild(buildRecord({forms:new Map([['maelstrom',8]])})).forms,[['maelstrom',8]]);
-console.log('Awakening: 72 authored fusion+solo branches (11 live), 36 twins, recipe separation, combat rhythm and saved builds passed.');
+console.log('Awakening: 72 authored fusion+solo branches live, 36 twins, recipe separation, combat rhythm and saved builds passed.');

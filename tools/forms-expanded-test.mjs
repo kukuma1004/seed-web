@@ -16,11 +16,11 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let t=0;t<seconds-1e-9;t+=dt)combat.update(Math.min(dt,seconds-t));};
 const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0&&b.x<edge)){b.x=2*edge-b.x;dir.x*=-1;return true;}}return false;};
 
-// Catalogue: thirty-six hand-authored forms. The first two approved five-form batches are offered.
+// Catalogue: all thirty-six hand-authored forms are offered in the beta.
 assert.equal(Object.keys(CURATED_FORMS).length,36,'차원 법칙을 뺀 1차 융합 36칸이 모두 손제작');
 assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,36);
-assert.equal(Object.keys(FORMS).length,30,'승인된 1차 융합 두 묶음 10종은 선택지에 나온다');
-for(const id of [...COMBO_BATCHES['20260921'].ids,...COMBO_BATCHES['20260921-2'].ids])assert.ok(Object.hasOwn(FORMS,id),`${id} 승인 묶음은 선택지에 있다`);
+assert.equal(Object.keys(FORMS).length,36,'손제작 1차 융합 36종 모두 선택지에 나온다');
+for(const id of Object.values(COMBO_BATCHES).flatMap(batch=>batch.ids))assert.ok(Object.hasOwn(FORMS,id),`${id} 승인 묶음은 선택지에 있다`);
 assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),Object.values(COMBO_BATCHES).filter(b=>!b.live).flatMap(b=>b.ids).sort(),'보류 중인 묶음만 선택지 밖에 있다');
 for(const id of Object.keys(CANDIDATE_FORMS))assert.ok(!Object.hasOwn(FORMS,id),`${id} 선택지에 새어 나감`);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);
@@ -209,4 +209,4 @@ for(const id of Object.keys(FORMS)){
  assert.ok(hits.length===0||hits.every((c,i)=>i===0||c.damage>=hits[i-1].damage),'오갈수록 피해가 줄지 않는다');
  combat.dispose();
 }
-console.log('Forms: thirty-six authored pairs (thirty offered), uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');
+console.log('Forms: thirty-six authored pairs offered, uncapped levels, distinct line, bounce, chain, control and burst mechanics passed.');

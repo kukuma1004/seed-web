@@ -9,7 +9,7 @@ assert.equal(new Set(FIRST_FUSIONS.map(v=>v.id)).size,45);
 assert.equal(new Set(FIRST_FUSIONS.map(v=>v.name)).size,45);
 assert.equal(new Set(SECOND_FUSIONS.map(v=>v.id)).size,990);
 assert.equal(new Set(SECOND_FUSIONS.map(v=>v.name)).size,990);
-assert.equal(Object.keys(FORMS).length,30,'실제 선택에는 기존 수제 20종과 승인된 1차 융합 10종만');
+assert.equal(Object.keys(FORMS).length,36,'실제 선택에는 손제작 1차 융합 36종만');
 assert.equal(Object.keys(GENERATED_FORMS).length,9,'남은 자동 생성 1차 융합(차원 법칙 9칸)은 연구 목록에만 보관');
 // 자동 재융합 990개는 계속 차단. SECOND_FORMS에는 손으로 만든 재융합만 묶음으로 들어간다(9/22 공명형 5 · 교차형 5, 9/23 섞음 10 — 모두 보류).
 assert.ok(Object.values(SECOND_FORMS).every(v=>v.curated&&!v.generated),'자동 재융합은 실제 목록에 없음');
@@ -36,4 +36,4 @@ for(const file of Object.values(COMBO_ART)){
 }
 assert.match(comboArt(SECOND_FUSIONS[0]),/combo-core/);
 assert.match(comboProjectileArt(SECOND_FUSIONS[0]),/combo-projectiles-v1\.webp/);
-console.log('combo catalogue archive: 10 laws, 45 first, 990 second; live gate: 30 curated first, 0 generated second, 20 curated second held (4 batches)');
+console.log('combo catalogue archive: 10 laws, 45 first, 990 second; live gate: 36 curated first, 0 generated second, 20 curated second held (4 batches)');

@@ -71,7 +71,7 @@ export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filt
 export const COMBO_BATCHES=Object.freeze({
  '20260921':Object.freeze({live:true,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])}),
  '20260921-2':Object.freeze({live:true,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])}),
- '20260921-3':Object.freeze({live:false,ids:Object.freeze(['spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'])})
+ '20260921-3':Object.freeze({live:true,ids:Object.freeze(['spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'])})
 });
 const HELD_BACK=new Set(Object.values(COMBO_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));
 export const isHeldBack=id=>HELD_BACK.has(id);
@@ -219,7 +219,7 @@ const FINAL_CANDIDATES=Object.freeze(Object.fromEntries(FINAL_MANIFEST.entries.f
 // All 72 have authored combat/visual data and can be inspected in the admin lab.
 // New branches remain out of ordinary rewards until real mobile and balance QA.
 export const AWAKEN_FORMS=Object.freeze({...EXISTING_AWAKEN_FORMS,...FINAL_CANDIDATES});
-export const LIVE_AWAKEN_FORMS=EXISTING_AWAKEN_FORMS;
+export const LIVE_AWAKEN_FORMS=AWAKEN_FORMS;
 // Twin awakenings: all 36 pairs of the nine playable solo evolutions have their own identity.
 // Both solo attacks fight from one slot (each at TWIN.damage) and their opening moves take turns every AWAKEN.openingEvery seconds.
 // The ten pairs that once routed to a fusion awakening are separate twins too.
@@ -350,8 +350,16 @@ export function formStats(id,level=1,{surge=false,twin=false}={}){
   if(awakened.finalCandidate){
    // The branch layer contributes its own hits. Keep the inherited weapon below
    // the parent fusion's raw output so the extra pattern is a trade, not free DPS.
-   const authored={...base,interval:base.interval*.94,damage:base.damage*.8,awakened:true,finalBranch:true};
-   return surge?surgeStats(awakened.base,authored):authored;
+   const inheritedScale=awakened.base==='returningpetals'?.68:.8;
+   const authored={...base,interval:base.interval*.94,damage:base.damage*inheritedScale,awakened:true,finalBranch:true};
+   if(awakened.base==='returningpetals')for(const key of DAMAGE_KEYS)if(key!=='damage'&&typeof authored[key]==='number')authored[key]*=inheritedScale;
+   if(!surge)return authored;
+   const charged=surgeStats(awakened.base,authored);
+   // These three parent attacks multiply extra projectiles or bounces during
+   // surge. Keep their authored pattern and cadence, but cap the damage spike.
+   if(['gravitymirror','returnflare','halobloom'].includes(awakened.base))for(const key of DAMAGE_KEYS)if(typeof charged[key]==='number')charged[key]*=.8;
+   if(awakened.base==='frostnet')for(const key of DAMAGE_KEYS)if(typeof charged[key]==='number')charged[key]*=1.16;
+   return charged;
   }
   const awake=awakenStats(awakened.base,base);return surge?surgeStats(awakened.base,awake):awake;}
  const base=baseStats(id,level);

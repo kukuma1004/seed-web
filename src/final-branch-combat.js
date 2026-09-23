@@ -9,13 +9,20 @@ const point=(p)=>new V(p.x,0,p.z);
 // Lightweight authored layer over a first fusion. No per-projectile mesh or
 // material allocation: the parent owns the visible shot, this layer draws its
 // distinct path and contact effects through the existing pooled VFX system.
-export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundary,reflector,blocked,constrain,fx}){
- let spec=null,clock=0,ready=0,beat=0,shots=[],events=[],fields=[],marks=new WeakMap(),level=1,baseDamage=1,passive=false,baseId=null;
+export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundary,reflector,blocked,constrain,fx,sound=()=>{}}){
+ let spec=null,clock=0,ready=0,beat=0,lastImpactSound=-Infinity,shots=[],events=[],fields=[],marks=new WeakMap(),level=1,baseDamage=1,passive=false,baseId=null;
+ const IMPACT_SOUND={reflect:'reflect',split:'split',chain:'chain',orbit:'hit',pierce:'pierceHit',burst:'burstHit',recall:'hit',gravity:'gravityHit',frost:'frostHit'};
  const nearbyEnemies=(p,r)=>nearby?nearby(p,r,[]):enemies();
  const targets=(p,r)=>nearbyEnemies(p,r+1).filter(e=>!e.dead&&distance(e.g.position,p)<r+(BOSSES.has(e.type)?.45:0));
  const nearest=(p,r=10,skip=null)=>{let best=null,d=r;for(const e of nearbyEnemies(p,r+1)){if(e.dead||(skip instanceof Set?skip.has(e):e===skip))continue;const q=distance(e.g.position,p);if(q<d){d=q;best=e;}}return best;};
  const power=(factor=1)=>Math.max(1,baseDamage*(spec?.power||0)*factor);
- const harm=(e,amount,from,phase='final')=>deal(e,amount,{kind:baseId,finalLaw:spec.law,indirect:true,phase,direction:point(e.g.position).sub(from).normalize()});
+ const harm=(e,amount,from,phase='final')=>{
+  const landed=deal(e,amount,{kind:baseId,finalLaw:spec.law,indirect:true,phase,direction:point(e.g.position).sub(from).normalize()});
+  // One audible contact per short cluster. A dense branch can hit many targets
+  // in one frame; spawning a voice for each target would punish mobile CPUs.
+  if(landed&&clock-lastImpactSound>=.22){sound(IMPACT_SOUND[spec.law]||'hit');lastImpactSound=clock;}
+  return landed;
+ };
  const tell=(p,scale=.45)=>{fx.pulse?.(p,spec.law,scale,.22);};
  const flash=(p,scale=.7)=>{fx.burst?.(p,spec.law,Math.min(18,Math.round(7+scale*4)),scale);};
  const blast=(p,r=spec.radius,factor=1,{slow=false,pull=false}={})=>{
@@ -33,7 +40,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
  };
  const shot=(pos,dir,{mode=spec.motion,life=1.5,speed=12,bounces=0,arc=0,returning=false,powerScale=1}={})=>{
   if(shots.length>=20)return;
-  shots.push({pos:point(pos),dir:point(dir).normalize(),start:point(pos),life,speed,mode,bounces,arc,age:0,trailClock:0,returning,powerScale,hitSet:new Set(),waypoints:[]});
+  shots.push({pos:point(pos),old:point(pos),dir:point(dir).normalize(),start:point(pos),life,speed,mode,bounces,arc,age:0,trailClock:0,returning,powerScale,hitSet:new Set(),waypoints:[]});
  };
  const fan=(pos,dir,count=3,mode='fan')=>{for(let i=0;i<count;i++)shot(pos,point(dir).applyAxisAngle(Y,(i-(count-1)/2)*.28),{mode,life:1.15,speed:12,powerScale:1/count*1.6});};
  const line=(a,b,width=.65,factor=1,slow=false,pull=false)=>{
@@ -58,7 +65,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
  };
  function set(id,damage,nextLevel=1,isPassive=false,nextBaseId=null){
   if(spec?.id===id&&level===Math.max(1,nextLevel)&&baseDamage===Math.max(1,damage||1)&&passive===isPassive&&baseId===nextBaseId)return;
-  spec=FINAL_BRANCH_PATTERNS[id]||null;clock=0;ready=0;beat=0;shots=[];events=[];fields=[];marks=new WeakMap();
+  spec=FINAL_BRANCH_PATTERNS[id]||null;clock=0;ready=0;beat=0;lastImpactSound=-Infinity;shots=[];events=[];fields=[];marks=new WeakMap();
   level=Math.max(1,nextLevel);baseDamage=Math.max(1,damage||1);passive=isPassive;baseId=nextBaseId;
  }
  function onFire(pos,dir,target=null){
@@ -129,6 +136,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
   if(!spec)return;
   const p=point(pos),d=point(dir).normalize();
   // Every completed branch has a signature opening in its own motion family.
+  sound(IMPACT_SOUND[spec.law]||'hit');lastImpactSound=clock;
   fx.pulse?.(p,spec.law,Math.min(4,spec.radius+1),.45);
   if(spec.motion==='satellite'){for(let i=0;i<4;i++){const a=i*Math.PI/2;const at=p.clone().add(new V(Math.cos(a)*spec.radius,0,Math.sin(a)*spec.radius));schedule(i*.11,'blast',at,{radius:spec.radius*.7,factor:.6,slow:spec.law==='frost',pull:spec.law==='gravity'});}return;}
   if(spec.motion==='relay'){for(const e of targets(p,9).slice(0,spec.id.startsWith('final-frostnet')?5:3))relay(e,{jumps:2,delay:.12,branch:spec.variation==='forked-branches'});return;}
@@ -162,7 +170,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
    if(f.tick<=0){f.tick=f.interval;blast(f.pos,f.radius,.36,{slow:f.slow,pull:f.pull});}
    if(f.life<=0)fields.splice(i,1);
   }
-  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.life-=dt;s.age+=dt;const old=s.pos.clone();
+  for(let i=shots.length-1;i>=0;i--){const s=shots[i];s.life-=dt;s.age+=dt;const old=s.old.copy(s.pos);
    if(s.mode==='inward-return'||s.mode==='direct-home'||s.mode==='reverse-waypoints'||s.mode==='straight-two-pass'||s.mode==='separate-home-routes'||s.mode==='merge-on-return'||s.mode==='stepping-stones'||s.mode==='trailing-rime'||s.mode==='return-seal'||s.mode==='home-finish'||s.mode==='two-beats'||s.mode==='accelerating-home'){
     if(!s.returning&&s.age>.55){s.returning=true;s.hitSet.clear();if(s.mode==='two-beats')blast(s.pos,spec.radius,.6);}
     if(s.returning){const home=point(player.position);s.dir.copy(home).sub(s.pos).normalize();if(s.mode==='accelerating-home')s.speed=Math.min(19,s.speed+dt*9);if(distance(s.pos,home)<.6){if(s.mode==='home-finish'||s.mode==='merge-on-return')blast(home,spec.radius,1.25);s.life=0;}}

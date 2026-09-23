@@ -54,7 +54,7 @@ export function discoveryBook(profile,titles=null){
  const held=titles?.titles?.length?`<p class="codex-goal">${titles.titles.map(t=>`${t.name} · ${t.perk}`).join('<br>')}</p>`:'';
  const section=(title,list)=>`<h3 class="book-title">${title} <span>${list.filter(f=>profile.forms.includes(f.id)).length}/${list.length}</span></h3><div class="form-cards book">${list.map(entry).join('')}</div>`;
  // One scroll area for every section, so a short phone screen never squeezes the four grids.
- return `<p>씨앗의 도감 · ${found}/${total} 발견</p><h2>씨앗의 도감</h2><p class="form-note">현재 플레이 가능한 진화만 표시합니다. 전체 설계 목표는 기본 9 · 단독 9 · 융합 36 · 융합+단독 72 · 쌍둥이 36입니다.</p>${held}${goal}
+ return `<p>씨앗의 도감 · ${found}/${total} 발견</p><h2>씨앗의 도감</h2><p class="form-note">기본 성질 9개에서 단독 9 · 융합 36 · 융합+단독 72 · 쌍둥이 36개의 길이 열립니다.</p>${held}${goal}
  <div class="book-scroll">
  ${section('완성 진화 · 두 법칙을 합치기',Object.values(FORMS))}
  ${section(`단독 진화 · 한 법칙을 Lv.${SOLO_LEVEL}까지`,Object.values(SOLO_FORMS))}

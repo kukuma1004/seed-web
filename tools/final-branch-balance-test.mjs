@@ -16,13 +16,16 @@ for(const a of Object.values(AWAKEN_FORMS).filter(form=>form.finalCandidate)){
  rows.push({id:a.id,ratio:result/pair,worth:(boosted-normal)/(normal/10),boss:bossDps(a.id,L,{shots})});
 }
 const extremes=(key)=>({min:rows.reduce((a,b)=>a[key]<b[key]?a:b),max:rows.reduce((a,b)=>a[key]>b[key]?a:b)});
-if(process.argv.includes('--report'))console.log(rows.filter(r=>r.worth>32||r.worth<12).map(r=>`${r.id}: ${r.worth.toFixed(1)}s`).join('\n'));
+if(process.argv.includes('--report'))for(const key of ['ratio','worth','boss']){
+ console.log(`${key} low:`,rows.toSorted((a,b)=>a[key]-b[key]).slice(0,5).map(r=>`${r.id} ${r[key].toFixed(2)}`).join(', '));
+ console.log(`${key} high:`,rows.toSorted((a,b)=>b[key]-a[key]).slice(0,5).map(r=>`${r.id} ${r[key].toFixed(2)}`).join(', '));
+}
 assert.equal(rows.length,61);
 for(const r of rows){
  const base=AWAKEN_FORMS[r.id].base;
  assert.ok(r.ratio<1.5,`${r.id}: crowd damage exceeds both ingredients`);
  assert.ok(r.ratio>=(SPECIALIST_FLOORS.has(base)?.2:.5),`${r.id}: too little crowd damage for its role (${r.ratio.toFixed(2)})`);
- assert.ok(r.worth>=8&&r.worth<=40,`${r.id}: signature worth ${r.worth.toFixed(1)} seconds`);
- assert.ok(r.boss>20&&r.boss<450,`${r.id}: boss damage ${r.boss.toFixed(0)} escapes safe band`);
+ assert.ok(r.worth>=10&&r.worth<=33,`${r.id}: signature worth ${r.worth.toFixed(1)} seconds`);
+ assert.ok(r.boss>45&&r.boss<320,`${r.id}: boss damage ${r.boss.toFixed(0)} escapes safe band`);
 }
-console.log(`Final branch balance: 61 held branches; crowd ${extremes('ratio').min.ratio.toFixed(2)}–${extremes('ratio').max.ratio.toFixed(2)}x, signature ${extremes('worth').min.worth.toFixed(1)}–${extremes('worth').max.worth.toFixed(1)}s, boss ${extremes('boss').min.boss.toFixed(0)}–${extremes('boss').max.boss.toFixed(0)} DPS.`);
+console.log(`Final branch balance: 61 new branches; crowd ${extremes('ratio').min.ratio.toFixed(2)}–${extremes('ratio').max.ratio.toFixed(2)}x, signature ${extremes('worth').min.worth.toFixed(1)}–${extremes('worth').max.worth.toFixed(1)}s, boss ${extremes('boss').min.boss.toFixed(0)}–${extremes('boss').max.boss.toFixed(0)} DPS.`);

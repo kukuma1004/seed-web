@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {COMBO_LAW_BY_ID} from './combo-catalog.js';
+import {finalProjectileStyle} from './final-identity-art.js';
 
 // One deterministic visual grammar serves the live 58 forms and the future
 // 1,090-entry catalogue. A recipe is data only, so choice cards and the 3D
@@ -23,6 +24,10 @@ const hash=text=>{let value=2166136261;for(let i=0;i<text.length;i++)value=Math.
 const unique=values=>[...new Set((values||[]).filter(Boolean))];
 
 export function projectileRecipe(form){
+ // The 72 completed branches and 36 twins have authored dominant-law art.
+ // Use the same recipe for card previews, combat geometry and shot audio.
+ const identity=form?.id&&finalProjectileStyle(form.id);
+ if(identity)return identity;
  const laws=unique(form?.requires||form?.laws||[]);
  const primary=laws[0]||'split',secondary=laws[1]||primary,tail=laws[2]||secondary;
  const accent=form?.visual?.accent||COMBO_LAW_BY_ID[primary]?.color||FALLBACK;

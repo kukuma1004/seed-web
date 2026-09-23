@@ -192,7 +192,7 @@ for(const id of Object.keys(ALL_FORMS)){
 }
 // Awakened evolutions replace two slots (the fusion and its best solo evolution at equal levels) with one:
 // about as strong as the pair, never a runaway (0.7x-1.5x), and the level rule is the one progression.js uses.
-for(const a of Object.values(LIVE_AWAKEN_FORMS)){
+for(const a of Object.values(LIVE_AWAKEN_FORMS).filter(a=>!a.finalCandidate)){
  const L=SOLO_LEVEL-1,shots=a.passive,pair=averageDps(a.base,L,{shots})+Math.max(...a.requires.map(soloFormOf).map(id=>averageDps(id,L,{shots})));
  const ratio=averageDps(a.id,L+Math.ceil(L/3),{shots})/pair;
  assert.ok(ratio>=.7&&ratio<=1.5,`${a.id}: awakened is ${ratio.toFixed(2)} of fusion + solo`);

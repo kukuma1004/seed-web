@@ -22,7 +22,7 @@ const pairs=draft.fusion_pairs.map(item=>{
   const implemented=awakenings.get(`${fusion.id}+${addedSolo.id}`);
   return {
    designId:branch.id,id:implemented?.id||`final-${fusion.id}-${addedLaw}`,
-   status:implemented?(LIVE_AWAKEN_FORMS[implemented.id]?'implemented_existing':'implemented_held'):'design_only',
+   status:implemented?(implemented.finalCandidate?(LIVE_AWAKEN_FORMS[implemented.id]?'implemented_live':'implemented_held'):'implemented_existing'):'design_only',
    name:implemented?.name||branch.name_ko,conceptName:branch.name_ko,
    fusion:fusion.id,addedSolo:addedSolo.id,addedLaw,
    behavior:implemented?.desc||branch.behavior,
@@ -36,7 +36,7 @@ const pairs=draft.fusion_pairs.map(item=>{
 if(pairs.length!==36||pairs.reduce((n,p)=>n+p.branches.length,0)!==72)throw new Error('Expected 36 pairs and 72 branches');
 if(pairs.flatMap(p=>p.branches).filter(b=>b.status!=='design_only').length!==Object.keys(AWAKEN_FORMS).length)throw new Error('Implemented awakenings did not map exactly once');
 const matrix={version:1,source:path.basename(source instanceof URL?source.pathname:source),scope:'9 basic + 9 solo + 36 fusion + 72 fusion-and-solo + 36 solo twins = 162 identities',
- releaseRule:'implemented_held branches are testable in the admin lab but excluded from normal selections and player codex until mobile and balance QA',pairs};
+ releaseRule:'implemented_live branches are available in the beta selection pool after scripted visual and balance checks; field performance remains under observation',pairs};
 fs.writeFileSync(output,JSON.stringify(matrix,null,2)+'\n','utf8');
-const implemented=pairs.flatMap(p=>p.branches).filter(b=>b.status==='implemented_existing').length;
+const implemented=pairs.flatMap(p=>p.branches).filter(b=>b.status==='implemented_existing'||b.status==='implemented_live').length;
 console.log(`Wrote ${pairs.length} pairs, 72 branches (${implemented} live, ${72-implemented} held for QA) to ${output}`);

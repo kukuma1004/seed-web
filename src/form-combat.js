@@ -99,7 +99,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // 3묶음 상태: 창날 고리의 빠진 창·발사 시계 · 강착 원반 부스러기 · 서리 되감기 표식 · 차가운 소용돌이 · 서리꽃 겹침.
  let spearGone=[],spearClock=0,debris=0,rimeMarks=new WeakMap(),coldWells=[],petalStacks=new WeakMap();
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
- const finalLayer=createFinalBranchCombat({player,enemies,nearby,deal:(e,damage,metadata)=>support(e,damage,metadata),boundary,reflector,blocked,constrain,fx});
+ const finalLayer=createFinalBranchCombat({player,enemies,nearby,deal:(e,damage,metadata)=>support(e,damage,metadata),boundary,reflector,blocked,constrain,fx,sound});
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
  const sourceForm=()=>SECOND_FORMS[statId]||AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
@@ -128,7 +128,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // visible projectile carries both parents' shapes. Only the equipped recipe
  // exists in memory; support particles and orbit bodies keep their own art.
  function curatedProjectileGeometry(geo){
-  if(AWAKEN_FORMS[statId]?.finalCandidate&&comboGeo)return comboGeo;
+  if(AWAKEN_FORMS[statId]&&comboGeo)return comboGeo;
   if(!secondRecipe||!comboGeo)return null;
   const primary={collapse:'collapse',seedstorm:'seed',tidepull:'tide',returnblade:'blade',
    frostkaleidoscope:'frostMirror',frostbloom:'bloom',returnflare:'returnFlare',
@@ -142,7 +142,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:active==='spearring'?S.spears:active==='accretiondisk'?S.vortices:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
-  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(AWAKEN_FORMS[statId]?.finalCandidate&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
+  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(AWAKEN_FORMS[statId]&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
  function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
@@ -158,7 +158,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   if(AWAKEN_FORMS[id]?.finalCandidate)finalLayer.set(id,S.damage,L,Boolean(ALL_FORMS[kind]?.passive),kind);
-  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'||AWAKEN_FORMS[id]?.finalCandidate)&&!comboGeo)comboGeo=buildComboProjectileGeometry(AWAKEN_FORMS[id]?.finalCandidate?finalProjectileStyle(id):sourceForm());
+  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'||AWAKEN_FORMS[id])&&!comboGeo)comboGeo=buildComboProjectileGeometry(AWAKEN_FORMS[id]?finalProjectileStyle(id):sourceForm());
   rebuildOrbit();
  }
  function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);if(AWAKEN_FORMS[statId]?.finalCandidate&&metadata.phase!=='final')finalLayer.onHit(e,metadata);return true;}
@@ -514,7 +514,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    fx.arc(memory.route[i],memory.route[i-1]);
    fx.rewindTrace(memory.route[i],memory.route[i-1],true,(memory.route.length-1-i)*.045);
   }
-  sound('chainHit');
+  sound('chain');
   for(const e of enemies()){
    if(e.dead)continue;
    for(let i=1;i<memory.route.length;i++){
@@ -592,7 +592,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    support(to,damage,{kind:'thundermirror',indirect:true,phase:'echo',direction:to.g.position.clone().sub(from.g.position).setY(0).normalize()});
    [from,to]=[to,from];
   }
-  sound('chainHit');
+  sound('chain');
  }
 
  // Pierce + split: every enemy the lance passes throws two petals sideways.
@@ -685,7 +685,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function shatterColdWell(w){
   const frozen=[...w.frozen].filter(e=>!e.dead).length,blast=S.shatter*(1+S.frozenGain*frozen);
   fx.explosion(w.pos,'frost',S.radius,frozen>=2);sound('frostHit');
-  for(const e of near(w.pos,S.radius+.8))if(!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.5))support(e,blast*(w.frozen.has(e)?1.4:1),{kind:'coldwell',indirect:true,phase:'shatter',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
+  for(const e of near(w.pos,S.radius+.8))if(!e.dead&&flat(e.g.position,w.pos)<S.radius+bossReach(e,0,.5))support(e,blast*(FORM_BOSSES.has(e.type)?1.7:w.frozen.has(e)?1.4:1),{kind:'coldwell',indirect:true,phase:'shatter',direction:e.g.position.clone().sub(w.pos).setY(0).normalize()});
   w.ob.removeFromParent();
  }
  function makeColdWell(pos){
