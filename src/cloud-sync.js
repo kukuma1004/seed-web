@@ -1,5 +1,5 @@
 import {FIREBASE_APP} from './account-auth.js';
-import {CLOUD_META_KEY,CLOUD_OWNER_KEY,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot,isSyncKey,readCloudMeta,normalizeCloudMeta,clearCloudLocalData} from './cloud-save.js';
+import {CLOUD_META_KEY,CLOUD_OWNER_KEY,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot,isSyncKey,readCloudMeta,normalizeCloudMeta,clearCloudLocalData,replacedRuns,rememberReplacedRuns,snapshotAdds} from './cloud-save.js';
 
 const encode=value=>encodeURIComponent(value);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -42,9 +42,12 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   else if(sameOwner||migrating)merged=local;
   else merged=normalizeCloudSnapshot({version:1,updatedAt:now()});
   const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=rewardResult.applied;
-  const shouldUpload=!remote||migrating||localDirty||lastRewards.length>0;
+  // 2026-09-23: 이 기기에만 있던 것(도감·더 최근 판)이 병합에 들어갔으면, 이 기기에 새 저장이 없어도 올린다.
+  // 예전에는 올리지 않아서, 다른 기기가 그 도감을 받지 못한 채 계속 옛 저장을 보았다.
+  const shouldUpload=!remote||migrating||localDirty||lastRewards.length>0||(sameOwner&&snapshotAdds(merged,remote));
   const nextRevision=shouldUpload?Math.max(Number(remote?.revision)||0,m.localRevision,merged.revision)+1:Math.max(Number(remote?.revision)||0,merged.revision);
   merged={...merged,revision:nextRevision,updatedAt:shouldUpload?now():(Number(remote?.updatedAt)||merged.updatedAt)};
+  if(sameOwner)rememberReplacedRuns(raw,replacedRuns(local,merged),now());
   active=false;const changed=applyCloudSnapshot(raw,merged);active=true;
   if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged});}
   catch(error){dirty=true;return {ok:false,reason:'upload',error,changed,rewards:lastRewards};}
