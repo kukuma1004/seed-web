@@ -1,9 +1,8 @@
-// Act 3 prototype: a forward-scrolling sky route inspired by classic vertical shooters.
-// The first slice is local/admin-only until its controls, readability and mobile budget pass.
+// Act 3: a forward-scrolling sky route inspired by classic vertical shooters.
 export const ACT3_REGION='skyway';
 export const ACT3_GRAMMAR='A';
 export const ACT3_NAME='3막 · 폭풍의 항로';
-export const ACT3_RELEASED=false;
+export const ACT3_RELEASED=true;
 export const isAct3=region=>region===ACT3_REGION;
 export const act3Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosses.includes('alwaysbeginner');
 export function act3Available(where=globalThis.location){return ACT3_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
@@ -44,8 +43,8 @@ export const ACT3_ARENA=Object.freeze({
  spawns:Object.freeze([[-7.8,-6.8],[0,-7.1],[7.8,-6.8],[-8,0],[8,0],[-7.6,5.7],[7.6,5.7]].map(([x,z])=>Object.freeze({x,z})))
 });
 
-const ACT3_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act3-v1','seed-ranking-v2':'seed-ranking-act3-v1'});
+export const ACT3_STORAGE_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act3-v1','seed-ranking-v2':'seed-ranking-act3-v1'});
 export function act3Storage(storage){
- if(!storage)return storage;const key=k=>ACT3_KEYS[k]||k;
+ if(!storage)return storage;const key=k=>ACT3_STORAGE_KEYS[k]||k;
  return {getItem:k=>storage.getItem(key(k)),setItem:(k,v)=>storage.setItem(key(k),v),removeItem:k=>storage.removeItem(key(k))};
 }

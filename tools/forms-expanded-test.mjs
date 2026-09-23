@@ -19,7 +19,7 @@ const walls=(a,b,dir)=>{for(const edge of [4,-4]){if((edge>0&&b.x>edge)||(edge<0
 // Catalogue: twenty-five hand-authored forms, of which twenty are offered. A batch whose art is not ready stays out of the offers.
 assert.equal(Object.keys(CURATED_FORMS).length,36,'차원 법칙을 뺀 1차 융합 36칸이 모두 손제작');
 assert.equal(new Set(Object.values(CURATED_FORMS).map(f=>[...f.requires].sort().join('+'))).size,36);
-assert.equal(Object.keys(FORMS).length,20,'그림이 없는 1묶음은 선택지에 나오지 않는다');
+assert.equal(Object.keys(FORMS).length,20,'승인 대기 중인 1차 조합은 그림을 갖춰도 선택지에 나오지 않는다');
 assert.deepEqual(Object.keys(CANDIDATE_FORMS).sort(),Object.values(COMBO_BATCHES).filter(b=>!b.live).flatMap(b=>b.ids).sort(),'보류 중인 묶음만 선택지 밖에 있다');
 for(const id of Object.keys(CANDIDATE_FORMS))assert.ok(!Object.hasOwn(FORMS,id),`${id} 선택지에 새어 나감`);
 for(const id of Object.keys(LAWS))assert.ok(Object.values(FORMS).filter(f=>f.requires.includes(id)).length>=2,`${id} feeds fewer than two forms`);

@@ -3,6 +3,7 @@ import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS} from './garden.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
 import {SAVE_KEY,validCheckpoint,withoutHidden,isCheckpointTombstone,checkpointStamp} from './run-save.js';
 import {ACT2_STORAGE_KEYS} from './act2.js';
+import {ACT3_STORAGE_KEYS} from './act3.js';
 import {QUALITY_KEY,clampLevel} from './quality.js';
 import {THEME_KEY,normalizeTheme} from './themes.js';
 import {NAME_KEY,cleanName} from './score.js';
@@ -15,7 +16,7 @@ export const CLOUD_META_KEY='seed-cloud-meta-v1';
 export const CLOUD_OWNER_KEY='seed-cloud-owner-v1';
 export const SOUND_KEY='seed-sound-v1';
 export const SYNC_KEYS=Object.freeze([
- DISCOVERIES_KEY,GARDEN_KEY,SHOP_KEY,SAVE_KEY,ACT2_STORAGE_KEYS[SAVE_KEY],
+ DISCOVERIES_KEY,GARDEN_KEY,SHOP_KEY,SAVE_KEY,ACT2_STORAGE_KEYS[SAVE_KEY],ACT3_STORAGE_KEYS[SAVE_KEY],
  QUALITY_KEY,THEME_KEY,SOUND_KEY,NAME_KEY,ACCOUNT_PROFILE_KEY,MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,BOSS_PET_KEY
 ]);
 const syncSet=new Set(SYNC_KEYS);
@@ -38,7 +39,7 @@ export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now()}={
  return normalizeCloudSnapshot({
   version:CLOUD_SCHEMA,revision,updatedAt,
   discoveries:json(storage,DISCOVERIES_KEY),garden:json(storage,GARDEN_KEY),shop:shop??{version:3,coins:STARTING_COINS},
-  checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY])},
+  checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY]),act3:json(storage,ACT3_STORAGE_KEYS[SAVE_KEY])},
   mirror:{checkpoint:json(storage,MIRROR_CHECKPOINT_KEY),record:json(storage,MIRROR_RECORD_KEY)},
   settings:{quality,theme:storage?.getItem(THEME_KEY),sound:storage?.getItem(SOUND_KEY)},
   player:{name:storage?.getItem(NAME_KEY)},account:json(storage,ACCOUNT_PROFILE_KEY),bossPet:json(storage,BOSS_PET_KEY)
@@ -54,7 +55,7 @@ export function normalizeCloudSnapshot(value){
   discoveries:normalizeDiscoveries(value?.discoveries),
   garden:autoPlantSeeds(normalizeGarden(value?.garden)),
   shop:normalizeShop(value?.shop??{version:3,coins:STARTING_COINS}),
-  checkpoints:{version:1,act1:checkpoint(value?.checkpoints?.act1),act2:checkpoint(value?.checkpoints?.act2)},
+  checkpoints:{version:1,act1:checkpoint(value?.checkpoints?.act1),act2:checkpoint(value?.checkpoints?.act2),act3:checkpoint(value?.checkpoints?.act3)},
   mirror:{checkpoint:normalizeMirrorCheckpoint(value?.mirror?.checkpoint),record:normalizeMirrorRecord(value?.mirror?.record)},
   settings:{quality:quality??1,theme:normalizeTheme(value?.settings?.theme),sound:value?.settings?.sound==='off'?'off':'on'},
   player:{name:cleanName(value?.player?.name)},
@@ -71,7 +72,7 @@ export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={})
  return normalizeCloudSnapshot({
   ...winner,
   revision:Math.max(local.revision,remote.revision),updatedAt:Math.max(local.updatedAt,remote.updatedAt),
-  checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2)},
+  checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2),act3:newerCheckpoint(local.checkpoints.act3,remote.checkpoints.act3,winner.checkpoints.act3)},
   mirror:{checkpoint:newerCheckpoint(local.mirror.checkpoint,remote.mirror.checkpoint,winner.mirror.checkpoint),record:{bestFloor:Math.max(local.mirror.record.bestFloor,remote.mirror.record.bestFloor),clears:Math.max(local.mirror.record.clears,remote.mirror.record.clears),perfectDodges:Math.max(local.mirror.record.perfectDodges,remote.mirror.record.perfectDodges)}},
   discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
   account:{...winner.account,badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt)},
@@ -109,7 +110,7 @@ export function applyCloudSnapshot(storage,value){
  const put=(key,val)=>storage?.setItem(key,typeof val==='string'?val:JSON.stringify(val));
  put(DISCOVERIES_KEY,next.discoveries);put(GARDEN_KEY,next.garden);put(SHOP_KEY,next.shop);put(ACCOUNT_PROFILE_KEY,next.account);put(BOSS_PET_KEY,next.bossPet);
  const save=(key,val)=>val?put(key,val):storage?.removeItem(key);
- save(SAVE_KEY,next.checkpoints.act1);save(ACT2_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act2);save(MIRROR_CHECKPOINT_KEY,next.mirror.checkpoint);save(MIRROR_RECORD_KEY,next.mirror.record);
+ save(SAVE_KEY,next.checkpoints.act1);save(ACT2_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act2);save(ACT3_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act3);save(MIRROR_CHECKPOINT_KEY,next.mirror.checkpoint);save(MIRROR_RECORD_KEY,next.mirror.record);
  put(QUALITY_KEY,String(next.settings.quality));put(THEME_KEY,next.settings.theme);put(SOUND_KEY,next.settings.sound);
  if(next.player.name)put(NAME_KEY,next.player.name);else storage?.removeItem(NAME_KEY);
  return !same(before,next);

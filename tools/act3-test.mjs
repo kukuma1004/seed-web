@@ -13,10 +13,9 @@ import {REGION_NAMES,writeCheckpoint,readCheckpoint} from '../src/run-save.js';
 import {KILL_POINTS} from '../src/score.js';
 
 const V=THREE.Vector3;
-assert.equal(ACT3_RELEASED,false,'the first slice remains local/admin-only');
-assert.equal(act3Available({hostname:'localhost'}),true);assert.equal(act3Available({hostname:'kukuma1004.github.io'}),false);
-assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'}),'garden');assert.equal(playableAct3Region(ACT3_REGION,{hostname:'localhost'}),ACT3_REGION);
-assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'},true),ACT3_REGION,'the administrator preview can enter act 3 before public release');
+assert.equal(ACT3_RELEASED,true,'act 3 is released');
+assert.equal(act3Available({hostname:'localhost'}),true);assert.equal(act3Available({hostname:'kukuma1004.github.io'}),true);
+assert.equal(playableAct3Region(ACT3_REGION,{hostname:'kukuma1004.github.io'}),ACT3_REGION);assert.equal(playableAct3Region(ACT3_REGION,{hostname:'localhost'}),ACT3_REGION);
 assert.equal(act3Unlocked({bosses:['alwaysbeginner']}),true);assert.equal(act3Unlocked({bosses:['austin']}),false);assert.equal(isAct3(ACT3_REGION),true);assert.equal(REGION_NAMES.skyway,'폭풍의 항로');
 assert.ok(ACT3_PRESSURE.hp>1&&ACT3_PRESSURE.speed>1&&ACT3_PRESSURE.projectile>1&&ACT3_PRESSURE.bossTempo>1);
 assert.ok(ACT3_PRESSURE.hp>ACT2_PRESSURE.hp&&ACT3_PRESSURE.speed>ACT2_PRESSURE.speed&&ACT3_PRESSURE.projectile>ACT2_PRESSURE.projectile&&ACT3_PRESSURE.bossTempo>ACT2_PRESSURE.bossTempo,'act 3 stays a measured step above act 2');
@@ -37,6 +36,9 @@ SKYWAY_ROOMS.forEach((room,stage)=>{
 });
 assert.equal(new Set(SKYWAY_ROOMS.flatMap(room=>room.enemies.map(([type])=>type)).filter(isAct3Minion)).size,4,'all four flight roles appear');
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),developerStart=main.slice(main.indexOf('function startDeveloperEncounter'),main.indexOf('function showDeveloperLab'));
+assert.match(main,/id="start-act3"/,'act 3 appears in the journey menu');
+assert.match(main,/id="start-act3"[\s\S]*?onclick=\(\)=>enter\(saved3\|\|null,ACT3_REGION\)/,'act 3 starts or restores its own run');
+assert.match(main,/if\(isAct3\(region\)\)return; \/\/ The shared board accepts only Acts 1 and 2/,'act 3 never posts into the existing online leaderboards');
 assert.match(main,/playableAct3Region\(playableRegion\(r\),globalThis\.location,developerRun\)/,'the public administrator lab must bypass only the unreleased act-3 gate');
 assert.doesNotMatch(developerStart,/restart\(\);[\s\S]*wave\(\)/,'the developer lab must build the selected encounter once instead of stacking it over the first room');
 assert.match(developerStart,/act3field:\{region:ACT3_REGION,stage:1[\s\S]*act3warden:\{region:ACT3_REGION,stage:4[\s\S]*act3boss:\{region:ACT3_REGION,stage:4/,'all three act-3 laboratory entries target the skyway');
@@ -83,4 +85,4 @@ for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
  assert.equal(sky.group.visible,true);assert.equal(garden.visible,false);assert.ok(after.distance>before.distance);assert.equal(after.drawCalls,3);assert.equal(after.openEnds,true);assert.equal(after.parallaxLayers,3);assert.ok(after.instances<100,'scrolling environment stays batched');
  sky.setActive(false);assert.equal(garden.visible,true);assert.equal(sky.group.visible,false);
 }
-console.log('Act 3: local gate, separate save, five rooms, flight roles, warden, boss patterns and batched scrolling passed.');
+console.log('Act 3: public gate, separate save, five rooms, flight roles, warden, boss patterns and batched scrolling passed.');

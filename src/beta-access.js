@@ -11,7 +11,7 @@ export function publicWebBetaLocked(locationLike=globalThis.location){
 }
 
 export const BETA_NOTICE=Object.freeze({
- title:'SEED 비공개 베타테스터 모집',
+ title:'SEED 비공개 테스트',
  body:'등록된 베타테스터는 Google 계정으로 PC 웹과 Android 앱에서 플레이할 수 있습니다.',
- detail:'새 신청은 Google Play 비공개 테스트를 위해 Android 기기가 있는 분에게 받고 있습니다. 이메일은 테스트 등록과 안내에만 사용합니다.'
+ detail:'아직 등록되지 않은 계정은 게임에 입장할 수 없습니다.'
 });

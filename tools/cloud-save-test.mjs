@@ -5,6 +5,7 @@ import {GARDEN_KEY,emptyGarden,gardenEffects,autoPlantSeeds,chooseBranch,setActi
 import {SHOP_KEY} from '../src/shop.js';
 import {SAVE_KEY} from '../src/run-save.js';
 import {ACT2_STORAGE_KEYS} from '../src/act2.js';
+import {ACT3_STORAGE_KEYS,act3Storage,ACT3_REGION} from '../src/act3.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
 import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot} from '../src/cloud-save.js';
@@ -50,8 +51,19 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const snapshot=collectCloudSnapshot(storage,{revision:4,updatedAt:123});
  assert.equal(snapshot.version,CLOUD_SCHEMA);assert.equal(snapshot.revision,4);assert.equal(snapshot.shop.coins,750);assert.equal(snapshot.garden.harvests,3);
  const encoded=JSON.stringify(snapshot);assert.ok(!encoded.includes('SECRET_TOKEN')&&!encoded.includes('PRIVATE_QUEUE')&&!encoded.includes('unrelated'));
- assert.ok(SYNC_KEYS.includes(SAVE_KEY)&&SYNC_KEYS.includes(ACT2_STORAGE_KEYS[SAVE_KEY]));
+ assert.ok(SYNC_KEYS.includes(SAVE_KEY)&&SYNC_KEYS.includes(ACT2_STORAGE_KEYS[SAVE_KEY])&&SYNC_KEYS.includes(ACT3_STORAGE_KEYS[SAVE_KEY]));
  assert.ok(SYNC_KEYS.includes(MIRROR_CHECKPOINT_KEY)&&SYNC_KEYS.includes(MIRROR_RECORD_KEY));
+}
+
+// Act 3 checkpoints use an independent key and must survive cloud round-trips.
+{
+ const {writeCheckpoint,readCheckpoint}=await import('../src/run-save.js');
+ const phone=memory(),pc=memory(),run={version:1,cycle:2,stage:3,mode:'entry',region:ACT3_REGION,hp:72,rules:['chain'],mutated:[],kills:42,elapsed:330};
+ assert.equal(writeCheckpoint(act3Storage(phone),run,5000),true);
+ const merged=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone),{prefer:'local'});
+ applyCloudSnapshot(pc,merged);
+ assert.equal(readCheckpoint(act3Storage(pc))?.stage,3);
+ assert.equal(readCheckpoint(pc),null,'act 3 must not replace act 1');
 }
 
 // The hundred-floor tower keeps its ten-floor entry across devices. A later

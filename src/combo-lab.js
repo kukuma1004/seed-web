@@ -2,16 +2,21 @@ import './combo-art.css';
 import './combo-lab.css';
 import {COMBO_LAW_BY_ID,FIRST_FUSIONS,SECOND_FUSIONS} from './combo-catalog.js';
 import {comboArt,comboProjectileArt} from './combo-art.js';
+import {CURATED_FORMS,SECOND_FORMS} from './forms.js';
+import {formArt} from './form-art.js';
 
 const $=q=>document.querySelector(q);
 const PAGE=24;
+const pairKey=ids=>[...ids].sort().join('+');
+const CURATED_FIRST_BY_PAIR=new Map(Object.values(CURATED_FORMS).map(form=>[pairKey(form.requires),form]));
+const curatedOf=combo=>SECOND_FORMS[combo.id]||CURATED_FIRST_BY_PAIR.get(pairKey(combo.laws));
 let mode='first',family='all',page=0,query='';
 
 function source(){
  const list=mode==='first'?FIRST_FUSIONS:SECOND_FUSIONS;
  return list.filter(v=>{
   if(mode==='second'&&family!=='all'&&v.family!==family)return false;
-  const text=[v.name,v.pair,v.epithet,...v.laws.map(id=>COMBO_LAW_BY_ID[id].name)].join(' ').toLowerCase();
+  const text=[v.name,curatedOf(v)?.name,v.pair,v.epithet,...v.laws.map(id=>COMBO_LAW_BY_ID[id].name)].join(' ').toLowerCase();
   return !query||text.includes(query);
  });
 }
@@ -19,7 +24,8 @@ function source(){
 function card(v){
  const lawNames=v.laws.map(id=>COMBO_LAW_BY_ID[id].name).join(' · ');
  const badge=v.family==='resonance'?'공명형':v.family==='convergence'?'교차형':'1차 융합';
- return `<article class="combo-card" style="--a:${v.visual.accent};--b:${v.visual.secondary}"><div class="art">${comboArt(v)}${comboProjectileArt(v)}</div><div class="copy"><small>${badge} · ${v.id}</small><h2>${v.name}</h2><p>${v.epithet||v.mechanic}</p><span>${lawNames}</span>${v.rule?`<em>${v.rule}</em>`:''}</div></article>`;
+ const curated=curatedOf(v);
+ return `<article class="combo-card" style="--a:${v.visual.accent};--b:${v.visual.secondary}"><div class="art">${curated?formArt(curated.id,'lab-form-art'):comboArt(v)}${comboProjectileArt(v)}</div><div class="copy"><small>${badge} · ${v.id}</small><h2>${curated?.name||v.name}</h2><p>${curated?.desc||v.epithet||v.mechanic}</p><span>${lawNames}</span>${v.rule?`<em>${v.rule}</em>`:''}</div></article>`;
 }
 
 function draw(){
@@ -49,4 +55,3 @@ $('#search').oninput=event=>{query=event.target.value.trim().toLowerCase();page=
 $('#prev').onclick=()=>{page--;draw();};
 $('#next').onclick=()=>{page++;draw();};
 draw();
-

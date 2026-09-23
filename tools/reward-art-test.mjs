@@ -3,9 +3,9 @@ import {RELICS} from '../src/relics.js';
 import {ITEMS} from '../src/inventory.js';
 import {relicArt,RELIC_ATLAS} from '../src/relic-art.js';
 import {itemArt,ITEM_ATLAS} from '../src/item-art.js';
-import {formArt,SOLO_ATLAS,FUSION_ATLAS,AWAKEN_ATLAS} from '../src/form-art.js';
+import {formArt,SOLO_ATLAS,FUSION_ATLAS,AWAKEN_ATLAS,FIRST_CANDIDATE_ATLAS,SECOND_ATLAS} from '../src/form-art.js';
 import {lawArt,LAW_ATLAS} from '../src/law-art.js';
-import {FORMS,CURATED_FORMS,GENERATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS} from '../src/forms.js';
+import {FORMS,CURATED_FORMS,GENERATED_FORMS,SOLO_FORMS,AWAKEN_FORMS,TWIN_FORMS,SECOND_FORMS} from '../src/forms.js';
 import {COMBO_ART} from '../src/combo-art.js';
 import fs from 'node:fs';
 
@@ -24,7 +24,8 @@ assert.equal(itemArt('missing'),'');
 assert.equal(new Set(Object.keys(RELICS).map(relicArt)).size,4);
 assert.equal(new Set(Object.keys(ITEMS).map(itemArt)).size,5);
 for(const id of Object.keys(SOLO_FORMS))assert.match(formArt(id),new RegExp(SOLO_ATLAS));
-for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(`${FUSION_ATLAS}|${COMBO_ART.cores}`));
+for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(`${FUSION_ATLAS}|${COMBO_ART.cores}|${FIRST_CANDIDATE_ATLAS}`));
+for(const id of Object.keys(SECOND_FORMS))assert.match(formArt(id),new RegExp(SECOND_ATLAS));
 for(const id of Object.keys(GENERATED_FORMS))assert.match(formArt(id),new RegExp(COMBO_ART.cores));
 for(const id of Object.keys(AWAKEN_FORMS))assert.match(formArt(id),new RegExp(AWAKEN_ATLAS));
 for(const id of Object.keys(TWIN_FORMS)){assert.match(formArt(id),/twin-art/);if(!TWIN_FORMS[id].parts.includes('riftseed'))assert.match(formArt(id),new RegExp(SOLO_ATLAS));}
@@ -33,4 +34,6 @@ for(const id of ['reflect','split','pierce','orbit','burst','gravity','recall','
 assert.equal(LAW_ATLAS,'seed-law-atlas-v4-ui.webp');
 assert.equal(lawArt('missing'),'', 'unknown laws do not point at an invalid atlas tile');
 assert.ok(fs.statSync(new URL(`../public/assets/${LAW_ATLAS}`,import.meta.url)).size<300_000,'law atlas stays mobile-sized');
+assert.ok(fs.statSync(new URL(`../public/assets/${FIRST_CANDIDATE_ATLAS}`,import.meta.url)).size<300_000,'first candidate atlas stays mobile-sized');
+assert.ok(fs.statSync(new URL(`../public/assets/${SECOND_ATLAS}`,import.meta.url)).size<350_000,'second fusion atlas stays mobile-sized');
 console.log('Every reward, law and evolution uses its production atlas and solo choices have distinct tiles.');

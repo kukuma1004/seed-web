@@ -24,6 +24,8 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 .menu-item.small-item{min-height:40px;padding:8px 14px}
 .menu-item.small-item strong{font-size:13px;color:#bcd3c6}
 .act2-button{border-color:#d9a8ff88;background:#241a33cc}
+.act3-button{border-color:#95dce7aa;background:linear-gradient(135deg,#193d46dd,#193047dd)}
+.act3-button strong{color:#defaff}.act3-button small{color:#a8dce7}
 .mirror-button{border-color:#b9b2ff99;background:linear-gradient(135deg,#252447dd,#171d34dd)}
 .mirror-button strong{color:#ece9ff}.mirror-button small{color:#bbb7e8}
 .dungeon-hint{margin:6px 0 0;font-size:11px;color:#8fa79b}
