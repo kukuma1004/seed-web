@@ -1,9 +1,9 @@
 export const DEFAULT_SEASON_STATUS=Object.freeze({
  paused:true,
- season:'1.1',
- title:'베타 시즌 1.1을 준비하고 있어요',
+ season:'1',
+ title:'시즌 1 비공개 테스트 중',
  body:'시험 기간에는 SEED 플레이를 잠시 쉬어 갑니다.',
- detail:'시즌 1.0 최종 기록은 언제든 볼 수 있어요. 저장된 정원과 도감도 그대로 남아 있습니다.'
+ detail:'등록된 테스터는 앱에서 플레이할 수 있어요. 저장된 정원과 도감은 그대로 남아 있습니다.'
 });
 
 // The contact address is already public in the privacy policy. Keeping only its

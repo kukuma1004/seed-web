@@ -30,6 +30,6 @@ export function buildText(b){
 }
 export function bossText(b,act=1){
  const p=parseBuild(b);if(!p)return '';
- const boss=act===2?'항상초심':'오스틴';
+ const boss=act===3?'폭풍비행사 요한':act===2?'항상초심':'오스틴';
  return `문지기 ${p.wardens}${p.austins?` · ${boss} ${p.austins}회 격파`:''}`;
 }

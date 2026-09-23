@@ -14,12 +14,12 @@ export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 // 1.2(2026-09-21): 한 판이 찐보스 열 번째 승리에서 끝나는 규칙으로 바뀌어 새 판을 연다. 1.1과 1.0 기록은 그대로 보관한다.
-export const SEASON=Object.freeze({id:'1.2',name:'베타 시즌 1.2 · 열 번의 승리',start:1789956000000});
+export const SEASON=Object.freeze({id:'1.2',name:'시즌 1',start:1789956000000});
 export const PREVIOUS_SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000,end:SEASON.start});
 export const ARCHIVE_SEASON=Object.freeze({id:'1.0',name:'베타 시즌 1.0 · 첫 정원',start:0,end:PREVIOUS_SEASON.start});
 export const ARCHIVE_SEASONS=Object.freeze([PREVIOUS_SEASON,ARCHIVE_SEASON]);
-export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2});
-export const runAct=run=>run?.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN;
+export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2,JOHAN:3});
+export const runAct=run=>run?.act===ACT.JOHAN?ACT.JOHAN:run?.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN;
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start&&(!Number.isFinite(season.end)||run.at<season.end);
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -29,9 +29,10 @@ const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 // only fourteen enemies at once. Keep a small margin for future hand-tuned rooms.
 export const MAX_KILLS_PER_JOURNEY=180;
 export function validRun(e){
- if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER)&&(e.done===undefined||typeof e.done==='boolean')))return false;
+ if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER||e.act===ACT.JOHAN)&&(e.done===undefined||typeof e.done==='boolean')))return false;
  const multiplier=1+e.cycle*.5;
- return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=(e.kills+12)*50*multiplier&&e.time>=e.cycle*15&&e.time>=e.kills/6;
+ const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;
+ return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=scoreCeiling&&e.time>=e.cycle*15&&e.time>=e.kills/6;
 }
 // 이번 시즌에 올릴 수 있는 판인가: 50번째 여정(찐보스 열 번)을 넘긴 옛 판은 받지 않는다(규칙도 같은 선을 지킨다).
 export const seasonRun=e=>validRun(e)&&e.cycle<=MAX_RUN_CYCLE;
@@ -131,7 +132,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   keepPendingBuilds(left);return sent;
  }
  async function post({name,score,cycle,stage,kills,time,act=ACT.AUSTIN,done=false,build=null}){
-  const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),act:act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,done:done===true,at:0};
+  const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),act:runAct({act}),done:done===true,at:0};
   if(!seasonRun(shaped)||isBadName(shaped.name))throw new Error('invalid-run');
   const s=await signIn();
   const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
@@ -150,9 +151,9 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  async function submit(entry,limit=20){
   let sent;
   try{sent=await post(entry);}
-  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,act:entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,done:entry.done===true,build:validBuild(entry.build)?entry.build:null}]);throw error;}
+  catch(error){if(error.message!=='invalid-run')keepPending([...pending(),{name:entry.name,score:entry.score,cycle:entry.cycle,stage:entry.stage,kills:entry.kills,time:entry.time,act:runAct(entry),done:entry.done===true,build:validBuild(entry.build)?entry.build:null}]);throw error;}
   await flushBuilds();
-  const act=entry.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,board=await top(limit,sent.name,SEASON,act);
+  const act=runAct(entry),board=await top(limit,sent.name,SEASON,act);
   const mine=board.findIndex(e=>e.id===sent.id),best=board.findIndex(e=>e.uid===sent.uid&&e.name===sent.name);
   return {id:sent.id,board,rank:mine+1,bestRank:best+1};
  }

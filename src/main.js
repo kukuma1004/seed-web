@@ -63,7 +63,7 @@ import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit,roomFor,FINAL_BOSS_CAP,MAX
 import {createWarden,tickWarden,wardenVariantFor,wardenEncounter,DUO_WARDEN,WARDEN_VARIANTS,SEAL} from './warden.js';
 import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,austinPatternName,createClockFloor} from './austin.js';
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX,formatTime,clearBonus,CLEAR_BONUS} from './score.js';
-import {createOnlineRanking,SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
+import {createOnlineRanking,SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
@@ -1028,8 +1028,8 @@ function showEntry(){
 function showSeasonPause(){
  revealApp();mode='season-pause';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),accountLine=user&&!user.isAnonymous?`현재 계정 · ${escapeHtml(account.label())}`:'관리자만 계정 로그인 후 플레이할 수 있어요';
- $('#overlay').innerHTML=`<div class="menu-panel season-pause-panel"><p class="eyebrow">SEED · BETA SEASON ${escapeHtml(seasonStatus.season)}</p><div class="season-seal" aria-hidden="true">♧</div><h2>${escapeHtml(seasonStatus.title)}</h2><p class="season-pause-copy">${escapeHtml(seasonStatus.body)}</p><div class="season-pause-status"><strong>플레이 일시 중지</strong><span>${escapeHtml(seasonStatus.detail)}</span></div><div class="menu-list"><button id="season-archive" class="primary menu-item"><strong>시즌 1.0 최종 기록</strong><small>첫 정원 명예의 전당 보기</small></button><button id="season-account" class="menu-item"><strong>관리자 로그인</strong><small>${accountLine}</small></button><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div><p class="account-note">시즌 1.0 기록과 각자의 저장 데이터는 지워지지 않습니다.</p></div>`;
- $('#season-archive').onclick=()=>showRanking('archive');$('#season-account').onclick=()=>showAccount();
+ $('#overlay').innerHTML=`<div class="menu-panel season-pause-panel"><p class="eyebrow">SEED · ${escapeHtml(SEASON.name)}</p><div class="season-seal" aria-hidden="true">♧</div><h2>${escapeHtml(seasonStatus.title)}</h2><p class="season-pause-copy">${escapeHtml(seasonStatus.body)}</p><div class="season-pause-status"><strong>플레이 일시 중지</strong><span>${escapeHtml(seasonStatus.detail)}</span></div><div class="menu-list"><button id="season-ranking" class="primary menu-item"><strong>${SEASON.name} 명예의 전당</strong><small>오스틴 · 항상초심 · 요한 기록</small></button><button id="season-account" class="menu-item"><strong>관리자 로그인</strong><small>${accountLine}</small></button><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div><p class="account-note">각자의 저장 데이터는 그대로 남아 있습니다.</p></div>`;
+ $('#season-ranking').onclick=()=>showRanking('online');$('#season-account').onclick=()=>showAccount();
 }
 // 프로필 '내 능력치'(2026-09-22 사용자: 도감을 채우면 모든 능력이 오른다는데 뭐가 오르는지 모르겠다).
 // 정원 숙련(보스를 이길 때 0.1%씩)·도감 칭호(10개마다 0.5%, 최대 10%)·칭호 보너스가 더해진 영구 능력을 다섯 줄로 보여 준다.
@@ -1342,7 +1342,7 @@ function showDungeon(){
 function rankBuild(entry,place){
  const b=parseBuild(entry.build);
  if(!b)return '<div class="rank-build none">조합 기록 없음</div>';
- const boss=`<span class="rank-boss">${isAct3(entry.region)?`문지기 ${b.wardens}${b.austins?` · 폭풍비행사 요한 ${b.austins}회 격파`:''}`:bossText(entry.build,runAct(entry))}</span>`;
+ const boss=`<span class="rank-boss">${bossText(entry.build,isAct3(entry.region)?ACT.JOHAN:runAct(entry))}</span>`;
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
 }
@@ -1429,16 +1429,16 @@ function showNotes(){
 }
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
- const remote=['online','austin','always','archive','archive11'].includes(view),archiveSeason=view==='archive11'?PREVIOUS_SEASON:view==='archive'?ARCHIVE_SEASON:null,archive=Boolean(archiveSeason),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:null;
+ const remote=['online','austin','always','johan'].includes(view),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:view==='johan'?ACT.JOHAN:null;
  const localBoard=readRanking(view==='act3'?act3Storage(runStorage):view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
- const tabs=locked?`<button class="primary" data-board="archive" aria-pressed="true">${ARCHIVE_SEASON.name}</button>`:`<div class="rank-season"><strong>${SEASON.name}</strong><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">종합</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">항상초심</button></div></div><div class="rank-tabs secondary"><button class="primary" data-board="archive11" aria-pressed="${view==='archive11'}">${PREVIOUS_SEASON.name.split(' · ')[0]}</button><button class="primary" data-board="archive" aria-pressed="${view==='archive'}">${ARCHIVE_SEASON.name.split(' · ')[0]}</button><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}</div>`;
- const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':archive?`${archiveSeason.name.split(' · ')[1]}에 남은 기록`:'가장 높이 오른 씨앗들';
+ const tabs=`<div class="rank-season"><strong>${SEASON.name}</strong><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">종합</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">항상초심</button><button class="primary" data-board="johan" aria-pressed="${view==='johan'}">요한</button></div></div>${locked?'':`<div class="rank-tabs secondary"><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}</div>`}`;
+ const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='johan'?'폭풍비행사 요한 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>${boardLabel}</p><h2>명예의 전당</h2>${tabs}<p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(!remote)return;
- const readBoard=()=>online.top(500,playerName,archiveSeason||SEASON,bossAct);
- (archive?Promise.resolve():online.flush().catch(()=>0)).then(readBoard).then(board=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),archive?`${archiveSeason.name.split(' · ')[0]} 최종 상위 10명 · 기록은 그대로 보관됩니다`:`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
+ const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
+ online.flush().catch(()=>0).then(readBoard).then(board=>{
+  if(serial!==rankSerial)return;setText($('#rank-status'),`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':bossAct===ACT.JOHAN?'요한 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
   const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true);bindRankSafety();}
  }).catch(()=>{
   if(serial!==rankSerial)return;const status=$('#rank-status');if(status)status.innerHTML='랭킹 서버에 잠깐 연결하지 못했어요 · <b>모두의 기록은 서버에 그대로 있어요</b><br><button class="primary" id="rank-retry">다시 불러오기</button>';
@@ -1456,16 +1456,15 @@ function showEnd(deathReport=null,{cleared=false,newTitle=null,bonus=0}={}){perf
  garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);refreshGardenEffects();
  // 보낼 값은 판이 끝난 지금 그대로 찍어 둔다. 예전에는 flush()가 끝난 뒤에야 점수·처치를 읽어서,
  // 그 사이에 다음 판을 시작하면 앞뒤가 안 맞는 기록이 랭킹에 올라갔다.
- const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,region,done:cleared,build};
+ const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct3(region)?ACT.JOHAN:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,region,done:cleared,build};
  if(ranked)submitScore(actStore(),entry);
- $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>${cleared?`${finalBossName()}을 ${FINAL_BOSS_CAP}번 이겼습니다`:'씨앗은 다시 뿌리를 내립니다'}</p><h2>${cleared?'완주!':'잠든 씨앗'}</h2><div class="final-score${cleared?' cleared':''}"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>${cleared?'완주 · ':''}여정 ${cycle+1} · ${cleared?'':inAustinRoom()?finalBossName()+' · ':(stage+1)+'번째 방 · '}${kills} 처치 · ${formatTime(elapsed)}</span></div><p id="rank-status" class="rank-result">${ranked?(isAct3(region)?'3막 기록을 이 기기에 저장했어요':isAct2(region)?'2막 기록 저장 중…':'모두의 랭킹에 올리는 중…'):localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div class="end-actions"><button class="primary" id="restart">돌아가기</button><button class="discovery-link" id="end-ranking">랭킹 보기</button></div>`;
+ $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>${cleared?`${finalBossName()}을 ${FINAL_BOSS_CAP}번 이겼습니다`:'씨앗은 다시 뿌리를 내립니다'}</p><h2>${cleared?'완주!':'잠든 씨앗'}</h2><div class="final-score${cleared?' cleared':''}"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>${cleared?'완주 · ':''}여정 ${cycle+1} · ${cleared?'':inAustinRoom()?finalBossName()+' · ':(stage+1)+'번째 방 · '}${kills} 처치 · ${formatTime(elapsed)}</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div class="end-actions"><button class="primary" id="restart">돌아가기</button><button class="discovery-link" id="end-ranking">랭킹 보기</button></div>`;
  if(deathReport)$('#rank-status').insertAdjacentHTML('beforebegin',combatAnalysisSummary(deathReport));
  if(cleared)$('#rank-status').insertAdjacentHTML('beforebegin',`<p class="clear-bonus">완주 보너스 <b>+${formatScore(bonus)}</b> · ${bonus>0?'빨리 끝낸 만큼 더했어요':`${Math.round(CLEAR_BONUS.baseSeconds/60)}분 안에 끝내면 보너스가 붙어요`}</p>`);
  if(newTitle)$('#rank-status').insertAdjacentHTML('beforebegin',`<p class="clear-title">새 칭호 <b>'${escapeHtml(newTitle.name)}'</b> · ${escapeHtml(newTitle.perk)}</p>`);
  $('#restart').onclick=showIntro;
- $('#end-ranking').onclick=()=>showRanking(isAct3(region)?'act3':'online');
+ $('#end-ranking').onclick=()=>showRanking(isAct3(region)?'johan':'online');
  if(!ranked)return;
- if(isAct3(region))return; // The shared board accepts only Acts 1 and 2; keep Act 3 scores isolated.
  // 화면 시계와 실제 시계가 크게 어긋난 판(게임 속도를 바꾸는 도구)은 모두의 랭킹에 올리지 않는다.
  const role=accountRole({admin:adminMode,tester:betaTesterMode}),decision=rankingDecision({isTestRun:developerRun,localInspection,score,name,native:account.native,admin:role.isAdmin,tester:role.isTester,user:account.user(),paceTrusted:paceTrusted(paceGame,paceReal)});
  if(!decision.eligible){logRankingFailure(runStorage,{uid:account.user()?.uid,score,reason:decision.reason});setText($('#rank-status'),decision.reason==='invalid_score'?'게임 속도가 평소와 달라서 이 판은 모두의 랭킹에 올리지 않았어요 · 이 기기 기록에는 남아요':`이 기기 기록에는 남았어요 · ${SEASON.name.split(' · ')[0]} 랭킹은 Android 앱 또는 등록된 PC 웹 테스터의 Google 계정 기록만 받아요`);return;}

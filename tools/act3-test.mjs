@@ -38,7 +38,8 @@ assert.equal(new Set(SKYWAY_ROOMS.flatMap(room=>room.enemies.map(([type])=>type)
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),developerStart=main.slice(main.indexOf('function startDeveloperEncounter'),main.indexOf('function showDeveloperLab'));
 assert.match(main,/id="start-act3"/,'act 3 appears in the journey menu');
 assert.match(main,/id="start-act3"[\s\S]*?onclick=\(\)=>enter\(saved3\|\|null,ACT3_REGION\)/,'act 3 starts or restores its own run');
-assert.match(main,/if\(isAct3\(region\)\)return; \/\/ The shared board accepts only Acts 1 and 2/,'act 3 never posts into the existing online leaderboards');
+assert.match(main,/act:isAct3\(region\)\?ACT\.JOHAN/,'act 3 records use the Johan leaderboard');
+assert.match(main,/data-board="johan"/,'Johan has a visible online leaderboard tab');
 assert.match(main,/playableAct3Region\(playableRegion\(r\),globalThis\.location,developerRun\)/,'the public administrator lab must bypass only the unreleased act-3 gate');
 assert.doesNotMatch(developerStart,/restart\(\);[\s\S]*wave\(\)/,'the developer lab must build the selected encounter once instead of stacking it over the first room');
 assert.match(developerStart,/act3field:\{region:ACT3_REGION,stage:1[\s\S]*act3warden:\{region:ACT3_REGION,stage:4[\s\S]*act3boss:\{region:ACT3_REGION,stage:4/,'all three act-3 laboratory entries target the skyway');
