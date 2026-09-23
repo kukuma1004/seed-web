@@ -13,6 +13,18 @@ const tacticalFusions=['gravitymirror','chainburst','blastlance','frostkaleidosc
  'spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'];
 const batch1=['icicle','halobloom','frostnet','rewindbolt','refractlance'];
 
+// A completed Lv.3 first fusion must contribute enough sustained pressure to
+// finish stage-one Austin with ordinary seed fire and skilled dodging. The
+// mirror is measured under Austin's real projectile pressure; this is a
+// damage floor, not a guarantee that standing still wins the encounter.
+for(const id of Object.keys(FORMS)){
+ const damage=bossDps(id,3,{shots:true});
+ assert.ok(damage>=50,`${id}: Austin pressure too low at Lv.3 (${Math.round(damage)} DPS)`);
+ assert.ok(damage<=260,`${id}: Austin pressure bypasses the boss damage budget (${Math.round(damage)} DPS)`);
+}
+const mirrorParry=simulate('mirrorguard',3,{positions:[[0,-5]],enemyType:'austin',shots:true,seconds:20});
+assert.ok(mirrorParry.interceptions>=3&&mirrorParry.interceptions<=12,`mirror guard should return a few Austin bolts, not erase the barrage (${mirrorParry.interceptions})`);
+
 // Equal investment: a fusion of two laws with p picks between them is level p-1; a solo law at level p evolves to level p-1.
 // A solo evolution starts at law level SOLO_LEVEL, so the first comparison is at evolution level SOLO_LEVEL-1.
 for(const level of [SOLO_LEVEL-1,9]){
@@ -63,8 +75,8 @@ for(const level of [SOLO_LEVEL-1,9]){
   const line=simulate('icicle',level,{scene:'line'}).dps,cluster=simulate('icicle',level,{scene:'cluster'}).dps;
   assert.ok(line<cluster*1.6,'고드름 창은 줄 세우기 보상이 아니라 같은 적 재적중 보상이다');
  }
- // 제어: 얼어붙은 그물은 묶음에서 보스 피해가 가장 낮고, 다수전 대비 10% 미만이다.
- assert.ok(boss.frostnet<crowd.frostnet*.1,`level ${level}: 얼어붙은 그물이 제어 대가를 치르지 않음`);
+ // 제어: 단독 보스에게도 서리 줄 하나를 걸지만, 무리 연결보다 훨씬 약하다.
+ assert.ok(boss.frostnet<crowd.frostnet*.2,`level ${level}: 얼어붙은 그물이 제어 대가를 치르지 않음`);
  assert.ok(boss.frostnet===Math.min(...Object.values(boss)),`level ${level}: 얼어붙은 그물이 단일 대상에서 약하지 않음`);
  // 다수전: 꽃잎 후광은 붙은 적 수만큼 세지고, 멀리 떨어진 적에게는 아예 닿지 않는다.
  {

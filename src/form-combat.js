@@ -88,7 +88,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
- let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0;
+ let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0,mirrorParryCooldown=0,stormCharges=new WeakMap();
  // 1묶음 상태: 고드름 창이 스스로 남긴 서리 표식 · 얼어붙은 그물이 남긴 선 · 되감는 번개가 기억한 길 · 꽃잎 후광이 센 벤 횟수.
  let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
  // 2묶음 상태: 밀물 고리의 닻 · 끌림 꽃밭들.
@@ -140,7 +140,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -447,7 +447,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    support(next,damage,{kind:'frostnet',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
    route.push(next.g.position.clone().setY(0));from=next;
   }
-  if(route.length<S.minLinks)return;
+  // A lone Austin anchors one short frost thread. It hurts only while he
+  // crosses that thread; it never freezes or holds a boss in place.
+  if(route.length<S.minLinks){
+   if(route.length!==1||from.type!=='austin')return;
+   const start=pos.clone().setY(0),end=route[0];
+   frostLines.push({a:start,b:end,life:Math.min(1.5,S.webLife),tick:0,bossThread:true});
+   fx.frostWeb(start,end);return;
+  }
   for(let i=1;i<route.length;i++){
    frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
    fx.frostWeb(route[i-1],route[i]);
@@ -461,7 +468,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    fx.frostWeb(line.a,line.b);
    for(const e of enemies()){
     if(e.dead||segmentDistance(line.a,line.b,e.g.position)>=bossReach(e,.72,1.2))continue;
-    support(e,S.webDamage,{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
+    support(e,S.webDamage*(line.bossThread&&e.type==='austin'?2.2:1),{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
     if(!immovable(e))e.slow=Math.max(e.slow||0,S.webSlow);
    }
   }
@@ -480,8 +487,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    support(next,damage,{kind:'rewindbolt',indirect:true,direction:next.g.position.clone().sub(from.g.position).setY(0).normalize()});
    route.push(next.g.position.clone().setY(0));from=next;
   }
-  // One enemy leaves no road worth rewinding.
-  if(route.length<3)return;
+  // A moving seed can rewind the single line it drew through Austin, but
+  // still has to run far enough before the trail fades.
+  if(route.length<3&&from.type!=='austin')return;
   for(let i=1;i<route.length;i++)fx.rewindTrace(route[i-1],route[i]);
   const memory={route,life:S.forget,moved:0};
   if(instant){replayRoute(memory);return;}
@@ -593,7 +601,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(count('showerpetal')>=30)break;
     const side=(k%2?-1:1)*(1.05+.25*Math.floor(k/2));
     const ob=spawnMesh(geos.showerPetal,mats.seed,e.g.position);ob.rotation.x=-Math.PI/2;
-    bolts.push({kind:'showerpetal',ob,dir:dir.clone().applyAxisAngle(Y,side),life:S.petalLife,passed:new Set([e])});
+    bolts.push({kind:'showerpetal',ob,dir:dir.clone().applyAxisAngle(Y,side),life:S.petalLife+(e.type==='austin'?.25:0),passed:new Set([e]),returnTarget:e.type==='austin'?e:null,age:0});
    }
   }
   fx.lance(start,end,'shower');
@@ -770,7 +778,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    touched.add(target);fx.arc(from.g.position,target.g.position);support(target,damage,{kind:'stormanchor',phase:'chain',indirect:true,direction:target.g.position.clone().sub(from.g.position).setY(0).normalize()});
    from=target;damage*=S.decay;target=nearestEnemy(from.g.position,S.range,touched,true);
   }
-  if(touched.size<S.minLinks&&!force)return;
+  // Austin conducts repeated strikes even when his escorts are gone. Two
+  // separate casts are needed before a small anchor can discharge.
+  if(touched.size<S.minLinks&&!force){
+   if(touched.size!==1||from.type!=='austin')return;
+   const charge=(stormCharges.get(from)||0)+1;
+   stormCharges.set(from,charge);
+   if(charge<2)return;
+   stormCharges.set(from,0);
+  }
   const center=new V();for(const e of touched)center.add(e.g.position);center.multiplyScalar(1/touched.size).setY(0);
   for(const e of near(center,S.finishRadius+1)){
    if(e.dead||immovable(e))continue;
@@ -787,7 +803,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const start=pos.clone().setY(0),end=start.clone();
   for(let travelled=0;travelled<S.length;travelled+=.4){const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();if(blocked(end,next)||boundary(end.clone(),next,probe))break;end.copy(next);}
   const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2)).sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
-  let struck=0;for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.damage*(1+S.ramp*struck),{kind:'blastlance',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;}
+  let struck=0;for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.damage*(1+S.ramp*struck),{kind:'blastlance',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;if(e.type==='austin'){end.copy(e.g.position).setY(0);break;}}
   for(let d=0;d<flat(start,end);d+=1.25)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.25)).setY(.7),d%2.5<1.25?'pierce':'burst',false);
   const radius=Math.min(S.blastRadius+.9,S.blastRadius+struck*.12),power=S.blast*(1+Math.min(1,struck*.12));fx.explosion(end,'burst',radius,true);sound('burstHit');
   for(const e of near(end,radius+.8))if(!e.dead&&flat(e.g.position,end)<radius+bossReach(e,0,.55))support(e,power,{kind:'blastlance',indirect:true,direction:e.g.position.clone().sub(end).setY(0).normalize()});
@@ -913,11 +929,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     }
    }else if(active==='mirrorguard'){
     for(const q of enemyShots()){
-     if(!(q.life>0)||q.boss||flat(q.ob.position,ob.position)>=.65)continue;
+     if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
+     if(q.boss&&(q.spriteKey!=='austin'||mirrorParryCooldown>0))continue;
      q.life=0;q.struck=true;
+     if(q.boss)mirrorParryCooldown=1.8;
      const aimAt=nearestEnemy(ob.position,14);
      const dir=aimAt?aimAt.g.position.clone().sub(ob.position).setY(0).normalize():ob.position.clone().sub(player.position).setY(0).normalize();
-     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage});
+     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage*(q.boss?2.4:1)});
      fx.reflect(ob.position,dir);
     }
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
@@ -986,6 +1004,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
 
  function update(dt){
   markClock+=dt;
+  mirrorParryCooldown=Math.max(0,mirrorParryCooldown-dt);
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
   if(awakened())awakenOpening(dt);
   for(const [e,t] of cooldowns){if(e.dead||t<=dt)cooldowns.delete(e);else cooldowns.set(e,t-dt);}
@@ -1305,6 +1324,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     fx.trail(previous,b.ob.position,'burst',b.charge>0);continue;
    }
    if(b.kind==='showerpetal'){
+    b.age+=dt;
+    if(b.returnTarget&&!b.returnTarget.dead&&b.age>.12){b.passed.delete(b.returnTarget);b.dir.copy(b.returnTarget.g.position).sub(b.ob.position).setY(0).normalize();}
     b.ob.position.addScaledVector(b.dir,dt*S.petalSpeed);b.ob.rotation.y+=dt*9;
     const e=near(b.ob.position,1.4).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.62,1.1));
     if(e){b.passed.add(e);support(e,S.petalDamage,{kind:'pierceshower',phase:'petal',direction:b.dir.clone()});b.life=0;}

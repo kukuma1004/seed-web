@@ -27,7 +27,7 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
  const cover={x:0,z:-6,w:8,d:1.2};
  const hitsCover=(a,b)=>walls&&Math.min(a.z,b.z)<=cover.z+cover.d/2&&Math.max(a.z,b.z)>=cover.z-cover.d/2&&Math.abs((a.x+b.x)/2-cover.x)<=cover.w/2;
  const player={position:new V(movingPlay?1.2:0,0,0)};
- let damage=0;const shotList=[];
+ let damage=0,interceptions=0;const shotList=[];
  // A twin awakening fights with two combats, like the game (one per attack, openings staggered by five seconds).
  const combats=parts.map((part,i)=>{const c=createFormCombat(new THREE.Scene(),{player,enemies:()=>enemies,
   hit:(e,amount)=>{damage+=amount;return true;},blocked:hitsCover,
@@ -38,7 +38,7 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
  for(let step=0;step<steps;step++,t+=dt){
   if(movingPlay)player.position.set(Math.cos(t*2.2)*1.2,0,Math.sin(t*2.2)*1.2);
   // Enemy shots fly in from 6 units away, three at a time, twice a second.
-  if(shots&&step%25===0)for(let k=0;k<3;k++){const a=k*2.1+step*.01;shotList.push({life:1.5,boss:enemyType==='austin',dir:new V(-Math.cos(a),0,-Math.sin(a)),ob:{position:new V(Math.cos(a)*6,.7,Math.sin(a)*6)}});}
+  if(shots&&step%25===0)for(let k=0;k<3;k++){const a=k*2.1+step*.01;shotList.push({life:1.5,boss:enemyType==='austin',spriteKey:enemyType==='austin'?'austin':null,dir:new V(-Math.cos(a),0,-Math.sin(a)),ob:{position:new V(Math.cos(a)*6,.7,Math.sin(a)*6)}});}
   for(const q of shotList){q.life-=dt;if(q.life>0)q.ob.position.addScaledVector(q.dir,dt*4.5);}
   for(let i=shotList.length-1;i>=0;i--)if(shotList[i].life<=0)shotList.splice(i,1);
   if(surgeAt!==null&&!surged&&t>=surgeAt){
@@ -56,9 +56,10 @@ export function simulate(id,level,{scene='cluster',seconds=10,dt=1/50,surgeAt=nu
    if(combat.cooldown<=0&&target){const aim=target.g.position.clone().sub(player.position).setY(0).normalize();combat.cooldown=combat.fire(player.position,aim,target.g.position);}
    combat.update(dt);
   }
+  for(const q of shotList)if(q.struck&&!q.counted){q.counted=true;interceptions++;}
  }
  const state=combats[0].state();for(const combat of combats)combat.dispose();
- return {damage,dps:damage/seconds,state};
+ return {damage,dps:damage/seconds,interceptions,state};
 }
 const nearest=(enemies,p)=>enemies.slice().sort((a,b)=>a.g.position.distanceToSquared(p)-b.g.position.distanceToSquared(p))[0];
 
