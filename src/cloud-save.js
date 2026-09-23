@@ -116,9 +116,49 @@ export function applyCloudSnapshot(storage,value){
  return !same(before,next);
 }
 
+// 2026-09-23 사용자 신고(테스터): "핸펀 업뎃하고 하니까 컴터로 해 둔 기록(오스틴 5번 잡은 판)이 날아감".
+// 막마다 저장 칸은 하나라서, 다른 기기에서 더 나중에 시작한 판이 이 기기의 더 긴 판을 덮을 수 있다.
+// 그런 경우 덮이기 전 판을 이 기기에만 따로 남겨 두고(동기화하지 않음), 던전 화면에서 되살릴 수 있게 한다.
+// 끝난 판 표시(지운 표시)로 바뀐 경우는 남기지 않는다(끝난 판을 다시 살리는 길이 되지 않게).
+export const CHECKPOINT_BACKUP_KEY='seed-checkpoint-backup-v1';
+export const CHECKPOINT_BACKUP_DAYS=14;
+const runOf=value=>value&&!isCheckpointTombstone(value)&&validCheckpoint(value)?value:null;
+const runTime=value=>Number.isFinite(value?.elapsed)?value.elapsed:0;
+export function replacedRuns(localValue,nextValue){
+ const local=normalizeCloudSnapshot(localValue),next=normalizeCloudSnapshot(nextValue),out={};
+ for(const act of ['act1','act2','act3']){
+  const mine=runOf(local.checkpoints[act]),theirs=runOf(next.checkpoints[act]);
+  if(mine&&theirs&&!same(mine,theirs)&&runTime(mine)>runTime(theirs)+1)out[act]=mine;
+ }
+ return out;
+}
+export function readCheckpointBackups(storage,now=Date.now()){
+ let value=null;try{value=JSON.parse(storage?.getItem(CHECKPOINT_BACKUP_KEY)||'null');}catch{}
+ const out={};if(!value||typeof value!=='object')return out;
+ for(const act of ['act1','act2','act3']){const row=value[act],run=runOf(row?.checkpoint);if(run&&Number.isFinite(row.at)&&now-row.at<CHECKPOINT_BACKUP_DAYS*864e5)out[act]={at:row.at,checkpoint:run};}
+ return out;
+}
+export function rememberReplacedRuns(storage,runs,now=Date.now()){
+ const acts=Object.keys(runs||{});if(!acts.length)return false;
+ const current=readCheckpointBackups(storage,now);
+ for(const act of acts)if(!current[act]||runTime(runs[act])>runTime(current[act].checkpoint))current[act]={at:now,checkpoint:runs[act]};
+ try{storage?.setItem(CHECKPOINT_BACKUP_KEY,JSON.stringify(current));return true;}catch{return false;}
+}
+export function forgetCheckpointBackup(storage,act,now=Date.now()){setCheckpointBackup(storage,act,null,now);}
+// 되살릴 때 지금 칸의 판을 대신 남겨 두면(맞바꾸기) 어느 판도 잃지 않는다.
+export function setCheckpointBackup(storage,act,checkpoint,now=Date.now()){
+ const current=readCheckpointBackups(storage,now),run=runOf(checkpoint);if(run)current[act]={at:now,checkpoint:run};else delete current[act];
+ try{if(Object.keys(current).length)storage?.setItem(CHECKPOINT_BACKUP_KEY,JSON.stringify(current));else storage?.removeItem(CHECKPOINT_BACKUP_KEY);}catch{}
+}
+// 병합 결과가 서버 것과 다르면(이 기기에만 있던 도감·더 최근 판 등) 이 기기가 '올릴 것 없음'이어도 올린다.
+// 순서만 다른 목록(두 기기가 도감을 다른 순서로 얻음)은 같은 것으로 본다. 그렇지 않으면 켤 때마다 서로 올린다.
+const sorted=list=>[...list].sort();
+const withoutStamp=value=>{const {revision,updatedAt,...rest}=normalizeCloudSnapshot(value);return {...rest,discoveries:{...rest.discoveries,forms:sorted(rest.discoveries.forms),bosses:sorted(rest.discoveries.bosses)},account:{...rest.account,badges:sorted(rest.account.badges),skins:sorted(rest.account.skins),appliedGrants:sorted(rest.account.appliedGrants)}};};
+export function snapshotAdds(mergedValue,remoteValue){return !same(withoutStamp(mergedValue),withoutStamp(remoteValue));}
+
 export function isSyncKey(key){return syncSet.has(key);}
 
 export function clearCloudLocalData(storage){
  for(const key of SYNC_KEYS)try{storage?.removeItem(key);}catch{}
- try{storage?.removeItem(CLOUD_META_KEY);storage?.removeItem(CLOUD_OWNER_KEY);}catch{}
+ try{storage?.removeItem(CLOUD_META_KEY);storage?.removeItem(CLOUD_OWNER_KEY);storage?.removeItem(CHECKPOINT_BACKUP_KEY);}catch{}
 }

@@ -214,3 +214,4 @@ body[data-quality="0"] #overlay.menu-screen,body[data-quality="0"] #overlay.gard
 .maintenance-panel h2{margin-bottom:12px}
 .maintenance-line{font-size:15px;line-height:1.7;color:#d8eadf;margin:2px 0}
 @media(max-height:430px){.maintenance-line{font-size:12px;line-height:1.55}}
+.menu-item.restore-run{border-color:#e7b85c}.menu-item.restore-run strong{color:#ffd88a}

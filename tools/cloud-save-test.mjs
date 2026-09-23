@@ -8,7 +8,7 @@ import {ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT3_STORAGE_KEYS,act3Storage,ACT3_REGION} from '../src/act3.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
 import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
-import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot} from '../src/cloud-save.js';
+import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
@@ -201,6 +201,47 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  await next.start();
  assert.equal(JSON.parse(storage.getItem(SHOP_KEY)).coins,300,'다음 실행에서 서버의 옛 저장이 기기 저장을 덮어쓰지 않는다');
  assert.equal(state.save.shop.coins,300);
+}
+
+// 2026-09-23 테스터 신고: "핸펀 업뎃하고 하니까 컴터로 해 둔 기록(오스틴 5번 잡은 판·새 도감)이 날아감".
+// 휴대폰에서 더 나중에 새로 시작한 짧은 판이 PC의 긴 판을 덮으면, PC는 덮이기 전 판을 따로 남겨 되살릴 수 있어야 하고,
+// PC에만 있던 도감은 PC에 '새 저장'이 없어도 서버로 올라가야 한다.
+{
+ const {writeCheckpoint,clearCheckpoint,readCheckpoint}=await import('../src/run-save.js');
+ const run=(stage,elapsed,austins)=>({version:1,cycle:austins*5,stage,mode:'entry',region:'garden',hp:90,rules:['split'],mutated:[],kills:10,elapsed,wardens:austins*5,austins});
+ const pc=memory();
+ writeCheckpoint(pc,run(2,3000,5),1000);
+ pc.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:['icicle','frostnet'],bosses:['warden','austin'],records:{}}));
+ pc.setItem('seed-cloud-owner-v1','uid');pc.setItem('seed-cloud-meta-v1',JSON.stringify({version:1,ownerUid:'uid',localRevision:5,syncedRevision:5,updatedAt:1000}));
+ const phone=memory();writeCheckpoint(phone,run(0,120,0),9000);phone.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:['icicle'],bosses:['warden'],records:{}}));
+ const state={save:collectCloudSnapshot(phone,{revision:9,updatedAt:9000}),puts:0};
+ const account={ready:async()=>({uid:'uid'}),user:()=>({uid:'uid'}),tokenSession:async()=>({uid:'uid',idToken:'t'})};
+ const fetchImpl=async(url,options={})=>{
+  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){state.puts++;state.save=JSON.parse(options.body);}
+  return {ok:true,status:200,json:async()=>state.save};
+ };
+ const cloud=createCloudSync({storage:pc,account,fetchImpl,now:()=>10_000,debounceMs:60_000});
+ assert.equal((await cloud.start()).ok,true);
+ assert.equal(readCheckpoint(pc).elapsed,120,'이어하기 칸은 여전히 더 최근 판(휴대폰)');
+ const backup=readCheckpointBackups(pc,10_000).act1;
+ assert.equal(backup?.checkpoint.austins,5,'덮인 PC 판(오스틴 5번)은 따로 남는다');
+ assert.equal(state.puts,1,'PC에만 있던 도감을 올린다');
+ assert.deepEqual([...state.save.discoveries.forms].sort(),['frostnet','icicle']);assert.ok(state.save.discoveries.bosses.includes('austin'));
+ assert.ok(!JSON.stringify(state.save).includes(CHECKPOINT_BACKUP_KEY),'남긴 판은 서버로 가지 않는다');
+ // 되살리기: 남긴 판을 지금 시각으로 다시 저장하면 가장 최근 판이 되어 다른 기기에도 간다.
+ writeCheckpoint(cloud.storage,backup.checkpoint,11_000);forgetCheckpointBackup(pc,'act1',11_000);
+ await cloud.syncNow();assert.equal(state.save.checkpoints.act1.austins,5);assert.deepEqual(readCheckpointBackups(pc,11_000),{});
+ // 같은 판을 다른 기기에서 더 이어 간 경우·끝난 판 표시로 바뀐 경우는 남기지 않는다.
+ const snap=(cp)=>normalizeCloudSnapshot({checkpoints:{act1:cp}});
+ assert.deepEqual(replacedRuns(snap(run(2,3000,5)),snap(run(4,3400,5))),{},'더 이어 간 같은 판');
+ assert.deepEqual(replacedRuns(snap(run(2,3000,5)),snap({version:1,cleared:true,savedAt:5})),{},'끝난 판 표시');
+ // 병합이 서버와 같으면(순서만 다름) 올리지 않는다.
+ const a=normalizeCloudSnapshot({discoveries:{version:1,forms:['icicle','frostnet'],bosses:[],records:{}}}),b=normalizeCloudSnapshot({discoveries:{version:1,forms:['frostnet','icicle'],bosses:[],records:{}}});
+ assert.equal(snapshotAdds(a,b),false);
+ // 14일이 지난 남긴 판은 사라진다.
+ const old=memory({[CHECKPOINT_BACKUP_KEY]:JSON.stringify({act1:{at:0,checkpoint:{...run(2,3000,5),savedAt:1}}})});
+ assert.equal(readCheckpointBackups(old,1000).act1?.checkpoint.austins,5);assert.deepEqual(readCheckpointBackups(old,15*864e5),{});
 }
 
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');
