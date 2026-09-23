@@ -41,6 +41,8 @@ const shot=(dir,extra={})=>({ob:{position:new THREE.Vector3(0,.67,0)},dir:new TH
   assert.equal(fx.mesh.geometry.attributes.fxSprite.array[0],SHOT_CELLS.crackleTrail,'an evolution bolt uses its second ingredient as the trail');
   assert.ok([...fx.mesh.instanceColor.array.slice(0,6)].every(Number.isFinite),'missing age/life never produces NaN colours');
   assert.equal(fx.sync([shot([0,0,-1],{fragment:true,tint:'split'})],camera),1,'split fragments wear only a small aura, no trail (less clutter)');
+  const painted=shot([0,0,-1]),uniqueForm=shot([1,0,0]);painted.ob.userData={spriteHidden:true};uniqueForm.ob.userData={spriteHidden:false};
+  assert.equal(fx.sync([painted,uniqueForm],camera,{bodyArt:'spriteHidden'}),3,'painted base shots keep a trail while unique form bolts retain body and trail');
   const many=Array.from({length:10},()=>shot([0,0,-1]));assert.equal(fx.sync(many,camera),8,'capacity is never exceeded');
   assert.equal(fx.sync([],camera),0);assert.equal(fx.mesh.count,0);
   fx.dispose();assert.equal(scene.children.length,0);

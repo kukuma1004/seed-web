@@ -35,7 +35,7 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('frostnet',['chain','frost'],'얼어붙은 그물','번개가 세 적 이상을 이으면 그 선 위에 서리 줄이 남아 지나는 적을 얼립니다.','길목을 얼려 무리의 발을 묶음','피해가 가장 낮고 문지기·보스는 줄 위에서도 멈추지 않음'),
  form('rewindbolt',['chain','recall'],'되감는 번개','번개가 지나간 길을 기억했다가, 씨앗이 충분히 움직이면 그 길을 되감아 한 번 더 흐릅니다.','움직이며 같은 무리를 두 번 훑음','제자리에 서 있으면 기억한 길이 그대로 사라짐'),
  form('refractlance',['pierce','reflect'],'굴절 창','창이 벽에 닿으면 벽을 타고 옆으로 꺾이고, 꺾인 창은 더 깊이 박힙니다.','적을 벽이나 엄폐물 쪽으로 몰면 한 발로 벽에 붙은 줄을 통째로 훑음','벽에서 떨어진 적에게는 꺾인 창이 지나가지 않아 평범한 창 한 자루'),
- // 2026-09-21 2묶음. 그림(카드·탄환)이 나올 때까지 선택지에는 나오지 않는다(COMBO_BATCHES).
+ // 2026-09-21 2묶음. 카드·탄환 시각 검수 뒤 베타 선택지에 공개한다(COMBO_BATCHES).
  form('thundermirror',['reflect','chain'],'천둥 거울','번개가 두 적 사이를 거울처럼 오가며 여러 번 내리칩니다. 혼자 남은 적에게는 벽에 반사된 번개가 한 번 더 떨어집니다.','문지기와 호위병처럼 둘이 붙어 있는 상대를 번갈아 두들김','무리 전체로는 퍼지지 않고 두 적만 칩니다'),
  form('sunmirror',['reflect','burst'],'태양 거울','천천히 나아가는 거울핵이 부딪히는 적 탄환을 빨아들여 빛을 모으고, 모은 만큼 크게 터집니다.','사수·포탑이 탄을 뿌리는 방에서 탄막을 폭발로 바꿈','탄을 쏘지 않는 적 앞에서는 작은 폭발에 그침'),
  form('pierceshower',['pierce','split'],'꿰뚫는 꽃비','창이 적을 꿰뚫을 때마다 그 자리에서 꽃잎 두 장이 양옆으로 튀어 나갑니다.','줄지어 오는 무리를 창과 꽃잎으로 한 번에 훑음','혼자 있는 적에게는 꽃잎이 헛나감'),
@@ -62,12 +62,12 @@ const generatedForm=entry=>Object.freeze({
 });
 export const GENERATED_FORMS=Object.freeze(Object.fromEntries(FIRST_FUSIONS.filter(entry=>!CURATED_PAIRS.has(pairKey(entry.laws))).map(entry=>[entry.id,generatedForm(entry)])));
 // 2026-09-18: 자동 조합은 계속 숨기고, 검증한 손제작 조합만 FORMS에 넣는다.
-// 2026-09-21: 조합 묶음은 따로 관리한다. 카드·탄환 그림이 나오기 전까지 live:false로 두고 선택지에 내지 않는다.
+// 2026-09-21: 조합 묶음은 따로 관리한다. 카드·탄환 검수와 사용자 공개 승인 전까지 live:false로 둔다.
 // 코드·수치·검사는 그대로 유지되고, ALL_FORMS에는 남아 있어 이미 얻은 저장과 도감은 깨지지 않는다.
 // 공개할 때는 live만 true로 바꾼다. 기록: combo-batches/
 export const COMBO_BATCHES=Object.freeze({
- '20260921':Object.freeze({live:false,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])}),
- '20260921-2':Object.freeze({live:false,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])}),
+ '20260921':Object.freeze({live:true,ids:Object.freeze(['icicle','halobloom','frostnet','rewindbolt','refractlance'])}),
+ '20260921-2':Object.freeze({live:true,ids:Object.freeze(['thundermirror','sunmirror','pierceshower','ebbring','pullgarden'])}),
  '20260921-3':Object.freeze({live:false,ids:Object.freeze(['spearring','accretiondisk','rimeback','coldwell','rimepetal','echolane'])})
 });
 const HELD_BACK=new Set(Object.values(COMBO_BATCHES).filter(batch=>!batch.live).flatMap(batch=>batch.ids));

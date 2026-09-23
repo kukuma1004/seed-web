@@ -38,7 +38,7 @@ export function createShotBatches(scene,{initial=64}={}){
  function sync(...lists){
   for(const batch of all)batch.count=0;
   for(const list of lists)for(const p of list){
-   const ob=p.ob;if(!ob)continue;
+   const ob=p.ob;if(!ob||ob.userData.spriteHidden)continue;
    const geometry=ob.userData.shotGeometry,parts=ob.userData.shotParts;
    if(!geometry&&!parts)continue;
    ob.updateMatrix();

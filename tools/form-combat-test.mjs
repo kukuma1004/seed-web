@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {createFormCombat,FORM_COMBAT,segmentDistance} from '../src/form-combat.js';
+import {createFormVisuals} from '../src/form-visuals.js';
 import {GENERATED_FORMS} from '../src/forms.js';
 import {blocksShield} from '../src/shield.js';
 
@@ -18,6 +19,54 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elapsed+=dt)combat.update(Math.min(dt,seconds-elapsed));};
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
+
+// The first curated visual batch must use its real combat geometry: three
+// hitscan paths, a persistent frost web, and a single merged orbit petal.
+{
+ const counts={lance:0,frostWeb:0,rewindTrace:0};
+ const vfx={lance(){counts.lance++;},frostWeb(){counts.frostWeb++;},rewindTrace(){counts.rewindTrace++;}};
+ for(const id of ['icicle','frostnet','rewindbolt','refractlance']){
+  const foes=[enemy(2),enemy(4),enemy(6)],f=fixture(foes,{vfx});
+  f.combat.set(id);f.combat.fire(vec(),vec(1));
+  assert.ok(f.calls.length>0,`${id} still deals damage through its original attack`);
+  assert.equal(f.combat.state().bolts,0,`${id} does not invent a travelling projectile`);
+  f.combat.dispose();
+ }
+ assert.ok(counts.lance>=2,'both lances reach the shared silhouette renderer');
+ assert.ok(counts.frostWeb>0,'frost links leave visible web segments');
+ assert.ok(counts.rewindTrace>0,'rewind records its attack route');
+ const bloom=fixture([enemy(2)]);bloom.combat.set('halobloom');
+ assert.ok(bloom.combat.state().orbit>0,'halobloom starts with its petal orbit');
+ const petals=[];bloom.scene.traverse(o=>{if(o.isMesh&&o.geometry.name==='seed-form-halo-bloom-petal')petals.push(o);});
+ assert.ok(petals.length>0&&petals.every(o=>o.geometry.getAttribute('position').count<=696),'petals use one budgeted merged geometry each');
+ bloom.combat.dispose();
+}
+
+// The second curated batch has four distinct borrowed-projectile replacements;
+// its hit timing and role stay with the existing combat implementation.
+{
+ const named=(scene,name)=>{let found=[];scene.traverse(o=>{if(o.isMesh&&o.geometry.name===name)found.push(o);});return found;};
+ const mirrorCalls=[];
+ const thunder=fixture([enemy(2),enemy(3)],{vfx:{mirrorArc(...args){mirrorCalls.push(args);}}});
+ thunder.combat.set('thundermirror');thunder.combat.fire(vec(),vec(1));
+ assert.ok(mirrorCalls.length>=3,'two-target mirror lightning visibly alternates');
+ assert.equal(thunder.combat.state().bolts,0,'mirror lightning remains hitscan');thunder.combat.dispose();
+ const sunFx={sunburst:0},sun=fixture([enemy(1.5)],{vfx:{sunburst(){sunFx.sunburst++;}}});
+ sun.combat.set('sunmirror');sun.combat.fire(vec(),vec(1));
+ assert.ok(named(sun.scene,'seed-form-sun-mirror-core').length>0);
+ step(sun.combat,.35);assert.ok(sunFx.sunburst>0,'sun core finishes in a distinct burst');sun.combat.dispose();
+ const shower=fixture([enemy(2)]);shower.combat.set('pierceshower');shower.combat.fire(vec(),vec(1));
+ assert.ok(named(shower.scene,'seed-form-piercing-shower-petal').length>0,'spear hits create dedicated petals');shower.combat.dispose();
+ const ebb=fixture();ebb.combat.set('ebbring');
+ assert.ok(named(ebb.scene,'seed-form-ebbing-wave-blade').length>0,'the trailing orbit uses its own wave shape');ebb.combat.dispose();
+ const gardenFx={gardenVortex:0},garden=fixture([enemy(5)],{vfx:{gardenVortex(){gardenFx.gardenVortex++;}}});
+ garden.combat.set('pullgarden');garden.combat.fire(vec(),vec(1));
+ assert.ok(named(garden.scene,'seed-form-gravity-split-pull-seed').length>0);
+ step(garden.combat,.7);assert.ok(gardenFx.gardenVortex>0,'landed seeds leave a visible field');garden.combat.dispose();
+ const visuals=createFormVisuals();
+ for(const id of ['sunMirror','showerPetal','ebbBlade','pullSeed'])assert.ok(visuals.geos[id].getAttribute('position').count<=696,`${id} stays under the mobile triangle cap`);
+ for(const geo of Object.values(visuals.geos))geo.dispose();for(const mat of Object.values(visuals.mats))mat.dispose();
+}
 
 // Future catalogue forms build one merged projectile only when equipped. This
 // proves the 1,090-entry visual grammar is wired to combat without preloading it.

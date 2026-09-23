@@ -73,7 +73,9 @@ export function createActiveVFX(scene,{mobile=false,theme='botanical',quality=2,
  const halo=new THREE.Mesh(haloGeo,additive(haloTex));halo.position.y=.14;halo.name='active-halo';group.add(halo);
  // A second, wider halo only shows during the finale shockwave (and faintly during overdrive).
  const wave=new THREE.Mesh(haloGeo,additive(haloTex));wave.position.y=.13;wave.name='active-wave';group.add(wave);
- const beam=new THREE.Mesh(new THREE.CylinderGeometry(.34,.62,4.6,24,1,true).translate(0,2.3,0),additive(beamTex));beam.name='active-beam';group.add(beam);
+ // The camera keeps a fixed elevated heading. A painted vertical sheet reads
+ // as the same ultimate column from that view for two triangles, not a tube.
+ const beam=new THREE.Mesh(new THREE.PlaneGeometry(1.24,4.6).translate(0,2.3,0),additive(beamTex));beam.name='active-beam';group.add(beam);
 
  const spriteMotes=Boolean(spriteAtlas);
  const moteGeo=spriteMotes?new THREE.PlaneGeometry(1,1):new THREE.OctahedronGeometry(.09,0);if(!spriteMotes)moteGeo.scale(.55,1.9,.55);

@@ -35,7 +35,7 @@ export function createShotAuras(scene,{atlas=null,capacity=320,mobile=false}={})
   cells.setXY(i,cell,angle);color.setHex(hex).multiplyScalar(glow*bright);mesh.setColorAt(i,color);
  }
  // first·second: 지금 고른 첫째·둘째 법칙(첫 법칙 = 탄 색). 매 프레임 호출, 살아 있는 탄만큼만 GPU로 올린다.
- function sync(shots,camera,{theme='botanical',first='seed',second=null}={}){
+ function sync(shots,camera,{theme='botanical',first='seed',second=null,bodyArt=false}={}){
   let count=0;
   if(atlas){
    camera.updateMatrixWorld();
@@ -49,8 +49,10 @@ export function createShotAuras(scene,{atlas=null,capacity=320,mobile=false}={})
     // 2026-09-22 사용자: "탄이 커진 느낌, 반사·분열로 퍼지면 어지럽다" → 무늬 약 25% 작게, 꼬리 짧고 가늘게,
     // 분열로 갈라진 작은 탄은 꼬리 없이 작고 흐린 무늬만(분열 5단계면 탄이 수십 개라 화면을 덮었다).
     if(!p.fragment){const length=1.05*Math.min(k,1.4),width=length*.5;put(count++,x-p.dir.x*length*.46,z-p.dir.z*length*.46,width,length,look.trail,heading,look.trailColor,1.35*fade);}
-    const size=(p.critical?.5:p.fragment?.4:.66)*k,pulse=.88+.12*Math.sin(age*10);
-    put(count++,x,z,size,size,look.aura,look.aligned?heading:age*look.spin,look.auraColor,(p.fragment?.8:1.15)*pulse*fade);
+    if(!(bodyArt==='spriteHidden'?Boolean(p.ob?.userData.spriteHidden):bodyArt)){
+     const size=(p.critical?.5:p.fragment?.4:.66)*k,pulse=.88+.12*Math.sin(age*10);
+     put(count++,x,z,size,size,look.aura,look.aligned?heading:age*look.spin,look.auraColor,(p.fragment?.8:1.15)*pulse*fade);
+    }
    }
   }
   mesh.count=count;if(!count)return 0;

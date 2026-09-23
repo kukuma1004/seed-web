@@ -22,6 +22,22 @@ for(const mobile of [false,true]){
   assert.ok(fx.state().events.portal>0,'Portals reuse the fixed spark and beam batches');
   for(const event of ['bossPitch','bossRush','bossSwing','bossWave','bossPhase'])assert.ok(fx.state().events[event]>0,`${event} reuses the fixed VFX batches`);
   assert.ok(fx.state().active<=fx.state().capacity);
+  for(const [draw,lowSegments,highSegments] of [
+    [()=>fx.lance(a,b,'icicle'),2,4],
+    [()=>fx.frostWeb(a,b),1,3],
+    [()=>fx.rewindTrace(a,b,true),1,2],
+    [()=>fx.mirrorArc(a,b,2),2,3],
+    [()=>fx.gardenVortex(a,1.5),3,5],
+    [()=>fx.sunburst(a,1.5),6,10]
+  ]){
+    fx.clear();fx.setQuality(0);draw();fx.update(.10);fx.update(.016);fx.update(.016);
+    assert.equal(meshes[1].count,lowSegments,'low-end devices draw the minimal attack silhouette');
+    fx.clear();fx.setQuality(2);draw();fx.update(.10);fx.update(.016);fx.update(.016);
+    assert.equal(meshes[1].count,highSegments,'higher quality adds detail within the shared beam batch');
+  }
+  assert.deepEqual(a,beforeA);assert.deepEqual(b,beforeB,'authored attack visuals do not move hit endpoints');
+  assert.equal(fx.state().events.lance,2);assert.equal(fx.state().events.frostWeb,2);assert.equal(fx.state().events.rewindTrace,2);
+  assert.equal(fx.state().events.mirrorArc,2);assert.equal(fx.state().events.gardenVortex,2);assert.equal(fx.state().events.sunburst,2);
   fx.clear();fx.setQuality(0);fx.explosion(a,'burst',1.6,true);fx.update(.016);const lowCount=fx.state().active;
   fx.clear();fx.setQuality(2);fx.explosion(a,'burst',1.6,true);fx.update(.016);assert.ok(lowCount<fx.state().active,'low quality emits fewer particles from the same effect');
   for(const mesh of meshes){
@@ -34,26 +50,31 @@ for(const mobile of [false,true]){
   const disposed=[];for(const mesh of meshes){mesh.geometry.addEventListener('dispose',()=>disposed.push('geometry'));mesh.material.addEventListener('dispose',()=>disposed.push('material'));}
   fx.dispose();assert.equal(scene.children.length,0);assert.equal(disposed.length,8);
 }
-// Higgsfield 이펙트 아틀라스(2026-09-21 첫 시험): 묶음 수는 그대로, 불꽃 조각·불꽃 혀만 소재 판으로 바뀐다.
+// The atlas covers the four existing batches without adding meshes or lights.
 {
   const atlasFile=new URL('../public/'+VFX_ATLAS_FILE,import.meta.url);
   assert.ok(fs.statSync(atlasFile).size<64*1024,'effect atlas stays a small WebP');
   const atlas=new THREE.Texture(),scene=new THREE.Scene(),fx=createVFX(scene,{atlas,random:()=>.3}),a=new THREE.Vector3(1,0,2);
   const meshes=[...scene.children[0].children],sprites=meshes.filter(m=>m.geometry.name==='seed-vfx-sprite');
   assert.equal(meshes.length,4,'the atlas keeps the same four GPU batches');
-  assert.equal(sprites.length,2,'sparks and flames become atlas sprites');
+  assert.equal(sprites.length,4,'sparks, streaks, flames and dash ghosts become atlas sprites');
   for(const mesh of sprites){
     assert.equal(mesh.material.map,atlas);assert.equal(mesh.material.customProgramCacheKey(),'seed-vfx-sprite-v1');
     assert.equal(mesh.material.blending,THREE.AdditiveBlending);assert.equal(mesh.material.depthWrite,false);
   }
-  fx.explosion(a,'burst',1.6,true);for(const id of ['frost','chain','split','gravity','seed'])fx.impact(a,id,true);fx.update(.016);
+  const camera=new THREE.PerspectiveCamera(60,1,.1,100);camera.position.set(0,9,12);camera.lookAt(0,0,0);camera.updateMatrixWorld();fx.setCamera(camera);
+  fx.explosion(a,'burst',1.6,true);for(const id of ['frost','chain','split','gravity','seed'])fx.impact(a,id,true);fx.arc(a,a.clone().add(new THREE.Vector3(2,0,0)));fx.dash(a,.3);fx.update(.016);
   for(const mesh of sprites){
     assert.ok(mesh.count>0);const cells=mesh.geometry.attributes.fxSprite.array;
     for(let i=0;i<mesh.count;i++){const cell=cells[i*2];assert.ok(Number.isInteger(cell)&&cell>=0&&cell<16,'atlas cell in range');assert.ok(Number.isFinite(cells[i*2+1]));}
   }
-  const flames=sprites[1];flames.geometry.computeBoundingBox();
+  const flames=meshes[2];flames.geometry.computeBoundingBox();
   assert.equal(flames.geometry.boundingBox.min.y,0,'the flame sprite is anchored at its base');
   for(let i=0;i<flames.count;i++)assert.equal(flames.geometry.attributes.fxSprite.array[i*2],VFX_CELLS.flame);
+  fx.clear();fx.lance(a,a.clone().add(new THREE.Vector3(3,0,1)),'icicle');fx.update(.016);
+  const beamMatrix=new THREE.Matrix4();meshes[1].getMatrixAt(0,beamMatrix);
+  const beamNormal=new THREE.Vector3(0,0,1).transformDirection(beamMatrix),cameraNormal=new THREE.Vector3(0,0,1).applyQuaternion(camera.quaternion);
+  assert.ok(beamNormal.dot(cameraNormal)>.99,'flat beam sprites face the gameplay camera instead of becoming edge-on');
   assert.equal(fx.state().textured,true);
   const shader={vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader};sprites[0].material.onBeforeCompile(shader);
   assert.ok(shader.vertexShader.includes('attribute vec2 fxSprite')&&shader.vertexShader.includes('vMapUv=(uv+')&&!shader.vertexShader.includes('#include <project_vertex>'),'sprite shader patch applies to this three.js version');

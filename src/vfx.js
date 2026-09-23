@@ -2,8 +2,9 @@ import * as THREE from 'three';
 import {LAWS} from './laws.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
+import {MIRROR_SHOT_COLOR} from './projectile-sprites.js';
 
-export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a};
+export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a,mirrorHostile:MIRROR_SHOT_COLOR};
 
 // The flat shock crown that spread across the floor was removed (2026-09-15): it covered the arena,
 // read as a flat colored sunburst and cost a batch. Hits and blasts now use sparks, streaks and flames only.
@@ -50,10 +51,10 @@ export function streakGeometry(){
 export function createVFX(scene,{mobile=false,random=Math.random,theme='botanical',quality=2,atlas=null}={}){
   const group=new THREE.Group();group.name='seed-vfx';scene.add(group);
   const dummy=new THREE.Object3D(),color=new THREE.Color(),up=new THREE.Vector3(0,1,0),identity=new THREE.Quaternion();
-  const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion();
+  const segDelta=new THREE.Vector3(),segMid=new THREE.Vector3(),segRotation=new THREE.Quaternion(),viewSegment=new THREE.Vector3(),spriteTurn=new THREE.Quaternion(),screenForward=new THREE.Vector3(0,0,1);
   const emitPos=new THREE.Vector3(),emitVelocity=new THREE.Vector3(),emitRotation=new THREE.Quaternion();
   const workA=new THREE.Vector3(),workB=new THREE.Vector3(),workC=new THREE.Vector3(),workD=new THREE.Vector3(),workE=new THREE.Vector3();
-  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0,bossPitch:0,bossRush:0,bossSwing:0,bossWave:0,bossPhase:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0));
+  const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0,lance:0,frostWeb:0,rewindTrace:0,mirrorArc:0,gardenVortex:0,sunburst:0,bossPitch:0,bossRush:0,bossSwing:0,bossWave:0,bossPhase:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0)),viewCamera=null;
   const density=()=>[.42,.68,1][qualityLevel]*(mobile?.68:1);
   function batch(geometry,capacity,sprite=null){
     const material=sprite?vfxSpriteMaterial(atlas):new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
@@ -69,7 +70,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   // glow: 부드러운 테두리만큼 줄어든 반짝임을 채우는 밝기 배율. 조각 가운데가 하얗게 넘치도록 불꽃 조각은 크게 올렸다
   // (2026-09-21 사용자: "반짝임이 줄어서 아쉽다"). 휴대폰은 화면이 작고 기본 화질의 번짐이 약해 1.35배 더 밝힌다.
   const sparks=atlas?batch(new THREE.PlaneGeometry(1,1),mobile?240:480,{x:4.2,y:2.1,glow:1.9}):batch(new THREE.OctahedronGeometry(1,0),mobile?240:480);
-  const beams=batch(streakGeometry(),mobile?120:240);
+  const beams=atlas?batch(new THREE.PlaneGeometry(1,1),mobile?120:240,{x:1.75,y:1,glow:1.45}):batch(streakGeometry(),mobile?120:240);
   // One tapered batch gives explosions a rising flame crown without creating a
   // mesh or a light for every lick of fire.
   const flames=atlas?batch(new THREE.PlaneGeometry(1,1).translate(0,.5,0),mobile?96:180,{x:5,y:2.7,glow:1.15}):batch(new THREE.ConeGeometry(1,2,5).translate(0,1,0),mobile?96:180);
@@ -84,23 +85,27 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     if(id==='burst'||id==='amber')return chance(VFX_CELLS.orb,VFX_CELLS.star,.4);
     return chance(VFX_CELLS.leaf,VFX_CELLS.star,.25);
   }
-  const ghostParts=[];
-  const part=(geo,x,y,z)=>{geo.translate(x,y,z);ghostParts.push(geo);};
-  part(new THREE.IcosahedronGeometry(.43,1).scale(1,1.2,.75),0,.65,0);
-  part(new THREE.IcosahedronGeometry(.23,1),0,1.18,0);
-  for(const side of [-1,1]){
-    part(new THREE.CapsuleGeometry(.11,.4,2,5),side*.47,.5,.05);
-    part(new THREE.CapsuleGeometry(.12,.25,2,5),side*.24,.2,.08);
-    part(new THREE.OctahedronGeometry(.25).scale(.6,1.3,.8),side*.38,.8,0);
+  function fallbackGhostGeometry(){
+    const ghostParts=[];
+    const part=(geo,x,y,z)=>{geo.translate(x,y,z);ghostParts.push(geo);};
+    part(new THREE.IcosahedronGeometry(.43,1).scale(1,1.2,.75),0,.65,0);
+    part(new THREE.IcosahedronGeometry(.23,1),0,1.18,0);
+    for(const side of [-1,1]){
+      part(new THREE.CapsuleGeometry(.11,.4,2,5),side*.47,.5,.05);
+      part(new THREE.CapsuleGeometry(.12,.25,2,5),side*.24,.2,.08);
+      part(new THREE.OctahedronGeometry(.25).scale(.6,1.3,.8),side*.38,.8,0);
+    }
+    for(let i=-1;i<=1;i++)part(new THREE.ConeGeometry(.11,.5,5),i*.15,1.48,0);
+    const unindexed=ghostParts.map(g=>g.index?g.toNonIndexed():g.clone());
+    const geometry=mergeGeometries(unindexed);
+    for(const part of [...ghostParts,...unindexed])part.dispose();
+    return geometry;
   }
-  for(let i=-1;i<=1;i++)part(new THREE.ConeGeometry(.11,.5,5),i*.15,1.48,0);
-  const unindexed=ghostParts.map(g=>g.index?g.toNonIndexed():g.clone());
-  const ghosts=batch(mergeGeometries(unindexed),mobile?4:8);
-  for(const geo of [...ghostParts,...unindexed])geo.dispose();
+  const ghosts=atlas?batch(new THREE.PlaneGeometry(1,1),mobile?4:8,{x:1.65,y:1.65,glow:.8}):batch(fallbackGhostGeometry(),mobile?4:8);
   const batches=[sparks,beams,flames,ghosts];
   function emit(pool,pos,tint,life,sx,sy=sx,sz=sx,{velocity,rotation,grow=0,delay=0,gravity=0,cell=0,angle=0}={}){
     const p=pool.slots[pool.cursor++%pool.capacity];p.pos.copy(pos);p.vel.copy(velocity||up).multiplyScalar(velocity?1:0);
-    p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=themeColor(themeId,tint,FX_COLORS[tint]??tint??FX_COLORS.seed);
+    p.rotation.copy(rotation||identity);p.scale.set(sx,sy,sz);p.life=life;p.max=life;p.tint=tint==='mirrorHostile'?MIRROR_SHOT_COLOR:themeColor(themeId,tint,FX_COLORS[tint]??tint??FX_COLORS.seed);
     p.grow=grow;p.delay=delay;p.gravity=gravity;p.twinkle=random()*Math.PI*2;p.cell=cell;p.angle=angle;
     return p;
   }
@@ -109,8 +114,13 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   function segment(a,b,id,width=.055,life=.16,delay=0){
     const theme=THEMES[themeId];width*=theme.trailWidth;life*=theme.trailLife;
     segDelta.copy(b).sub(a);const length=segDelta.length();if(length<.001)return;
-    segMid.copy(a).add(b).multiplyScalar(.5);segRotation.setFromUnitVectors(up,segDelta.multiplyScalar(1/length));
-    emit(beams,segMid,id,life,width,length,width,{rotation:segRotation,delay});
+    segMid.copy(a).add(b).multiplyScalar(.5);segDelta.multiplyScalar(1/length);
+    if(beams.sprite&&viewCamera){
+      viewSegment.copy(segDelta).transformDirection(viewCamera.matrixWorldInverse);
+      const angle=Math.atan2(-viewSegment.x,viewSegment.y);
+      segRotation.copy(viewCamera.quaternion).multiply(spriteTurn.setFromAxisAngle(screenForward,angle));
+    }else segRotation.setFromUnitVectors(up,segDelta);
+    emit(beams,segMid,id,life,width,length,width,{rotation:segRotation,delay,cell:id==='chain'?VFX_CELLS.lightning:VFX_CELLS.trail});
   }
   function flame(pos,id='burst',n=10,spread=1,delay=0){
     counters.flame++;
@@ -170,6 +180,83 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
       workA.copy(from).lerp(to,.55);workC.copy(to).sub(from);workB.set(workA.x-workC.z*.18,workA.y+.04,workA.z+workC.x*.18);segment(workA,workB,'amber',width*.65,life*.7);
     }else if(theme.trailMode==='comet'&&!fragment){emitPos.copy(from).lerp(to,.52);emitVelocity.set(0,.28,0);emit(sparks,emitPos,'awaken',life*.9,width*1.15,width*2.1,width,{velocity:emitVelocity,cell:VFX_CELLS.star});}
   }
+  // The first curated batch contains three hitscan attacks. Give those attacks
+  // authored silhouettes in the existing beam pool rather than inventing a
+  // projectile that would disagree with their collision timing.
+  function lance(from,to,kind='icicle',folded=false){
+    counters.lance++;
+    const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
+    if(length<.05)return;
+    const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle',accent=ice?'frost':kind==='shower'?'split':'reflect';
+    workA.set(from.x,.79,from.z);workB.set(to.x,.79,to.z);
+    segment(workA,workB,accent,folded?.13:.11,.19);
+    workC.copy(workA).lerp(workB,ice?.38:.5);
+    segment(workA,workC,'amber',.046,.17);
+    if(qualityLevel===0)return;
+    // Two teeth at the tip read as split ice or a refracted prism at gameplay scale.
+    for(const sign of [-1,1]){
+      workD.copy(workA).lerp(workB,.77).add(workE.set(sideX*sign*(ice?.16:.2),0,sideZ*sign*(ice?.16:.2)));
+      segment(workD,workB,accent,.047,.19);
+    }
+  }
+  function frostWeb(from,to){
+    counters.frostWeb++;
+    const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
+    if(length<.05)return;
+    const ox=-dz/length*.09,oz=dx/length*.09;
+    workA.set(from.x,.25,from.z);workB.set(to.x,.25,to.z);
+    segment(workA,workB,'frost',.032,.62);
+    if(qualityLevel===0)return;
+    workC.set(from.x+ox,.25,from.z+oz);workD.set(to.x-ox,.25,to.z-oz);
+    segment(workC,workD,'frost',.022,.58);
+    workC.copy(workA).lerp(workB,.47).add(workE.set(ox,0,oz));
+    workD.copy(workA).lerp(workB,.57).sub(workE);
+    segment(workC,workD,'chain',.022,.48);
+  }
+  function rewindTrace(from,to,replay=false,delay=0){
+    counters.rewindTrace++;
+    const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
+    if(length<.05)return;
+    const ox=-dz/length*.11,oz=dx/length*.11;
+    workA.set(from.x,.88,from.z);workB.set(to.x,.88,to.z);
+    segment(workA,workB,replay?'amber':'recall',replay?.062:.034,replay?.3:.22,delay);
+    if(qualityLevel===0)return;
+    workC.set(from.x+ox,.88,from.z+oz);workD.set(to.x+ox,.88,to.z+oz);
+    segment(workC,workD,replay?'chain':'amber',.028,replay?.27:.2,delay+.025);
+  }
+  function mirrorArc(from,to,echo=0){
+    counters.mirrorArc++;
+    const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
+    if(length<.05)return;
+    const delay=Math.min(6,echo)*.045,ox=-dz/length*.17,oz=dx/length*.17;
+    workA.set(from.x,.91,from.z);workB.set(to.x,.91,to.z);
+    workC.copy(workA).lerp(workB,.5).add(workE.set(ox,0,oz));
+    segment(workA,workC,'chain',.074,.22,delay);
+    segment(workC,workB,'reflect',.074,.22,delay);
+    if(qualityLevel===0)return;
+    workD.copy(workA).lerp(workB,.5).sub(workE.multiplyScalar(1.45));
+    segment(workC,workD,'amber',.035,.2,delay+.015);
+  }
+  function gardenVortex(pos,radius=1.5){
+    counters.gardenVortex++;
+    const count=qualityLevel===0?3:5;
+    for(let i=0;i<count;i++){
+      const a=i*Math.PI*2/count,r=radius*.44;
+      workA.set(pos.x+Math.cos(a)*r,.18,pos.z+Math.sin(a)*r);
+      workB.set(pos.x+Math.cos(a+.65)*r*1.35,.18,pos.z+Math.sin(a+.65)*r*1.35);
+      segment(workA,workB,i%2?'gravity':'split',.034,.62);
+    }
+  }
+  function sunburst(pos,radius=1){
+    counters.sunburst++;
+    const count=qualityLevel===0?6:10;
+    for(let i=0;i<count;i++){
+      const a=i*Math.PI*2/count,inner=radius*.23,outer=radius*(i%2?.75:1);
+      workA.set(pos.x+Math.cos(a)*inner,.66,pos.z+Math.sin(a)*inner);
+      workB.set(pos.x+Math.cos(a)*outer,.66,pos.z+Math.sin(a)*outer);
+      segment(workA,workB,i%2?'amber':'burst',.056,.22,i%3*.018);
+    }
+  }
   function reflect(pos,dir){
     counters.reflect++;pulse(pos,'reflect',.42,.3);burst(pos,'reflect',12);
     workA.set(pos.x,.7,pos.z);workB.set(dir.z,0,-dir.x);
@@ -212,7 +299,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   }
   function dash(pos,angle){
     counters.dash++;
-    emitRotation.setFromAxisAngle(up,angle);emit(ghosts,pos,'seed',.32,1.35,1.35,1.35,{rotation:emitRotation});
+    emitRotation.setFromAxisAngle(up,angle);emit(ghosts,pos,'seed',.32,1.35,1.35,1.35,{rotation:emitRotation,cell:VFX_CELLS.leaf});
   }
   function evolution(pos,id){
     counters.evolution++;pulse(pos,id,.7,.8);pulse(pos,id,1.1,.6,.55);
@@ -309,8 +396,8 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     }
   }
   function clear(){for(const pool of batches){for(const p of pool.slots)p.life=0;pool.mesh.count=0;}}
-  return {pulse,burst,flame,explosion,impact,muzzle,trail,reflect,split,arc,portal,dash,evolution,bossPitch,bossRush,bossSwing,bossWave,bossPhase,update,clear,setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
-    state:()=>({theme:themeId,quality:qualityLevel,textured:Boolean(atlas),active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
+  return {pulse,burst,flame,explosion,impact,muzzle,trail,lance,frostWeb,rewindTrace,mirrorArc,gardenVortex,sunburst,reflect,split,arc,portal,dash,evolution,bossPitch,bossRush,bossSwing,bossWave,bossPhase,update,clear,setCamera:camera=>{viewCamera=camera;},setTheme:id=>{themeId=normalizeTheme(id);return themeId;},setQuality:level=>qualityLevel=Math.max(0,Math.min(2,level|0)),
+    state:()=>({theme:themeId,quality:qualityLevel,textured:Boolean(atlas),spriteBeams:Boolean(beams.sprite),spriteDash:Boolean(ghosts.sprite),active:batches.reduce((s,p)=>s+p.mesh.count,0),capacity:batches.reduce((s,p)=>s+p.capacity,0),batches:batches.length,events:{...counters}}),
     dispose(){group.removeFromParent();for(const {mesh} of batches){mesh.dispose();mesh.geometry.dispose();mesh.material.dispose();}}
   };
 }

@@ -1,8 +1,8 @@
 import './combo-art.css';
 import './combo-lab.css';
 import {COMBO_LAW_BY_ID,FIRST_FUSIONS,SECOND_FUSIONS} from './combo-catalog.js';
-import {comboArt,comboProjectileArt} from './combo-art.js';
-import {CURATED_FORMS,SECOND_FORMS} from './forms.js';
+import {comboArt} from './combo-art.js';
+import {CURATED_FORMS,SECOND_FORMS,isHeldBack} from './forms.js';
 import {formArt} from './form-art.js';
 
 const $=q=>document.querySelector(q);
@@ -25,7 +25,9 @@ function card(v){
  const lawNames=v.laws.map(id=>COMBO_LAW_BY_ID[id].name).join(' · ');
  const badge=v.family==='resonance'?'공명형':v.family==='convergence'?'교차형':'1차 융합';
  const curated=curatedOf(v);
- return `<article class="combo-card" style="--a:${v.visual.accent};--b:${v.visual.secondary}"><div class="art">${curated?formArt(curated.id,'lab-form-art'):comboArt(v)}${comboProjectileArt(v)}</div><div class="copy"><small>${badge} · ${v.id}</small><h2>${curated?.name||v.name}</h2><p>${curated?.desc||v.epithet||v.mechanic}</p><span>${lawNames}</span>${v.rule?`<em>${v.rule}</em>`:''}</div></article>`;
+ const artKind=curated?'선택 원화':'법칙 조합 시안';
+ const status=!curated?'연구 중 · 전투 미적용':v.family||isHeldBack(curated.id)?'연구 중 · 탄환·적중 연출 검수 전':'게임에 적용된 조합';
+ return `<article class="combo-card" style="--a:${v.visual.accent};--b:${v.visual.secondary}"><div class="art">${curated?formArt(curated.id,'lab-form-art'):comboArt(v)}<span class="art-kind">${artKind}</span></div><div class="copy"><small>${badge} · ${v.id}</small><h2>${curated?.name||v.name}</h2><p>${curated?.desc||v.epithet||v.mechanic}</p><span>${lawNames}</span><small class="art-status">${status}</small>${v.rule?`<em>${v.rule}</em>`:''}</div></article>`;
 }
 
 function draw(){

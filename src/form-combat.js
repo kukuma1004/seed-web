@@ -21,7 +21,7 @@ export const ORBIT_VISUALS=Object.freeze({
  starring:Object.freeze({geometry:'starPetal',material:'star',motion:'breathing-star'}),
  comethalo:Object.freeze({geometry:'cometBud',material:'storm',motion:'charged-comet'}),
  halobloom:Object.freeze({geometry:'haloPetal',material:'seed',motion:'counting-halo'}),
- ebbring:Object.freeze({geometry:'blade',material:'tide',motion:'ebbing-ring'}),
+ ebbring:Object.freeze({geometry:'ebbBlade',material:'tide',motion:'ebbing-ring'}),
  spearring:Object.freeze({geometry:'gravityStake',material:'blade',motion:'launching-spears'}),
  accretiondisk:Object.freeze({geometry:'vortex',material:'core',motion:'feeding-disk'})
 });
@@ -79,7 +79,7 @@ const immovable=e=>['warden','austin','act2warden','alwaysbeginner','turret'].in
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
 export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
- const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
+ const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
  const awakenedMats=new Map();
@@ -258,14 +258,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
    case 'sunmirror':{
     if(full('sunmirror',S.bolts))return S.interval;
-    const ob=spawnMesh(geos.lens,mats.star,pos);ob.rotation.x=-Math.PI/2;
+    const ob=spawnMesh(geos.sunMirror,mats.star,pos);ob.rotation.x=-Math.PI/2;
     bolts.push({kind:'sunmirror',ob,dir:aim,life:S.life,charge:force?4:0});
     fx.muzzle(pos,aim,'burst');return S.interval;
    }
    case 'pullgarden':{
     if(full('pullgarden',2))return S.interval;
     const to=target?new V(target.x,0,target.z):pos.clone().addScaledVector(aim,5),offset=to.clone().sub(pos).setY(0);if(offset.length()>S.range)offset.setLength(S.range);
-    bolts.push({kind:'pullgarden',ob:spawnMesh(geos.bloom,mats.core,pos),from:pos.clone().setY(0),to:pos.clone().setY(0).add(offset),t:0,life:4});
+    bolts.push({kind:'pullgarden',ob:spawnMesh(geos.pullSeed,mats.core,pos),from:pos.clone().setY(0),to:pos.clone().setY(0).add(offset),t:0,life:4});
     fx.muzzle(pos,aim,'gravity');return S.interval;
    }
    case 'frostbloom':{
@@ -419,7 +419,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    for(const other of near(e.g.position,S.shatterRadius+.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<S.shatterRadius+bossReach(other,0,.4))
     support(other,S.shatter*S.shatterShare,{kind:'icicle',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});
   }
-  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.7),'frost',false);
+  fx.lance(start,end,'icicle');
   fx.pulse(end,'frost',.5,.2);
  }
 
@@ -448,14 +448,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    route.push(next.g.position.clone().setY(0));from=next;
   }
   if(route.length<S.minLinks)return;
-  for(let i=1;i<route.length;i++)frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
+  for(let i=1;i<route.length;i++){
+   frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
+   fx.frostWeb(route[i-1],route[i]);
+  }
  }
  function updateFrostLines(dt){
   for(const line of frostLines){
    line.life-=dt;line.tick-=dt;
    if(line.life<=0||line.tick>0)continue;
    line.tick=S.webTick||.5;
-   fx.trail(line.a.clone().setY(.22),line.b.clone().setY(.22),'frost',true);
+   fx.frostWeb(line.a,line.b);
    for(const e of enemies()){
     if(e.dead||segmentDistance(line.a,line.b,e.g.position)>=bossReach(e,.72,1.2))continue;
     support(e,S.webDamage,{kind:'frostnet',indirect:true,phase:'line',direction:e.g.position.clone().sub(line.a).setY(0).normalize()});
@@ -479,13 +482,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
   // One enemy leaves no road worth rewinding.
   if(route.length<3)return;
+  for(let i=1;i<route.length;i++)fx.rewindTrace(route[i-1],route[i]);
   const memory={route,life:S.forget,moved:0};
   if(instant){replayRoute(memory);return;}
   rewindMemories.push(memory);
   while(rewindMemories.length>S.trails)rewindMemories.shift();
  }
  function replayRoute(memory){
-  for(let i=1;i<memory.route.length;i++)fx.arc(memory.route[i-1],memory.route[i]);
+  for(let i=memory.route.length-1;i>0;i--){
+   fx.arc(memory.route[i],memory.route[i-1]);
+   fx.rewindTrace(memory.route[i],memory.route[i-1],true,(memory.route.length-1-i)*.045);
+  }
   sound('chainHit');
   for(const e of enemies()){
    if(e.dead)continue;
@@ -541,7 +548,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(!support(e,S.damage*(1+S.foldGain*folds),{kind:'refractlance',direction:heading.clone()})){budget=0;break;}
     budget--;
    }
-   for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(heading,d).setY(.7),start.clone().addScaledVector(heading,Math.min(flat(start,end),d+1.5)).setY(.7),'pierce',folds>0);
+   fx.lance(start,end,'refractlance',folds>0);
    if(!hinge||budget<=0||leg>=S.folds){fx.pulse(end,'pierce',.5,.2);break;}
    fx.reflect(end,hinge);sound('reflect');
    folds++;start=end.clone();heading=hinge;
@@ -554,13 +561,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function thunderMirror(pos,first=null){
   const a=first||nearestEnemy(pos,S.reach,new Set(),true);if(!a)return;
   const b=nearestEnemy(a.g.position,S.range,new Set([a]),true);
-  fx.arc(pos.clone().setY(.9),a.g.position);
+  fx.mirrorArc(pos,a.g.position);fx.burst(a.g.position,'reflect',4,.35);
   let damage=S.damage;support(a,damage,{kind:'thundermirror',indirect:true,direction:a.g.position.clone().sub(pos).setY(0).normalize()});
-  if(!b){fx.pulse(a.g.position,'reflect',.6,.2);support(a,S.damage*S.soloEcho,{kind:'thundermirror',indirect:true,phase:'wall',direction:a.g.position.clone().sub(pos).setY(0).normalize()});return;}
+  if(!b){fx.reflect(a.g.position,a.g.position.clone().sub(pos).setY(0).normalize());support(a,S.damage*S.soloEcho,{kind:'thundermirror',indirect:true,phase:'wall',direction:a.g.position.clone().sub(pos).setY(0).normalize()});return;}
   let from=a,to=b;
   for(let i=0;i<S.echoes;i++){
    if(to.dead||from.dead)break;
-   damage*=S.decay;fx.arc(from.g.position,to.g.position);
+   damage*=S.decay;fx.mirrorArc(from.g.position,to.g.position,i+1);fx.burst(to.g.position,'reflect',4,.35,(i+1)*.045);
    support(to,damage,{kind:'thundermirror',indirect:true,phase:'echo',direction:to.g.position.clone().sub(from.g.position).setY(0).normalize()});
    [from,to]=[to,from];
   }
@@ -585,11 +592,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    for(let k=0;k<S.spread;k++){
     if(count('showerpetal')>=30)break;
     const side=(k%2?-1:1)*(1.05+.25*Math.floor(k/2));
-    const ob=spawnMesh(geos.seed,mats.seed,e.g.position);ob.rotation.x=-Math.PI/2;
+    const ob=spawnMesh(geos.showerPetal,mats.seed,e.g.position);ob.rotation.x=-Math.PI/2;
     bolts.push({kind:'showerpetal',ob,dir:dir.clone().applyAxisAngle(Y,side),life:S.petalLife,passed:new Set([e])});
    }
   }
-  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.7),'pierce',false);
+  fx.lance(start,end,'shower');
   if(struck)fx.split(end,dir,Math.min(5,struck));
  }
 
@@ -598,7 +605,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let i=0;i<count;i++){
    const a=i*Math.PI*2/count+.4,spot=center.clone().add(new V(Math.cos(a),0,Math.sin(a)).multiplyScalar(count>1?1.35:0));
    constrain(spot,.3);
-   gardens.push({pos:spot,life:S.life,tick:0});fx.pulse(spot,'gravity',S.fieldRadius,.35);
+   gardens.push({pos:spot,life:S.life,tick:0});
   }
   while(gardens.length>12)gardens.shift();
  }
@@ -612,7 +619,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(d>.25){e.g.position.addScaledVector(pull.normalize(),Math.min(d-.25,S.pull*dt));constrain(e.g.position,.65);}
    }
    if(g.tick<=0){
-    g.tick=S.tickEvery;fx.flame(g.pos,'gravity',6,S.fieldRadius*.3);
+    g.tick=S.tickEvery;fx.gardenVortex(g.pos,S.fieldRadius);fx.flame(g.pos,'gravity',6,S.fieldRadius*.3);
     for(const e of inside)support(e,S.damage,{kind:'pullgarden',indirect:true,phase:'tick',direction:e.g.position.clone().sub(g.pos).setY(0).normalize()});
    }
    if(inside.length>=S.bloomAt){
@@ -897,7 +904,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }else if(active==='ebbring'){
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);
-     support(e,S.damage*(S.calm?S.calmScale:1),{kind:'ebbring',indirect:true,direction:e.g.position.clone().sub(center).setY(0).normalize()});fx.pulse(e.g.position,'recall',.4,.18);
+     support(e,S.damage*(S.calm?S.calmScale:1),{kind:'ebbring',indirect:true,direction:e.g.position.clone().sub(center).setY(0).normalize()});fx.burst(e.g.position,'recall',4,.35);
     }
    }else if(active==='halobloom'){
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
@@ -1291,7 +1298,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(e)support(e,S.damage,{kind:'sunmirror',direction:b.dir.clone()});
     if(e||wall||b.life<=dt){
      b.life=0;const radius=S.radius+S.chargeRadius*b.charge,blast=S.blast*(1+S.chargeGain*b.charge),at=b.ob.position.clone().setY(0);
-     fx.explosion(at,'burst',radius,b.charge>=3);sound('burstHit');
+     fx.sunburst(at,radius);fx.explosion(at,'burst',radius,b.charge>=3);sound('burstHit');
      for(const o of near(at,radius+.8))if(!o.dead&&flat(o.g.position,at)<radius+bossReach(o,0,.5))support(o,blast,{kind:'sunmirror',indirect:true,phase:'blast',direction:o.g.position.clone().sub(at).setY(0).normalize()});
      continue;
     }

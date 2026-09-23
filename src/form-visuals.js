@@ -59,12 +59,12 @@ function bud(name,radius,height,petals,color){
  parts.push(paint(leaf(height*.42,radius*.48,.02,.035),C.gold).translate(0,height*.43,0));
  return join(name,parts);
 }
-function crescent(scale=1){
+function crescent(scale=1,curveSegments=7){
  const s=new THREE.Shape();
  s.moveTo(-.47,-.28);s.bezierCurveTo(-.05,-.19,.33,-.07,.41,.52);
  s.bezierCurveTo(.7,.11,.47,-.38,.12,-.47);
  s.bezierCurveTo(-.16,-.53,-.32,-.4,-.47,-.28);
- const g=new THREE.ExtrudeGeometry(s,{depth:.065,bevelEnabled:true,bevelThickness:.014,bevelSize:.015,bevelSegments:1,steps:1,curveSegments:7});
+ const g=new THREE.ExtrudeGeometry(s,{depth:.065,bevelEnabled:true,bevelThickness:.014,bevelSize:.015,bevelSegments:1,steps:1,curveSegments});
  return g.translate(0,0,-.0325).scale(scale,scale,scale);
 }
 
@@ -175,8 +175,35 @@ export function createFormVisuals(){
   paint(leaf(.3,.11,.04,.03,5),C.jade).rotateX(Math.PI/2).rotateZ(.9).translate(.1,0,-.3)
  ]);
  geos.haloPetal=join('halo-bloom-petal',[
-  petal(.52,.27,{edge:C.ivory,inner:C.jade,bend:.05,depth:.07}),
+  petal(.52,.27,{edge:C.ivory,inner:C.gold,bend:.05,depth:.07}),
+  paint(leaf(.25,.07,.02,.018,5),C.jade).translate(0,.055,.06),
   paint(new THREE.OctahedronGeometry(.085,0),C.gold).translate(0,-.2,0)
+ ]);
+ // 2묶음. 각각 한 메시와 기존 재질을 사용하며 카드의 주 실루엣만 남긴다.
+ geos.sunMirror=join('sun-mirror-core',[
+  paint(new THREE.TorusGeometry(.28,.039,4,12),C.gold),
+  paint(new THREE.CylinderGeometry(.195,.195,.052,12,1),C.ivory).rotateX(Math.PI/2),
+  paint(new THREE.OctahedronGeometry(.145,0),C.gold).translate(0,0,.055),
+  paint(leaf(.24,.08,.01,.025,4),C.jade).rotateZ(Math.PI/2).translate(-.27,0,.04),
+  paint(leaf(.24,.08,.01,.025,4),C.jade).rotateZ(-Math.PI/2).translate(.27,0,.04)
+ ]);
+ geos.showerPetal=join('piercing-shower-petal',[
+  petal(.49,.24,{edge:C.ivory,inner:C.gold,bend:.08,depth:.075}),
+  paint(leaf(.26,.09,.04,.022,5),C.blue).rotateZ(.18).translate(-.07,-.17,.045),
+  paint(new THREE.OctahedronGeometry(.055,0),C.ice).translate(0,.21,.04)
+ ]);
+ geos.ebbBlade=join('ebbing-wave-blade',[
+  paint(crescent(.82,4),C.blue).rotateZ(-.2),
+  paint(leaf(.54,.14,.14,.045,4),C.ice).rotateZ(-.78).translate(-.08,.025,.065),
+  paint(new THREE.OctahedronGeometry(.13,0).scale(.8,1.2,.7),C.gold).translate(-.18,-.22,.1),
+  paint(leaf(.31,.08,.06,.02,4),C.ivory).rotateZ(-1).translate(.19,.16,.1)
+ ]);
+ geos.pullSeed=join('gravity-split-pull-seed',[
+  paint(new THREE.IcosahedronGeometry(.19,0).scale(.82,1.25,.82),C.violet),
+  paint(new THREE.TorusGeometry(.22,.032,4,10),C.gold).rotateX(Math.PI/2),
+  paint(leaf(.28,.11,.04,.03,4),C.ivory).rotateZ(.6).translate(.13,-.16,.025),
+  paint(leaf(.28,.11,.04,.03,4),C.ivory).rotateZ(-.6).translate(-.13,-.16,.025),
+  paint(new THREE.ConeGeometry(.042,.3,4),C.jade).rotateZ(Math.PI).translate(0,-.29,.01)
  ]);
  return {mats,geos};
 }
