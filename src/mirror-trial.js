@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {ALL_FORMS} from './forms.js';
+import {ALL_FORMS,SOLO_FORMS} from './forms.js';
 
 // The mirror is one bounded boss AI that translates a build into readable
 // patterns. It never runs a second copy of the player's projectile simulation.
@@ -32,6 +32,20 @@ export const MIRROR_BREAK=Object.freeze({
  damageMultiplier:1.4,
  ultimateCharge:.12
 });
+
+// A mirror should reward close dodges, not disappear to one isolated burst.
+// Its guard regenerates in real time and opens wide during a perfect-dodge break.
+export const MIRROR_GUARD=Object.freeze({burst:.12,perSecond:.12,breakBurst:.24,breakPerSecond:.38});
+export function mirrorDamageAllowed(enemy,amount){
+ const cap=enemy.maxHp*(enemy.broken>0?MIRROR_GUARD.breakBurst:MIRROR_GUARD.burst);
+ const bank=Math.min(cap,Math.max(0,enemy.damageAllowance??cap));
+ const dealt=Math.min(Math.max(0,Number(amount)||0),cap,bank);
+ enemy.damageAllowance=bank-dealt;return dealt;
+}
+export function refillMirrorGuard(enemy,dt){
+ const broken=enemy.broken>0,cap=enemy.maxHp*(broken?MIRROR_GUARD.breakBurst:MIRROR_GUARD.burst);
+ enemy.damageAllowance=Math.min(cap,(enemy.damageAllowance??cap)+enemy.maxHp*(broken?MIRROR_GUARD.breakPerSecond:MIRROR_GUARD.perSecond)*Math.max(0,dt));
+}
 
 export const MIRROR_ATTACK_CADENCE=Object.freeze({
  autoFire:true,
@@ -101,7 +115,10 @@ export function mirrorBuildSnapshot({levels=new Map(),forms=new Map(),dashEvolut
  const laws=entryList(levels).filter(([id])=>LAWS[id]).map(([id,level])=>Object.freeze({id,level:levelOf(level)}));
  const evolved=entryList(forms).filter(([id])=>ALL_FORMS[id]).map(([id,level])=>{
   const form=ALL_FORMS[id];
-  return Object.freeze({id,level:levelOf(level),laws:Object.freeze(form.requires.filter(law=>LAWS[law]))});
+  const copiedLaws=new Set(form.requires.filter(law=>LAWS[law]));
+  if(form.addedSolo)for(const law of SOLO_FORMS[form.addedSolo]?.requires||[])copiedLaws.add(law);
+  if(form.twin)for(const part of form.parts)for(const law of SOLO_FORMS[part]?.requires||[])copiedLaws.add(law);
+  return Object.freeze({id,name:form.name,level:levelOf(level),laws:Object.freeze([...copiedLaws])});
  });
  const dash=typeof dashEvolution==='string'&&dashEvolution?dashEvolution:null;
  return Object.freeze({laws:Object.freeze(laws),forms:Object.freeze(evolved),dashEvolution:dash});
@@ -153,12 +170,22 @@ export function mirrorPatternPlan(snapshot,{floor,round=1,quality='normal'}={}){
  const tower=mirrorFloorRules(floor??round,{quality});
  // Every acquired family stays in the loadout. The scheduler only limits how
  // many may start on the same beat; it never removes a chosen law or form.
- const attacks=ordered.map(([law,score],index)=>Object.freeze({
+ const lawAttacks=ordered.map(([law,score],index)=>Object.freeze({
   ...MIRROR_PATTERNS[law],law,weight:Number(score.toFixed(2)),order:index+1
  }));
+ // The clone opens with the player's actual evolved forms. Their two or three
+ // laws are combined in one bounded volley, then the base-law attacks rotate.
+ const formAttacks=(snapshot?.forms||[]).filter(form=>form.laws.length).map((form,index)=>{
+  const primary=ordered.find(([law])=>form.laws.includes(law))?.[0]||form.laws[0];
+  return Object.freeze({
+   ...MIRROR_PATTERNS[primary],id:`form-${form.id}`,name:`${form.name||ALL_FORMS[form.id]?.name||'진화'} · 거울`,
+   law:primary,formId:form.id,laws:Object.freeze([...form.laws]),order:index+1
+  });
+ });
+ const attacks=Object.freeze([...formAttacks,...lawAttacks]);
  const r=tower.difficulty,lead=ordered[0][0];
  return Object.freeze({
-  attacks:Object.freeze(attacks),
+  attacks,
   loadout:mirrorCloneLoadout(snapshot),
   concurrentAttackFamilies:tower.concurrentAttackFamilies,
   chainLength:tower.chainLength,

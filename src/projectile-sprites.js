@@ -24,6 +24,14 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
  texture.minFilter=THREE.LinearMipmapLinearFilter;
  texture.magFilter=THREE.LinearFilter;
  const material=new THREE.MeshBasicMaterial({map:texture,transparent:true,alphaTest:.07,depthWrite:false,depthTest:true,side:THREE.FrontSide,toneMapped:false});
+ // The blue storm painting vanishes against the act-3 clouds. Recolor only its
+ // luminance in one shared instanced batch; no second texture or per-bolt mesh.
+ const stormMaterial=material.clone();
+ stormMaterial.onBeforeCompile=shader=>{shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+  float stormInk=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+  vec3 stormEmber=mix(vec3(.18,.025,.025),vec3(1.,.31,.035),smoothstep(.1,.72,stormInk));
+  diffuseColor.rgb=mix(stormEmber,vec3(1.,.96,.68),smoothstep(.7,1.,stormInk));`);};
+ stormMaterial.customProgramCacheKey=()=> 'seed-storm-amber-v1';
  const geometries=Array.from({length:16},(_,index)=>cellGeometry(index));
  const batches=new Array(16).fill(null),counts=new Uint16Array(16);
  const dummy=new THREE.Object3D(),right=new THREE.Vector3(),up=new THREE.Vector3(),travel=new THREE.Vector3(),roll=new THREE.Quaternion(),zAxis=new THREE.Vector3(0,0,1);
@@ -37,7 +45,7 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
  const active=()=>ready&&enabled;
  let used=0,hidden=0,mirrorCount=0;
  function make(cell,size){
-  const mesh=new THREE.InstancedMesh(geometries[cell],material,size);
+  const mesh=new THREE.InstancedMesh(geometries[cell],cell===PROJECTILE_DNA_CELLS.storm?stormMaterial:material,size);
   mesh.name=`seed-projectile-dna-${cell}`;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
   mesh.frustumCulled=false;mesh.castShadow=false;mesh.receiveShadow=false;
   mesh.renderOrder=12;mesh.count=0;mesh.visible=false;scene.add(mesh);
@@ -77,7 +85,7 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
    // A baseball keeps its hand-painted red seams and physical ball shape.
    if(p.spriteKey==='baseball'){p.ob.visible=true;p.ob.userData.spriteHidden=false;continue;}
    const key=p.mirror?p.law||'seed':p.spriteKey||((p.boss||p.pierce)?'boss':'hostile');
-   add(p,PROJECTILE_DNA_CELLS[key]??PROJECTILE_DNA_CELLS.hostile,key==='hostile'?.75:key==='boss'?1.12:1);
+   add(p,PROJECTILE_DNA_CELLS[key]??PROJECTILE_DNA_CELLS.hostile,key==='hostile'?.75:key==='boss'?1.12:key==='storm'?(p.boss?1.34:1.16):1);
   }
   for(let cell=0;cell<batches.length;cell++){
    const batch=batches[cell];if(!batch)continue;
@@ -89,6 +97,6 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
   return used;
  }
  function setEnabled(value){enabled=Boolean(value);return active();}
- function dispose(){for(const batch of batches)if(batch){batch.mesh.removeFromParent();batch.mesh.dispose();}mirrorHalos.removeFromParent();mirrorHalos.dispose();haloGeometry.dispose();haloMaterial.dispose();for(const geometry of geometries)geometry.dispose();material.dispose();texture.dispose();}
+ function dispose(){for(const batch of batches)if(batch){batch.mesh.removeFromParent();batch.mesh.dispose();}mirrorHalos.removeFromParent();mirrorHalos.dispose();haloGeometry.dispose();haloMaterial.dispose();for(const geometry of geometries)geometry.dispose();stormMaterial.dispose();material.dispose();texture.dispose();}
  return {sync,setEnabled,active,state:()=>({active:active(),ready,drawn:used,batches:batches.filter(b=>b?.mesh.count).length,mirrorRims:mirrorCount,hidden,capacity,file}),dispose};
 }

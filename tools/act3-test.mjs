@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn} from '../src/act3.js';
+import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn,act3SupplyDrop} from '../src/act3.js';
 import {ACT2_PRESSURE} from '../src/act2.js';
 import {ACT3_GEOMETRIES,ACT3_ART,ACT3_MINIONS,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,TEMPEST_CARRIER} from '../src/act3-enemies.js';
 import {createSkyway} from '../src/skyway.js';
@@ -26,6 +26,11 @@ assert.equal(crowd.filter(type=>type==='sky-diver').length,1,'chargers are rare'
 assert.ok(crowd.filter(type=>type!=='sky-diver').length>=11,'shooters dominate the route');
 assert.ok(ACT3_MINIONS['sky-diver'].hp<ACT3_MINIONS['sky-scout'].hp,'the rare charger is fragile');
 for(let i=0;i<14;i++)assert.ok(insideArena(act3ReinforcementSpawn(i),.5,ACT3_ARENA),'reinforcement lane stays inside the route');
+assert.ok(act3ReinforcementSpawn(3).x-act3ReinforcementSpawn(2).x<2,'중앙 편대는 분열탄도 닿을 만큼 밀집한다');
+assert.equal(act3SupplyDrop('sky-carrier',2,false,{tonic:4}),'tonic','후반 방 보급 모함을 잡으면 물약을 얻는다');
+assert.equal(act3SupplyDrop('sky-carrier',2,true,{tonic:4}),null,'방마다 첫 보급만 준다');
+assert.equal(act3SupplyDrop('sky-carrier',3,false,{tonic:5}),null,'가방 상한을 넘지 않는다');
+assert.equal(act3SupplyDrop('sky-scout',3,false,{tonic:0}),null,'일반 잡몹은 물약을 만들지 않는다');
 
 assert.equal(SKYWAY_ROOMS.length,5);assert.equal(arenaFor(0,0,ACT3_REGION),ACT3_ARENA);
 assert.equal(shouldBuildArenaBoundary(ACT3_REGION),false,'the scrolling route has no visible front/back room walls');assert.equal(shouldBuildArenaBoundary('garden'),true);
@@ -67,6 +72,12 @@ for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
  assert.equal(e.homeReady,true,`${type} owns a stable formation anchor`);assert.ok(Number.isFinite(e.artRoll),`${type} bank animation stays finite`);
  assert.ok(w.bolts.length||states.has('commit'),`${type} produces a shot or a real charge`);
  if(type==='sky-bomber')assert.ok(w.bolts.length>=3,'bomber completes its warning and fan attack');
+}
+{
+ const normal=world(),frozen=world(),a=createAct3Minion(scene,'sky-scout',()=>.25),b=createAct3Minion(scene,'sky-scout',()=>.25);
+ for(const enemy of [a,b]){enemy.g.position.set(0,0,-5);enemy.state='stalk';enemy.timer=0;}
+ b.slow=1;tickAct3Minion(a,.016,0,normal.ctx);tickAct3Minion(b,.016,0,frozen.ctx);
+ assert.ok(frozen.bolts[0].spec.speed<normal.bolts[0].spec.speed*.85,'빙결은 새로 발사한 적탄 속도도 낮춘다');
 }
 {
  const w=world(),e=createAct3Warden(scene);e.g.position.set(0,0,-5);e.timer=0;const moves=new Set();

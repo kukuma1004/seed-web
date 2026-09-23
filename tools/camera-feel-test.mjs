@@ -8,6 +8,9 @@ for(let i=0;i<20;i++)pose=camera.follow(1/60,{playerX:i*.08,playerZ:0,moveX:.08,
 assert.ok(pose.lookAhead.x>.35&&pose.x>0,'deliberate movement creates a bounded look-ahead');
 const before=pose.lookAhead.x;for(let i=0;i<30;i++)pose=camera.follow(1/60,{playerX:1.6,playerZ:0,moveX:.0001,moveZ:0,followX:.5,followZ:.4,baseZoom:1.3});
 assert.ok(pose.lookAhead.x<before*.2,'tiny stick noise decays instead of moving the camera');
+const skyCamera=createCameraFeel();let skyPose=null;
+for(let i=0;i<60;i++)skyPose=skyCamera.follow(1/60,{playerX:i*.1,playerZ:0,moveX:.1,moveZ:0,followX:.045,followZ:.02,leadScale:0,baseZoom:1.3});
+assert.equal(skyPose.lookAhead.x,0,'3막은 이동 입력에 따라 탄이 같이 밀려 보이지 않도록 시선 선행을 끈다');
 camera.triggerUltimate(true);assert.equal(camera.stepEffects(.01),.08,'only an ultimate requests a short simulation hold');
 pose=camera.follow(.01,{baseZoom:1.3});assert.notEqual(pose.zoom,1.3,'ultimate activation owns a brief camera punch');
 for(let i=0;i<60;i++){camera.stepEffects(1/60);pose=camera.follow(1/60,{baseZoom:1.3});}

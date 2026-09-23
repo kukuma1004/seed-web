@@ -15,7 +15,7 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
  const edges=new THREE.InstancedMesh(edgeGeo,edgeMat,farCount),clouds=new THREE.InstancedMesh(edgeGeo,cloudMat,nearCount);group.add(edges,clouds);
  edges.frustumCulled=clouds.frustumCulled=false;edges.instanceMatrix.setUsage(THREE.DynamicDrawUsage);clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
  const rain=Array.from({length:farCount+nearCount},(_,i)=>({x:-22+(i*7.13)%44,z:-22+(i*9.47)%44,s:.5+(i%5)*.17}));
- const m=new THREE.Matrix4(),p=new THREE.Vector3(),q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,-.16)),s=new THREE.Vector3(),saved=new Map(),hidden=new Map();let active=false,distance=0,speed=5.4,map=null;
+ const m=new THREE.Matrix4(),p=new THREE.Vector3(),q=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,-.16)),s=new THREE.Vector3(),saved=new Map(),hidden=new Map();let active=false,distance=0,speed=6.8,map=null;
  const background=new THREE.Color('#142c38'),fog=new THREE.Color('#193a50');
  // Blend only the overlap at the route's ends. This keeps continuous forward
  // travel without a hard image seam, a mirrored island, or a second full layer.

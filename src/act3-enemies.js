@@ -29,12 +29,12 @@ const craft=(kind)=>{
 // Tail, rim and core are merged once; each projectile remains one shared mesh.
 const skyBolt=(boss=false)=>{
  const radius=boss?.20:.16,parts=[];
- parts.push(tint(new THREE.SphereGeometry(radius,8,5).scale(.74,.62,1.65),0xffeff8));
+ parts.push(tint(new THREE.SphereGeometry(radius,8,5).scale(.74,.62,1.65),0xfff2bb));
  // A thicker rim survives the low-resolution mobile render without bloom;
  // it stays joined to the pale head instead of reading as a second tiny ring.
- parts.push(tint(new THREE.TorusGeometry(radius*1.04,radius*.22,4,12).rotateX(Math.PI/2).scale(.78,1,1.5),boss?0xff64d3:0xff6398));
- parts.push(tint(new THREE.ConeGeometry(radius*.53,boss?1.18:.92,6).rotateX(-Math.PI/2).translate(0,0,boss?-.64:-.5),boss?0xc76faa:0xcc647f));
- parts.push(tint(new THREE.ConeGeometry(radius*.29,.63,5).rotateX(-Math.PI/2).translate(0,.018,-.36),0xffbed6));
+ parts.push(tint(new THREE.TorusGeometry(radius*1.04,radius*.22,4,12).rotateX(Math.PI/2).scale(.78,1,1.5),boss?0xff6a1c:0xff8331));
+ parts.push(tint(new THREE.ConeGeometry(radius*.53,boss?1.18:.92,6).rotateX(-Math.PI/2).translate(0,0,boss?-.64:-.5),boss?0xcf3d24:0xb74c2c));
+ parts.push(tint(new THREE.ConeGeometry(radius*.29,.63,5).rotateX(-Math.PI/2).translate(0,.018,-.36),0xffc66c));
  return merge(parts);
 };
 
@@ -56,7 +56,7 @@ export const ACT3_MINIONS=Object.freeze({
  'sky-scout':{kind:'scout',hp:54,speed:3.85,damage:11,cooldown:1.5},
  'sky-diver':{kind:'diver',hp:28,speed:5.3,damage:18,cooldown:1.9},
  'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.7},
- 'sky-carrier':{kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.45}
+ 'sky-carrier':{name:'보급 모함',kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.45}
 });
 export const ACT3_ART=Object.freeze({
  'sky-scout':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:0,size:1.72,baseline:.08}),
@@ -85,7 +85,8 @@ export function damageTempestCarrier(e,amount){const cap=e.maxHp*TEMPEST_CARRIER
 
 const face=(e,d)=>{if(d.lengthSq()>.001)e.g.rotation.y=Math.atan2(d.x,d.z);};
 const finishMotion=(e,dt,time)=>{const dx=e.g.position.x-e.before.x,dz=e.g.position.z-e.before.z;e.artRoll=THREE.MathUtils.damp(e.artRoll,THREE.MathUtils.clamp(-dx*2.4,-.24,.24),9,dt);e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,-dx*1.7,7,dt);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,dz*.34,7,dt);e.body.position.y=Math.sin(time*5+e.phase)*.07;e.hit=Math.max(0,e.hit-dt);};
-const shot=(ctx,e,dir,spec={})=>ctx.bolt(e.g.position,dir,{speed:spec.speed||8.4,damage:spec.damage||e.config?.damage||14,boss:Boolean(spec.boss),curve:spec.curve||0,life:spec.life||4.5});
+const frozenShotScale=e=>e.slow>0?((e.type==='tempestcarrier'||e.type==='act3warden') ? 0.9 : 0.82):1;
+const shot=(ctx,e,dir,spec={})=>ctx.bolt(e.g.position,dir,{speed:(spec.speed||8.4)*frozenShotScale(e),damage:spec.damage||e.config?.damage||14,boss:Boolean(spec.boss),curve:spec.curve||0,life:spec.life||4.5});
 const formationMove=(e,dt,time,{x=1,z=.45,xf=1.15,zf=.72,speed=4}={})=>{
  if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;}
  e.formation.set(THREE.MathUtils.clamp(e.home.x+Math.sin(time*xf+e.phase)*x,-7.7,7.7),0,THREE.MathUtils.clamp(e.home.z+Math.cos(time*zf+e.phase)*z,-6.35,-2.65));
@@ -143,7 +144,7 @@ const BOSS_MOVES=Object.freeze([
 ]);
 const bossShot=(ctx,e,dir,spec={},offsetX=0)=>{
  const origin=e.g.position.clone();origin.x+=offsetX;
- ctx.bolt(origin,dir,{speed:spec.speed||8.4,damage:spec.damage||15,boss:true,curve:spec.curve||0,life:spec.life||5,scale:spec.scale||1});
+ ctx.bolt(origin,dir,{speed:(spec.speed||8.4)*frozenShotScale(e),damage:spec.damage||15,boss:true,curve:spec.curve||0,life:spec.life||5,scale:spec.scale||1});
 };
 function startBossBarrage(e,phase){
  e.state='barrage';e.volleyStep=0;e.volleyTimer=0;

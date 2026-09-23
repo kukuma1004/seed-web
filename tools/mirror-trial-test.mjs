@@ -19,7 +19,8 @@ for(const quality of ['low','normal']){
  const plan=mirrorPatternPlan(snapshot,{floor:12,quality});
  assert.ok(plan.attacks.length>=2,'고른 성질을 대표 두 개로 잘라내지 않는다');
  assert.ok(plan.concurrentAttackFamilies<=MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,'동시에 시작하는 공격군만 두 개 이하');
- assert.equal(plan.attacks[0].law,'recall','진화의 대표 성질을 우선한다');
+ assert.equal(plan.attacks[0].law,'recall','강화한 주 성질을 진화 공격의 기준으로 삼는다');
+ assert.equal(plan.attacks[0].formId,'returnflare','복사한 진화를 일반 법칙보다 먼저 쓴다');
  assert.equal(plan.loadout.exactCopy,true);
  assert.equal(plan.copied.healing,false);assert.equal(plan.copied.revive,false);assert.equal(plan.copied.relic,false);
  assert.ok(plan.budget.hostileProjectiles<=84,'모바일 적 탄환 예산을 넘지 않는다(7발 부채꼴 기준, 묶음 그리기)');
@@ -31,7 +32,8 @@ const blank=mirrorPatternPlan(mirrorBuildSnapshot(),{floor:1,quality:'low'});
 assert.equal(blank.attacks[0].law,'pierce','기본 씨앗은 읽기 쉬운 직선 공격부터 시작');
 assert.equal(blank.attacks.length,1,'첫 두 층은 대표 패턴 하나만 쓴다');
 const reflectStack=mirrorPatternPlan(mirrorBuildSnapshot({forms:new Map([['prism',5],['mirrormaze',5],['gravitymirror',5],['frostkaleidoscope',5],['mirrorguard',5]])}),{floor:10,quality:'low'});
-assert.equal(reflectStack.attacks.filter(x=>x.law==='reflect').length,1,'반사 진화를 여러 개 가져도 분신의 반사 공격군은 하나로 합친다');
+assert.equal(reflectStack.attacks.filter(x=>x.law==='reflect'&&!x.formId).length,1,'기본 반사 공격군은 하나만 유지한다');
+assert.equal(reflectStack.attacks.filter(x=>x.formId).length,5,'서로 다른 반사 진화는 각각 복사한다');
 assert.ok(reflectStack.attacks.length>1,'반사 이외의 진화 성질은 잃지 않는다');
 // 2026-09-22: 모든 층을 두 층 위 난이도로(1층 = 예전 3층).
 assert.equal(mirrorDifficultyFloor(1),3);assert.equal(mirrorDifficultyFloor(10),12);

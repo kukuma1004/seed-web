@@ -3,7 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSeedBody} from './seed-body.js';
 import {createMotion} from './motion.js';
-import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan} from './mirror-trial.js';
+import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan,refillMirrorGuard,MIRROR_GUARD} from './mirror-trial.js';
 
 export const MIRROR_ARENA=Object.freeze({
  shape:'circle',id:'mirror-tower',radius:13,
@@ -114,6 +114,26 @@ export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
  return fan({damageScale,speedScale:1.12});
 }
 
+// A form is one recognizable combined attack, not two unrelated law volleys.
+// Reuse the selected form's first-law silhouette and carry its other laws as
+// bounded flight/impact effects. The middle round owns area control so a copied
+// gravity build cannot fill the whole arena with simultaneous wells.
+export function mirrorFormVolley(attack,floor=1,shotIndex=0){
+ const laws=attack?.laws||[attack?.law||'pierce'],primary=attack?.law||laws[0]||'pierce';
+ const narrow=laws.includes('pierce'),base=narrow?[-.08,0,.08].map(angle=>({angle,speedScale:1.12})):mirrorVolley(primary,floor,shotIndex).slice(0,laws.includes('split')?5:4);
+ const middle=Math.floor(base.length/2);
+ return Object.freeze(base.map((spec,index)=>Object.freeze({
+  ...spec,law:primary,formId:attack?.formId,
+  damageScale:(spec.damageScale||1)*.72,
+  bounces:laws.includes('reflect')?Math.max(1,spec.bounces||0):spec.bounces||0,
+  gravity:laws.includes('gravity')&&index===middle,
+  frost:laws.includes('frost')||Boolean(spec.frost),
+  burst:laws.includes('burst')&&index===middle,
+  recall:laws.includes('recall')||Boolean(spec.recall),
+  curve:spec.curve||((laws.includes('chain')&&index!==middle)?(index<middle?-.09:.09):0)
+ })));
+}
+
 export const MIRROR_PROJECTILE_BASE_SPEED=10.2;
 export function mirrorProjectileSpeed(floor=1,speedScale=1){
  // 체감 난이도 층을 쓴다(1층 = 예전 3층 탄속).
@@ -147,15 +167,15 @@ export function createMirrorFighter(scene,{floor=1,quality='normal',levels=new M
  const hp=Math.round(180*plan.stats.hpScale);
  return {
   g:root,type:'mirrorseed',hp,maxHp:hp,dead:false,hit:0,slow:0,state:'stalk',timer:0,attackCD:.68,
-  broken:0,cracks:0,shotIndex:0,attackIndex:0,bursts:[],strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
+  broken:0,cracks:0,damageAllowance:hp*MIRROR_GUARD.burst,shotIndex:0,attackIndex:0,bursts:[],strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
   floor,plan,moveName:'비친 자동공격 준비',snapshot
  };
 }
 
 // 공격 하나 = 연사 한 번. 바로 쏘지 않고 줄에 세워 두었다가 pumpBursts가 interval마다 한 발씩 내보낸다.
 function fireAttack(enemy,entry){
- const volley=mirrorVolley(entry.attack.law,enemy.floor,enemy.shotIndex++);
- (enemy.bursts||=[]).push({clock:0,law:entry.attack.law,specs:volley.map(spec=>({...spec,damageScale:(spec.damageScale||1)*entry.damageScale*enemy.plan.stats.hitDamageMaxHp,law:entry.attack.law}))});
+ const volley=entry.attack.formId?mirrorFormVolley(entry.attack,enemy.floor,enemy.shotIndex++):mirrorVolley(entry.attack.law,enemy.floor,enemy.shotIndex++);
+ (enemy.bursts||=[]).push({clock:0,law:entry.attack.law,specs:volley.map(spec=>({...spec,damageScale:(spec.damageScale||1)*entry.damageScale*enemy.plan.stats.hitDamageMaxHp,law:spec.law||entry.attack.law}))});
 }
 function pumpBursts(enemy,dt,fire){
  const burst=enemy.bursts?.[0];if(!burst)return;
@@ -164,7 +184,8 @@ function pumpBursts(enemy,dt,fire){
  if(!burst.specs.length)enemy.bursts.shift();
 }
 
-export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit}={}){
+export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit,guardDt=dt}={}){
+ refillMirrorGuard(enemy,guardDt);
  const previousX=enemy.g.position.x,previousZ=enemy.g.position.z;
  enemy.hit=Math.max(0,(enemy.hit||0)-dt);enemy.turnTimer-=dt;
  if(enemy.turnTimer<=0){enemy.turnTimer=.92+(enemy.floor%3)*.16;enemy.strafeSign*=-1;}

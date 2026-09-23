@@ -24,8 +24,17 @@ export function act3CrowdType(index,stage=0){
  return 'sky-scout';
 }
 export function act3ReinforcementSpawn(index){
- const lanes=[-7.6,-5.1,-2.55,0,2.55,5.1,7.6];
+ // The middle three briefly form a cluster that split builds can cut apart;
+ // outer lanes stay open so chain and single-target builds still have routes.
+ const lanes=[-7.6,-5.1,-1.8,0,1.8,5.1,7.6];
  return Object.freeze({x:lanes[index%lanes.length],z:-7.2+(Math.floor(index/lanes.length)%2)*.9});
+}
+
+// Two supply windows, one in each late formation room. The player must bring
+// down a carrier; the item goes straight to the capped run bag and cannot be
+// farmed by leaving and re-entering a cleared room.
+export function act3SupplyDrop(type,stage,claimed,inventory){
+ return type==='sky-carrier'&&(stage===2||stage===3)&&!claimed&&(inventory?.tonic||0)<5?'tonic':null;
 }
 
 export const SKYWAY_ROOMS=Object.freeze([

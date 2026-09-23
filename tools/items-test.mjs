@@ -38,7 +38,7 @@ const old=emptyInventory();addItem(old,'potion',1);assert.equal(drinkPotion(old,
 // Austin gives the main item bundle: always the big potion, plus one bonus kind that is not already full.
 assert.deepEqual(austinDrops(()=>0),['potion','potion']);assert.deepEqual(austinDrops(()=>.999),['potion','sprout']);
 assert.match(ITEMS.potion.from,/오스틴/);assert.match(ITEMS.potion.from,/항상초심/);
-assert.equal(ITEMS.tonic.from,'상점 · 포탑');
+assert.equal(ITEMS.tonic.from,'상점 · 포탑 · 3막 보급 모함');
 for(const id of ['wind','shell','sprout']){assert.match(ITEMS[id].from,/오스틴/);assert.match(ITEMS[id].from,/항상초심/);}
 for(const id of ['potion','tonic','wind','shell'])assert.equal(ITEMS[id].max,5,`${id} run stack is capped at five`);
 assert.deepEqual(AUSTIN_BONUS.map(([id])=>id),['potion','wind','shell','sprout']);
