@@ -115,12 +115,13 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     const theme=THEMES[themeId];width*=theme.trailWidth;life*=theme.trailLife;
     segDelta.copy(b).sub(a);const length=segDelta.length();if(length<.001)return;
     segMid.copy(a).add(b).multiplyScalar(.5);segDelta.multiplyScalar(1/length);
+    let angle=0;
     if(beams.sprite&&viewCamera){
       viewSegment.copy(segDelta).transformDirection(viewCamera.matrixWorldInverse);
-      const angle=Math.atan2(-viewSegment.x,viewSegment.y);
+      angle=Math.atan2(-viewSegment.x,viewSegment.y);
       segRotation.copy(viewCamera.quaternion).multiply(spriteTurn.setFromAxisAngle(screenForward,angle));
     }else segRotation.setFromUnitVectors(up,segDelta);
-    emit(beams,segMid,id,life,width,length,width,{rotation:segRotation,delay,cell:id==='chain'?VFX_CELLS.lightning:VFX_CELLS.trail});
+    emit(beams,segMid,id,life,width,length,width,{rotation:segRotation,delay,angle,cell:id==='chain'?VFX_CELLS.lightning:VFX_CELLS.trail});
   }
   function flame(pos,id='burst',n=10,spread=1,delay=0){
     counters.flame++;
@@ -188,16 +189,27 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
     if(length<.05)return;
     const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle',accent=ice?'frost':kind==='shower'?'split':kind==='spearring'?'pierce':'reflect';
-    workA.set(from.x,.79,from.z);workB.set(to.x,.79,to.z);
-    segment(workA,workB,accent,folded?.13:.11,.19);
-    workC.copy(workA).lerp(workB,ice?.38:.5);
-    segment(workA,workC,'amber',.046,.17);
-    if(qualityLevel===0)return;
-    // Two teeth at the tip read as split ice or a refracted prism at gameplay scale.
+    const life=folded?.36:.32,head=Math.min(.42,Math.max(.22,length*.16));
+    workA.set(from.x,.88,from.z);workB.set(to.x,.88,to.z);
+    // The hit is instantaneous, but the wide shaft and triangular point must
+    // read as a weapon even on low quality where bloom is disabled.
+    segment(workA,workB,accent,folded?.32:.28,life);
+    workC.copy(workA).lerp(workB,.72);
+    segment(workA,workC,ice?'frost':'amber',.1,life*.82);
     for(const sign of [-1,1]){
-      workD.copy(workA).lerp(workB,.77).add(workE.set(sideX*sign*(ice?.16:.2),0,sideZ*sign*(ice?.16:.2)));
-      segment(workD,workB,accent,.047,.19);
+      workD.set(to.x-dx/length*head+sideX*sign*head*.55,.88,to.z-dz/length*head+sideZ*sign*head*.55);
+      segment(workD,workB,accent,.13,life);
     }
+    if(atlas){
+      let tipAngle=0;
+      if(viewCamera){viewSegment.set(dx/length,0,dz/length).transformDirection(viewCamera.matrixWorldInverse);tipAngle=Math.atan2(-viewSegment.x,viewSegment.y);}
+      emit(sparks,workB,accent,life,.19,.3,.19,{cell:VFX_CELLS.shard,angle:tipAngle});
+    }
+    if(qualityLevel===0)return;
+    workC.copy(workA).lerp(workB,.13);
+    workD.set(workC.x+sideX*.23,.88,workC.z+sideZ*.23);
+    workE.set(workC.x-sideX*.23,.88,workC.z-sideZ*.23);
+    segment(workD,workE,ice?'frost':'amber',.085,life*.75);
   }
   function frostWeb(from,to){
     counters.frostWeb++;

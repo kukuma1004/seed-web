@@ -1,0 +1,10 @@
+#app-update-gate{position:fixed;inset:0;z-index:100;display:grid;place-items:center;padding:24px;background:#061318f4;color:#f1f6e7;text-align:center}
+#app-update-gate[hidden]{display:none}
+.app-update-panel{width:min(460px,100%);max-height:90dvh;overflow:auto;padding:30px 24px;border:1px solid #b5d8bd88;border-radius:18px;background:linear-gradient(155deg,#1b3838,#0a1c25 70%);box-shadow:0 20px 70px #000a}
+.app-update-mark{display:block;font-size:36px;color:#c9efc1}
+.app-update-panel h2{margin:10px 0;font-size:clamp(20px,3vw,28px)}
+.app-update-panel p{margin:0 0 18px;color:#c8d8ce;font-size:14px;line-height:1.6}
+.app-update-actions{display:grid;gap:10px}
+.app-update-actions button{min-height:48px;padding:8px 18px;border:1px solid #b8d9bb;background:#d5eccf;color:#123029;font-weight:700;border-radius:8px}
+.app-update-actions button+button{background:#173238;color:#e3f0df}
+.app-update-actions button:disabled{opacity:.55}

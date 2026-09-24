@@ -4,6 +4,14 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-25-b',date:'9월 25일',title:'창날이 더 선명해졌어요',
+  lines:[
+   '굴절 창과 유리 창날이 뾰족한 창끝과 굵은 몸통으로 보여요.',
+   '굴절 송곳비는 벽에서 튕긴 뒤에도 작은 창끝이 움직이는 모습으로 보여요.',
+   'Android 앱은 Play 스토어에 새 버전이 나오면 게임 안에서 업데이트를 안내해요.'
+  ]
+ },
+ {
   id:'2026-09-25-a',date:'9월 25일',title:'명예의 전당에서 내 기록 확인',
   lines:[
    '상위 10명 밖이어도 내 계정의 최고 기록을 아래에서 볼 수 있어요.',

@@ -184,7 +184,13 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
    const wall=reflected||cover;
    if(wall){if(s.bounces>0){s.bounces--;s.pos.copy(old);fx.reflect?.(s.pos,s.dir);if(s.mode==='each-bounce'||s.mode==='gravity-footprints'||s.mode==='frost-stamps')blast(s.pos,spec.radius*.65,.5,{slow:spec.law==='frost',pull:spec.law==='gravity'});}else{s.life=0;if(s.mode==='finish')blast(old,spec.radius,1.2);}}
    s.trailClock-=dt;
-   if(s.trailClock<=0){fx.trail?.(old,s.pos,spec.law,s.returning||s.bounces>0);s.trailClock=.08;}
+   if(s.trailClock<=0){
+    if(s.mode==='post-bounce-lance'){
+     const tail=s.pos.clone().addScaledVector(s.dir,-.85);
+     fx.lance?.(tail,s.pos,'spearring',wall);
+    }else fx.trail?.(old,s.pos,spec.law,s.returning||s.bounces>0);
+    s.trailClock=s.mode==='post-bounce-lance'?.12:.08;
+   }
    for(const e of nearbyEnemies(s.pos,1.8))if(!e.dead&&!s.hitSet.has(e)&&distance(s.pos,e.g.position)<(BOSSES.has(e.type)?1.1:.65)){
     s.hitSet.add(e);harm(e,power(s.powerScale),old);
     if(s.mode==='bounce-relay')relay(e,{jumps:1,delay:.12});

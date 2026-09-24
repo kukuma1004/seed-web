@@ -23,7 +23,7 @@ for(const mobile of [false,true]){
   for(const event of ['bossPitch','bossRush','bossSwing','bossWave','bossPhase'])assert.ok(fx.state().events[event]>0,`${event} reuses the fixed VFX batches`);
   assert.ok(fx.state().active<=fx.state().capacity);
   for(const [draw,lowSegments,highSegments] of [
-    [()=>fx.lance(a,b,'icicle'),2,4],
+    [()=>fx.lance(a,b,'icicle'),4,5],
     [()=>fx.frostWeb(a,b),1,3],
     [()=>fx.rewindTrace(a,b,true),1,2],
     [()=>fx.mirrorArc(a,b,2),2,3],
@@ -75,6 +75,7 @@ for(const mobile of [false,true]){
   const beamMatrix=new THREE.Matrix4();meshes[1].getMatrixAt(0,beamMatrix);
   const beamNormal=new THREE.Vector3(0,0,1).transformDirection(beamMatrix),cameraNormal=new THREE.Vector3(0,0,1).applyQuaternion(camera.quaternion);
   assert.ok(beamNormal.dot(cameraNormal)>.99,'flat beam sprites face the gameplay camera instead of becoming edge-on');
+  assert.ok(Math.abs(meshes[1].geometry.attributes.fxSprite.array[1])>.1,'the painted beam rotates along the lance path instead of standing vertically');
   assert.equal(fx.state().textured,true);
   const shader={vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader};sprites[0].material.onBeforeCompile(shader);
   assert.ok(shader.vertexShader.includes('attribute vec2 fxSprite')&&shader.vertexShader.includes('vMapUv=(uv+')&&!shader.vertexShader.includes('#include <project_vertex>'),'sprite shader patch applies to this three.js version');

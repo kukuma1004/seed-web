@@ -865,7 +865,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(!support(e,S.damage*(1+S.ramp*struck),{kind:'glassspear',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}
    struck++;
   }
-  for(let d=0;d<flat(start,end);d+=1.6)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.6)).setY(.7),'pierce',false);
+  fx.lance(start,end,'spearring');
   fx.pulse(end,'pierce',.5,.2);
  }
  // Reflect + gravity: the wall is part of the weapon. Every rebound tugs
