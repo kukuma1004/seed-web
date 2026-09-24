@@ -82,7 +82,7 @@ for(const name of ['해일 폭창','서리 붕괴','불씨 칼날','서리 씨�
  combat.fire(new V(),new V(0,0,-1));
  const visible=[];scene.traverse(object=>{if(object.userData.curatedSecond===form.id)visible.push(object);});
  assert.ok(visible.length,`${name}: 주 공격이 부모 전용 탄을 그대로 쓰지 않고 재융합 탄을 보인다`);
- assert.ok(visible.every(object=>object.geometry.name===`seed-combo-projectile-${form.id}`));
+ assert.ok(visible.every(object=>object.userData.paintedProjectile&&object.geometry.type==='PlaneGeometry'));
  combat.clear();
 }
 {

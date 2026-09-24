@@ -3,9 +3,9 @@ import * as THREE from 'three';
 import {createProjectileSprites,PROJECTILE_DNA_CELLS,MIRROR_SHOT_COLOR} from '../src/projectile-sprites.js';
 
 const originalLoad=THREE.TextureLoader.prototype.load;
-let finishLoad;
-THREE.TextureLoader.prototype.load=function(_url,onLoad){
-  const texture=new THREE.Texture();finishLoad=()=>onLoad(texture);return texture;
+const finishLoads=new Map();
+THREE.TextureLoader.prototype.load=function(url,onLoad){
+  const texture=new THREE.Texture();finishLoads.set(url,()=>onLoad(texture));return texture;
 };
 try{
   const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(55,1,.1,100);
@@ -18,7 +18,7 @@ try{
   sprites.sync(player,enemy);
   assert.equal(sprites.state().drawn,0,'3D geometry remains visible until the atlas loads');
   assert.ok(player.every(p=>p.ob.visible!==false));
-  finishLoad();sprites.sync(player,enemy);
+  for(const finish of finishLoads.values())finish();sprites.sync(player,enemy);
   assert.equal(sprites.state().drawn,24,'the sprite budget is bounded');
   assert.equal(sprites.state().hidden,24);
   assert.ok(player.every(p=>p.ob.userData.spriteHidden),'all law bodies use the new atlas');
@@ -31,16 +31,23 @@ try{
   const mirror={...shot('split'),mirror:true,law:'split',age:.4};
   sprites.sync([], [mirror]);
   assert.equal(sprites.state().mirrorRims,1,'the reflected law keeps its silhouette and gets a hostile rim');
-  assert.equal(scene.getObjectByName('seed-projectile-dna-2').count,1);
+  assert.equal(scene.getObjectByName('seed-projectile-law-2').count,1);
   const rim=scene.getObjectByName('seed-mirror-hostile-rims');
   assert.equal(rim.count,1);assert.equal(rim.material.color.getHex(),MIRROR_SHOT_COLOR);
+  const form={...shot('seed'),spriteKey:'combo',spriteCell:7};
+  const baseball={...shot('seed'),spriteKey:'baseball'};
+  sprites.sync([form],[baseball]);
+  assert.equal(sprites.state().formDrawn,1,'the equipped form uses a painted card projectile');
+  assert.equal(sprites.state().baseballs,1,'baseballs use their transparent painted cutout');
+  assert.ok(form.ob.userData.spriteHidden&&baseball.ob.userData.spriteHidden);
+  assert.equal(scene.getObjectByName('seed-projectile-combo-7').geometry.getAttribute('position').count,4);
   sprites.setEnabled(false);sprites.sync(player,enemy);
   assert.ok([...player,...enemy].every(p=>p.ob.visible&&p.ob.userData.spriteHidden===false),'3D fallback restores all bodies');
   sprites.dispose();
   const fallbackScene=new THREE.Scene(),fallback=createProjectileSprites(fallbackScene,camera,{capacity:8});
-  finishLoad();fallback.setEnabled(false);fallback.sync([], [{...shot('seed'),mirror:true,law:'seed'}]);
+  for(const finish of finishLoads.values())finish();fallback.setEnabled(false);fallback.sync([], [{...shot('seed'),mirror:true,law:'seed'}]);
   assert.equal(fallback.state().mirrorRims,1,'a mirror rim remains visible with the old 3D body and no VFX atlas');
   assert.equal(fallbackScene.getObjectByName('seed-mirror-hostile-rims').geometry.type,'RingGeometry');
   fallback.dispose();
 }finally{THREE.TextureLoader.prototype.load=originalLoad;}
-console.log('Projectile DNA atlas load, 16-cell batching, hostile mirror rims, capacity fallback, finite transforms and 3D toggle passed.');
+console.log('Projectile DNA, painted combo and baseball atlases, batching, hostile mirror rims, capacity fallback and finite transforms passed.');

@@ -32,7 +32,8 @@ console.log('탄환 묶음 그리기: 예전 개별 물체와 같은 행렬, 반
 {
  const fs=await import('node:fs');
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
- for(const pair of ["[projectileGeometry(projectileGeos,'seed'),mats['shot-seed']]",'[enemyGeos.boltCore,mats.enemyBolt]','[stadiumBallGeo,mats.stadiumBall]','[austinGeo.core,mats.austinBolt]'])assert.ok(main.includes(pair),`셰이더 미리 준비에 ${pair} 필요`);
+ assert.match(main,/projectileSprites\.sync\(projectileBodyList,enemyShots\)/,'all live shots use painted 2D batches');
+ assert.doesNotMatch(main,/createProjectileGeometries\(|shotBatches\.sync\(/,'production avoids the old projectile meshes');
  assert.match(main,/const litLanterns=lanternLights\.filter\(l=>l\.visible\);[\s\S]*for\(const l of litLanterns\)l\.visible=false;[\s\S]*for\(const l of litLanterns\)l\.visible=true;/,'등불이 꺼진 조명 상태도 미리 준비해야 한다');
  assert.match(main,/function warmShaders\(\)[\s\S]*shaderWarmGroup\.removeFromParent\(\)/,'견본은 컴파일 뒤 장면에서 뺀다');
 }

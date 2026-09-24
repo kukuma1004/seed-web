@@ -17,6 +17,7 @@ function fixture(foes=[],overrides={}){
  return {combat,player,calls,constrained,scene};
 }
 const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elapsed+=dt)combat.update(Math.min(dt,seconds-elapsed));};
+const painted=scene=>{const found=[];scene.traverse(o=>{if(o.isMesh&&o.userData.paintedProjectile)found.push(o);});return found;};
 assert.ok(MIRROR_BOSS_PARRY.damageScale<=.1,'boss parry must be defense, not a source of boss damage');
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
@@ -79,27 +80,26 @@ for(const spriteKey of ['austin','baseball','storm','mirror']){
  assert.equal(thunder.combat.state().bolts,0,'mirror lightning remains hitscan');thunder.combat.dispose();
  const sunFx={sunburst:0},sun=fixture([enemy(1.5)],{vfx:{sunburst(){sunFx.sunburst++;}}});
  sun.combat.set('sunmirror');sun.combat.fire(vec(),vec(1));
- assert.ok(named(sun.scene,'seed-form-sun-mirror-core').length>0);
+ assert.ok(painted(sun.scene).length>0,'sun mirror fires a painted 2D projectile');
  step(sun.combat,.35);assert.ok(sunFx.sunburst>0,'sun core finishes in a distinct burst');sun.combat.dispose();
  const shower=fixture([enemy(2)]);shower.combat.set('pierceshower');shower.combat.fire(vec(),vec(1));
- assert.ok(named(shower.scene,'seed-form-piercing-shower-petal').length>0,'spear hits create dedicated petals');shower.combat.dispose();
+ assert.ok(painted(shower.scene).length>0,'spear hits create painted petals');shower.combat.dispose();
  const ebb=fixture();ebb.combat.set('ebbring');
  assert.ok(named(ebb.scene,'seed-form-ebbing-wave-blade').length>0,'the trailing orbit uses its own wave shape');ebb.combat.dispose();
  const gardenFx={gardenVortex:0},garden=fixture([enemy(5)],{vfx:{gardenVortex(){gardenFx.gardenVortex++;}}});
  garden.combat.set('pullgarden');garden.combat.fire(vec(),vec(1));
- assert.ok(named(garden.scene,'seed-form-gravity-split-pull-seed').length>0);
+ assert.ok(painted(garden.scene).length>0,'gravity seeds use the painted 2D sheet');
  step(garden.combat,.7);assert.ok(gardenFx.gardenVortex>0,'landed seeds leave a visible field');garden.combat.dispose();
  const visuals=createFormVisuals();
  for(const id of ['sunMirror','showerPetal','ebbBlade','pullSeed'])assert.ok(visuals.geos[id].getAttribute('position').count<=696,`${id} stays under the mobile triangle cap`);
  for(const geo of Object.values(visuals.geos))geo.dispose();for(const mat of Object.values(visuals.mats))mat.dispose();
 }
 
-// Future catalogue forms build one merged projectile only when equipped. This
-// proves the 1,090-entry visual grammar is wired to combat without preloading it.
+// Future catalogue forms use one painted atlas tile when equipped.
 {
  const f=fixture(),id=Object.keys(GENERATED_FORMS)[0];f.combat.set(id,2);f.combat.fire(vec(),vec(1));
  const meshes=[];f.scene.traverse(o=>{if(o.isMesh)meshes.push(o);});
- assert.ok(meshes.some(o=>o.geometry.name===`seed-combo-projectile-${id}`));
+ assert.ok(painted(f.scene).length>0&&painted(f.scene).every(o=>o.geometry.type==='PlaneGeometry'));
  assert.match(f.combat.audioEvent(),/^shot/);assert.equal(f.combat.state().bolts,1);f.combat.dispose();
 }
 
@@ -117,7 +117,7 @@ for(const spriteKey of ['austin','baseball','storm','mirror']){
  for(const [id,name] of [['spearring',visualNames.spearRing],['accretiondisk',visualNames.accretionDisk],['rimeback',visualNames.rimeback],['coldwell',visualNames.coldwell],['rimepetal',visualNames.rimeBud],['echolane',visualNames.echoOrb]]){
   const f=fixture([enemy(2)]);f.combat.set(id,4);if(!['spearring','accretiondisk'].includes(id))f.combat.fire(vec(),vec(1),vec(2));
   const meshes=[];f.scene.traverse(o=>{if(o.isMesh&&o.geometry.name===name)meshes.push(o);});
-  assert.ok(meshes.length,`${id}: authored attack silhouette is absent from combat`);f.combat.dispose();
+  assert.ok(meshes.length||painted(f.scene).length,`${id}: authored attack silhouette is absent from combat`);f.combat.dispose();
  }
  const boss=enemy(3,0,'tempestcarrier'),ordinary=enemy(4.2,.2),f=fixture([boss,ordinary]);
  f.combat.set('coldwell',9);for(let i=0;i<3;i++){f.combat.fire(vec(),vec(1),vec(3));step(f.combat,.52);}

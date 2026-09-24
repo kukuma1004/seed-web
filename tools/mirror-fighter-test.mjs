@@ -44,7 +44,8 @@ assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProj
 
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),mirrorBoltSource=main.slice(main.indexOf('function mirrorBolt'),main.indexOf('function mirrorPerfectDodge'));
 assert.doesNotMatch(mirrorBoltSource,/enemyBolt\(/,'거울 분신은 공통 보스 구체를 쓰지 않는다');
-assert.match(mirrorBoltSource,/projectileGeometry\(projectileGeos,law\)[\s\S]*mats\['shot-'\+law\][\s\S]*applyProjectileTheme/,'거울 분신은 플레이어와 같은 탄환 형상·재질·테마를 쓴다');
+assert.match(mirrorBoltSource,/law=Object\.hasOwn\(LAWS,spec\.law\)[\s\S]*applyProjectileTheme\(ob,law,combatTheme/,'거울 분신은 플레이어 법칙과 테마를 복제한다');
+assert.match(main,/projectileSprites\.sync\(projectileBodyList,enemyShots\)/,'거울 분신 탄도 같은 2D 탄환 렌더러를 사용한다');
 
 for(const panel of MIRROR_PANELS)assert.ok(Math.hypot(panel.x,panel.z)+Math.max(panel.w,panel.d)/2<MIRROR_ARENA.radius,'반사판은 넓은 전장 안쪽에 둔다');
 const previous={x:-7,z:0},next={x:-4,z:0},direction={x:1,z:0};

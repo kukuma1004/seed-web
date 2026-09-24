@@ -183,8 +183,8 @@ for(const id of Object.keys(FORMS)){
 }
 {
  const boss=enemy(5,0,'austin'),duel=fixture([boss]);duel.combat.set('gravitystake');duel.combat.fire(vec(),vec(1));
- assert.equal(duel.combat.state().stakes,1,'one isolated target receives a planted stake');let planted=false;duel.scene.traverse(o=>{if(o.geometry?.name==='seed-form-gravity-implosion-stake')planted=true;});assert.ok(planted,'the target carries a distinct planted-stake mesh');step(duel.combat,.65);
- planted=false;duel.scene.traverse(o=>{if(o.geometry?.name==='seed-form-gravity-implosion-stake')planted=true;});assert.equal(planted,false,'the planted mesh expires after implosion');
+ assert.equal(duel.combat.state().stakes,1,'one isolated target receives a planted stake');let planted=false;duel.scene.traverse(o=>{if(o.userData.paintedProjectile&&o.geometry?.type==='PlaneGeometry')planted=true;});assert.ok(planted,'the target carries a painted 2D stake');step(duel.combat,.65);
+ planted=false;duel.scene.traverse(o=>{if(o.userData.paintedProjectile)planted=true;});assert.equal(planted,false,'the painted stake expires after implosion');
  assert.ok(duel.calls.some(c=>c.e===boss&&c.phase==='implosion'&&c.damage===formStats('gravitystake',1).implosion),'the stake collapses into its single target');duel.combat.dispose();
  const target=enemy(5),nearby=enemy(5,2),crowd=fixture([target,nearby]);crowd.combat.set('gravitystake');crowd.combat.fire(vec(),vec(1));step(crowd.combat,.8);
  assert.ok(crowd.calls.some(c=>c.e===target&&c.phase==='line'),'the narrow line still deals modest contact damage');

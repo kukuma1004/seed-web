@@ -3,7 +3,7 @@ import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,aw
 import {createFormVisuals} from './form-visuals.js';
 import {createFinalBranchCombat} from './final-branch-combat.js';
 import {finalProjectileStyle} from './final-identity-art.js';
-import {buildComboProjectileGeometry,projectileAudioEvent} from './combo-projectile.js';
+import {projectileAudioEvent,projectileRecipe} from './combo-projectile.js';
 
 // Ordinary prism is allowed to grow as it finds walls. Infinite Prism already
 // adds another generation, a larger shard pool and a permanent damage boost,
@@ -82,10 +82,24 @@ const immovable=e=>FORM_BOSSES.has(e.type)||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null}){
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null,comboTexture=null}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
- const {mats,geos}=createFormVisuals();
+ // Live combat uses painted quads. Keep the old geometry builder only for
+ // headless visual tests; allocating every 3D form on each equip caused a
+ // noticeable pause on mobile even though none of those meshes was rendered.
+ const {mats,geos}=camera?{mats:{},geos:{cometBud:Symbol('cometBud')}}:createFormVisuals();
+ // Card and combat art share twelve painted cutouts. The same one texture is
+ // reused by every equipped form, without per-projectile texture uploads.
+ const comboPaint=new THREE.MeshBasicMaterial({map:comboTexture,transparent:Boolean(comboTexture),alphaTest:comboTexture?.06:0,depthWrite:false,depthTest:true,side:THREE.DoubleSide,toneMapped:false,color:comboTexture?0xffffff:0xa9f1da});
+ const comboCells=new Map();
+ function comboCell(index){
+  index=Math.max(0,Math.min(11,index|0));
+  if(comboCells.has(index))return comboCells.get(index);
+  const geo=new THREE.PlaneGeometry(1,1),uv=geo.getAttribute('uv'),col=index%4,row=2-Math.floor(index/4),edge=.002;
+  for(let i=0;i<uv.count;i++)uv.setXY(i,(col+edge+uv.getX(i)*(1-2*edge))/4,(row+edge+uv.getY(i)*(1-2*edge))/3);
+  geo.name=`seed-form-painted-projectile-${index}`;comboCells.set(index,geo);return geo;
+ }
  // The Comet Corolla's painted relief is shared by its orbit and launched bud.
  // Collision still uses the original world positions; this is only a billboard.
  const cometPlane=camera&&typeof document!=='undefined'?new THREE.PlaneGeometry(1,1):null;
@@ -153,8 +167,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  let themeId=normalizeTheme(theme);
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
- let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap();
- let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),comboGeo=null,movementCharge=0,cometCursor=0,mirrorParryCooldown=0,stormCharges=new WeakMap();
+ let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap(),paintedCellIndex=0;
+ let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),movementCharge=0,cometCursor=0,mirrorParryCooldown=0,stormCharges=new WeakMap();
  // 1묶음 상태: 고드름 창이 스스로 남긴 서리 표식 · 얼어붙은 그물이 남긴 선 · 되감는 번개가 기억한 길 · 꽃잎 후광이 센 벤 횟수.
  let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
  // 2묶음 상태: 밀물 고리의 닻 · 끌림 꽃밭들.
@@ -195,18 +209,17 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   if(!awakenedMats.has(mat)){const gold=mat.clone();if(gold.emissive){gold.emissive.setHex(0xffb84f);gold.emissiveIntensity=Math.max(.38,gold.emissiveIntensity||0);}gold.roughness=Math.max(.18,(gold.roughness??.5)*.72);awakenedMats.set(mat,gold);}
   return awakenedMats.get(mat);
  }
- // Curated second fusions keep their parent's attack and collision, but the
- // visible projectile carries both parents' shapes. Only the equipped recipe
- // exists in memory; support particles and orbit bodies keep their own art.
- function curatedProjectileGeometry(geo){
-  if(AWAKEN_FORMS[statId]&&comboGeo)return comboGeo;
-  if(!secondRecipe||!comboGeo)return null;
-  const primary={collapse:'collapse',seedstorm:'seed',tidepull:'tide',returnblade:'blade',
-   frostkaleidoscope:'frostMirror',frostbloom:'bloom',returnflare:'returnFlare',
-   returningpetals:'returnPetal',lightningpetal:'lightningPetal',gravitystake:'gravityStake'}[active];
-  return primary&&geo===geos[primary]?comboGeo:null;
+ function paintedCell(){return paintedCellIndex;}
+ function spawnMesh(geo,mat,pos,y=.7){
+  const comet=geo===geos.cometBud?cometSprite(pos,y):null;
+  if(comet){applyProjectileScale(comet);group.add(comet);return comet;}
+  const cell=paintedCell(),ob=new THREE.Mesh(comboCell(cell),comboPaint);
+  ob.position.set(pos.x,y,pos.z);ob.castShadow=false;ob.receiveShadow=false;
+  ob.userData.spriteCell=cell;ob.userData.paintedProjectile=true;ob.userData.awakened=awakened();
+  if(secondRecipe)ob.userData.curatedSecond=secondRecipe.id;
+  if(AWAKEN_FORMS[statId]?.finalCandidate)ob.userData.finalBranch=statId;
+  applyProjectileScale(ob);group.add(ob);return ob;
  }
- function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=geo===geos.cometBud?cometSprite(pos,y):null;if(ob){applyProjectileScale(ob);group.add(ob);return ob;}const fallback=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));fallback.position.set(pos.x,y,pos.z);fallback.userData.awakened=awakened();if(visual&&secondRecipe)fallback.userData.curatedSecond=secondRecipe.id;if(visual&&AWAKEN_FORMS[statId]?.finalCandidate)fallback.userData.finalBranch=statId;applyProjectileScale(fallback);group.add(fallback);return fallback;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
@@ -214,10 +227,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
   tintPaintedOrbit(cometMaterial,'comet');tintPaintedOrbit(orbitMaterial,'orbit');tintPaintedOrbit(advancedOrbitMaterial,'advanced-orbit');
-  for(let i=0;i<count;i++)orbit.add((active==='comethalo'?cometSprite():paintedOrbitSprite(active))||new THREE.Mesh(AWAKEN_FORMS[statId]&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
+  for(let i=0;i<count;i++){
+   let body=active==='comethalo'?cometSprite():paintedOrbitSprite(active);
+   if(!body&&camera){body=spawnMesh(geos[style.geometry],mats[style.material],player.position);body.userData.paintedOrbit=true;body.userData.spriteBaseAngle=0;}
+   orbit.add(body||new THREE.Mesh(geos[style.geometry],combatMaterial(mats[style.material])));
+  }
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -228,9 +245,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const kind=AWAKEN_FORMS[id]?.base||curated?.main||id;
   const asTwin=Boolean(opts.twin);
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
+  {const form=sourceForm(),recipe=projectileRecipe(AWAKEN_FORMS[statId]?.finalCandidate?finalProjectileStyle(statId):form);paintedCellIndex=form.visual?.projectileTile??recipe.trailVariant??0;}
   if(level!==L||S.damage===0){level=L;refresh();}
   if(AWAKEN_FORMS[id]?.finalCandidate)finalLayer.set(id,S.damage,L,Boolean(ALL_FORMS[kind]?.passive),kind);
-  if((secondRecipe||GENERATED_FORMS[active]||SECOND_FORMS[active]||active==='riftseed'||AWAKEN_FORMS[id])&&!comboGeo)comboGeo=buildComboProjectileGeometry(AWAKEN_FORMS[id]?finalProjectileStyle(id):sourceForm());
   rebuildOrbit();
  }
  function support(e,damage,metadata){if(e.dead)return false;if(hit(e,damage,{...metadata,evolution:ownerId||statId,awakened:awakened()})===false)return false;hits++;if(secondRecipe&&!metadata.follow&&metadata.kind===secondRecipe.main)secondFollow(e,metadata);if(AWAKEN_FORMS[statId]?.finalCandidate&&metadata.phase!=='final')finalLayer.onHit(e,metadata);return true;}
@@ -276,7 +293,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(full('gene',S.bolts))return S.interval;
    const second=SECOND_FORMS[active],secondRole=second?.family==='convergence'?(secondPhase++%2?'consume':'mark'):null;
    const source=sourceForm();
-   const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||source.requires)],ob=spawnMesh(comboGeo||geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
+   const laws=[...(secondRole==='consume'?S.followUpLaws:S.primaryLaws||S.laws||source.requires)],ob=spawnMesh(geos.gene,mats.gene,pos);ob.rotation.x=-Math.PI/2;ob.rotation.y=Math.atan2(aim.x,aim.z);
    // A second fusion alternates two inherited law packets, so its projectile
    // traits follow the packet being fired. Existing gene attacks keep their
    // authored stat sheet (notably riftseed's two-target pierce).
@@ -1175,7 +1192,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
       else if(second.family==='convergence'&&b.secondRole==='mark'){secondMarks.set(e,markClock+S.markWindow);fx.pulse(e.g.position,b.laws[0],.62,.24);}
       else if(second.family==='convergence'&&b.secondRole==='consume'){const expires=secondMarks.get(e)||0;if(expires>=markClock){secondMarks.delete(e);fx.explosion(e.g.position,S.followUpLaws.includes('burst')?'burst':S.followUpLaws[0],1.05);sound(S.followUpLaws.includes('portal')?'portal':'fusion');support(e,S.damage*S.followUpScale,{kind:b.form,direction:direction.clone(),comboLaws:S.followUpLaws,generated:true,indirect:true,convergence:true});}}
      }
-     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(comboGeo||geos.gene,mats.gene,e.g.position);applyProjectileScale(ob,.65,.65,.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
+     if(!b.fragment&&b.split>0){fx.split(e.g.position,direction,Math.min(5,b.split));sound('split');for(let i=0;i<b.split&&count('gene')<36;i++){const d=direction.clone().applyAxisAngle(Y,(i-(b.split-1)/2)*.34),ob=spawnMesh(geos.gene,mats.gene,e.g.position);applyProjectileScale(ob,.65,.65,.65);bolts.push({kind:'gene',form:b.form,laws:b.laws.filter(id=>id!=='split'),secondRole:null,ob,dir:d,age:0,life:.55,passed:new Set([e]),bounces:0,pierce:1,split:0,portalDistance:0,portaled:true,returning:false,fragment:true});}}
      b.pierce--;if(b.pierce<=0){b.life=0;break;}
     }
     fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
@@ -1781,7 +1798,25 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
   return out;
  }
- return {set,setTheme,fire,update,clear,surge,calm,auraBolts,audioEvent:()=>projectileAudioEvent(sourceForm()),
+ function projectileBodies(out){
+  for(const b of bolts){
+   if(!b.ob?.parent||b.life<=0)continue;
+   if(b.kind==='comethalo'&&b.ob.userData.cometSprite)continue;
+   b.spriteKey='combo';b.spriteCell=b.ob.userData.spriteCell??paintedCell();
+   b.visualScale=.85*(b.ob.userData.visualScale?.[0]??1);
+   if(b.ob.userData.paintedProjectile&&camera)b.ob.quaternion.copy(camera.quaternion);
+   out.push(b);
+  }
+  for(const item of [...stakes,...coldWells]){
+   if(!item.ob?.parent)continue;
+   if(item.ob.userData.paintedProjectile&&camera)item.ob.quaternion.copy(camera.quaternion);
+   const body=item.renderBody||(item.renderBody={ob:item.ob,life:1,spriteKey:'combo',spriteCell:item.ob.userData.spriteCell??paintedCell(),visualScale:1});
+   body.visualScale=item.ob.userData.visualScale?.[0]??1;
+   out.push(body);
+  }
+  return out;
+ }
+ return {set,setTheme,fire,update,clear,surge,calm,auraBolts,projectileBodies,audioEvent:()=>projectileAudioEvent(sourceForm()),
   state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,final:finalLayer.state(),debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
-  dispose(){clear();cometPlane?.dispose();cometMaterial?.dispose();cometTexture?.dispose();for(const geometry of orbitCellGeometries.values())geometry.dispose();orbitMaterial?.dispose();orbitTexture?.dispose();advancedOrbitMaterial?.dispose();advancedOrbitTexture?.dispose();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
+  dispose(){clear();cometPlane?.dispose();cometMaterial?.dispose();cometTexture?.dispose();for(const geometry of [...orbitCellGeometries.values(),...comboCells.values()])geometry.dispose();comboPaint.dispose();orbitMaterial?.dispose();orbitTexture?.dispose();advancedOrbitMaterial?.dispose();advancedOrbitTexture?.dispose();for(const g of Object.values(geos))g?.dispose?.();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }

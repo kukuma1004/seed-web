@@ -25,29 +25,14 @@ const craft=(kind)=>{
  return merge(p);
 };
 
-// A tapered hot core with a thin pink rim reads as hostile fire even without bloom.
-// Tail, rim and core are merged once; each projectile remains one shared mesh.
-const skyBolt=(boss=false)=>{
- const radius=boss?.20:.16,parts=[];
- parts.push(tint(new THREE.SphereGeometry(radius,8,5).scale(.74,.62,1.65),0xfff2bb));
- // A thicker rim survives the low-resolution mobile render without bloom;
- // it stays joined to the pale head instead of reading as a second tiny ring.
- parts.push(tint(new THREE.TorusGeometry(radius*1.04,radius*.22,4,12).rotateX(Math.PI/2).scale(.78,1,1.5),boss?0xff6a1c:0xff8331));
- parts.push(tint(new THREE.ConeGeometry(radius*.53,boss?1.18:.92,6).rotateX(-Math.PI/2).translate(0,0,boss?-.64:-.5),boss?0xcf3d24:0xb74c2c));
- parts.push(tint(new THREE.ConeGeometry(radius*.29,.63,5).rotateX(-Math.PI/2).translate(0,.018,-.36),0xffc66c));
- return merge(parts);
-};
-
 export const ACT3_GEOMETRIES=Object.freeze({
  scout:craft('scout'),diver:craft('diver'),bomber:craft('bomber'),carrier:craft('carrier'),warden:craft('warden'),boss:craft('boss'),
- tellRing:new THREE.RingGeometry(.935,1,32),tellLine:new THREE.PlaneGeometry(.075,11),bolt:skyBolt(),
- bossBolt:skyBolt(true)
+ tellRing:new THREE.RingGeometry(.935,1,32),tellLine:new THREE.PlaneGeometry(.075,11)
 });
 export const ACT3_MATERIALS=Object.freeze({
  craft:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.46,metalness:.18,emissive:0x132e38,emissiveIntensity:.38}),
  warning:new THREE.MeshBasicMaterial({color:0xffa65c,transparent:true,opacity:.48,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
- bossWarning:new THREE.MeshBasicMaterial({color:0xe175ff,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
- bolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),bossBolt:new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false})
+ bossWarning:new THREE.MeshBasicMaterial({color:0xe175ff,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true})
 });
 
 export const ACT3_MINIONS=Object.freeze({
