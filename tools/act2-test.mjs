@@ -21,7 +21,7 @@ import {contactShadowRadius} from '../src/contact-shadows.js';
 const V=THREE.Vector3;
 
 // Unlock and act marker.
-assert.equal(act2Unlocked({bosses:['austin']}),true);assert.equal(act2Unlocked({bosses:['warden']}),false);assert.equal(act2Unlocked(null),false);
+assert.equal(act2Unlocked({bosses:['austin']}),true);assert.equal(act2Unlocked({bosses:['warden']}),true);assert.equal(act2Unlocked(null),true,'beta players may choose act 2 before clearing Austin');
 assert.equal(isAct2(ACT2_REGION),true);assert.equal(actOf('garden'),1);assert.equal(actOf('stadium'),2);assert.ok(REGION_NAMES.stadium);
 
 // Rooms: five stadium rooms, minions and covers inside their arenas, no star room, traps or turrets.

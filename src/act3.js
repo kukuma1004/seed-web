@@ -4,7 +4,8 @@ export const ACT3_GRAMMAR='A';
 export const ACT3_NAME='3막 · 폭풍의 항로';
 export const ACT3_RELEASED=true;
 export const isAct3=region=>region===ACT3_REGION;
-export const act3Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosses.includes('alwaysbeginner');
+// The beta lets players test this route without first clearing acts 1 and 2.
+export const act3Unlocked=()=>true;
 export function act3Available(where=globalThis.location){return ACT3_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
 export function playableAct3Region(region,where=globalThis.location,preview=false){return isAct3(region)&&!act3Available(where)&&!preview?'garden':region;}
 

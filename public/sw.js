@@ -1,9 +1,8 @@
 // Offline play: after one visit with internet, the whole game (code, images, icons) is kept on the device.
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
-const CACHE='seed-play-v36';
+const CACHE='seed-play-v37';
 const ROOT=new URL('./',self.location).href;
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-192.png',ROOT+'icons/seed-512.png'];
-const FORCE_GATE_REFRESH='account-sync-20260924';
 let lastSync=0,syncing=null;
 
 // Download every file listed by the build (offline-manifest.json) that is not stored yet,
@@ -28,13 +27,11 @@ function syncOfflineCopy(){
 }
 
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
-// Claim and navigate existing tabs so the current game code and privacy notice
-// reach installed web-app windows without a manual refresh.
+// Claim clients without navigating them: an update must not interrupt a run.
+// The running game checks season access itself; new code loads on the next open.
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  await Promise.all((await caches.keys()).filter(k=>k.startsWith('seed-play-')&&k!==CACHE).map(k=>caches.delete(k)));
  await self.clients.claim();
- const windows=await self.clients.matchAll({type:'window',includeUncontrolled:true});
- await Promise.allSettled(windows.filter(client=>{const path=new URL(client.url).pathname;return path===new URL(ROOT).pathname||path.endsWith('/index.html');}).map(client=>client.navigate(`${ROOT}?gate=${FORCE_GATE_REFRESH}`)));
  syncOfflineCopy();
 })()));
 self.addEventListener('fetch',event=>{

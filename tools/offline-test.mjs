@@ -11,8 +11,7 @@ assert.ok(sw.includes('caches.match(request,{ignoreSearch:true,ignoreVary:true})
 assert.ok(sw.includes('cache.put(gamePage?ROOT:request,copy)'),'the recovery page must never replace the cached game shell');
 assert.ok(sw.includes("endsWith('/season-status.json')")&&sw.includes("cache:'no-store'"),'the season pause bypasses stale cache while retaining an offline fallback');
 assert.ok(sw.includes('self.skipWaiting()')&&sw.includes('self.clients.claim()'),'a gate release activates without waiting for old tabs to close');
-assert.ok(sw.includes('client.navigate(`${ROOT}?gate=${FORCE_GATE_REFRESH}`)'),'a newly activated gate redirects already-open web tabs');
-assert.ok(sw.includes("path.endsWith('/index.html')"),'gate navigation is limited to game tabs');
+assert.ok(!sw.includes('client.navigate('),'a newly activated service worker must not interrupt an active run');
 const config=readFileSync(new URL('../vite.config.js',import.meta.url),'utf8');
 assert.ok(config.includes('offline-manifest.json')&&config.includes('closeBundle'),'the build writes the file list');
 const manifestPath=new URL('../dist/offline-manifest.json',import.meta.url);

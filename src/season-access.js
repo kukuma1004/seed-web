@@ -1,9 +1,9 @@
 export const DEFAULT_SEASON_STATUS=Object.freeze({
- paused:true,
+ paused:false,
  season:'1',
- title:'시즌 1 비공개 테스트 중',
- body:'시험 기간에는 SEED 플레이를 잠시 쉬어 갑니다.',
- detail:'등록된 테스터는 앱에서 플레이할 수 있어요. 저장된 정원과 도감은 그대로 남아 있습니다.'
+ title:'시즌 1 진행 중',
+ body:'웹과 Android 앱에서 함께 플레이할 수 있어요.',
+ detail:'테스트 피드백을 반영해 계속 업데이트합니다.'
 });
 
 // The contact address is already public in the privacy policy. Keeping only its
@@ -49,15 +49,15 @@ export function gameplayIsPaused({status=DEFAULT_SEASON_STATUS,native=false,admi
 }
 export function normalizeSeasonStatus(value){
  const text=(key,fallback)=>typeof value?.[key]==='string'&&value[key].trim()?value[key].trim().slice(0,180):fallback;
- return Object.freeze({paused:value?.paused!==false,season:text('season',DEFAULT_SEASON_STATUS.season),title:text('title',DEFAULT_SEASON_STATUS.title),body:text('body',DEFAULT_SEASON_STATUS.body),detail:text('detail',DEFAULT_SEASON_STATUS.detail)});
+ return Object.freeze({paused:value?.paused===true,season:text('season',DEFAULT_SEASON_STATUS.season),title:text('title',DEFAULT_SEASON_STATUS.title),body:text('body',DEFAULT_SEASON_STATUS.body),detail:text('detail',DEFAULT_SEASON_STATUS.detail)});
 }
-export async function loadSeasonStatus({fetchImpl=globalThis.fetch,url=SEASON_STATUS_URL,enabled=true,timeoutMs=4000}={}){
+export async function loadSeasonStatus({fetchImpl=globalThis.fetch,url=SEASON_STATUS_URL,enabled=true,timeoutMs=4000,fallback=DEFAULT_SEASON_STATUS}={}){
  if(!enabled)return Object.freeze({...DEFAULT_SEASON_STATUS,paused:false});
- if(typeof fetchImpl!=='function')return DEFAULT_SEASON_STATUS;
+ if(typeof fetchImpl!=='function')return fallback;
  const controller=typeof AbortController==='function'?new AbortController():null,timer=setTimeout(()=>controller?.abort(),timeoutMs);
  try{
   const response=await fetchImpl(`${url}${url.includes('?')?'&':'?'}t=${Date.now()}`,{cache:'no-store',signal:controller?.signal});
   if(!response.ok)throw new Error(`season-status-${response.status}`);
   return normalizeSeasonStatus(await response.json());
- }catch{return DEFAULT_SEASON_STATUS;}finally{clearTimeout(timer);}
+ }catch{return fallback;}finally{clearTimeout(timer);}
 }

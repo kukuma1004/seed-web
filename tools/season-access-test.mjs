@@ -13,10 +13,13 @@ assert.equal(await isBetaTester({email:'student@example.com',isAnonymous:true},t
 assert.ok(BETA_TESTER_EMAIL_HASHES.includes(await accessHash('iseungjun5618@gmail.com')),'corrected tester Google account is recognized');
 assert.ok(BETA_TESTER_EMAIL_HASHES.includes(await accessHash('huryohanh@gmail.com')),'new Play tester can also enter the PC web beta');
 assert.equal(normalizeSeasonStatus({paused:false,title:' 열림 '}).paused,false);
-assert.equal(normalizeSeasonStatus({}).paused,true,'missing or malformed remote values fail closed');
+assert.equal(normalizeSeasonStatus({}).paused,false,'missing pause flag cannot interrupt a public run');
 const open=await loadSeasonStatus({fetchImpl:async()=>({ok:true,json:async()=>({paused:false,season:'1'})})});
 assert.equal(open.paused,false);assert.equal(open.season,'1');
 const offline=await loadSeasonStatus({fetchImpl:async()=>{throw new Error('offline');}});assert.deepEqual(offline,DEFAULT_SEASON_STATUS);
+const lastKnownOpen={...DEFAULT_SEASON_STATUS,title:'이미 확인한 공개 시즌'};
+assert.deepEqual(await loadSeasonStatus({fetchImpl:async()=>{throw new Error('offline');},fallback:lastKnownOpen}),lastKnownOpen,'a transient poll failure retains the last confirmed access state');
+assert.equal(DEFAULT_SEASON_STATUS.paused,false,'the public web must remain playable if its status request times out');
 const dev=await loadSeasonStatus({enabled:false,fetchImpl:async()=>{throw new Error('must not fetch');}});assert.equal(dev.paused,false);
 assert.equal(gameplayIsPaused({status:{paused:true}}),true);
 assert.equal(gameplayIsPaused({status:{paused:true},native:true}),false,'the installed beta app stays playable while the public web is paused');
@@ -30,6 +33,7 @@ const accountScreen=main.slice(main.indexOf('function showAccount'),main.indexOf
 assert.match(accountScreen,/await action\(\);[\s\S]*await refreshAccessMode\(\);[\s\S]*showEntry\(\)/,'공개 화면에서 로그인 직후 관리자와 테스터 권한을 다시 확인해야 합니다.');
 assert.match(main,/WEB_ACCESS_POLL_MS=15_000/,'이미 열린 웹 게임도 짧은 주기로 차단 상태를 다시 확인해야 합니다.');
 assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운드에서 돌아온 웹 게임은 즉시 차단 상태를 확인해야 합니다.');
+assert.match(main,/if\(!betaLocked&&!seasonPaused\)\{[\s\S]*mode==='season-pause'[\s\S]*showEntry\(\)/,'공개 상태로 돌아오면 잘못 나타난 플레이 중지 화면에서 빠져나와야 합니다.');
 assert.match(main,/if\(adminMode\|\|betaTesterMode\)\{[\s\S]*mode==='beta-lock'[\s\S]*showEntry\(\)/,'새로 승인된 테스터는 기존 잠금 화면에서 즉시 게임 메뉴로 이동해야 합니다.');
 assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차단되면 안전한 진행 지점을 저장한 뒤 클라우드 동기화를 시도해야 합니다.');
 assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에만 전투 실험실 진입점이 보여야 합니다.');
@@ -47,6 +51,7 @@ assert.match(auth,/browserLocalPersistence[\s\S]*browserSessionPersistence/,'웹
 assert.match(auth,/onAuthStateChanged\(webAuth/,'다른 탭이나 팝업에서 바뀐 로그인 상태를 즉시 반영해야 합니다.');
 assert.match(auth,/prompt:'select_account'/,'관리자와 학생 계정이 함께 있는 브라우저에서 계정을 다시 고를 수 있어야 합니다.');
 const worker=fs.readFileSync(new URL('../public/sw.js',import.meta.url),'utf8');
-assert.match(worker,/seed-play-v36/,'오래 열린 설치형 웹앱도 이번 배포 빌드로 교체되어야 합니다.');
+assert.match(worker,/seed-play-v37/,'새 서비스워커는 다음 접속부터 업데이트를 제공해야 합니다.');
+assert.doesNotMatch(worker,/client\.navigate\(/,'게임 도중 서비스워커 업데이트로 화면을 강제 새로고침하면 안 됩니다.');
 assert.doesNotMatch(main,/id="beta-email"|id="beta-submit"/,'웹 입구에 사용하지 않는 테스터 신청 폼이 다시 나오지 않아야 합니다.');
-console.log('Season access: remote pause, fail-closed fallback, local development and administrator bypass passed.');
+console.log('Season access: remote pause, transient-network fallback, local development and administrator bypass passed.');

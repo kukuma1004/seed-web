@@ -1021,7 +1021,7 @@ async function enforceCurrentWebAccess(){
  if(account.native||import.meta.env.DEV)return false;
  if(webAccessCheck)return webAccessCheck;
  webAccessCheck=(async()=>{
-  seasonStatus=await loadSeasonStatus({enabled:true});
+  seasonStatus=await loadSeasonStatus({enabled:true,fallback:seasonStatus});
   await refreshAccessMode();
   if(adminMode||betaTesterMode){
    // A tester can be added while this installed/web tab is already showing the
@@ -1031,7 +1031,10 @@ async function enforceCurrentWebAccess(){
    return false;
   }
   const betaLocked=publicWebBetaLocked(),seasonPaused=gameplayPaused();
-  if(!betaLocked&&!seasonPaused)return false;
+  if(!betaLocked&&!seasonPaused){
+   if(mode==='season-pause'||mode==='beta-lock')showEntry();
+   return false;
+  }
   saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
   if(betaLocked){if(mode!=='beta-lock')showBetaLock();}
   else if(mode!=='season-pause')showSeasonPause();

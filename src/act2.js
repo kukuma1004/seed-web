@@ -6,9 +6,9 @@ export const ACT2_REGION='stadium';
 export const ACT2_NAME='2막 · 다시 심는 씨앗';
 export const isAct2=region=>region===ACT2_REGION;
 export const actOf=region=>isAct2(region)?2:1;
-export const act2Unlocked=profile=>Array.isArray(profile?.bosses)&&profile.bosses.includes('austin');
-// Opened to the closed beta on 2026-09-18. Austin's first defeat remains the
-// progression gate, and act 2 keeps a separate checkpoint and local record.
+// During the open beta every act can be tried from a fresh seed. Boss victories
+// still count toward titles and garden growth, while each act keeps its own save.
+export const act2Unlocked=()=>true;
 export const ACT2_RELEASED=true;
 export function act2Available(where=globalThis.location){return ACT2_RELEASED||['localhost','127.0.0.1'].includes(where?.hostname);}
 // A future maintenance switch can still send an unavailable act-2 save back to act 1 safely.
