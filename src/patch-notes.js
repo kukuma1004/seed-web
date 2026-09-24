@@ -4,6 +4,13 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-25-a',date:'9월 25일',title:'명예의 전당에서 내 기록 확인',
+  lines:[
+   '상위 10명 밖이어도 내 계정의 최고 기록을 아래에서 볼 수 있어요.',
+   '예전 기록이나 이름을 바꾼 뒤의 기록도 계정 기준으로 찾습니다.'
+  ]
+ },
+ {
   id:'2026-09-24-i',date:'9월 24일',title:'탄환 그림과 움직임을 가볍게',
   lines:[
    '진화탄과 2막 야구공까지 카드 그림과 어울리는 2D 모습으로 바꿨어요.',

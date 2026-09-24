@@ -432,7 +432,7 @@ function drawRoom(){
 // 방 안에서 움직이지 않는 것들의 행렬을 잠근다(함정과 배우는 제외).
 function freezeStatic(group){group.updateMatrixWorld(true);group.traverse(o=>{o.matrixAutoUpdate=false;});}
 // Everyone's ranking lives on the jpmathlab Firebase project; this browser's board stays as the fallback.
-const online=localInspection?{flush:async()=>0,top:async()=>[],uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage,authProvider:()=>account.tokenSession()});let playerName=lastName(runStorage),rankSerial=0;
+const online=localInspection?{flush:async()=>0,top:async()=>[],personalRank:async()=>({entry:null,rank:0}),uid:()=>null,submit:async()=>{throw new Error('Local inspection never submits rankings');}}:createOnlineRanking({storage:runStorage,authProvider:()=>account.tokenSession()});let playerName=lastName(runStorage),rankSerial=0;
 // 관리자(개발자) 계정도 모두의 랭킹을 받는다. 빠지는 것은 실험 판(developerRun)뿐이다.
 const betaRankingEligible=()=>accountCanRank({native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
 // 정원의 식물은 시각 기록이고, 각 막의 최종 보스가 남긴 작은 성장점만 전투에 적용된다.
@@ -1399,13 +1399,15 @@ function rankSafety(entry){
  return `<div class="rank-actions"><a href="${escapeHtml(rankingReportMailto(entry))}">신고</a><button type="button" data-block-ranker="${escapeHtml(entry.uid)}">이 사용자 숨기기</button></div>`;
 }
 function bindRankSafety(){document.querySelectorAll('[data-block-ranker]').forEach(button=>button.onclick=()=>{blockRankingUser(runStorage,button.dataset.blockRanker);button.closest('li')?.remove();$('#toast').textContent='이 사용자의 기록을 내 화면에서 숨겼어요';});}
-function rankingBoard(board,mine=null,onlineView=false){
- // Only the top ten are listed. My line appears below only when I am outside them (inside, it is highlighted in the list).
- const shown=onlineView?visibleRanking(board,runStorage):board,shownMine=mine&&shown.includes(mine)?mine:null;
- const rank=shownMine?shown.indexOf(shownMine)+1:0,details=onlineView?(entry,place)=>rankBuild(entry,place)+rankSafety(entry):rankBuild;
- const top=`<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(shown,shownMine,10,details)}</section>`;
- if(rank<=10)return top;
- return top+`<section class="ranking-self"><strong>내 순위</strong>${rankingTable([shownMine],shownMine,1,rankBuild,rank)}</section>`;
+function rankingBoard(board,mine=null,onlineView=false,personalRank=0,personalLoading=false,personalError=false){
+ const shown=onlineView?visibleRanking(board,runStorage):board;
+ const topMine=mine&&shown.slice(0,10).find(entry=>entry===mine||(entry.id&&entry.id===mine.id));
+ const details=onlineView?(entry,place)=>rankBuild(entry,place)+rankSafety(entry):rankBuild;
+ const top=`<section class="ranking-top"><strong>TOP 10</strong>${rankingTable(shown,topMine,10,details)}</section>`;
+ if(topMine)return top;
+ const place=personalRank>0?personalRank:'—';
+ const own=mine?rankingTable([mine],mine,1,rankBuild,place):`<p class="ranking-empty">${personalLoading?'내 기록을 확인하는 중…':personalError?'내 기록을 불러오지 못했어요. 다시 열어 확인해 주세요.':'이 계정으로 등록된 기록이 아직 없어요.'}</p>`;
+ return top+`<section class="ranking-self"><strong>내 기록${personalRank>0?' · '+personalRank+'위':''}</strong>${own}</section>`;
 }
 // 정원 화면: 정원은 3D 장면이 그리고, 오른쪽 상자에서 고른 대상을 다룬다.
 let gardenReturn=showIntro;
@@ -1487,7 +1489,14 @@ function showRanking(view='online'){
  const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
  online.flush().catch(()=>0).then(readBoard).then(board=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':bossAct===ACT.JOHAN?'요한 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
-  const mine=board.find(e=>e.uid===online.uid()&&e.name===playerName)||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true);bindRankSafety();}
+  const mine=board.find(e=>e.uid===online.uid())||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true,0,!mine);bindRankSafety();}
+  online.personalRank(SEASON,bossAct).then(personal=>{
+   if(serial!==rankSerial)return;
+   const current=$('#rank-board');if(current){current.innerHTML=rankingBoard(board,personal.entry||mine,true,personal.rank);bindRankSafety();}
+  }).catch(()=>{
+   if(serial!==rankSerial)return;
+   const current=$('#rank-board');if(current){current.innerHTML=rankingBoard(board,mine,true,0,false,true);bindRankSafety();}
+  });
  }).catch(()=>{
   if(serial!==rankSerial)return;const status=$('#rank-status');if(status)status.innerHTML='랭킹 서버에 잠깐 연결하지 못했어요 · <b>모두의 기록은 서버에 그대로 있어요</b><br><button class="primary" id="rank-retry">다시 불러오기</button>';
   const retry=$('#rank-retry');if(retry)retry.onclick=()=>showRanking(view);

@@ -10,7 +10,7 @@ export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v4',BUILD_PENDING_KEY='seed-ranking-build-pending-v1',RUNS_PATH='seedRanking/season12/runs',BUILDS_PATH='seedRanking/season12/builds',SEASON11_RUNS_PATH='seedRanking/season11/runs',SEASON11_BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PENDING_MAX=10,BUILD_PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v4',BUILD_PENDING_KEY='seed-ranking-build-pending-v1',RUNS_PATH='seedRanking/season12/runs',BUILDS_PATH='seedRanking/season12/builds',SEASON11_RUNS_PATH='seedRanking/season11/runs',SEASON11_BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PERSONAL_RANK_RUN_LIMIT=1500,PENDING_MAX=10,BUILD_PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
 // 1.2(2026-09-21): 한 판이 찐보스 열 번째 승리에서 끝나는 규칙으로 바뀌어 새 판을 연다. 1.1과 1.0 기록은 그대로 보관한다.
@@ -107,6 +107,22 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   }catch{}
   return board;
  }
+ // Top-score and recent-run windows can miss an older personal best. Fetch it
+ // by UID, then count distinct higher-scoring players for an exact place.
+ // A capped score query never produces a guessed rank when it is incomplete.
+ async function personalRank(season=SEASON,act=null){
+  const s=await signIn(),paths=pathsFor(season);
+  const own=await read(runsURL(s,`orderBy=${encodeURIComponent('"uid"')}&equalTo=${encodeURIComponent(JSON.stringify(s.uid))}&`,paths.runs));
+  const entry=bestPerPlayer(own,Number.MAX_SAFE_INTEGER,season,act)[0]||null;
+  if(!entry)return {entry:null,rank:0};
+  try{const build=await request(`${config.databaseURL}/${paths.builds}/${encodeURIComponent(entry.id)}.json?auth=${encodeURIComponent(s.idToken)}`);if(validBuild(build)&&build.uid===s.uid)entry.build=build;}catch{}
+  try{
+   const higher=await read(runsURL(s,`orderBy=${encodeURIComponent('"score"')}&startAt=${encodeURIComponent(JSON.stringify(entry.score))}&limitToLast=${PERSONAL_RANK_RUN_LIMIT}&`,paths.runs));
+   const complete=Object.keys(higher||{}).length<PERSONAL_RANK_RUN_LIMIT;
+   const rank=complete?bestPerPlayer(higher,Number.MAX_SAFE_INTEGER,season,act).findIndex(run=>run.id===entry.id)+1:0;
+   return {entry,rank:rank>0?rank:0};
+  }catch{return {entry,rank:0};}
+ }
  // 조합을 기록 옆에 쓴다. 규칙이 막으면 예외가 나므로 부르는 쪽이 판단한다.
  function putBuild(s,id,build,path=BUILDS_PATH){
   return request(`${config.databaseURL}/${path}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,
@@ -168,5 +184,5 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
  async function remove(id){const s=await signIn();try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});}catch{}await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
- return {signIn,top,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
+ return {signIn,top,personalRank,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
 }

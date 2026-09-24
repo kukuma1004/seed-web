@@ -209,7 +209,8 @@
         "runs": {
           ".read": "auth != null",
           ".indexOn": [
-            "score"
+            "score",
+            "uid"
           ],
           "$runId": {
             ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && ((!data.exists() && newData.child('uid').val() == auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() == auth.uid))",

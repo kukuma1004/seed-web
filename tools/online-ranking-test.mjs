@@ -30,8 +30,11 @@ function fakeFirebase({clock}){
   if(runsBase&&(!opts.method||opts.method==='GET')){
    const orderBy=u.searchParams.get('orderBy'),limit=Number(u.searchParams.get('limitToLast'));
    if(orderBy==='"$key"'){const from=JSON.parse(u.searchParams.get('startAt')),to=u.searchParams.has('endAt')?JSON.parse(u.searchParams.get('endAt')):null;const kept=Object.entries(runs).filter(([k])=>k>=from&&(!to||k<=to)).sort((a,b)=>a[0]<b[0]?-1:1).slice(-limit);return json(200,Object.fromEntries(kept));}
+   if(orderBy==='"uid"'){const own=JSON.parse(u.searchParams.get('equalTo'));return json(200,Object.fromEntries(Object.entries(runs).filter(([,v])=>v.uid===own)));}
    assert.equal(orderBy,'"score"');
-   const kept=Object.entries(runs).sort((a,b)=>a[1].score-b[1].score).slice(-limit);return json(200,Object.fromEntries(kept));
+   const from=u.searchParams.has('startAt')?JSON.parse(u.searchParams.get('startAt')):-Infinity;
+   const kept=Object.entries(runs).filter(([,v])=>v.score>=from).sort((a,b)=>a[1].score-b[1].score);
+   return json(200,Object.fromEntries(Number.isFinite(limit)?kept.slice(-limit):kept));
   }
   // Builds: same rules as docs/firebase-rules-with-seed.json — only the run's writer, once, known fields only.
   const bm=buildsBase&&path!==buildsBase?{1:path.slice(buildsBase.length+1)}:null;
@@ -103,6 +106,19 @@ function fakeFirebase({clock}){
  assert.equal(runAct(fb.runs[act3.id]),ACT.JOHAN);assert.deepEqual((await other.top(20,'',SEASON,ACT.JOHAN)).map(e=>e.name),['서연']);
  assert.equal(validRun({...base,uid:'u',name:'서연',score:18000,kills:100,act:ACT.JOHAN,at:T0}),true,'Act 3 boss points stay rankable');
  assert.equal((await other.top(20,'',SEASON,ACT.ALWAYS_BEGINNER))[0].score,3900,'Johan does not replace Act 2 best');
+}
+
+// A long-ago personal run must still appear even after it falls outside both
+// the top 100 score query and the most recent 500 runs.
+{
+ const clock={t:T0+1_000_000},fb=fakeFirebase({clock}),ranking=createOnlineRanking({storage:memory(),fetchImpl:fb.fetchImpl,now:()=>clock.t});
+ const posted=await ranking.submit({name:'내기록',score:1000,cycle:1,stage:3,kills:40,time:300});
+ for(let i=0;i<600;i++)fb.runs[pushKeyPrefix(clock.t+i+1)+String(i).padStart(12,'0')]={uid:`other-${i}`,name:`도전자${i}`,score:2000+i,cycle:1,stage:3,kills:80,time:300,act:ACT.AUSTIN,at:clock.t+i+1};
+ assert.equal((await ranking.top(500,'내기록')).some(row=>row.id===posted.id),false);
+ const personal=await ranking.personalRank(SEASON,ACT.AUSTIN);
+ assert.equal(personal.entry.id,posted.id);
+ assert.equal(personal.rank,601);
+ assert.equal((await ranking.personalRank(SEASON,ACT.JOHAN)).entry,null);
 }
 
 // Failures surface as errors so the game can fall back to this device's board.
