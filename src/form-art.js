@@ -38,6 +38,7 @@ const firstCandidateTileStyle=tile=>`background-image:url('${BASE}assets/${FIRST
 const pairKey=ids=>[...ids].sort().join('+');
 const CURATED_COMBO_ART=Object.freeze(Object.fromEntries(Object.values(CURATED_FORMS).filter(f=>TILES[f.id]===undefined).map(f=>[f.id,FIRST_FUSIONS.find(entry=>pairKey(entry.laws)===pairKey(f.requires))]).filter(([,entry])=>entry)));
 export function formArt(id,extra=''){
+ if(id==='comethalo')return `<span class="form-art comethalo-art ${extra}" aria-hidden="true" style="background-image:url('${BASE}assets/seed-comethalo-card-v1.webp');background-size:cover;background-position:center"></span>`;
  if(Object.hasOwn(FIRST_CANDIDATE_ART_TILES,id))return `<span class="form-art first-candidate-art ${extra}" aria-hidden="true" style="${firstCandidateTileStyle(FIRST_CANDIDATE_ART_TILES[id])}"></span>`;
  if(Object.hasOwn(SECOND_ART_TILES,id))return `<span class="form-art second-art ${extra}" aria-hidden="true" style="${secondTileStyle(SECOND_ART_TILES[id])}"></span>`;
  if(Object.hasOwn(SECOND_FORMS,id))return comboArt(SECOND_FORMS[id],`form-art ${extra}`);

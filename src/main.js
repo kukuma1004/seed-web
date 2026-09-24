@@ -635,7 +635,7 @@ function formHit(e,amount,meta){
  if(supports('gravity')){if(wells.length>=6)wells.shift();wells.push({pos:e.g.position.clone(),life:1.2,pulse:0});}
  return true;
 }
-function formOptions(){return {player,enemies:()=>enemies,nearby:(pos,radius,out)=>enemyIndex.queryInto(pos,radius,out),hit:formHit,blocked:(a,b)=>segmentHitsCover(a,b,obstacles,.1),reflector:(a,b,d)=>mirrorPanelsActive&&reflectMirrorPanels(a,b,d),boundary:(a,b,d)=>reflectArenaBoundary(a,b,d,arena),constrain:collide,vfx,sound:id=>audio.play(id),enemyShots:()=>enemyShots,theme:combatTheme};}
+function formOptions(){return {player,camera,enemies:()=>enemies,nearby:(pos,radius,out)=>enemyIndex.queryInto(pos,radius,out),hit:formHit,blocked:(a,b)=>segmentHitsCover(a,b,obstacles,.1),reflector:(a,b,d)=>mirrorPanelsActive&&reflectMirrorPanels(a,b,d),boundary:(a,b,d)=>reflectArenaBoundary(a,b,d,arena),constrain:collide,vfx,sound:id=>audio.play(id),enemyShots:()=>enemyShots,theme:combatTheme};}
 function clearEscorts(){for(const p of pendingEscorts)release(p.marker);pendingEscorts.length=0;}
 function updateEscorts(dt){
  if(isAct2(region))return;

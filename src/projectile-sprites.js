@@ -54,6 +54,8 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
  function batchFor(cell){return batches[cell]||(batches[cell]=make(cell,Math.min(64,capacity)));}
  function add(p,cell,size){
   const ob=p.ob;if(!ob||!p.dir)return;
+  // Comet Corolla uses its authored 2.5D bud in both orbit and flight.
+  if(p.kind==='comethalo'&&ob.userData.cometSprite){ob.visible=true;ob.userData.spriteHidden=false;return;}
   const sprite=active()&&used<capacity;
   ob.visible=!sprite;ob.userData.spriteHidden=sprite;
   if(!sprite)return;

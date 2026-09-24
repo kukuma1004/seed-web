@@ -20,6 +20,22 @@ const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elap
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
 
+// Orbiting bodies should obey one readable defense rule: touching an ordinary
+// hostile shot stops it, while boss volleys still require a dodge. Mirror
+// Guard's named Austin parry is checked by its own dedicated behavior.
+for(const id of ['starring','frostguard','stormcrown','mirrorguard','comethalo','halobloom','ebbring','spearring','accretiondisk']){
+ const shot={life:3,boss:false,struck:false,ob:{position:vec(100)}};
+ const f=fixture([],{enemyShots:()=>[shot]});f.combat.set(id,2);f.combat.update(.01);
+ const body=f.scene.children[0].children[0].children[0];
+ assert.ok(body?.isMesh,`${id} must have an orbiting body`);
+ shot.ob.position.copy(body.position);f.combat.update(.01);
+ assert.equal(shot.life,0,`${id} should intercept an ordinary shot`);
+ assert.equal(shot.struck,true,`${id} should mark the shot as spent`);
+ shot.life=3;shot.struck=false;shot.boss=true;f.combat.update(.01);
+ assert.equal(shot.life,3,`${id} should leave boss patterns dodgeable`);
+ f.combat.dispose();
+}
+
 // The first curated visual batch must use its real combat geometry: three
 // hitscan paths, a persistent frost web, and a single merged orbit petal.
 {

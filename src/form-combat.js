@@ -81,10 +81,72 @@ const immovable=e=>FORM_BOSSES.has(e.type)||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical'}){
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null}){
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
  const {mats,geos}=createFormVisuals();
+ // The Comet Corolla's painted relief is shared by its orbit and launched bud.
+ // Collision still uses the original world positions; this is only a billboard.
+ const cometPlane=camera&&typeof document!=='undefined'?new THREE.PlaneGeometry(1,1):null;
+ const orbitCells={starring:0,frostguard:1,stormcrown:2,mirrorguard:3};
+ const advancedOrbitCells={halobloom:0,ebbring:1,spearring:2,accretiondisk:3};
+ const cometRoll=new THREE.Quaternion(),cometAxis=new V(0,0,1),screenRight=new V(),screenUp=new V(),cometTangent=new V();
+ let cometTexture=null,cometMaterial=null;
+ let orbitTexture=null,orbitMaterial=null,advancedOrbitTexture=null,advancedOrbitMaterial=null,cometFailed=false,orbitFailed=false,advancedOrbitFailed=false;
+ const orbitCellGeometries=new Map();
+ function orbitCellGeometry(cell){
+  if(orbitCellGeometries.has(cell))return orbitCellGeometries.get(cell);
+  const geometry=new THREE.PlaneGeometry(1,1),uv=geometry.getAttribute('uv');
+  const column=cell%2,row=1-Math.floor(cell/2),inset=.003;
+  for(let i=0;i<uv.count;i++)uv.setXY(i,(column+inset+uv.getX(i)*(1-2*inset))/2,(row+inset+uv.getY(i)*(1-2*inset))/2);
+  orbitCellGeometries.set(cell,geometry);
+  return geometry;
+ }
+ function paintedOrbitSprite(id){
+  const advanced=advancedOrbitCells[id]!==undefined,cell=advanced?advancedOrbitCells[id]:orbitCells[id];
+  if(!cometPlane||cell===undefined||(advanced?advancedOrbitFailed:orbitFailed))return null;
+  let material=advanced?advancedOrbitMaterial:orbitMaterial;
+  if(!material){
+   const url=`${import.meta.env?.BASE_URL||'/'}assets/${advanced?'seed-orbit-advanced-v1.webp':'seed-orbit-sprites-v1.webp'}`;
+   material=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.035,opacity:0,depthWrite:false,depthTest:true,side:THREE.DoubleSide,toneMapped:false});
+   const texture=new THREE.TextureLoader().load(url,()=>{material.opacity=1;},undefined,()=>{if(advanced)advancedOrbitFailed=true;else orbitFailed=true;rebuildOrbit();});
+   texture.colorSpace=THREE.SRGBColorSpace;
+   texture.minFilter=THREE.LinearMipmapLinearFilter;
+   material.map=texture;material.needsUpdate=true;
+   tintPaintedOrbit(material,advanced?'advanced-orbit':'orbit');
+   if(advanced){advancedOrbitMaterial=material;advancedOrbitTexture=texture;}
+   else{orbitMaterial=material;orbitTexture=texture;}
+  }
+  const ob=new THREE.Mesh(orbitCellGeometry(cell),material);
+  ob.name=`seed-orbit-painterly-${id}`;ob.castShadow=false;ob.receiveShadow=false;
+  ob.userData.paintedOrbit=true;
+  ob.userData.spriteBaseAngle=['frostguard','ebbring','spearring'].includes(id)?Math.PI/4:['stormcrown','mirrorguard'].includes(id)?Math.PI/2:0;
+  return ob;
+ }
+ function cometSprite(pos,y=.85){
+  if(!cometPlane||cometFailed)return null;
+  if(!cometMaterial){
+   const url=`${import.meta.env?.BASE_URL||'/'}assets/seed-comethalo-sprite-v1.webp`;
+   cometMaterial=new THREE.MeshBasicMaterial({transparent:true,alphaTest:.035,opacity:0,depthWrite:false,depthTest:true,side:THREE.DoubleSide,toneMapped:false});
+   cometTexture=new THREE.TextureLoader().load(url,()=>{cometMaterial.opacity=1;},undefined,()=>{cometFailed=true;rebuildOrbit();});
+   cometTexture.colorSpace=THREE.SRGBColorSpace;
+   cometTexture.minFilter=THREE.LinearMipmapLinearFilter;
+   cometMaterial.map=cometTexture;cometMaterial.needsUpdate=true;
+   tintPaintedOrbit(cometMaterial,'comet');
+  }
+  const ob=new THREE.Mesh(cometPlane,cometMaterial);
+  ob.name='seed-comet-corolla-sprite';ob.castShadow=false;ob.receiveShadow=false;
+  ob.userData.cometSprite=true;ob.userData.paintedOrbit=true;ob.userData.spriteBaseAngle=Math.PI/4;
+  if(pos)ob.position.set(pos.x,y,pos.z);
+  return ob;
+ }
+ function facePaintedOrbit(ob,dir){
+  if(!ob.userData.paintedOrbit)return;
+  screenRight.set(1,0,0).applyQuaternion(camera.quaternion);
+  screenUp.set(0,1,0).applyQuaternion(camera.quaternion);
+  const angle=Math.atan2(dir.dot(screenUp),dir.dot(screenRight));
+  ob.quaternion.copy(camera.quaternion).multiply(cometRoll.setFromAxisAngle(cometAxis,angle-ob.userData.spriteBaseAngle));
+ }
  const awakenedMats=new Map();
  const originalMats=new Map(Object.entries(mats).map(([name,material])=>[name,{material,color:material.color?.clone(),emissive:material.emissive?.clone()}]));
  let themeId=normalizeTheme(theme);
@@ -104,6 +166,13 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
  const sourceForm=()=>SECOND_FORMS[statId]||AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});
 
+ function tintPaintedOrbit(material,key){
+  if(!material)return;
+  material.color.setHex(0xffffff);
+  if(themeId!=='botanical')material.color.lerp(new THREE.Color(themeColor(themeId,`form:${key}:core`,0xffffff)),.22);
+  if(awakened())material.color.lerp(new THREE.Color(0xffdf88),.15);
+ }
+
  function applyTheme(){
   for(const [name,base] of originalMats){
    const {material,color,emissive}=base;if(color)material.color.copy(color);if(emissive)material.emissive.copy(emissive);
@@ -113,6 +182,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
    const gold=awakenedMats.get(material);if(gold){if(gold.color&&material.color)gold.color.copy(material.color);if(gold.emissive)gold.emissive.setHex(themeId==='botanical'?0xffb84f:themeColor(themeId,`form:${name}:awaken`,0xffb84f));}
   }
+  tintPaintedOrbit(cometMaterial,'comet');tintPaintedOrbit(orbitMaterial,'orbit');tintPaintedOrbit(advancedOrbitMaterial,'advanced-orbit');
  }
  function applyProjectileScale(ob,x=ob.userData.visualScale?.[0]??1,y=ob.userData.visualScale?.[1]??x,z=ob.userData.visualScale?.[2]??x){
   ob.userData.visualScale=[x,y,z];const scale=THEMES[themeId].projectileScale;ob.scale.set(x*scale[0],y*scale[1],z*scale[2]);return ob;
@@ -135,14 +205,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    returningpetals:'returnPetal',lightningpetal:'lightningPetal',gravitystake:'gravityStake'}[active];
   return primary&&geo===geos[primary]?comboGeo:null;
  }
- function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));ob.position.set(pos.x,y,pos.z);ob.userData.awakened=awakened();if(visual&&secondRecipe)ob.userData.curatedSecond=secondRecipe.id;if(visual&&AWAKEN_FORMS[statId]?.finalCandidate)ob.userData.finalBranch=statId;applyProjectileScale(ob);group.add(ob);return ob;}
+ function spawnMesh(geo,mat,pos,y=.7){const visual=curatedProjectileGeometry(geo),ob=geo===geos.cometBud?cometSprite(pos,y):null;if(ob){applyProjectileScale(ob);group.add(ob);return ob;}const fallback=new THREE.Mesh(visual||geo,combatMaterial(visual?mats.gene:mat));fallback.position.set(pos.x,y,pos.z);fallback.userData.awakened=awakened();if(visual&&secondRecipe)fallback.userData.curatedSecond=secondRecipe.id;if(visual&&AWAKEN_FORMS[statId]?.finalCandidate)fallback.userData.finalBranch=statId;applyProjectileScale(fallback);group.add(fallback);return fallback;}
  function remove(b){b.ob?.removeFromParent();}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:active==='spearring'?S.spears:active==='accretiondisk'?S.vortices:0;
   const style=ORBIT_VISUALS[active];
   if(!style){orbit.visible=false;return;}
-  for(let i=0;i<count;i++)orbit.add(new THREE.Mesh(AWAKEN_FORMS[statId]&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
+  tintPaintedOrbit(cometMaterial,'comet');tintPaintedOrbit(orbitMaterial,'orbit');tintPaintedOrbit(advancedOrbitMaterial,'advanced-orbit');
+  for(let i=0;i<count;i++)orbit.add((active==='comethalo'?cometSprite():paintedOrbitSprite(active))||new THREE.Mesh(AWAKEN_FORMS[statId]&&comboGeo?comboGeo:geos[style.geometry],combatMaterial(mats[style.material])));
   orbit.visible=count>0;
  }
  function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();comboGeo?.dispose();comboGeo=null;hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
@@ -910,13 +981,31 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(d>1e-4)ebbAnchor.addScaledVector(gap.normalize(),Math.min(d,S.ebb*dt));
    S.calm=flat(ebbAnchor,player.position)<S.stretch;center=ebbAnchor;
   }
+  // Every tangible orbit intercepts ordinary hostile shots on contact. Boss
+  // volleys keep their authored dodge patterns; only Mirror Guard retains its
+  // special, timed Austin parry. Fetch the shot list once for all orbit bodies.
+  const hostileShots=enemyShots();
   orbit.children.forEach((ob,i)=>{
    const pose=orbitPose(active,i,orbit.children.length,angle,breathe,S);
    ob.position.set(center.x+pose.x,pose.y,center.z+pose.z);
-   ob.rotation.set(pose.pitch,pose.yaw,pose.roll);ob.scale.set(...pose.scale);
+   if(ob.userData.paintedOrbit){
+    const a=angle+i*Math.PI*2/Math.max(1,orbit.children.length);
+    const radial=active==='stormcrown'||active==='mirrorguard';
+    facePaintedOrbit(ob,radial?cometTangent.set(Math.cos(a),0,Math.sin(a)):cometTangent.set(-Math.sin(a),0,Math.cos(a)));
+   }else ob.rotation.set(pose.pitch,pose.y,pose.roll);
+   ob.scale.set(...pose.scale);
+   if(ob.userData.paintedOrbit&&active==='stormcrown')ob.scale.multiplyScalar(.72);
+   if(active==='spearring')ob.visible=!(spearGone[i]>0);
+   if(ob.visible&&active!=='mirrorguard')for(const q of hostileShots){
+    if(!(q.life>0)||q.boss)continue;
+    const dx=q.ob.position.x-ob.position.x,dz=q.ob.position.z-ob.position.z,distanceSq=dx*dx+dz*dz;
+    if(active==='accretiondisk'&&debris<S.capacity&&distanceSq<S.catchRadius*S.catchRadius){
+     q.life=0;q.struck=true;debris++;fx.burst(q.ob.position,'gravity',6);continue;
+    }
+    if(distanceSq>=.36)continue;
+    q.life=0;q.struck=true;fx.burst(q.ob.position,active==='frostguard'?'frost':'orbit',4);
+   }
    if(active==='frostguard'){
-    // Satellites shatter ordinary enemy shots; the warden's shots pass through every orbit.
-    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'frost',8);}
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.85,1.35)){
      cooldowns.set(e,S.cooldown);const direction=e.g.position.clone().sub(player.position).setY(0).normalize();
      if(support(e,S.damage,{kind:'frostguard',direction})){
@@ -926,18 +1015,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
      }
     }
    }else if(active==='starring'){
-    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<.6){q.life=0;q.struck=true;fx.burst(q.ob.position,'orbit',8);}
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);support(e,S.damage,{kind:'starring',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()});fx.pulse(e.g.position,'orbit',.45,.2);
     }
    }else if(active==='spearring'){
-    ob.visible=!(spearGone[i]>0);
     if(ob.visible)for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
      cooldowns.set(e,S.cooldown);support(e,S.damage,{kind:'spearring',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()});
     }
    }else if(active==='accretiondisk'){
-    // 적 탄(문지기·보스 탄 제외)을 끌어와 부스러기로 삼는다.
-    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,ob.position)<S.catchRadius&&debris<S.capacity){q.life=0;q.struck=true;debris++;fx.burst(q.ob.position,'gravity',6);}
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.85,1.35)){
      cooldowns.set(e,S.cooldown);
      if(support(e,S.damage,{kind:'accretiondisk',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()})&&debris<S.capacity)debris++;
@@ -954,7 +1039,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
      if(support(e,S.damage,{kind:'halobloom',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()})){haloCuts++;fx.pulse(e.g.position,'split',.42,.18);}
     }
    }else if(active==='mirrorguard'){
-    for(const q of enemyShots()){
+    for(const q of hostileShots){
      if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
      if(q.boss&&(q.spriteKey!=='austin'||mirrorParryCooldown>0))continue;
      q.life=0;q.struck=true;
@@ -986,7 +1071,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    for(const ob of ordered){
     if(launched>=2)break;
     const target=nearestEnemy(ob.position,S.range,new Set(),true);if(!target||count('comethalo')>=S.bolts)continue;
-    const dir=target.g.position.clone().sub(ob.position).setY(0).normalize(),shot=spawnMesh(geos.cometBud,mats.storm,ob.position);shot.rotation.x=-Math.PI/2;applyProjectileScale(shot,.86,.86,.86);
+    const dir=target.g.position.clone().sub(ob.position).setY(0).normalize(),shot=spawnMesh(geos.cometBud,mats.storm,ob.position);if(shot.userData.cometSprite)facePaintedOrbit(shot,dir);else shot.rotation.x=-Math.PI/2;applyProjectileScale(shot,.86,.86,.86);
     bolts.push({kind:'comethalo',ob:shot,dir,life:S.life,damage:S.damage,blast:S.blast,blastRadius:S.blastRadius,speed:S.speed});launched++;
    }
    if(launched){cometCursor=(cometCursor+launched)%orbit.children.length;movementCharge=Math.max(0,movementCharge-S.chargeCost*launched);fx.pulse(player.position,'orbit',1.5,.2);}
@@ -1080,7 +1165,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     fx.trail(previous,b.ob.position,b.laws.includes('portal')?'portal':b.laws[0],b.fragment);continue;
    }
    if(b.kind==='comethalo'){
-    b.ob.position.addScaledVector(b.dir,dt*b.speed);b.ob.rotation.y+=dt*12;b.ob.rotation.z+=dt*7;
+    b.ob.position.addScaledVector(b.dir,dt*b.speed);
+    if(b.ob.userData.cometSprite)facePaintedOrbit(b.ob,b.dir);else{b.ob.rotation.y+=dt*12;b.ob.rotation.z+=dt*7;}
     if(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position)){b.life=0;continue;}
     const target=near(b.ob.position,1.8).find(e=>!e.dead&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.68,1.16));
     if(target){
@@ -1619,7 +1705,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     case 'comethalo':{
      movementCharge=1;
      for(const d of around(8)){
-      const ob=spawnMesh(geos.cometBud,mats.storm,pos);ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.9,.9,.9);
+      const ob=spawnMesh(geos.cometBud,mats.storm,pos);if(ob.userData.cometSprite)facePaintedOrbit(ob,d);else ob.rotation.x=-Math.PI/2;applyProjectileScale(ob,.9,.9,.9);
       bolts.push({kind:'comethalo',ob,dir:d,life:S.life,damage:S.damage,blast:S.blast,blastRadius:S.blastRadius,speed:S.speed});
      }
      break;
@@ -1680,5 +1766,5 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  }
  return {set,setTheme,fire,update,clear,surge,calm,auraBolts,audioEvent:()=>projectileAudioEvent(sourceForm()),
   state:()=>({active,evolution:ownerId||statId,theme:themeId,twin,awakened:awakened(),awakenIn:awakened()?Math.max(0,awakenTimer):null,level,bolts:bolts.length,wells:wells.length,shatters:shatters.length,embers:embers.length,storms:storms.length,stakes:stakes.length,frostLines:frostLines.length,rewinds:rewindMemories.length,gardens:gardens.length,coldWells:coldWells.length,final:finalLayer.state(),debris,spearsGone:spearGone.filter(t=>t>0).length,ebbCalm:active==='ebbring'?Boolean(S.calm):null,haloCuts,haloRegrow:Math.max(0,haloRegrow),charge:movementCharge,orbit:orbit.visible?orbit.children.length:0,hits,secondHits,secondPhase,surge:Math.max(0,surgeTime)}),
-  dispose(){clear();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
+  dispose(){clear();cometPlane?.dispose();cometMaterial?.dispose();cometTexture?.dispose();for(const geometry of orbitCellGeometries.values())geometry.dispose();orbitMaterial?.dispose();orbitTexture?.dispose();advancedOrbitMaterial?.dispose();advancedOrbitTexture?.dispose();for(const g of Object.values(geos))g.dispose();for(const m of new Set([...Object.values(mats),...awakenedMats.values()]))m.dispose();group.removeFromParent();}};
 }
