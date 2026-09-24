@@ -343,6 +343,40 @@
         }
       }
     },
+    "seedWebTelemetry": {
+      "v1": {
+        "days": {
+          "$day": {
+            "visitors": {
+              "$uid": {
+                ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && newData.val() == true",
+                ".validate": "newData.val() == true"
+              }
+            },
+            "starts": {
+              "$uid": {
+                "$eventId": {
+                  ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && !data.exists() && newData.val() == true",
+                  ".validate": "newData.val() == true"
+                }
+              }
+            },
+            "loginFailures": {
+              "$provider": {
+                "$reason": {
+                  "$uid": {
+                    "$eventId": {
+                      ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && ($provider == 'google' || $provider == 'apple' || $provider == 'guest') && ($reason == 'network' || $reason == 'config' || $reason == 'popup' || $reason == 'other') && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && !data.exists() && newData.val() == true",
+                      ".validate": "newData.val() == true"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "seedPerformance": {
       "sessions": {
         "$uid": {

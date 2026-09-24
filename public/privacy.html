@@ -12,7 +12,7 @@ a{color:#8fd7b4}
 .box{border:1px solid #2f4d50;border-radius:12px;padding:14px 16px;background:#102a30;margin:16px 0}
 </style></head><body><main>
 <h1>SEED 개인정보 처리방침</h1>
-<small>최종 수정일: 2026년 9월 18일 · 적용 대상: SEED 안드로이드 앱 및 웹 게임(kukuma1004.github.io/seed-web)</small>
+<small>최종 수정일: 2026년 9월 24일 · 적용 대상: SEED 안드로이드 앱 및 웹 게임(kukuma1004.github.io/seed-web)</small>
 
 <div class="box">
 <p><strong>요약</strong> — SEED는 계정 로그인을 강제하지 않습니다. 게스트로 플레이하거나 Google·Apple 계정을 선택해 로그인할 수 있습니다.
@@ -28,8 +28,10 @@ a{color:#8fd7b4}
 <tr><td>직접 입력한 Google Play 계정 이메일, Android 기기 보유 확인, 신청 시각</td><td>웹에서 비공개 베타테스터 신청을 보낸 경우</td><td>Google Play 비공개 테스트 등록과 베타 안내</td><td>Google Firebase Realtime Database(싱가포르). 신청 브라우저의 익명 식별자로 제출</td></tr>
 <tr><td>접속 IP, 기기·브라우저 종류를 나타내는 사용자 에이전트</td><td>로그인과 랭킹 서버 연결 시</td><td>서비스 보안, 부정 이용 방지, 연결 제공. IP로 대략적인 지역이 추정될 수 있으나 SEED 운영자가 위치 정보를 따로 저장하거나 이용하지 않음</td><td>Google Firebase</td></tr>
 <tr><td>게임 진행 상황(정원·씨앗·조합 도감·유물·JP·체크포인트), 별명과 설정</td><td>플레이 중</td><td>이어하기, 여러 기기 동기화, 계정 보상 지급</td><td>기기 안(브라우저 저장소)과 Google Firebase Realtime Database(싱가포르). 로그인한 Firebase UID별로 분리</td></tr>
+<tr><td>웹 브라우저별 임의 식별자, 접속 날짜, 전투 시작 횟수, 로그인 실패 유형</td><td>웹 게임 방문·전투 시작·로그인 실패 시</td><td>웹 이용 추이와 접속 문제 파악. 로그인 취소는 실패로 세지 않음</td><td>Google Firebase Authentication 및 Realtime Database(싱가포르). 게임 계정과 별도 식별자 사용</td></tr>
 </table>
 <p>게스트 식별자는 Google·Apple 계정이나 실제 신원과 연결되지 않습니다. 앱을 지우면 게스트 진행을 되찾지 못할 수 있습니다. 계정 로그인을 선택한 경우 Firebase UID가 해당 로그인 제공자의 계정과 연결됩니다.</p>
+<p>웹 이용 통계에는 이메일·별명·게임 조합·상세 오류 문구를 넣지 않습니다. 임의 식별자는 같은 브라우저의 하루 방문을 중복 계산하지 않기 위한 것으로, 브라우저 데이터를 지우면 새 식별자가 생길 수 있습니다. Android 앱은 이 웹 통계에 포함되지 않습니다.</p>
 
 <h2>2. 수집하지 않는 정보</h2>
 <p>법적 이름·생년월일·전화번호·주소·연락처·기기에 저장된 사진·마이크·카메라·정확한 위치·하드웨어 식별자(광고 ID 포함)를 요구하거나 수집하지 않습니다.

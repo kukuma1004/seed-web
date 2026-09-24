@@ -24,8 +24,8 @@ export const AUSTIN_ARENA=Object.freeze({shape:'circle',radius:7.6});
 export const AUSTIN_ART='boss-austin-v1.png';
 export const PHASES=Object.freeze({
  normal:{tempo:1,label:'정시 근무',jabs:3,alarms:3,volleys:3,bolts:24,gapHalf:.58,rest:.58,order:['jab','sweep','alarm','volley']},
- overtime:{tempo:.8,label:'야근 모드',jabs:3,alarms:4,volleys:4,bolts:30,gapHalf:.48,rest:.4,order:['volley','alarm','sweep','jab','volley','jab']},
- deadline:{tempo:.7,label:'마감 직전',jabs:4,alarms:5,volleys:5,bolts:36,gapHalf:.46,rest:.26,order:['alarm','volley','jab','sweep','volley','jab']}
+ overtime:{tempo:.9,label:'야근 모드',jabs:3,alarms:4,volleys:4,bolts:30,gapHalf:.48,rest:.4,order:['volley','alarm','sweep','jab','volley','jab']},
+ deadline:{tempo:.8,label:'마감 직전',jabs:4,alarms:5,volleys:5,bolts:36,gapHalf:.46,rest:.26,order:['alarm','volley','jab','sweep','volley','jab']}
 });
 // Burst damage may reach a phase boundary, but cannot erase an unseen phase.
 // A short, visible wind-up clears the old hazards before the faster phase begins.

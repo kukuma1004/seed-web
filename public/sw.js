@@ -1,9 +1,9 @@
 // Offline play: after one visit with internet, the whole game (code, images, icons) is kept on the device.
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
-const CACHE='seed-play-v33';
+const CACHE='seed-play-v34';
 const ROOT=new URL('./',self.location).href;
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-192.png',ROOT+'icons/seed-512.png'];
-const FORCE_GATE_REFRESH='closed-beta-1.1-auth-refresh';
+const FORCE_GATE_REFRESH='web-telemetry-20260924';
 let lastSync=0,syncing=null;
 
 // Download every file listed by the build (offline-manifest.json) that is not stored yet,
@@ -28,8 +28,8 @@ function syncOfflineCopy(){
 }
 
 self.addEventListener('install',event=>event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting())));
-// The public web is closed during the beta. Claim and navigate existing tabs so
-// an old game bundle cannot continue indefinitely without a manual refresh.
+// Claim and navigate existing tabs so the current game code and privacy notice
+// reach installed web-app windows without a manual refresh.
 self.addEventListener('activate',event=>event.waitUntil((async()=>{
  await Promise.all((await caches.keys()).filter(k=>k.startsWith('seed-play-')&&k!==CACHE).map(k=>caches.delete(k)));
  await self.clients.claim();
