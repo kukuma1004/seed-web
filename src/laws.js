@@ -10,7 +10,7 @@ const ALL_LAWS={
  burst:{name:'폭발',form:'불꽃 열매',icon:'✺',color:0xffad58,desc:'적중점 주변에 폭발 피해를 줍니다',upgrade:'폭발 반경 1.5 → 2.1',hint:'무리의 가운데를 맞혀 주변까지 터뜨리세요'},
  recall:{name:'귀환',form:'돌아오는 잎',icon:'↶',color:0x8dffcd,desc:'날아간 탄환이 돌아오며 한 번 더 적을 맞힙니다',upgrade:'귀환 피해 +50%',hint:'탄환이 돌아오는 길에 적을 놓으세요'},
  gravity:{name:'중력',form:'밤의 씨방',icon:'◉',color:0xda9aff,desc:'적중점에 작은 소용돌이를 남겨 적을 모읍니다',upgrade:'흡인 반경 2.2 → 3',hint:'적을 모아 분열·폭발·연쇄를 이어보세요'},
- frost:{name:'빙결',form:'서리 봉오리',icon:'❄',color:0x9af0ff,desc:'맞은 적의 움직임과 공격을 1.3초 동안 늦춥니다',upgrade:'둔화 40% → 60% · 지속 연장',hint:'빠른 적을 늦춰 포위망에 틈을 만드세요'},
+ frost:{name:'빙결',form:'서리 봉오리',icon:'❄',color:0x9af0ff,desc:'적을 1.3초 둔화하고 연속 적중 시 서리가 깨지며 추가 피해를 줍니다',upgrade:'둔화 40% → 60% · 지속 연장',hint:'같은 적을 연속으로 맞혀 얼음을 깨뜨리세요'},
  portal:{name:'차원',form:'별문 씨앗',icon:'◇',color:0x9b86ff,desc:'탄환이 앞쪽에 작은 문을 열어 벽을 넘지 않고 전장을 도약합니다',upgrade:'도약 거리 2.6 → 4.4',hint:'적의 앞줄을 건너뛰어 뒤쪽 사수와 포탑을 노리세요'}
 };
 export const LAWS=Object.fromEntries(Object.entries(ALL_LAWS).filter(([id])=>!HIDDEN_LAWS.includes(id)));
