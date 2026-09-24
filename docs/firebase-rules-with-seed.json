@@ -327,7 +327,7 @@
     "seedBetaApplicants": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
-        ".write": "auth != null && auth.uid == $uid",
+        ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && newData.child('email').val() == auth.token.email",
         ".validate": "newData.hasChildren(['email', 'displayName', 'android', 'consentVersion', 'appliedAt', 'status', 'source']) && newData.child('email').isString() && newData.child('email').val().matches(/^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\\.[A-Za-z]{2,}$/) && newData.child('email').val().length <= 254 && (auth.token.firebase.sign_in_provider == 'anonymous' || newData.child('email').val() == auth.token.email) && newData.child('displayName').isString() && newData.child('displayName').val().length <= 80 && newData.child('android').val() == true && newData.child('consentVersion').isString() && newData.child('appliedAt').isNumber() && newData.child('appliedAt').val() <= now && newData.child('status').val() == 'pending' && newData.child('source').val() == 'public-web'",
         "$other": {
           ".validate": false
