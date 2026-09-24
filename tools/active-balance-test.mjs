@@ -19,6 +19,10 @@ const batch1=['icicle','halobloom','frostnet','rewindbolt','refractlance'];
 // damage floor, not a guarantee that standing still wins the encounter.
 for(const id of Object.keys(FORMS)){
  const damage=bossDps(id,3,{shots:true});
+ if(id==='mirrorguard'){
+  assert.ok(damage>=10&&damage<=50,`defensive mirror guard should survive boss shots without becoming boss DPS (${Math.round(damage)} DPS)`);
+  continue;
+ }
  assert.ok(damage>=50,`${id}: Austin pressure too low at Lv.3 (${Math.round(damage)} DPS)`);
  assert.ok(damage<=260,`${id}: Austin pressure bypasses the boss damage budget (${Math.round(damage)} DPS)`);
 }

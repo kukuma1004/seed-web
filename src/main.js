@@ -395,7 +395,8 @@ function applyLawHit(e,amount,secondary=false,critical=false){
   if(secondary){e.slow=Math.max(e.slow||0,LS.frostTime);}else{
    const frost=applyFrostContact(e,{duration:LS.frostTime,now:elapsed,boss:isBoss(e)});
    if(frost.first)vfx.burst(e.g.position,'frost',5,.38);
-   if(frost.shatter){vfx.burst(e.g.position,'frost',12,1.15);audio.play('frostHit');damageEnemy(e,amount*frost.bonus,false,false,{kind:'frost-shatter'});}
+   else if(!frost.shatter)vfx.burst(e.g.position,'frost',2,.18+.09*frost.stacks);
+   if(frost.shatter){vfx.burst(e.g.position,'frost',18,1.3);vfx.frostWeb(e.g.position.clone().add(new V(-.55,.2,-.55)),e.g.position.clone().add(new V(.55,.2,.55)));audio.play('frostHit');damageEnemy(e,amount*frost.bonus,false,false,{kind:'frost-shatter'});}
   }
   combatAnalysis.utility('freeze');
  }

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createFormCombat,FORM_COMBAT,segmentDistance} from '../src/form-combat.js';
+import {createFormCombat,FORM_COMBAT,MIRROR_BOSS_PARRY,segmentDistance} from '../src/form-combat.js';
 import {createFormVisuals} from '../src/form-visuals.js';
 import {GENERATED_FORMS} from '../src/forms.js';
 import {blocksShield} from '../src/shield.js';
@@ -17,12 +17,12 @@ function fixture(foes=[],overrides={}){
  return {combat,player,calls,constrained,scene};
 }
 const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elapsed+=dt)combat.update(Math.min(dt,seconds-elapsed));};
+assert.ok(MIRROR_BOSS_PARRY.damageScale<=.1,'boss parry must be defense, not a source of boss damage');
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
 
-// Orbiting bodies should obey one readable defense rule: touching an ordinary
-// hostile shot stops it, while boss volleys still require a dodge. Mirror
-// Guard's named Austin parry is checked by its own dedicated behavior.
+// Orbiting bodies stop ordinary shots. Only Mirror Guard can occasionally
+// parry a boss projectile; every other orbit still leaves boss patterns intact.
 for(const id of ['starring','frostguard','stormcrown','mirrorguard','comethalo','halobloom','ebbring','spearring','accretiondisk']){
  const shot={life:3,boss:false,struck:false,ob:{position:vec(100)}};
  const f=fixture([],{enemyShots:()=>[shot]});f.combat.set(id,2);f.combat.update(.01);
@@ -32,8 +32,18 @@ for(const id of ['starring','frostguard','stormcrown','mirrorguard','comethalo',
  assert.equal(shot.life,0,`${id} should intercept an ordinary shot`);
  assert.equal(shot.struck,true,`${id} should mark the shot as spent`);
  shot.life=3;shot.struck=false;shot.boss=true;f.combat.update(.01);
- assert.equal(shot.life,3,`${id} should leave boss patterns dodgeable`);
+ assert.equal(shot.life,id==='mirrorguard'?0:3,`${id} boss interception rule`);
  f.combat.dispose();
+}
+for(const spriteKey of ['austin','baseball','storm','mirror']){
+ const first={life:3,boss:true,spriteKey,struck:false,ob:{position:vec(100)}};
+ const shots=[first],f=fixture([],{enemyShots:()=>shots});f.combat.set('mirrorguard',2);f.combat.update(.01);
+ const body=f.scene.children[0].children[0].children[0];first.ob.position.copy(body.position);f.combat.update(.01);
+ assert.equal(first.life,0,`Mirror Guard must parry ${spriteKey} boss projectiles`);
+ const second={life:3,boss:true,spriteKey,struck:false,ob:{position:body.position.clone()}};shots.push(second);f.combat.update(.01);
+ assert.equal(second.life,3,'a boss volley must not be erased during parry cooldown');
+ second.ob.position.copy(vec(100));step(f.combat,2.5);second.ob.position.copy(body.position);f.combat.update(.01);
+ assert.equal(second.life,0,'one more boss projectile can be parried after cooldown');f.combat.dispose();
 }
 
 // The first curated visual batch must use its real combat geometry: three
@@ -121,7 +131,16 @@ for(const id of ['starring','frostguard','stormcrown','mirrorguard','comethalo',
  step(net.combat,.05);assert.equal(net.combat.state().frostLines,1);net.combat.dispose();
  const crowd=fixture(Array.from({length:8},(_,i)=>enemy(2+i*.45)));crowd.combat.set('frostnet',9);
  for(let i=0;i<12;i++){crowd.combat.fire(vec(),vec(1));assert.ok(crowd.combat.state().frostLines<=24,'surge frost web must stay within its floor-line budget');}
+ assert.ok(crowd.calls.length>0&&crowd.scene.children.length>0);
+ assert.ok(crowd.combat.state().frostLines>0);
  crowd.combat.dispose();
+}
+{
+ const linked=[enemy(2),enemy(4),enemy(6)],between=enemy(3,.4),boss=enemy(5,.4,'austin');
+ const f=fixture([...linked,between,boss]);f.combat.set('frostnet');f.combat.fire(vec(),vec(1));
+ assert.ok(linked.every(e=>e.frostLock>=.6),'linked ordinary foes freeze together');
+ assert.ok(between.frostLock>=.6,'the frost front also catches an enemy between links');
+ assert.equal(boss.frostLock,undefined,'bosses cannot be held by the front');f.combat.dispose();
 }
 
 // Themes are cosmetic: switching one never changes the immutable combat stats.

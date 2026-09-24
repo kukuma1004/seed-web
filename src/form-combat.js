@@ -10,6 +10,7 @@ import {buildComboProjectileGeometry,projectileAudioEvent} from './combo-project
 // so its child shards conserve the parent's damage instead of multiplying it
 // by 1.4 on every split (two children at 70% each).
 export const PRISM_CHILD_FALLOFF=Object.freeze({base:.7,infinite:.5});
+export const MIRROR_BOSS_PARRY=Object.freeze({cooldown:2.4,damageScale:.08});
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -516,8 +517,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
  }
 
- // Chain + frost: three or more links leave a frost line along the route.
- // Guardians and bosses take the line's damage but never its hold.
+ // Chain + frost: three or more links release one bounded freezing front.
+ // Guardians and bosses take the line's damage but never its hard freeze.
  function frostNet(pos,first=null){
   let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
   const touched=new Set([from]),route=[from.g.position.clone().setY(0)];let damage=S.damage;
@@ -537,6 +538,21 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    frostLines.push({a:start,b:end,life:Math.min(1.5,S.webLife),tick:0,bossThread:true});
    if(frostLines.length>24)frostLines.splice(0,frostLines.length-24);
    fx.frostWeb(start,end);return;
+  }
+  // The first linked group visibly freezes together. The web also catches a
+  // few foes standing between links, without a room-wide scan or extra meshes.
+  let frozen=0;const affected=new Set();
+  for(let i=1;i<route.length&&frozen<10;i++){
+   const a=route[i-1],b=route[i];
+   for(const e of near(a,S.range+1.4)){
+    if(e.dead||affected.has(e)||segmentDistance(a,b,e.g.position)>1.15+bossReach(e,0,.15))continue;
+    affected.add(e);
+    if(immovable(e))continue;
+    e.slow=Math.max(e.slow||0,2.1);
+    e.frostLock=Math.max(e.frostLock||0,.62);
+    if(frozen++<5)fx.burst(e.g.position,'frost',5,.55);
+    if(frozen>=10)break;
+   }
   }
   for(let i=1;i<route.length;i++){
    frostLines.push({a:route[i-1],b:route[i],life:S.webLife,tick:0});
@@ -1041,12 +1057,12 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }else if(active==='mirrorguard'){
     for(const q of hostileShots){
      if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
-     if(q.boss&&(q.spriteKey!=='austin'||mirrorParryCooldown>0))continue;
+     if(q.boss&&mirrorParryCooldown>0)continue;
      q.life=0;q.struck=true;
-     if(q.boss)mirrorParryCooldown=1.8;
+     if(q.boss)mirrorParryCooldown=MIRROR_BOSS_PARRY.cooldown;
      const aimAt=nearestEnemy(ob.position,14);
      const dir=aimAt?aimAt.g.position.clone().sub(ob.position).setY(0).normalize():ob.position.clone().sub(player.position).setY(0).normalize();
-     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage*(q.boss?2.4:1)});
+     if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage*(q.boss?MIRROR_BOSS_PARRY.damageScale:1)});
      fx.reflect(ob.position,dir);
     }
     for(const e of enemies())if(!e.dead&&!cooldowns.has(e)&&flat(ob.position,e.g.position)<bossReach(e,.8,1.3)){
@@ -1680,11 +1696,12 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     case 'mirrorguard':{
     let turned=0;
     for(const q of enemyShots()){
-     if(!(q.life>0)||q.boss||turned>=30)continue;
+     if(!(q.life>0)||turned>=30||(q.boss&&mirrorParryCooldown>0))continue;
      q.life=0;q.struck=true;turned++;
+     if(q.boss)mirrorParryCooldown=MIRROR_BOSS_PARRY.cooldown;
      const aimAt=nearestEnemy(q.ob.position,14);
      const d=aimAt?aimAt.g.position.clone().sub(q.ob.position).setY(0).normalize():q.ob.position.clone().sub(player.position).setY(0).normalize();
-     bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,q.ob.position),dir:d,life:1.6,damage:S.damage*1.5});
+     bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,q.ob.position),dir:d,life:1.6,damage:S.damage*(q.boss?MIRROR_BOSS_PARRY.damageScale:1.5)});
      fx.reflect(q.ob.position,d);
     }
      break;

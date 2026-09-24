@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {LAWS} from '../src/laws.js';
 import {FORMS,CURATED_FORMS,CANDIDATE_FORMS,COMBO_BATCHES,formLevel,formStats,formUpgradeLine} from '../src/forms.js';
-import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,PRISM_CHILD_FALLOFF,orbitPose} from '../src/form-combat.js';
+import {createFormCombat,FORM_COMBAT,ORBIT_VISUALS,PRISM_CHILD_FALLOFF,MIRROR_BOSS_PARRY,orbitPose} from '../src/form-combat.js';
 import {blocksShield} from '../src/shield.js';
 
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
@@ -114,14 +114,15 @@ for(const id of Object.keys(FORMS)){
  assert.ok(f.calls.some(c=>c.e===close));assert.ok(!f.calls.some(c=>c.e===distant));assert.equal(f.combat.state().bolts,0);
 }
 
-// Mirror guard: ordinary enemy shots touching a mirror become the seed's shots; warden shots are untouched.
+// Mirror guard catches one ordinary and one boss shot, but the boss return is
+// a defensive splinter rather than a second full-strength attack.
 {
  const target=enemy(0,-6),shots=[{life:4,ob:{position:vec(1.9,0)}},{life:4,boss:true,ob:{position:vec(-1.9,0)}}];
  const f=fixture([target],{enemyShots:()=>shots});f.combat.set('mirrorguard');
- f.combat.update(.001);assert.ok(shots[0].life===0&&shots[0].struck,'the ordinary shot was caught');assert.equal(shots[1].life,4,'the warden shot was not');
+ f.combat.update(.001);assert.ok(shots[0].life===0&&shots[0].struck,'the ordinary shot was caught');assert.equal(shots[1].life,0,'the warden shot was parried');
  step(f.combat,1);
  const damages=f.calls.filter(c=>c.kind==='mirrorguard'&&!c.indirect).map(c=>c.damage).sort((a,b)=>a-b);
- assert.deepEqual(damages,[formStats('mirrorguard',1).damage]);
+ assert.deepEqual(damages,[formStats('mirrorguard',1).damage*MIRROR_BOSS_PARRY.damageScale,formStats('mirrorguard',1).damage]);
 }
 
 // The three newly curated pairs are true interactions, not two generic law
