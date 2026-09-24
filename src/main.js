@@ -690,13 +690,20 @@ function saveLeaveState(){
 // 개발자 실험실·연습장은 저장 기록이 없어 눌러도 안내만 뜨고 나가지지 않았다. 이제 어떤 판이든 나갈 수 있다.
 // 저장하는 판: 방 입구 저장으로 나간다. 저장하지 않는 판(거울의 탑·실험실·연습장): 저장 없이 바로 나간다.
 // 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
-let exitWithoutSaveArmed=false;
+let exitWithoutSaveArmed=false,saveExitBusy=false,cloudSaveFailed=false;
 function saveExitLabel(){return mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
 function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
-$('#save-exit').onclick=()=>{
+$('#save-exit').onclick=async()=>{
+ if(saveExitBusy)return;
  if(developerRun||mirrorSession){leavePausedRun();return;}
- if(!readCheckpoint(actStore())&&!exitWithoutSaveArmed){exitWithoutSaveArmed=true;$('#toast').textContent='저장 기록이 없어 이번 판은 이어할 수 없어요 · 한 번 더 누르면 저장하지 않고 나가요';$('#save-exit').textContent=saveExitLabel();return;}
- saveLeaveState();leavePausedRun();
+ if(!readCheckpoint(actStore())&&!exitWithoutSaveArmed){exitWithoutSaveArmed=true;pauseBuild.setSaveStatus('저장 기록이 없어요. 다시 누르면 저장하지 않고 나갑니다.');$('#save-exit').textContent=saveExitLabel();return;}
+ if(exitWithoutSaveArmed){leavePausedRun();return;}
+ if(!saveLeaveState()&&!roomCleared){exitWithoutSaveArmed=true;pauseBuild.setSaveStatus('이 방의 기록을 저장하지 못했어요. 다시 누르면 이전 기록만 남기고 나갑니다.');$('#save-exit').textContent=saveExitLabel();return;}
+ saveExitBusy=true;pauseBuild.setSaveStatus('기기에 저장했어요. 다른 기기에서도 이어할 수 있도록 계정 저장을 확인하는 중…');$('#save-exit').disabled=true;$('#save-exit').textContent='계정에 저장하는 중…';
+ let timeout;try{const result=await Promise.race([cloud.flush(),new Promise(resolve=>{timeout=setTimeout(()=>resolve({ok:false,reason:'timeout'}),10_000);})]);cloudSaveFailed=!result.ok||cloud.isDirty();}
+ catch{cloudSaveFailed=true;}
+ finally{clearTimeout(timeout);saveExitBusy=false;$('#save-exit').disabled=false;}
+ leavePausedRun();
 };
 function wave(continueSkyway=false){
  audio.setScene(mirrorSession||inAustinRoom()?'boss':'combat');
@@ -1140,11 +1147,13 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
    <button id="account-link" class="menu-item"><strong>프로필·계정</strong><small>${escapeHtml(account.label())} · 정원 · 도감 · 칭호</small></button>
   </div>
+  ${cloudSaveFailed?'<p class="cloud-save-warning" role="alert">이 기기에는 저장됐지만 계정 저장은 아직 확인되지 않았어요. 다른 기기로 옮기기 전에 연결 상태를 확인해 주세요. <button id="retry-cloud-save" type="button">계정 저장 다시 시도</button></p>':''}
   <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · <a href="https://kukuma1004.github.io/seed-web/terms.html" target="_blank" rel="noopener">랭킹 이용규칙</a> · 광고와 결제가 없는 게임입니다</p>
  </div>`;
  bindNameField();
  online.flush().catch(()=>0);
  $('#go-dungeon').onclick=showDungeon;
+ if($('#retry-cloud-save'))$('#retry-cloud-save').onclick=async()=>{const button=$('#retry-cloud-save');button.disabled=true;button.textContent='확인 중…';try{const result=await cloud.flush();if(result.ok&&!cloud.isDirty()){cloudSaveFailed=false;showIntro();return;}}catch{}button.disabled=false;button.textContent='계정 저장 다시 시도';};
  if($('#developer-lab'))$('#developer-lab').onclick=showDeveloperLab;
  $('#patch-notes').onclick=showNotes;
  $('#ranking-link').onclick=()=>showRanking('online');
@@ -1553,7 +1562,7 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
    :'가져온 물약 없이 출발해요 · 출발 상점에서 준비할 수 있어요';
  }}
 
-function togglePause(){if(mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused){exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms);}else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
+function togglePause(){if(saveExitBusy||mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused){exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms);}else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
 window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
 function refreshCloudOnReturn(){

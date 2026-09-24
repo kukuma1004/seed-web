@@ -220,6 +220,40 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const again=await cloud.syncNow();assert.equal(again.rewards.length,0);assert.equal(JSON.parse(storage.getItem(SHOP_KEY)).coins,3150);
 }
 
+// Leaving a run must wait for its checkpoint to reach the account, including
+// a second save made while the first upload was in flight.
+{
+ const {writeCheckpoint,readCheckpoint}=await import('../src/run-save.js');
+ const run=stage=>({version:1,cycle:0,stage,mode:'entry',region:'garden',hp:90,rules:[],mutated:[],kills:stage*10,elapsed:stage*60});
+ const account={ready:async()=>({uid:'same-run'}),user:()=>({uid:'same-run'}),tokenSession:async()=>({uid:'same-run',idToken:'token'})};
+ let remote=null,duringPut=null,failUpload=false;
+ const fetchImpl=async(url,options={})=>{
+  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){
+   if(failUpload){failUpload=false;return {ok:false,status:503,json:async()=>({error:'offline'})};}
+   remote=JSON.parse(options.body);if(duringPut){const callback=duringPut;duringPut=null;callback();}
+  }
+  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
+ };
+ const padStore=memory(),phoneStore=memory();
+ const pad=createCloudSync({storage:padStore,account,fetchImpl,debounceMs:60_000});
+ const phone=createCloudSync({storage:phoneStore,account,fetchImpl,debounceMs:60_000});
+ await pad.start();await phone.start();
+ writeCheckpoint(pad.storage,run(1),1000);
+ duringPut=()=>writeCheckpoint(pad.storage,run(2),2000);
+ assert.equal((await pad.flush()).ok,true);
+ assert.equal(pad.isDirty(),false);
+ assert.equal(remote.checkpoints.act1.stage,2,'save-and-exit waits for the last checkpoint upload');
+ await phone.syncNow();assert.equal(readCheckpoint(phone.storage)?.stage,2,'another device can continue at the saved room');
+ failUpload=true;writeCheckpoint(pad.storage,run(3),3000);
+ assert.equal((await pad.flush()).reason,'upload');
+ assert.equal(readCheckpoint(pad.storage)?.stage,3,'a failed cloud upload keeps the local checkpoint');
+ assert.equal(remote.checkpoints.act1.stage,2,'a failed upload must not claim cross-device progress');
+ assert.equal((await pad.flush()).ok,true);
+ await phone.syncNow();assert.equal(readCheckpoint(phone.storage)?.stage,3);
+ pad.signOutCleanup();phone.signOutCleanup();
+}
+
 // A concurrent phone write between GET and PUT must be merged, not replaced.
 {
  const storage=memory({[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['collapse'],bosses:['austin'],records:{}})});

@@ -8,6 +8,8 @@
 .pause-sheet footer{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;width:100%;margin-top:16px;flex:none}
 .pause-sheet footer button,.pause-sheet footer .primary,#pause-build #save-exit{position:static;transform:none;width:100%;min-width:0;max-width:none;min-height:46px;margin:0;padding:8px 10px;border-radius:8px;font-size:11px;line-height:1.25;text-align:center}
 #pause-build #save-exit{background:#122c2b}
+#pause-save-status{margin:8px 0 0;color:#f5dcae;font-size:11px;line-height:1.4;text-align:center}
+#pause-save-status[hidden]{display:none}
 body:has(#pause-build:not([hidden])) #pause{z-index:10}body:has(#pause-build:not([hidden])) #toast{visibility:hidden}
 @media(max-width:600px){.pause-sheet{padding:14px}#pause-loadout{grid-template-columns:1fr}.pause-item{padding:9px}.pause-item>span{width:56px;height:56px}.pause-sheet footer{grid-template-columns:1fr;gap:7px}.pause-sheet h2{font-size:23px}}
 @media(max-height:500px) and (orientation:landscape){.pause-sheet{padding:10px 64px 10px 16px}.pause-item p{display:none}.pause-sheet header p{margin:2px 0 6px!important}#pause-loadout{gap:6px;grid-template-columns:repeat(3,minmax(0,1fr))}.pause-sheet h2{font-size:20px;margin:2px}.pause-sheet header p{margin:4px 0 8px}.pause-sheet header small{font-size:10px}.pause-item{padding:8px;gap:8px}.pause-item>span{width:48px;height:48px}.pause-item h3{font-size:14px}.pause-item p{font-size:10px}.pause-sheet footer{margin-top:8px}}

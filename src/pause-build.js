@@ -20,7 +20,7 @@ function itemBag(inventory){
 export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null,titleUI=null,dashUI=null,bonusUI=null){
  const root=document.createElement('section');root.id='pause-build';root.hidden=true;
  root.setAttribute('role','dialog');root.setAttribute('aria-modal','true');root.setAttribute('aria-labelledby','pause-title');
- root.innerHTML='<div class="pause-sheet"><header><small>일시 정지</small><h2 id="pause-title">지금의 시드</h2><p id="pause-slots"></p></header><div id="pause-loadout"></div><footer><button id="pause-resume" class="primary">계속하기</button></footer></div>';
+ root.innerHTML='<div class="pause-sheet"><header><small>일시 정지</small><h2 id="pause-title">지금의 시드</h2><p id="pause-slots"></p></header><div id="pause-loadout"></div><footer><button id="pause-resume" class="primary">계속하기</button></footer><p id="pause-save-status" role="status" aria-live="polite" hidden></p></div>';
  root.querySelector('footer').append(saveButton);document.body.append(root);
  const continueButton=root.querySelector('#pause-resume');continueButton.onclick=resume;
  // Keep keyboard focus in the sheet; P/Escape still use the game's pause handler.
@@ -33,6 +33,7 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
  let shownLevels,shownForms;
  const api={
   show(levels,forms){
+   api.setSaveStatus('');
    shownLevels=levels;shownForms=forms;
    const core=orbitCore(forms,FORMS);
    const entries=[...forms].map(([id,level])=>{const f=FORMS[id],orbitStatus=isOrbitEvolution(id)?id===core?' · 공전 코어 활성':' · 공전 코어 대기':'';return `<article class="pause-item evolved">${formArt(id)}<div><small>${f.solo?'':f.awakened?'각성 진화 · ':'완성 진화 · '}${f.pair}${orbitStatus}</small><h3>${f.name} <span>Lv.${level}</span></h3><p>${f.desc}</p></div></article>`;})
@@ -54,7 +55,8 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
    if(relicUI){root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',relicLoadout(relicUI.get(),relicUI.canSwap(),relicUI.effect));root.querySelectorAll('[data-equip-relic]').forEach(b=>b.onclick=()=>{relicUI.swap(b.dataset.equipRelic);api.show(shownLevels,shownForms);});}
    root.hidden=false;continueButton.focus({preventScroll:true});
   },
-  hide(){root.hidden=true;}
+  hide(){root.hidden=true;},
+  setSaveStatus(message){const status=root.querySelector('#pause-save-status');status.hidden=!message;status.textContent=message;}
  };
  return api;
 }
