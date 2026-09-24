@@ -315,6 +315,33 @@
           "account": {
             ".validate": "newData.hasChildren()"
           },
+          "mirror": {
+            ".validate": "newData.hasChildren(['record'])",
+            "record": {
+              ".validate": "newData.child('version').val() == 1 && newData.child('bestFloor').isNumber() && newData.child('clears').isNumber() && newData.child('perfectDodges').isNumber()"
+            },
+            "checkpoint": {
+              ".validate": "newData.hasChildren()"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
+          "bossPet": {
+            ".validate": "newData.child('version').val() == 1 && newData.child('updatedAt').isNumber() && (!newData.child('id').exists() || newData.child('id').val() == 'austin' || newData.child('id').val() == 'alwaysbeginner' || newData.child('id').val() == 'tempestcarrier')",
+            "version": {
+              ".validate": "newData.val() == 1"
+            },
+            "updatedAt": {
+              ".validate": "newData.isNumber() && newData.val() >= 0"
+            },
+            "id": {
+              ".validate": "newData.val() == 'austin' || newData.val() == 'alwaysbeginner' || newData.val() == 'tempestcarrier'"
+            },
+            "$other": {
+              ".validate": false
+            }
+          },
           "$other": {
             ".validate": false
           }

@@ -116,7 +116,10 @@ const revealApp=()=>document.documentElement.classList.add('seed-loaded');
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
 let rawStorage;try{rawStorage=window.localStorage;}catch{rawStorage=null;}
 const account=createAccountAuth({storage:rawStorage});
-const cloud=createCloudSync({storage:rawStorage,account});
+const cloud=createCloudSync({storage:rawStorage,account,onSynced:()=>{
+ cloudSaveFailed=false;
+ document.querySelector('.cloud-save-warning')?.remove();
+}});
 const runStorage=cloud.storage;
 const webTelemetry=createWebTelemetry({
  enabled:!account.native&&!import.meta.env.DEV&&location.hostname==='kukuma1004.github.io',
@@ -688,8 +691,8 @@ $('#save-exit').onclick=async()=>{
  if(exitWithoutSaveArmed){leavePausedRun();return;}
  if(!saveLeaveState()&&!roomCleared){exitWithoutSaveArmed=true;pauseBuild.setSaveStatus('이 방의 기록을 저장하지 못했어요. 다시 누르면 이전 기록만 남기고 나갑니다.');$('#save-exit').textContent=saveExitLabel();return;}
  saveExitBusy=true;pauseBuild.setSaveStatus('기기에 저장했어요. 다른 기기에서도 이어할 수 있도록 계정 저장을 확인하는 중…');$('#save-exit').disabled=true;$('#save-exit').textContent='계정에 저장하는 중…';
- let timeout;try{const result=await Promise.race([cloud.flush(),new Promise(resolve=>{timeout=setTimeout(()=>resolve({ok:false,reason:'timeout'}),10_000);})]);cloudSaveFailed=!result.ok||cloud.isDirty();}
- catch{cloudSaveFailed=true;}
+ let timeout;try{const result=await Promise.race([cloud.flush(),new Promise(resolve=>{timeout=setTimeout(()=>resolve({ok:false,reason:'timeout'}),10_000);})]);cloudSaveFailed=Boolean(account.user()&&!account.user().isAnonymous&&(!result.ok||cloud.isDirty()));}
+ catch{cloudSaveFailed=Boolean(account.user()&&!account.user().isAnonymous);}
  finally{clearTimeout(timeout);saveExitBusy=false;$('#save-exit').disabled=false;}
  leavePausedRun();
 };

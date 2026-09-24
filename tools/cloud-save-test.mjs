@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
 import {ACCOUNT_PROFILE_KEY,FOUNDING_BADGE,FOUNDING_SEED,normalizeAccountProfile,recordBestScore} from '../src/account-profile.js';
 import {DISCOVERIES_KEY} from '../src/discoveries.js';
 import {GARDEN_KEY,emptyGarden,gardenEffects,autoPlantSeeds,chooseBranch,setActive,growPlants} from '../src/garden.js';
@@ -13,6 +14,16 @@ import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,merge
 import {createCloudSync} from '../src/cloud-sync.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
+
+// Every snapshot field must be accepted by the deployed per-user save schema.
+// A new client field rejected by $other silently breaks all cloud uploads.
+{
+ const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedUsers['$uid'].save;
+ const snapshot=collectCloudSnapshot(memory());
+ for(const field of Object.keys(snapshot))assert.ok(Object.hasOwn(rules,field),`Firebase save rules reject ${field}`);
+ for(const field of Object.keys(snapshot.mirror))assert.ok(Object.hasOwn(rules.mirror,field),`Firebase mirror rules reject ${field}`);
+ for(const field of Object.keys(snapshot.bossPet))assert.ok(Object.hasOwn(rules.bossPet,field),`Firebase boss pet rules reject ${field}`);
+}
 
 // Rendering quality must stay on the device: legacy PC saves at "high" must
 // never enable full bloom and shadows on a phone when progress is merged.
@@ -236,20 +247,25 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
   return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
  };
  const padStore=memory(),phoneStore=memory();
- const pad=createCloudSync({storage:padStore,account,fetchImpl,debounceMs:60_000});
+ let synced=0;
+ const pad=createCloudSync({storage:padStore,account,fetchImpl,debounceMs:60_000,onSynced:()=>{synced++;}});
  const phone=createCloudSync({storage:phoneStore,account,fetchImpl,debounceMs:60_000});
  await pad.start();await phone.start();
+ synced=0;
  writeCheckpoint(pad.storage,run(1),1000);
  duringPut=()=>writeCheckpoint(pad.storage,run(2),2000);
  assert.equal((await pad.flush()).ok,true);
  assert.equal(pad.isDirty(),false);
+ assert.equal(synced,1,'sync success is reported only after the newest checkpoint reaches the cloud');
  assert.equal(remote.checkpoints.act1.stage,2,'save-and-exit waits for the last checkpoint upload');
  await phone.syncNow();assert.equal(readCheckpoint(phone.storage)?.stage,2,'another device can continue at the saved room');
  failUpload=true;writeCheckpoint(pad.storage,run(3),3000);
  assert.equal((await pad.flush()).reason,'upload');
+ assert.equal(synced,1,'a failed upload cannot clear the cloud warning');
  assert.equal(readCheckpoint(pad.storage)?.stage,3,'a failed cloud upload keeps the local checkpoint');
  assert.equal(remote.checkpoints.act1.stage,2,'a failed upload must not claim cross-device progress');
  assert.equal((await pad.flush()).ok,true);
+ assert.equal(synced,2,'a later successful retry clears the stale warning');
  await phone.syncNow();assert.equal(readCheckpoint(phone.storage)?.stage,3);
  pad.signOutCleanup();phone.signOutCleanup();
 }

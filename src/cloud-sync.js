@@ -5,7 +5,7 @@ const encode=value=>encodeURIComponent(value);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 const requestError=async response=>{let detail='';try{detail=(await response.json())?.error||'';}catch{}const error=new Error(`Firebase ${response.status}${detail?`: ${detail}`:''}`);error.status=response.status;throw error;};
 
-export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=Date.now,debounceMs=1800}={}){
+export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=Date.now,debounceMs=1800,onSynced=()=>{}}={}){
  let active=false,timer=null,running=null,dirty=false,lastRewards=[],retryDelayMs=10_000;
  const base=FIREBASE_APP.databaseURL.replace(/\/$/,'');
  const raw=storage;
@@ -69,6 +69,7 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   if(migrating)account.finishMigration?.();
   if(lastRewards.length)try{globalThis.sessionStorage?.setItem('seed-cloud-reward-notice-v1',JSON.stringify(lastRewards));}catch{}
   try{raw?.setItem('seed-cloud-last-sync-v1',String(now()));}catch{}
+  if(!dirty)try{onSynced();}catch{}
   return {ok:true,changed,rewards:lastRewards,startup,migrated:migrating};
  }
 
