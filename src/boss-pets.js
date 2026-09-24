@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 
-// The companion is cosmetic. Boss discoveries are the sole unlock source;
-// developer-lab victories do not enter discoveries and therefore unlock nothing.
+// Boss discoveries are the sole unlock source; developer-lab victories do not
+// enter discoveries. The companion has no direct combat or collision effects.
 export const BOSS_PET_KEY='seed-boss-pet-v1';
 export const BOSS_PETS=Object.freeze({
  austin:Object.freeze({id:'austin',name:'꼬마 오스틴',boss:'정시파이터 오스틴',file:'boss-pet-austin-v1.png',size:.69}),
@@ -37,7 +37,7 @@ export function stepBossPet(position,target,dt,out={}){
  out.x=position.x+(target.x-position.x)*blend;out.z=position.z+(target.z-position.z)*blend;return out;
 }
 
-// One sprite, one loaded texture and one draw call; no collision, stats or combat hooks.
+// One sprite, one loaded texture and one draw call; no collision or combat hooks.
 export function createBossPet(scene,{profile,id=null}={}){
  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({transparent:true,alphaTest:.06,depthWrite:false,toneMapped:false}));
  sprite.name='cosmetic-boss-pet';sprite.center.set(.5,.065);sprite.visible=false;scene.add(sprite);

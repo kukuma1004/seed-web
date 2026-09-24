@@ -10,7 +10,15 @@ export const BADGES=Object.freeze({
 
 const ids=(value,known=null,limit=100)=>[...new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'&&id.length<=48&&(!known||known.has(id))):[])].slice(0,limit);
 const title=value=>typeof value==='string'&&value.length<=48?value:'';
-const EMPTY=()=>({version:1,badges:[],skins:[],equippedTitle:'',appliedGrants:[],lastRewardAt:0});
+const BEST_ACTS=['act1','act2','act3'];
+export const normalizeBestScores=value=>Object.fromEntries(BEST_ACTS.map(act=>[act,Number.isSafeInteger(value?.[act])?Math.max(0,Math.min(1e12,value[act])):0]));
+export const mergeBestScores=(a,b)=>{const left=normalizeBestScores(a),right=normalizeBestScores(b);return Object.fromEntries(BEST_ACTS.map(act=>[act,Math.max(left[act],right[act])]));};
+export function recordBestScore(profile,act,score){
+ const next=normalizeAccountProfile(profile);
+ if(BEST_ACTS.includes(act)&&Number.isSafeInteger(score)&&score>next.bestScores[act])next.bestScores[act]=Math.min(1e12,score);
+ return next;
+}
+const EMPTY=()=>({version:1,badges:[],skins:[],equippedTitle:'',appliedGrants:[],lastRewardAt:0,bestScores:normalizeBestScores()});
 
 export function normalizeAccountProfile(value){
  return {
@@ -19,7 +27,8 @@ export function normalizeAccountProfile(value){
   skins:ids(value?.skins,null,80),
   equippedTitle:title(value?.equippedTitle),
   appliedGrants:ids(value?.appliedGrants,null,100),
-  lastRewardAt:Number.isFinite(value?.lastRewardAt)?Math.max(0,Math.floor(value.lastRewardAt)):0
+  lastRewardAt:Number.isFinite(value?.lastRewardAt)?Math.max(0,Math.floor(value.lastRewardAt)):0,
+  bestScores:normalizeBestScores(value?.bestScores)
  };
 }
 

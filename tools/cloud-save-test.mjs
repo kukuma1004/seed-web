@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {ACCOUNT_PROFILE_KEY,FOUNDING_BADGE,FOUNDING_SEED,normalizeAccountProfile} from '../src/account-profile.js';
+import {ACCOUNT_PROFILE_KEY,FOUNDING_BADGE,FOUNDING_SEED,normalizeAccountProfile,recordBestScore} from '../src/account-profile.js';
 import {DISCOVERIES_KEY} from '../src/discoveries.js';
 import {GARDEN_KEY,emptyGarden,gardenEffects,autoPlantSeeds,chooseBranch,setActive,growPlants} from '../src/garden.js';
 import {SHOP_KEY} from '../src/shop.js';
@@ -8,10 +8,61 @@ import {ACT2_STORAGE_KEYS} from '../src/act2.js';
 import {ACT3_STORAGE_KEYS,act3Storage,ACT3_REGION} from '../src/act3.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirrorCheckpoint,clearMirrorCheckpoint} from '../src/mirror-trial.js';
 import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
-import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
+import {QUALITY_KEY} from '../src/quality.js';
+import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,clearCloudLocalData,isSyncKey,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
+
+// Rendering quality must stay on the device: legacy PC saves at "high" must
+// never enable full bloom and shadows on a phone when progress is merged.
+{
+ const phone=memory({[QUALITY_KEY]:'0'}),pc=memory({[QUALITY_KEY]:'2'});
+ const legacyPc={...collectCloudSnapshot(pc),settings:{quality:2,theme:'botanical',sound:'on'}};
+ assert.equal(isSyncKey(QUALITY_KEY),false);
+ assert.equal(collectCloudSnapshot(phone).settings.quality,1,'the cloud schema has a fixed compatibility value');
+ assert.equal(normalizeCloudSnapshot(legacyPc).settings.quality,1,'old PC quality must not propagate');
+ applyCloudSnapshot(phone,legacyPc);
+ assert.equal(phone.getItem(QUALITY_KEY),'0');
+ clearCloudLocalData(phone);
+ assert.equal(phone.getItem(QUALITY_KEY),'0','signing out must keep the phone quality setting');
+}
+
+// Same-UID devices share personal act records and the union of discovered forms.
+// The local top-20 board is intentionally separate: it can contain other users.
+{
+ const pad=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify(recordBestScore(null,'act1',12000)),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism'],bosses:[]})});
+ const phone=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify(recordBestScore(null,'act2',18000)),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism','mirrorguard'],bosses:[]})});
+ const merged=mergeCloudSnapshots(collectCloudSnapshot(pad),collectCloudSnapshot(phone));
+ assert.deepEqual(merged.account.bestScores,{act1:12000,act2:18000,act3:0});
+ assert.ok(merged.discoveries.forms.includes('prism'));
+ assert.ok(merged.discoveries.forms.includes('mirrorguard'));
+ applyCloudSnapshot(pad,merged);
+ assert.deepEqual(JSON.parse(pad.getItem(ACCOUNT_PROFILE_KEY)).bestScores,{act1:12000,act2:18000,act3:0});
+}
+
+// An app left open on the phone receives progress made on the tablet when it
+// returns to the foreground and explicitly refreshes the same UID's save.
+{
+ let remote=null;const user={ready:async()=>({uid:'same-user'}),user:()=>({uid:'same-user'}),tokenSession:async()=>({uid:'same-user',idToken:'token'})};
+ const fetchImpl=async(url,options={})=>{
+  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT')remote=JSON.parse(options.body);
+  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
+ };
+ const padStore=memory(),phoneStore=memory();
+ const padCloud=createCloudSync({storage:padStore,account:user,fetchImpl,debounceMs:60_000});
+ const phoneCloud=createCloudSync({storage:phoneStore,account:user,fetchImpl,debounceMs:60_000});
+ await padCloud.start();await phoneCloud.start();
+ padCloud.storage.setItem(ACCOUNT_PROFILE_KEY,JSON.stringify(recordBestScore(null,'act3',27000)));
+ padCloud.storage.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:['prism'],bosses:[]}));
+ await padCloud.syncNow();
+ const returned=await phoneCloud.syncNow();
+ assert.equal(returned.changed,true);
+ assert.equal(JSON.parse(phoneStore.getItem(ACCOUNT_PROFILE_KEY)).bestScores.act3,27000);
+ assert.ok(JSON.parse(phoneStore.getItem(DISCOVERIES_KEY)).forms.includes('prism'));
+ padCloud.signOutCleanup();phoneCloud.signOutCleanup();
+}
 
 // 2026-09-22 신고(저장하고 나갔는데 예전으로 돌아옴): 두 기기의 저장 중 '더 최근에 저장한 판'을 고른다.
 // 예전에는 올리지 못한 작은 변경이 있는 기기 쪽 저장을 통째로 골라, 그 기기의 옛 판이 다른 기기의 최신 판을 덮었다.

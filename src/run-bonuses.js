@@ -4,6 +4,8 @@
 // meaningful alternative.
 export const RUN_BONUS_MAX=5;
 export const RUN_BONUS_CHANCE=.02;
+export const BOSS_PET_RARE_BONUS=.02;
+export const rareRunBonusChance=hasBossPet=>RUN_BONUS_CHANCE+(hasBossPet?BOSS_PET_RARE_BONUS:0);
 export const RUN_BONUSES=Object.freeze({
  heal:Object.freeze({id:'heal',icon:'♥',name:'생명력 즉시 +20',desc:'지금 잃은 생명력을 20 회복',color:'#9dffb7'}),
  move:Object.freeze({id:'move',icon:'➶',name:'이동 속도 +3%',desc:'이번 여정 동안 더 빠르게 이동',color:'#8fe9ff'}),
@@ -28,7 +30,7 @@ export function runBonusOffers(value,{hp=100,maxHp=100,choicesTaken=0}={}){
  return hp<maxHp?['heal',rotated[0]]:rotated.slice(0,2);
 }
 // This is an extra blessing, never a replacement for the build-defining law
-// card. Two percent keeps it truly hidden without flattening run variety.
+// card. The caller may add the equipped boss pet's small, non-stacking bonus.
 export function rareRunBonusOffers(value,{hp=100,maxHp=100,choicesTaken=0,random=Math.random,chance=RUN_BONUS_CHANCE}={}){
  const offers=runBonusOffers(value,{hp,maxHp,choicesTaken});
  return offers.length&&random()<chance?offers:[];
