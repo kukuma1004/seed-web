@@ -100,7 +100,7 @@ export function tickAct3Minion(e,dt,time,ctx){
   if(e.timer<=0){e.state='stalk';e.timer=.2+(e.phase%1)*.35;}
  }else if(e.type==='sky-scout'){
   formationMove(e,dt,time,{x:1.35,z:.4,xf:1.65,zf:.82,speed:5});face(e,to);
-  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});if(e.attacks%4===0)for(const a of [-.26,.26])shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,a),{speed:8.7});ctx.sound?.('bossAttack');}
+  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});ctx.sound?.('bossAttack');}
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
    formationMove(e,dt,time,{x:1.05,z:.72,xf:.82,zf:.6,speed:3.4});face(e,to);

@@ -11,16 +11,27 @@ export function playableAct3Region(region,where=globalThis.location,preview=fals
 
 export const ACT3_PRESSURE=Object.freeze({
  hp:1.22,speed:1.17,projectile:1.22,bossTempo:1.14,
- crowdInitial:11,crowdInterval:.64,crowdExtra:Object.freeze([5,7,9,11,0]),
+ crowdInitial:11,crowdInterval:.64,crowdExtra:Object.freeze([0,3,7,11,0]),
  projectileCapLow:48,projectileCapNormal:64
 });
+
+// The opening teaches aimed shots before adding the bombers' warned fan.
+// Later rooms restore density without changing the 14-actor ceiling.
+export const ACT3_ROOM_PRESSURE=Object.freeze([
+ Object.freeze({crowdInitial:6,crowdInterval:.93,crowdExtra:0,projectile:1.08,projectileCapLow:24,projectileCapNormal:32}),
+ Object.freeze({crowdInitial:8,crowdInterval:.78,crowdExtra:3,projectile:1.12,projectileCapLow:32,projectileCapNormal:40}),
+ Object.freeze({crowdInitial:10,crowdInterval:.70,crowdExtra:7,projectile:1.16,projectileCapLow:40,projectileCapNormal:52}),
+ Object.freeze({crowdInitial:11,crowdInterval:.64,crowdExtra:11,projectile:1.16,projectileCapLow:48,projectileCapNormal:64}),
+ Object.freeze({crowdInitial:0,crowdInterval:.64,crowdExtra:0,projectile:ACT3_PRESSURE.projectile,projectileCapLow:48,projectileCapNormal:64})
+]);
+export const act3RoomPressure=stage=>ACT3_ROOM_PRESSURE[Math.max(0,Math.min(4,stage|0))];
 
 // The sky route is a shooter stage first. Only one slot in twelve is a charger;
 // the rest keep pressure on the player with aimed fire and overlapping lanes.
 export function act3CrowdType(index,stage=0){
  const slot=(index+stage*3)%12;
  if(slot===9)return 'sky-diver';
- if(slot===4||slot===10)return 'sky-bomber';
+ if(stage>0&&(slot===4||stage>=2&&slot===10))return 'sky-bomber';
  if(stage>=2&&slot===7)return 'sky-carrier';
  return 'sky-scout';
 }

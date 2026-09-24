@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
 import * as THREE from 'three';
-import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn,act3SupplyDrop} from '../src/act3.js';
+import {ACT3_REGION,ACT3_RELEASED,ACT3_PRESSURE,act3RoomPressure,SKYWAY_ROOMS,ACT3_ARENA,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn,act3SupplyDrop} from '../src/act3.js';
 import {ACT2_PRESSURE} from '../src/act2.js';
 import {ACT3_GEOMETRIES,ACT3_ART,ACT3_MINIONS,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,TEMPEST_CARRIER} from '../src/act3-enemies.js';
 import {createSkyway} from '../src/skyway.js';
@@ -21,6 +21,13 @@ assert.ok(ACT3_PRESSURE.hp>1&&ACT3_PRESSURE.speed>1&&ACT3_PRESSURE.projectile>1&
 assert.ok(ACT3_PRESSURE.hp>ACT2_PRESSURE.hp&&ACT3_PRESSURE.speed>ACT2_PRESSURE.speed&&ACT3_PRESSURE.projectile>ACT2_PRESSURE.projectile&&ACT3_PRESSURE.bossTempo>ACT2_PRESSURE.bossTempo,'act 3 stays a measured step above act 2');
 assert.ok(ACT3_PRESSURE.crowdInterval<ACT2_PRESSURE.crowdInterval,'act 3 formations reinforce faster without raising the live actor cap');
 assert.ok(ACT3_PRESSURE.projectileCapLow<ACT3_PRESSURE.projectileCapNormal&&ACT3_PRESSURE.projectileCapNormal<=64,'hostile projectiles stay capped for phones');
+const opening=act3RoomPressure(0),second=act3RoomPressure(1),late=act3RoomPressure(3);
+assert.ok(opening.crowdInitial<second.crowdInitial&&second.crowdInitial<late.crowdInitial,'flight density grows by room');
+assert.ok(opening.crowdInterval>second.crowdInterval&&second.crowdInterval>late.crowdInterval,'opening reinforcements leave a dodge window');
+assert.ok(opening.projectile<second.projectile&&second.projectile<late.projectile,'opening missiles travel slower');
+assert.ok(opening.projectileCapNormal<second.projectileCapNormal&&second.projectileCapNormal<late.projectileCapNormal,'opening screen has a lower missile ceiling');
+assert.ok(Array.from({length:24},(_,i)=>act3CrowdType(i,0)).every(type=>type!=='sky-bomber'),'first-room reinforcements never add three-shot bombers');
+assert.equal(Array.from({length:12},(_,i)=>act3CrowdType(i,1)).filter(type=>type==='sky-bomber').length,1,'second room introduces one bomber per formation');
 const crowd=Array.from({length:12},(_,i)=>act3CrowdType(i,3));
 assert.equal(crowd.filter(type=>type==='sky-diver').length,1,'chargers are rare');
 assert.ok(crowd.filter(type=>type!=='sky-diver').length>=11,'shooters dominate the route');
@@ -45,6 +52,7 @@ assert.match(main,/id="start-act3"/,'act 3 appears in the journey menu');
 assert.match(main,/id="start-act3"[\s\S]*?onclick=\(\)=>enter\(saved3\|\|null,ACT3_REGION\)/,'act 3 starts or restores its own run');
 assert.match(main,/act:isAct3\(region\)\?ACT\.JOHAN/,'act 3 records use the Johan leaderboard');
 assert.match(main,/data-board="johan"/,'Johan has a visible online leaderboard tab');
+assert.match(main,/speed:spec\.speed\*difficulty\(cycle,region\)\.projectileSpeed\*act3RoomPressure\(stage\)\.projectile/,'actual missiles use the room-specific speed');
 assert.match(main,/playableAct3Region\(playableRegion\(r\),globalThis\.location,developerRun\)/,'the public administrator lab must bypass only the unreleased act-3 gate');
 assert.doesNotMatch(developerStart,/restart\(\);[\s\S]*wave\(\)/,'the developer lab must build the selected encounter once instead of stacking it over the first room');
 assert.match(developerStart,/act3field:\{region:ACT3_REGION,stage:1[\s\S]*act3warden:\{region:ACT3_REGION,stage:4[\s\S]*act3boss:\{region:ACT3_REGION,stage:4/,'all three act-3 laboratory entries target the skyway');
@@ -66,6 +74,11 @@ function world(player=new V(0,0,1)){
  const bolts=[],hits=[],summons=[];return {bolts,hits,summons,ctx:{player,collide:()=>{},hit:value=>{hits.push(value);return true;},bolt:(pos,dir,spec)=>bolts.push({pos:pos.clone(),dir:dir.clone(),spec}),sound:()=>{},summon:types=>summons.push(...types)}};
 }
 const scene=new THREE.Scene();
+{
+ const w=world(),e=createAct3Minion(scene,'sky-scout',()=>.25);e.g.position.set(0,0,-5);e.state='stalk';
+ for(let i=0;i<5;i++){e.timer=0;tickAct3Minion(e,.016,i*.016,w.ctx);}
+ assert.equal(w.bolts.length,5,'scouts fire one aimed missile per attack, without a hidden three-shot volley');
+}
 for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
  const w=world(),e=createAct3Minion(scene,type,()=>.25);e.g.position.set(0,0,-5);e.timer=0;const states=new Set();
  for(let time=0;time<5;time+=.04){tickAct3Minion(e,.04,time,w.ctx);states.add(e.state);}
