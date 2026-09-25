@@ -747,9 +747,12 @@ function endEnemyShot(p){
 function bossBolt(pos,dir,bounces,laws=[],damageScale=1){const start=pos.clone().addScaledVector(dir,1.25);const ob=enemyBolt(start,'boss',laws.includes('frost'));enemyShots.push({boss:true,ob,dir,life:5,bounces:enemyBounces(bounces),speed:6.8*difficulty(cycle,region).projectileSpeed,damage:18*damageScale,age:0,origin:pos.clone(),pierce:true,recall:laws.includes('recall'),frost:laws.includes('frost')});}
 function mirrorBolt(pos,dir,spec={}){
  if(!mirrorSession||enemyShots.length>=mirrorFloorRules(mirrorSession.floor,{quality:qualityLevel===0?'low':'normal'}).budget.hostileProjectiles)return;
+ // Reflected volleys should clear before the next copied attack family fills
+ // the arena. Count only this family so other copied laws retain their budget.
+ if(spec.law==='reflect'&&enemyShots.filter(shot=>shot.mirror&&shot.law==='reflect'&&shot.life>0).length>=24)return;
  const law=Object.hasOwn(LAWS,spec.law)?spec.law:'seed',start=pos.clone().addScaledVector(dir,1.05),ob=new THREE.Object3D(),damage=Math.max(5,Math.round(maxPlayerHp()*(spec.damageScale||.075)));
  ob.position.set(start.x,.67,start.z);ob.rotation.y=Math.atan2(dir.x,dir.z);applyProjectileTheme(ob,law,combatTheme,0,1.08);
- enemyShots.push({mirror:true,boss:true,ob,dir:dir.clone(),life:5,bounces:enemyBounces(spec.bounces),speed:mirrorProjectileSpeed(mirrorSession.floor,spec.speedScale),damage,age:0,origin:pos.clone(),pierce:true,recall:Boolean(spec.recall),frost:Boolean(spec.frost),burst:Boolean(spec.burst),gravity:Boolean(spec.gravity),curve:spec.curve||0,law,trailTime:0,trailPos:ob.position.clone()});
+ enemyShots.push({mirror:true,boss:true,ob,dir:dir.clone(),life:law==='reflect'?3.2:5,bounces:enemyBounces(spec.bounces),speed:mirrorProjectileSpeed(mirrorSession.floor,spec.speedScale),damage,age:0,origin:pos.clone(),pierce:true,recall:Boolean(spec.recall),frost:Boolean(spec.frost),burst:Boolean(spec.burst),gravity:Boolean(spec.gravity),curve:spec.curve||0,law,trailTime:0,trailPos:ob.position.clone()});
 }
 function mirrorCue(message,duration=1100){const toast=$('#toast');toast.textContent=message;setTimeout(()=>{if(toast.textContent===message)toast.textContent='';},duration);}
 function mirrorPerfectDodge(projectile){
@@ -1078,7 +1081,7 @@ function showAccount(error=''){
  const unlockedPets=new Set(unlockedBossPets(profile).map(pet=>pet.id)),equippedPet=readBossPet(runStorage,profile).id;
  const petOptions=Object.values(BOSS_PETS).map(pet=>{const unlocked=unlockedPets.has(pet.id);return `<button type="button" class="title-option ${equippedPet===pet.id?'equipped':''}" data-equip-pet="${pet.id}" aria-pressed="${equippedPet===pet.id}" ${unlocked?'':'disabled'}>${unlocked?`<img class="boss-pet-thumb" src="${import.meta.env.BASE_URL}assets/${pet.file}" alt="" loading="lazy">`:'<span class="boss-pet-thumb locked" aria-hidden="true">?</span>'}<span><strong>${unlocked?escapeHtml(pet.name):'???'}</strong><small>${escapeHtml(pet.boss)} ${unlocked?'격파 기념':'격파 후 해금'}</small></span><em>${equippedPet===pet.id?'동행 중':unlocked?'동행':'잠김'}</em></button>`;}).join('');
  const petProfile=`<section class="title-profile boss-pet-profile"><div class="title-profile-head"><strong>보스 동행</strong><span>${unlockedPets.size}/${Object.keys(BOSS_PETS).length} 발견</span></div><div class="title-options">${petOptions}</div>${equippedPet?'<button type="button" class="pet-unequip">동행 쉬기</button>':''}<small>함께 걷는 작은 기념 펫이에요.</small></section>`;
- $('#overlay').innerHTML=`<div class="menu-panel account-panel"><p class="eyebrow">SEED · PROFILE & ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 프로필':'어떻게 시작할까요'}</h2>
+ $('#overlay').innerHTML=`<div class="menu-panel account-panel">${user||localInspection?'<button type="button" id="account-back" class="account-back" aria-label="프로필에서 돌아가기">‹ 돌아가기</button>':''}<p class="eyebrow">SEED · PROFILE & ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 프로필':'어떻게 시작할까요'}</h2>
   <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
   ${user?`<div class="account-status"><strong>${escapeHtml(account.label())}</strong><span>${user.isAnonymous?'나중에 Google 또는 Apple 계정에 연결하면 현재 기록을 그대로 지킬 수 있어요.':'이 UID로 여러 기기의 기록을 이어갑니다.'}</span>${badgeLine?`<em class="account-badge">✦ ${escapeHtml(badgeLine)}</em>`:''}<small>UID ${escapeHtml(user.uid)}</small></div>`:''}
   <section class="profile-collection"><button type="button" id="profile-garden"><span class="profile-collection-icon" aria-hidden="true">♧</span><span><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></span><em>›</em></button><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 공개 도감 · ':''}${knownForms}/${Object.keys(DISCOVERY_FORMS).length} 발견</small></span><em>›</em></button></section>
@@ -1099,6 +1102,7 @@ function showAccount(error=''){
  if($('#account-google'))$('#account-google').onclick=()=>busy(account.signInWithGoogle,'google');
  if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple,'apple');
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest,'guest');
+ if($('#account-back'))$('#account-back').onclick=()=>{if(publicWebBetaLocked()&&!adminMode&&!betaTesterMode)showBetaLock();else showIntro();};
  if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAccessMode();showEntry();};
  $('#profile-garden').onclick=()=>showGarden(showAccount);
  $('#profile-discoveries').onclick=()=>showDiscoveries(showAccount);

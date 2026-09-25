@@ -25,7 +25,7 @@ for(const law of ['pierce','split','chain','burst','reflect','recall','frost','g
 assert.ok(mirrorVolley('pierce',3).every(spec=>Math.abs(spec.angle)<=.06),'연사는 부채꼴이 아니라 조준선 근처로 모인다');
 assert.equal(MIRROR_BURST.shots,7);assert.ok(MIRROR_BURST.interval>=.05&&MIRROR_BURST.interval<=.1&&MIRROR_BURST.followDamage<.3);
 assert.ok(mirrorVolley('orbit',1).length>=7&&mirrorVolley('orbit',20).length<=8,'원형 탄막 7~8발, 모바일 상한 유지');
-assert.equal(mirrorVolley('reflect',4)[0].bounces,2);
+assert.equal(mirrorVolley('reflect',4)[0].bounces,1,'반사 연사는 한 번만 튕겨 다음 공격과 겹치지 않는다');
 assert.equal(mirrorVolley('recall',4)[0].recall,true);
 assert.equal(mirrorVolley('burst',4)[0].burst,true,'폭발 조합은 빗나가도 폭발을 남긴다');
 assert.equal(mirrorVolley('gravity',4)[0].gravity,true,'중력 조합은 플레이어를 끌어당기는 우물을 남긴다');
@@ -45,6 +45,8 @@ assert.ok(MIRROR_PROJECTILE_BASE_SPEED>=10&&mirrorProjectileSpeed(10)>mirrorProj
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),mirrorBoltSource=main.slice(main.indexOf('function mirrorBolt'),main.indexOf('function mirrorPerfectDodge'));
 assert.doesNotMatch(mirrorBoltSource,/enemyBolt\(/,'거울 분신은 공통 보스 구체를 쓰지 않는다');
 assert.match(mirrorBoltSource,/law=Object\.hasOwn\(LAWS,spec\.law\)[\s\S]*applyProjectileTheme\(ob,law,combatTheme/,'거울 분신은 플레이어 법칙과 테마를 복제한다');
+assert.match(mirrorBoltSource,/spec\.law==='reflect'[\s\S]*>=24/,'반사 분신 탄은 고유 동시 표시량을 제한한다');
+assert.match(mirrorBoltSource,/life:law==='reflect'\?3\.2:5/,'반사탄은 다음 공격과 겹치기 전에 정리된다');
 assert.match(main,/projectileSprites\.sync\(projectileBodyList,enemyShots\)/,'거울 분신 탄도 같은 2D 탄환 렌더러를 사용한다');
 
 for(const panel of MIRROR_PANELS)assert.ok(Math.hypot(panel.x,panel.z)+Math.max(panel.w,panel.d)/2<MIRROR_ARENA.radius,'반사판은 넓은 전장 안쪽에 둔다');

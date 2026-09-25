@@ -107,7 +107,9 @@ export function mirrorVolley(law='pierce',floor=1,shotIndex=0){
  if(law==='orbit'){const n=Math.min(8,Math.max(7,5+Math.floor(floor/5)));return Array.from({length:n},(_,i)=>({angle:i*Math.PI*2/n,damageScale,speedScale:.95}));}
  if(law==='split'||law==='chain')return fan({damageScale,speedScale:law==='chain'?1.1:.98});
  if(law==='burst')return fan({damageScale:.82,speedScale:.86,burst:true});
- if(law==='reflect')return fan({damageScale,bounces:2,speedScale:1.08});
+ // Seven quick reflected shots are enough to express the copied build.
+ // A second bounce keeps every shot on screen into the next attack chain.
+ if(law==='reflect')return fan({damageScale,bounces:1,speedScale:1.08});
  if(law==='recall')return fan({damageScale,recall:true,speedScale:.96});
  if(law==='frost')return fan({damageScale:.76,frost:true,speedScale:.9});
  if(law==='gravity')return fan({damageScale:.9,curve:(shotIndex%2?1:-1)*.2,speedScale:.84,gravity:true});
