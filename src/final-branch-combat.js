@@ -203,5 +203,16 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
    if(s.life<=0){if(s.mode==='finish')blast(s.pos,spec.radius,1.1);shots.splice(i,1);}
   }
  }
- return {set,onFire,onHit,onOpening,update,clear:()=>set(null,1),state:()=>({id:spec?.id||null,shots:shots.length,events:events.length,fields:fields.length})};
+ // Final-branch shots used to exist only as a faint trail. Reuse the parent's
+ // painted projectile atlas batch, without a scene mesh for each extra shot.
+ function visualShots(out,cell){
+  for(const s of shots){
+   if(s.life<=0)continue;
+   const body=s.renderBody||(s.renderBody={ob:{position:s.pos,visible:false,userData:{}},dir:s.dir,life:s.life,spriteKey:'combo',spriteCell:cell,visualScale:1});
+   body.life=s.life;body.spriteCell=cell;
+   out.push(body);
+  }
+  return out;
+ }
+ return {set,onFire,onHit,onOpening,update,visualShots,clear:()=>set(null,1),state:()=>({id:spec?.id||null,shots:shots.length,events:events.length,fields:fields.length})};
 }

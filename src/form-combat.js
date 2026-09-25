@@ -2,8 +2,7 @@ import * as THREE from 'three';
 import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 import {createFinalBranchCombat} from './final-branch-combat.js';
-import {finalProjectileStyle} from './final-identity-art.js';
-import {projectileAudioEvent,projectileRecipe} from './combo-projectile.js';
+import {projectileAtlasTile,projectileAudioEvent} from './combo-projectile.js';
 
 // Ordinary prism is allowed to grow as it finds walls. Infinite Prism already
 // adds another generation, a larger shard pool and a permanent damage boost,
@@ -169,6 +168,16 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap(),paintedCellIndex=0;
  let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),movementCharge=0,cometCursor=0,mirrorParryCooldown=0,stormCharges=new WeakMap();
+ // Hitscan damage stays immediate. These short-lived, mesh-free render bodies
+ // let its painted lance actually travel along the already visible hit line.
+ const lancePictures=[];
+ function showLance(from,to,scale=1){
+  if(!camera||!comboTexture||lancePictures.length>=16)return;
+  const delta=to.clone().sub(from).setY(0),length=delta.length();if(length<.15)return;
+  const start=from.clone().setY(.92),end=to.clone().setY(.92),dir=delta.multiplyScalar(1/length);
+  const ob={position:start.clone(),visible:false,userData:{}};
+  lancePictures.push({ob,from:start,to:end,dir,age:0,life:.32,duration:.32,spriteKey:'combo',spriteCell:paintedCell(),visualScale:1.45*scale});
+ }
  // 1묶음 상태: 고드름 창이 스스로 남긴 서리 표식 · 얼어붙은 그물이 남긴 선 · 되감는 번개가 기억한 길 · 꽃잎 후광이 센 벤 횟수.
  let iceMarks=new WeakMap(),frostLines=[],rewindMemories=[],haloCuts=0,haloRegrow=0;
  // 2묶음 상태: 밀물 고리의 닻 · 끌림 꽃밭들.
@@ -234,7 +243,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];lancePictures.length=0;cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -245,7 +254,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const kind=AWAKEN_FORMS[id]?.base||curated?.main||id;
   const asTwin=Boolean(opts.twin);
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
-  {const form=sourceForm(),recipe=projectileRecipe(AWAKEN_FORMS[statId]?.finalCandidate?finalProjectileStyle(statId):form);paintedCellIndex=form.visual?.projectileTile??recipe.trailVariant??0;}
+  {const form=sourceForm();paintedCellIndex=projectileAtlasTile(form);}
   if(level!==L||S.damage===0){level=L;refresh();}
   if(AWAKEN_FORMS[id]?.finalCandidate)finalLayer.set(id,S.damage,L,Boolean(ALL_FORMS[kind]?.passive),kind);
   rebuildOrbit();
@@ -479,7 +488,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(!support(e,S.damage,{kind:'thunderlance',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}
    struck.push(e);
   }
-  for(let d=0;d<flat(start,end);d+=1.4)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.4)).setY(.7),'chain',false);
+  fx.lance(start,end,'thunderlance');showLance(start,end);
   fx.pulse(end,'chain',.6,.2);
   for(let i=1;i<struck.length;i++)fx.arc(struck[i-1].g.position,struck[i].g.position);
   const touched=new Set(struck);let from=struck.at(-1);
@@ -519,7 +528,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    for(const other of near(e.g.position,S.shatterRadius+.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<S.shatterRadius+bossReach(other,0,.4))
     support(other,S.shatter*S.shatterShare,{kind:'icicle',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});
   }
-  fx.lance(start,end,'icicle');
+  fx.lance(start,end,'icicle');showLance(start,end);
   fx.pulse(end,'frost',.5,.2);
  }
 
@@ -673,7 +682,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(!support(e,S.damage*(1+S.foldGain*folds),{kind:'refractlance',direction:heading.clone()})){budget=0;break;}
     budget--;
    }
-   fx.lance(start,end,'refractlance',folds>0);
+   fx.lance(start,end,'refractlance',folds>0);showLance(start,end,folds>0?.9:1);
    if(!hinge||budget<=0||leg>=S.folds){fx.pulse(end,'pierce',.5,.2);break;}
    fx.reflect(end,hinge);sound('reflect');
    folds++;start=end.clone();heading=hinge;
@@ -721,7 +730,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     bolts.push({kind:'showerpetal',ob,dir:dir.clone().applyAxisAngle(Y,side),life:S.petalLife+(e.type==='austin'?.25:0),passed:new Set([e]),returnTarget:e.type==='austin'?e:null,age:0});
    }
   }
-  fx.lance(start,end,'shower');
+  fx.lance(start,end,'shower');showLance(start,end);
   if(struck)fx.split(end,dir,Math.min(5,struck));
  }
 
@@ -770,7 +779,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    .sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
   let struck=0;
   for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.lance,{kind:'spearring',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;}
-  fx.lance(start,end,'spearring');
+  fx.lance(start,end,'spearring');showLance(start,end);
   fx.pulse(start,'pierce',S.radius*.6,.2);fx.pulse(end,'pierce',.5,.2);sound('reflect');
  }
  // Orbit + gravity: the disk throws its debris at the nearest enemies.
@@ -865,7 +874,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(!support(e,S.damage*(1+S.ramp*struck),{kind:'glassspear',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}
    struck++;
   }
-  fx.lance(start,end,'spearring');
+  fx.lance(start,end,'spearring');showLance(start,end);
   fx.pulse(end,'pierce',.5,.2);
  }
  // Reflect + gravity: the wall is part of the weapon. Every rebound tugs
@@ -930,7 +939,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let travelled=0;travelled<S.length;travelled+=.4){const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();if(blocked(end,next)||boundary(end.clone(),next,probe))break;end.copy(next);}
   const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.72,1.2)).sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
   let struck=0;for(const e of line){if(struck>=S.pierce)break;if(!support(e,S.damage*(1+S.ramp*struck),{kind:'blastlance',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck++;if(e.type==='austin'){end.copy(e.g.position).setY(0);break;}}
-  for(let d=0;d<flat(start,end);d+=1.25)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.25)).setY(.7),d%2.5<1.25?'pierce':'burst',false);
+  fx.lance(start,end,'blastlance');showLance(start,end,1.2);
   const radius=Math.min(S.blastRadius+.9,S.blastRadius+struck*.12),power=S.blast*(1+Math.min(1,struck*.12));fx.explosion(end,'burst',radius,true);sound('burstHit');
   for(const e of near(end,radius+.8))if(!e.dead&&flat(e.g.position,end)<radius+bossReach(e,0,.55))support(e,power,{kind:'blastlance',indirect:true,direction:e.g.position.clone().sub(end).setY(0).normalize()});
  }
@@ -942,7 +951,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   for(let travelled=0;travelled<S.length;travelled+=.4){const next=end.clone().addScaledVector(dir,.4),probe=dir.clone();if(blocked(end,next)||boundary(end.clone(),next,probe))break;end.copy(next);}
   const line=enemies().filter(e=>!e.dead&&segmentDistance(start,end,e.g.position)<bossReach(e,.52,1.05)).sort((a,b)=>a.g.position.clone().sub(start).dot(dir)-b.g.position.clone().sub(start).dot(dir));
   const struck=[];for(const e of line){if(struck.length>=S.pierce)break;if(!support(e,S.damage,{kind:'gravitystake',phase:'line',direction:dir.clone()})){end.copy(e.g.position).setY(0);break;}struck.push(e);}
-  for(let d=0;d<flat(start,end);d+=1.5)fx.trail(start.clone().addScaledVector(dir,d).setY(.7),start.clone().addScaledVector(dir,Math.min(flat(start,end),d+1.5)).setY(.7),'gravity',false);
+  fx.lance(start,end,'gravitystake');showLance(start,end,1.1);
   const target=force?struck[0]:struck.length===1?struck[0]:null,isolated=target&&!enemies().some(e=>e!==target&&!e.dead&&flat(e.g.position,target.g.position)<S.isolation);
   if(!target||(!isolated&&!force)||target.dead){fx.pulse(end,'pierce',.45,.18);return;}
   const count=Math.min(S.implosions,S.stakes-stakes.length);
@@ -1148,6 +1157,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
 
  function update(dt){
   markClock+=dt;
+  for(let i=lancePictures.length-1;i>=0;i--){const p=lancePictures[i];p.age+=dt;p.life=Math.max(0,p.duration-p.age);if(!p.life){lancePictures.splice(i,1);continue;}p.ob.position.lerpVectors(p.from,p.to,Math.min(1,p.age/p.duration));}
   if(AWAKEN_FORMS[statId]?.finalCandidate)finalLayer.update(dt);
   mirrorParryCooldown=Math.max(0,mirrorParryCooldown-dt);
   if(surgeTime>0){surgeTime-=dt;if(surgeTime<=0)calm();}
@@ -1799,6 +1809,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   return out;
  }
  function projectileBodies(out){
+  for(const picture of lancePictures)out.push(picture);
+  finalLayer.visualShots(out,paintedCell());
   for(const b of bolts){
    if(!b.ob?.parent||b.life<=0)continue;
    if(b.kind==='comethalo'&&b.ob.userData.cometSprite)continue;

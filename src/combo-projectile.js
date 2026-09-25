@@ -43,6 +43,33 @@ export function projectileRecipe(form){
  });
 }
 
+// The 12-cell painted combat sheet has authored silhouettes. Recipe variants
+// below are geometry jitter, not sheet coordinates: using them as coordinates
+// made fire spears appear as ice flowers and changed a form's art by hash.
+export function projectileAtlasTile(form){
+ const explicit=form?.visual?.projectileTile;
+ if(Number.isInteger(explicit)&&explicit>=0&&explicit<12)return explicit;
+ const {primary,secondary}=projectileRecipe(form),has=law=>primary===law||secondary===law;
+ if(has('pierce')){
+  if(has('burst'))return 1;        // burning spear
+  if(has('frost')||has('reflect'))return 3;
+  if(has('gravity')||has('portal'))return 9;
+  if(has('split'))return 4;
+  if(has('recall'))return 10;
+  return 2;                       // ivory and lightning spear
+ }
+ if(has('frost'))return has('split')?8:3;
+ if(has('portal'))return 9;
+ if(has('burst'))return has('split')?5:1;
+ if(has('gravity'))return 7;
+ if(has('recall'))return 6;
+ if(has('reflect'))return 0;
+ if(has('orbit'))return 6;
+ if(has('chain'))return 2;
+ if(has('split'))return 4;
+ return 10;
+}
+
 function colorGeometry(geometry,color,tip=1.12){
  const g=geometry.index?geometry.toNonIndexed():geometry;if(g!==geometry)geometry.dispose();
  g.deleteAttribute('uv');g.computeVertexNormals();g.computeBoundingBox();

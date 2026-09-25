@@ -5,6 +5,7 @@ import {THEMES,normalizeTheme,themeColor} from './themes.js';
 import {MIRROR_SHOT_COLOR} from './projectile-sprites.js';
 
 export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a,mirrorHostile:MIRROR_SHOT_COLOR};
+const LANCE_ACCENTS=Object.freeze({icicle:'frost',shower:'split',spearring:'pierce',refractlance:'reflect',thunderlance:'chain',blastlance:'burst',gravitystake:'gravity'});
 
 // The flat shock crown that spread across the floor was removed (2026-09-15): it covered the arena,
 // read as a flat colored sunburst and cost a batch. Hits and blasts now use sparks, streaks and flames only.
@@ -188,14 +189,15 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
     counters.lance++;
     const dx=to.x-from.x,dz=to.z-from.z,length=Math.hypot(dx,dz);
     if(length<.05)return;
-    const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle',accent=ice?'frost':kind==='shower'?'split':kind==='spearring'?'pierce':'reflect';
+    const sideX=-dz/length,sideZ=dx/length,ice=kind==='icicle';
+    const accent=LANCE_ACCENTS[kind]||(FX_COLORS[kind]?kind:'reflect');
     const life=folded?.36:.32,head=Math.min(.42,Math.max(.22,length*.16));
     workA.set(from.x,.88,from.z);workB.set(to.x,.88,to.z);
     // The hit is instantaneous, but the wide shaft and triangular point must
     // read as a weapon even on low quality where bloom is disabled.
     segment(workA,workB,accent,folded?.32:.28,life);
     workC.copy(workA).lerp(workB,.72);
-    segment(workA,workC,ice?'frost':'amber',.1,life*.82);
+    segment(workA,workC,ice?'frost':kind==='blastlance'?'burst':kind==='gravitystake'?'gravity':'amber',.1,life*.82);
     for(const sign of [-1,1]){
       workD.set(to.x-dx/length*head+sideX*sign*head*.55,.88,to.z-dz/length*head+sideZ*sign*head*.55);
       segment(workD,workB,accent,.13,life);
