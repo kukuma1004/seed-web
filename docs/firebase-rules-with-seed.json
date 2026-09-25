@@ -374,6 +374,7 @@
     "seedWebTelemetry": {
       "v1": {
         "days": {
+          ".read": "auth != null && auth.token.email == 'kukuma1004@gmail.com' && auth.token.email_verified == true",
           "$day": {
             "visitors": {
               "$uid": {
@@ -386,6 +387,44 @@
                 "$eventId": {
                   ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && !data.exists() && newData.val() == true",
                   ".validate": "newData.val() == true"
+                }
+              }
+            },
+            "appVisitors": {
+              "$uid": {
+                ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && newData.val() == true",
+                ".validate": "newData.val() == true"
+              }
+            },
+            "appStarts": {
+              "$uid": {
+                "$eventId": {
+                  ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && !data.exists() && newData.val() == true",
+                  ".validate": "newData.val() == true"
+                }
+              }
+            },
+            "sessions": {
+              "$platform": {
+                "$uid": {
+                  "$eventId": {
+                    ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && ($platform == 'web' || $platform == 'android') && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && newData.hasChildren(['startedAt', 'activeSeconds', 'act', 'outcome']) && (!data.exists() || (newData.child('startedAt').val() == data.child('startedAt').val() && newData.child('act').val() == data.child('act').val() && newData.child('activeSeconds').val() >= data.child('activeSeconds').val()))",
+                    "startedAt": {
+                      ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"
+                    },
+                    "activeSeconds": {
+                      ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
+                    },
+                    "act": {
+                      ".validate": "newData.val() == 1 || newData.val() == 2 || newData.val() == 3"
+                    },
+                    "outcome": {
+                      ".validate": "newData.val() == 'active' || newData.val() == 'cleared' || newData.val() == 'ended' || newData.val() == 'left' || newData.val() == 'closed' || newData.val() == 'restart'"
+                    },
+                    "$other": {
+                      ".validate": false
+                    }
+                  }
                 }
               }
             },
