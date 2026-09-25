@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {titleState,codexNews,codexSteps,codexBonus,CODEX,AUSTIN_MOVE_SPEED,ALWAYS_BEGINNER_MAX_HP,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
+import {titleState,codexNews,codexSteps,codexBonus,CODEX,AUSTIN_MOVE_SPEED,AUSTIN_VETERAN_CADENCE,AUSTIN_VETERAN_TITLE,ALWAYS_BEGINNER_MAX_HP,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
 import {ALL_FORMS} from '../src/forms.js';
 import {FIRST_GARDEN_BADGE} from '../src/account-profile.js';
 
@@ -8,6 +8,7 @@ const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 {const s=titleState({discovered:7});assert.deepEqual(s.titles,[]);assert.equal(s.shown,null);close(s.codexBonus,0);close(s.moveSpeed,1);assert.equal(s.maxHp,100);assert.equal(s.next.need,3);assert.match(s.next.reward,/칭호/);}
 // Austin: +5% movement, without adding projectile speed.
 {const s=titleState({austin:true,discovered:3});assert.equal(s.titles.length,1);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.shotSpeed,1);assert.equal(s.shown,s.titles[0].name);}
+{const s=titleState({austinVeteran:true,equipped:'austinveteran'});assert.equal(s.shown,AUSTIN_VETERAN_TITLE);close(s.attackCadence,1+AUSTIN_VETERAN_CADENCE);close(s.shotSpeed,1);assert.match(s.titles[0].perk,/누적 10회/);}
 // Always Beginner: a flat +10 max HP that does not scale with garden percentages.
 {const s=titleState({alwaysBeginner:true,discovered:3});assert.equal(s.titles.length,1);assert.equal(s.titles[0].name,ALWAYS_BEGINNER_TITLE);assert.equal(s.maxHpBonus,ALWAYS_BEGINNER_MAX_HP);assert.equal(s.maxHp,110);}
 // 도감 칭호: 10종마다 +0.5%, 30종마다 추가 +0.5%. 150/153종에서 +10%.
@@ -34,7 +35,7 @@ close(titleState({discovered:150}).codexBonus,CODEX.maxStat);close(titleState({d
 assert.match(codexNews(9,10),/칭호/);assert.match(codexNews(19,20),/1%/);assert.equal(codexNews(10,11),null);assert.equal(codexNews(5,6),null);
 assert.equal(codexNews(200,220),null,'상한 뒤에는 새 소식이 없다');
 assert.match(codexNews(29,30),/2%/);assert.match(codexNews(79,80),/5%/);assert.match(codexNews(149,150),/10%/);assert.match(codexNews(150,153),/정원의 완성자/);assert.doesNotMatch(codexNews(150,153),/능력/);
-// 2026-09-21: 오스틴 10회 완주 칭호. 이동 속도 +10%이고 '정시를 깨운 자' +5%와 더해지지 않는다.
+// Three victories in one run give the clear title; ten cumulative victories give a separate cadence title.
 {
  const clearOnly=titleState({austinClear:true}),both=titleState({austin:true,austinClear:true}),austinOnly=titleState({austin:true});
  assert.ok(Math.abs(clearOnly.moveSpeedBonus-.1)<1e-9);

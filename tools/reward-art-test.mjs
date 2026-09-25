@@ -11,7 +11,7 @@ import fs from 'node:fs';
 
 for(const id of Object.keys(RELICS)){
  const html=relicArt(id);
- assert.match(html,new RegExp(RELIC_ATLAS));
+ assert.match(html,new RegExp(id==='echo'||id==='stride'?`relic-${id}\\.svg`:RELIC_ATLAS));
  assert.match(html,/relic-art/);
 }
 for(const id of Object.keys(ITEMS)){
@@ -21,7 +21,7 @@ for(const id of Object.keys(ITEMS)){
 }
 assert.equal(relicArt('missing'),'');
 assert.equal(itemArt('missing'),'');
-assert.equal(new Set(Object.keys(RELICS).map(relicArt)).size,4);
+assert.equal(new Set(Object.keys(RELICS).map(relicArt)).size,6);
 assert.equal(new Set(Object.keys(ITEMS).map(itemArt)).size,5);
 for(const id of Object.keys(SOLO_FORMS))assert.match(formArt(id),new RegExp(SOLO_ATLAS));
 for(const id of Object.keys(CURATED_FORMS))assert.match(formArt(id),new RegExp(`${FUSION_ATLAS}|${COMBO_ART.cores}|${FIRST_CANDIDATE_ATLAS}|seed-comethalo-card-v1.webp`));

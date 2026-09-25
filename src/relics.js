@@ -2,12 +2,24 @@ import {LAWS} from './laws.js';
 import {ALL_FORMS} from './forms.js';
 // Run-only relics. Stored relics never grant effects; the equipped slot is separate.
 export const RELICS=Object.freeze({
- mirror:{name:'거울 조각',law:'reflect',desc:'반사탄 튕김 +1 · 법칙 최대치(8회)를 넘어섭니다 · 반사 재료 진화 피해 +12%'},
- crystal:{name:'분열 결정',law:'split',desc:'분열탄 파편 +1 · 법칙 최대치(9개)를 넘어섭니다 · 분열 재료 진화 피해 +12%'},
- coil:{name:'전도 코일',law:'chain',desc:'연쇄 대상 +1 · 법칙 최대치(6명)를 넘어섭니다 · 연쇄 재료 진화 피해 +12%'},
- core:{name:'중력 핵',law:'gravity',desc:'중력장 반경 +0.6 · 법칙 최대치(4.2)를 넘어섭니다 · 중력 재료 진화 피해 +12%'}
+ mirror:{name:'거울 조각',law:'reflect',desc:'반사 +1 · 튕긴 씨앗탄은 다음 한 명에게 피해 +25% · 반사 진화 피해 +12%'},
+ crystal:{name:'분열 결정',law:'split',desc:'파편 +1 · 파편 일부가 뒤로 흩어져 후방을 지킴 · 분열 진화 피해 +12%'},
+ coil:{name:'전도 코일',law:'chain',desc:'연쇄 대상 +1 · 마지막 전이가 첫 적에게 18% 되돌아옴 · 연쇄 진화 피해 +12%'},
+ core:{name:'중력 핵',law:'gravity',desc:'중력 반경 +0.6 · 우물에 끌린 일반 적을 0.8초 둔화 · 중력 진화 피해 +12%'},
+ echo:{name:'잔향 시계',law:null,desc:'오버드라이브 마무리 위력이 20% 줄지만 0.45초 뒤 35% 잔향이 다시 터짐'},
+ stride:{name:'질주 인장',law:null,desc:'회피 직후 첫 씨앗탄이 피해 +80%와 관통 +1 · 다음 회피까지 재발동 안 함'}
 });
 export const RELIC_STORAGE=3;
+export const WARDEN_RELIC_DROP_CHANCE=.01;
+export const wardenRelicDrop=(random=Math.random)=>random()<WARDEN_RELIC_DROP_CHANCE;
+// Replaces part of the forward split fan; it never creates extra projectiles.
+export function relicSplitAngle(id,count,index,spread){
+ if(id!=='crystal'||count<3)return count===1?0:-spread+2*spread*index/(count-1);
+ const front=count-Math.max(1,Math.floor(count/3));
+ if(index<front)return front===1?0:-spread+2*spread*index/(front-1);
+ const rear=count-front,k=index-front;
+ return Math.PI+(rear===1?0:-spread+2*spread*k/(rear-1));
+}
 export const emptyRelics=()=>({equipped:null,stored:[]});
 export function validRelics(r){
  if(r===undefined)return true;
@@ -53,6 +65,7 @@ const raised=(value,s)=>value+s.step;
 export function relicLawStats(stats,r){
  const out={...stats},s=RELIC_STAT[r?.equipped];
  if(s&&out[s.key])out[s.key]=raised(out[s.key],s);
+ if(r?.equipped==='core'&&out.gravityRadius)out.frostFactor=Math.min(.8,out.frostFactor||1);
  return out;
 }
 const shown=v=>Number.isInteger(v)?String(v):v.toFixed(1);
@@ -61,12 +74,18 @@ const subject=word=>{const c=word.charCodeAt(word.length-1)-0xac00;return word+(
 // What one relic changes for this exact build, using the same numbers the game uses.
 // state: active (it does something now) · missing (no matching law or form)
 export function relicEffect(id,base,heldForms=[]){
+ if(id==='echo')return {state:'active',lines:['오버드라이브 마무리 80% + 0.45초 뒤 35% 잔향'],note:''};
+ if(id==='stride')return {state:'active',lines:['회피 직후 첫 씨앗탄 피해 +80% · 관통 +1'],note:''};
  const s=RELIC_STAT[id],law=RELICS[id]?.law;
  if(!s)return {state:'missing',lines:[],note:''};
  const lines=[],now=base?.[s.key]||0;let grows=false;
  if(now>0){
   const next=raised(now,s);grows=true;
   lines.push(`${s.label} ${shown(now)}${s.unit} → ${shown(next)}${s.unit}${next>s.cap+1e-9?' · 최대치 초과':''}`);
+  if(id==='mirror')lines.push('튕긴 씨앗탄의 다음 타격 +25%');
+  if(id==='crystal')lines.push('파편 일부가 뒤쪽으로 퍼짐');
+  if(id==='coil')lines.push('마지막 연쇄가 첫 적에게 18% 되돌아옴');
+  if(id==='core')lines.push('끌려온 일반 적 0.8초 둔화');
  }
  const forms=[...heldForms].map(f=>Array.isArray(f)?f[0]:f).filter(f=>ALL_FORMS[f]?.requires.includes(law));
  for(const f of forms)lines.push(`${ALL_FORMS[f].name} 피해 +12%`);

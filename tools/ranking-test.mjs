@@ -68,17 +68,16 @@ assert.equal([...cleanName('가나다라마바사아자차')].length,8);assert.e
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).speed>difficulty(c).speed);
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).projectileSpeed>difficulty(c).projectileSpeed);
 for(let c=0;c<8;c++)assert.ok(difficulty(c+1).damage>difficulty(c).damage&&difficulty(c+1).bossTempo>difficulty(c).bossTempo);
-assert.equal(difficulty(20).hp,5.8,'the existing first twenty journeys keep their tuning');
-assert.ok(difficulty(30).hp>difficulty(20).hp&&difficulty(100).hp>difficulty(30).hp,'late-run enemy health never stops growing');
-// 2026-09-21: 적의 위협은 50번째 여정(cycle 49)까지 계속 오르고, 그 뒤(옛 저장)는 그 값에 머문다.
+assert.ok(Math.abs(difficulty(14).hp-4.36)<1e-9,'the fifteenth journey keeps the existing health ramp');
+assert.equal(difficulty(100).hp,difficulty(14).hp,'old checkpoints use the final supported difficulty tier');
+// Threat rises through the fifteenth journey and then stops for legacy saves.
 for(const key of ['speed','projectileSpeed','damage','bossTempo']){
- for(let c=0;c<49;c++)assert.ok(difficulty(c+1)[key]>=difficulty(c)[key],`${key}가 ${c+2}번째 여정에서 줄어듦`);
- assert.ok(difficulty(49)[key]>difficulty(30)[key],`${key}가 뒤쪽 여정에서 멈춤`);
- assert.equal(difficulty(100)[key],difficulty(49)[key],`${key}는 50번째 여정 값에 머문다`);
+ for(let c=0;c<14;c++)assert.ok(difficulty(c+1)[key]>=difficulty(c)[key],`${key}가 ${c+2}번째 여정에서 줄어듦`);
+ assert.equal(difficulty(100)[key],difficulty(14)[key],`${key}는 15번째 여정 값에 머문다`);
 }
-assert.equal(difficulty(12).speed,1.9,'앞쪽 곡선은 그대로');assert.equal(difficulty(25).damage,2.5,'앞쪽 곡선은 그대로');
-assert.ok(difficulty(49).speed<=2.3&&difficulty(49).projectileSpeed<=1.55&&difficulty(49).bossTempo<=1.45,'50번째 여정에서도 읽을 수 있는 빠르기');
-assert.ok(difficulty(49).damage<=3.3,'50번째 여정 공격력 상한');
+assert.equal(difficulty(12).speed,1.9,'앞쪽 곡선은 그대로');assert.ok(Math.abs(difficulty(14).damage-1.84)<1e-9,'15번째 여정 공격력');
+assert.ok(difficulty(14).speed<=2.3&&difficulty(14).projectileSpeed<=1.55&&difficulty(14).bossTempo<=1.45,'15번째 여정에서도 읽을 수 있는 빠르기');
+assert.ok(difficulty(14).damage<=3.3,'15번째 여정 공격력 상한');
 
 // Build records: short, validated, unknown ids skipped, shown under a ranking line through a callback.
 {
@@ -111,6 +110,6 @@ for(const it of Object.values(ITEMS))assert.ok(it.key===''||it.key==='Q',it.id);
  assert.ok(rankingTable([{name:'가',score:10,cycle:0,stage:2,kills:3,time:65,at:1}]).includes('여정 1 · 3번째 방 · 3 처치 · 1분 05초'));
 }
 // 완주 보너스: 90분에서 1초 빠를 때마다 60점, 90분을 넘기면 0.
-assert.equal(CLEAR_BONUS.baseSeconds,5400);assert.equal(clearBonus(3300),126000);assert.equal(clearBonus(5400),0);assert.equal(clearBonus(9000),0);assert.equal(clearBonus(-5),324000);
-assert.ok(clearBonus(3000)>clearBonus(3600),'빠를수록 보너스가 크다');
+assert.equal(CLEAR_BONUS.baseSeconds,1800);assert.equal(clearBonus(1200),21000);assert.equal(clearBonus(1800),0);assert.equal(clearBonus(9000),0);assert.equal(clearBonus(-5),63000);
+assert.ok(clearBonus(900)>clearBonus(1200),'빠를수록 보너스가 크다');
 console.log('Score, ranking board, names, potions and save fields, time tie-break, clears and clear bonus passed.');

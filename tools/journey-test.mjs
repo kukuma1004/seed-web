@@ -26,6 +26,6 @@ assert.equal(fanCount,15,'Three five-bolt salvos per fan attack');
 // Neighbouring bolts leave a lane wider than the seed (hit radius .6 each side) within five units.
 {const gap=2*5*Math.sin(FAN_SPACING/2);assert.ok(gap>1.3,`fan lane ${gap.toFixed(2)} at distance 5`);assert.ok(FAN_SHIFT<FAN_SPACING/4,'salvos keep their lanes');}
 
-// 2026-09-21: 한 판은 찐보스를 열 번 이기면 끝난다. 찐보스는 다섯 여정마다이니 마지막은 50번째 여정(cycle 49).
-assert.equal(FINAL_BOSS_CAP,10);assert.equal(FINAL_BOSS_EVERY,5);assert.equal(MAX_RUN_CYCLE,49);
-assert.equal(bossCapReached(9),false);assert.equal(bossCapReached(10),true);assert.equal(bossCapReached(27),true,'옛 저장처럼 이미 넘겼다면 다음 찐보스에서 끝');assert.equal(bossCapReached(undefined),false);
+// Three victories in one run finish at the fifteenth journey (cycle 14).
+assert.equal(FINAL_BOSS_CAP,3);assert.equal(FINAL_BOSS_EVERY,5);assert.equal(MAX_RUN_CYCLE,14);
+assert.equal(bossCapReached(2),false);assert.equal(bossCapReached(3),true);assert.equal(bossCapReached(27),true,'옛 저장처럼 이미 넘겼다면 다음 찐보스에서 끝');assert.equal(bossCapReached(undefined),false);

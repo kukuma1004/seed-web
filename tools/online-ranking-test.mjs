@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {createOnlineRanking,bestPerPlayer,validRun,seasonRun,AUTH_KEY,FIREBASE,SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON,ARCHIVE_SEASONS,ACT,runAct,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,SEASON11_RUNS_PATH,SEASON11_BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
+import {createOnlineRanking,bestPerPlayer,validRun,seasonRun,AUTH_KEY,FIREBASE,SEASON,PREVIOUS_RULE_SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON,ARCHIVE_SEASONS,ACT,runAct,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,SEASON12_RUNS_PATH,SEASON12_BUILDS_PATH,SEASON11_RUNS_PATH,SEASON11_BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
 import {MAX_RUN_CYCLE} from '../src/journey.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
 const T0=SEASON.start;
@@ -20,7 +20,7 @@ function fakeFirebase({clock}){
   const token=tokens.get(u.searchParams.get('auth'));const uid=token&&token.exp>clock.t?token.uid:null;
   if(!rulesPublished||!uid)return json(401,{error:'Permission denied'});
   const path=u.pathname.replace(/\.json$/,'').replace(/^\//,'');
-  const runsBase=[RUNS_PATH,SEASON11_RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path===base),buildsBase=[BUILDS_PATH,SEASON11_BUILDS_PATH,LEGACY_BUILDS_PATH].find(base=>path===base||path.startsWith(base+'/'));
+  const runsBase=[RUNS_PATH,SEASON12_RUNS_PATH,SEASON11_RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path===base),buildsBase=[BUILDS_PATH,SEASON12_BUILDS_PATH,SEASON11_BUILDS_PATH,LEGACY_BUILDS_PATH].find(base=>path===base||path.startsWith(base+'/'));
   if(runsBase&&opts.method==='POST'){
    const run=JSON.parse(opts.body);
    if(run.uid!==uid||typeof run.name!=='string'||run.name.length<1||run.name.length>16||!(run.score>=1)||![ACT.AUSTIN,ACT.ALWAYS_BEGINNER,ACT.JOHAN].includes(run.act)||run.at?.['.sv']!=='timestamp')return json(401,{error:'Permission denied'});
@@ -50,7 +50,7 @@ function fakeFirebase({clock}){
    }
    if(opts.method==='DELETE'){if(builds[id]&&builds[id].uid!==uid)return json(401,{error:'Permission denied'});delete builds[id];return json(200,null);}
   }
-  const runBase=[RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path.startsWith(base+'/')),m=runBase?{1:path.slice(runBase.length+1)}:null;
+  const runBase=[RUNS_PATH,SEASON12_RUNS_PATH,LEGACY_RUNS_PATH].find(base=>path.startsWith(base+'/')),m=runBase?{1:path.slice(runBase.length+1)}:null;
   if(m&&opts.method==='DELETE'){if(runs[m[1]]?.uid!==uid)return json(401,{error:'Permission denied'});delete runs[m[1]];return json(200,null);}
   return json(404,{error:'not found'});
  }
@@ -108,6 +108,21 @@ function fakeFirebase({clock}){
  assert.equal((await other.top(20,'',SEASON,ACT.ALWAYS_BEGINNER))[0].score,3900,'Johan does not replace Act 2 best');
 }
 
+// Existing Austin victories on this account unlock the cumulative title.
+{
+ const clock={t:T0+1_000_000},fb=fakeFirebase({clock}),ranking=createOnlineRanking({storage:memory(),fetchImpl:fb.fetchImpl,now:()=>clock.t});
+ const owner=(await ranking.signIn()).uid;
+ for(let i=0;i<10;i++){
+  const id=pushKeyPrefix(clock.t+i)+String(i).padStart(12,'0');
+  fb.runs[id]={uid:owner,name:'오스틴용사',score:3000,cycle:4,stage:4,kills:40,time:300,act:ACT.AUSTIN,at:clock.t+i};
+  fb.builds[id]={uid:owner,laws:'',forms:'',relic:'',wardens:1,austins:1};
+ }
+ const outsider=pushKeyPrefix(clock.t+10)+'outsider';
+ fb.runs[outsider]={uid:'someone-else',name:'다른유저',score:3000,cycle:4,stage:4,kills:40,time:300,act:ACT.AUSTIN,at:clock.t+10};
+ fb.builds[outsider]={uid:'someone-else',laws:'',forms:'',relic:'',wardens:1,austins:100};
+ assert.equal(await ranking.historicalAustinWins(10),10,'authenticated run history retroactively grants ten Austin wins without reading another UID');
+}
+
 // A long-ago personal run must still appear even after it falls outside both
 // the top 100 score query and the most recent 500 runs.
 {
@@ -143,11 +158,11 @@ function fakeFirebase({clock}){
  clock.t=T0+1000;
  const fresh=await ranking.submit({name:'새시즌',score:120,cycle:0,stage:1,kills:12,time:60});
  assert.deepEqual(fresh.board.map(e=>e.name),['새시즌'],'only this season is on the board');assert.equal(fresh.rank,1);
- const archive=await ranking.top(20,'',PREVIOUS_SEASON);assert.deepEqual(new Set(archive.map(e=>e.name)),new Set(['옛기록0','옛기록1','옛기록2']),'the closed season remains readable without new-season runs');
+ const archive=await ranking.top(20,'',PREVIOUS_RULE_SEASON);assert.ok(['옛기록0','옛기록1','옛기록2'].every(name=>archive.some(e=>e.name===name)),'the previous rules board remains readable');
  assert.equal(Object.keys(fb.runs).length,121,'nothing was deleted');
- assert.ok(!inSeason({at:T0-1})&&inSeason({at:T0}));assert.ok(inSeason({at:T0-1},PREVIOUS_SEASON)&&!inSeason({at:T0},PREVIOUS_SEASON));
- // 보관 시즌은 빈틈 없이 이어진다: 1.0 끝 = 1.1 시작, 1.1 끝 = 1.2 시작.
- assert.equal(ARCHIVE_SEASON.end,PREVIOUS_SEASON.start);assert.equal(PREVIOUS_SEASON.end,SEASON.start);assert.deepEqual(ARCHIVE_SEASONS.map(v=>v.id),['1.1','1.0']);
+ assert.ok(!inSeason({at:T0-1})&&inSeason({at:T0}));assert.ok(inSeason({at:T0-1},PREVIOUS_RULE_SEASON)&&inSeason({at:T0},PREVIOUS_RULE_SEASON),'late old-client scores remain visible until their update reaches Play');
+ // Paths isolate 1.2 from the new three-boss board; no fixed end date hides old-client scores.
+ assert.equal(ARCHIVE_SEASON.end,PREVIOUS_SEASON.start);assert.equal(PREVIOUS_SEASON.end,PREVIOUS_RULE_SEASON.start);assert.equal(PREVIOUS_RULE_SEASON.end,undefined);assert.deepEqual(ARCHIVE_SEASONS.map(v=>v.id),['1.2','1.1','1.0']);
  assert.ok(pushKeyPrefix(T0)<pushKeyPrefix(T0+1)&&pushKeyPrefix(T0-1)<pushKeyPrefix(T0),'key prefixes follow time');
  assert.equal(pushKeyPrefix(0),'--------');
 }
@@ -222,18 +237,18 @@ function fakeFirebase({clock}){
   assert.ok(current.act?.['.validate'].includes('newData.val() == 3'),'현재 시즌 규칙이 요한 기록을 허용해야 한다');
  }
  // 게임이 실제로 쓰는 경로가 규칙에 있는 구역이어야 한다.
- for(const path of [RUNS_PATH,BUILDS_PATH,SEASON11_RUNS_PATH,SEASON11_BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH]){
+ for(const path of [RUNS_PATH,BUILDS_PATH,SEASON12_RUNS_PATH,SEASON12_BUILDS_PATH,SEASON11_RUNS_PATH,SEASON11_BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH]){
   const node=path.split('/').reduce((at,part)=>at?.[part],rules);
   assert.ok(node?.$runId,`${path} 경로에 규칙이 없다`);
  }
 }
 
-// 시즌 1.2: 찐보스 열 번(50번째 여정)까지, 같은 점수면 빠른 판이 위, 완주 표시.
+// Three final-boss wins end at journey 15; old 50-journey records stay in the archive.
 {
- assert.equal(MAX_RUN_CYCLE,49);
- const base={uid:'u',name:'가',score:1000,cycle:49,stage:4,kills:5000,time:3000,at:SEASON.start+1};
- assert.equal(seasonRun(base),true,'50번째 여정(cycle 49)까지는 받는다');
- assert.equal(seasonRun({...base,cycle:50,kills:5100,time:3000}),false,'51번째 여정부터는 이번 시즌에 받지 않는다');
+ assert.equal(MAX_RUN_CYCLE,14);
+ const base={uid:'u',name:'가',score:1000,cycle:14,stage:4,kills:1400,time:1200,at:SEASON.start+1};
+ assert.equal(seasonRun(base),true,'15번째 여정(cycle 14)까지는 받는다');
+ assert.equal(seasonRun({...base,cycle:15,kills:1500,time:1300}),false,'16번째 여정부터는 이번 시즌에 받지 않는다');
  assert.equal(validRun({...base,cycle:136,kills:16000,score:1000,time:9000}),true,'보관 시즌을 읽을 때는 옛 판도 그대로 보인다');
  assert.equal(validRun({...base,done:'yes'}),false,'완주 표시는 참/거짓만');
  const board=bestPerPlayer({a:{...base,uid:'a',name:'느림',time:1500},b:{...base,uid:'b',name:'빠름',time:1200},c:{...base,uid:'c',name:'높음',score:1001,time:5000}},10);
@@ -241,7 +256,7 @@ function fakeFirebase({clock}){
  const clock={t:SEASON.start+10},fb=fakeFirebase({clock}),ranking=createOnlineRanking({storage:memory(),fetchImpl:fb.fetchImpl,now:()=>clock.t});
  await assert.rejects(ranking.submit({name:'오래버팀',score:500000,cycle:136,stage:3,kills:16000,time:8200}),/invalid-run/,'상한을 넘긴 옛 판은 올라가지 않는다');
  assert.equal(ranking.pendingCount(),0,'거절된 옛 판이 대기 목록을 막지 않는다');
- const done=await ranking.submit({name:'완주',score:80000,cycle:49,stage:4,kills:5000,time:3000,done:true});
+ const done=await ranking.submit({name:'완주',score:80000,cycle:14,stage:4,kills:1400,time:1200,done:true});
  assert.equal(done.board.find(e=>e.name==='완주').done,true,'완주 표시가 기록에 남는다');
 }
 

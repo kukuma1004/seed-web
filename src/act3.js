@@ -64,7 +64,7 @@ export const ACT3_ARENA=Object.freeze({
  spawns:Object.freeze([[-7.8,-6.8],[0,-7.1],[7.8,-6.8],[-8,0],[8,0],[-7.6,5.7],[7.6,5.7]].map(([x,z])=>Object.freeze({x,z})))
 });
 
-export const ACT3_STORAGE_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act3-v1','seed-ranking-v2':'seed-ranking-act3-v1'});
+export const ACT3_STORAGE_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act3-v1','seed-ranking-v2':'seed-ranking-act3-v1','seed-ranking-v3':'seed-ranking-act3-v2'});
 export function act3Storage(storage){
  if(!storage)return storage;const key=k=>ACT3_STORAGE_KEYS[k]||k;
  return {getItem:k=>storage.getItem(key(k)),setItem:(k,v)=>storage.setItem(key(k),v),removeItem:k=>storage.removeItem(key(k))};

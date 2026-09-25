@@ -1,12 +1,12 @@
 import assert from 'node:assert/strict';
-import {emptyRelics,validRelics,normalizeRelics,keepRelic,equipRelic,relicOffers,relicLawStats,relicFormScale,relicEffect} from '../src/relics.js';
+import {emptyRelics,validRelics,normalizeRelics,keepRelic,equipRelic,relicOffers,relicLawStats,relicFormScale,relicEffect,relicSplitAngle,wardenRelicDrop} from '../src/relics.js';
 import {FORMS} from '../src/forms.js';
 import {lawStats} from '../src/progression.js';
 import {validCheckpoint,writeCheckpoint,readCheckpoint,clearCheckpoint} from '../src/run-save.js';
 const r=emptyRelics();assert.ok(keepRelic(r,'mirror'));
 assert.ok(keepRelic(r,'crystal','store'));assert.ok(keepRelic(r,'coil','store'));assert.ok(keepRelic(r,'core','store'));
 assert.deepEqual(r,{equipped:'mirror',stored:['crystal','coil','core']});
-assert.ok(!keepRelic(r,'mirror'));assert.ok(!keepRelic(r,'invalid'));assert.equal(relicOffers(r).length,0);
+assert.ok(!keepRelic(r,'mirror'));assert.ok(!keepRelic(r,'invalid'));assert.equal(relicOffers(r).length,2);
 assert.ok(equipRelic(r,'coil'));assert.equal(r.equipped,'coil');assert.deepEqual(r.stored,['crystal','mirror','core']);
 const base=lawStats(new Map([['reflect',1],['split',1],['chain',1],['gravity',1]]));
 const active=relicLawStats(base,r);assert.equal(active.chainTargets,base.chainTargets+1);assert.equal(active.splitCount,base.splitCount);assert.equal(active.reflectBounces,base.reflectBounces);
@@ -25,7 +25,7 @@ const copy=normalizeRelics(r);copy.stored.pop();assert.equal(r.stored.length,3,'
 
 // The effect line shows before → after for this build, and says plainly when a relic does nothing.
 const fx=(id,laws,forms=new Map())=>relicEffect(id,lawStats(new Map(laws)),forms);
-const coilNow=fx('coil',[['chain',1]]);assert.equal(coilNow.state,'active');assert.deepEqual(coilNow.lines,['연쇄 대상 2명 → 3명']);
+const coilNow=fx('coil',[['chain',1]]);assert.equal(coilNow.state,'active');assert.deepEqual(coilNow.lines,['연쇄 대상 2명 → 3명','마지막 연쇄가 첫 적에게 18% 되돌아옴']);
 assert.equal(fx('core',[['gravity',1]]).lines[0],'중력장 반경 2.2 → 2.8','fractional radius is shown to one decimal');
 assert.equal(fx('core',[['gravity',3]]).lines[0],'중력장 반경 3.8 → 4.4 · 최대치 초과','the tag appears whenever the result passes the cap');
 const noMirror=fx('mirror',[['chain',1]]);assert.equal(noMirror.state,'missing');assert.equal(noMirror.lines.length,0);assert.match(noMirror.note,/반사 법칙을 얻거나 반사가 재료인 진화/);
@@ -38,5 +38,10 @@ for(const [id,law] of [['mirror','reflect'],['crystal','split'],['coil','chain']
 }
 const chainForm=Object.keys(FORMS).find(f=>FORMS[f].requires.includes('chain'));
 const viaForm=fx('coil',[],new Map([[chainForm,2]]));assert.equal(viaForm.state,'active','a form made from chain still benefits');assert.deepEqual(viaForm.lines,[`${FORMS[chainForm].name} 피해 +12%`]);
-const both=fx('coil',[['chain',8]],new Map([[chainForm,1]]));assert.equal(both.state,'active');assert.equal(both.lines.length,2,'over-cap stat and form damage both listed');
+const both=fx('coil',[['chain',8]],new Map([[chainForm,1]]));assert.equal(both.state,'active');assert.equal(both.lines.length,3,'over-cap stat, transformation and form damage are listed');
+assert.equal(fx('echo',[]).state,'active');assert.equal(fx('stride',[]).state,'active');
+assert.equal(wardenRelicDrop(()=>0),true);assert.equal(wardenRelicDrop(()=>.0099),true);assert.equal(wardenRelicDrop(()=>.01),false);
+const normal=Array.from({length:9},(_,i)=>relicSplitAngle(null,9,i,.85));
+const crystal=Array.from({length:9},(_,i)=>relicSplitAngle('crystal',9,i,.85));
+assert.equal(normal.filter(angle=>angle>Math.PI/2).length,0);assert.equal(crystal.filter(angle=>angle>Math.PI/2).length,3,'rear shards replace, not add to, nine fragments');
 console.log('Relics: one active + three stored, swaps, effect isolation, caps, legacy saves, death cleanup and build-aware effect lines passed.');
