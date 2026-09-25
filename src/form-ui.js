@@ -51,7 +51,8 @@ export function discoveryBook(profile,titles=null){
  // Every entry opens its page: a found evolution shows its whole description, an unfound one only its recipe.
  const entry=f=>{const known=profile.forms.includes(f.id),best=profile.records?.[f.id];return `<button type="button" class="form-card book-entry ${known?'':'unknown'}" data-book="${f.id}" data-known="${known?1:0}" data-best="${best?.dps||0}" data-peak="${best?.peak||0}" data-duration="${best?.duration||0}" aria-label="${known?f.name:'아직 발견하지 못한 진화'} 자세히 보기">${formArt(f.id,'form-portrait')}<strong>${known?f.name:'？？？'}</strong><p>${f.pair}</p>${best?`<small class="book-best">개인 최고 ${Math.round(best.dps)} DPS</small>`:''}</button>`;};
  const goal=titles?.next?`<p class="codex-goal">도감 ${titles.next.need}개 더 발견하면 ${titles.next.reward}</p>`:'';
- const held=titles?.titles?.length?`<p class="codex-goal">${titles.titles.map(t=>`${t.name} · ${t.perk}`).join('<br>')}</p>`:'';
+ const heldTitles=titles?.titles||[];
+ const held=heldTitles.length?`<div class="codex-held"><p class="codex-goal codex-held-full">${heldTitles.map(t=>`${t.name} · ${t.perk}`).join('<br>')}</p><details class="codex-held-compact"><summary>보유 칭호 ${heldTitles.length}개 · 능력치 보기</summary><p>${heldTitles.map(t=>`${t.name} · ${t.perk}`).join('<br>')}</p></details></div>`:'';
  const section=(title,list)=>`<h3 class="book-title">${title} <span>${list.filter(f=>profile.forms.includes(f.id)).length}/${list.length}</span></h3><div class="form-cards book">${list.map(entry).join('')}</div>`;
  // One scroll area for every section, so a short phone screen never squeezes the four grids.
  return `<p>씨앗의 도감 · ${found}/${total} 발견</p><h2>씨앗의 도감</h2><p class="form-note">기본 성질 9개에서 단독 9 · 융합 36 · 융합+단독 72 · 쌍둥이 36개의 길이 열립니다.</p>${held}${goal}

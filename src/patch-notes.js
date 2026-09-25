@@ -4,6 +4,13 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-25-d',date:'9월 25일',title:'휴대폰 도감 화면을 고쳤어요',
+  lines:[
+   '가로 화면에서 칭호가 많아도 진화 카드가 잘리지 않도록 도감 공간을 넓혔어요.',
+   '칭호 능력치는 접어서 볼 수 있고, 돌아가기 단추는 화면 안에 남아요.'
+  ]
+ },
+ {
   id:'2026-09-25-c',date:'9월 25일',title:'진화 카드와 작은 화면을 다듬었어요',
   lines:[
    '완성 진화와 쌍둥이 각성 카드의 금빛 테두리를 한결같이 맞췄어요.',

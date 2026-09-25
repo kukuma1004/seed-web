@@ -1,6 +1,6 @@
 // Offline play: after one visit with internet, the whole game (code, images, icons) is kept on the device.
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
-const CACHE='seed-play-v45';
+const CACHE='seed-play-v46';
 const ROOT=new URL('./',self.location).href;
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-192.png',ROOT+'icons/seed-512.png'];
 let lastSync=0,syncing=null;
