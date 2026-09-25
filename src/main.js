@@ -36,7 +36,7 @@ import {createShield,tickShield,blocksShield} from './shield.js';
 import {readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,REGION_NAMES,restoredScore,restoredWardens,restoredAustins} from './run-save.js';
 import {createSeedBody} from './seed-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
-import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_CLEAR_MOVE_SPEED,ALWAYS_CLEAR_TITLE,ALWAYS_CLEAR_MAX_HP} from './titles.js';
+import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_VETERAN_TITLE,ALWAYS_CLEAR_TITLE,CLEAR_ALL_STATS} from './titles.js';
 import {ACT2_REGION,ACT2_NAME,ACT2_PRESSURE,isAct2,actOf,act2Unlocked,act2Available,playableRegion,actStorage} from './act2.js';
 import {ACT2_ART,ACT2_GEOMETRIES,isAct2Minion,createAct2Minion,tickAct2Minion,catcherReturn} from './act2-enemies.js';
 import {ACT2_WARDENS,ACT2_WARDEN_ART,act2WardenEncounter,createAct2Warden,tickAct2Warden,act2WardenHint} from './act2-wardens.js';
@@ -64,8 +64,8 @@ import './journey.css';
 import {ROOMS,EXIT,LAW_NAMES,rewardOptions,canUseExit,roomFor,FINAL_BOSS_CAP,MAX_RUN_CYCLE,bossCapReached} from './journey.js';
 import {createWarden,tickWarden,wardenVariantFor,wardenEncounter,DUO_WARDEN,WARDEN_VARIANTS,SEAL} from './warden.js';
 import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAustin,austinHint,austinPatternName,createClockFloor} from './austin.js';
-import {killPoints,roomPoints,submitScore,readRanking,PREVIOUS_RANKING_KEY,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX,formatTime,clearBonus,CLEAR_BONUS} from './score.js';
-import {createOnlineRanking,SEASON,PREVIOUS_RULE_SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
+import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX,formatTime,clearBonus,CLEAR_BONUS} from './score.js';
+import {createOnlineRanking,SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
@@ -352,10 +352,10 @@ function completeRun(){
  for(const p of enemyShots)release(p.ob);enemyShots=[];if(!developerRun)clearCheckpoint(actStore());mode='dead';
  // 빨리 끝낸 만큼 완주 보너스(score.js CLEAR_BONUS).
  const bonus=clearBonus(elapsed);score+=bonus;
- // 막마다 완주 칭호: 1막 '정시를 정복한 자'(이동 +10%), 2막 '초심을 완성한 자'(최대 생명력 +20). 실험 판에는 주지 않는다.
+ // 막마다 완주 칭호: 1막과 2막은 각각 모든 능력 +1%. 실험 판에는 주지 않는다.
  const clearId=isAct3(region)?null:isAct2(region)?'alwaysclear':'austinclear';
  const already=clearId==='alwaysclear'?seedTitle.isAlwaysClearUnlocked():clearId==='austinclear'?seedTitle.isAustinClearUnlocked():true;
- const newTitle=!developerRun&&clearId&&!already?(clearId==='alwaysclear'?{name:ALWAYS_CLEAR_TITLE,perk:`최대 생명력 +${ALWAYS_CLEAR_MAX_HP}`}:{name:AUSTIN_CLEAR_TITLE,perk:`이동 속도 +${Math.round(AUSTIN_CLEAR_MOVE_SPEED*100)}%`}):null;
+ const newTitle=!developerRun&&clearId&&!already?{name:clearId==='alwaysclear'?ALWAYS_CLEAR_TITLE:AUSTIN_CLEAR_TITLE,perk:`모든 능력 +${Math.round(CLEAR_ALL_STATS*100)}%`}:null;
  if(!developerRun&&clearId)remember('bosses',clearId);
  showEnd(null,{cleared:true,newTitle,bonus});
 }
@@ -453,7 +453,7 @@ let gardenFx=gardenEffects(garden),lastHarvest=null;
 const gardenStats=()=>gardenFx.mastery;
 // 도감 칭호: 10종마다 +0.5%, 30종마다 추가 +0.5%(150종에서 최대 +10%). 정원 숙련과 더한다.
 const codexRate=()=>mirrorSession?0:(seedTitle?.state().codexBonus||0);
-const masteryRate=id=>mirrorSession?0:((gardenStats()?.points?.[id]||0)*MASTERY_STEP)+codexRate();
+const masteryRate=id=>mirrorSession?0:((gardenStats()?.points?.[id]||0)*MASTERY_STEP)+codexRate()+(seedTitle?.state().clearStatBonus||0);
 let seedTitle=null;
 const maxPlayerHp=()=>mirrorSession?100:100*(1+masteryRate('maxHp'))+(seedTitle?.state().maxHpBonus||0);
 const gardenPower=()=>mirrorSession?1:1+masteryRate('power');
@@ -839,7 +839,7 @@ function enemyDown(e){perf.event(PE.enemyDeath);
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);audio.play('bossDefeat');
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
- if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const accountNow=readAccountProfile(runStorage),austinWins=Math.min(100000,accountNow.austinWins+1);writeAccountProfile(runStorage,{...accountNow,austinWins});if(austinWins>=10&&!seedTitle.isAustinVeteranUnlocked())remember('bosses','austinveteran');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+200 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}${austinWins===10?` · 칭호 '정시의 연대기' (공격 빈도 +2%)`:''}`;}}
+ if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const accountNow=readAccountProfile(runStorage),austinWins=Math.min(100000,accountNow.austinWins+1);writeAccountProfile(runStorage,{...accountNow,austinWins});if(austinWins>=10&&!seedTitle.isAustinVeteranUnlocked())remember('bosses','austinveteran');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+200 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}${austinWins===10?` · 칭호 '${AUSTIN_VETERAN_TITLE}' (이동 속도 +5%)`:''}`;}}
  else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+300 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}`;}}
  else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const wallet=earnCoins(runStorage,400);remember('bosses','tempestcarrier');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+400 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}`;}}
  else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;const relicFound=wardenRelicDrop(rng);if(relicFound)relicRewardPending=true;const bossSignal=act3BossAhead()?' · 폭풍 중심에서 거대한 기체음이 들립니다':act2BossAhead()?' · 관중석의 함성이 결승전을 부릅니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':'';$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50 JP (보유 ${wallet.coins} JP)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':bossSignal}${relicFound?' · 희귀 유물 발견!':''}`;}}
@@ -1048,17 +1048,17 @@ function showSeasonPause(){
  revealApp();mode='season-pause';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),accountLine=user&&!user.isAnonymous?`현재 계정 · ${escapeHtml(account.label())}`:'관리자만 계정 로그인 후 플레이할 수 있어요';
  $('#overlay').innerHTML=`<div class="menu-panel season-pause-panel"><p class="eyebrow">SEED · ${escapeHtml(SEASON.name)}</p><div class="season-seal" aria-hidden="true">♧</div><h2>${escapeHtml(seasonStatus.title)}</h2><p class="season-pause-copy">${escapeHtml(seasonStatus.body)}</p><div class="season-pause-status"><strong>플레이 일시 중지</strong><span>${escapeHtml(seasonStatus.detail)}</span></div><div class="menu-list"><button id="season-ranking" class="primary menu-item"><strong>${SEASON.name} 명예의 전당</strong><small>오스틴 · 항상초심 · 요한 기록</small></button><button id="season-account" class="menu-item"><strong>관리자 로그인</strong><small>${accountLine}</small></button><a class="menu-item small-item" href="https://kukuma1004.github.io/jpmath-lab/games/"><strong>게임 소식으로 돌아가기</strong></a></div><p class="account-note">각자의 저장 데이터는 그대로 남아 있습니다.</p></div>`;
- $('#season-ranking').onclick=()=>showRanking('previous');$('#season-account').onclick=()=>showAccount();
+ $('#season-ranking').onclick=()=>showRanking('online');$('#season-account').onclick=()=>showAccount();
 }
 // 프로필 '내 능력치'(2026-09-22 사용자: 도감을 채우면 모든 능력이 오른다는데 뭐가 오르는지 모르겠다).
 // 정원 숙련·도감 칭호(10개마다 0.5%, 30개마다 추가 0.5%)·칭호 보너스를 다섯 줄로 보여 준다.
 function permanentStatsProfile(titleInfo){
- const pts=gardenStats()?.points||{},codex=titleInfo.codexBonus||0,pct=v=>`${Math.round(v*1000)/10}%`;
- const row=(id,extra=[])=>{const garden=(pts[id]||0)*MASTERY_STEP,total=garden+codex,parts=[garden?`정원 ${pct(garden)}`:'',codex?`도감 ${pct(codex)}`:'',...extra].filter(Boolean);
+ const pts=gardenStats()?.points||{},codex=titleInfo.codexBonus||0,clear=titleInfo.clearStatBonus||0,pct=v=>`${Math.round(v*1000)/10}%`;
+ const row=(id,extra=[])=>{const garden=(pts[id]||0)*MASTERY_STEP,total=garden+codex+clear+(id==='move'?titleInfo.moveSpeedBonus||0:0),parts=[garden?`정원 ${pct(garden)}`:'',codex?`도감 ${pct(codex)}`:'',clear?`완주 ${pct(clear)}`:'',...extra].filter(Boolean);
   return `<li><b>${escapeHtml(MASTERY[id].name)}</b><em>${total?'+'+pct(total):'0%'}</em><small>${escapeHtml(MASTERY[id].desc)}${parts.length?' · '+parts.join(' · '):''}</small></li>`;};
  const moveTitle=titleInfo.moveSpeedBonus?[`칭호 이속 ${pct(titleInfo.moveSpeedBonus)}`]:[];
- const hpNow=Math.round(100*(1+(pts.maxHp||0)*MASTERY_STEP+codex)+(titleInfo.maxHpBonus||0));
- return `<section class="stat-profile"><div class="title-profile-head"><strong>내 능력치</strong><span>최대 생명력 ${hpNow}</span></div><ul>${row('power')}${row('move',moveTitle)}${row('critical')}${row('cooldown')}${row('maxHp',titleInfo.maxHpBonus?[`칭호 +${titleInfo.maxHpBonus}`]:[])}${titleInfo.attackCadenceBonus?`<li><b>공격 빈도</b><em>+${pct(titleInfo.attackCadenceBonus)}</em><small>정시의 연대기 · 씨앗탄과 진화 공격이 더 자주 발사됩니다</small></li>`:''}</ul><small>오스틴 누적 ${readAccountProfile(runStorage).austinWins}/10회 · 정시의 연대기는 공격 빈도 +2%. 정원 숙련은 보스를 이길 때마다 0.1~0.3%씩, 도감은 10종마다 다섯 능력 +0.5%, 30종마다 추가 +0.5%(150종에서 최대 +10%). 거울의 탑에서는 적용되지 않아요.</small></section>`;
+ const hpNow=Math.round(100*(1+(pts.maxHp||0)*MASTERY_STEP+codex+clear)+(titleInfo.maxHpBonus||0));
+ return `<section class="stat-profile"><div class="title-profile-head"><strong>내 능력치</strong><span>최대 생명력 ${hpNow}</span></div><ul>${row('power')}${row('move',moveTitle)}${row('critical')}${row('cooldown')}${row('maxHp',titleInfo.maxHpBonus?[`칭호 +${titleInfo.maxHpBonus}`]:[])}</ul><small>오스틴 누적 ${readAccountProfile(runStorage).austinWins}/10회 · 10회 칭호는 이속 +5%, 막별 완주는 모든 능력 +1%. 정원 숙련은 보스를 이길 때마다 0.1~0.3%씩, 도감은 10종마다 다섯 능력 +0.5%, 30종마다 추가 +0.5%(150종에서 최대 +10%). 거울의 탑에서는 적용되지 않아요.</small></section>`;
 }
 // The local top-20 board can contain other players. Recover only entries with
 // this account's current nickname from a device already bound to the same UID.
@@ -1085,7 +1085,7 @@ function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
  const gardenLine=gardenSummary(),knownForms=adminMode?Object.keys(DISCOVERY_FORMS).length:profile.forms.filter(id=>DISCOVERY_FORMS[id]).length;
- const permanentStats=[titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.attackCadenceBonus?`공격 빈도 +${Math.round(titleInfo.attackCadenceBonus*1000)/10}%`:'',titleInfo.shotSpeedBonus?`탄속 +${Math.round(titleInfo.shotSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
+ const permanentStats=[titleInfo.clearStatBonus?`완주: 모든 능력 +${Math.round(titleInfo.clearStatBonus*1000)/10}%`:'',titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
  const personalBests=user?accountProfile.bestScores:{act1:readRanking(runStorage)[0]?.score||0,act2:readRanking(actStorage(runStorage,2))[0]?.score||0,act3:readRanking(act3Storage(runStorage))[0]?.score||0};
  const recordProfile=`<section class="account-records"><header><strong>막별 최고 기록</strong><button type="button" id="account-ranking">전체 보기</button></header><div><span><b>오스틴</b><em>${personalBests.act1?formatScore(personalBests.act1)+'점':'도전 전'}</em></span><span><b>항상초심</b><em>${personalBests.act2?formatScore(personalBests.act2)+'점':'도전 전'}</em></span><span><b>요한</b><em>${personalBests.act3?formatScore(personalBests.act3)+'점':'도전 전'}</em></span></div></section>`;
  const titleProfile=titleInfo.titles.length?`<section class="title-profile"><div class="title-profile-head"><strong>칭호</strong><span>영구 ${permanentStats}</span></div><div class="title-options">${titleInfo.titles.map(title=>`<button type="button" class="title-option ${title.id===titleInfo.equipped?'equipped':''}" data-equip-title="${escapeHtml(title.id)}" aria-pressed="${title.id===titleInfo.equipped}"><span><strong>${escapeHtml(title.name)}</strong><small>${escapeHtml(title.perk)}</small></span><em>${title.id===titleInfo.equipped?'장착 중':'장착'}</em></button>`).join('')}</div><small>장착은 씨앗 위 표시만 바꾸며, 획득한 업적 효과는 항상 유지됩니다.</small></section>`:`<section class="title-profile empty"><strong>칭호</strong><small>도감 ${CODEX.titleAt}개 발견이나 특별한 기록으로 칭호를 얻을 수 있어요.</small></section>`;
@@ -1117,7 +1117,7 @@ function showAccount(error=''){
  if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAccessMode();showEntry();};
  $('#profile-garden').onclick=()=>showGarden(showAccount);
  $('#profile-discoveries').onclick=()=>showDiscoveries(showAccount);
- if($('#account-ranking'))$('#account-ranking').onclick=()=>showRanking('previous');
+ if($('#account-ranking'))$('#account-ranking').onclick=()=>showRanking('online');
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
  document.querySelectorAll('[data-equip-pet]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipPet,save=writeBossPet(runStorage,profile,id);if(!save.saved)return;bossPet.equip(id,profile);showAccount();});
  if($('.pet-unequip'))$('.pet-unequip').onclick=()=>{writeBossPet(runStorage,profile,null);bossPet.equip(null,profile);showAccount();};
@@ -1165,7 +1165,7 @@ function showIntro(){perfFinish('left');trainingSession=null;mirrorSession=null;
  if($('#retry-cloud-save'))$('#retry-cloud-save').onclick=async()=>{const button=$('#retry-cloud-save');button.disabled=true;button.textContent='확인 중…';try{const result=await cloud.flush();if(result.ok&&!cloud.isDirty()){cloudSaveFailed=false;showIntro();return;}}catch{}button.disabled=false;button.textContent='계정 저장 다시 시도';};
  if($('#developer-lab'))$('#developer-lab').onclick=showDeveloperLab;
  $('#patch-notes').onclick=showNotes;
- $('#ranking-link').onclick=()=>showRanking('previous');
+ $('#ranking-link').onclick=()=>showRanking('online');
  $('#account-link').onclick=()=>showAccount();
  updateFormLabel();
 }
@@ -1515,21 +1515,20 @@ function showNotes(){
   <button id="notes-back" class="menu-item small-item">돌아가기</button></div>`;
  $('#notes-back').onclick=showIntro;
 }
-function showRanking(view='previous'){
+function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
- const remote=['online','austin','always','johan','previous'].includes(view),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:view==='johan'?ACT.JOHAN:null,boardSeason=view==='previous'?PREVIOUS_RULE_SEASON:SEASON;
- const localStorage=view==='act3'?act3Storage(runStorage):view==='act2'?actStorage(runStorage,2):runStorage;
- const localBoard=readRanking(localStorage,view==='local-old'?PREVIOUS_RANKING_KEY:undefined),localMine=localBoard.find(e=>e.name===playerName)||null;
- const tabs=`<div class="rank-season"><strong>${boardSeason.name}</strong><div class="rank-tabs"><button class="primary" data-board="previous" aria-pressed="${view==='previous'}">기존 명예의 전당</button><button class="primary" data-board="online" aria-pressed="${view==='online'}">새 완주 기록</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">새 오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">새 항상초심</button><button class="primary" data-board="johan" aria-pressed="${view==='johan'}">새 요한</button></div></div>${locked?'':`<div class="rank-tabs secondary"><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}<button class="primary" data-board="local-old" aria-pressed="${view==='local-old'}">기존 · 이 기기</button></div>`}`;
- const boardLabel=view==='austin'?'새 오스틴 최고 기록':view==='always'?'새 항상초심 최고 기록':view==='johan'?'새 폭풍비행사 요한 최고 기록':view==='previous'||view==='local-old'?'기존 명예의 전당 · 50여정 기록 그대로':view==='online'?'새 완주 기록 · 15여정 규칙':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
+ const remote=['online','austin','always','johan'].includes(view),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:view==='johan'?ACT.JOHAN:null;
+ const localBoard=readRanking(view==='act3'?act3Storage(runStorage):view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
+ const tabs=`<div class="rank-season"><strong>${SEASON.name}</strong><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">종합</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">항상초심</button><button class="primary" data-board="johan" aria-pressed="${view==='johan'}">요한</button></div></div>${locked?'':`<div class="rank-tabs secondary"><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}</div>`}`;
+ const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='johan'?'폭풍비행사 요한 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>${boardLabel}</p><h2>명예의 전당</h2>${tabs}<p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(!remote)return;
- const readBoard=()=>online.top(500,playerName,boardSeason,bossAct);
+ const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
  online.flush().catch(()=>0).then(readBoard).then(board=>{
   if(serial!==rankSerial)return;setText($('#rank-status'),`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':bossAct===ACT.JOHAN?'요한 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
   const mine=board.find(e=>e.uid===online.uid())||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true,0,!mine);bindRankSafety();}
-  online.personalRank(boardSeason,bossAct).then(personal=>{
+  online.personalRank(SEASON,bossAct).then(personal=>{
    if(serial!==rankSerial)return;
    const current=$('#rank-board');if(current){current.innerHTML=rankingBoard(board,personal.entry||mine,true,personal.rank);bindRankSafety();}
   }).catch(()=>{
@@ -1554,7 +1553,7 @@ function showEnd(deathReport=null,{cleared=false,newTitle=null,bonus=0}={}){perf
  // 그 사이에 다음 판을 시작하면 앞뒤가 안 맞는 기록이 랭킹에 올라갔다.
  const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct3(region)?ACT.JOHAN:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,region,done:cleared,build};
  if(ranked){submitScore(actStore(),entry);const act=isAct3(region)?'act3':isAct2(region)?'act2':'act1',before=readAccountProfile(runStorage),after=recordBestScore(before,act,score);if(after.bestScores[act]>before.bestScores[act])writeAccountProfile(runStorage,after);}
- $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>${cleared?`${finalBossName()}을 ${FINAL_BOSS_CAP}번 이겼습니다`:'씨앗은 다시 뿌리를 내립니다'}</p><h2>${cleared?'완주!':'잠든 씨앗'}</h2><div class="final-score${cleared?' cleared':''}"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>${cleared?'완주 · ':''}여정 ${cycle+1} · ${cleared?'':inAustinRoom()?finalBossName()+' · ':(stage+1)+'번째 방 · '}${kills} 처치 · ${formatTime(elapsed)}</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div class="end-actions"><button class="primary" id="restart">돌아가기</button><button class="discovery-link" id="end-ranking">랭킹 보기</button></div>`;
+ $('#overlay').hidden=false;$('#overlay').innerHTML=`<p>${cleared?`${finalBossName()}을 ${FINAL_BOSS_CAP}번 이겼습니다`:'씨앗은 다시 뿌리를 내립니다'}</p><h2>${cleared?'완주!':'잠든 씨앗'}</h2><div class="final-score${cleared?' cleared':''}"><small>${name?escapeHtml(name)+'의 ':''}최종 점수</small><strong>${formatScore(score)}</strong><span>${cleared?'3회 격파 · 완주 · ':''}여정 ${cycle+1} · ${cleared?'':inAustinRoom()?finalBossName()+' · ':(stage+1)+'번째 방 · '}${kills} 처치 · ${formatTime(elapsed)}</span></div><p id="rank-status" class="rank-result">${ranked?'모두의 랭킹에 올리는 중…':localInspection?'로컬 검사 · 랭킹에 올리지 않습니다':'점수가 없어서 랭킹에 올리지 않았어요'}</p><div class="end-actions"><button class="primary" id="restart">돌아가기</button><button class="discovery-link" id="end-ranking">랭킹 보기</button></div>`;
  if(deathReport)$('#rank-status').insertAdjacentHTML('beforebegin',combatAnalysisSummary(deathReport));
  if(cleared)$('#rank-status').insertAdjacentHTML('beforebegin',`<p class="clear-bonus">완주 보너스 <b>+${formatScore(bonus)}</b> · ${bonus>0?'빨리 끝낸 만큼 더했어요':`${Math.round(CLEAR_BONUS.baseSeconds/60)}분 안에 끝내면 보너스가 붙어요`}</p>`);
  if(newTitle)$('#rank-status').insertAdjacentHTML('beforebegin',`<p class="clear-title">새 칭호 <b>'${escapeHtml(newTitle.name)}'</b> · ${escapeHtml(newTitle.perk)}</p>`);

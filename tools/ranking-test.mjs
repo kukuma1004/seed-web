@@ -106,10 +106,12 @@ for(const it of Object.values(ITEMS))assert.ok(it.key===''||it.key==='Q',it.id);
  submitScore(store,{name:'완주씨앗',score:5000,cycle:49,stage:4,kills:5100,time:1500,done:true},10);
  submitScore(store,{name:'빠른씨앗',score:5000,cycle:49,stage:4,kills:5100,time:1200,done:true},11);
  const board=readRanking(store);assert.deepEqual(board.map(e=>e.name),['빠른씨앗','완주씨앗'],'이 기기 기록판도 같은 점수면 빠른 순');
- const html=rankingTable(board);assert.ok(html.includes('완주 · 여정 50')&&html.includes('20분 00초')&&!html.includes('5번째 방'),'완주 줄에는 방 대신 완주와 시간이 보인다');
+ const html=rankingTable(board);assert.ok(html.includes('완주 · 여정 50')&&!html.includes('3회 격파 · 완주 · 여정 50')&&html.includes('20분 00초')&&!html.includes('5번째 방'),'기존 50여정 완주는 예전 규칙 그대로 표시한다');
+ const short=rankingTable([{name:'새완주',score:5000,cycle:14,stage:4,kills:120,time:1200,done:true,at:12}]);
+ assert.ok(short.includes('3회 격파 · 완주 · 여정 15'),'새 15여정 완주는 같은 랭킹에서 규칙만 표시한다');
  assert.ok(rankingTable([{name:'가',score:10,cycle:0,stage:2,kills:3,time:65,at:1}]).includes('여정 1 · 3번째 방 · 3 처치 · 1분 05초'));
 }
-// 완주 보너스: 90분에서 1초 빠를 때마다 60점, 90분을 넘기면 0.
+// 짧은 완주 보너스는 이전에 설계한 30분 기준 그대로 둔다.
 assert.equal(CLEAR_BONUS.baseSeconds,1800);assert.equal(clearBonus(1200),21000);assert.equal(clearBonus(1800),0);assert.equal(clearBonus(9000),0);assert.equal(clearBonus(-5),63000);
 assert.ok(clearBonus(900)>clearBonus(1200),'빠를수록 보너스가 크다');
 console.log('Score, ranking board, names, potions and save fields, time tie-break, clears and clear bonus passed.');

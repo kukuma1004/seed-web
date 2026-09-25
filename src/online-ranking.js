@@ -5,22 +5,18 @@
 import {cleanName} from './score.js';
 import {isBadName} from './name-filter.js';
 import {validBuild} from './ranking-build.js';
-import {MAX_RUN_CYCLE} from './journey.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
 });
-export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v5',OLD_PENDING_KEY='seed-ranking-pending-v4',BUILD_PENDING_KEY='seed-ranking-build-pending-v1',RUNS_PATH='seedRanking/season13/runs',BUILDS_PATH='seedRanking/season13/builds',SEASON12_RUNS_PATH='seedRanking/season12/runs',SEASON12_BUILDS_PATH='seedRanking/season12/builds',SEASON11_RUNS_PATH='seedRanking/season11/runs',SEASON11_BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PERSONAL_RANK_RUN_LIMIT=1500,PENDING_MAX=10,BUILD_PENDING_MAX=10;
+export const AUTH_KEY='seed-firebase-auth-v1',PENDING_KEY='seed-ranking-pending-v4',BUILD_PENDING_KEY='seed-ranking-build-pending-v1',RUNS_PATH='seedRanking/season12/runs',BUILDS_PATH='seedRanking/season12/builds',SEASON11_RUNS_PATH='seedRanking/season11/runs',SEASON11_BUILDS_PATH='seedRanking/season11/builds',LEGACY_RUNS_PATH='seedRanking/runs',LEGACY_BUILDS_PATH='seedRanking/builds',FETCH_RUNS=100,FETCH_RECENT=500,PERSONAL_RANK_RUN_LIMIT=1500,PENDING_MAX=10,BUILD_PENDING_MAX=10;
 // Seasons: the board starts over without deleting anything. Runs before SEASON.start stay in the database but are not shown.
 // (The database rules allow no extra fields, so the season is decided by the server timestamp `at`.)
-// Season 1 retains old entries; newer builds finish after three final-boss victories.
-export const SEASON=Object.freeze({id:'three-clear',name:'시즌 1',start:Date.parse('2026-09-25T15:00:00Z')});
-// The old app can keep writing season12 while its Play update is under review.
-// Different database paths separate the rule sets, so never hide late old-client runs by a fixed date.
-export const PREVIOUS_RULE_SEASON=Object.freeze({id:'1.2',name:'시즌 1 · 기존 명예의 전당',start:1789956000000});
-export const PREVIOUS_SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000,end:PREVIOUS_RULE_SEASON.start});
+// 1.2(2026-09-21): 한 판이 찐보스 열 번째 승리에서 끝나는 규칙으로 바뀌어 새 판을 연다. 1.1과 1.0 기록은 그대로 보관한다.
+export const SEASON=Object.freeze({id:'1.2',name:'시즌 1',start:1789956000000});
+export const PREVIOUS_SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000,end:SEASON.start});
 export const ARCHIVE_SEASON=Object.freeze({id:'1.0',name:'베타 시즌 1.0 · 첫 정원',start:0,end:PREVIOUS_SEASON.start});
-export const ARCHIVE_SEASONS=Object.freeze([PREVIOUS_RULE_SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON]);
+export const ARCHIVE_SEASONS=Object.freeze([PREVIOUS_SEASON,ARCHIVE_SEASON]);
 export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2,JOHAN:3});
 export const runAct=run=>run?.act===ACT.JOHAN?ACT.JOHAN:run?.act===ACT.ALWAYS_BEGINNER?ACT.ALWAYS_BEGINNER:ACT.AUSTIN;
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start&&(!Number.isFinite(season.end)||run.at<season.end);
@@ -37,8 +33,10 @@ export function validRun(e){
  const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;
  return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=scoreCeiling&&e.time>=e.cycle*15&&e.time>=e.kills/6;
 }
-// Current three-boss run ends at journey 15. Older records stay readable in season12.
-export const seasonRun=e=>validRun(e)&&e.cycle<=MAX_RUN_CYCLE;
+// 이번 시즌에 올릴 수 있는 판인가: 50번째 여정(찐보스 열 번)을 넘긴 옛 판은 받지 않는다(규칙도 같은 선을 지킨다).
+// Season 1 still contains 50-journey records; shorter new runs share that board.
+export const RANKING_CYCLE_CAP=49;
+export const seasonRun=e=>validRun(e)&&e.cycle<=RANKING_CYCLE_CAP;
 // One line per player (same device and same name keep only their best), highest first; the same score goes to the faster run.
 export function bestPerPlayer(data,limit=20,season=SEASON,act=null){
  const runs=Object.entries(data&&typeof data==='object'?data:{}).map(([id,v])=>({id,...v})).filter(validRun).filter(run=>(!season||inSeason(run,season))&&(!act||runAct(run)===act)).sort((a,b)=>b.score-a.score||a.time-b.time||a.at-b.at);
@@ -81,7 +79,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   const b=await request(`https://identitytoolkit.googleapis.com/v1/accounts:signUp?key=${encodeURIComponent(config.apiKey)}`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({returnSecureToken:true})});
   return remember({uid:b.localId,idToken:b.idToken,refreshToken:b.refreshToken,expiresAt:now()+Number(b.expiresIn||3600)*1000});
  }
- const pathsFor=season=>season?.id===ARCHIVE_SEASON.id?{runs:LEGACY_RUNS_PATH,builds:LEGACY_BUILDS_PATH}:season?.id===PREVIOUS_SEASON.id?{runs:SEASON11_RUNS_PATH,builds:SEASON11_BUILDS_PATH}:season?.id===PREVIOUS_RULE_SEASON.id?{runs:SEASON12_RUNS_PATH,builds:SEASON12_BUILDS_PATH}:{runs:RUNS_PATH,builds:BUILDS_PATH};
+ const pathsFor=season=>season?.id===ARCHIVE_SEASON.id?{runs:LEGACY_RUNS_PATH,builds:LEGACY_BUILDS_PATH}:season?.id===PREVIOUS_SEASON.id?{runs:SEASON11_RUNS_PATH,builds:SEASON11_BUILDS_PATH}:{runs:RUNS_PATH,builds:BUILDS_PATH};
  const runsURL=(s,query='',path=RUNS_PATH)=>`${config.databaseURL}/${path}.json?${query}auth=${encodeURIComponent(s.idToken)}`;
  // Two reads merged: the highest scores overall (old seasons are filtered out) and every recent run since the season began,
  // so new runs are found even while old high scores fill the score query.
@@ -130,7 +128,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  // proof of ownership, so historical title credit is tied to the authenticated uid.
  async function historicalAustinWins(goal=10){
   const s=await signIn();let wins=0;
-  for(const season of [SEASON,PREVIOUS_RULE_SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON]){
+  for(const season of [SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON]){
    const paths=pathsFor(season);let own;
    try{own=await read(runsURL(s,`orderBy=${encodeURIComponent('"uid"')}&equalTo=${encodeURIComponent(JSON.stringify(s.uid))}&`,paths.runs));}catch{continue;}
    const records=Object.entries(own||{}).filter(([,run])=>run?.uid===s.uid&&runAct(run)===ACT.AUSTIN&&validRun(run));
@@ -151,7 +149,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
    {method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify({uid:s.uid,laws:build.laws,forms:build.forms,relic:build.relic,wardens:build.wardens,austins:build.austins})});
  }
  // 경로가 없는 항목은 시즌 1.1 규칙이 막던 때(9월 21일 오전)에 쌓인 것이다.
- function pendingBuilds(){try{const list=JSON.parse(storage?.getItem(BUILD_PENDING_KEY));return Array.isArray(list)?list.filter(v=>typeof v?.id==='string'&&validBuild(v.build)).map(v=>({...v,path:[BUILDS_PATH,SEASON12_BUILDS_PATH,SEASON11_BUILDS_PATH].includes(v.path)?v.path:SEASON11_BUILDS_PATH})):[];}catch{return [];}}
+ function pendingBuilds(){try{const list=JSON.parse(storage?.getItem(BUILD_PENDING_KEY));return Array.isArray(list)?list.filter(v=>typeof v?.id==='string'&&validBuild(v.build)).map(v=>({...v,path:[BUILDS_PATH,SEASON11_BUILDS_PATH].includes(v.path)?v.path:SEASON11_BUILDS_PATH})):[];}catch{return [];}}
  function keepPendingBuilds(list){try{storage?.setItem(BUILD_PENDING_KEY,JSON.stringify(list.slice(-BUILD_PENDING_MAX)));}catch{}}
  // 2026-09-21: 시즌 1.1 규칙이 조합 쓰기를 막고 있어 165건이 조합 없이 올라갔다.
  // 조용히 버리지 말고 이 브라우저에 남겨 두었다가 규칙이 고쳐지면 다시 보낸다.
@@ -169,23 +167,21 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
   }
   keepPendingBuilds(left);return sent;
  }
- async function post({name,score,cycle,stage,kills,time,act=ACT.AUSTIN,done=false,build=null},runsPath=RUNS_PATH,buildsPath=BUILDS_PATH){
+ async function post({name,score,cycle,stage,kills,time,act=ACT.AUSTIN,done=false,build=null}){
   const shaped={uid:'check',name:cleanName(name),score:Math.floor(score),cycle,stage,kills,time:Math.floor(time),act:runAct({act}),done:done===true,at:0};
-  if(!(runsPath===SEASON12_RUNS_PATH?(validRun(shaped)&&shaped.cycle<=49):seasonRun(shaped))||isBadName(shaped.name))throw new Error('invalid-run');
+  if(!seasonRun(shaped)||isBadName(shaped.name))throw new Error('invalid-run');
   const s=await signIn();
-  const created=await request(runsURL(s,'',runsPath),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
+  const created=await request(runsURL(s),{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({...shaped,uid:s.uid,at:{'.sv':'timestamp'}})});
   // The build is extra: if it cannot be written (older rules), the run still counts
   // and the build waits in this browser instead of disappearing.
   if(created?.name&&validBuild(build)){
-   try{await putBuild(s,created.name,build,buildsPath);}
-   catch{keepPendingBuilds([...pendingBuilds(),{id:created.name,build,path:buildsPath}]);}
+   try{await putBuild(s,created.name,build);}
+   catch{keepPendingBuilds([...pendingBuilds(),{id:created.name,build,path:BUILDS_PATH}]);}
   }
   return {id:created?.name,uid:s.uid,name:shaped.name};
  }
  function pending(){try{const list=JSON.parse(storage?.getItem(PENDING_KEY));return Array.isArray(list)?list:[];}catch{return [];}}
  function keepPending(list){try{storage?.setItem(PENDING_KEY,JSON.stringify(list.slice(-PENDING_MAX)));}catch{}}
- function oldPending(){try{const list=JSON.parse(storage?.getItem(OLD_PENDING_KEY));return Array.isArray(list)?list:[];}catch{return [];}}
- function keepOldPending(list){try{storage?.setItem(OLD_PENDING_KEY,JSON.stringify(list.slice(-PENDING_MAX)));}catch{}}
  // Returns the board after the run, the run's place on it (0 if it is not this player's best or below the board)
  // and the place of this player's best line. A run that could not be sent waits in this browser for flush().
  async function submit(entry,limit=20){
@@ -199,13 +195,7 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  // Sends runs that failed earlier (offline, or before the database rules were published). Stops at the first failure.
  async function flush(){
-  const old=oldPending();let sent=0;
-  while(old.length){
-   try{await post(old[0],SEASON12_RUNS_PATH,SEASON12_BUILDS_PATH);sent++;old.shift();}
-   catch(error){if(error.message==='invalid-run'){old.shift();continue;}break;}
-  }
-  keepOldPending(old);
-  const list=pending();
+  const list=pending();let sent=0;
   while(list.length){
    try{await post(list[0]);sent++;list.shift();}
    catch(error){if(error.message==='invalid-run'){list.shift();continue;}break;}
@@ -214,5 +204,5 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
  async function remove(id){const s=await signIn();try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});}catch{}await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
- return {signIn,top,personalRank,historicalAustinWins,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length+oldPending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
+ return {signIn,top,personalRank,historicalAustinWins,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
 }

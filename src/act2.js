@@ -33,7 +33,7 @@ export const STADIUM_ROOMS=Object.freeze([
 ]);
 
 // Act 2 keeps its checkpoint and local board apart from act 1 (names, discoveries, titles and settings are shared).
-export const ACT2_STORAGE_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act2-v1','seed-ranking-v2':'seed-ranking-act2-v1','seed-ranking-v3':'seed-ranking-act2-v2'});
+export const ACT2_STORAGE_KEYS=Object.freeze({'seed-run-checkpoint-v1':'seed-run-checkpoint-act2-v1','seed-ranking-v2':'seed-ranking-act2-v1'});
 export function actStorage(storage,act=1){
  if(act!==2||!storage)return storage;
  const key=k=>ACT2_STORAGE_KEYS[k]||k;

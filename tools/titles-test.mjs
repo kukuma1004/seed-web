@@ -1,14 +1,14 @@
 import assert from 'node:assert/strict';
-import {titleState,codexNews,codexSteps,codexBonus,CODEX,AUSTIN_MOVE_SPEED,AUSTIN_VETERAN_CADENCE,AUSTIN_VETERAN_TITLE,ALWAYS_BEGINNER_MAX_HP,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
+import {titleState,codexNews,codexSteps,codexBonus,CODEX,CLEAR_ALL_STATS,AUSTIN_MOVE_SPEED,AUSTIN_VETERAN_MOVE_SPEED,AUSTIN_VETERAN_TITLE,ALWAYS_BEGINNER_MAX_HP,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
 import {ALL_FORMS} from '../src/forms.js';
 import {FIRST_GARDEN_BADGE} from '../src/account-profile.js';
 
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
 // 칭호가 없으면 그대로. 다음 목표는 도감 10개에서 받는 칭호.
 {const s=titleState({discovered:7});assert.deepEqual(s.titles,[]);assert.equal(s.shown,null);close(s.codexBonus,0);close(s.moveSpeed,1);assert.equal(s.maxHp,100);assert.equal(s.next.need,3);assert.match(s.next.reward,/칭호/);}
-// Austin: +5% movement, without adding projectile speed.
+// First Austin title keeps +5% movement; cumulative ten adds another +5%.
 {const s=titleState({austin:true,discovered:3});assert.equal(s.titles.length,1);close(s.moveSpeed,1+AUSTIN_MOVE_SPEED);close(s.shotSpeed,1);assert.equal(s.shown,s.titles[0].name);}
-{const s=titleState({austinVeteran:true,equipped:'austinveteran'});assert.equal(s.shown,AUSTIN_VETERAN_TITLE);close(s.attackCadence,1+AUSTIN_VETERAN_CADENCE);close(s.shotSpeed,1);assert.match(s.titles[0].perk,/누적 10회/);}
+{const s=titleState({austinVeteran:true,equipped:'austinveteran'});assert.equal(s.shown,AUSTIN_VETERAN_TITLE);close(s.moveSpeed,1+AUSTIN_VETERAN_MOVE_SPEED);close(s.shotSpeed,1);assert.match(s.titles[0].perk,/누적 10회/);}
 // Always Beginner: a flat +10 max HP that does not scale with garden percentages.
 {const s=titleState({alwaysBeginner:true,discovered:3});assert.equal(s.titles.length,1);assert.equal(s.titles[0].name,ALWAYS_BEGINNER_TITLE);assert.equal(s.maxHpBonus,ALWAYS_BEGINNER_MAX_HP);assert.equal(s.maxHp,110);}
 // 도감 칭호: 10종마다 +0.5%, 30종마다 추가 +0.5%. 150/153종에서 +10%.
@@ -35,22 +35,25 @@ close(titleState({discovered:150}).codexBonus,CODEX.maxStat);close(titleState({d
 assert.match(codexNews(9,10),/칭호/);assert.match(codexNews(19,20),/1%/);assert.equal(codexNews(10,11),null);assert.equal(codexNews(5,6),null);
 assert.equal(codexNews(200,220),null,'상한 뒤에는 새 소식이 없다');
 assert.match(codexNews(29,30),/2%/);assert.match(codexNews(79,80),/5%/);assert.match(codexNews(149,150),/10%/);assert.match(codexNews(150,153),/정원의 완성자/);assert.doesNotMatch(codexNews(150,153),/능력/);
-// Three victories in one run give the clear title; ten cumulative victories give a separate cadence title.
+// Three victories in one run give +1% to five stats; ten cumulative victories give +5% move.
 {
  const clearOnly=titleState({austinClear:true}),both=titleState({austin:true,austinClear:true}),austinOnly=titleState({austin:true});
- assert.ok(Math.abs(clearOnly.moveSpeedBonus-.1)<1e-9);
- assert.ok(Math.abs(both.moveSpeedBonus-.1)<1e-9,'두 칭호를 가져도 +15%가 아니라 +10%');
- assert.ok(Math.abs(austinOnly.moveSpeedBonus-.05)<1e-9,'완주 전에는 그대로 +5%');
+ close(clearOnly.clearStatBonus,CLEAR_ALL_STATS);
+ close(both.clearStatBonus,CLEAR_ALL_STATS);
+ close(both.moveSpeedBonus,AUSTIN_MOVE_SPEED);
+ close(austinOnly.moveSpeedBonus,AUSTIN_MOVE_SPEED);
  assert.equal(both.titles[0].id,'austinclear','완주 칭호가 먼저 보인다');
- assert.match(both.titles.find(t=>t.id==='austinclear').perk,/겹치지 않음/);
+ assert.match(both.titles.find(t=>t.id==='austinclear').perk,/모든 능력 \+1%/);
  assert.equal(titleState({austin:true,austinClear:true,equipped:'austin'}).shown,'정시를 깨운 자','고른 칭호가 우선');
+ close(titleState({austin:true,austinClear:true,austinVeteran:true}).moveSpeedBonus,AUSTIN_MOVE_SPEED+AUSTIN_VETERAN_MOVE_SPEED);
 }
-// 2막 완주 칭호: 최대 생명력 +20, '초심을 지킨 자' +10과 더해지지 않는다.
+// 2막 완주도 +1% 모든 능력; 첫 격파 생명력 +10은 별도로 유지한다.
 {
  const both=titleState({alwaysBeginner:true,alwaysClear:true}),only=titleState({alwaysClear:true}),old=titleState({alwaysBeginner:true});
- assert.equal(both.maxHpBonus,20,'+30이 아니라 +20');assert.equal(only.maxHpBonus,20);assert.equal(old.maxHpBonus,10);
+ assert.equal(both.maxHpBonus,10);assert.equal(only.maxHpBonus,0);assert.equal(old.maxHpBonus,10);
+ close(both.clearStatBonus,CLEAR_ALL_STATS);
  assert.ok(both.titles.findIndex(t=>t.id==='alwaysclear')<both.titles.findIndex(t=>t.id==='alwaysbeginner'),'완주 칭호가 먼저');
  const all=titleState({austin:true,austinClear:true,alwaysBeginner:true,alwaysClear:true});
- assert.ok(Math.abs(all.moveSpeedBonus-.1)<1e-9&&all.maxHpBonus===20,'두 막의 완주 칭호는 서로 다른 능력이라 함께 적용된다');
+ close(all.clearStatBonus,2*CLEAR_ALL_STATS);assert.equal(all.maxHpBonus,10);
 }
-console.log('칭호: 오스틴 이속 +5%, 완주 칭호 +10%(중복 없음), 2막 완주 생명력 +20(중복 없음), 도감 10종마다 +0.5%와 30종마다 추가 +0.5%(150종에서 최대 10%), 목표·겹침·새 소식 통과');
+console.log('칭호: 첫 오스틴 격파 이속 +5%, 막별 완주 모든 능력 +1%, 누적 10회 추가 이속 +5%, 도감 보상·장착 통과');
