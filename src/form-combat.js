@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
+import {ALL_FORMS,GENERATED_FORMS,SECOND_FORMS,AWAKEN,AWAKEN_FORMS,TWIN_FORMS,MIRROR_BOSS_PARRY,mirrorBossParryCapacity,awakenOpeningEvery,awakenSurgeOpening,formStats} from './forms.js';
 import {createFormVisuals} from './form-visuals.js';
 import {createFinalBranchCombat} from './final-branch-combat.js';
 import {projectileAtlasTile,projectileAudioEvent} from './combo-projectile.js';
@@ -9,7 +9,7 @@ import {projectileAtlasTile,projectileAudioEvent} from './combo-projectile.js';
 // so its child shards conserve the parent's damage instead of multiplying it
 // by 1.4 on every split (two children at 70% each).
 export const PRISM_CHILD_FALLOFF=Object.freeze({base:.7,infinite:.5});
-export const MIRROR_BOSS_PARRY=Object.freeze({cooldown:2.4,damageScale:.08});
+export {MIRROR_BOSS_PARRY,mirrorBossParryCapacity};
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
 const V=THREE.Vector3;
 const Y=new V(0,1,0);
@@ -167,7 +167,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  const orbit=new THREE.Group();group.add(orbit);orbit.visible=false;
  // active is the attack being fought with (a fusion id for an awakened evolution); statId is the evolution held.
  let secondRecipe=null,secondReadyAt=0,twin=false,ownerId=null,active=null,statId=null,level=1,S=formStats(null),angle=0,pulseTimer=0,hits=0,surgeTime=0,breathe=0,awakenTimer=0,secondHits=0,secondPhase=0,markClock=0,secondMarks=new WeakMap(),paintedCellIndex=0;
- let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),movementCharge=0,cometCursor=0,mirrorParryCooldown=0,stormCharges=new WeakMap();
+ let bolts=[],wells=[],shatters=[],embers=[],storms=[],stakes=[],cooldowns=new Map(),movementCharge=0,cometCursor=0,mirrorParryCooldown=0,mirrorParriesUsed=0,stormCharges=new WeakMap();
  // Hitscan damage stays immediate. These short-lived, mesh-free render bodies
  // let its painted lance actually travel along the already visible hit line.
  const lancePictures=[];
@@ -243,7 +243,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
   orbit.visible=count>0;
  }
- function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];lancePictures.length=0;cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
+ function clear(){for(const b of bolts)remove(b);for(const stake of stakes)remove(stake);for(const well of coldWells)well.ob?.removeFromParent();bolts=[];wells=[];shatters=[];embers=[];storms=[];stakes=[];lancePictures.length=0;cooldowns.clear();hits=0;secondHits=0;secondPhase=0;markClock=0;secondMarks=new WeakMap();iceMarks=new WeakMap();frostLines=[];rewindMemories=[];haloCuts=0;haloRegrow=0;mirrorParryCooldown=0;mirrorParriesUsed=0;stormCharges=new WeakMap();ebbReady=false;gardens=[];spearGone=[];spearClock=0;debris=0;rimeMarks=new WeakMap();coldWells=[];petalStacks=new WeakMap();active=null;statId=null;ownerId=null;twin=false;awakenTimer=0;level=1;surgeTime=0;breathe=0;movementCharge=0;cometCursor=0;lastPlayerPosition.copy(player.position);S=formStats(null);angle=0;pulseTimer=0;finalLayer.clear();rebuildOrbit();}
+ // One shared 2.4-second budget for orbit contact and the opening move.
+ // Extra levels stop more shots in a volley, but never stockpile full immunity.
+ function tryBossParry(){
+  if(mirrorParryCooldown<=0){mirrorParryCooldown=MIRROR_BOSS_PARRY.cooldown;mirrorParriesUsed=0;}
+  if(mirrorParriesUsed>=mirrorBossParryCapacity(level))return false;
+  mirrorParriesUsed++;return true;
+ }
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
@@ -1024,8 +1031,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    S.calm=flat(ebbAnchor,player.position)<S.stretch;center=ebbAnchor;
   }
   // Every tangible orbit intercepts ordinary hostile shots on contact. Boss
-  // volleys keep their authored dodge patterns; only Mirror Guard retains its
-  // special, timed Austin parry. Fetch the shot list once for all orbit bodies.
+  // volleys keep their authored dodge patterns; only Mirror Guard retains a
+  // level-capped boss parry. Fetch the shot list once for all orbit bodies.
   const hostileShots=enemyShots();
   orbit.children.forEach((ob,i)=>{
    const pose=orbitPose(active,i,orbit.children.length,angle,breathe,S);
@@ -1083,9 +1090,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }else if(active==='mirrorguard'){
     for(const q of hostileShots){
      if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
-     if(q.boss&&mirrorParryCooldown>0)continue;
+     if(q.boss&&!tryBossParry())continue;
      q.life=0;q.struck=true;
-     if(q.boss)mirrorParryCooldown=MIRROR_BOSS_PARRY.cooldown;
      const aimAt=nearestEnemy(ob.position,14);
      const dir=aimAt?aimAt.g.position.clone().sub(ob.position).setY(0).normalize():ob.position.clone().sub(player.position).setY(0).normalize();
      if(count('mirrorguard')<20)bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,ob.position),dir,life:1.6,damage:S.damage*(q.boss?MIRROR_BOSS_PARRY.damageScale:1)});
@@ -1723,9 +1729,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     case 'mirrorguard':{
     let turned=0;
     for(const q of enemyShots()){
-     if(!(q.life>0)||turned>=30||(q.boss&&mirrorParryCooldown>0))continue;
+     if(!(q.life>0)||turned>=30||(q.boss&&!tryBossParry()))continue;
      q.life=0;q.struck=true;turned++;
-     if(q.boss)mirrorParryCooldown=MIRROR_BOSS_PARRY.cooldown;
      const aimAt=nearestEnemy(q.ob.position,14);
      const d=aimAt?aimAt.g.position.clone().sub(q.ob.position).setY(0).normalize():q.ob.position.clone().sub(player.position).setY(0).normalize();
      bolts.push({kind:'mirrorguard',ob:spawnMesh(geos.mirrorBolt,mats.mirror,q.ob.position),dir:d,life:1.6,damage:S.damage*(q.boss?MIRROR_BOSS_PARRY.damageScale:1.5)});

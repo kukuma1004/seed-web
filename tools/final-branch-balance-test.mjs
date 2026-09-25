@@ -13,7 +13,8 @@ for(const a of Object.values(AWAKEN_FORMS).filter(form=>form.finalCandidate)){
   normal+=simulate(a.id,L,{scene,seconds:10,shots}).damage;
   boosted+=simulate(a.id,L,{scene,seconds:10,shots,surgeAt:1,surgeSeconds:3}).damage;
  }
- rows.push({id:a.id,ratio:result/pair,worth:(boosted-normal)/(normal/10),boss:bossDps(a.id,L,{shots})});
+ rows.push({id:a.id,ratio:result/pair,worth:(boosted-normal)/(normal/10),boss:bossDps(a.id,L,{shots}),
+  bossShotsStopped:a.base==='mirrorguard'?simulate(a.id,L,{positions:[[0,-5]],enemyType:'austin',shots:true}).interceptions:0});
 }
 const extremes=(key)=>({min:rows.reduce((a,b)=>a[key]<b[key]?a:b),max:rows.reduce((a,b)=>a[key]>b[key]?a:b)});
 if(process.argv.includes('--report'))for(const key of ['ratio','worth','boss']){
@@ -26,6 +27,9 @@ for(const r of rows){
  assert.ok(r.ratio<1.5,`${r.id}: crowd damage exceeds both ingredients`);
  assert.ok(r.ratio>=(SPECIALIST_FLOORS.has(base)?.2:.5),`${r.id}: too little crowd damage for its role (${r.ratio.toFixed(2)})`);
  assert.ok(r.worth>=10&&r.worth<=33,`${r.id}: signature worth ${r.worth.toFixed(1)} seconds`);
- assert.ok(r.boss>45&&r.boss<320,`${r.id}: boss damage ${r.boss.toFixed(0)} escapes safe band`);
+ if(base==='mirrorguard'){
+  assert.ok(r.boss>20&&r.bossShotsStopped>=3,`${r.id}: defensive boss trade failed (${r.boss.toFixed(0)} DPS, ${r.bossShotsStopped} parries)`);
+ }else assert.ok(r.boss>45,`${r.id}: boss damage ${r.boss.toFixed(0)} escapes safe band`);
+ assert.ok(r.boss<320,`${r.id}: boss damage ${r.boss.toFixed(0)} escapes safe band`);
 }
 console.log(`Final branch balance: 61 new branches; crowd ${extremes('ratio').min.ratio.toFixed(2)}–${extremes('ratio').max.ratio.toFixed(2)}x, signature ${extremes('worth').min.worth.toFixed(1)}–${extremes('worth').max.worth.toFixed(1)}s, boss ${extremes('boss').min.boss.toFixed(0)}–${extremes('boss').max.boss.toFixed(0)} DPS.`);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {readFileSync,statSync} from 'node:fs';
 import {AWAKEN_FORMS,TWIN_FORMS} from '../src/forms.js';
-import {buildComboProjectileGeometry} from '../src/combo-projectile.js';
+import {buildComboProjectileGeometry,projectileAtlasTile} from '../src/combo-projectile.js';
 import {FINAL_IDENTITY_COUNT,FINAL_IDENTITY_IDS,finalIdentity,finalProjectileStyle,finalArt} from '../src/final-identity-art.js';
 import {createFormCombat} from '../src/form-combat.js';
 
@@ -42,14 +42,15 @@ for(let i=1;i<=3;i++){
 for(const [id,f] of Object.entries(AWAKEN_FORMS)){
  assert.equal(finalIdentity(id)?.recipe[1],f.addedSolo,`${id}: art and playable recipe drift`);
 }
-// Previously live awakenings used the parent's visual mesh while the choice
-// card showed a different final projectile. Check the equipped scene itself.
-for(const [id,form] of Object.entries(AWAKEN_FORMS).filter(([,form])=>!form.finalCandidate&&form.base!=='thunderlance')){
+// Previously live awakenings now use the shared painted 2D combat sheet.
+// Check the equipped scene rather than looking for a removed 3D mesh name.
+for(const [id,form] of Object.entries(AWAKEN_FORMS).filter(([,form])=>!form.finalCandidate&&!form.passive&&form.base!=='thunderlance')){
  const scene=new THREE.Scene(),player={position:new THREE.Vector3()},enemy={type:'chaser',dead:false,g:{position:new THREE.Vector3(0,0,-4)}};
  const combat=createFormCombat(scene,{player,enemies:()=>[enemy],hit:()=>true,blocked:()=>false,boundary:()=>false,constrain:p=>p,vfx:null});
  combat.set(id,5);combat.fire(player.position,new THREE.Vector3(0,0,-1),enemy.g.position);
- let found=false;scene.traverse(ob=>{if(ob.isMesh&&ob.geometry?.name===`seed-combo-projectile-${id}`)found=true;});
- assert.ok(found,`${id}: combat still renders the old fusion projectile`);
+ const tile=projectileAtlasTile(form);let found=false;
+ scene.traverse(ob=>{if(ob.isMesh&&ob.userData.paintedProjectile&&ob.userData.spriteCell===tile)found=true;});
+ assert.ok(found,`${id}: combat shot must use its painted projectile tile ${tile}`);
  combat.dispose();
 }
 console.log(`Final identity art: ${FINAL_IDENTITY_COUNT.final}+${FINAL_IDENTITY_COUNT.twin}, max ${maxVertices} vertices/${maxTriangles} triangles, 3 WebP sheets`);

@@ -21,7 +21,7 @@ export const CURATED_FORMS=Object.freeze(Object.fromEntries([
  form('stormcrown',['orbit','chain'],'폭풍 왕관','주위를 도는 번개 구슬이 일반 적 탄환을 막고 가까운 적에게 스스로 번개를 떨어뜨립니다. 보스 탄은 통과합니다.','움직이며 주변을 자동으로 정리','사거리가 짧아 멀리 있는 사수·포탑을 못 맞힘',true),
  form('tidepull',['gravity','recall'],'귀환 해일','해일핵이 전장을 왕복하며 적을 쓸어 모아 씨앗의 안전거리 앞까지 데려옵니다.','먼 무리를 왕복 경로로 긁어 한곳에 배달','좌우로 흩어진 적과 문지기·포탑은 끌 수 없음'),
  form('seedstorm',['split','burst'],'씨앗 폭풍','짧은 거리에 터지는 씨앗을 부채꼴로 흩뿌립니다.','가까이 붙은 무리를 순식간에 정리','사거리가 짧아 멀리서 쏘는 적에게 약함'),
- form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 일반 적 탄환을 되받습니다. 모든 보스의 탄환도 2.4초마다 한 발 막지만, 되돌린 보스 탄의 피해는 매우 낮습니다.','사수·포탑의 탄막을 공격으로 바꾸고 보스 탄 한 발을 막음','보스의 연속 탄막과 근접 공격은 직접 피해야 함',true),
+ form('mirrorguard',['orbit','reflect'],'거울 수호','주위를 도는 거울이 일반 적 탄환을 되받습니다. 모든 보스의 탄환도 2.4초마다 Lv.1은 1발, Lv.4는 2발, Lv.7부터 최대 3발 막습니다. 되돌린 보스 탄의 피해는 매우 낮습니다.','사수·포탑의 탄막을 공격으로 바꾸고 보스 탄 일부를 막음','넘치는 보스 탄막과 근접 공격은 직접 피해야 함',true),
  form('gravitymirror',['reflect','gravity'],'중력 거울','거울핵이 벽을 튕길 때마다 짧은 중력장을 남겨 적을 끌어모으고, 마지막 충돌에서 압축해 터뜨립니다.','벽을 이용해 적의 위치를 바꾸고 마지막 폭발까지 연결','트인 공간에서는 튕김과 끌림을 충분히 만들기 어려움'),
  form('chainburst',['chain','burst'],'연쇄 폭발','번개가 적 사이를 차례로 건너간 뒤 마지막 표적에서 폭발합니다.','흩어진 무리를 이어 마지막 밀집 지점을 폭파','적이 한두 마리뿐이면 연쇄 거리와 마무리 폭발을 낭비'),
  form('blastlance',['pierce','burst'],'폭발 창','긴 창이 적을 관통할수록 폭발력을 모읍니다. 오스틴의 단단한 몸에는 창끝이 박혀 그 자리에서 터집니다.','일렬로 선 적을 꿰뚫을수록 마지막 폭발이 강해짐','옆으로 흩어진 적과 코앞의 적에게는 충전할 거리가 부족'),
@@ -204,7 +204,7 @@ const EXISTING_AWAKEN_FORMS=Object.freeze(Object.fromEntries([
  awaken('tempestcrown','stormcrown','뇌신의 왕관','구슬이 늘어 더 자주, 더 멀리 치고, 10초마다 주변 모든 적에게 번개를 내리꽂습니다.','움직이며 주변을 자동으로 쓸어버림','멀리서 버티는 포탑은 직접 다가가야 함'),
  awaken('maelstrom','tidepull','대소용돌이','해일핵이 늘고 더 넓게 붙잡으며, 10초마다 네 방향으로 해일을 보냅니다.','전장 곳곳의 무리를 한곳으로 배달','문지기·포탑은 끌 수 없음'),
  awaken('bloomtempest','seedstorm','씨앗 대폭풍','부채꼴 씨앗이 늘고, 10초마다 씨앗을 한 바퀴 둥글게 흩뿌립니다.','붙어 오는 무리를 사방에서 정리','사거리가 짧음'),
- awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 일반 적 탄환을 대량으로 되받아칩니다. 보스 탄은 2.4초마다 한 발만 막습니다.','일반 탄막을 통째로 공격으로 바꿈','보스 연속 탄막과 근접 공격은 직접 피해야 함')
+ awaken('mirrorhall','mirrorguard','거울의 전당','거울이 늘어 더 넓게 막고, 10초마다 일반 적 탄환을 대량으로 되받아칩니다. 보스 탄은 진화 레벨에 따라 2.4초마다 최대 3발만 막습니다.','일반 탄막을 통째로 공격으로 바꿈','넘치는 보스 탄막과 근접 공격은 직접 피해야 함')
 ].map(f=>[f.id,f])));
 const FINAL_CANDIDATES=Object.freeze(Object.fromEntries(FINAL_MANIFEST.entries.filter(entry=>entry.kind==='final')
  .filter(branch=>branch.status!=='implemented_existing')
@@ -534,6 +534,8 @@ function baseStats(id,level){
 }
 
 // What the next form level changes, for the reward screen.
+export const MIRROR_BOSS_PARRY=Object.freeze({cooldown:2.4,damageScale:.08,maxPerWindow:3,levelsPerCharge:3});
+export const mirrorBossParryCapacity=level=>Math.min(MIRROR_BOSS_PARRY.maxPerWindow,1+Math.floor((Math.max(1,Math.floor(level))-1)/MIRROR_BOSS_PARRY.levelsPerCharge));
 export function formUpgradeLine(id,level){
  const now=formStats(id,level),next=formStats(id,level+1);
  if(SECOND_FORMS[id]?.curated)return `재융합 Lv.${level} → ${level+1} · 피해 +25% · ${SECOND_FORMS[id].follow.line} +25%`;
@@ -541,5 +543,6 @@ export function formUpgradeLine(id,level){
   const count=({mirrormaze:['bounces','튕김'],fullbloom:['petals','꽃잎'],thunderweb:['jumps','번개 도약'],starring:['petals','꽃잎'],glassspear:['pierce','관통'],flarebloom:['embers','불씨'],rewind:['leaves','잎'],blackhole:['radius','끌림 반경'],winterbreath:['range','숨결 거리'],frostguard:['satellites','위성'],returnblade:['hitsPerLeg','왕복당 타격'],prism:['generations','갈라짐'],thunderlance:['pierce','관통'],stormcrown:['orbs','번개 구슬'],seedstorm:['seeds','씨앗'],mirrorguard:['mirrors','거울'],collapse:['radius','붕괴 반경'],frostbloom:['radius','얼음 반경'],tidepull:['radius','소용돌이 반경'],gravitymirror:['bounces','튕김'],chainburst:['jumps','연쇄'],blastlance:['pierce','관통'],frostkaleidoscope:['bounces','튕김'],lightningpetal:['petals','전기 꽃잎'],returnflare:['homeRadius','귀환 폭발 반경'],comethalo:['comets','혜성 꽃봉오리'],stormanchor:['jumps','연쇄'],returningpetals:['petals','귀환 꽃잎'],gravitystake:['pierce','관통 깊이']})[baseFormOf(id)];
  const parts=[`진화 Lv.${level} → ${level+1}`,`피해 +25%`];
  if(count&&next[count[0]]!==now[count[0]]){const f=v=>Number.isInteger(v)?v:v.toFixed(1);parts.push(`${count[1]} ${f(now[count[0]])} → ${f(next[count[0]])}`);}
+ if(baseFormOf(id)==='mirrorguard'&&mirrorBossParryCapacity(level+1)>mirrorBossParryCapacity(level))parts.push(`보스탄 방어 ${mirrorBossParryCapacity(level)} → ${mirrorBossParryCapacity(level+1)}발/2.4초`);
  return parts.join(' · ');
 }

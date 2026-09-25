@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createFormCombat,FORM_COMBAT,MIRROR_BOSS_PARRY,segmentDistance} from '../src/form-combat.js';
+import {createFormCombat,FORM_COMBAT,MIRROR_BOSS_PARRY,mirrorBossParryCapacity,segmentDistance} from '../src/form-combat.js';
 import {createFormVisuals} from '../src/form-visuals.js';
-import {GENERATED_FORMS} from '../src/forms.js';
+import {GENERATED_FORMS,formUpgradeLine} from '../src/forms.js';
 import {blocksShield} from '../src/shield.js';
 
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
@@ -19,6 +19,8 @@ function fixture(foes=[],overrides={}){
 const step=(combat,seconds,dt=.01)=>{for(let elapsed=0;elapsed<seconds-1e-9;elapsed+=dt)combat.update(Math.min(dt,seconds-elapsed));};
 const painted=scene=>{const found=[];scene.traverse(o=>{if(o.isMesh&&o.userData.paintedProjectile)found.push(o);});return found;};
 assert.ok(MIRROR_BOSS_PARRY.damageScale<=.1,'boss parry must be defense, not a source of boss damage');
+assert.deepEqual([1,3,4,6,7,10].map(mirrorBossParryCapacity),[1,1,2,2,3,3]);
+assert.match(formUpgradeLine('mirrorguard',3),/보스탄 방어 1 → 2발\/2\.4초/);
 assert.equal(segmentDistance(vec(),vec(2),vec(1,1)),1);
 assert.equal(segmentDistance(vec(),vec(),vec(3,4)),5);
 
@@ -45,6 +47,18 @@ for(const spriteKey of ['austin','baseball','storm','mirror']){
  assert.equal(second.life,3,'a boss volley must not be erased during parry cooldown');
  second.ob.position.copy(vec(100));step(f.combat,2.5);second.ob.position.copy(body.position);f.combat.update(.01);
  assert.equal(second.life,0,'one more boss projectile can be parried after cooldown');f.combat.dispose();
+}
+
+// Levels widen one shared defense window, never grant unlimited boss-shot immunity.
+for(const [id,level,expected] of [['mirrorguard',1,1],['mirrorguard',4,2],['mirrorguard',7,3],['mirrorhall',7,3],['final-mirrorguard-orbit',7,3]]){
+ const shots=[],f=fixture([],{enemyShots:()=>shots});f.combat.set(id,level);f.combat.update(.01);
+ const body=f.scene.children[0].children[0].children[0];
+ for(let i=0;i<5;i++)shots.push({life:3,boss:true,spriteKey:'austin',struck:false,ob:{position:body.position.clone()}});
+ f.combat.update(.001);
+ assert.equal(shots.filter(q=>q.struck).length,expected,`${id} Lv.${level}: capped boss volley`);
+ f.combat.surge(1);f.combat.update(.001);
+ assert.equal(shots.filter(q=>q.struck).length,expected,`${id} Lv.${level}: opening shares the same budget`);
+ f.combat.dispose();
 }
 
 // The first curated visual batch must use its real combat geometry: three
