@@ -31,7 +31,7 @@ export function awakenCard(option,forms,level,discovered=false,index=0){
  return `<button class="form-card awaken-card" data-awaken="${index}">
  ${formArt(form.id,'form-portrait')}
  ${comboProjectilePreview(form)}
- <small>${discovered?'발견한 각성 진화':'새로운 각성 진화'} · ${current?`보유 Lv.${current} → Lv.${level}`:'진화 Lv.'+level}<span class="awaken-tag">${form.twin?'쌍둥이':'융합 각성'}</span></small>
+ <small>${discovered?'발견한 각성 진화':'새로운 각성 진화'} · ${current?`보유 Lv.${current} → Lv.${level}`:'진화 Lv.'+level}<span class="awaken-tag">${form.twin?'쌍둥이 각성':'완성 진화'}</span></small>
  <strong>${form.name}</strong><p>${parts}</p><p>${form.desc}</p>${form.synergy?`<small class="twin-synergy">${form.synergy.name} · 두 공격이 ${form.synergy.window}초 안에 같은 적을 맞히면 추가 피해와 두 성질이 함께 발동</small>`:''}
  <small class="form-strength">${form.strength}</small><small class="form-cost">${form.weakness}</small>
  </button>`;
@@ -56,16 +56,16 @@ export function discoveryBook(profile,titles=null){
  // One scroll area for every section, so a short phone screen never squeezes the four grids.
  return `<p>씨앗의 도감 · ${found}/${total} 발견</p><h2>씨앗의 도감</h2><p class="form-note">기본 성질 9개에서 단독 9 · 융합 36 · 융합+단독 72 · 쌍둥이 36개의 길이 열립니다.</p>${held}${goal}
  <div class="book-scroll">
- ${section('완성 진화 · 두 법칙을 합치기',Object.values(FORMS))}
+ ${section('1차 융합 · 두 법칙을 합치기',Object.values(FORMS))}
  ${section(`단독 진화 · 한 법칙을 Lv.${SOLO_LEVEL}까지`,Object.values(SOLO_FORMS))}
- ${section('융합 각성 · 융합 + 지정된 단독 진화',Object.values(LIVE_AWAKEN_FORMS))}
+ ${section('완성 진화 · 융합 + 지정된 단독 진화',Object.values(LIVE_AWAKEN_FORMS))}
  ${section('쌍둥이 각성 · 두 단독 진화',Object.values(TWIN_FORMS))}
  </div>
  <p class="form-note">찾은 진화를 누르면 자세한 설명을 볼 수 있어요 · 발견은 쓰러져도 같은 기기·브라우저에 남습니다</p><button id="close-discoveries" class="primary">돌아가기</button>
  <div id="book-detail" class="book-detail" hidden></div>`;
 }
 
-const KIND_NAMES={fusion:'완성 진화',solo:'단독 진화',awakened:'각성 진화',twin:'쌍둥이 각성',second:'재융합'};
+const KIND_NAMES={fusion:'1차 융합',solo:'단독 진화',awakened:'완성 진화',twin:'쌍둥이 각성',second:'재융합'};
 const kindOf=f=>f.second?'second':f.twin?'twin':f.awakened?'awakened':f.solo?'solo':'fusion';
 const RECIPES={
  fusion:f=>`${f.pair} 법칙을 함께 가지고 있을 때 합칠 수 있어요`,

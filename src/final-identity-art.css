@@ -1,10 +1,20 @@
-/* Three authored 6 × 6 sheets replace 108 individual card requests. */
+/* Three authored 6 × 6 sheets replace 108 individual card requests.
+   All final and twin awakenings use the original awakening's gold frame.
+   Keep the grid static; the shimmer runs only for an inspected card. */
 .form-art.final-identity-art{
   background-size:600% 600%;background-repeat:no-repeat;background-color:#091d25;
-  border:1px solid #e6c883;border-radius:10px;
-  box-shadow:inset 0 0 0 1px #fff1b74d,0 4px 16px #020a1099;
+  position:relative;border:1px solid #ffe08a;border-radius:10px;
+  box-shadow:inset 0 0 0 2px #ffe08acc,0 0 16px #ffd36a88,0 4px 16px #020a1099;
+  filter:saturate(1.25) brightness(1.08);
 }
-.form-art.final-identity-art.twin-identity-art{
-  border-color:#d7e6cc;box-shadow:inset 0 0 0 1px #edffdf59,0 4px 16px #020a1099;
+.form-art.final-identity-art::after{
+  content:"";position:absolute;inset:0;border-radius:inherit;
+  background:#fff3c214;pointer-events:none;
 }
+.form-art.final-identity-art:is(:hover,:focus-visible)::after,
+.book-entry:is(:hover,:focus-visible) .form-art.final-identity-art::after{
+  background:linear-gradient(120deg,transparent 30%,#fff3c255 50%,transparent 70%);
+  background-size:250% 100%;animation:awaken-shine 3.2s ease-in-out infinite;
+}
+@media(prefers-reduced-motion:reduce){.form-art.final-identity-art::after{animation:none!important}}
 .book-entry.unknown .form-art.final-identity-art{filter:grayscale(1) brightness(.38)}
