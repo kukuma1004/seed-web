@@ -25,7 +25,8 @@ export function announceFinale(root,plan){
 
 export function activeIcon(forms){
  if(!forms.length)return '<span class="active-lock">🔒</span>';
- return forms.map(id=>formArt(id,'active-portrait')).join('');
+ if(forms.length===1)return formArt(forms[0],'active-portrait');
+ return `<span class="active-composite" aria-hidden="true">${formArt(forms[0],'active-portrait active-main')}${formArt(forms[1],'active-portrait active-echo')}</span>`;
 }
 
 // Rewrites the button only when something visible changed.

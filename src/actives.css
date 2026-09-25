@@ -4,7 +4,15 @@
 #active-skill .active-fill{position:absolute;inset:-5px;border-radius:50%;background:conic-gradient(#f2c96b var(--fill),#ffffff1a 0);-webkit-mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px));mask:radial-gradient(farthest-side,transparent calc(100% - 5px),#000 calc(100% - 4px))}
 #active-skill .active-icon{position:absolute;inset:9px;border-radius:50%;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#1b3a3f}
 #active-skill .active-portrait{width:100%;height:100%;flex:1 1 0;background-size:400% 300%;border-radius:0;box-shadow:none;margin:0}
-#active-skill.overdrive .active-portrait+.active-portrait{border-left:2px solid #f2c96b}
+/* Keep each portrait's atlas grid when it is reused in the small skill HUD. */
+:is(#active-skill,#active-cinematic,.active-sheet-art) .active-portrait.final-identity-art{background-size:600% 600%}
+:is(#active-skill,#active-cinematic,.active-sheet-art) .active-portrait.second-art{background-size:500% 400%}
+:is(#active-skill,#active-cinematic,.active-sheet-art) .active-portrait.first-candidate-art{background-size:400% 400%}
+/* One readable primary portrait, with the partner as a small gold-rimmed echo. */
+.active-composite{position:relative;display:block;width:100%;height:100%;overflow:hidden;border-radius:50%}
+:is(#active-skill,#active-cinematic,.active-sheet-art) .active-composite .active-main{position:absolute;inset:0;width:100%;height:100%;margin:0;border:0;border-radius:50%;box-shadow:none}
+:is(#active-skill,#active-cinematic,.active-sheet-art) .active-composite .active-echo{position:absolute;right:3%;bottom:3%;width:43%;height:43%;margin:0;border:2px solid #ffe5a5;border-radius:50%;box-shadow:0 0 0 2px #15262b,0 0 10px #f5c67599}
+.active-composite::after{content:"";position:absolute;inset:4%;border:1px solid #ffe2a966;border-radius:50%;pointer-events:none}
 #active-skill .active-lock{font-size:24px;opacity:.7}
 #active-skill .active-name{position:absolute;left:50%;bottom:-19px;transform:translateX(-50%);white-space:nowrap;font-size:12px;font-weight:700;text-shadow:0 1px 3px #000,0 0 6px #000}
 #active-skill .active-key{position:absolute;right:-4px;top:-4px;min-width:20px;height:20px;border-radius:10px;background:#0b1c20;border:1px solid #d9c28a88;font-size:11px;line-height:18px}
