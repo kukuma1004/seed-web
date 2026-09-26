@@ -17,7 +17,7 @@ export const ALWAYS_CLEAR_TITLE='초심을 이은 자';
 export const ALWAYS_VETERAN_TITLE='열 번째 스트라이크';
 export const ALWAYS_VETERAN_MAX_HP=10;
 export const JOHAN_TITLE='폭풍을 마주한 자';
-export const JOHAN_POWER=.02;
+export const JOHAN_COOLDOWN=.02;
 export const JOHAN_CLEAR_TITLE='폭풍을 가른 자';
 export const JOHAN_VETERAN_TITLE='열 번의 출격';
 export const JOHAN_VETERAN_COOLDOWN=.03;
@@ -41,7 +41,7 @@ export function titleState({austin=false,austinClear=false,austinVeteran=false,a
  if(alwaysBeginner)titles.push({id:'alwaysbeginner',name:ALWAYS_BEGINNER_TITLE,perk:`최대 생명력 +${ALWAYS_BEGINNER_MAX_HP}`,shotSpeed:0,moveSpeed:0,maxHp:ALWAYS_BEGINNER_MAX_HP});
  if(johanClear)titles.push({id:'johanclear',name:JOHAN_CLEAR_TITLE,perk:`요한 한 판 3회 격파 · 완주 · 모든 능력 +${percent(CLEAR_ALL_STATS)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
  if(johanVeteran)titles.push({id:'johanveteran',name:JOHAN_VETERAN_TITLE,perk:`요한 누적 10회 격파 · 순환 +${percent(JOHAN_VETERAN_COOLDOWN)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
- if(johan)titles.push({id:'tempestcarrier',name:JOHAN_TITLE,perk:`요한 첫 격파 · 공격력 +${percent(JOHAN_POWER)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
+ if(johan)titles.push({id:'tempestcarrier',name:JOHAN_TITLE,perk:`요한 첫 격파 · 순환 +${percent(JOHAN_COOLDOWN)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
  if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 공격력·이속·치명타·순환·최대 생명력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
  if(n>=CODEX.completeAt)titles.push({id:'codexcomplete',name:CODEX_COMPLETE_TITLE,perk:`도감 ${CODEX.completeAt}종 완성 · 기념 칭호`,shotSpeed:0,moveSpeed:0,maxHp:0});
  const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
@@ -49,9 +49,9 @@ export function titleState({austin=false,austinClear=false,austinVeteran=false,a
  const next=goal!==null&&goal<=total?{at:goal,need:goal-n,reward:!codex?`칭호 '${CODEX_TITLE}'`:goal===CODEX.completeAt?`칭호 '${CODEX_COMPLETE_TITLE}'`:`모든 능력 +${percent(codexBonus(goal)-codexBonus(n))}`}:null;
  const sources=titles.filter(title=>title.shotSpeed>0).map(({id,name,shotSpeed})=>({id,name,shotSpeed}));
  const moveSpeedBonus=(austin?AUSTIN_MOVE_SPEED:0)+(austinVeteran?AUSTIN_VETERAN_MOVE_SPEED:0),shotSpeedBonus=0,maxHpBonus=(alwaysBeginner?ALWAYS_BEGINNER_MAX_HP:0)+(alwaysVeteran?ALWAYS_VETERAN_MAX_HP:0);
- const powerBonus=johan?JOHAN_POWER:0,cooldownBonus=johanVeteran?JOHAN_VETERAN_COOLDOWN:0;
+ const cooldownBonus=(johan?JOHAN_COOLDOWN:0)+(johanVeteran?JOHAN_VETERAN_COOLDOWN:0);
  const clearStatBonus=(Number(austinClear)+Number(alwaysClear)+Number(johanClear))*CLEAR_ALL_STATS;
- return {titles,equipped:selected?.id||null,shown:selected?.name||null,moveSpeed:1+moveSpeedBonus,moveSpeedBonus,shotSpeed:1,shotSpeedBonus,shotSpeedSources:sources,attackCadence:1,attackCadenceBonus:0,maxHp:100+maxHpBonus+100*clearStatBonus,maxHpBonus,powerBonus,cooldownBonus,clearStatBonus,codexBonus:codex?codexStat:0,next};
+ return {titles,equipped:selected?.id||null,shown:selected?.name||null,moveSpeed:1+moveSpeedBonus,moveSpeedBonus,shotSpeed:1,shotSpeedBonus,shotSpeedSources:sources,attackCadence:1,attackCadenceBonus:0,maxHp:100+maxHpBonus+100*clearStatBonus,maxHpBonus,cooldownBonus,clearStatBonus,codexBonus:codex?codexStat:0,next};
 }
 
 // What changed when the discovery count went from `before` to `after`, as one line for the toast (null if nothing).

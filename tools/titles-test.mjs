@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {titleState,codexNews,codexSteps,codexBonus,CODEX,CLEAR_ALL_STATS,AUSTIN_MOVE_SPEED,AUSTIN_VETERAN_MOVE_SPEED,AUSTIN_VETERAN_TITLE,ALWAYS_BEGINNER_MAX_HP,ALWAYS_VETERAN_MAX_HP,JOHAN_POWER,JOHAN_VETERAN_COOLDOWN,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
+import {titleState,codexNews,codexSteps,codexBonus,CODEX,CLEAR_ALL_STATS,AUSTIN_MOVE_SPEED,AUSTIN_VETERAN_MOVE_SPEED,AUSTIN_VETERAN_TITLE,ALWAYS_BEGINNER_MAX_HP,ALWAYS_VETERAN_MAX_HP,JOHAN_COOLDOWN,JOHAN_VETERAN_COOLDOWN,ALWAYS_BEGINNER_TITLE,FIRST_GARDEN_TITLE} from '../src/titles.js';
 import {ALL_FORMS} from '../src/forms.js';
 import {FIRST_GARDEN_BADGE} from '../src/account-profile.js';
 
@@ -58,9 +58,9 @@ assert.match(codexNews(29,30),/2%/);assert.match(codexNews(79,80),/5%/);assert.m
 }
 {
  const first=titleState({johan:true}),veteran=titleState({johanVeteran:true}),clear=titleState({johanClear:true}),all=titleState({austinClear:true,alwaysBeginner:true,alwaysVeteran:true,alwaysClear:true,johan:true,johanClear:true,johanVeteran:true});
- close(first.powerBonus,JOHAN_POWER);close(veteran.cooldownBonus,JOHAN_VETERAN_COOLDOWN);close(clear.clearStatBonus,CLEAR_ALL_STATS);
+ close(first.cooldownBonus,JOHAN_COOLDOWN);close(veteran.cooldownBonus,JOHAN_VETERAN_COOLDOWN);close(all.cooldownBonus,JOHAN_COOLDOWN+JOHAN_VETERAN_COOLDOWN);close(clear.clearStatBonus,CLEAR_ALL_STATS);
  close(all.clearStatBonus,3*CLEAR_ALL_STATS);assert.equal(all.maxHpBonus,ALWAYS_BEGINNER_MAX_HP+ALWAYS_VETERAN_MAX_HP);
  assert.equal(titleState({johan:true,equipped:'tempestcarrier'}).shown,'폭풍을 마주한 자');
  assert.ok(all.titles.some(t=>t.id==='alwaysveteran'));assert.ok(all.titles.some(t=>t.id==='johanveteran'));
 }
-console.log('칭호: 첫 오스틴 격파 이속 +5%, 막별 완주 모든 능력 +1%, 누적 10회 추가 이속 +5%, 도감 보상·장착 통과');
+console.log('칭호: 막별 완주·누적 보상, 요한 순환 +2%와 +3% 누적, 도감 보상·장착 통과');
