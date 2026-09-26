@@ -143,7 +143,8 @@ function tickBossBarrage(e,phase,dt,ctx){
  e.volleyTimer-=dt;
  if(e.pattern===2){
   const halfway=(10+phase*2)/2,sign=e.volleyLeft>halfway?e.turnSign:-e.turnSign;
-  e.g.position.x=THREE.MathUtils.clamp(e.g.position.x+sign*dt*(6.4+phase*.8),-6.3,6.3);
+  const span=ctx.arenaMode?(ctx.arena.halfWidth-2):6.3;
+  e.g.position.x=THREE.MathUtils.clamp(e.g.position.x+sign*dt*(6.4+phase*.8),-span,span);
  }
  if(e.volleyTimer>0)return false;
  const aimed=e.target.copy(ctx.player).sub(e.g.position).setY(0);if(aimed.lengthSq()>.001)aimed.normalize();else aimed.set(0,0,1);
@@ -160,7 +161,7 @@ function tickBossBarrage(e,phase,dt,ctx){
   e.volleyTimer=.16;
  }else if(e.pattern===3){
   const gap=(e.volleyStep*2+phase)%7;
-  for(let lane=0;lane<7;lane++)if(lane!==gap){const x=-6.6+lane*2.2,dir=new V((ctx.player.x-x)*.035,0,1).normalize();bossShot(ctx,e,dir,{speed:8.2+phase*.5,damage:17+phase*2,scale:1.08},x-e.g.position.x);}
+  for(let lane=0;lane<7;lane++)if(lane!==gap){const x=(ctx.arenaMode?e.g.position.x:0)-6.6+lane*2.2,dir=ctx.arenaMode?new V(ctx.player.x-x,0,ctx.player.z-e.g.position.z).normalize():new V((ctx.player.x-x)*.035,0,1).normalize();bossShot(ctx,e,dir,{speed:8.2+phase*.5,damage:17+phase*2,scale:1.08},x-e.g.position.x);}
   e.volleyTimer=.32;
  }else{
   const count=16,offset=(e.volleyStep%2?Math.PI/count:0)+e.volleyStep*.08;
@@ -175,8 +176,14 @@ export function tickTempestCarrier(e,dt,time,ctx){
  e.before.copy(e.g.position);e.timer-=dt;e.damageAllowance=Math.min(e.maxHp*TEMPEST_CARRIER.damage.burst,e.damageAllowance+e.maxHp*TEMPEST_CARRIER.damage.perSecond*dt);const ratio=e.hp/e.maxHp,to=e.target.copy(ctx.player).sub(e.g.position).setY(0);if(to.lengthSq()>.001)to.normalize();e.tell.visible=e.line.visible=false;
  const phase=ratio>.66?0:ratio>.33?1:2;e.phaseIndex=phase;
  if(phase>e.lastPhase){e.lastPhase=phase;e.state='recover';e.timer=.72;e.moveName='폭풍핵 변환';e.hint='장갑이 열리며 호위 편대가 진입합니다';ctx.summon?.(phase===1?['sky-scout','sky-scout']:['sky-bomber','sky-scout']);ctx.sound?.('bossWarning');}
+ if(ctx.arenaMode){
+  // The survival arena has no fixed bottom edge: pursue at a readable range.
+  const distance=e.g.position.distanceTo(ctx.player);
+  if(e.state==='stalk'||e.state==='recover'){if(distance>7.5)e.g.position.addScaledVector(to,dt*4.6);else if(distance<4.5)e.g.position.addScaledVector(to,-dt*2.2);e.g.position.x+=to.z*dt*1.25;e.g.position.z-=to.x*dt*1.25;}
+ }else {
  if(e.state!=='barrage'||e.pattern!==2)e.g.position.x=THREE.MathUtils.damp(e.g.position.x,Math.sin(time*(.62+phase*.1))*Math.min(5.7,3.4+phase),4.2,dt);
- e.g.position.z=THREE.MathUtils.damp(e.g.position.z,-1.8,5,dt);face(e,to);
+ e.g.position.z=THREE.MathUtils.damp(e.g.position.z,-1.8,5,dt);
+ }face(e,to);
  if(e.state==='stalk'&&e.timer<=0){
   const available=phase===0?3:phase===1?4:5;e.pattern=e.attacks++%available;if(e.pattern===1)e.turnSign=e.attacks%2?1:-1;
   const move=BOSS_MOVES[e.pattern];e.state='tell';e.timer=[.46,.38,.34,.42,.5][e.pattern]/(1+phase*.06);e.dir.copy(to);e.moveName=move.name;e.hint=move.hint;ctx.sound?.('bossWarning');

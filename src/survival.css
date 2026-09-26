@@ -1,0 +1,32 @@
+.survival-panel{width:min(640px,94vw);max-height:90dvh;overflow:auto;padding:clamp(18px,3vw,32px)!important;text-align:center;box-sizing:border-box}
+.survival-panel h2{font-size:clamp(24px,4vw,38px);margin:8px 0 14px}.survival-lead{color:#d8eabd}
+.survival-panel p{line-height:1.6}.survival-facts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:20px 0}
+.survival-facts span{display:flex;flex-direction:column;gap:6px;padding:12px 4px;border:1px solid #9bbd7d55;border-radius:12px;background:#193329b8;font-size:12px;color:#b9ccbd}
+.survival-facts b{font-size:clamp(18px,3vw,26px);color:#e1e8ad;font-weight:650}.survival-note{font-size:12px;color:#aabcad}.survival-record{font-size:13px;color:#d0dfb7}
+.survival-actions{display:flex;gap:12px;position:sticky;bottom:-1px;padding:12px 0 4px;background:#142824;z-index:2}
+.survival-actions button{flex:1;min-height:48px;margin:0!important;font-size:17px!important}.survival-lab{margin-top:16px;color:#bdc8bc;font-size:12px}.survival-lab button{font-size:13px!important;padding:10px!important;min-height:42px;margin:6px}
+.survival-mode #stages{display:none!important}.survival-menu{border-color:#a4c57377!important}
+.survival-mode #toast{top:auto!important;bottom:12px!important;left:50%;transform:translateX(-50%);height:auto!important;width:max-content;font-size:13px;letter-spacing:.6px;max-width:55%;line-height:1.5;padding:5px 12px;border-radius:8px;background:#0a1918b3}
+.survival-mode #toast:empty{display:none}.survival-mode #encounter{font-size:12px;letter-spacing:.6px}
+body.phone-landscape.survival-mode #encounter{display:block!important;top:30px!important;left:10px;transform:none;width:160px;max-width:29vw;white-space:pre-line;font-size:10px;line-height:1.4;text-align:left;letter-spacing:0}
+@media(max-height:500px){.survival-panel{max-height:94dvh;padding:16px!important}.survival-panel h2{font-size:25px;margin:5px}.survival-facts{margin:10px 0}.survival-facts span{padding:7px}.survival-panel p{margin:8px 0}.survival-actions{padding-top:8px}}
+.survival-panel{background:linear-gradient(145deg,#182d28f7,#0a1918f7);border:1px solid #b1c89266;border-radius:18px;box-shadow:0 24px 70px #0009;flex-shrink:0}
+#overlay.survival-overlay.intro{inset:0;width:100%;height:100%;max-height:none;display:flex;align-items:center;justify-content:center;padding:12px;box-sizing:border-box;overflow:hidden;backdrop-filter:blur(3px);background:#06121099}
+#overlay.survival-overlay.intro .survival-panel{position:relative!important;inset:auto!important;display:block!important;width:min(640px,94vw)!important;height:auto!important;margin:0!important;transform:none!important;max-width:640px;justify-content:normal!important}
+
+.survival-mode #encounter{white-space:pre-line;line-height:1.4}
+.survival-result-note{color:#e7d9a3;font-size:12px!important;margin:4px 0!important}
+/* End screens must not retain a frozen HP value or boss attack instruction. */
+body.survival-mode.survival-result :is(#status,#rules,#boss-hud,#encounter,#score-hud,#pause,#help,#item-bar,#active-skill,#touch-controls,#form-label,#growth-progress,#overhead){display:none!important}
+@media(max-width:600px){.survival-actions{gap:6px}.survival-actions button{font-size:14px!important;padding:10px 6px!important}}
+.survival-panel .survival-sync-button,#survival-cloud-conflict button{min-height:40px;font-size:13px!important;padding:8px 12px!important;margin:4px!important}
+#survival-cloud-conflict:not(:empty){padding:10px;border:1px solid #dfc37366;border-radius:10px;background:#39332066}
+.survival-ranking-panel header{flex:none}.survival-ranking-panel h2{font-size:clamp(20px,3vw,30px)}
+#overlay.survival-overlay.intro .survival-ranking-panel{display:flex!important;flex-direction:column;height:min(680px,92dvh)!important;overflow:hidden}
+.survival-rank-scroll{overflow:auto;min-height:0;flex:1;text-align:left;padding:0 4px}.survival-rank-scroll h3{font-size:14px;color:#e8db9c;letter-spacing:1px;margin:16px 0 10px}
+.survival-rank-scroll ol{list-style:none;padding:0;margin:0}.survival-rank-scroll li{padding:12px;background:#1f3831;border:1px solid #9bbd7d33;border-radius:10px;margin:8px 0;font-size:13px}
+.survival-rank-heading{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}.survival-rank-heading strong{color:#e7dc9f}.survival-rank-scroll li p{font-size:12px;margin:6px 0;color:#c1d4c6}.survival-rank-build{overflow-wrap:anywhere}
+.survival-ranking-panel .survival-actions{position:static;flex:none}.survival-rank-scroll .rank-actions button,.survival-rank-scroll .rank-actions a{min-height:44px;padding:10px;box-sizing:border-box}
+body:has(#survival-ranking-list) #app-actions{display:none}
+#overlay.survival-overlay.intro .survival-ranking-panel{background:#0c211ff7!important;border:1px solid #9bbd7d55}
+.survival-ranking-panel .survival-actions button{border-radius:9px;background:#213d32;color:#e8efd6;border:1px solid #b8c99580}

@@ -12,10 +12,10 @@ import {dashEvolutionSummary} from './dash-evolution.js';
 import './pause-build.css';
 
 // The bag lists what every potion does, so a player can learn them while the game is stopped.
-function itemBag(inventory){
+function itemBag(inventory,survival=false){
  const held=heldItems(inventory);
  const rows=held.map(id=>{const it=ITEMS[id];return `<li>${itemArt(id)}<div><strong>${it.name} <span>×${inventory[id]}</span></strong><p>${it.desc}${it.kind!=='revive'?' · Q 마시기 · Shift+Q 고르기':''}</p></div></li>`;}).join('');
- return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:'<p>보스를 이기면 시간의 물약 1개와 추가 보상을 얻어요 · 회복 보상은 모두 생명력 50을 채워 줍니다</p>'}</section>`;
+ return `<section class="item-bag"><h3>물약 가방</h3>${rows?`<ul>${rows}</ul>`:survival?'<p>각 막 90·180초에 작은 물약을 보급해요 · 생명력 +25 · 최대 5개</p>':'<p>보스를 이기면 시간의 물약 1개와 추가 보상을 얻어요 · 회복 보상은 모두 생명력 50을 채워 줍니다</p>'}</section>`;
 }
 export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,activeUI=null,titleUI=null,dashUI=null,bonusUI=null){
  const root=document.createElement('section');root.id='pause-build';root.hidden=true;
@@ -32,7 +32,7 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
  });
  let shownLevels,shownForms;
  const api={
-  show(levels,forms){
+  show(levels,forms,{survival=false,killScale=1}={}){
    api.setSaveStatus('');
    shownLevels=levels;shownForms=forms;
    const core=orbitCore(forms,FORMS);
@@ -40,10 +40,10 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
     .concat([...levels].map(([id,level])=>{const law=LAWS[id];return `<article class="pause-item">${lawArt(id)}<div><small>법칙</small><h3>${law.name} <span>Lv.${level}</span></h3><p>${law.hint}</p></div></article>`;}));
    root.querySelector('#pause-slots').textContent=`보유 ${levels.size+forms.size}/${SLOT_CAP}칸 · 진화 ${forms.size}개`;
    root.querySelector('#pause-loadout').innerHTML=entries.join('')||'<p class="pause-empty">아직 이름 없는 씨앗이에요.<br>적을 처치하고 첫 법칙을 골라 주세요.</p>';
-   if(activeUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',activeSection(forms,activeUI.get()));
+   if(activeUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',activeSection(forms,activeUI.get(),killScale));
    if(dashUI){const section=dashEvolutionSummary(dashUI.get());if(section)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',section);}
    if(bonusUI){const lines=bonusUI.summary();if(lines.length)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag run-bonus-summary"><h3>이번 여정의 작은 성장</h3><p>${lines.join(' · ')}</p></section>`);}
-   if(itemsUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',itemBag(itemsUI.get()));
+   if(itemsUI)root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',itemBag(itemsUI.get(),survival));
    const titles=titleUI?.state();
    if(titles&&(titles.titles.length||titles.next)){
     const cadence=bonusUI?.cadenceScale?.()||1;
@@ -52,7 +52,7 @@ export function createPauseBuild(saveButton,resume,relicUI=null,itemsUI=null,act
     const sources=titles.codexBonus>0?`도감 칭호 · 공격력·이속·치명타·순환·최대 생명력 +${percent(titles.codexBonus)}`:'';
     root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',`<section class="item-bag title-perk"><h3>칭호와 현재 능력치</h3><p class="title-total"><strong>${titles.codexBonus>0?`공격력·이속·치명타·순환·최대 생명력 +${percent(titles.codexBonus)}`:'칭호 효과 없음'}</strong>${sources?`<small>${sources}</small>`:''}</p>${titles.maxHpBonus?`<p class="title-total"><strong>최대 생명력 +${titles.maxHpBonus}</strong><small>항상 적용되는 칭호 효과</small></p>`:''}${cadence>1?`<p class="title-total"><strong>공격 빈도 ${percent(cadence)}</strong><small>이번 여정 희귀 보너스 +${percent(cadence-1)}</small></p>`:''}${titles.titles.map(t=>`<p class="${t.id===titles.equipped?'equipped':''}"><strong>${t.id===titles.equipped?'장착 · ':''}${t.name}</strong> · ${t.perk}</p>`).join('')}${titles.next?`<p class="title-next">도감 ${titles.next.need}개 더 · ${titles.next.reward}</p>`:''}</section>`);
    }
-   if(relicUI){root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',relicLoadout(relicUI.get(),relicUI.canSwap(),relicUI.effect));root.querySelectorAll('[data-equip-relic]').forEach(b=>b.onclick=()=>{relicUI.swap(b.dataset.equipRelic);api.show(shownLevels,shownForms);});}
+   if(relicUI&&!survival){root.querySelector('#pause-loadout').insertAdjacentHTML('beforeend',relicLoadout(relicUI.get(),relicUI.canSwap(),relicUI.effect));root.querySelectorAll('[data-equip-relic]').forEach(b=>b.onclick=()=>{relicUI.swap(b.dataset.equipRelic);api.show(shownLevels,shownForms);});}
    root.hidden=false;continueButton.focus({preventScroll:true});
   },
   hide(){root.hidden=true;},

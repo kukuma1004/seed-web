@@ -100,3 +100,14 @@ release/
 
 # Higgsfield 원본(4K 등)은 저장소에 올리지 않는다. public/에는 가공한 결과만.
 art-source/
+!tools/survival-rules-test.mjs
+!tools/survival-art-test.mjs
+!tools/survival-integration-test.mjs
+!tools/survival-benchmark-test.mjs
+
+!tools/survival-save-test.mjs
+!tools/survival-sync-test.mjs
+
+!tools/survival-ranking-test.mjs
+!tools/survival-record-sync-test.mjs
+!tools/survival-emulator-check.mjs

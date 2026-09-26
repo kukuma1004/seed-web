@@ -17,17 +17,17 @@ export const BASE_SLIDE_ARENAS=Object.freeze(['diamond','ballpark']);
 export const RELAY_LAYOUT=Object.freeze({
  pitcher:Object.freeze({x:0,z:.78}),home:Object.freeze({x:0,z:4.2}),catcher:Object.freeze({x:0,z:5.08})
 });
-export function stadiumBaseAt(position,radius=BASE_SLIDE.radius){
- return STADIUM_BASES.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=radius);
+export function stadiumBaseAt(position,radius=BASE_SLIDE.radius,bases=STADIUM_BASES){
+ return bases.findIndex(base=>Math.hypot(position.x-base.x,position.z-base.z)<=radius);
 }
-export function baseSlideFor(position,cooldown=0,enabled=true,blockedIndex=-1){
+export function baseSlideFor(position,cooldown=0,enabled=true,blockedIndex=-1,bases=STADIUM_BASES,speed=BASE_SLIDE.speed){
  if(!enabled||cooldown>0)return null;
- const index=stadiumBaseAt(position);
+ const index=stadiumBaseAt(position,BASE_SLIDE.radius,bases);
  // Landing on a base must not launch the next leg automatically. The player
  // has to step off the plate and deliberately enter it again.
  if(index<0||index===blockedIndex)return null;
- const from=STADIUM_BASES[index],to=STADIUM_BASES[from.next],length=Math.hypot(to.x-position.x,to.z-position.z)||1;
- return {index,targetX:to.x,targetZ:to.z,dx:(to.x-position.x)/length,dz:(to.z-position.z)/length,speed:BASE_SLIDE.speed,duration:length/BASE_SLIDE.speed,cooldown:BASE_SLIDE.cooldown};
+ const from=bases[index],to=bases[from.next],length=Math.hypot(to.x-position.x,to.z-position.z)||1;
+ return {index,targetX:to.x,targetZ:to.z,dx:(to.x-position.x)/length,dz:(to.z-position.z)/length,speed,duration:length/speed,cooldown:BASE_SLIDE.cooldown};
 }
 
 // The act-2 night stadium, drawn over the act-1 garden: a single 512 px hand-painted clay tile

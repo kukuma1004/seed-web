@@ -280,6 +280,28 @@
         }
       }
     },
+    "seedSurvivalSaves": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && newData.exists()",
+        ".validate": "newData.hasChildren(['version', 'revision', 'updatedAt', 'checkpoint'])",
+        "version": {
+          ".validate": "newData.val() == 1"
+        },
+        "revision": {
+          ".validate": "newData.isNumber() && ((!data.exists() && newData.val() == 1) || (data.exists() && newData.val() == data.val() + 1))"
+        },
+        "updatedAt": {
+          ".validate": "newData.isNumber() && newData.val() == now"
+        },
+        "checkpoint": {
+          ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 800000"
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
+    },
     "seedUsers": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
@@ -476,6 +498,70 @@
               ".validate": false
             }
           }
+        }
+      }
+    },
+    "seedSurvivalRanking": {
+      "v1": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".indexOn": [
+          "score"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && auth.uid == $uid && (!newData.exists() || !data.exists() || newData.child('score').val() > data.child('score').val())",
+          ".validate": "newData.hasChildren(['uid','name','score','kills','bosses','time','laws','forms']) && newData.child('bosses').val() <= newData.child('kills').val() && newData.child('time').val() >= newData.child('bosses').val() * 270 && newData.child('score').val() <= (newData.child('kills').val() - newData.child('bosses').val()) * 30 + newData.child('bosses').val() * 500",
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == $uid"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000000 && newData.val() % 1 == 0"
+          },
+          "kills": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 10000000 && newData.val() % 1 == 0"
+          },
+          "bosses": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000 && newData.val() % 1 == 0"
+          },
+          "time": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 86400 && newData.val() % 1 == 0"
+          },
+          "laws": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "forms": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
+    "seedSurvivalRecords": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && newData.exists()",
+        ".validate": "newData.hasChildren(['version','bestKills','bestBosses','bestTime','fastestClear'])",
+        "version": {
+          ".validate": "newData.val() == 1"
+        },
+        "bestKills": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000 && (!data.exists() || newData.val() >= data.val())"
+        },
+        "bestBosses": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000 && (!data.exists() || newData.val() >= data.val())"
+        },
+        "bestTime": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400 && (!data.exists() || newData.val() >= data.val())"
+        },
+        "fastestClear": {
+          ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400 && (newData.val() == 0 || newData.val() >= 810) && (!data.exists() || data.val() == 0 || (newData.val() > 0 && newData.val() <= data.val()))"
+        },
+        "$other": {
+          ".validate": false
         }
       }
     }

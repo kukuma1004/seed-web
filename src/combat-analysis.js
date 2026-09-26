@@ -2,6 +2,8 @@
 // one-second buckets: no per-hit history, DOM writes or floating damage numbers.
 const cleanNumber=(value,min=0,max=1e12)=>Number.isFinite(value)?Math.max(min,Math.min(max,value)):0;
 const sourceId=value=>typeof value==='string'&&value.length<=64?value:'seed';
+// Retain the historical one-second peak plus the live bucket across a resume.
+const compactBuckets=m=>{let peak=0;for(const n of m.values())peak=Math.max(peak,n);return [[-1,peak],...[...m].filter(([s])=>s>=0).slice(-2)];};
 
 export function createCombatAnalysis(){
  let room=null;
@@ -15,6 +17,8 @@ export function createCombatAnalysis(){
   utility(kind,amount=1){if(room&&Object.hasOwn(room.utility,kind))room.utility[kind]+=cleanNumber(amount,0,1e6);},
   kill(){if(room)room.kills++;},
   active(){return Boolean(room);},
+  snapshot(){return room?{...room,sources:[...room.sources],buckets:compactBuckets(room.buckets),sourceBuckets:[...room.sourceBuckets].map(([id,m])=>[id,compactBuckets(m)])}:null;},
+  restore(saved){if(!saved)return;room={...saved,meta:{...saved.meta},utility:{...saved.utility},sources:new Map(saved.sources),buckets:new Map(saved.buckets),sourceBuckets:new Map(saved.sourceBuckets.map(([id,rows])=>[id,new Map(rows)]))};},
   finish(now=0){
    if(!room)return null;const duration=Math.max(.1,cleanNumber(now)-room.start),total=room.damage;
    const sources=[...room.sources].map(([id,damage])=>({id,damage,dps:damage/duration,peak:Math.max(0,...(room.sourceBuckets.get(id)?.values()||[])),share:total?damage/total:0})).sort((a,b)=>b.damage-a.damage);

@@ -48,8 +48,8 @@ SKYWAY_ROOMS.forEach((room,stage)=>{
 });
 assert.equal(new Set(SKYWAY_ROOMS.flatMap(room=>room.enemies.map(([type])=>type)).filter(isAct3Minion)).size,4,'all four flight roles appear');
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),developerStart=main.slice(main.indexOf('function startDeveloperEncounter'),main.indexOf('function showDeveloperLab'));
-assert.match(main,/id="start-act3"/,'act 3 appears in the journey menu');
-assert.match(main,/id="start-act3"[\s\S]*?onclick=\(\)=>enter\(saved3\|\|null,ACT3_REGION\)/,'act 3 starts or restores its own run');
+assert.match(main,/actCard\('start-act3',3/,'act 3 appears in the journey menu');
+assert.match(main,/actCard\('start-act3',3[\s\S]*?onclick=\(\)=>enter\(saved3\|\|null,ACT3_REGION\)/,'act 3 starts or restores its own run');
 assert.match(main,/act:isAct3\(region\)\?ACT\.JOHAN/,'act 3 records use the Johan leaderboard');
 assert.match(main,/data-board="johan"/,'Johan has a visible online leaderboard tab');
 assert.match(main,/speed:spec\.speed\*difficulty\(cycle,region\)\.projectileSpeed\*act3RoomPressure\(stage\)\.projectile/,'actual missiles use the room-specific speed');

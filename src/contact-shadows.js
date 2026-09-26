@@ -14,7 +14,7 @@ export function createContactShadows(scene,capacity=CONTACT_SHADOW_CAPACITY){
   const radius=contactShadowRadius(type||actor?.type);position.set(group.position.x,.125,group.position.z);scale.set(radius,radius*.56,1);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(mesh.count++,matrix);
  };
  function update(player,enemies=[],fallen=[]){
-  mesh.count=0;add(player,'player');for(const enemy of enemies)if(!enemy.dead)add(enemy);for(const entry of fallen)add(entry.e);mesh.instanceMatrix.needsUpdate=true;return mesh.count;
+  mesh.count=0;add(player,'player');for(const enemy of enemies)if(!enemy.dead&&!enemy.survivalKind)add(enemy);for(const entry of fallen)add(entry.e);mesh.instanceMatrix.needsUpdate=true;return mesh.count;
  }
  function dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();}
  return {mesh,update,dispose,capacity,drawCalls:1};
