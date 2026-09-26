@@ -4,7 +4,7 @@ import {ALL_FORMS as FORMS} from './forms.js';
 export const DISCOVERIES_KEY='seed-discoveries-v1';
 // austinclear: 한 판 오스틴 3회 완주. austinveteran: 누적 오스틴 10회.
 // alwaysclear: 한 판 항상초심 3회 완주.
-const BOSS_IDS=new Set(['warden','austin','alwaysbeginner','tempestcarrier','austinclear','austinveteran','alwaysclear']);
+const BOSS_IDS=new Set(['warden','austin','alwaysbeginner','tempestcarrier','austinclear','austinveteran','alwaysclear','alwaysveteran','johanclear','johanveteran']);
 const emptyProfile=()=>({version:1,forms:[],bosses:[],records:{}});
 const uniqueKnown=(items,known)=>Array.isArray(items)?[...new Set(items.filter(id=>typeof id==='string'&&known(id)))]:[];
 const recordsOf=value=>{

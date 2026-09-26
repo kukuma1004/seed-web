@@ -18,7 +18,7 @@ export function recordBestScore(profile,act,score){
  if(BEST_ACTS.includes(act)&&Number.isSafeInteger(score)&&score>next.bestScores[act])next.bestScores[act]=Math.min(1e12,score);
  return next;
 }
-const EMPTY=()=>({version:1,badges:[],skins:[],equippedTitle:'',appliedGrants:[],lastRewardAt:0,bestScores:normalizeBestScores(),austinWins:0});
+const EMPTY=()=>({version:1,badges:[],skins:[],equippedTitle:'',appliedGrants:[],lastRewardAt:0,bestScores:normalizeBestScores(),austinWins:0,alwaysWins:0,johanWins:0});
 
 export function normalizeAccountProfile(value){
  return {
@@ -29,7 +29,9 @@ export function normalizeAccountProfile(value){
   appliedGrants:ids(value?.appliedGrants,null,100),
   lastRewardAt:Number.isFinite(value?.lastRewardAt)?Math.max(0,Math.floor(value.lastRewardAt)):0,
   bestScores:normalizeBestScores(value?.bestScores),
-  austinWins:Number.isSafeInteger(value?.austinWins)?Math.max(0,Math.min(100000,value.austinWins)):0
+  austinWins:Number.isSafeInteger(value?.austinWins)?Math.max(0,Math.min(100000,value.austinWins)):0,
+  alwaysWins:Number.isSafeInteger(value?.alwaysWins)?Math.max(0,Math.min(100000,value.alwaysWins)):0,
+  johanWins:Number.isSafeInteger(value?.johanWins)?Math.max(0,Math.min(100000,value.johanWins)):0
  };
 }
 

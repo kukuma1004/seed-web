@@ -120,6 +120,13 @@ function fakeFirebase({clock}){
  fb.runs[outsider]={uid:'someone-else',name:'다른유저',score:3000,cycle:4,stage:4,kills:40,time:300,act:ACT.AUSTIN,at:clock.t+10};
  fb.builds[outsider]={uid:'someone-else',laws:'',forms:'',relic:'',wardens:1,austins:100};
  assert.equal(await ranking.historicalAustinWins(10),10);
+ for(const [act,prefix] of [[ACT.ALWAYS_BEGINNER,'always'],[ACT.JOHAN,'johan']])for(let i=0;i<10;i++){
+  const id=pushKeyPrefix(clock.t+100+act*20+i)+prefix+String(i).padStart(8,'0');
+  fb.runs[id]={uid:owner,name:'같은 계정',score:4000,cycle:4,stage:4,kills:40,time:300,act,at:clock.t+100+act*20+i};
+  fb.builds[id]={uid:owner,laws:'',forms:'',relic:'',wardens:1,austins:1};
+ }
+ assert.equal(await ranking.historicalBossWins(ACT.ALWAYS_BEGINNER,10),10);
+ assert.equal(await ranking.historicalBossWins(ACT.JOHAN,10),10);
 }
 
 // A long-ago personal run must still appear even after it falls outside both

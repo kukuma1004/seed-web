@@ -10,10 +10,10 @@ export const ALWAYS_BEGINNER_TITLE_PERK=Object.freeze({maxHp:ALWAYS_BEGINNER_MAX
 // A screen-space nameplate follows the world position. Korean text stays crisp
 // on low-resolution mobile canvases and costs no WebGL texture or draw call.
 // It shows the first title held (Austin's before the codex title); austin/discovered feed titles.js.
-export function createSeedTitle(player,{austin=false,austinClear=false,austinVeteran=false,alwaysBeginner=false,alwaysClear=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
+export function createSeedTitle(player,{austin=false,austinClear=false,austinVeteran=false,alwaysBeginner=false,alwaysClear=false,alwaysVeteran=false,johan=false,johanClear=false,johanVeteran=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
  const root=document.createElement('div');root.className='seed-victory-title';root.hidden=true;document.body.append(root);
  const world=new THREE.Vector3(),lift=new THREE.Vector3(0,1.42,0);
- let current={austin:Boolean(austin),austinClear:Boolean(austinClear),austinVeteran:Boolean(austinVeteran),alwaysBeginner:Boolean(alwaysBeginner),alwaysClear:Boolean(alwaysClear),discovered,total,badges:Array.isArray(badges)?[...badges]:[],equipped},state=titleState(current);
+ let current={austin:Boolean(austin),austinClear:Boolean(austinClear),austinVeteran:Boolean(austinVeteran),alwaysBeginner:Boolean(alwaysBeginner),alwaysClear:Boolean(alwaysClear),alwaysVeteran:Boolean(alwaysVeteran),johan:Boolean(johan),johanClear:Boolean(johanClear),johanVeteran:Boolean(johanVeteran),discovered,total,badges:Array.isArray(badges)?[...badges]:[],equipped},state=titleState(current);
  const refresh=()=>{state=titleState(current);if(root.textContent!==(state.shown||''))root.textContent=state.shown||'';};
  refresh();
  return {
@@ -28,6 +28,14 @@ export function createSeedTitle(player,{austin=false,austinClear=false,austinVet
   isAlwaysClearUnlocked(){return current.alwaysClear;},
   setAlwaysBeginnerUnlocked(value=true){current={...current,alwaysBeginner:Boolean(value)};refresh();},
   isAlwaysBeginnerUnlocked(){return current.alwaysBeginner;},
+  setAlwaysVeteranUnlocked(value=true){current={...current,alwaysVeteran:Boolean(value)};refresh();},
+  isAlwaysVeteranUnlocked(){return current.alwaysVeteran;},
+  setJohanUnlocked(value=true){current={...current,johan:Boolean(value)};refresh();},
+  isJohanUnlocked(){return current.johan;},
+  setJohanClearUnlocked(value=true){current={...current,johanClear:Boolean(value)};refresh();},
+  isJohanClearUnlocked(){return current.johanClear;},
+  setJohanVeteranUnlocked(value=true){current={...current,johanVeteran:Boolean(value)};refresh();},
+  isJohanVeteranUnlocked(){return current.johanVeteran;},
   setDiscovered(count,total=current.total){current={...current,discovered:count,total};refresh();},
   setBadges(badges){current={...current,badges:Array.isArray(badges)?[...badges]:[]};refresh();},
   setEquipped(equipped){current={...current,equipped:typeof equipped==='string'?equipped:''};refresh();},

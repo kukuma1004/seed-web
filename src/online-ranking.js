@@ -126,12 +126,12 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  // Read this account's own ended runs and their build records. A nickname is never
  // proof of ownership, so historical title credit is tied to the authenticated uid.
- async function historicalAustinWins(goal=10){
+ async function historicalBossWins(act=ACT.AUSTIN,goal=10){
   const s=await signIn();let wins=0;
   for(const season of [SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON]){
    const paths=pathsFor(season);let own;
    try{own=await read(runsURL(s,`orderBy=${encodeURIComponent('"uid"')}&equalTo=${encodeURIComponent(JSON.stringify(s.uid))}&`,paths.runs));}catch{continue;}
-   const records=Object.entries(own||{}).filter(([,run])=>run?.uid===s.uid&&runAct(run)===ACT.AUSTIN&&validRun(run));
+   const records=Object.entries(own||{}).filter(([,run])=>run?.uid===s.uid&&runAct(run)===act&&validRun(run));
    if(!records.length)continue;
    let recent={};try{recent=await read(runsURL(s,keyRange(season),paths.builds))||{};}catch{}
    for(let at=0;at<records.length&&wins<goal;at+=8){
@@ -204,5 +204,5 @@ export function createOnlineRanking({config=FIREBASE,storage=null,fetchImpl=(...
  }
  // Only the player who wrote a run may remove it (used to clean up live checks).
  async function remove(id){const s=await signIn();try{await request(`${config.databaseURL}/${BUILDS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});}catch{}await request(`${config.databaseURL}/${RUNS_PATH}/${encodeURIComponent(id)}.json?auth=${encodeURIComponent(s.idToken)}`,{method:'DELETE'});return true;}
- return {signIn,top,personalRank,historicalAustinWins,submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
+ return {signIn,top,personalRank,historicalBossWins,historicalAustinWins:(goal=10)=>historicalBossWins(ACT.AUSTIN,goal),submit,flush,flushBuilds,remove,pendingCount:()=>pending().length,pendingBuildCount:()=>pendingBuilds().length,uid:()=>session?.uid||null};
 }

@@ -10,11 +10,11 @@ import {validRunBonuses} from './run-bonuses.js';
 import {SLOT_CAP} from './progression.js';
 import {roomPoints} from './score.js';
 import {MASTERY_STEP,MASTERY_STAT_CAP} from './garden.js';
-import {ALWAYS_BEGINNER_MAX_HP,CLEAR_ALL_STATS,CODEX} from './titles.js';
+import {ALWAYS_BEGINNER_MAX_HP,ALWAYS_VETERAN_MAX_HP,CLEAR_ALL_STATS,CODEX} from './titles.js';
 
 // 정원·도감·막별 완주·첫 항상초심 칭호를 모두 합친 최대 생명력에 여유 5를 더한다.
 // 칭호로 상한이 늘어도 방 입구 저장이 무효가 되지 않도록 검증 상한과 함께 갱신한다.
-export const MAX_SAVED_HP=Math.ceil(100*(1+MASTERY_STEP*MASTERY_STAT_CAP+CODEX.maxStat+2*CLEAR_ALL_STATS))+ALWAYS_BEGINNER_MAX_HP+5;
+export const MAX_SAVED_HP=Math.ceil(100*(1+MASTERY_STEP*MASTERY_STAT_CAP+CODEX.maxStat+3*CLEAR_ALL_STATS))+ALWAYS_BEGINNER_MAX_HP+ALWAYS_VETERAN_MAX_HP+5;
 export const SAVE_KEY='seed-run-checkpoint-v1';
 export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:'야간 경기장',skyway:'폭풍의 항로'};
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));

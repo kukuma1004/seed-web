@@ -42,11 +42,13 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 // Same-UID devices share personal act records and the union of discovered forms.
 // The local top-20 board is intentionally separate: it can contain other users.
 {
- const pad=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act1',12000),austinWins:10}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism'],bosses:[]})});
- const phone=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act2',18000),austinWins:3}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism','mirrorguard'],bosses:[]})});
+ const pad=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act1',12000),austinWins:10,alwaysWins:6,johanWins:3}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism'],bosses:[]})});
+ const phone=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act2',18000),austinWins:3,alwaysWins:10,johanWins:8}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism','mirrorguard'],bosses:['johanclear']})});
  const merged=mergeCloudSnapshots(collectCloudSnapshot(pad),collectCloudSnapshot(phone));
  assert.deepEqual(merged.account.bestScores,{act1:12000,act2:18000,act3:0});
  assert.equal(merged.account.austinWins,10,'a phone with fewer Austin wins cannot erase the cumulative title');
+ assert.equal(merged.account.alwaysWins,10);assert.equal(merged.account.johanWins,8);
+ assert.ok(merged.discoveries.bosses.includes('johanclear'));
  assert.ok(merged.discoveries.forms.includes('prism'));
  assert.ok(merged.discoveries.forms.includes('mirrorguard'));
  applyCloudSnapshot(pad,merged);

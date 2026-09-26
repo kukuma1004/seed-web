@@ -25,8 +25,8 @@ assert.equal(validCheckpoint({...s,banked:6}),true);assert.equal(validCheckpoint
 // 2026-09-22 신고: 칭호·정원 생명력 강화로 최대 생명력이 110을 넘으면 방 입구 저장이 무효가 되어 '저장하고 나가기'가 멈췄다.
 // 저장 상한은 실제로 오를 수 있는 최대 생명력(정원 +5%, 칭호 +20)보다 커야 한다.
 {
-  const {MAX_SAVED_HP}=await import('../src/run-save.js'),{MASTERY_STEP,MASTERY_STAT_CAP}=await import('../src/garden.js'),{ALWAYS_BEGINNER_MAX_HP,CLEAR_ALL_STATS,CODEX}=await import('../src/titles.js');
-  const reachable=100*(1+MASTERY_STEP*MASTERY_STAT_CAP+CODEX.maxStat+2*CLEAR_ALL_STATS)+ALWAYS_BEGINNER_MAX_HP;
+  const {MAX_SAVED_HP}=await import('../src/run-save.js'),{MASTERY_STEP,MASTERY_STAT_CAP}=await import('../src/garden.js'),{ALWAYS_BEGINNER_MAX_HP,ALWAYS_VETERAN_MAX_HP,CLEAR_ALL_STATS,CODEX}=await import('../src/titles.js');
+  const reachable=100*(1+MASTERY_STEP*MASTERY_STAT_CAP+CODEX.maxStat+3*CLEAR_ALL_STATS)+ALWAYS_BEGINNER_MAX_HP+ALWAYS_VETERAN_MAX_HP;
   assert.ok(MAX_SAVED_HP>=reachable,`저장 상한 ${MAX_SAVED_HP}이 실제 최대 생명력 ${reachable}보다 작다`);
   for(const hp of [110.1,111,120,reachable])assert.equal(validCheckpoint({...s,hp}),true,`생명력 ${hp} 저장`);
   assert.equal(validCheckpoint({...s,hp:MAX_SAVED_HP+1}),false,'말이 안 되는 생명력은 여전히 거절');
