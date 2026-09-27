@@ -1,6 +1,5 @@
 import * as THREE from 'three';
 import {SURVIVAL_BASES} from './survival-rules.js';
-import {FLOOR_ATLAS_FILE,floorSlabVariant,floorSlabUV} from './floor-art.js';
 
 const KINDS=['swarm','runner','brute'];
 const FILES=['enemy-hound-v4.webp','enemy-runner-v1.webp','enemy-shield-v4.webp'];
@@ -9,6 +8,7 @@ const SIZES=[.78,.86,1.28];
 const DEFEAT_LIMIT=24,FLECK_LIMIT=96;
 const SPEEDS=[10,15,6];
 const FRAME_CELLS=[[0,1],[1,1],[0,0],[1,0]];
+const GARDEN_SURFACE='survival-garden-paving-v1.webp';
 
 // This entire renderer is visual only. The garden's landmarks sit beyond the
 // playable rectangle; neither floor variation nor decorations create obstacles.
@@ -38,24 +38,37 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
 
  const earth=mesh(new THREE.PlaneGeometry(halfWidth*2+24,halfDepth*2+24),new THREE.MeshBasicMaterial({color:0x172d25,toneMapped:false}),'survival-garden-earth');
  earth.rotation.x=-Math.PI/2;earth.position.y=-.08;
- // One merged floor. Borrow the existing irregular stone texture when supplied;
- // never dispose or modify shared texture state. No per-frame surface work.
+ // One baked painterly surface: cracks, moss, flowers and shallow lighting are
+ // part of the same draw. Mobile reads a 768px derivative, never the source art.
+ // The supplied journey texture is untouched; this map belongs to this mode.
+ const paintedGarden=texture(GARDEN_SURFACE,mobile?'mobile/':'');
+ paintedGarden.wrapS=paintedGarden.wrapT=THREE.RepeatWrapping;
+ const shadedStone=new THREE.Color(.76,.83,.84),sunlitStone=new THREE.Color(1,.97,.82);
  const vertices=[],uvs=[],colors=[],indices=[];
  const nx=Math.ceil(halfWidth*2/1.85),nz=Math.ceil(halfDepth*2/1.85),dx=halfWidth*2/nx,dz=halfDepth*2/nz;
  for(let x=0;x<nx;x++)for(let z=0;z<nz;z++){
-  const x0=-halfWidth+x*dx,z0=-halfDepth+z*dz,variant=floorSlabVariant(x,z),start=vertices.length/3;
-  const edge=Math.max(Math.abs((x+.5)/nx*2-1),Math.abs((z+.5)/nz*2-1));
+  const x0=-halfWidth+x*dx,z0=-halfDepth+z*dz,start=vertices.length/3;
   vertices.push(x0,0,z0+dz,x0+dx,0,z0+dz,x0,0,z0,x0+dx,0,z0);
   for(const [u,v] of [[0,0],[1,0],[0,1],[1,1]]){
    const wx=x0+u*dx,wz=z0+(1-v)*dz,path=Math.min(Math.abs(wx-Math.sin(wz*.15)*3),Math.abs(wz-Math.sin(wx*.13)*4));
-   const pathBlend=Math.max(0,1-path/3.5),shade=.83+.06*Math.sin(wx*.45+wz*.37);
-   color.setHex(0x718a76).lerp(new THREE.Color(0xc4bc9b),pathBlend).multiplyScalar(shade*(1-edge*.15));
-   if(groundTexture)uvs.push(wx*.65,wz*.65);else uvs.push(...floorSlabUV(variant,u,v));colors.push(color.r,color.g,color.b);
+   // Large stone shapes leave visual space between the small combat actors.
+   // Broad baked illumination replaces an evenly bright carpet. Calculate at
+   // the vertex (not the tile centre) so neighbouring quads have no seams.
+   const edge=Math.max(Math.abs(wx/halfWidth),Math.abs(wz/halfDepth));
+   const pathBlend=Math.max(0,1-path/3.5);
+   const sun=Math.exp(-((wx+5)*(wx+5)/110+(wz+4)*(wz+4)/180));
+   // Wide canopy shadows interrupt the repeating garden without covering
+   // enemies with an overlay. Baked once into the existing vertex colors;
+   // both edges of every floor quad sample the same world-space value.
+   const canopy=Math.max(0,Math.sin(wx*.29+wz*.19+.8))*Math.max(0,Math.sin(wz*.37-wx*.11));
+   const shade=(.78+.13*sun+.025*Math.sin(wx*.23+wz*.17)-canopy*.11*(1-sun*.55))*(1-edge*.12);
+   color.copy(shadedStone).lerp(sunlitStone,pathBlend*.24+sun*.28).multiplyScalar(shade);
+   uvs.push(wx/18,wz/18);colors.push(color.r,color.g,color.b);
   }
   indices.push(start,start+1,start+2,start+2,start+1,start+3);
  }
  const floorGeometry=new THREE.BufferGeometry();floorGeometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));floorGeometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));floorGeometry.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));floorGeometry.setIndex(indices);floorGeometry.computeBoundingSphere();
- const floor=mesh(floorGeometry,new THREE.MeshBasicMaterial({map:groundTexture||texture(FLOOR_ATLAS_FILE),vertexColors:true,toneMapped:false}),'survival-garden-floor');
+ const floor=mesh(floorGeometry,new THREE.MeshBasicMaterial({map:paintedGarden,vertexColors:true,toneMapped:false}),'survival-garden-floor');
 
  // Irregular soft moss islands break the tile grid; alpha fades into the stone.
  const mossVertices=[],mossColors=[],mossIndices=[];
@@ -71,7 +84,8 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   }
  }
  const mossGeometry=new THREE.BufferGeometry();mossGeometry.setAttribute('position',new THREE.Float32BufferAttribute(mossVertices,3));mossGeometry.setAttribute('color',new THREE.Float32BufferAttribute(mossColors,4));mossGeometry.setIndex(mossIndices);mossGeometry.computeBoundingSphere();
- mesh(mossGeometry,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,toneMapped:false}),'survival-garden-moss');
+ const moss=mesh(mossGeometry,new THREE.MeshBasicMaterial({vertexColors:true,transparent:true,depthWrite:false,toneMapped:false}),'survival-garden-moss');
+ moss.visible=false;
  // Low, worn edging makes the movement limit legible without enclosing the
  // camera in high walls. All masonry and foliage are outside that limit.
  const stoneGeometry=geometry(new THREE.BoxGeometry(1,1,1)),stoneMaterial=material(new THREE.MeshBasicMaterial({color:0x687b62,toneMapped:false}));
@@ -117,6 +131,8 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  }
  undergrowth.instanceMatrix.needsUpdate=true;
  if(undergrowth.instanceColor)undergrowth.instanceColor.needsUpdate=true;
+ // Baked foliage is clearer and costs no alpha overdraw in the playable area.
+ undergrowth.visible=false;
  // Sparse resting seed petals: a quiet golden navigation landmark, no light.
  const flecks=batch(petalGeometry,material(new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,toneMapped:false})),FLECK_LIMIT,'survival-defeat-petals');
  flecks.setColorAt(0,color.setHex(0xffffff));flecks.instanceColor.setUsage(THREE.DynamicDrawUsage);
@@ -164,7 +180,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   }
   uv.needsUpdate=true;c.needsUpdate=true;floor.material.needsUpdate=true;
   earth.material.color.setHex(act===2?0x0b1d2b:act===1?0x20271d:0x172d25);
-  for(const obj of [root.getObjectByName('survival-garden-moss'),leaves,undergrowth])obj.visible=act===0;
+  leaves.visible=act===0;moss.visible=false;undergrowth.visible=false;
   rocks.visible=act!==2;edging.visible=act!==2;diamond.visible=bases.visible=act===1;
   for(let k=0;k<3;k++)for(let direction=0;direction<4;direction++){
    const b=bodies[k*4+direction];b.material.map=texture(ACT_FILES[act][k]);b.material.needsUpdate=true;
@@ -226,7 +242,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   d.direction=Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3;
  }
  function setActive(active){if(disposed)return;root.visible=Boolean(active);if(!root.visible){clear();flecks.count=0;for(const d of defeats)d.active=false;}}
- function state(){return {act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?7:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size+Number(Boolean(groundTexture)),sharedGround:Boolean(groundTexture),actorTextureSize:512,mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
+ function state(){return {act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?5:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:GARDEN_SURFACE,groundTextureSize:mobile?768:1024,actorTextureSize:512,mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
  function dispose(){if(disposed)return;setActive(false);disposed=true;root.removeFromParent();for(const b of bodies)b.dispose();for(const b of [edging,leaves,rocks,shadows,undergrowth,flecks,bases])b.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  return {setAct,setActive,update,defeat,state,dispose};
 }

@@ -30,3 +30,18 @@ body.survival-mode.survival-result :is(#status,#rules,#boss-hud,#encounter,#scor
 body:has(#survival-ranking-list) #app-actions{display:none}
 #overlay.survival-overlay.intro .survival-ranking-panel{background:#0c211ff7!important;border:1px solid #9bbd7d55}
 .survival-ranking-panel .survival-actions button{border-radius:9px;background:#213d32;color:#e8efd6;border:1px solid #b8c99580}
+/* Readable over detailed paving; scoped to survival so journey stays intact. */
+body.survival-mode:after{box-shadow:inset 0 0 100px 16px #020c1240}
+.survival-mode #encounter{color:#e3e8d8;text-shadow:0 2px 4px #04100e,0 0 12px #04100e}
+.survival-mode #evolution{color:#f1f4e4;background:linear-gradient(90deg,#07171300,#071713ed 18%,#071713ed 82%,#07171300);text-shadow:0 2px 3px #0008}
+.survival-mode #evolution small{color:#d0ddcc}.survival-mode #evolution span{color:#e0e9da}
+.survival-mode :is(#form-label,#growth-progress,#help){text-shadow:0 2px 4px #03100d,0 0 10px #03100d}
+.survival-mode #rules em{border-color:#c5cba380;box-shadow:0 3px 10px #0008}
+/* Quiet edge lighting and compact ink panels retain legibility in a full wave.
+   Static gradients only: no blur, filters, extra canvas or animation layer. */
+body.survival-mode:after{background:linear-gradient(180deg,#04110f38,transparent 29%,transparent 70%,#04110f30);box-shadow:inset 0 0 100px 16px #020c1252}
+.survival-mode #encounter{padding:5px 12px;border-radius:3px;background:linear-gradient(90deg,#07171300,#071713ab 15%,#071713ab 85%,#07171300)}
+body.survival-mode #growth-progress div{border-color:#d4d9b396;background:#07130ff0;box-shadow:0 1px 5px #0008}
+body.survival-mode #growth-progress i{background:linear-gradient(90deg,#6dba99,#d1d995)}
+.survival-mode #overhead .oh-hp{border-color:#e0edba;box-shadow:0 1px 4px #000,0 0 0 1px #10221dcc}
+body.phone-landscape.survival-mode #encounter{padding:3px 6px;background:#071713b8}

@@ -11,6 +11,19 @@ try{
  const root=scene.getObjectByName('survival-garden-art');
  assert.equal(root.visible,false);assert.equal(art.update([],0),0);
  assert.equal(loaded.length,4);assert(loaded.every(t=>t.userData.url.startsWith('/seed/assets/mobile/')));
+ const floor=root.getObjectByName('survival-garden-floor'),surface=floor.material.map;
+ assert.match(surface.userData.url,/mobile\/survival-garden-paving-v1.webp$/);
+ assert.equal(art.state().groundTextureSize,768);
+ const originalFloorUv=Array.from(floor.geometry.attributes.uv.array),originalFloorColors=Array.from(floor.geometry.attributes.color.array);
+ const positionAttribute=floor.geometry.attributes.position,colorAttribute=floor.geometry.attributes.color,joins=new Map();
+ for(let i=0;i<positionAttribute.count;i++){
+  const key=[positionAttribute.getX(i).toFixed(4),positionAttribute.getZ(i).toFixed(4)].join(',');
+  const rgb=[colorAttribute.getX(i),colorAttribute.getY(i),colorAttribute.getZ(i)];
+  assert(rgb.every(Number.isFinite),'ground shades finite');
+  if(joins.has(key))assert(rgb.every((v,j)=>Math.abs(v-joins.get(key)[j])<1e-6),'shared slab vertices have seamless lighting');
+  joins.set(key,rgb);
+ }
+
  const make=(kind,x,facing=0)=>{const g=new THREE.Group();g.position.set(x,0,0);g.rotation.y=facing;return {survivalKind:kind,g,hit:0,phase:1,radius:.3};};
  const enemies=[make('swarm',0),make('runner',1,Math.PI/2),make('brute',2,Math.PI)];
  art.setActive(true);assert.equal(art.update(enemies,1),3);assert.equal(art.state().bodyBatches,3);
@@ -40,16 +53,16 @@ try{
  assert.equal(loaded.length,texturePeak,'texture cache bounded across acts and laps');
  assert.equal(new Set(root.children.map(o=>o.geometry)).size,geometryPeak);assert.equal(new Set(root.children.map(o=>o.material)).size,materialPeak);
  assert.equal(art.state().maxBodyBatches,12);assert.equal(art.state().capacity,3);
- art.setAct(0);art.setActive(false);
+ art.setAct(0);assert.equal(floor.material.map,surface);assert.deepEqual(Array.from(floor.geometry.attributes.uv.array),originalFloorUv);assert.deepEqual(Array.from(floor.geometry.attributes.color.array),originalFloorColors);art.setActive(false);
  const resources=new Set();root.traverse(o=>{if(o.geometry)resources.add(o.geometry);if(o.material)resources.add(o.material);});for(const t of loaded)resources.add(t);
  const disposed=new Map();for(const resource of resources)resource.addEventListener('dispose',()=>disposed.set(resource,(disposed.get(resource)||0)+1));
  art.dispose();art.dispose();assert.deepEqual(scene.children,[existing]);assert.equal(art.state().disposed,true);
  for(const resource of resources)assert.equal(disposed.get(resource),1,'Each unique owned geometry, material and texture is released once.');
  assert.equal(art.update(enemies,6),0);art.setActive(true);assert.equal(art.state().active,false);
- // The live floor borrows the already resident texture; it must survive disposal.
+ // The dedicated floor owns its map; supplied shared journey texture must survive disposal.
  const shared=new THREE.Texture();let sharedDisposals=0;shared.addEventListener('dispose',()=>sharedDisposals++);
  const n=loaded.length,borrowed=createSurvivalArt(scene,camera,{groundTexture:shared});
- assert.equal(loaded.length-n,3);assert.equal(borrowed.state().sharedGround,true);
+ assert.equal(loaded.length-n,4);assert.equal(borrowed.state().sharedGround,false);
  borrowed.dispose();assert.equal(sharedDisposals,0);shared.dispose();
  console.log('Survival garden: fixed 12 body batches, bounded population, pooled transforms, hit tint, lifecycle and resource disposal passed.');
 }finally{THREE.TextureLoader.prototype.load=originalLoad;}
