@@ -19,6 +19,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{}}={})
  const lightStamps={};for(const [name,color] of Object.entries({moon:'116,165,221',warm:'255,178,80',seed:'168,228,211',spell:'183,219,255'})){const c=document.createElement('canvas');c.width=c.height=128;const g=c.getContext('2d'),r=g.createRadialGradient(64,64,0,64,64,64);r.addColorStop(0,`rgba(${color},.24)`);r.addColorStop(.4,`rgba(${color},.10)`);r.addColorStop(1,`rgba(${color},0)`);g.fillStyle=r;g.fillRect(0,0,128,128);lightStamps[name]=c;}
  let s=createAdventure(Date.now()),closed=false,paused=false,raf=0,last=0,deadline=0,width=1,height=1,scale=1,ox=0,oy=0,modalKey='',hudAt=0,pointerAttack=false,mouse=null,moving=false;
  const move={x:0,y:0},aim={x:1,y:0},stickPointers=new Map();
+ let cameraX=12,cameraY=9,cameraRoom=-1;
  const listen=(target,name,fn,options)=>{target.addEventListener(name,fn,options);listeners.push(()=>target.removeEventListener(name,fn,options));};
  const load=(key,path)=>{const im=new Image();assets[key]=im;im.onload=()=>{if(!closed)draw();};im.src=BASE+'assets/'+path;};
  load('floor','adventure/moon-garden-v1.webp');load('seed','cute/seed-body-v1.webp');load('hound','cute/enemy-hound-v4.webp');load('caster','cute/enemy-caster-v4.webp');load('shield','cute/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
@@ -30,12 +31,21 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{}}={})
  function restart(){s=createAdventure(Date.now());paused=false;modalKey='';resetInput();syncModal();syncHud();draw();}
  function point(x,y){return {x:ox+x*scale,y:oy+y*scale};}
  function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;const dpr=Math.min(window.devicePixelRatio||1,1.5);canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);scale=Math.max(width/28,height/20);vignette=ctx.createRadialGradient(width/2,height/2,height*.2,width/2,height/2,Math.max(width,height)*.65);vignette.addColorStop(0,'#07101800');vignette.addColorStop(1,'#02090eb0');camera();draw();}
- function camera(){const landscape=width>height;scale=landscape?Math.min(width/25,height/16.5):width/17;const visibleX=width/scale,visibleY=height/scale;const cx=landscape?12:Math.max(visibleX/2-1,Math.min(25-visibleX/2,s.player.x));const cy=landscape?8:Math.max(visibleY/2-1,Math.min(17-visibleY/2,s.player.y));ox=width/2-cx*scale;oy=height/2-cy*scale;}
+ function camera(dt=0){
+  // Frame the combat around the seed instead of shrinking the whole room to fit.
+  scale=width>height?Math.min(width/18,height/11.5):width/12.5;
+  const visibleX=width/scale,visibleY=height/scale;
+  const bound=(v,span,min,max)=>span>=max-min?(min+max)/2:Math.max(min+span/2,Math.min(max-span/2,v));
+  const targetX=bound(s.player.x,visibleX,-3,27),targetY=bound(s.player.y-1,visibleY,-3,18);
+  if(!dt||cameraRoom!==s.room){cameraX=targetX;cameraY=targetY;cameraRoom=s.room;}
+  else{const blend=1-Math.exp(-10*dt);cameraX+=(targetX-cameraX)*blend;cameraY+=(targetY-cameraY)*blend;}
+  ox=width/2-cameraX*scale;oy=height/2-cameraY*scale;
+ }
  function sound(){for(const event of s.events)audio?.play(event);s.events.length=0;}
  function loop(now){raf=0;if(closed||document.hidden||paused)return;raf=requestAnimationFrame(loop);if(!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;if(s.phase==='playing'){
  let x=move.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=move.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);moving=Boolean(x||y);if(mouse){aim.x=(mouse.x-ox)/scale-s.player.x;aim.y=(mouse.y-oy)/scale-s.player.y;}else if(moving&&!pointerAttack){aim.x=x;aim.y=y;}
  stepAdventure(s,dt,{x,y,aimX:aim.x,aimY:aim.y,attack:pointerAttack||keys.has('KeyJ')});sound();audio?.tick(dt);
- }camera();draw();if(now-hudAt>80){hudAt=now;syncHud();}syncModal();}
+ }camera(dt);draw();if(now-hudAt>80){hudAt=now;syncHud();}syncModal();}
  function setText(sel,text){const e=$(sel);if(e.textContent!==text)e.textContent=text;}
  function syncHud(){const p=s.player;setText('.sa-route b',ROOMS[s.room]);setText('.sa-route span',`${s.room+1} / ${ROOMS.length} · ${Math.floor(s.time/60)}:${String(Math.floor(s.time%60)).padStart(2,'0')}`);setText('.sa-level',`Lv.${s.level} 작은 씨앗`);$('.sa-health i').style.width=p.hp/p.maxHp*100+'%';setText('.sa-health span',`${Math.ceil(p.hp)} / ${p.maxHp}`);$('.sa-charge i').style.width=s.charge+'%';$('.sa-ultimate').classList.toggle('ready',s.charge>=100);$('.sa-ultimate small').textContent=s.charge>=100?'궁극기 · F':`궁극기 ${Math.floor(s.charge)}%`;$('.sa-dodge').classList.toggle('cooldown',p.dash>0);$('.sa-dodge small').textContent=p.dash>0?`${p.dash.toFixed(1)}초`:'회피 · Space';$('.sa-aim i').textContent=symbols[s.weapon];const modes=availableAttacks(s.shapes),next=modes[(modes.indexOf(s.weapon)+1)%modes.length];$('.sa-weapon').hidden=modes.length<2;$('.sa-weapon').firstChild.textContent=symbols[next]||'✣';$('.sa-weapon small').textContent=next?ATTACK_SHAPES[next].name+' · Q':'';
 
