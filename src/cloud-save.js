@@ -1,3 +1,4 @@
+import {mergeBossRuns} from './boss-title-ledger.js';
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
 import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS,MASTERY_KEYS,MAX_RECORDS} from './garden.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
@@ -101,7 +102,7 @@ export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={})
   checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2),act3:newerCheckpoint(local.checkpoints.act3,remote.checkpoints.act3,winner.checkpoints.act3)},
   mirror:{checkpoint:newerCheckpoint(local.mirror.checkpoint,remote.mirror.checkpoint,winner.mirror.checkpoint),record:{bestFloor:Math.max(local.mirror.record.bestFloor,remote.mirror.record.bestFloor),clears:Math.max(local.mirror.record.clears,remote.mirror.record.clears),perfectDodges:Math.max(local.mirror.record.perfectDodges,remote.mirror.record.perfectDodges)}},
   discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
-  account:{...winner.account,badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt),bestScores:mergeBestScores(local.account.bestScores,remote.account.bestScores),austinWins:Math.max(local.account.austinWins,remote.account.austinWins),alwaysWins:Math.max(local.account.alwaysWins,remote.account.alwaysWins),johanWins:Math.max(local.account.johanWins,remote.account.johanWins)},
+  account:{...winner.account,bossRuns:mergeBossRuns(local.account.bossRuns,remote.account.bossRuns),badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt),bestScores:mergeBestScores(local.account.bestScores,remote.account.bestScores),austinWins:Math.max(local.account.austinWins,remote.account.austinWins),alwaysWins:Math.max(local.account.alwaysWins,remote.account.alwaysWins),johanWins:Math.max(local.account.johanWins,remote.account.johanWins)},
   bossPet:local.bossPet.updatedAt===remote.bossPet.updatedAt?winner.bossPet:local.bossPet.updatedAt>remote.bossPet.updatedAt?local.bossPet:remote.bossPet
  });
 }

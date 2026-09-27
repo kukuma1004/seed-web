@@ -2,7 +2,7 @@ import {DEFENSE_FORMS,FUSIONS,defenseFusionOf,defenseFormKind,defenseRankTotal,d
 export {FUSIONS,getDefenseEvolutionOptions};
 export {DEFENSE_CATALOG,DEFENSE_FORMS,DEFENSE_CATALOG_COUNTS,defenseDamageMultiplier} from './seed-defense-catalog.js';
 // Renderer-independent, seeded tower defence. All distances are garden units.
-export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,plantCost:30});
+export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:1.5,plantCost:30});
 export const PATH = Object.freeze([{x:-4,y:12},{x:76,y:12},{x:76,y:30},{x:24,y:30},{x:24,y:48},{x:104,y:48}].map(Object.freeze));
 export const PADS = Object.freeze([{x:18,y:21},{x:42,y:21},{x:63,y:21},{x:85,y:25},{x:14,y:39},{x:37,y:39},{x:59,y:39},{x:82,y:40}].map(Object.freeze));
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
@@ -25,7 +25,7 @@ const canBuild=s=>s.phase==='build'||s.phase==='draft';
 const matchFusion=defenseFusionOf;
 function random(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/4294967296;}
 export function defensePoint(progress){let p=clamp(progress,0,DEFENSE_PATH_LENGTH);for(let i=0;i<SEGMENTS.length;i++){if(p<=SEGMENTS[i]){const t=p/SEGMENTS[i];return {x:PATH[i].x+(PATH[i+1].x-PATH[i].x)*t,y:PATH[i].y+(PATH[i+1].y-PATH[i].y)*t};}p-=SEGMENTS[i];}return {...PATH.at(-1)};}
-export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:3,pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:80,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:1,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'씨앗을 심고 첫 법칙을 선택하세요.'};s.offers=getDefenseOffers(s);return s;}
+export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:4,runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:80,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:1,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'씨앗을 심고 첫 법칙을 선택하세요.'};s.offers=getDefenseOffers(s);return s;}
 export function defenseUpgradeCost(t){return t&&t.level<5?25+t.level*15:Infinity;}
 export function defenseTowerName(t){return !t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗';}
 export function defenseTowerStats(t){
@@ -69,12 +69,27 @@ export function evolveDefense(s,towerId,formId){
  if(!t||!getDefenseEvolutionOptions(t).some(f=>f.id===formId))return false;
  t.formId=formId;t.shotTime=0;s.lastEvent=`${defenseTowerName(t)} 진화 완성`;return true;
 }
-export function defenseWaveInfo(wave){const w=clamp(Math.floor(wave)||1,1,12);return {wave:w,count:9+w*3+(w%4===0?1:0),boss:w%4===0,interval:Math.max(.27,.76-w*.035),hp:27+w*7+w*w*2.7,title:w%4===0?`${w/4}번째 문지기`:["첫 침입","달리는 그림자","방패 행렬"][(w-1)%3],desc:w%4===0?'문지기는 생명력이 높고 후반 경로에서 핵을 향해 탄을 쏩니다.':w>=3?'빠른 적과 방패 적이 섞여 옵니다. 관통은 방패를 무시합니다.':'경로를 따라오는 무리를 씨앗으로 막으세요.'};}
-export function startDefenseWave(s){if(s.phase!=='build'||s.draftCredit||s.wave>=12)return false;s.wave++;s.phase='wave';s.spawned=0;s.spawnTimer=.4;s.waveTime=0;s.shots.length=0;s.fields.length=0;for(const t of s.towers){t.shotTime=0;t.mirrorTime=0;}s.lastEvent=`${s.wave} / 12 웨이브`;return true;}
+export const DEFENSE_ACTS=Object.freeze([
+ Object.freeze({name:'잠든 정원',boss:'오스틴',id:'austin'}),
+ Object.freeze({name:'별빛 야구장',boss:'항상초심',id:'alwaysbeginner'}),
+ Object.freeze({name:'폭풍 항로',boss:'요한',id:'tempestcarrier'})
+]);
+export function defenseWaveInfo(wave){
+ const w=Math.max(1,Math.floor(Number.isFinite(wave)?wave:1)),localWave=(w-1)%12+1,act=Math.floor((w-1)/12)%3,lap=Math.floor((w-1)/36),tier=act+lap*3,boss=localWave%4===0,final=localWave===12;
+ // Pressure rises continuously at act boundaries. Crowd, speed and shot counts
+ // stay capped; later loops primarily demand stronger placement and builds.
+ const stage=Math.min(36,w),hp=(27+stage*7+stage*stage*2.7)*(1+Math.max(0,w-36)*.055);
+ return {wave:w,localWave,act,lap,final,boss,bossId:final?DEFENSE_ACTS[act].id:null,
+  count:Math.min(90,9+localWave*3+tier*8)+(boss?1:0),interval:Math.max(.16,.76-localWave*.035-tier*.055),hp,
+  bossHp:final?7500*(1+tier*.75):(27+localWave*7+localWave*localWave*2.7)*15*(1+tier*.5),
+  speed:Math.min(14,7.5+w*.2),title:final?DEFENSE_ACTS[act].boss:boss?`${act+1}막 ${localWave/4}번째 문지기`:['첫 침입','달리는 그림자','방패 행렬'][(localWave-1)%3],
+  desc:final?`${DEFENSE_ACTS[act].boss}를 쓰러뜨리면 공통 칭호 격파 수에 반영돼요. 같은 보스를 한 판에서 세 번 이기면 완주 칭호를 받아요.`:boss?'문지기는 후반 경로에서 정원의 심장을 공격해요.':'빠른 적과 방패 적을 막으세요. 관통은 방패를 무시해요.'};
+}
+export function startDefenseWave(s){if(s.phase!=='build'||s.draftCredit)return false;s.wave++;s.phase='wave';s.spawned=0;s.spawnTimer=.2;s.waveTime=0;s.shots.length=0;s.fields.length=0;for(const t of s.towers){t.shotTime=0;t.mirrorTime=0;}const info=defenseWaveInfo(s.wave);s.lastEvent=`${info.lap+1}순환 · ${info.act+1}막 ${info.localWave}/12 · ${info.title}`;return true;}
 function effect(s,kind,x,y,color,extra={}){if(s.effects.length>=DEFENSE.maxEffects)return;s.effects.push({kind,x,y,tx:x,ty:y,color,life:.35,maxLife:.35,...extra});}
 function compact(a,predicate){let write=0;for(let i=0;i<a.length;i++)if(predicate(a[i]))a[write++]=a[i];a.length=write;}
 function slow(s,e,strength=.5,duration=1.6){e.slow=Math.min(e.slow||1,e.kind==='boss'?Math.max(.72,strength):strength);e.slowTime=Math.max(e.slowTime||0,duration);s.stats.slows++;}
-function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;s.currency+=e.kind==='boss'?28:e.kind==='shield'?5:3;effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
+function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;if(e.bossId&&Object.hasOwn(s.bossWins,e.bossId)){const ordinal=++s.bossWins[e.bossId];s.pendingBosses.push({boss:e.bossId,ordinal,wave:s.wave});}s.currency+=e.kind==='boss'?28:e.kind==='shield'?5:3;effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
 function nearest(s,p,range,skip){let best=null,d=range*range;for(const e of s.enemies){if(e.hp<=0||skip?.includes(e.id))continue;const d2=dist2(e,p);if(d2<d){d=d2;best=e;}}return best;}
 function front(s,p,range,skip){let best=null;for(const e of s.enemies)if(e.hp>0&&dist2(p,e)<=range*range&&!skip?.includes(e.id)&&(!best||e.progress>best.progress))best=e;return best;}
 function chain(s,from,damage,count,icy=false,skip=[]){let prev=from;const hit=[...skip,from.id];if(icy)slow(s,from);for(let i=0;i<count;i++){const next=nearest(s,prev,12,hit);if(!next)break;effect(s,'chain',prev.x,prev.y,icy?'#8ce9ff':'#ffdd78',{tx:next.x,ty:next.y});hurt(s,next,damage,true);if(icy)slow(s,next);s.stats.chains++;hit.push(next.id);prev=next;}}
@@ -111,12 +126,12 @@ function moveShots(s,dt){const count=s.shots.length;for(let i=0;i<count;i++){con
  }
  if(q.x<-15||q.x>115||q.y<-15||q.y>75)q.life=0;
 }compact(s.shots,q=>q.life>0);}
-function spawn(s,info){const index=s.spawned++,boss=info.boss&&index===info.count-1,r=random(s),kind=boss?'boss':s.wave>=3&&index%5===3?'shield':s.wave>=2&&index%4===1?'fast':s.wave>=6&&index%7===0?'resilient':'normal';const hp=info.hp*(boss?15:kind==='shield'?1.5:kind==='resilient'?2:kind==='fast'?.65:1);const speed=(7.5+s.wave*.2)*(boss?.68:kind==='fast'?1.65:kind==='resilient'?.8:1);s.enemies.push({id:s.nextId++,x:PATH[0].x,y:PATH[0].y,progress:0,hp,maxHp:hp,kind,speed:speed*(.97+r*.06),slow:1,slowTime:0,attackTime:4,leakDamage:boss?5:kind==='resilient'?2:1});}
+function spawn(s,info){const index=s.spawned++,boss=info.boss&&index===info.count-1,r=random(s),kind=boss?'boss':s.wave>=3&&index%5===3?'shield':s.wave>=2&&index%4===1?'fast':s.wave>=6&&index%7===0?'resilient':'normal';const hp=(boss?info.bossHp:info.hp)*(boss?1:kind==='shield'?1.5:kind==='resilient'?2:kind==='fast'?.65:1);const speed=(info.speed)*(boss?.68:kind==='fast'?1.65:kind==='resilient'?.8:1);s.enemies.push({id:s.nextId++,x:PATH[0].x,y:PATH[0].y,progress:0,hp,maxHp:hp,kind,bossId:boss?info.bossId:null,act:info.act,speed:speed*(.97+r*.06),slow:1,slowTime:0,attackTime:4,leakDamage:boss?5:kind==='resilient'?2:1});}
 function tick(s,dt,combat){s.time+=dt;for(const e of s.effects)e.life-=dt;compact(s.effects,e=>e.life>0);if(s.phase!=='wave')return;
  s.waveTime+=dt;const info=defenseWaveInfo(s.wave);s.spawnTimer-=dt;
  if(s.spawned<info.count&&s.spawnTimer<=0&&s.enemies.length<DEFENSE.maxEnemies){spawn(s,info);s.spawnTimer+=info.interval;}
- for(const e of s.enemies){if(e.hp<=0)continue;e.pullThisTick=0;e.slowTime=Math.max(0,e.slowTime-dt);if(!e.slowTime)e.slow=1;e.progress+=e.speed*e.slow*dt;Object.assign(e,defensePoint(e.progress));
-  if(e.kind==='boss'&&e.progress>DEFENSE_PATH_LENGTH*.72){e.attackTime-=dt;if(e.attackTime<=0&&s.shots.length<DEFENSE.maxShots){e.attackTime=5;s.shots.push({id:s.nextId++,x:e.x,y:e.y,tx:104,ty:48,vx:0,vy:0,speed:17,life:12,age:0,law:'hostile',damage:1,hit:[],ownerId:e.id});effect(s,'warning',e.x,e.y,'#ff6677',{radius:5,life:.7,maxLife:.7});}}
+ for(const e of s.enemies){if(e.hp<=0)continue;e.pullThisTick=0;e.slowTime=Math.max(0,e.slowTime-dt);if(!e.slowTime)e.slow=1;const rush=e.bossId==='austin'&&e.hp<e.maxHp*.4?1.22:e.bossId==='alwaysbeginner'&&s.waveTime%6<1.4?1.4:1;e.progress+=e.speed*e.slow*rush*dt;Object.assign(e,defensePoint(e.progress));
+  if(e.kind==='boss'&&e.progress>DEFENSE_PATH_LENGTH*.72){e.attackTime-=dt;if(e.attackTime<=0&&s.shots.length<DEFENSE.maxShots){e.attackTime=e.bossId==='tempestcarrier'?3:e.bossId==='alwaysbeginner'?4:5;s.shots.push({id:s.nextId++,x:e.x,y:e.y,tx:104,ty:48,vx:0,vy:0,speed:17,life:12,age:0,law:'hostile',damage:1,hit:[],ownerId:e.id});effect(s,'warning',e.x,e.y,'#ff6677',{radius:5,life:.7,maxLife:.7});}}
   if(e.progress>=DEFENSE_PATH_LENGTH){s.coreHp=Math.max(0,s.coreHp-e.leakDamage);s.leaked++;e.hp=0;effect(s,'core',100,48,'#ff6677',{radius:5});}
  }
  for(const f of s.fields){f.life-=dt;f.tick-=dt;for(const e of s.enemies){if(e.hp<=0||dist2(e,f)>f.radius**2)continue;if(f.kind==='web'){slow(s,e,.5,.3);if(f.tick<=0)hurt(s,e,f.damage*.12,true);}else{slow(s,e,.7,.25);const allowance=dt*(e.kind==='boss'?1.5:Math.min(5,e.speed*.3)),pull=Math.max(0,allowance-(e.pullThisTick||0));e.pullThisTick=(e.pullThisTick||0)+pull;e.progress=Math.max(0,e.progress-pull);Object.assign(e,defensePoint(e.progress));s.stats.pulls++;}}if(f.tick<=0)f.tick=.3;if(f.life<=0&&f.kind==='collapse')blast(s,f,f.damage*2.1,9,'gravity');}
@@ -125,28 +140,31 @@ function tick(s,dt,combat){s.time+=dt;for(const e of s.effects)e.life-=dt;compac
  combat?.update(dt);
  moveShots(s,dt);compact(s.enemies,e=>e.hp>0);
  if(s.coreHp<=0){s.phase='lost';s.lastEvent='핵이 무너졌습니다. 위치와 법칙 조합을 바꿔 다시 도전하세요.';return;}
- if(s.spawned===info.count&&!s.enemies.length&&!s.shots.some(q=>q.law==='hostile')){s.currency+=25+s.wave*2;s.shots.length=0;s.fields.length=0;if(s.wave===12){s.phase='won';s.lastEvent='열두 번의 침입을 막았습니다.';}else{s.phase='draft';s.draftCredit=1;s.offers=getDefenseOffers(s);s.lastEvent='한 씨앗에 법칙을 새기거나 기존 법칙을 강화하세요.';}}
+ if(s.spawned===info.count&&!s.enemies.length&&!s.shots.some(q=>q.law==='hostile')){s.currency+=25+s.wave*2;s.shots.length=0;s.fields.length=0;s.phase='draft';s.draftCredit=1;s.offers=getDefenseOffers(s);s.lastEvent=info.final?`${info.title}의 습격을 막았어요 · 다음 막으로 이어집니다`:'한 씨앗에 법칙을 새기거나 기존 법칙을 강화하세요.';}
 }
 export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0||s.phase==='lost'||s.phase==='won')return s;let remaining=Math.min(.1,dt);while(remaining>1e-8){const step=Math.min(1/60,remaining);tick(s,step,combat);remaining-=step;if(s.phase==='lost'||s.phase==='won')break;}return s;}
 
 export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
-export function checkpointDefense(s){if(!canBuild(s))return null;return {version:3,pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
+export function checkpointDefense(s){if(!canBuild(s))return null;return {version:4,runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
 export function restoreDefense(raw){
- try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![1,2,3].includes(r.version)||!['build','draft'].includes(r.phase))return null;
+ try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![1,2,3,4].includes(r.version)||!['build','draft'].includes(r.phase))return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
- if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,11)||!integer(r.coreHp,1,20)||!integer(r.currency,0,10000)||!finite(r.time,0,100000)||!integer(r.kills,0,1000)||!integer(r.leaked,0,1000)||!integer(r.selectedPad,0,7)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1000000))return null;
+ if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,r.version===4?1000000:11)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,7)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
  if(r.phase==='draft'&&(r.draftCredit!==1||r.wave===0)||r.phase==='build'&&r.wave>0&&r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>8)return null;
  if((Array.isArray(r.enemies)&&r.enemies.length)||(Array.isArray(r.shots)&&r.shots.length)||(Array.isArray(r.fields)&&r.fields.length))return null;
- const s=createDefense(r.seed);for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
- if(r.version===3){if(!Array.isArray(r.pads)||r.pads.length!==8||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));}
+ const s=createDefense(r.seed);
+ if(r.version===4){if(typeof r.runId!=='string'||! /^[\w-]{1,90}$/.test(r.runId)||!r.bossWins||Object.keys(s.bossWins).some((id,i)=>!integer(r.bossWins[id],0,Math.max(0,Math.floor((r.wave-12*(i+1))/36)+1))))return null;s.runId=r.runId;s.bossWins=Object.fromEntries(Object.keys(s.bossWins).map(id=>[id,r.bossWins[id]]));if(!Array.isArray(r.pendingBosses)||r.pendingBosses.length>90||r.pendingBosses.some(e=>!e||!Object.hasOwn(s.bossWins,e.boss)||!integer(e.ordinal,1,s.bossWins[e.boss])||!integer(e.wave,1,r.wave)||defenseWaveInfo(e.wave).bossId!==e.boss))return null;s.pendingBosses=r.pendingBosses.map(e=>({boss:e.boss,ordinal:e.ordinal,wave:e.wave}));}
+ else s.runId=`legacy-${r.seed}`;
+ for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
+ if(r.version>=3){if(!Array.isArray(r.pads)||r.pads.length!==8||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));}
  const pads=new Set(),ids=new Set();for(const t of r.towers){
-  if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,7)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,12)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
+  if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,7)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,r.wave+1)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
   // v1 did not record which ingredient received repeats. Preserve those points
   // as generic reinforcement, not invented law ranks or free branch eligibility.
   const ranks=r.version===1?Object.fromEntries(t.laws.map(l=>[l,1])):t.lawRanks;
-  if(!ranks||typeof ranks!=='object'||Array.isArray(ranks)||Object.keys(ranks).length!==t.laws.length||Object.keys(ranks).some(l=>!t.laws.includes(l)||!integer(ranks[l],1,12)))return null;
+  if(!ranks||typeof ranks!=='object'||Array.isArray(ranks)||Object.keys(ranks).length!==t.laws.length||Object.keys(ranks).some(l=>!t.laws.includes(l)||!integer(ranks[l],1,r.wave+1)))return null;
   const formId=r.version===1?matchFusion(t.laws):t.formId;
   if(formId!==null&&typeof formId!=='string')return null;
   const ultimateCharge=r.version===1?0:t.ultimateCharge;if(!finite(ultimateCharge,0,30))return null;

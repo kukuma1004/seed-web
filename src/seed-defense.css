@@ -99,3 +99,13 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
  #seed-defense #td-book{font-size:11px;padding:5px 8px}
  #seed-defense .td-hint{top:50px}
 }
+
+/* Keep speed and act progress reachable on small portrait screens too. */
+#seed-defense #td-speed{min-width:46px;padding:7px;font-variant-numeric:tabular-nums;color:#f0dfa6}
+@media(max-width:580px) and (min-height:501px){
+ #seed-defense .td-top{grid-template-columns:minmax(0,1fr) 46px 64px 44px;grid-template-rows:44px 16px;padding:3px 8px;gap:2px 8px}
+ #seed-defense .td-meters{grid-column:1/5;font-size:10px;justify-content:space-between;width:100%}
+ #seed-defense #td-speed{grid-column:2;grid-row:1}
+ #seed-defense #td-book{grid-column:3;grid-row:1}
+ #seed-defense #td-pause{grid-column:4;grid-row:1}
+}

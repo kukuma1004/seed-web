@@ -8,7 +8,7 @@ import {LAWS} from './laws.js';
 export const DEFENSE_RANK_PATH='seedDefenseRanking/v1';
 const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
 // Completed waves dominate core health, which dominates kills. Equal results tie.
-export const defenseRankScore=e=>e.cleared*100000+e.hp*1000+e.kills;
+export const defenseRankScore=e=>e.cleared*100000+e.hp*1000+Math.min(999,e.kills);
 export function parseDefenseTowers(text){
  if(typeof text!=='string'||text.length>400)return null;
  const rows=text.split(',').map(s=>s.split(':'));
@@ -17,8 +17,8 @@ export function parseDefenseTowers(text){
 }
 export function validDefenseRank(e){
  return Boolean(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&!isBadName(e.name)
-  &&integer(e.cleared,0,12)&&integer(e.hp,0,20)&&integer(e.kills,0,345)&&integer(e.time,1,100000)
-  &&(e.cleared===12?e.hp>0:e.hp===0)&&integer(e.score,1,1220345)&&e.score===defenseRankScore(e)
+  &&integer(e.cleared,0,1000000)&&integer(e.hp,0,20)&&integer(e.kills,0,1000000000)&&integer(e.time,1,1e12)
+  &&(e.hp===0||e.cleared===12)&&integer(e.score,1,100000020999)&&e.score===defenseRankScore(e)
   &&parseDefenseTowers(e.towers));
 }
 export function defenseRankEntry(state,{uid,name}){

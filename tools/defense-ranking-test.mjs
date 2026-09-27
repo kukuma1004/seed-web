@@ -7,9 +7,10 @@ assert.equal(entry.score,1218340);assert.equal(entry.time,304);assert.equal(entr
 assert.equal(defenseRankEntry({...state,phase:'draft'},{uid:'a',name:'씨앗'}),null);
 const lost=defenseRankEntry({...state,phase:'lost',wave:8,coreHp:-1,kills:100},{uid:'b',name:'씨앗'});
 assert.equal(lost.cleared,7);assert.equal(lost.hp,0);
-for(const bad of [{score:1},{hp:21},{kills:346},{towers:'prism:6'},{towers:'bad:1'},{towers:Array(9).fill('chain:1').join(',')},{time:0}])assert(!validDefenseRank({...entry,...bad}));
+for(const bad of [{score:1},{hp:21},{kills:1000000001},{towers:'prism:6'},{towers:'bad:1'},{towers:Array(9).fill('chain:1').join(',')},{time:0}])assert(!validDefenseRank({...entry,...bad}));
 assert.deepEqual(parseDefenseTowers('chain:2,chain:5,seed:1'),[['chain',2],['chain',5],['seed',1]],'separate towers remain visible');
 assert.deepEqual(defensePlaces([{...entry,uid:'b'},entry,lost]).map(e=>e.rank),[1,1,3]);
+const endless=defenseRankEntry({...state,phase:'lost',wave:74,kills:9000},{uid:'a',name:'씨앗'});assert.equal(endless.cleared,73);assert.equal(endless.kills,9000);assert.equal(endless.score,7300999);assert(validDefenseRank(endless));
 let remote=null,rev=0,offline=false,uid='a',race=false;
 const map=new Map(),storage={getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};
 const reply=(body,status=200)=>({ok:status===200,status,json:async()=>structuredClone(body),headers:{get:()=>String(rev)}});

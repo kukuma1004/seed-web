@@ -1,3 +1,4 @@
+import {defenseWaveInfo} from './seed-defense-rules.js';
 import {DEFENSE_FORMS} from './seed-defense-catalog.js';
 const SOLO={reflect:0,split:1,chain:2,orbit:3,pierce:4,burst:5,recall:6,gravity:7,frost:8};
 const FUSION={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
@@ -15,6 +16,7 @@ export function defenseBodyParts(t){
 export function paintDefenseGround(g,assets,path,state){
  if(assets.floor?.naturalWidth){g.save();g.filter='brightness(1.19) saturate(1.62) contrast(1.13)';g.drawImage(assets.floor,-8,4,118,54);g.restore();}
  else{g.fillStyle='#283c32';g.fillRect(-8,4,118,54);}
+ const act=defenseWaveInfo(Math.max(1,state.wave)).act;if(act){g.fillStyle=act===1?'#7c48232b':'#28577c30';g.fillRect(-8,4,118,54);}
  // Directional canopy light is baked once with the ground, never per frame.
  const sunlight=g.createRadialGradient(12,15,1,22,22,69);
  sunlight.addColorStop(0,'#f6dc682e');sunlight.addColorStop(.45,'#c5cb480c');sunlight.addColorStop(1,'#062e3100');
