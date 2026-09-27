@@ -28,7 +28,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,onClose=()=>{}}={}){
  const key='seed-defense-preparation-v1:'+encodeURIComponent(owner),root=document.createElement('section');
  root.id='seed-defense';root.setAttribute('aria-label','씨앗 수호전');
- root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-book">조합 162</button><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><button class="td-quick-start">다음 습격 시작</button><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><button class="td-panel-close" aria-label="씨앗 정보 닫기">×</button><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
+ root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-book">조합 162</button><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><div class="td-plant-prompt" hidden><button id="td-plant-here"></button><button class="td-placement-close" aria-label="심기 취소">×</button></div><button class="td-quick-start">다음 습격 시작</button><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><button class="td-panel-close" aria-label="씨앗 정보 닫기">×</button><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
  host.append(root);document.body.classList.add('seed-defense-open');
  const $=s=>root.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),back=document.createElement('canvas'),bg=back.getContext('2d',{alpha:false});
  let state=createDefense(Date.now()>>>0),selected=0,paused=false,ended=false,frame=0,last=0,uiAt=0,uiKey='',saveNote='준비 상태는 이 기기에 저장돼요',width=1,height=1,scale=1,ox=0,oy=0,dirty=true,frames=[],lastEffects=0,renderCosts=[],announced='',confirming=false;
@@ -48,17 +48,23 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  function clearSave(){try{storage.removeItem(key);}catch{}}
  function sound(id){audio?.play(id);}
  function resize(){const r=$('.td-board').getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);const dpr=Math.min(1.5,window.devicePixelRatio||1);canvas.width=back.width=Math.round(width*dpr);canvas.height=back.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);bg.setTransform(dpr,0,0,dpr,0,0);scale=Math.min(width/118,height/54);ox=(width-118*scale)/2+8*scale;oy=(height-54*scale)/2-4*scale;dirty=true;placeButtons();}
- function placeButtons(){for(const b of $('.td-pads').children){const p=state.pads[Number(b.dataset.pad)];b.style.left=(ox+p.x*scale)+'px';b.style.top=(oy+p.y*scale)+'px';}}
+ function placeButtons(){for(const b of $('.td-pads').children){const p=state.pads[Number(b.dataset.pad)];b.style.left=(ox+p.x*scale)+'px';b.style.top=(oy+p.y*scale)+'px';}positionPlantPrompt();}
+ function positionPlantPrompt(){const p=state.pads[selected],prompt=$('.td-plant-prompt');if(!p||prompt.hidden)return;const w=prompt.offsetWidth,h=prompt.offsetHeight,x=ox+p.x*scale,y=oy+p.y*scale;prompt.style.left=Math.max(8,Math.min(width-w-8,x-w/2))+'px';prompt.style.top=Math.max(58,Math.min(height-h-8,y+32+h<height?y+32:y-h-32))+'px';}
+ function closeSelection(){root.classList.remove('td-inspecting','td-placing');$('.td-plant-prompt').hidden=true;}
+ function showSelection(){const empty=!state.towers.some(t=>t.pad===selected),placing=empty&&['build','draft'].includes(state.phase);root.classList.toggle('td-placing',placing);root.classList.toggle('td-inspecting',!placing);$('.td-plant-prompt').hidden=!placing;$('.td-scroll').scrollTop=0;updatePlantPrompt();}
+ function updatePlantPrompt(){const button=$('#td-plant-here');button.disabled=state.currency<DEFENSE.plantCost;button.textContent=button.disabled?'햇살 '+(DEFENSE.plantCost-Math.floor(state.currency))+' 더 필요':'여기에 심기 · '+DEFENSE.plantCost+' 햇살';positionPlantPrompt();}
+ function plantSelected(){if(plantDefense(state,selected)){dirty=true;sound('pickup');save();uiKey='';updateUI();showSelection();hint('씨앗을 심었어요 · 법칙을 선택하세요');}}
+ $('#td-plant-here').onclick=plantSelected;$('.td-placement-close').onclick=closeSelection;
  $('.td-pads').innerHTML=PADS.map((p,i)=>`<button data-pad="${i}" aria-label="${i+1}번 화단 선택"><span>${i+1}</span></button>`).join('');
- for(const b of $('.td-pads').children)b.onclick=()=>{root.classList.add('td-inspecting');moving=false;selected=Number(b.dataset.pad);state.selectedPad=selected;uiKey='';sound('pickup');updateUI();};
+ for(const b of $('.td-pads').children)b.onclick=()=>{moving=false;selected=Number(b.dataset.pad);state.selectedPad=selected;uiKey='';sound('pickup');updateUI();showSelection();};
  const tower=()=>state.towers.find(t=>t.pad===selected);
  listen(canvas,'click',e=>{
   if(bookOpen||confirming||!['build','draft'].includes(state.phase)){hint('씨앗 배치는 습격 사이에 바꿀 수 있어요');return;}
   const rect=canvas.getBoundingClientRect(),x=Math.round(((e.clientX-rect.left-ox)/scale)*2)/2,y=Math.round(((e.clientY-rect.top-oy)/scale)*2)/2;
   const pad=moving?selected:state.pads.findIndex((_,i)=>!state.towers.some(t=>t.pad===i));
   if(pad<0){hint('씨앗은 최대 8개예요 · 씨앗을 선택해 위치를 옮겨 보세요');return;}
-  const error=defensePlacement(state,x,y,pad);if(error){hint(error);return;}
-  if(placeDefensePad(state,pad,x,y)){root.classList.add('td-inspecting');selected=pad;moving=false;combat.reset();dirty=true;placeButtons();save();uiKey='';updateUI();hint(tower()?'씨앗을 새 위치로 옮겼어요':'이 위치에 씨앗을 심을 수 있어요 · 사거리를 확인하세요');}
+  const error=defensePlacement(state,x,y,pad);if(error){closeSelection();hint(error);return;}
+  if(placeDefensePad(state,pad,x,y)){selected=pad;moving=false;combat.reset();dirty=true;placeButtons();save();uiKey='';updateUI();showSelection();hint(tower()?'씨앗을 새 위치로 옮겼어요':'사거리를 확인하고 ‘여기에 심기’를 누르세요');}
  });
  function hint(message){$('.td-hint').textContent=message;}
  function togglePause(){if(paused&&!bookOpen&&!confirming)$('.td-dialog').hidden=true;if(ended||bookOpen||confirming||['won','lost'].includes(state.phase))return;paused=!paused;audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';$('#td-pause').setAttribute('aria-label',paused?'계속하기':'일시정지');hint(paused?'잠시 쉬는 중 · ▶를 눌러 계속하세요':'');uiKey='';updateUI();}
@@ -76,8 +82,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  $('#td-book').onclick=showBook;
  function close(){if(ended)return;save();combat.dispose();ended=true;cancelAnimationFrame(frame);observer.disconnect();listeners.forEach(fn=>fn());root.remove();document.body.classList.remove('seed-defense-open');audio?.setPaused(false);onClose();}
  $('#td-leave').onclick=()=>{if(state.phase!=='wave')return close();paused=true;confirming=true;audio?.setPaused(true);dialog('<div><h2>이번 습격을 나갈까요?</h2><p>마지막 준비 상태가 남아 있어요.<br>이번 습격의 처치와 햇살은 저장되지 않아요.</p><button id="td-quit-yes">준비 상태로 저장하고 나가기</button><button id="td-quit-no">계속 방어하기</button></div>');$('#td-quit-yes').onclick=close;$('#td-quit-no').onclick=()=>{confirming=false;paused=false;$('.td-dialog').hidden=true;audio?.setPaused(false);$('#td-pause').textContent='Ⅱ';$('#td-pause').setAttribute('aria-label','일시정지');last=performance.now();uiKey='';updateUI();};};
- $('.td-panel-close').onclick=()=>root.classList.remove('td-inspecting');
- $('#td-start').onclick=()=>{if(paused){togglePause();return;}if(startDefenseWave(state)){root.classList.remove('td-inspecting');moving=false;hint(defenseWaveInfo(state.wave).title+' · 씨앗들이 정원을 지키고 있어요');sound('evolve');uiKey='';updateUI();}};
+ $('.td-panel-close').onclick=closeSelection;
+ $('#td-start').onclick=()=>{if(paused){togglePause();return;}if(startDefenseWave(state)){closeSelection();moving=false;hint(defenseWaveInfo(state.wave).title+' · 씨앗들이 정원을 지키고 있어요');sound('evolve');uiKey='';updateUI();}};
  function updateUI(){
   $('#td-heart').textContent=`♡ ${Math.ceil(state.coreHp)} / 20`;$('#td-sun').textContent=`✦ ${Math.floor(state.currency)} 햇살`;$('#td-wave').textContent=`습격 ${state.wave} / ${DEFENSE.waves}`;
   const t=tower(),offers=t?getDefenseOffers(state,t.id):[],sig=[selected,state.phase,state.currency,t?.level,t?.laws?.join(','),JSON.stringify(t?.lawRanks),t?.formId,Math.floor(t?.ultimateCharge||0),state.draftCredit,offers.join(','),paused,saveNote,moving].join('|');
@@ -97,15 +103,15 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   else if(state.phase==='draft'||state.draftCredit>0)html+='<p class="td-callout">심은 씨앗을 선택하고 법칙을 부여하세요.</p>';
   else html+=`<div class="td-next"><small>다음 습격</small><p>${esc(info.title)}</p><small>${esc(info.desc)}</small></div>`;
   $('.td-scroll').innerHTML=html;
-  if($('#td-plant'))$('#td-plant').onclick=()=>{if(plantDefense(state,selected)){dirty=true;sound('pickup');save();uiKey='';updateUI();}};
-  if($('#td-move'))$('#td-move').onclick=()=>{moving=!moving;if(moving)root.classList.remove('td-inspecting');hint(moving?'옮길 땅을 눌러 주세요 · 길과 다른 씨앗 주변은 비워 주세요':'위치 옮기기를 취소했어요');uiKey='';updateUI();};
+  if($('#td-plant'))$('#td-plant').onclick=plantSelected;updatePlantPrompt();
+  if($('#td-move'))$('#td-move').onclick=()=>{moving=!moving;if(moving)closeSelection();hint(moving?'옮길 땅을 눌러 주세요 · 길과 다른 씨앗 주변은 비워 주세요':'위치 옮기기를 취소했어요');uiKey='';updateUI();};
   if($('#td-upgrade'))$('#td-upgrade').onclick=()=>{if(upgradeDefense(state,t.id)){hint('강화 Lv.'+t.level+' · 피해와 사거리가 늘었어요');sound('evolve');save();uiKey='';updateUI();}};
   for(const b of root.querySelectorAll('[data-law]'))b.onclick=()=>{const previous={...t,laws:[...t.laws]};if(chooseDefenseLaw(state,t.id,b.dataset.law)){const evolved=t.formId!==previous.formId;sound(evolved?'fusion':'evolve');if(evolved){combat.reset();celebrate(t,previous,'융합 진화');}else hint(DEFENSE_LAWS[b.dataset.law].name+' 법칙 '+t.lawRanks[b.dataset.law]+'단계 · 진화 조건을 확인하세요');save();uiKey='';updateUI();if(evolved)$('.td-scroll').scrollTop=0;}};
   if($('#td-ultimate'))$('#td-ultimate').onclick=()=>{if(!paused&&combat.surge(t.id)){sound('evolve');hint(SIGNATURES[t.formId]?.name||'궁극기');uiKey='';updateUI();}};
   for(const b of root.querySelectorAll('[data-evolution]'))b.onclick=()=>{const previous={...t,laws:[...t.laws]};if(evolveDefense(state,t.id,b.dataset.evolution)){combat.reset();sound('fusion');celebrate(t,previous,KIND[DEFENSE_FORMS[t.formId].kind]);save();uiKey='';updateUI();$('.td-scroll').scrollTop=0;}};
   $('#td-start').textContent=paused?'계속하기':state.phase==='wave'?'습격 방어 중':state.phase==='won'?'정원을 지켰어요':state.phase==='lost'?'도전 종료':state.phase==='draft'||state.draftCredit>0?'씨앗에 법칙을 먼저 부여':'다음 습격 시작';
   $('#td-start').disabled=!paused&&(state.phase==='wave'||state.phase==='draft'||state.draftCredit>0||['won','lost'].includes(state.phase));
-  $('#td-save-note').textContent=saveNote;root.classList.toggle('td-in-wave',state.phase==='wave');$('.td-quick-start').hidden=state.phase==='wave'||['won','lost'].includes(state.phase);$('.td-quick-start').textContent=state.phase==='draft'||state.draftCredit>0?'씨앗 선택 · 법칙 부여':'다음 습격 시작';$('.td-quick-start').onclick=()=>{if(state.phase==='draft'||state.draftCredit>0)root.classList.add('td-inspecting');else $('#td-start').click();};
+  $('#td-save-note').textContent=saveNote;root.classList.toggle('td-in-wave',state.phase==='wave');$('.td-quick-start').hidden=state.phase==='wave'||['won','lost'].includes(state.phase);$('.td-quick-start').textContent=!state.towers.length?'씨앗 심기 · 땅을 선택하세요':state.phase==='draft'||state.draftCredit>0?'씨앗 선택 · 법칙 부여':'다음 습격 시작';$('.td-quick-start').onclick=()=>{if(!state.towers.length||state.phase==='draft'||state.draftCredit>0)showSelection();else $('#td-start').click();};
  }
  function ground(){
   bg.fillStyle='#10251d';bg.fillRect(0,0,width,height);
