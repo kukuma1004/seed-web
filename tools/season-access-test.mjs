@@ -36,7 +36,9 @@ assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운
 assert.match(main,/if\(!betaLocked&&!seasonPaused\)\{[\s\S]*mode==='season-pause'[\s\S]*showEntry\(\)/,'공개 상태로 돌아오면 잘못 나타난 플레이 중지 화면에서 빠져나와야 합니다.');
 assert.match(main,/if\(adminMode\|\|betaTesterMode\)\{[\s\S]*mode==='beta-lock'[\s\S]*showEntry\(\)/,'새로 승인된 테스터는 기존 잠금 화면에서 즉시 게임 메뉴로 이동해야 합니다.');
 assert.match(main,/saveLeaveState\(\);cloud\.syncNow\(\)\.catch/,'실행 중 차단되면 안전한 진행 지점을 저장한 뒤 클라우드 동기화를 시도해야 합니다.');
-assert.match(main,/adminMode\?'<button id="developer-lab"/,'관리자 계정에만 전투 실험실 진입점이 보여야 합니다.');
+assert.match(main,/adminMode\?'<div class="home-admin-actions"><button id="developer-usage"[^\n]*id="developer-lab"[^\n]*:''}/,'관리자 계정에만 이용 현황과 전투 실험실 진입점이 보여야 합니다.');
+assert.match(main,/function showDeveloperUsage\(\)\{\s*if\(!adminMode\)return showIntro\(\);/,'통계 화면에서도 관리자 권한을 확인합니다.');
+assert.match(main,/\$\('#usage-back'\)\.onclick=showIntro/,'통계에서 메인으로 돌아옵니다.');
 assert.match(main,/localAdminLab=localInspection[\s\S]*refreshAccessMode=async\(\)=>\{const user=account\.user\(\);adminMode=localAdminLab\|\|/,'공개 호스트에서는 켤 수 없는 로컬 관리자 UI 검사 경로가 있어야 합니다.');
 assert.match(main,/publicWebBetaLocked\(\)&&!adminMode&&!betaTesterMode/,'등록된 테스터만 잠긴 PC 웹을 통과해야 합니다.');
 assert.match(main,/if\(localAdminLab\|\|account\.user\(\)\)showIntro\(\);else showAccount\(\)/,'로컬 관리자 UI 검사는 외부 계정을 만들지 않고 바로 시작해야 합니다.');

@@ -5,6 +5,19 @@ export const MAX_STEP_SECONDS=1/60;
 // A slow device must not run the whole game six times per frame: that makes the next frame slower
 // still. Past three substeps the steps grow instead (at most 1/30 s, still shorter than any cover).
 export const MAX_SUBSTEPS=3;
+// Limit rendering on high-refresh displays without dropping elapsed simulation time.
+// Carry the deadline forward (not now + interval), including on 90/144 Hz screens.
+export function createFramePacer(){
+ let next=0,rate=0;
+ return (now,fps)=>{
+  if(!Number.isFinite(now)||!Number.isFinite(fps)||fps<=0)return false;
+  const interval=1000/fps;
+  if(rate!==fps){rate=fps;next=now+interval;return true;}
+  if(now+.5<next)return false;
+  next+=interval*Math.max(1,Math.floor((now+.5-next)/interval)+1);
+  return true;
+ };
+}
 export function advanceFrame(rawSeconds,endTime,step){
  const duration=Number.isFinite(rawSeconds)?Math.min(Math.max(0,rawSeconds),MAX_FRAME_SECONDS):0;
  if(!duration)return 0;

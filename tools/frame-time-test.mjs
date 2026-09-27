@@ -1,6 +1,23 @@
 import assert from 'node:assert/strict';
-import {advanceFrame,MAX_STEP_SECONDS,MAX_SUBSTEPS,MAX_FRAME_SECONDS} from '../src/frame-time.js';
+import {advanceFrame,createFramePacer,MAX_STEP_SECONDS,MAX_SUBSTEPS,MAX_FRAME_SECONDS} from '../src/frame-time.js';
 import {segmentHitsCover} from '../src/collision.js';
+
+// Refresh-rate capping must save work without slowing travel or cooldowns.
+for(const refresh of [30,60,90,120,144,165])for(const target of [30,60]){
+ const due=createFramePacer();let rendered=0,last=0,elapsed=0;
+ for(let i=0;i<=refresh*10;i++){
+  const now=i*1000/refresh;if(!due(now,target))continue;rendered++;
+  advanceFrame((now-last)/1000,now/1000,dt=>elapsed+=dt);last=now;
+ }
+ assert(Math.abs(rendered-(Math.min(refresh,target)*10+1))<=1,`${refresh} Hz / ${target} fps has uneven deadlines`);
+ assert(Math.abs(elapsed-10)<1/target,`${refresh} Hz loses game time`);
+}
+{
+ const due=createFramePacer();assert(due(0,30));assert(!due(8,30));
+ assert(due(9,60),'combat resumes immediately');assert(!due(10,60));
+ assert(due(60000,60),'background return renders once');assert(!due(60001,60),'no catch-up burst');
+ assert(!due(NaN,60));assert(!due(60002,0));
+}
 
 // At 20 fps the old .04-second clamp ran only eight seconds of gameplay
 // during ten real seconds. Verify wall-clock travel and cooldowns instead.
