@@ -40,3 +40,7 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
  #seed-defense .td-hint{font-size:11px;top:3px}
 }
 @media(max-width:580px) and (min-height:501px){#seed-defense{grid-template-rows:72px min(55vh,calc(100vw / 2.185)) minmax(0,1fr)}#seed-defense .td-panel{grid-template-columns:minmax(0,1fr) 135px}}
+#seed-defense .td-evolution-progress{padding:10px 12px;margin:10px 0;border-left:2px solid #bfcb8f;background:#95ac7c12;display:grid;gap:5px;font-size:12px}#seed-defense .td-evolution-progress b{color:#eddda2}#seed-defense .td-evolution-progress span{color:#dce5c6}#seed-defense .td-evolution-progress small{color:#a9bbaa;font-size:10px;line-height:1.5}
+#seed-defense .td-top{background:linear-gradient(105deg,#152e29,#102426);border-bottom-color:#9da77c55}#seed-defense .td-panel{background:linear-gradient(125deg,#172f29,#102328)}#seed-defense h2{color:#e5dfb7}#seed-defense .td-pads button.planted{box-shadow:none;background:transparent}#seed-defense .td-pads button.selected{border-color:#e4ddb090;box-shadow:none}#seed-defense .td-pads button.planted>span:not(.form-art){top:36px;font-size:9px;color:#e5e6c8;text-shadow:0 1px 3px #05130d}
+#seed-defense.td-evolved .td-hint{color:#fff0b5;background:#193028df;border:1px solid #cfbd7680;border-radius:8px;padding:6px 10px;width:fit-content;max-width:calc(100% - 20px);margin:auto;left:0;right:0;font-size:12px}
+@media(max-height:500px){#seed-defense .td-evolution-progress{padding:7px;margin:6px 0;font-size:11px}#seed-defense.td-evolved .td-hint{font-size:10px}}
