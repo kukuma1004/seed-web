@@ -101,6 +101,7 @@ import './mobile.css';
 import './choice.css';
 import './account.css';
 import './developer-lab.css';
+import {mountDeveloperLab} from './developer-lab-view.js';
 import {setupMobileApp} from './mobile-app.js';
 import {createNativeUpdateGate} from './native-update.js';
 import './native-update.css';
@@ -1506,13 +1507,7 @@ function showDeveloperLab(){
   ['쌍둥이 각성',Object.entries(FORMS).filter(([,form])=>form.twin).map(([id,form])=>[id,form.name])],
   ['옛 재융합 · 기록 보존',Object.entries(FORMS).filter(([,form])=>form.second).map(([id,form])=>[id,form.name])]
  ];
- const buildButton=([id,name])=>`<button type="button" data-developer-form="${id}" aria-pressed="${developerForm===id}">${id?formArt(id,'developer-form-art'):'<span class="developer-seed-mark">♧</span>'}<strong>${escapeHtml(name)}</strong></button>`;
- $('#overlay').innerHTML=`<div class="menu-panel developer-panel"><p class="eyebrow">SEED · ADMIN ONLY</p><h2>전투 실험실</h2><p class="developer-note">검사 가능한 ${Object.keys(FORMS).length}종(공개·보류·옛 기록 포함)을 골라 원하는 전투에 바로 들어갑니다. 실험 중 점수·보상·도감·정원·저장은 남지 않아요.</p><h3>확인할 진화</h3><div class="developer-form-groups">${groups.map(([label,options],index)=>`<details ${options.some(([id])=>id===developerForm)||(!developerForm&&index===0)?'open':''}><summary>${label} <small>${options.length}</small></summary><div class="developer-builds">${options.map(buildButton).join('')}</div></details>`).join('')}</div><div class="developer-toggles"><label><input id="developer-active" type="checkbox" checked> 궁극기 즉시 충전</label><label><input id="developer-safe" type="checkbox"> 피해 받지 않기</label></div><h3>바로 이동</h3><div class="developer-actions"><button data-developer-target="room"><strong>일반 방</strong><small>움직임과 탄환 확인</small></button><button data-developer-target="warden"><strong>문지기</strong><small>단독 문지기 전투</small></button><button data-developer-target="duo"><strong>쌍문지기</strong><small>두 종류 동시 전투</small></button><button data-developer-target="austin"><strong>오스틴</strong><small>1막 진짜 보스</small></button><button data-developer-target="act2field"><strong>2막 전장 기믹</strong><small>베이스 활주 · 패스 포탑</small></button><button data-developer-target="act2warden"><strong>2막 연계 문지기</strong><small>A → B 60% 난입</small></button><button data-developer-target="act2boss"><strong>항상초심</strong><small>2막 최종 보스</small></button><button data-developer-target="act3field"><strong>3막 폭풍 항로</strong><small>전진감 · 편대 · 구름층</small></button><button data-developer-target="act3warden"><strong>3막 편대 문지기</strong><small>교차 사격 · 낙하 돌진</small></button><button data-developer-target="act3boss"><strong>폭풍비행사 요한</strong><small>3막 탄막형 최종 보스</small></button></div><div class="developer-footer"><button id="developer-choice">법칙 선택 카드 바로 보기</button><button id="developer-back">메인으로</button></div></div>`;
- const select=id=>{developerForm=id;document.querySelectorAll('[data-developer-form]').forEach(button=>button.setAttribute('aria-pressed',String(button.dataset.developerForm===id)));};
- document.querySelectorAll('[data-developer-form]').forEach(button=>button.onclick=()=>select(button.dataset.developerForm));
- document.querySelectorAll('[data-developer-target]').forEach(button=>button.onclick=()=>startDeveloperEncounter(button.dataset.developerTarget));
- $('#developer-choice').onclick=()=>{developerForm='';startDeveloperEncounter('room');cardChoice(false,['reflect','split','chain']);};
- $('#developer-back').onclick=showIntro;
+ mountDeveloperLab($('#overlay'),{groups,selected:developerForm,onSelect:id=>{developerForm=id;},onTarget:startDeveloperEncounter,onCards:()=>{developerForm='';startDeveloperEncounter('room');cardChoice(false,['reflect','split','chain']);},onBack:showIntro});
 }
 function showDeveloperUsage(){
  if(!adminMode)return showIntro();

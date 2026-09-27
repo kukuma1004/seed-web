@@ -114,8 +114,9 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
   if(scene.hat.includes(step))noise(at,.026,.045,musicBus);
  }
  async function unlock(){
+  if(paused||globalThis.document?.hidden)return false;
   if(!ensure())return false;
-  try{if(ctx.state!=='running')await ctx.resume();unlocked=ctx.state==='running';return unlocked;}catch{return false;}
+  try{if(ctx.state!=='running')await ctx.resume();if(paused||globalThis.document?.hidden){await ctx.suspend();return false;}unlocked=ctx.state==='running';return unlocked;}catch{return false;}
  }
  function play(id,{intensity=1,pitch=1}={}){
   const spec=AUDIO_EVENTS[id];if(!spec||muted||paused||!unlocked||!ctx||ctx.state!=='running')return false;

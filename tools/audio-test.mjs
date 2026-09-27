@@ -38,5 +38,17 @@ for(let i=0;i<18;i++)live.tick(.1);
 assert.ok(musicOscillators>=5,'third act schedules a real melody and rhythmic bass');
 assert.equal(live.play('ultimateBurst'),true);assert.equal(live.state().voices,0,'finished sounds release their limiter slots');
 await live.setPaused(true);assert.equal(live.play('shot'),false,'pause stops effects');
+assert.equal(await live.unlock(),false,'tapping pause menus must not resume the audio context');
 await live.setPaused(false);assert.equal(live.state().musicScene,'combat3');
+globalThis.document={hidden:true};
+assert.equal(await live.unlock(),false,'hidden pages cannot wake audio');
+delete globalThis.document;
+let resumeDone,raceContext;
+class DelayedContext extends FakeAudioContext{
+ constructor(){super();this.state='suspended';raceContext=this;}
+ resume(){return new Promise(resolve=>{resumeDone=()=>{this.state='running';resolve();};});}
+}
+const race=createGameAudio({AudioContextCtor:DelayedContext});
+const waking=race.unlock();await race.setPaused(true);resumeDone();
+assert.equal(await waking,false);assert.equal(raceContext.state,'suspended','a late resume cannot undo background suspension');
 console.log('Audio: event matrix, cooldowns, bounded voices, procedural scene music and silent fallback passed.');

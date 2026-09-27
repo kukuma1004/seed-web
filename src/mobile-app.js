@@ -52,7 +52,7 @@ export function setupMobileApp(){
  markFullscreen();
  if(!nativeApp&&import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{updateViaCache:'none'}).then(registration=>{
   registration.update().catch(()=>{});
-  setInterval(()=>registration.update().catch(()=>{}),60_000);
+  setInterval(()=>{if(!document.hidden)registration.update().catch(()=>{});},60_000);
  }).catch(()=>{}));
  return {fullscreen,enterFullscreen,nativeApp,launch};
 }

@@ -44,8 +44,10 @@ assert.match(main,/publicWebBetaLocked\(\)&&!adminMode&&!betaTesterMode/,'등록
 assert.match(main,/if\(localAdminLab\|\|account\.user\(\)\)showIntro\(\);else showAccount\(\)/,'로컬 관리자 UI 검사는 외부 계정을 만들지 않고 바로 시작해야 합니다.');
 assert.match(main,/accountCanRank\(\{native:account\.native,admin:adminMode,tester:betaTesterMode/,'등록된 PC 웹 테스터(와 관리자)도 베타 랭킹에 참여할 수 있어야 합니다.');
 assert.match(main,/betaTesterMode\?grantGift\(runStorage,BETA_BOOSTER_GIFT,'sprout',1\)/,'베타테스터는 계정마다 다시 싹 부스터를 한 번 받아야 합니다.');
-assert.match(main,/data-developer-target="warden"[\s\S]*data-developer-target="duo"[\s\S]*data-developer-target="austin"/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
-assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*검사 가능한 \$\{Object\.keys\(FORMS\)\.length\}종/,'전투 실험실은 공개·보류·옛 기록을 구분하고 하드코딩된 개수 없이 제공해야 합니다.');
+const lab=fs.readFileSync(new URL('../src/developer-lab-view.js',import.meta.url),'utf8');
+assert.match(lab,/\['warden',[\s\S]*\['duo',[\s\S]*\['austin',/,'관리자는 문지기·쌍문지기·오스틴으로 바로 이동할 수 있어야 합니다.');
+assert.match(main,/form\.solo[\s\S]*form\.awakened[\s\S]*form\.twin[\s\S]*mountDeveloperLab/,'전투 실험실은 실제 조합 분류를 사용해야 합니다.');
+assert.match(lab,/rows\.slice\(page\*pageSize,\(page\+1\)\*pageSize\)/,'실험실은 전체 그림을 한꺼번에 생성하지 않아야 합니다.');
 assert.match(main,/developerRun\)return true;[\s\S]*writeCheckpoint/,'개발자 실험은 기존 이어하기 저장을 덮어쓰지 않아야 합니다.');
 assert.match(main,/if\(developerRun\)\{\$\('#overlay'\)[\s\S]*점수·보상·도감·정원·저장/,'개발자 실험 종료는 랭킹과 정원 기록을 만들지 않아야 합니다.');
 const auth=fs.readFileSync(new URL('../src/account-auth.js',import.meta.url),'utf8');
