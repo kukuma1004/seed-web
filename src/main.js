@@ -1441,8 +1441,8 @@ function showIntro(){document.body.classList.remove('survival-result');$('#overl
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  // 하던 사람에게만 새 소식 점을 띄운다(처음 온 사람에게는 붙이지 않는다).
  const newsDot=hasUnseenNotes(runStorage,{firstVisit:!profile.forms.length&&!garden.harvests});
- $('#overlay').innerHTML=`<button id="patch-notes" class="menu-news-button" aria-label="새 소식 열기"><span>새 소식${newsDot?'<i class="news-dot" aria-label="읽지 않은 새 소식"></i>':''}</span><small>${PATCH_NOTES[0].date}</small></button><div class="menu-panel">
-  <p class="eyebrow">SEED</p><h2>잠든 정원</h2>
+ $('#overlay').innerHTML=`<button id="patch-notes" class="menu-news-button" aria-label="새 소식 열기"><span>새 소식${newsDot?'<i class="news-dot" aria-label="읽지 않은 새 소식"></i>':''}</span><small>${PATCH_NOTES[0].date}</small></button><div class="menu-panel home-panel">
+  <header class="home-heading"><p class="eyebrow">S E E D</p><h2>잠든 정원</h2><span class="menu-ornament" aria-hidden="true">✦</span></header>
   ${nameFieldHtml()}
   <div class="menu-list">
    <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
@@ -1684,7 +1684,7 @@ async function showSeedDefense(){
 function showDungeon(){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-journey" class="dungeon-mode mode-journey" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/garden-sanctuary-v2.webp')"><span class="mode-number">01</span><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></button><button id="open-survival" class="dungeon-mode mode-survival" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/ground-garden-v5.webp')"><span class="mode-number">02</span><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></button></div><button id="open-defense" class="secondary" style="width:100%;margin-top:12px">씨앗 수호전 · 시범 플레이</button></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
  $('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#back-menu').onclick=showIntro;
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
@@ -1705,7 +1705,7 @@ function showJourneys(){
  const art=(back,boss,sheet=false)=>`<span class="journey-picture" style="background-image:url('${import.meta.env.BASE_URL}assets/${back}')"><span class="journey-boss ${sheet?'sheet':''}" style="background-image:url('${import.meta.env.BASE_URL}assets/mobile/${boss}')"></span></span>`;
  const actCard=(id,number,title,description,picture,ready=true)=>`<button id="${id}" class="journey-card act-card-${number}" ${ready?'':'disabled'}>${picture}<span class="journey-act">${number}막</span><span class="journey-caption"><strong>${title}</strong><small>${description}</small></span></button>`;
  $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel journey-panel">
-  <header class="dungeon-heading"><p class="eyebrow">SEED · JOURNEY</p><h2>여정</h2></header>
+  <header class="dungeon-heading"><p class="eyebrow">SEED · JOURNEY</p><h2>어디로 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header>
   <div class="dungeon-scroll">
    <button id="open-shop" class="journey-shop"><strong>출발 상점</strong><small>가져갈 물약 · ${itemCounts(shop.carry)||'없음'}</small><span aria-hidden="true">→</span></button>
    <div class="journey-grid">

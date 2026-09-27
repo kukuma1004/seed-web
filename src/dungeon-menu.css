@@ -1,20 +1,109 @@
-/* Static existing art, no extra scene or animated background for mode selection. */
-.menu-panel.dungeon-panel{left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(920px,94vw);height:min(760px,94dvh);max-height:94dvh;box-sizing:border-box;padding:22px 26px 14px;display:flex;gap:14px;justify-content:flex-start;overflow:hidden;background:#0b2026f5;border:1px solid #c1d3b544;border-radius:20px;text-align:left}
-.dungeon-heading{flex:none}.dungeon-heading h2{font-size:28px!important;margin:4px 0 0!important;letter-spacing:1px!important}.dungeon-heading .eyebrow{font-size:10px;letter-spacing:3px}
-.dungeon-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;flex:1;padding:2px 3px 8px;scrollbar-width:thin}
-.dungeon-footer{flex:none;display:flex;justify-content:center;padding-top:8px;border-top:1px solid #bed3b92b}.dungeon-footer button{margin:0!important;min-height:44px;min-width:160px;padding:10px 26px!important;font-size:16px!important;border-radius:10px;background:#193831;border:1px solid #c4dab86b;color:#edf2d5}
-.dungeon-modes{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:100%;align-content:center}
-.dungeon-mode{position:relative;display:flex;flex-direction:column;justify-content:flex-end;align-items:flex-start;gap:8px;aspect-ratio:1.15;padding:24px!important;margin:0!important;min-width:0;border:1px solid #bfdc9e70;border-radius:16px;text-align:left;overflow:hidden;background-size:cover;background-position:center;color:#eff5d9}
-.dungeon-mode strong{font-size:clamp(22px,3vw,34px);letter-spacing:1px}.dungeon-mode small{font-size:13px;line-height:1.5;color:#d2e5cc}.mode-number{position:absolute;top:16px;left:22px;font:16px Georgia;color:#e5d9a3}
-.journey-shop{width:100%;display:flex;align-items:center;gap:12px;padding:10px 14px!important;margin:0 0 12px!important;min-height:46px;border-radius:10px;border:1px solid #dcca8266;background:#29362e;color:#f1e5b6;text-align:left}.journey-shop strong{font-size:15px;white-space:nowrap}.journey-shop small{font-size:12px;color:#bdcdbd}.journey-shop>span{margin-left:auto}
-.journey-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
-.journey-card{position:relative;isolation:isolate;aspect-ratio:1;min-width:0;width:100%;padding:0!important;margin:0!important;border-radius:14px;border:1px solid #cad8a077;overflow:hidden;display:block;text-align:left;color:#eef5d8;background:#14322d}
-.journey-picture{position:absolute;inset:0;background-size:cover;background-position:center;z-index:-2}.journey-card:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#05141a 0%,#06192077 35%,#06192022 68%)}
+/* Menu art is static illustration; selection is live HTML, with no extra WebGL pass. */
+.menu-panel.dungeon-panel{left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(1380px,94vw);height:min(850px,94dvh);max-height:94dvh;box-sizing:border-box;padding:20px 26px 12px;display:flex;flex-direction:column;gap:14px;justify-content:flex-start;overflow:hidden;background:linear-gradient(180deg,#04171ec9,#04151a80);border:0;border-radius:20px;text-align:left}
+.dungeon-heading{flex:none;padding-right:120px}.dungeon-heading h2{font-family:Georgia,'Batang','Malgun Gothic',serif!important;font-size:clamp(25px,3.5vw,46px)!important;margin:4px 0 0!important;letter-spacing:2px!important;color:#fff3d4;text-shadow:0 2px 12px #000}.dungeon-heading .eyebrow{font-size:11px;letter-spacing:4px;color:#d5c792}
+.menu-ornament{display:flex;align-items:center;gap:10px;color:#d6bb73;width:min(360px,100%);font-size:15px;margin-top:10px}.menu-ornament:before,.menu-ornament:after{content:'';height:1px;background:linear-gradient(90deg,transparent,#cfb56d);flex:1}.menu-ornament:after{transform:rotate(180deg)}
+.dungeon-scroll{min-height:0;overflow-y:auto;overscroll-behavior:contain;flex:1;padding:2px 3px 8px;scrollbar-width:thin;scrollbar-color:#ac9967 #071c20}
+.dungeon-footer{flex:none;display:flex;justify-content:center;padding-top:3px}.dungeon-footer button{margin:0!important;min-height:48px;min-width:210px;padding:10px 32px!important;font-family:Georgia,'Batang','Malgun Gothic',serif;font-size:22px!important;border-radius:14px;background:linear-gradient(120deg,#273a2eea,#0a2424ed);border:1px solid #dfc67e;color:#fff2d3;box-shadow:inset 0 0 0 3px #eee0ae0b,0 5px 14px #0005}
+.dungeon-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:20px;height:100%;min-height:240px;align-content:center}
+.dungeon-mode{position:relative;isolation:isolate;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;aspect-ratio:.9;max-height:100%;width:100%;padding:0!important;margin:0!important;min-width:0;border:2px solid #d9bd74;border-radius:20px;text-align:center;overflow:hidden;background:#081e23;color:#fff3d7;box-shadow:inset 0 0 0 3px #fff2be1a,0 12px 20px #0005;transition:border-color .18s,transform .18s}
+.mode-art{position:absolute;inset:0;width:100%;height:100%;object-fit:cover;object-position:center top;z-index:-2}.dungeon-mode:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#04171cfb 0%,#04171cef 12%,#04171c45 33%,transparent 50%)}
+.mode-caption{display:flex;flex-direction:column;gap:9px;padding:28px 12px 20px;text-shadow:0 2px 5px #000}.dungeon-mode strong{font-family:Georgia,'Batang','Malgun Gothic',serif;font-size:clamp(21px,2.6vw,36px);letter-spacing:1px;line-height:1.3}.dungeon-mode small{font-size:clamp(11px,1.2vw,16px);line-height:1.5;color:#e4e1c9;word-break:keep-all}
+.journey-shop{width:100%;display:flex;align-items:center;gap:12px;padding:10px 16px!important;margin:0 0 14px!important;min-height:48px;border-radius:10px;border:1px solid #dcca8266;background:linear-gradient(90deg,#2b382ced,#0b2827d9);color:#f1e5b6;text-align:left}.journey-shop strong{font-size:16px;white-space:nowrap}.journey-shop small{font-size:12px;color:#cbd7be}.journey-shop>span{margin-left:auto}
+.journey-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;max-width:1050px;margin:auto}
+.journey-card{position:relative;isolation:isolate;aspect-ratio:1.06;min-width:0;width:100%;padding:0!important;margin:0!important;border-radius:16px;border:1px solid #d9bd74;overflow:hidden;display:block;text-align:left;color:#fff1d3;background:#10272c;box-shadow:0 10px 20px #0004}
+.journey-picture{position:absolute;inset:0;background-size:cover;background-position:center;z-index:-2}.journey-card:after{content:'';position:absolute;inset:0;z-index:-1;background:linear-gradient(0deg,#05141a 0%,#061920ce 23%,#06192022 68%)}
 .journey-boss{position:absolute;left:18%;top:2%;width:68%;height:68%;background-size:contain;background-position:center;background-repeat:no-repeat}.journey-boss.sheet{background-size:200% 200%;background-position:left top}
 .act-card-2 .journey-picture{background-color:#3f283a;background-blend-mode:soft-light}.act-card-3 .journey-boss{left:20%;width:60%;height:60%;top:8%}
-.journey-act{position:absolute;top:10px;left:12px;font-size:12px;letter-spacing:1px;padding:4px 7px;border-radius:6px;background:#061b21d9;color:#f4e5b5}
-.journey-caption{position:absolute;bottom:14px;left:14px;right:10px;display:flex;flex-direction:column;gap:5px}.journey-caption strong{font-size:clamp(16px,2.4vw,25px)}.journey-caption small{font-size:clamp(10px,1.4vw,12px);line-height:1.4;color:#c6ded3}
-.journey-card:disabled{opacity:.55;cursor:not-allowed}.journey-extra{margin-top:12px;border-top:1px solid #b6ceb526;padding:8px 0;color:#b7cabc;font-size:12px}.journey-extra summary{cursor:pointer;min-height:36px;line-height:36px}.journey-extra .menu-item{margin:6px 0;min-height:44px}.journey-name .name-field{padding:8px 0;margin:0}.journey-name .ranking-consent{display:flex!important;font-size:12px!important}
-.dungeon-panel button:focus-visible,.journey-extra summary:focus-visible{outline:2px solid #e6df9f;outline-offset:-4px}.dungeon-panel button:hover:not(:disabled){border-color:#e1dea3}.dungeon-panel button:active:not(:disabled){filter:brightness(.88)}
-@media(max-height:500px){.menu-panel.dungeon-panel{padding:12px 16px 10px;gap:8px}.dungeon-heading h2{font-size:21px!important}.dungeon-heading .eyebrow{display:none}.dungeon-footer{padding-top:6px}.dungeon-modes{gap:12px}.dungeon-mode{aspect-ratio:auto;height:min(210px,53dvh);padding:16px!important}.dungeon-mode strong{font-size:25px}.dungeon-mode small{font-size:11px}.journey-shop{margin-bottom:8px!important;min-height:44px;padding:6px 12px!important}.journey-grid{max-width:calc((100dvh - 210px)*3);margin:auto;gap:9px}.journey-caption{left:10px;bottom:9px;gap:3px}.journey-caption strong{font-size:17px}.journey-caption small{font-size:10px}.journey-act{top:6px;left:7px;font-size:10px;padding:3px 5px}.journey-extra{margin-top:6px;padding-top:3px}}
-@media(max-width:540px) and (min-height:501px){.menu-panel.dungeon-panel{padding:18px 14px}.dungeon-modes{grid-template-columns:1fr}.dungeon-mode{aspect-ratio:1.8}.journey-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.journey-caption{left:6px;bottom:6px}.journey-caption strong{font-size:13px}.journey-caption small{display:none}.journey-act{font-size:9px;left:5px;top:5px;padding:2px 4px}.journey-shop small{font-size:10px}}
+.journey-act{position:absolute;top:12px;left:14px;font-size:12px;letter-spacing:1px;padding:5px 10px;border:1px solid #b5a37077;border-radius:6px;background:#061b21e8;color:#f4e5b5}
+.journey-caption{position:absolute;bottom:18px;left:18px;right:12px;display:flex;flex-direction:column;gap:7px}.journey-caption strong{font-family:Georgia,'Batang','Malgun Gothic',serif;font-size:clamp(16px,2.4vw,28px)}.journey-caption small{font-size:clamp(11px,1.4vw,13px);line-height:1.4;color:#d6dfcc;word-break:keep-all}
+.journey-card:disabled{cursor:not-allowed;border-color:#8e937d}.journey-card:disabled .journey-picture{filter:saturate(.4);opacity:.5}.journey-card:disabled .journey-act:after{content:' · 잠김';color:#d3d0c0}.journey-extra{margin-top:12px;border-top:1px solid #ccb57644;padding:6px 0;color:#d4d4b9;font-size:13px}.journey-extra summary{cursor:pointer;min-height:44px;line-height:44px}.journey-extra .menu-item{margin:6px 0;min-height:44px}.journey-name .name-field{padding:8px 0;margin:0}.journey-name .ranking-consent{display:flex!important;font-size:12px!important}
+.dungeon-panel button:focus-visible,.journey-extra summary:focus-visible{outline:3px solid #fff1b5;outline-offset:-5px}.dungeon-panel button:hover:not(:disabled){border-color:#fff1bd}.dungeon-panel button:active:not(:disabled){filter:brightness(.88)}
+/* Dedicated home panel: start at the top when content is taller than the screen. */
+.menu-panel.home-panel{width: min(440px,44vw);padding:clamp(22px,4vh,46px) 30px;justify-content:flex-start;gap:16px;scrollbar-width:thin;scrollbar-color:#a99a6d #071c20;background:linear-gradient(90deg,#06171cf5 0%,#06171ce8 80%,#06171c88 100%);border-right:1px solid #cfb87940}
+.home-panel>*{flex-shrink:0}.home-panel .home-heading{margin:0 0 3px}.home-panel .eyebrow{display:block;font:16px Georgia,serif;letter-spacing:7px;color:#d4bd7e}.home-panel h2{font-family:Georgia,'Batang','Malgun Gothic',serif!important;font-size:38px!important;color:#fff1cf;margin:10px 0!important;letter-spacing:4px!important}.home-panel .menu-ornament{margin-top:10px}.home-panel .menu-list{gap:10px}.home-panel .menu-item{border-radius:10px;min-height:58px;border-color:#bdad765c;background:linear-gradient(100deg,#1a302eea,#10262acc)}.home-panel .menu-item.primary{margin-top:0;border-color:#deca86;background:linear-gradient(110deg,#355145,#173631)}.home-panel .menu-item strong{color:#f4eacf}.home-panel .name-field input{border-color:#af9d6680;background:#0c2428c9}.home-panel .legal-note{white-space:normal;overflow:visible;line-height:1.6;font-size:10px;margin:0;color:#bdc7b7}
+@media(max-height:600px) and (min-width:601px){.menu-panel.home-panel{width:min(460px,48vw);padding:18px 24px;gap:10px}.home-panel h2{font-size:28px!important;margin:5px 0!important}.home-panel .eyebrow{font-size:12px}.home-panel .menu-ornament{margin-top:5px}.home-panel .menu-list{display:grid;grid-template-columns:1fr 1fr;gap:8px}.home-panel #go-dungeon{grid-column:1/-1}.home-panel .menu-item{min-height:48px;padding:8px 12px}.home-panel .menu-item strong{font-size:13px}.home-panel .menu-item small{font-size:10px}.home-panel .name-field{margin:0}.home-panel .name-field input{min-height:40px}.home-panel .name-field label{display:block}.home-panel .name-field small{display:none}.home-panel .ranking-consent{font-size:11px!important}.home-panel .home-heading{margin:0}}
+@media(max-height:500px){.menu-panel.dungeon-panel{padding:10px 14px 8px;gap:7px;width:94vw;height:94dvh}.dungeon-heading h2{font-size:24px!important;margin:0!important}.dungeon-heading .eyebrow{display:none}.dungeon-heading .menu-ornament{margin-top:4px;font-size:10px;width:240px}.dungeon-footer{padding-top:0}.dungeon-footer button{min-height:44px;font-size:17px!important;padding:7px 24px!important;min-width:170px}.dungeon-modes{gap:12px;min-height:140px;align-content:stretch}.dungeon-mode{aspect-ratio:auto;height:100%;border-radius:13px}.mode-caption{padding:22px 8px 12px;gap:5px}.dungeon-mode strong{font-size:23px}.dungeon-mode small{font-size:11px}.journey-shop{margin-bottom:8px!important;min-height:44px;padding:6px 12px!important}.journey-grid{max-width:760px;gap:12px}.journey-card{aspect-ratio:1.55}.journey-caption{left:10px;bottom:9px;gap:3px}.journey-caption strong{font-size:18px}.journey-caption small{font-size:11px}.journey-act{top:6px;left:7px;font-size:10px;padding:3px 5px}.journey-extra{margin-top:6px;padding-top:3px}}
+@media(max-width:600px) and (min-height:501px){.menu-panel.home-panel{width:100%;max-width:none;padding:76px 24px 24px;background:linear-gradient(90deg,#06171cf2,#06171cd6 66%,#06171c99);gap:14px}.home-panel h2{font-size:34px!important}.home-panel .menu-list{gap:8px}.menu-panel.dungeon-panel{padding:56px 12px 10px;gap:10px;width:96vw;height:98dvh;border-radius:12px}.dungeon-heading{padding-right:0}.dungeon-heading h2{font-size:26px!important}.dungeon-heading .eyebrow{display:block;font-size:10px}.dungeon-heading .menu-ornament{margin-top:6px}.dungeon-modes{grid-template-columns:1fr;grid-template-rows:repeat(3,minmax(135px,1fr));gap:10px;min-height:435px;align-content:stretch}.dungeon-mode{aspect-ratio:auto;min-height:135px;text-align:left;border-radius:13px}.mode-art{object-position:center 38%}.dungeon-mode:after{background:linear-gradient(90deg,#04171cea 0%,#04171c70 52%,#04171c11)}.mode-caption{padding:14px 16px;max-width:73%;gap:5px}.dungeon-mode strong{font-size:25px}.dungeon-mode small{font-size:12px}.journey-grid{grid-template-columns:1fr;gap:10px}.journey-card{aspect-ratio:2.2}.journey-boss{left:46%;width:52%;height:100%;top:0}.act-card-3 .journey-boss{left:50%;width:48%;height:90%;top:3%}.journey-caption{left:14px;bottom:12px;right:10px}.journey-caption strong{font-size:22px}.journey-caption small{font-size:12px}.journey-act{font-size:11px;left:12px;top:9px}.journey-shop small{font-size:11px}}
+/* Shared gold inlay ties the title, mode selection and chapter cards together. */
+.menu-panel.dungeon-panel{background:linear-gradient(180deg,#04171e75,#04151a28);box-shadow:none}
+.mode-caption strong{display:flex;align-items:center;justify-content:center;gap:12px}
+.mode-caption strong:before,.mode-caption strong:after{content:'';flex:1;max-width:44px;height:1px;background:linear-gradient(90deg,transparent,#e3c884)}
+.mode-caption strong:after{transform:rotate(180deg)}
+.dungeon-mode:before{content:'';position:absolute;inset:4px;pointer-events:none;border:1px solid #e3c88436;border-radius:14px}
+.journey-card:before{content:'';position:absolute;inset:4px;border:1px solid #e3c88430;border-radius:11px;pointer-events:none}
+.journey-panel .journey-grid{max-width:960px}
+.journey-card{border-width:2px;aspect-ratio:1}
+.journey-caption strong{letter-spacing:1px;text-shadow:0 2px 8px #000}
+.journey-caption small{color:#e5e4ce}
+.journey-act{font-family:Georgia,'Batang','Malgun Gothic',serif;box-shadow:0 2px 8px #0004}
+.journey-extra summary{display:flex;align-items:center;justify-content:space-between;gap:12px;line-height:1.5;list-style:none;padding:0 10px;border-radius:7px}
+.journey-extra summary::-webkit-details-marker{display:none}
+.journey-extra summary:after{content:'＋';color:#d7bf7f;font-size:18px}
+.journey-extra[open] summary:after{content:'−'}
+.journey-extra summary:hover{background:#c9b57410}
+.home-panel #go-dungeon{position:relative;padding-right:45px}
+.home-panel #go-dungeon:after{content:'→';position:absolute;right:18px;top:50%;transform:translateY(-50%);font-size:24px;font-weight:400;color:#e9d393}
+.home-panel .menu-item:focus-visible,.home-panel input:focus-visible,.home-panel a:focus-visible{outline:2px solid #f1db99;outline-offset:3px}
+.home-panel .menu-item:hover{border-color:#e7d492;background:linear-gradient(100deg,#294238ee,#122e2bdc)}
+.home-panel .ranking-consent{min-height:32px;align-items:center}
+.home-panel .ranking-consent input{accent-color:#bca362}
+.home-panel .name-field input.need~#name-hint{display:block;color:#f0beaa;font-size:11px;line-height:1.4}
+@media(min-width:601px) and (min-height:501px) and (max-height:650px){
+ .journey-panel .journey-grid{max-width:min(780px,calc((100dvh - 325px)*3))}
+ .journey-caption{left:12px;bottom:13px}
+ .journey-caption strong{font-size:21px}
+ .journey-caption small{font-size:11px}
+}
+@media(min-width:601px) and (max-height:500px){
+ .journey-panel .journey-grid{max-width:540px;gap:12px}
+ .journey-card{aspect-ratio:1}
+ .journey-caption strong{font-size:17px;letter-spacing:0}
+ .journey-caption small{font-size:10px}
+ .journey-boss{left:17%;width:72%;height:72%;top:0}
+ .journey-panel .journey-shop{margin-bottom:7px!important}
+ .journey-panel .journey-extra summary{min-height:44px}
+ .mode-caption strong{gap:8px}
+ .mode-caption strong:before,.mode-caption strong:after{max-width:24px}
+ .menu-panel.home-panel{padding-left:max(20px,env(safe-area-inset-left));padding-bottom:max(18px,env(safe-area-inset-bottom))}
+}
+@media(max-width:600px) and (min-height:501px){
+ .menu-panel.home-panel{padding-top:max(76px,calc(env(safe-area-inset-top) + 60px));padding-bottom:max(24px,env(safe-area-inset-bottom))}
+ .menu-panel.dungeon-panel{padding-top:max(56px,calc(env(safe-area-inset-top) + 46px));padding-bottom:max(10px,env(safe-area-inset-bottom))}
+ .mode-caption strong{justify-content:flex-start;gap:10px}
+ .mode-caption strong:before{display:none}
+ .mode-caption strong:after{max-width:38px;transform:none}
+ .journey-card{aspect-ratio:2.2}
+ .journey-caption{max-width:64%}
+ .journey-card:after{background:linear-gradient(90deg,#05141ae6,#06192080 58%,#06192011),linear-gradient(0deg,#05141aa8,transparent 60%)}
+ .home-panel .ranking-consent{min-height:44px}
+}
+@media(prefers-reduced-motion:reduce){.dungeon-mode{transition:none}}
+/* News has its own lane beside browser actions on the home screen. */
+body.menu-mode:has(.home-panel) #app-actions{right:max(124px,calc(env(safe-area-inset-right) + 116px));top:max(18px,env(safe-area-inset-top))}
+#overlay:has(.home-panel) .menu-news-button{right:max(18px,env(safe-area-inset-right));top:max(18px,env(safe-area-inset-top));backdrop-filter:none;border-color:#c6b57980;border-radius:10px}
+body.menu-mode:has(.dungeon-panel) #app-actions{top:max(14px,env(safe-area-inset-top));right:max(30px,env(safe-area-inset-right))}
+@media(max-height:500px){body.menu-mode:has(.home-panel) #app-actions{right:max(108px,calc(env(safe-area-inset-right) + 100px));top:max(8px,env(safe-area-inset-top))}#overlay:has(.home-panel) .menu-news-button{top:max(8px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));min-width:82px;min-height:40px}.menu-panel.home-panel{gap:7px}.home-panel .home-heading .menu-ornament{display:none}.home-panel .name-field label{font-size:10px}.home-panel .legal-note{font-size:9px}}
+@media(max-width:600px) and (min-height:501px){body.menu-mode:has(.dungeon-panel) #app-actions{top:max(12px,env(safe-area-inset-top));right:max(18px,env(safe-area-inset-right))}}
+
+/* Keep chapter artwork above the native button fill in WebKit/Chromium. */
+.journey-picture{z-index:0}.journey-card:after{z-index:1;pointer-events:none}.journey-caption,.journey-act{z-index:2}.journey-card:before{z-index:3;pointer-events:none}
+
+/* Final illustration pass: quiet the backdrop and let the framed art carry the menu. */
+.menu-panel.dungeon-panel{background:linear-gradient(180deg,#04171e94,#04151a42 58%,#04151a20)}
+.dungeon-mode{border-color:#e1c67e;box-shadow:inset 0 0 0 3px #fff2be1a,0 9px 22px #0008}
+.dungeon-mode:before{z-index:3;background:linear-gradient(90deg,transparent 44%,#f1d88c 50%,transparent 56%) center top/70px 1px no-repeat}
+.mode-caption{position:relative;z-index:2}
+.journey-card:before{background:linear-gradient(90deg,transparent 44%,#f1d88c 50%,transparent 56%) center top/60px 1px no-repeat}
+.journey-shop{box-shadow:inset 0 1px #f2dfa51c,0 4px 12px #0003}
+#overlay .home-panel .legal-note{font-size:12px;line-height:1.65;margin-top:2px;color:#bbc8bd}
+#overlay .home-panel .eyebrow{color:#d4bd7e}
+.home-panel #go-dungeon{box-shadow:inset 0 1px #f9e9b330,0 5px 14px #0004}
+@media(min-width:601px) and (min-height:501px){
+ .dungeon-hub .dungeon-mode{aspect-ratio:auto;height:100%}
+ .dungeon-hub .dungeon-modes{align-content:stretch}
+ .dungeon-hub .mode-caption{padding-bottom:22px}
+}
+@media(max-height:500px){
+ #overlay .home-panel .legal-note{font-size:11px;line-height:1.5}
+ .dungeon-mode:before,.journey-card:before{background-size:44px 1px}
+}
