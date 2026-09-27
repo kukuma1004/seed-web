@@ -36,6 +36,32 @@ tickSurvival(sparse,.01,0);tickSurvival(busy,.01,80);
 assert.equal(sparse.spawnTimer,busy.spawnTimer*.85,'only sparse fields replenish a little sooner');
 const freshStats=survivalEnemySpec('swarm',120);settleSurvivalKill(sparse);assert.deepEqual(survivalEnemySpec('swarm',120),freshStats,'clear speed never raises enemy HP or damage');
 
+// Completed builds must face a sustained circuit, not the opening tutorial.
+const at=(lap,act,time)=>({...createSurvivalSession(81),lap,act,time,legStartedAt:0});
+for(let lap=1;lap<=25;lap++)for(let act=0;act<3;act++){
+ const previous=act?at(lap,act-1,269):at(lap-1,2,269),next=at(lap,act,0);
+ for(const kind of ['swarm','runner','brute']){
+  const before=survivalEnemySpec(kind,previous),after=survivalEnemySpec(kind,next);
+  assert(after.hp>=before.hp,`no durability reset: circuit ${lap+1}, act ${act+1}, ${kind}`);
+  assert(after.speed>=before.speed-1e-9,'no movement reset at act boundaries after a circuit');
+ }
+ const pressure=survivalPressure(next);
+ assert.equal(pressure.cap,300);assert(pressure.spawnInterval<=.17);
+ assert.equal(pressure.formation,'pincer','new circuits open from two sides, not a tutorial column');
+ const adds=survivalPressure(at(lap,act,270));assert.equal(adds.cap,60,'boss fights keep their smaller crowd');
+ const capped=at(lap,act,0);assert.equal(tickSurvival(capped,.1,300).spawn,0);
+}
+const composition=(lap,act,time)=>{const session=at(lap,act,time),result={swarm:0,runner:0,brute:0};
+ for(let i=0;i<10000;i++)result[survivalSpawn(session,{x:0,z:0}).kind]++;
+ return result;
+};
+const openingMix=composition(1,0,0);
+assert(openingMix.brute>1400&&openingMix.brute<2000,'durable bodies present from the first second of circuit two');
+assert(openingMix.runner>1700&&openingMix.runner<2300,'telegraphed runners do not wait for minute two');
+assert(openingMix.swarm>5800,'ordinary swarms still form the majority at circuit two entry');
+assert.deepEqual(openingMix,composition(1,0,0),'enemy mix remains deterministic across restores');
+console.log('Circuit entry specs',JSON.stringify([at(0,2,269),at(1,0,0),at(2,0,0)].map(s=>({circuit:s.lap+1,act:s.act+1,swarm:survivalEnemySpec('swarm',s),brute:survivalEnemySpec('brute',s),pressure:survivalPressure(s)}))));
+
 // All roles have contact stats only; fast fragile runners and slow durable brutes.
 for(let second=0;second<=600;second++){
  const pressure=survivalPressure(second);

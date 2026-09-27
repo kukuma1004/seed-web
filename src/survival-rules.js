@@ -31,7 +31,7 @@ export const survivalAct=session=>SURVIVAL_ACTS[Math.min(2,count(session?.act,2)
 export const survivalActTime=session=>Math.max(0,(session?.time||0)-(session?.legStartedAt||0));
 export function survivalScaling(session){
  const act=count(session?.act,2),lap=count(session?.lap,1000);
- return {hp:Math.min(20,(1+act*.18)*(1+lap*.35)),speed:Math.min(1.3,1+act*.025+lap*.035),damage:Math.min(2,1+act*.08+lap*.12),bossHp:Math.min(12,(1+act*.12)*Math.pow(1.35,Math.min(lap,20))),tempo:Math.min(1.4,1+lap*.05),projectile:Math.min(1.3,1+lap*.04)};
+ return {hp:Math.min(60,(1+act*.18)*Math.pow(1.9,Math.min(lap,10))),speed:Math.min(1.3,1+act*.025+lap*.065),damage:Math.min(2,1+act*.08+lap*.18),bossHp:Math.min(12,(1+act*.12)*Math.pow(1.35,Math.min(lap,20))),tempo:Math.min(1.4,1+lap*.05),projectile:Math.min(1.3,1+lap*.04)};
 }
 // An act clear is a transition, never a restart: the caller retains the build,
 // inventory, score and choice progress. The world is cleared at this boundary.
@@ -67,13 +67,16 @@ const PHASES=Object.freeze([
 export function survivalPressure(seconds){
  const session=typeof seconds==='object'?seconds:null;
  const time=bounded(session?survivalActTime(session):seconds,86400),act=count(session?.act,2),lap=count(session?.lap,1000);
- const phase=Math.min(7,Math.max(act+Math.min(3,lap),Math.floor(time/(SURVIVAL.duration/PHASES.length))));
- if(time>=SURVIVAL.duration)return {cap:SURVIVAL.maxBossAdds,spawnInterval:SURVIVAL.bossSpawnInterval,hpScale:3.45,speedScale:1.49,label:survivalAct(session).boss,formation:'boss',formationLabel:'최종 결전',relief:false};
- const strength=Math.min(7,Math.max(act,Math.floor(time/60)));
+ const phase=Math.min(7,Math.max(lap?Math.min(7,5+lap):act,Math.floor(time/(SURVIVAL.duration/PHASES.length))));
+ // Completed builds enter the next circuit intact: ordinary enemies must not
+ // return to tutorial durability/composition every time the act timer resets.
+ const strength=lap?Math.min(12,4+(lap-1)*3+act+Math.floor(Math.min(time,SURVIVAL.duration)/60)*.5):Math.min(7,Math.max(act,Math.floor(time/60)));
+ if(time>=SURVIVAL.duration)return {cap:SURVIVAL.maxBossAdds,spawnInterval:SURVIVAL.bossSpawnInterval,hpScale:Math.max(3.45,1+strength*.35),speedScale:1.49,label:survivalAct(session).boss,formation:'boss',formationLabel:'최종 결전',relief:false};
  const rules=PHASES[phase],beat=time%60,relief=beat>=60-SURVIVAL.reliefDuration;
- const formation=relief?'relief':time<8?'column':beat<25?'pincer':'surround';
+ const opening=time<8&&!lap;
+ const formation=relief?'relief':opening?'column':beat<25?'pincer':'surround';
  const formationLabel=relief?'숨 고르기':formation==='column'?'한쪽에서 접근':formation==='pincer'?'양쪽 압박':'사방 포위';
- return {cap:relief?Math.floor(rules.cap*.7):rules.cap,spawnInterval:time<8?1:relief?.65:rules.spawnInterval,hpScale:1+strength*.35,speedScale:1+strength*.07,label:relief?'숨 고르기':rules.label,formation,formationLabel,relief};
+ return {cap:relief?Math.floor(rules.cap*.7):rules.cap,spawnInterval:opening?1:relief?.65:rules.spawnInterval,hpScale:1+strength*.35,speedScale:1+Math.min(5,strength)*.07,label:relief?'숨 고르기':rules.label,formation,formationLabel,relief};
 }
 
 const ENEMIES=Object.freeze({
@@ -113,8 +116,9 @@ export function survivalSpawn(session,player,arena=SURVIVAL.arena){
  }
  session.spawnIndex=index+1;
  const time=bounded(survivalActTime(session),86400),roll=random(session);
- const bruteChance=time>=45?Math.min(.12,.05+Math.floor(time/60)*.01):0;
- const runnerChance=time>=15?Math.min(.15,.08+Math.floor(time/60)*.01):0;
+ const lap=count(session.lap,1000),act=count(session.act,2);
+ const bruteChance=lap?Math.min(.25,.14+lap*.03+act*.01+Math.floor(time/60)*.015):time>=45?Math.min(.12,.05+Math.floor(time/60)*.01):0;
+ const runnerChance=lap?Math.min(.26,.18+lap*.02+act*.01+Math.floor(time/60)*.01):time>=15?Math.min(.15,.08+Math.floor(time/60)*.01):0;
  const kind=roll<bruteChance?'brute':roll<bruteChance+runnerChance?'runner':'swarm';
  return {x,z,kind};
 }
