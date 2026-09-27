@@ -1702,6 +1702,7 @@ function bindNameField(onSubmit=null){
 }
 // Existing two main modes stay prominent; the new defence slice is a separate trial.
 let defenseScreen=null,adventureScreen=null;
+let defenseLoadSerial=0;
 async function showSeedAdventure(){
  mode='adventure';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  try{
@@ -1711,9 +1712,18 @@ async function showSeedAdventure(){
 }
 
 async function showSeedDefense(){
- mode='defense';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ const serial=++defenseLoadSerial;
+ mode='defense-loading';touch.reset();keys.clear();stopAnimation();
+ const overlay=$('#overlay');overlay.hidden=false;
+ overlay.innerHTML='<div class="menu-panel"><p class="eyebrow">SEED · 씨앗 수호전</p><h2>정원을 준비하고 있어요</h2><p id="defense-load-status" role="status">수호전 파일을 불러오는 중이에요…</p><button id="defense-load-reload" hidden>최신 화면으로 다시 열기</button><button id="defense-load-back">돌아가기</button></div>';
+ const back=()=>{if(serial!==defenseLoadSerial)return;++defenseLoadSerial;clearTimeout(slow);showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
+ $('#defense-load-back').onclick=back;
+ $('#defense-load-reload').onclick=()=>location.reload();
+ const slow=setTimeout(()=>{if(serial!==defenseLoadSerial)return;$('#defense-load-status').textContent='불러오기가 지연되고 있어요. 연결을 확인하거나 최신 화면으로 다시 열어 주세요. 저장 기록은 지우지 않아요.';$('#defense-load-reload').hidden=false;},12000);
  try{
   const {mountSeedDefense}=await import('./seed-defense-view.js');
+  clearTimeout(slow);if(serial!==defenseLoadSerial)return;
+  mode='defense';overlay.hidden=true;
   const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
   defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,onBossDefeated:event=>awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
@@ -1722,7 +1732,14 @@ async function showSeedDefense(){
    if(!decision.eligible||owner!==account.user()?.uid)return '온라인 기록은 같은 계정으로 로그인한 정상 플레이만 등록해요.';
    try{await defenseRanking.submit(entry);return '계정 최고기록 확인 완료 · 사용한 씨앗도 랭킹에 남았어요.';}catch{return '온라인 등록 대기 · 이 계정에 보관하고 랭킹을 열면 다시 전송해요.';}
   },onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
- }catch(error){console.error('씨앗 수호전 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='수호전을 불러오지 못했어요. 다시 눌러 주세요.';}
+ }catch(error){
+  clearTimeout(slow);if(serial!==defenseLoadSerial)return;
+  console.error('씨앗 수호전 시작 실패',error);
+  document.querySelector('#seed-defense')?.remove();document.body.classList.remove('seed-defense-open');
+  mode='defense-loading';overlay.hidden=false;
+  $('#defense-load-status').textContent='수호전 파일을 불러오지 못했어요. 업데이트 전 화면이 남아 있거나 연결이 끊겼을 수 있어요. 최신 화면으로 다시 열어 주세요. 저장 기록은 지우지 않아요.';
+  $('#defense-load-reload').hidden=false;
+ }
 }
 function showDungeon(){
  mode='ready';touch.reset();keys.clear();
