@@ -3,7 +3,7 @@ import {RoundedBoxGeometry} from 'three/addons/geometries/RoundedBoxGeometry.js'
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {createSeedBody} from './seed-body.js';
 import {createMotion} from './motion.js';
-import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan,refillMirrorGuard,MIRROR_GUARD} from './mirror-trial.js';
+import {mirrorBuildSnapshot,mirrorDifficultyFloor,mirrorPatternPlan,refillMirrorGuard,MIRROR_GUARD,MIRROR_DUEL} from './mirror-trial.js';
 
 export const MIRROR_ARENA=Object.freeze({
  shape:'circle',id:'mirror-tower',radius:13,
@@ -18,10 +18,10 @@ export const MIRROR_PANELS=Object.freeze([
  Object.freeze({x:0,z:-5.4,w:3.4,d:.18}),Object.freeze({x:0,z:5.4,w:3.4,d:.18})
 ]);
 
-// Obstacles enter after the opening ten floors. Keep the middle lane and both
+// Two open floors teach the duel; cover enters on floor three. Keep the middle lane and both
 // outer loops wide enough for a dash; vary the formation between ten-floor sets.
 export function mirrorFloorObstacles(floor=1){
- const n=Math.max(1,Math.floor(Number(floor)||1));if(n<11)return [];
+ const n=Math.max(1,Math.floor(Number(floor)||1));if(n<3)return [];
  const shift=(Math.floor((n-1)/10)%2?1:-1)*.65;
  const side=[{x:-4.15,z:shift,w:1.25,d:1.65,h:1.8},{x:4.15,z:-shift,w:1.25,d:1.65,h:1.8}];
  if(n>=31)side.push({x:shift,z:-2.8,w:1.6,d:1.15,h:1.8});
@@ -50,7 +50,7 @@ function segmentPanelHit(previous,next,panel,padding){
  for(const axis of ['x','z']){
   const start=axis==='x'?previous.x:previous.z,delta=axis==='x'?dx:dz,min=axis==='x'?minX:minZ,max=axis==='x'?maxX:maxZ;
   if(Math.abs(delta)<1e-8){if(start<min||start>max)return null;continue;}
-  let a=(min-start)/delta,b=(max-start)/delta,normal=delta>0?-1:1;if(a>b){const hold=a;a=b;b=hold;normal*=-1;}
+  let a=(min-start)/delta,b=(max-start)/delta,normal=delta>0?-1:1;if(a>b){const hold=a;a=b;b=hold;}
   if(a>enter){enter=a;nx=axis==='x'?normal:0;nz=axis==='z'?normal:0;}
   leave=Math.min(leave,b);if(enter>leave)return null;
  }
@@ -84,14 +84,35 @@ export function createMirrorPanels(scene){
 // The clone is slower than the seed in open space, but it cuts toward the
 // player's escape line near the rim. This keeps the large room useful without
 // turning the safest strategy into running around the outside forever.
-export function mirrorSteering({mirrorX=0,mirrorZ=0,playerX=0,playerZ=0,arenaRadius=MIRROR_ARENA.radius,desiredDistance=[4.8,8],strafe=.52,strafeSign=1}={}){
+export function mirrorSteering({mirrorX=0,mirrorZ=0,playerX=0,playerZ=0,velocityX=0,velocityZ=0,lead=0,reloading=false,arenaRadius=MIRROR_ARENA.radius,desiredDistance=[4.8,8],strafe=.52,strafeSign=1}={}){
  const dx=playerX-mirrorX,dz=playerZ-mirrorZ,distance=Math.max(.001,Math.hypot(dx,dz)),nx=dx/distance,nz=dz/distance;
  const [near,far]=desiredDistance,playerRadius=Math.hypot(playerX,playerZ),edge=clamp((playerRadius-arenaRadius*.68)/(arenaRadius*.22),0,1);
- const range=distance>far?1:distance<near?-.72:.08;
- const forward=range+edge*1.18,tangent=strafe*strafeSign*(1-edge*.58);
- let x=nx*forward+nz*tangent,z=nz*forward-nx*tangent,length=Math.hypot(x,z);
+ const range=distance>far?1:distance<near?-.85:reloading?-.42:.2;
+ const forward=range+edge*(reloading?.35:.95),tangent=strafe*strafeSign*(1-edge*.58);
+ let x=nx*forward+nz*tangent+velocityX*lead*(.15+edge*.2),z=nz*forward-nx*tangent+velocityZ*lead*(.15+edge*.2);
+ // Leave room for the next dodge instead of sliding along the wall forever.
+ const ownRadius=Math.hypot(mirrorX,mirrorZ),rim=clamp((ownRadius-arenaRadius+2.4)/1.5,0,1);
+ if(ownRadius>.001){x-=mirrorX/ownRadius*rim*1.8;z-=mirrorZ/ownRadius*rim*1.8;}
+ let length=Math.hypot(x,z);
  if(length<.001){x=nx;z=nz;length=1;}
- return Object.freeze({x:x/length,z:z/length,distance,edgeCut:edge});
+ return {x:x/length,z:z/length,distance,edgeCut:edge,tactic:distance>far?'chase':distance<near||reloading?'retreat':'flank'};
+}
+
+// Only four boxes at most: route around the first blocking cover corner. The
+// caller latches the waypoint until reached, so strafing cannot flip it every frame.
+export function mirrorCoverWaypoint(from,target,obstacles=[],strafeSign=1){
+ let nearest=null,cover=null;
+ for(const obstacle of obstacles){const hit=segmentPanelHit(from,target,obstacle,.82);if(hit&&(!nearest||hit.t<nearest.t)){nearest=hit;cover=obstacle;}}
+ if(!cover)return null;
+ let best=null,bestScore=Infinity;
+ for(const sx of [-1,1])for(const sz of [-1,1]){
+  const point={x:cover.x+sx*(cover.w/2+1.03),z:cover.z+sz*(cover.d/2+1.03)};
+  if(obstacles.some(o=>segmentPanelHit(from,point,o,.74)))continue;
+  const cross=(target.x-from.x)*(point.z-from.z)-(target.z-from.z)*(point.x-from.x);
+  const score=Math.hypot(point.x-from.x,point.z-from.z)+Math.hypot(target.x-point.x,target.z-point.z)+(Math.sign(cross)===strafeSign?0:.18);
+  if(score<bestScore){bestScore=score;best=point;}
+ }
+ return best;
 }
 
 // 2026-09-22 사용자 요청: 한꺼번에 퍼지는 부채꼴 대신 기관총처럼 "7발 연사 → 장전 → 다시 연사".
@@ -166,62 +187,94 @@ export function createMirrorFighter(scene,{floor=1,quality='normal',levels=new M
  const motion=createMotion(root,root.userData.legs);
  const readyMaterial=new THREE.MeshBasicMaterial({color:0xe7dbff,transparent:true,opacity:.2,depthWrite:false,toneMapped:false});
  const readyRing=new THREE.Mesh(new THREE.TorusGeometry(.53,.035,4,28),readyMaterial);readyRing.rotation.x=Math.PI/2;readyRing.position.y=1.48;readyRing.castShadow=false;root.add(readyRing);
+ const pointerGeometry=new THREE.BufferGeometry();pointerGeometry.setAttribute('position',new THREE.Float32BufferAttribute([-.12,.08,.7,0,.08,1.12,.12,.08,.7],3));
+ const readyPointer=new THREE.Mesh(pointerGeometry,readyMaterial);readyPointer.name='mirror-aim-cue';readyPointer.visible=false;root.add(readyPointer);
  const hp=Math.round(180*plan.stats.hpScale);
  return {
   g:root,type:'mirrorseed',hp,maxHp:hp,dead:false,hit:0,slow:0,state:'stalk',timer:0,attackCD:.68,
-  broken:0,cracks:0,damageAllowance:hp*MIRROR_GUARD.burst,shotIndex:0,attackIndex:0,bursts:[],strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,
-  floor,plan,moveName:'비친 자동공격 준비',snapshot
+  broken:0,cracks:0,damageAllowance:hp*MIRROR_GUARD.burst,shotIndex:0,attackIndex:0,bursts:[],strafeSign:1,turnTimer:1.05,dir:new THREE.Vector3(),faceDir:new THREE.Vector3(),feintDir:new THREE.Vector3(),dashDir:new THREE.Vector3(),dashTime:0,queuedAttacks:[],motion,readyRing,readyPointer,
+  floor,plan,moveName:'비친 자동공격 준비',snapshot,obstacles:mirrorFloorObstacles(floor),reactionClock:0,observedPlayer:null,route:null,reloadDuration:.68,contactCD:0
  };
 }
 
 // 공격 하나 = 연사 한 번. 바로 쏘지 않고 줄에 세워 두었다가 pumpBursts가 interval마다 한 발씩 내보낸다.
 function fireAttack(enemy,entry){
+ if(enemy.bursts?.length>=MIRROR_DUEL.maximumBurstQueue)return false;
  const volley=entry.attack.formId?mirrorFormVolley(entry.attack,enemy.floor,enemy.shotIndex++):mirrorVolley(entry.attack.law,enemy.floor,enemy.shotIndex++);
  (enemy.bursts||=[]).push({clock:0,law:entry.attack.law,specs:volley.map(spec=>({...spec,damageScale:(spec.damageScale||1)*entry.damageScale*enemy.plan.stats.hitDamageMaxHp,law:spec.law||entry.attack.law}))});
+ return true;
 }
 function pumpBursts(enemy,dt,fire){
  const burst=enemy.bursts?.[0];if(!burst)return;
  burst.clock-=dt;
- while(burst.specs.length&&burst.clock<=0){const spec=burst.specs.shift();fire(enemy.g.position,enemy.dir.clone().applyAxisAngle(AXIS_Y,spec.angle||0),spec);burst.clock+=MIRROR_BURST.interval;}
+ // Never catch up a stalled tab with a whole volley on the same frame.
+ if(burst.specs.length&&burst.clock<=0){const spec=burst.specs.shift();fire(enemy.g.position,enemy.dir.clone().applyAxisAngle(AXIS_Y,spec.angle||0),spec);burst.clock=MIRROR_BURST.interval+Math.max(-MIRROR_BURST.interval*.5,burst.clock);}
  if(!burst.specs.length)enemy.bursts.shift();
 }
 
-export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit,guardDt=dt}={}){
+export function tickMirrorFighter(enemy,dt,time,{player,camera,constrain,fire,hit,guardDt=dt,obstacles=enemy.obstacles}={}){
  refillMirrorGuard(enemy,guardDt);
  const previousX=enemy.g.position.x,previousZ=enemy.g.position.z;
- enemy.hit=Math.max(0,(enemy.hit||0)-dt);enemy.turnTimer-=dt;
- if(enemy.turnTimer<=0){enemy.turnTimer=.92+(enemy.floor%3)*.16;enemy.strafeSign*=-1;}
  const movement=enemy.plan.tower.movement;
- const steering=mirrorSteering({mirrorX:enemy.g.position.x,mirrorZ:enemy.g.position.z,playerX:player.x,playerZ:player.z,arenaRadius:enemy.plan.tower.arena.radius,desiredDistance:movement.desiredDistance,strafe:movement.strafe,strafeSign:enemy.strafeSign});
- enemy.dir.set(player.x-enemy.g.position.x,0,player.z-enemy.g.position.z).normalize();
- enemy.faceDir.copy(enemy.state==='tell'&&movement.feint&&enemy.timer>.12?enemy.feintDir:enemy.dir);enemy.g.rotation.y=Math.atan2(enemy.faceDir.x,enemy.faceDir.z);
+ enemy.hit=Math.max(0,(enemy.hit||0)-dt);enemy.contactCD=Math.max(0,(enemy.contactCD||0)-dt);enemy.turnTimer-=dt;
+ if(enemy.turnTimer<=0&&enemy.state==='stalk'){enemy.turnTimer=movement.reposition*2;enemy.strafeSign*=-1;}
+ // Sample movement rather than reading a dodge on the very same frame. Dash
+ // velocity is capped so it cannot turn into an unavoidable predictive shot.
+ enemy.reactionClock=(enemy.reactionClock||0)-dt;
+ if(!enemy.observedPlayer||enemy.reactionClock<=0){
+  const old=enemy.observedPlayer,elapsed=old?Math.max(.001,time-old.time):1;
+  let vx=old?(player.x-old.x)/elapsed:0,vz=old?(player.z-old.z)/elapsed:0;
+  const velocity=Math.hypot(vx,vz);if(velocity>6){vx*=6/velocity;vz*=6/velocity;}
+  enemy.observedPlayer={x:player.x,z:player.z,vx,vz,time};enemy.reactionClock=movement.reaction;
+ }
+ const observed=enemy.observedPlayer,reloading=enemy.state==='stalk'&&enemy.attackCD>.1;
+ const steering=mirrorSteering({mirrorX:previousX,mirrorZ:previousZ,playerX:observed.x,playerZ:observed.z,velocityX:observed.vx,velocityZ:observed.vz,lead:movement.lead,reloading,arenaRadius:enemy.plan.tower.arena.radius,desiredDistance:movement.desiredDistance,strafe:movement.strafe,strafeSign:enemy.strafeSign});
+ const lead=Math.min(movement.lead,MIRROR_DUEL.maximumAimLead/Math.max(1,Math.hypot(observed.vx,observed.vz)));
+ const aim=Math.atan2(observed.x+observed.vx*lead-previousX,observed.z+observed.vz*lead-previousZ);
+ if(enemy.dir.lengthSq()<.001)enemy.dir.set(Math.sin(aim),0,Math.cos(aim));
+ if(!(enemy.state==='tell'&&enemy.timer<=MIRROR_DUEL.aimLock)){
+  const angle=Math.atan2(enemy.dir.x,enemy.dir.z),difference=Math.atan2(Math.sin(aim-angle),Math.cos(aim-angle));
+  const turn=(enemy.state==='recover'?movement.aimRate:5)*dt,heading=angle+clamp(difference,-turn,turn);enemy.dir.set(Math.sin(heading),0,Math.cos(heading));
+ }
+ enemy.faceDir.copy(enemy.dir);enemy.g.rotation.y=Math.atan2(enemy.faceDir.x,enemy.faceDir.z);
 
  if(enemy.broken>0){
-  enemy.broken=Math.max(0,enemy.broken-dt);enemy.state='broken';enemy.moveName='거울 깨짐 · 지금 공격하세요';if(enemy.bursts)enemy.bursts.length=0;
+  enemy.broken=Math.max(0,enemy.broken-dt);enemy.state='broken';enemy.moveName='거울 깨짐 · 지금 공격하세요';if(enemy.bursts)enemy.bursts.length=0;enemy.queuedAttacks.length=0;enemy.dashTime=0;enemy.route=null;
   enemy.readyRing.material.color.setHex(0xffd471);enemy.readyRing.material.opacity=.72;enemy.readyRing.scale.setScalar(1.08+Math.sin(time*11)*.08);
  }else{
-  if(enemy.state==='broken'){enemy.state='stalk';enemy.attackCD=.62;}
-  const speed=4.05*enemy.plan.stats.moveSpeedScale+(mirrorDifficultyFloor(enemy.floor)-1)*.03;
-  if(enemy.dashTime>0){enemy.dashTime=Math.max(0,enemy.dashTime-dt);enemy.g.position.addScaledVector(enemy.dashDir,speed*2.9*dt);}else{enemy.g.position.x+=steering.x*speed*dt;enemy.g.position.z+=steering.z*speed*dt;}constrain(enemy.g.position);
-  enemy.attackCD-=dt;
-  const progress=clamp(1-enemy.attackCD/.9,0,1);enemy.readyRing.material.color.setHex(0xe7dbff);enemy.readyRing.material.opacity=.16+progress*.62;enemy.readyRing.scale.setScalar(.84+progress*.2);
-  if(enemy.state==='stalk'&&enemy.attackCD<=0){enemy.queuedAttacks=mirrorAttackSequence(enemy.plan,enemy.attackIndex).map(entry=>({...entry}));enemy.attackIndex+=enemy.queuedAttacks.length;const first=enemy.queuedAttacks[0]?.attack;enemy.state='tell';enemy.timer=clamp((first?.tell||.5)*.64,.24,.42);enemy.feintDir.copy(enemy.dir).applyAxisAngle(AXIS_Y,(enemy.shotIndex%2?1:-1)*.42);enemy.moveName=movement.feint?'거울 속임수 · 마지막 순간 방향 전환':'비친 자동공격 · 회피로 스쳐 균열';}
+  if(enemy.state==='broken'){enemy.state='stalk';enemy.attackCD=.62;enemy.reloadDuration=.62;}
+  const speed=Math.min(MIRROR_DUEL.maximumMoveSpeed,4.05*enemy.plan.stats.moveSpeedScale+.12);
+  let mx=steering.x,mz=steering.z;
+  if(enemy.route&&Math.hypot(enemy.route.x-previousX,enemy.route.z-previousZ)<.35)enemy.route=null;
+  if(!enemy.route)enemy.route=mirrorCoverWaypoint(enemy.g.position,{x:previousX+mx*2.2,z:previousZ+mz*2.2},obstacles,enemy.strafeSign);
+  if(enemy.route){const rx=enemy.route.x-previousX,rz=enemy.route.z-previousZ,len=Math.max(.001,Math.hypot(rx,rz));mx=rx/len;mz=rz/len;}
+  enemy.tactic=enemy.route?'cover':steering.tactic;
+  const dash=enemy.dashTime>0,movingSpeed=speed*(dash?2.45:enemy.state==='tell'?.64:1),steps=Math.max(1,Math.ceil(movingSpeed*dt/.25));
+  for(let i=0;i<steps;i++){enemy.g.position.x+=(dash?enemy.dashDir.x:mx)*movingSpeed*dt/steps;enemy.g.position.z+=(dash?enemy.dashDir.z:mz)*movingSpeed*dt/steps;constrain(enemy.g.position);}
+  enemy.dashTime=Math.max(0,enemy.dashTime-dt);
+  if(enemy.state==='stalk')enemy.attackCD-=dt;
+  const progress=clamp(1-enemy.attackCD/(enemy.reloadDuration||.68),0,1);enemy.readyRing.material.color.setHex(enemy.state==='stalk'?0x91d6de:0xe7dbff);enemy.readyRing.material.opacity=.16+progress*.62;enemy.readyRing.scale.setScalar(.84+progress*.2);
+  if(enemy.state==='stalk')enemy.moveName=`재장전 ${Math.max(0,enemy.attackCD).toFixed(1)}초 · ${enemy.tactic==='cover'?'엄폐 우회':enemy.tactic==='chase'?'추격':enemy.tactic==='retreat'?'거리 확보':'측면 이동'}`;
+  if(enemy.state==='stalk'&&enemy.attackCD<=0){enemy.queuedAttacks=mirrorAttackSequence(enemy.plan,enemy.attackIndex).map(entry=>({...entry}));enemy.attackIndex+=enemy.queuedAttacks.length;const first=enemy.queuedAttacks[0]?.attack;enemy.state='tell';enemy.timer=clamp((first?.tell||.5)*.68,MIRROR_DUEL.minimumTell,MIRROR_DUEL.maximumTell);enemy.moveName=`${first?.name||'비친 공격'} · 조준`;
+   if(movement.feint){enemy.strafeSign*=-1;enemy.route=null;}
+  }
   else if(enemy.state==='tell'){
    enemy.timer-=dt;enemy.readyRing.material.opacity=.58+Math.sin(time*24)*.3;
    if(enemy.timer<=0){
     const first=enemy.queuedAttacks.shift();if(first)fireAttack(enemy,first);
-    if(movement.dash){enemy.dashTime=.16;enemy.dashDir.set(enemy.dir.z*enemy.strafeSign,0,-enemy.dir.x*enemy.strafeSign).addScaledVector(enemy.dir,-.18).normalize();}
-    enemy.state='recover';enemy.timer=enemy.queuedAttacks.length?.4:.2;enemy.attackCD=.78/enemy.plan.stats.attackSpeedScale;enemy.moveName=enemy.queuedAttacks.length?`${first.attack.name} → 연계 준비`:first?.attack.name||'비친 자동공격';
+    if(movement.dash&&!enemy.route&&enemy.attackIndex%2===0){enemy.dashTime=.13;enemy.dashDir.set(enemy.dir.z*enemy.strafeSign,0,-enemy.dir.x*enemy.strafeSign).addScaledVector(enemy.dir,-.18).normalize();}
+    enemy.state='recover';enemy.timer=0;enemy.moveName=enemy.queuedAttacks.length?`${first.attack.name} → 연계 준비`:first?.attack.name||'비친 자동공격';
    }
   }else if(enemy.state==='recover'){
    enemy.timer-=dt;
    for(const entry of enemy.queuedAttacks)entry.delay-=dt;
-   while(enemy.queuedAttacks.length&&enemy.queuedAttacks[0].delay<=0){const entry=enemy.queuedAttacks.shift();fireAttack(enemy,entry);enemy.moveName=`연계 · ${entry.attack.name}`;}
-   if(enemy.timer<=0&&enemy.queuedAttacks.length===0)enemy.state='stalk';
+   if(!enemy.bursts?.length&&enemy.queuedAttacks.length&&enemy.queuedAttacks[0].delay<=0){const entry=enemy.queuedAttacks.shift();fireAttack(enemy,entry);enemy.moveName=`연계 · ${entry.attack.name}`;}
   }
   pumpBursts(enemy,dt,fire);
-  if(steering.distance<.72&&enemy.state!=='tell'&&hit)hit(Math.max(5,Math.round(enemy.plan.stats.hitDamageMaxHp*70)));
+  if(enemy.state==='recover'&&!enemy.bursts?.length&&!enemy.queuedAttacks.length){enemy.state='stalk';enemy.reloadDuration=Math.max(MIRROR_DUEL.minimumReload,MIRROR_DUEL.reload/enemy.plan.stats.attackSpeedScale);enemy.attackCD=enemy.reloadDuration;}
+  if(Math.hypot(player.x-enemy.g.position.x,player.z-enemy.g.position.z)<.72&&enemy.state!=='tell'&&enemy.contactCD<=0&&hit){hit(Math.max(5,Math.round(enemy.plan.stats.hitDamageMaxHp*70)));enemy.contactCD=MIRROR_DUEL.contactCooldown;}
  }
+ if(enemy.readyPointer)enemy.readyPointer.visible=enemy.state==='tell'||enemy.state==='recover';
  enemy.motion.update(dt,enemy.g.position.x-previousX,enemy.g.position.z-previousZ,{type:'seed',state:enemy.state,timer:enemy.timer,hit:enemy.hit});
  enemy.g.userData.updateArt?.(camera,enemy.g.position.x-previousX,enemy.g.position.z-previousZ);
  enemy.g.userData.updateEvolutionArt?.(time,enemy.broken>0);

@@ -46,6 +46,8 @@ assert.equal(mirrorFloorRules(5).chainLength,2);assert.equal(mirrorFloorRules(6)
 assert.equal(mirrorFloorRules(20).chainLength,3,'후반은 탄 수 대신 패턴 연결이 늘어난다');
 assert.equal(mirrorFloorRules(21).endless,false);
 assert.equal(mirrorFloorRules(100).milestone,true);
+assert.equal(mirrorFloorRules(2).arena.solidObstacles,0);
+assert.equal(mirrorFloorRules(3).arena.solidObstacles,2,'엄폐는 세 번째 결투부터 등장한다');
 assert.equal(mirrorFloorRules(11).arena.solidObstacles,2);
 assert.equal(mirrorFloorRules(61).arena.solidObstacles,4);
 assert.ok(mirrorPatternPlan(snapshot,{floor:100}).stats.hpScale>mirrorPatternPlan(snapshot,{floor:10}).stats.hpScale,'십 층마다 분신이 완만하게 강해진다');

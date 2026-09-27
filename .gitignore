@@ -111,3 +111,5 @@ art-source/
 !tools/survival-ranking-test.mjs
 !tools/survival-record-sync-test.mjs
 !tools/survival-emulator-check.mjs
+
+!tools/seed-defense-test.mjs

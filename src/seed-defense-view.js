@@ -1,0 +1,116 @@
+import {DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,checkpointDefense,restoreDefense} from './seed-defense-rules.js';
+import './seed-defense.css';
+
+const BASE=import.meta.env.BASE_URL;
+const BODY={collapse:0,frostguard:1,frostnet:5,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
+const SOLO={reflect:0,split:1,chain:2,orbit:3,pierce:4,burst:5,recall:6,gravity:7,frost:8};
+const CARD={reflect:0,split:1,pierce:2,orbit:3,burst:4,gravity:5,recall:6,frost:9,chain:10};
+const LAW_CELL={burst:6,frost:9,chain:3,pierce:5,split:2,reflect:1,recall:7,gravity:8,orbit:4,hostile:12};
+const INK={burst:'#ffaa65',frost:'#b2f1ff',chain:'#ffe391',pierce:'#dbf6b1',split:'#ffa88f',reflect:'#91e4ff',recall:'#a0ebc9',gravity:'#d2a0ff',orbit:'#b7bfff'};
+const name=t=>FUSIONS[t?.fusion]?.name||(t?.laws?.length?DEFENSE_LAWS[t.laws[0]].name+' 씨앗':'어린 씨앗');
+const baseLaw=law=>FUSIONS[law]?.laws[0]||law;
+const color=law=>law==='hostile'?'#ff6677':INK[baseLaw(law)]||'#d7e5b4';
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+// A second WebGL scene is unnecessary here: cached ground + shared painted
+// atlases, one capped Canvas2D loop. The parent suspends its combat renderer.
+export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,onClose=()=>{}}={}){
+ const key='seed-defense-preparation-v1:'+encodeURIComponent(owner),root=document.createElement('section');
+ root.id='seed-defense';root.setAttribute('aria-label','씨앗 수호전');
+ root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
+ host.append(root);document.body.classList.add('seed-defense-open');
+ const $=s=>root.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),back=document.createElement('canvas'),bg=back.getContext('2d',{alpha:false});
+ let state=createDefense(Date.now()>>>0),selected=0,paused=false,ended=false,frame=0,last=0,uiAt=0,uiKey='',saveNote='준비 상태는 이 기기에 저장돼요',width=1,height=1,scale=1,ox=0,oy=0,dirty=true,frames=[],lastEffects=0,renderCosts=[],announced='',confirming=false;
+ const assets={},loads=[],listeners=[];
+ const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
+ const load=(id,file)=>{const img=new Image();assets[id]=img;loads.push(new Promise(resolve=>{img.onload=()=>{dirty=true;resolve();};img.onerror=resolve;img.src=BASE+'assets/'+file;}));};
+ load('floor','mobile/ground-garden-v5.webp');load('plants','garden-growth-atlas-v3.webp');load('solo','seed-solo-bodies-v3.webp');load('seed','seed-body-directions-v6.png');load('fusion','seed-fusion-bodies-v1.png');load('projectile','mobile/seed-projectile-dna-v1.png');load('hound','mobile/enemy-hound-v4.webp');load('runner','mobile/enemy-runner-v1.webp');load('shield','mobile/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
+ function read(){try{return restoreDefense(JSON.parse(storage.getItem(key)));}catch{return null;}}
+ const saved=read();if(saved){state=saved;selected=state.selectedPad;}
+ function save(){if(!['build','draft'].includes(state.phase))return;try{const data=checkpointDefense(state);if(data){storage.setItem(key,JSON.stringify(data));saveNote='이번 준비 저장됨 · 이 기기 전용';}}catch{saveNote='저장 공간이 부족해요 · 종료 전 확인해 주세요';}}
+ function clearSave(){try{storage.removeItem(key);}catch{}}
+ function sound(id){audio?.play(id);}
+ function resize(){const r=$('.td-board').getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);const dpr=Math.min(1.5,window.devicePixelRatio||1);canvas.width=back.width=Math.round(width*dpr);canvas.height=back.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);bg.setTransform(dpr,0,0,dpr,0,0);scale=Math.min(width/116,height/68);ox=(width-100*scale)/2;oy=(height-60*scale)/2;dirty=true;placeButtons();}
+ function placeButtons(){for(const b of $('.td-pads').children){const p=PADS[Number(b.dataset.pad)];b.style.left=(ox+p.x*scale)+'px';b.style.top=(oy+p.y*scale)+'px';}}
+ $('.td-pads').innerHTML=PADS.map((p,i)=>`<button data-pad="${i}" aria-label="${i+1}번 화단 선택"><span>${i+1}</span></button>`).join('');
+ for(const b of $('.td-pads').children)b.onclick=()=>{selected=Number(b.dataset.pad);state.selectedPad=selected;uiKey='';sound('pickup');updateUI();};
+ const tower=()=>state.towers.find(t=>t.pad===selected);
+ function hint(message){$('.td-hint').textContent=message;}
+ function togglePause(){if(ended||confirming||['won','lost'].includes(state.phase))return;paused=!paused;audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';$('#td-pause').setAttribute('aria-label',paused?'계속하기':'일시정지');hint(paused?'잠시 쉬는 중 · ▶를 눌러 계속하세요':'');uiKey='';updateUI();}
+ $('#td-pause').onclick=togglePause;
+ function dialog(html){$('.td-dialog').hidden=false;$('.td-dialog').innerHTML=html;}
+ function close(){if(ended)return;save();ended=true;cancelAnimationFrame(frame);observer.disconnect();listeners.forEach(fn=>fn());root.remove();document.body.classList.remove('seed-defense-open');audio?.setPaused(false);onClose();}
+ $('#td-leave').onclick=()=>{if(state.phase!=='wave')return close();paused=true;confirming=true;audio?.setPaused(true);dialog('<div><h2>이번 습격을 나갈까요?</h2><p>마지막 준비 상태가 남아 있어요.<br>이번 습격의 처치와 햇살은 저장되지 않아요.</p><button id="td-quit-yes">준비 상태로 저장하고 나가기</button><button id="td-quit-no">계속 방어하기</button></div>');$('#td-quit-yes').onclick=close;$('#td-quit-no').onclick=()=>{confirming=false;paused=false;$('.td-dialog').hidden=true;audio?.setPaused(false);last=performance.now();};};
+ $('#td-start').onclick=()=>{if(paused){togglePause();return;}if(startDefenseWave(state)){hint(defenseWaveInfo(state.wave).title+' · 씨앗들이 정원을 지키고 있어요');sound('evolve');uiKey='';updateUI();}};
+ function updateUI(){
+  $('#td-heart').textContent=`♡ ${Math.ceil(state.coreHp)} / 20`;$('#td-sun').textContent=`✦ ${Math.floor(state.currency)} 햇살`;$('#td-wave').textContent=`습격 ${state.wave} / ${DEFENSE.waves}`;
+  const t=tower(),offers=t?getDefenseOffers(state,t.id):[],sig=[selected,state.phase,state.currency,t?.level,t?.laws?.join(','),state.draftCredit,offers.join(','),paused,saveNote].join('|');
+  if(sig===uiKey)return;uiKey=sig;root.classList.toggle('td-drafting',Boolean(t&&state.draftCredit===1&&state.phase!=='wave'));
+  for(const b of $('.td-pads').children){b.classList.toggle('selected',Number(b.dataset.pad)===selected);b.classList.toggle('planted',state.towers.some(t=>t.pad===Number(b.dataset.pad)));b.setAttribute('aria-pressed',String(Number(b.dataset.pad)===selected));}
+  const info=defenseWaveInfo(Math.min(DEFENSE.waves,state.wave+1));
+  let html=`<div class="td-eyebrow">${selected+1}번 화단</div><h2>${esc(t?name(t):'씨앗을 심을 자리')}</h2>`;
+  if(t){const stats=defenseTowerStats(t);html+=`<p class="td-traits">${t.laws.length?t.laws.map(l=>DEFENSE_LAWS[l].name).join(' + '):'아직 어떤 법칙도 품지 않았어요'} · 성장 ${t.level}</p><p class="td-detail">${esc(FUSIONS[t.fusion]?.desc||DEFENSE_LAWS[t.laws[0]]?.desc||'먼저 법칙을 부여해 이 씨앗의 역할을 정하세요.')}</p><div class="td-stats">피해 ${Math.round(stats.damage||0)} · 사거리 ${Math.round(stats.range||0)}</div><button id="td-upgrade" ${state.phase==='wave'||state.currency<defenseUpgradeCost(t)||t.level>=5?'disabled':''}>${t.level>=5?'최대 성장':'성장시키기 · '+defenseUpgradeCost(t)+' 햇살'}</button>`;
+  }else html+=`<p class="td-detail">모든 타워는 작은 씨앗에서 시작해요. 길의 굴곡은 공전, 긴 직선은 관통에 유리해요.</p><button id="td-plant" ${state.phase==='wave'||state.currency<DEFENSE.plantCost?'disabled':''}>씨앗 심기 · ${DEFENSE.plantCost} 햇살</button>`;
+  if(offers.length&&state.draftCredit===1&&state.phase!=='wave')html+=`<div class="td-draft-title">이 씨앗에 법칙 하나 부여</div><div class="td-law-options">${offers.map(id=>`<button data-law="${id}" style="--law:${color(id)}"><span class="td-law-art" aria-hidden="true" style="background-image:url('${BASE}assets/seed-law-atlas-v4-ui.webp');background-position:${CARD[id]%4*100/3}% ${Math.floor(CARD[id]/4)*50}%"></span><b>${DEFENSE_LAWS[id].name}${t.laws.includes(id)?' 강화':Object.values(FUSIONS).some(f=>t.laws.length===1&&f.laws.includes(t.laws[0])&&f.laws.includes(id))?' · 융합':''}</b><small>${esc(t.laws.includes(id)?'이 씨앗의 피해를 한 번 더 강화해요.':DEFENSE_LAWS[id].desc)}</small></button>`).join('')}</div>`;
+  else if(state.phase==='draft'||state.draftCredit>0)html+='<p class="td-callout">심은 씨앗을 선택하고 법칙을 부여하세요.</p>';
+  else html+=`<div class="td-next"><small>다음 습격</small><p>${esc(info.title)}</p><small>${esc(info.desc)}</small></div>`;
+  $('.td-scroll').innerHTML=html;
+  if($('#td-plant'))$('#td-plant').onclick=()=>{if(plantDefense(state,selected)){sound('pickup');save();uiKey='';updateUI();}};
+  if($('#td-upgrade'))$('#td-upgrade').onclick=()=>{if(upgradeDefense(state,t.id)){sound('evolve');save();uiKey='';updateUI();}};
+  for(const b of root.querySelectorAll('[data-law]'))b.onclick=()=>{const before=t.fusion;if(chooseDefenseLaw(state,t.id,b.dataset.law)){sound(t.fusion&&!before?'fusion':'evolve');hint(t.fusion&&!before?name(t)+' · 새로운 모습으로 진화했어요':'법칙을 품었어요 · 다른 씨앗과 역할을 나눠 보세요');save();uiKey='';updateUI();}};
+  $('#td-start').textContent=paused?'계속하기':state.phase==='wave'?'습격 방어 중':state.phase==='won'?'정원을 지켰어요':state.phase==='lost'?'도전 종료':state.phase==='draft'||state.draftCredit>0?'씨앗에 법칙을 먼저 부여':'다음 습격 시작';
+  $('#td-start').disabled=!paused&&(state.phase==='wave'||state.phase==='draft'||state.draftCredit>0||['won','lost'].includes(state.phase));
+  $('#td-save-note').textContent=saveNote;
+ }
+ function ground(){
+  bg.fillStyle='#091d22';bg.fillRect(0,0,width,height);bg.save();bg.translate(ox,oy);bg.scale(scale,scale);
+  if(assets.floor.complete&&assets.floor.naturalWidth){bg.globalAlpha=.36;for(let y=-10;y<70;y+=12)for(let x=-10;x<110;x+=12)bg.drawImage(assets.floor,x,y,12,12);bg.globalAlpha=1;}
+  const plants=assets.plants;if(plants.complete&&plants.naturalWidth){const sw=plants.width/4,sh=plants.height/3;for(let i=0;i<20;i++){const x=i%10*12-5,y=i<10?1:65,cell=i%3?2:6,size=13+(i%3)*2;bg.globalAlpha=.62;bg.drawImage(plants,cell%4*sw,Math.floor(cell/4)*sh,sw,sh,x-size/2,y-size,size,size);}bg.globalAlpha=1;}
+  const path=()=>{bg.beginPath();PATH.forEach((p,i)=>i?bg.lineTo(p.x,p.y):bg.moveTo(p.x,p.y));};
+  bg.lineJoin=bg.lineCap='round';path();bg.strokeStyle='#060f13';bg.lineWidth=8;bg.stroke();path();bg.strokeStyle='#839073';bg.lineWidth=6.6;bg.stroke();path();bg.strokeStyle='#374b42';bg.lineWidth=5.8;bg.stroke();for(let i=0;i<PATH.length-1;i++){const a=PATH[i],b=PATH[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),dx=(b.x-a.x)/len,dy=(b.y-a.y)/len;for(let d=2;d<len-1;d+=2.8){const x=a.x+dx*d,y=a.y+dy*d;bg.strokeStyle=d%2<1?'#8d9d7940':'#122b2440';bg.lineWidth=.18;bg.beginPath();bg.moveTo(x-dy*2.6,y+dx*2.6);bg.lineTo(x+dy*2.6,y-dx*2.6);bg.stroke();}}
+  path();bg.strokeStyle='#c9c38a44';bg.lineWidth=.16;bg.setLineDash([.35,2]);bg.stroke();bg.setLineDash([]);
+  for(let i=0;i<PATH.length-1;i++){const a=PATH[i],b=PATH[i+1],angle=Math.atan2(b.y-a.y,b.x-a.x);bg.save();bg.translate((a.x+b.x)/2,(a.y+b.y)/2);bg.rotate(angle);bg.strokeStyle='#e6e0b075';bg.lineWidth=.23;bg.beginPath();bg.moveTo(-.7,-.7);bg.lineTo(.4,0);bg.lineTo(-.7,.7);bg.stroke();bg.restore();}
+  for(const p of PADS){bg.fillStyle='#091714';bg.beginPath();bg.ellipse(p.x,p.y+1,4.1,2.7,0,0,Math.PI*2);bg.fill();bg.strokeStyle='#b6c99480';bg.lineWidth=.2;bg.stroke();bg.strokeStyle='#516d57';bg.beginPath();bg.ellipse(p.x,p.y+.4,3.6,2.5,0,0,Math.PI*2);bg.stroke();}
+  bg.fillStyle='#b0c6aa';bg.font='1.6px sans-serif';bg.textAlign='center';bg.fillText('숲의 입구',PATH[0].x+3,PATH[0].y-5);const end=PATH.at(-1);bg.fillText('정원의 심장',end.x-2,end.y+7);
+  bg.restore();dirty=false;
+ }
+ function sprite(id,x,y,size,cell=0,cols=2,rows=2){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*.82,size,size);return true;}
+ function draw(now){
+  if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+  const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,12,state.coreHp>10?5:3,4,3);
+  const chosen=tower();if(chosen){ctx.beginPath();ctx.arc(chosen.x,chosen.y,defenseTowerStats(chosen).range,0,Math.PI*2);ctx.fillStyle=color(chosen.laws[0])+'0b';ctx.strokeStyle=color(chosen.laws[0])+'55';ctx.lineWidth=.16;ctx.fill();ctx.stroke();}
+  for(const t of state.towers){
+   const ink=color(t.laws[0]);ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,2.7,1.25,0,0,Math.PI*2);ctx.fill();
+   const bob=Math.sin(now*.002+t.id)*.15;
+   if(t.fusion&&BODY[t.fusion]!==undefined)sprite('fusion',t.x,t.y+bob,6.2,BODY[t.fusion],4,3);else if(t.laws.length)sprite('solo',t.x,t.y+bob,5.7,SOLO[t.laws[0]],4,3);else sprite('seed',t.x,t.y+bob,5.5);
+   if(t.laws.includes('orbit'))for(let j=0;j<3;j++){const a=now*.0015+j*Math.PI*2/3;ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(t.x+Math.cos(a)*3.4,t.y+Math.sin(a)*2.4,.5,.18,a,0,Math.PI*2);ctx.fill();}
+   ctx.fillStyle=ink;for(let j=0;j<t.level;j++){ctx.beginPath();ctx.arc(t.x-1.5+j*.75,t.y+2.25,.2,0,Math.PI*2);ctx.fill();}
+  }
+  for(const f of state.fields){
+   const icy=f.kind==='web',ink=icy?'#8ce9ff':'#ba94ee',r=f.radius;ctx.save();ctx.translate(f.x,f.y);ctx.globalAlpha=.55*Math.min(1,f.life/.3);ctx.strokeStyle=ink;ctx.lineWidth=.22;ctx.beginPath();ctx.ellipse(0,0,r,r*.65,0,0,Math.PI*2);ctx.stroke();ctx.rotate(icy?0:now*.0009);for(let j=0;j<6;j++){const a=j*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*r*.25,Math.sin(a)*r*.25);ctx.lineTo(Math.cos(a+.35)*r*.75,Math.sin(a+.35)*r*.5);ctx.stroke();}ctx.restore();
+  }
+  for(const e of state.enemies){
+   const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
+   const boss=e.kind==='boss',sz=boss?8:e.kind==='shield'||e.kind==='resilient'?5.5:4.1;
+   ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();sprite(boss?'boss':e.kind==='fast'?'runner':e.kind==='shield'||e.kind==='resilient'?'shield':'hound',e.x,e.y+Math.sin(now*.012+e.id)*.14,sz,face);
+   if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}
+   if(e.slowTime>0&&e.slow<1){ctx.strokeStyle='#91dcff';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(e.x,e.y,1.5,0,Math.PI*2);ctx.stroke();}
+  }
+  for(const q of state.shots){
+   const a=Math.atan2(q.vy||q.ty-q.y,q.vx||q.tx-q.x),ink=color(q.law);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(a);ctx.strokeStyle=ink+'90';ctx.lineWidth=.25;ctx.beginPath();ctx.moveTo(-1.5,0);ctx.lineTo(0,0);ctx.stroke();
+   if(!sprite('projectile',0,.8,['pierce','thunderlance','returnblade'].includes(q.law)?3.5:2.5,LAW_CELL[baseLaw(q.law)]??0,4,4)){ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(0,0,.7,.26,0,0,Math.PI*2);ctx.fill();}ctx.restore();
+  }
+  for(const e of state.effects){
+   const alpha=Math.min(1,Math.max(0,e.life/(e.maxLife||.35))),ink=typeof e.color==='string'?e.color:color(e.law);ctx.globalAlpha=alpha;ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=.3;
+   if(e.kind==='chain'||e.kind==='beam'||e.kind==='line'){const tx=e.tx??e.x,ty=e.ty??e.y;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo((e.x+tx)/2+.5,(e.y+ty)/2-.5);ctx.lineTo(tx,ty);ctx.stroke();}
+   else{const radius=e.radius||e.r||1.3;ctx.save();ctx.translate(e.x,e.y);ctx.rotate((1-alpha)*.8);for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*radius*.45,Math.sin(a)*radius*.45);ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);ctx.stroke();}if(e.kind==='gravity'||e.kind==='well'){ctx.beginPath();ctx.ellipse(0,0,radius,radius*.45,.4,0,Math.PI*2);ctx.stroke();}ctx.restore();}
+  }ctx.globalAlpha=1;ctx.restore();
+ }
+ function result(){if(announced===state.phase)return;announced=state.phase;clearSave();sound(state.phase==='won'?'evolve':'hurt');dialog(`<div><small>씨앗 수호전 · 도전 결과</small><h2>${state.phase==='won'?'정원이 다시 숨 쉬어요':'다음 씨앗을 기약하며'}</h2><p>${state.wave}차 습격 · ${state.kills}마리 처치<br>${state.towers.filter(t=>t.fusion).length}개 씨앗이 융합 진화했어요</p><p>직선에는 관통, 굴곡에는 공전.<br>입구의 둔화와 출구의 화력을 나눠 보세요.</p><button id="td-retry">새 씨앗으로 다시</button><button id="td-home">던전으로 돌아가기</button></div>`);$('#td-retry').onclick=()=>{state=createDefense(Date.now()>>>0);selected=0;paused=false;announced='';$('.td-dialog').hidden=true;uiKey='';save();updateUI();};$('#td-home').onclick=close;}
+ function loop(now){if(ended||document.hidden){frame=0;return;}frame=requestAnimationFrame(loop);if(last&&now-last<(paused||state.phase!=='wave'?1000/30:1000/60)-.5)return;const workStart=performance.now();const raw=last?(now-last)/1000:0;last=now;if(raw>0&&raw<1){frames.push(raw*1000);if(frames.length>120)frames.shift();}if(!paused&&!confirming){const phase=state.phase;stepDefense(state,Math.min(.05,raw));audio?.tick(Math.min(.05,raw));if(phase!==state.phase){if(['build','draft'].includes(state.phase)){save();sound('pickup');hint('습격을 막았어요 · 원하는 씨앗에 다음 법칙을 주세요');}if(['won','lost'].includes(state.phase))result();uiKey='';}const effect=state.effects.at(-1);if(effect&&effect!==lastEffects){lastEffects=effect;sound(effect.kind==='chain'?'chain':effect.kind==='burst'?'burstHit':'hit');}}draw(now);renderCosts.push(performance.now()-workStart);if(renderCosts.length>120)renderCosts.shift();if(now-uiAt>150){uiAt=now;updateUI();if(new URLSearchParams(location.search).has('inspect'))$('#seed-defense-inspection').textContent=JSON.stringify({phase:state.phase,wave:state.wave,simulationTime:state.time,coreHp:state.coreHp,currency:state.currency,kills:state.kills,towers:state.towers.map(t=>({id:t.id,pad:t.pad,laws:t.laws,fusion:t.fusion,level:t.level})),enemies:state.enemies.length,shots:state.shots.length,effects:state.effects.length,fields:state.fields.length,paused,frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)]||0,workMsP95:[...renderCosts].sort((a,b)=>a-b)[Math.floor(renderCosts.length*.95)]||0,assetsReady:Object.values(assets).filter(i=>i.complete&&i.naturalWidth).length,assetCount:Object.keys(assets).length,renderer:'cached Canvas2D',dpr:Math.min(1.5,devicePixelRatio||1)});}}
+ const observer=new ResizeObserver(resize);observer.observe($('.td-board'));
+ listen(document,'visibilitychange',()=>{if(document.hidden){paused=true;cancelAnimationFrame(frame);frame=0;save();audio?.setPaused(true);$('#td-pause').textContent='▶';hint('전투를 멈췄어요 · ▶를 눌러 계속하세요');}else{last=performance.now();if(!frame)frame=requestAnimationFrame(loop);uiKey='';updateUI();}});
+ listen(window,'pagehide',save);listen(window,'keydown',e=>{if(e.code==='Escape'||e.code==='KeyP'){e.preventDefault();togglePause();}if(e.code==='Space'){e.preventDefault();$('#td-start').click();}});
+ audio?.setScene('garden');audio?.setPaused(false);resize();updateUI();hint(saved?'이 기기에 저장된 준비 상태를 불러왔어요':'① 화단 선택 → ② 씨앗 심기 → ③ 법칙 부여 → 습격 시작');Promise.all(loads).then(()=>{if(!ended)dirty=true;});frame=requestAnimationFrame(loop);
+ return {close};
+}

@@ -697,6 +697,7 @@ const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>rel
 // the unfinished attempt; saving its rewards as well would respawn the same
 // enemies while preserving their kills, score, choice gauge and drops.
 function saveLeaveState(){
+ if(mode==='defense')return false;
  if(survivalSession)return saveSurvival();
  if(developerRun)return false;
  if(!['playing','evolving','cards','forms','relics','dash','solo','awaken'].includes(mode)||roomCleared)return false;
@@ -1027,10 +1028,11 @@ function mirrorBolt(pos,dir,spec={}){
  if(!mirrorSession||enemyShots.length>=mirrorFloorRules(mirrorSession.floor,{quality:qualityLevel===0?'low':'normal'}).budget.hostileProjectiles)return;
  // Reflected volleys should clear before the next copied attack family fills
  // the arena. Count only this family so other copied laws retain their budget.
- if(spec.law==='reflect'&&enemyShots.filter(shot=>shot.mirror&&shot.law==='reflect'&&shot.life>0).length>=24)return;
+ const reflecting=(spec.bounces||0)>0||spec.law==='reflect';
+ if(reflecting&&enemyShots.filter(shot=>shot.mirror&&(shot.mirrorReflecting||shot.law==='reflect')&&shot.life>0).length>=24)return;
  const law=Object.hasOwn(LAWS,spec.law)?spec.law:'seed',start=pos.clone().addScaledVector(dir,1.05),ob=new THREE.Object3D(),damage=Math.max(5,Math.round(maxPlayerHp()*(spec.damageScale||.075)));
  ob.position.set(start.x,.67,start.z);ob.rotation.y=Math.atan2(dir.x,dir.z);applyProjectileTheme(ob,law,combatTheme,0,1.08);
- enemyShots.push({mirror:true,boss:true,ob,dir:dir.clone(),life:law==='reflect'?3.2:5,bounces:enemyBounces(spec.bounces),speed:mirrorProjectileSpeed(mirrorSession.floor,spec.speedScale),damage,age:0,origin:pos.clone(),pierce:true,recall:Boolean(spec.recall),frost:Boolean(spec.frost),burst:Boolean(spec.burst),gravity:Boolean(spec.gravity),curve:spec.curve||0,law,trailTime:0,trailPos:ob.position.clone()});
+ enemyShots.push({mirror:true,mirrorReflecting:reflecting,boss:true,ob,dir:dir.clone(),life:reflecting?3.2:5,bounces:enemyBounces(spec.bounces),speed:mirrorProjectileSpeed(mirrorSession.floor,spec.speedScale),damage,age:0,origin:pos.clone(),pierce:true,recall:Boolean(spec.recall),frost:Boolean(spec.frost),burst:Boolean(spec.burst),gravity:Boolean(spec.gravity),curve:spec.curve||0,law,trailTime:0,trailPos:ob.position.clone()});
 }
 function mirrorCue(message,duration=1100){const toast=$('#toast');toast.textContent=message;setTimeout(()=>{if(toast.textContent===message)toast.textContent='';},duration);}
 function mirrorPerfectDodge(projectile){
@@ -1315,6 +1317,7 @@ async function enforceCurrentWebAccess(){
    if(mode==='season-pause'||mode==='beta-lock')showEntry();
    return false;
   }
+  if(mode==='defense')defenseScreen?.close();
   saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
   if(betaLocked){if(mode!=='beta-lock')showBetaLock();}
   else if(mode!=='season-pause')showSeasonPause();
@@ -1669,12 +1672,20 @@ function bindNameField(onSubmit=null){
  const consent=$('#ranking-terms');if(consent)consent.onchange=()=>setRankingTermsAccepted(runStorage,consent.checked);
  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;if(onSubmit)onSubmit();else showDungeon();};
 }
-// Two clear entry points; journey details live one level inside.
+// Existing two main modes stay prominent; the new defence slice is a separate trial.
+let defenseScreen=null;
+async function showSeedDefense(){
+ mode='defense';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ try{
+  const {mountSeedDefense}=await import('./seed-defense-view.js');
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner:account.user()?.uid||'guest',audio,onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
+ }catch(error){console.error('씨앗 수호전 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='수호전을 불러오지 못했어요. 다시 눌러 주세요.';}
+}
 function showDungeon(){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-journey" class="dungeon-mode mode-journey" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/garden-sanctuary-v2.webp')"><span class="mode-number">01</span><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></button><button id="open-survival" class="dungeon-mode mode-survival" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/ground-garden-v5.webp')"><span class="mode-number">02</span><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
- $('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#back-menu').onclick=showIntro;
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-journey" class="dungeon-mode mode-journey" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/garden-sanctuary-v2.webp')"><span class="mode-number">01</span><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></button><button id="open-survival" class="dungeon-mode mode-survival" style="background-image:linear-gradient(0deg,#081b20 0%,#0a1c2277 70%),url('${import.meta.env.BASE_URL}assets/mobile/ground-garden-v5.webp')"><span class="mode-number">02</span><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></button></div><button id="open-defense" class="secondary" style="width:100%;margin-top:12px">씨앗 수호전 · 시범 플레이</button></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ $('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#back-menu').onclick=showIntro;
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
 function showJourneys(){
@@ -1897,7 +1908,7 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
  }}
 
 function togglePause(){if(saveExitBusy||mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused){void webTelemetry.playPause();exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms,{survival:Boolean(survivalSession),killScale:survivalSession?SURVIVAL.killChargeScale:1});}else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
-window.addEventListener('keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
+window.addEventListener('keydown',e=>{if(mode==='defense')return;if(e.target?.closest?.('input,textarea'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
 function refreshCloudOnReturn(){
  if(mode==='ready'&&$('#survival-cloud-status'))void refreshSurvivalAccount();
@@ -1907,7 +1918,7 @@ function refreshCloudOnReturn(){
   if(mode==='ready')location.reload();else pendingCloudReload=true;
  }).catch(()=>{}).finally(()=>{foregroundCloudSync=null;});
 }
-document.addEventListener('visibilitychange',()=>{if(document.hidden){saveLeaveState();if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();void webTelemetry.playPause();audio.setPaused(true);stopAnimation();}else{last=performance.now();realLast=Date.now();startAnimation();if(!paused)audio.setPaused(false);enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();}});
+document.addEventListener('visibilitychange',()=>{if(mode==='defense')return;if(document.hidden){saveLeaveState();if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();void webTelemetry.playPause();audio.setPaused(true);stopAnimation();}else{last=performance.now();realLast=Date.now();startAnimation();if(!paused)audio.setPaused(false);enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();}});
 if(!account.native&&!import.meta.env.DEV){
  setInterval(()=>{if(!document.hidden)enforceCurrentWebAccess().catch(()=>{});},WEB_ACCESS_POLL_MS);
  window.addEventListener('focus',()=>{enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();});
@@ -1958,7 +1969,7 @@ if(!mirrorSession&&!survivalSession?.lab&&mode==='playing'&&!roomCleared&&!bossF
 // 판 시간은 게임 시계(프레임 간격)가 아니라 실제 시계로 잰다. 게임을 느리게 돌리는 도구를 쓰면
 // 예전에는 기록 시간이 그만큼 줄어 '분당 처치'가 부풀려졌다. 실제 시계는 그렇게 줄지 않는다.
 let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],frameCounter=0,animationHandle=0;
-function startAnimation(){if(!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
+function startAnimation(){if(mode!=='defense'&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
 function stopAnimation(){if(animationHandle)cancelAnimationFrame(animationHandle);animationHandle=0;}
 function animate(now){animationHandle=0;if(document.hidden)return;startAnimation();let raw=(now-last)/1000;last=now;
  {const realNow=Date.now();const realDelta=(realNow-realLast)/1000;realLast=realNow;if(mode==='playing'&&!paused&&!survivalSession?.benchmark&&realDelta>0&&realDelta<2){elapsed+=realDelta;paceReal+=realDelta;paceGame+=Math.min(2,Math.max(0,raw));webTelemetry.playTick(realDelta);}}if(perfEnabled)try{perf.frame(raw*1000,mode==='playing'&&!paused,perfSnapshot);perf.beginFrame();if(perf.due())perf.sampleState(perfSnapshot());}catch{}frames.push(raw*1000);if(frames.length>180)frames.shift();const visualDt=Math.min(.1,Math.max(0,raw)),timeScale=cameraFeel.stepEffects(visualDt),dt=survivalSession?.benchmark?(()=>{for(let i=0;i<4;i++)stepSurvivalBenchmark(1/60);return 4/60;})():advanceFrame(raw*timeScale,now*.001,(step,time)=>update(step,time));if(survivalSession&&!survivalSession.lab&&!survivalSession.finished&&survivalSession.time>=survivalAutosaveAt){survivalAutosaveAt=survivalSession.time+15;saveSurvival();}audio.tick(visualDt);perfT=performance.now();if(!paused)vfx.update(visualDt);perfMark(PS.particles);frameCounter++;
@@ -2166,7 +2177,7 @@ screen.orientation?.addEventListener?.('change',()=>{requestAnimationFrame(settl
  });
 function runLocalStartupLab(){
  if(!localInspection)return;const params=new URLSearchParams(location.search);
- let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('survivalLab'))showSurvivalSetup();else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
+ let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('defenseLab'))void showSeedDefense();else if(params.has('survivalLab'))showSurvivalSetup();else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
 }
 applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();const startupCloud=localInspection?Promise.resolve({changed:false}):account.ready().then(()=>{backfillPersonalBests();return cloud.start();}),startupSeason=localInspection?Promise.resolve(DEFAULT_SEASON_STATUS):loadSeasonStatus({enabled:!import.meta.env.DEV});Promise.all([startupCloud,startupSeason]).then(async([result,status])=>{startupCloudReady=true;seasonStatus=status;await refreshAccessMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();void backfillBossVeterans();void webTelemetry.visit();if(result&&result.ok===false&&result.reason!=='signed-out')$('#toast').textContent='클라우드 저장을 불러오지 못했어요 · 이 기기 저장으로 열었어요(연결되면 합쳐져요)';runLocalStartupLab();scheduleShaderWarm();}).catch(async()=>{startupCloudReady=true;seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAccessMode();showEntry();void webTelemetry.visit();runLocalStartupLab();scheduleShaderWarm();});startAnimation();
 // Read-only live diagnostics for performance and real-input validation.

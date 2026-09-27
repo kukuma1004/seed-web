@@ -71,10 +71,17 @@ export function refundMirrorAttackCooldown(remaining,perfectDodges=1){
 // Open arenas stay the same size. Difficulty comes from movement decisions,
 // not from squeezing the player into an increasingly tiny safe area.
 export const MIRROR_MOVEMENT_PROFILES=Object.freeze({
- reflection:Object.freeze({name:'비친 새싹',desiredDistance:Object.freeze([4.3,7.4]),strafe:.7,reposition:.68,dash:true,feint:false}),
- duelist:Object.freeze({name:'거울 결투가',desiredDistance:Object.freeze([4,7]),strafe:.8,reposition:.58,dash:true,feint:false}),
- trickster:Object.freeze({name:'깨진 형상',desiredDistance:Object.freeze([3.7,6.7]),strafe:.88,reposition:.5,dash:true,feint:true}),
- apex:Object.freeze({name:'완성된 거울',desiredDistance:Object.freeze([3.4,6.3]),strafe:.96,reposition:.44,dash:true,feint:true})
+ reflection:Object.freeze({name:'비친 새싹',desiredDistance:Object.freeze([3.6,6.5]),strafe:.7,reposition:.68,reaction:.22,lead:.1,aimRate:1.8,dash:true,feint:false}),
+ duelist:Object.freeze({name:'거울 결투가',desiredDistance:Object.freeze([3.4,6.2]),strafe:.8,reposition:.58,reaction:.19,lead:.16,aimRate:2,dash:true,feint:false}),
+ trickster:Object.freeze({name:'깨진 형상',desiredDistance:Object.freeze([3.2,5.9]),strafe:.88,reposition:.5,reaction:.17,lead:.22,aimRate:2.2,dash:true,feint:true}),
+ apex:Object.freeze({name:'완성된 거울',desiredDistance:Object.freeze([3,5.6]),strafe:.96,reposition:.44,reaction:.15,lead:.26,aimRate:2.4,dash:true,feint:true})
+});
+
+// Difficulty improves decisions, while every tier keeps a visible committed
+// shot direction and a real gap after its last bullet. Shared with the HUD.
+export const MIRROR_DUEL=Object.freeze({
+ minimumTell:.34,maximumTell:.46,aimLock:.2,reload:.54,minimumReload:.4,
+ maximumMoveSpeed:5.15,maximumAimLead:1.35,maximumBurstQueue:1,contactCooldown:.8
 });
 
 export const MIRROR_TOWER=Object.freeze({
@@ -148,7 +155,7 @@ export function mirrorFloorRules(floor=1,{quality='normal'}={}){
   milestone,
   checkpoint:milestone,
   endless:n>=MIRROR_TOWER.endlessFrom,
-  arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:n<11?0:n<31?2:n<61?3:4,shrinks:false}),
+  arena:Object.freeze({radius:MIRROR_TOWER.arenaRadius,solidObstacles:n<3?0:n<31?2:n<61?3:4,shrinks:false}),
   movement,
   concurrentAttackFamilies:d<3?1:MIRROR_TRIAL_LIMITS.concurrentAttackFamilies,
   chainLength:d<4?1:d<8?2:3,
