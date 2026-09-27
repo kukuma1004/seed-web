@@ -1,8 +1,9 @@
+import {buildLevel} from '../src/progression.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
-import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,createSurvivalSession,survivalEnemySpec,survivalSpawn,survivalChoiceKills,tickSurvival,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
+import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,createSurvivalSession,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
 import {createSpatialIndex} from '../src/spatial-index.js';
 import {constrainToArena} from '../src/arena.js';
 import {baseSlideFor,stadiumBaseAt,BASE_SLIDE} from '../src/stadium.js';
@@ -14,18 +15,27 @@ const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 function between(start,end){const i=main.indexOf(start),j=main.indexOf(end,i+start.length);assert(i>=0&&j>i);return main.slice(i,j);}
 const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:''});return dom.get(id);};
 let bossSpawns=0,hits=0;
-const session=createSurvivalSession(4123);session.nextSupply=90;
-const ctx=vm.createContext({THREE,SURVIVAL,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,tickSurvival,constrainToArena,addItem,
- enemies:[],player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
+const session=createSurvivalSession(4123);session.nextSupply=60;
+const ctx=vm.createContext({THREE,SURVIVAL,buildLevel,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
+ levels:new Map(),heldForms:new Map(),enemies:[],player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
  spawnSurvivalBoss(){bossSpawns++;},enemyIndex:createSpatialIndex(2.5),separationEnemies:[],hitPlayer(a){hits+=a;}});
 vm.runInContext(between('function spawnSurvivalEnemy(', 'function spawnSurvivalBoss(')+between('function updateSurvival(', 'function finishSurvival('),ctx);
 for(let i=0;i<400;i++)ctx.spawnSurvivalEnemy();assert.equal(ctx.enemies.length,300,'runtime actor cap');
 assert(ctx.enemies.every(e=>e.type==='swarm'&&e.survivalKind&&e.g.children.length===0),'ordinary actors have no per-actor renderer');
 assert.equal(ctx.enemies.filter(e=>e.g.parent).length,0);
-ctx.survivalSession.time=89.99;ctx.updateSurvival(.02);assert.equal(ctx.inventory.tonic,1);assert.equal(ctx.survivalSession.nextSupply,180);
-ctx.inventory.tonic=5;ctx.survivalSession.time=179.99;ctx.updateSurvival(.02);assert.equal(ctx.inventory.tonic,5,'supply observes carry cap');
+ctx.survivalSession.time=59.99;ctx.updateSurvival(.02);assert.equal(ctx.inventory.tonic,1);assert.equal(ctx.survivalSession.nextSupply,120);
+ctx.inventory.tonic=5;ctx.survivalSession.time=119.99;ctx.updateSurvival(.02);assert.equal(ctx.inventory.tonic,5,'supply observes carry cap');
 ctx.survivalSession.time=SURVIVAL.duration-.01;ctx.updateSurvival(.02);assert.equal(bossSpawns,1);ctx.updateSurvival(1);assert.equal(bossSpawns,1,'single boss transition');
 ctx.survivalSession.finished=true;const endedAt=ctx.survivalSession.time;ctx.updateSurvival(20);assert.equal(ctx.survivalSession.time,endedAt);
+
+// Refresh build strength before spawning, but never heal actors already alive.
+ctx.enemies=[];ctx.survivalSession=createSurvivalSession(2);
+const existing=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'swarm'}),existingHp=existing.hp;
+ctx.levels.set('frost',39);ctx.heldForms.set('meteorspear',36);ctx.heldForms.set('burstpetals',33);ctx.heldForms.set('glassmaze',18);ctx.heldForms.set('spearthunder',38);ctx.heldForms.set('mirrorguard',10);
+ctx.updateSurvival(.01);assert.equal(ctx.survivalSession.buildLevel,174);
+assert.equal(existing.hp,existingHp,'level changes do not refill enemy health');
+assert(ctx.enemies.some(e=>e!==existing&&e.hp>existingHp*6),'new enemies use the current build level');
+ctx.levels.clear();ctx.heldForms.clear();
 
 ctx.enemies=[];ctx.survivalSession=createSurvivalSession(2);
 const enemy=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'runner'});ctx.enemyIndex.rebuild(ctx.enemies);

@@ -1,5 +1,6 @@
+import {buildLevel} from '../src/progression.js';
 import assert from 'node:assert/strict';
-import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,createSurvivalSession,survivalPressure,survivalEnemySpec,survivalSpawn,survivalChoiceKills,tickSurvival,settleSurvivalKill,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
+import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,createSurvivalSession,survivalPressure,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,settleSurvivalKill,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
 
 // Seeded runs replay exactly, including players travelling along every edge.
 const a=createSurvivalSession(413),b=createSurvivalSession(413),c=createSurvivalSession(414),kinds=new Set();
@@ -39,7 +40,7 @@ const freshStats=survivalEnemySpec('swarm',120);settleSurvivalKill(sparse);asser
 // Completed builds must face a sustained circuit, not the opening tutorial.
 const at=(lap,act,time)=>({...createSurvivalSession(81),lap,act,time,legStartedAt:0});
 for(let lap=1;lap<=25;lap++)for(let act=0;act<3;act++){
- const previous=act?at(lap,act-1,269):at(lap-1,2,269),next=at(lap,act,0);
+ const previous=act?at(lap,act-1,179):at(lap-1,2,179),next=at(lap,act,0);
  for(const kind of ['swarm','runner','brute']){
   const before=survivalEnemySpec(kind,previous),after=survivalEnemySpec(kind,next);
   assert(after.hp>=before.hp,`no durability reset: circuit ${lap+1}, act ${act+1}, ${kind}`);
@@ -48,7 +49,7 @@ for(let lap=1;lap<=25;lap++)for(let act=0;act<3;act++){
  const pressure=survivalPressure(next);
  assert.equal(pressure.cap,300);assert(pressure.spawnInterval<=.17);
  assert.equal(pressure.formation,'pincer','new circuits open from two sides, not a tutorial column');
- const adds=survivalPressure(at(lap,act,270));assert.equal(adds.cap,60,'boss fights keep their smaller crowd');
+ const adds=survivalPressure(at(lap,act,180));assert.equal(adds.cap,60,'boss fights keep their smaller crowd');
  const capped=at(lap,act,0);assert.equal(tickSurvival(capped,.1,300).spawn,0);
 }
 const composition=(lap,act,time)=>{const session=at(lap,act,time),result={swarm:0,runner:0,brute:0};
@@ -60,7 +61,7 @@ assert(openingMix.brute>1400&&openingMix.brute<2000,'durable bodies present from
 assert(openingMix.runner>1700&&openingMix.runner<2300,'telegraphed runners do not wait for minute two');
 assert(openingMix.swarm>5800,'ordinary swarms still form the majority at circuit two entry');
 assert.deepEqual(openingMix,composition(1,0,0),'enemy mix remains deterministic across restores');
-console.log('Circuit entry specs',JSON.stringify([at(0,2,269),at(1,0,0),at(2,0,0)].map(s=>({circuit:s.lap+1,act:s.act+1,swarm:survivalEnemySpec('swarm',s),brute:survivalEnemySpec('brute',s),pressure:survivalPressure(s)}))));
+console.log('Circuit entry specs',JSON.stringify([at(0,2,179),at(1,0,0),at(2,0,0)].map(s=>({circuit:s.lap+1,act:s.act+1,swarm:survivalEnemySpec('swarm',s),brute:survivalEnemySpec('brute',s),pressure:survivalPressure(s)}))));
 
 // All roles have contact stats only; fast fragile runners and slow durable brutes.
 for(let second=0;second<=600;second++){
@@ -76,9 +77,9 @@ for(let second=0;second<=600;second++){
 assert.ok(survivalEnemySpec('runner',0).speed>survivalEnemySpec('swarm',0).speed);
 assert.ok(survivalEnemySpec('brute',0).hp>survivalEnemySpec('swarm',0).hp);
 assert.ok(survivalPressure(55).cap<survivalPressure(45).cap,'each wave gives a brief relief beat');
-assert.ok(survivalPressure(35).cap>survivalPressure(30).cap);
-assert.equal(SURVIVAL.duration,270,'boss is scheduled within five combat minutes');
-assert.equal(survivalPressure(200).cap,300,'late density arrives before the fourth minute');
+assert.ok(survivalPressure(24).cap>survivalPressure(20).cap);
+assert.equal(SURVIVAL.duration,180,'boss is scheduled within three combat minutes');
+assert.equal(survivalPressure(170).cap,300,'late density arrives before the third minute');
 assert.equal(survivalPressure(35).hpScale,survivalPressure(30).hpScale,'faster population ramp must not accelerate durability');
 assert.equal(survivalPressure(35).speedScale,survivalPressure(30).speedScale);
 
@@ -111,7 +112,7 @@ for(let i=0;i<SURVIVAL.duration*100;i++){
  while(progress>=survivalChoiceKills(choices)){progress-=survivalChoiceKills(choices);choices++;}
 }
 assert.ok(choices>=28&&choices<=50,`expected 28–50 choices, got ${choices}`);
-assert.equal(survivalChoiceKills(-1),8);assert.equal(survivalChoiceKills(1000),300);
+assert.equal(survivalChoiceKills(-1),8);assert.equal(survivalChoiceKills(1000),200);
 
 // Only this mode's v3 record is written. Old single-act records survive intact.
 const memory=new Map([['seed-run-save','unchanged'],['seed-ranking','unchanged'],['seed-survival-record-v2','old']]);
@@ -126,25 +127,25 @@ for(let leg=0;leg<7;leg++){
  assert.equal(journey.act,act);assert.equal(journey.lap,Math.floor(leg/3));assert.equal(survivalActTime(journey),0);
  assert.equal(survivalAct(journey).type,['austin','alwaysbeginner','tempestcarrier'][act]);
  assert.equal(advanceSurvivalAct(journey),false,'time alone cannot skip a boss');
- journey.time=start+269.9;assert.equal(tickSurvival(journey,.2,0).boss,true);
+ journey.time=start+179.9;assert.equal(tickSurvival(journey,.2,0).boss,true);
  assert.equal(tickSurvival(journey,2,0).boss,false);
  journey.time+=30;settleSurvivalKill(journey,{boss:true});const defeated=journey.bossesDefeated;
  settleSurvivalKill(journey,{boss:true});assert.equal(journey.bossesDefeated,defeated);
  assert.equal(journey.completedLaps,Math.floor((leg+1)/3));
  assert.equal(advanceSurvivalAct(journey),true);assert.equal(advanceSurvivalAct(journey),false);
- assert.equal(journey.nextSupply,journey.time+90);assert.equal(journey.bossSpawned,false);assert.equal(journey.won,false);
+ assert.equal(journey.nextSupply,journey.time+60);assert.equal(journey.bossSpawned,false);assert.equal(journey.won,false);
  assert(survivalPressure(journey).cap<=300);assert.deepEqual(heldBuild,buildBefore);
 }
 assert(survivalScaling(journey).hp>baseScale.hp);assert(survivalScaling(journey).projectile>baseScale.projectile);
 for(const lap of [0,1,20,1000,1e10]){const scale=survivalScaling({act:2,lap});assert(Object.values(scale).every(Number.isFinite));assert(scale.speed<=1.3&&scale.projectile<=1.3&&scale.tempo<=1.4);assert(survivalPressure({act:2,lap,time:250}).cap<=300);}
-const record=recordSurvivalResult(storage,journey);assert.equal(record.wins,2);assert.equal(record.bestBosses,7);assert(record.fastestClear>=810);
+const record=recordSurvivalResult(storage,journey);assert.equal(record.wins,2);assert.equal(record.bestBosses,7);assert(record.fastestClear>=SURVIVAL.duration*3);
 assert.equal(memory.get('seed-run-save'),'unchanged');assert.equal(memory.get('seed-ranking'),'unchanged');assert.equal(memory.get('seed-survival-record-v2'),'old');assert.equal(memory.size,4);
 memory.set(SURVIVAL.recordKey,'broken json');assert.equal(readSurvivalRecord(storage).runs,0);
 memory.set(SURVIVAL.recordKey,JSON.stringify({bestKills:-20,bestTime:1e12,wins:99,runs:2}));
 assert.deepEqual(readSurvivalRecord(storage),{bestKills:0,bestTime:86400,wins:99,runs:2,fastestClear:0,bestBosses:0});
 const denied={getItem(){throw Error('denied');},setItem(){throw Error('full');}};
 for(const target of [null,undefined,denied]){assert.doesNotThrow(()=>readSurvivalRecord(target));assert.doesNotThrow(()=>recordSurvivalResult(target,null));}
-const resultSession={...createSurvivalSession(),act:1,time:700,legStartedAt:400,bossSpawned:true};
+const resultSession={...createSurvivalSession(),act:1,time:400+SURVIVAL.duration+30,legStartedAt:400,bossSpawned:true};
 assert.equal(survivalOutcome(resultSession,{boss:{hp:.1,maxHp:8600}}).value,'1%');
 assert.equal(survivalOutcome(resultSession,{boss:{hp:4300,maxHp:8600}}).value,'50%');
 assert.equal(survivalOutcome(resultSession).bossSeconds,30);assert.match(survivalOutcome(resultSession).title,/항상초심/);
@@ -162,3 +163,30 @@ tickSurvivalRush(r,.66,{x:0,z:5},1);assert.equal(r.rushState,'rush');assert.equa
 const frozen=structuredClone(r);tickSurvivalRush(r,0,{x:-5,z:0},1);assert.deepEqual(r,frozen);
 tickSurvivalRush(r,.73,{x:0,z:5},1);assert.equal(r.rushState,'recover');
 tickSurvivalRush(r,.81,{x:0,z:5},0);assert.equal(r.rushState,null);assert(r.rushClock>2);
+
+// Old checkpoints keep consumed supplies when the act clock is compressed.
+for(const [oldNext,time,expectedNext,due] of [[990,945,960,false],[990,961,1020,true],[1080,1000,1020,false],[1080,1021,1080,true],[1170,1070,1080,false]]){
+ const legacy={...createSurvivalSession(),legStartedAt:900,time,nextSupply:oldNext};delete legacy.supplyInterval;
+ assert.equal(takeSurvivalSupply(legacy),due);assert.equal(legacy.nextSupply,expectedNext);
+ const saved=structuredClone(legacy);assert.equal(takeSurvivalSupply(saved),false,'same supply cannot be claimed on another restore');
+}
+const overdue={...createSurvivalSession(),time:220,nextSupply:180};delete overdue.supplyInterval;
+assert.equal(tickSurvival(overdue,.01).boss,true);assert.equal(takeSurvivalSupply(overdue),false);
+assert.equal(tickSurvival(overdue,.01).boss,false,'old post-180s checkpoint spawns only one boss');
+for(let act=0;act<3;act++){
+ const first=survivalScaling({act,lap:0}),second=survivalScaling({act,lap:1}),third=survivalScaling({act,lap:2});
+ assert(Math.abs(second.bossHp/first.bossHp-1.35)<1e-9);
+ assert(Math.abs(third.bossHp/first.bossHp-1.8225)<1e-9);
+ for(const key of ['bossHp','tempo','projectile','damage'])assert(third[key]>second[key]&&second[key]>first[key]);
+}
+
+const photoLevel=buildLevel(new Map([['frost',39]]),new Map([['meteorspear',36],['burstpetals',33],['glassmaze',18],['spearthunder',38],['mirrorguard',10]]));
+assert.equal(photoLevel,174,'twins counted once, without expanding ingredients');
+for(const lap of [0,1,2,10]){
+ const base=survivalScaling({lap,buildLevel:0}),early=survivalScaling({lap,buildLevel:30}),grown=survivalScaling({lap,buildLevel:174});
+ assert.deepEqual(base,early,'early build growth is free of level compensation');
+ assert(grown.hp>base.hp*6&&grown.hp<base.hp*7);
+ assert(grown.bossHp>base.bossHp&&grown.bossHp<base.bossHp*2);
+ for(const key of ['speed','damage','tempo','projectile'])assert.equal(grown[key],base[key],'levels do not accelerate threats');
+ const max=survivalScaling({lap,buildLevel:1e12});assert(Object.values(max).every(Number.isFinite));assert(max.hp<=1440&&max.bossHp<=48);
+}

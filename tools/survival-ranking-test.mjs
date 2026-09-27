@@ -3,7 +3,7 @@ import {readFileSync} from 'node:fs';
 import {createSurvivalRanking,validSurvivalRank,survivalPlaces} from '../src/survival-ranking.js';
 const entry=(uid='a',score=100)=>({uid,name:'씨앗',score,kills:100,bosses:0,time:60,laws:'split:2',forms:'prism:1'});
 assert(validSurvivalRank(entry()));
-for(const bad of [{score:3001},{time:0},{bosses:1,time:269},{forms:'x'.repeat(121)},{kills:1.5}])assert(!validSurvivalRank({...entry(),...bad}));
+for(const bad of [{score:3001},{time:0},{bosses:1,time:179},{forms:'x'.repeat(121)},{kills:1.5}])assert(!validSurvivalRank({...entry(),...bad}));
 assert.deepEqual(survivalPlaces([entry('a',100),entry('b',100),entry('c',90)]).map(e=>e.rank),[1,1,3]);
 let uid='a',offline=false,remote={},rev=0,puts=0,race=null;
 const m=new Map(),storage={getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,v),removeItem:k=>m.delete(k)};
@@ -45,3 +45,8 @@ assert(main.includes('survival-result-ranking'));assert(main.includes('hall-surv
 const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedSurvivalRanking.v1;
 assert.deepEqual(rules['.indexOn'],['score']);assert(rules.$uid['.write'].includes('auth.uid == $uid'));assert.equal(rules.$uid.$other['.validate'],false);
 console.log('Survival ranking: identity, offline retry, ETag race, ties, bounds, dedicated rules and menu routing passed');
+
+assert(validSurvivalRank({...entry(),bosses:3,time:540}));
+assert(!validSurvivalRank({...entry(),bosses:3,time:539}));
+assert(validSurvivalRank({...entry(),bosses:3,time:810}),'old records remain valid');
+assert(rules.$uid['.validate'].includes("newData.child('bosses').val() * 180"));

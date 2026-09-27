@@ -1,7 +1,7 @@
 // Pure rules for the separate survival challenge. The caller owns actors and
 // only ticks while playing; menus and law choices therefore freeze the clock.
 export const SURVIVAL=Object.freeze({
- duration:270,
+ duration:180,supplyInterval:60,
  arena:Object.freeze({shape:'rect',halfWidth:24,halfDepth:20,start:Object.freeze({x:0,z:0})}),
  maxEnemies:300,maxBossAdds:60,spawnBatch:6,minSpawnDistance:10,arrivalDistance:11,spawnInset:1.2,killChargeScale:.18,
  bossSpawnInterval:2.4,reliefDuration:6,recordKey:'seed-survival-record-v3'
@@ -19,7 +19,7 @@ const count=(value,limit=1000000)=>Math.floor(bounded(value,limit));
 
 export function createSurvivalSession(seed=1){
  const initial=Number.isFinite(seed)?seed>>>0:1;
- return {seed:initial,rngState:initial,time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false};
+ return {seed:initial,rngState:initial,time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
 }
 
 export const SURVIVAL_ACTS=Object.freeze([
@@ -31,7 +31,11 @@ export const survivalAct=session=>SURVIVAL_ACTS[Math.min(2,count(session?.act,2)
 export const survivalActTime=session=>Math.max(0,(session?.time||0)-(session?.legStartedAt||0));
 export function survivalScaling(session){
  const act=count(session?.act,2),lap=count(session?.lap,1000);
- return {hp:Math.min(60,(1+act*.18)*Math.pow(1.9,Math.min(lap,10))),speed:Math.min(1.3,1+act*.025+lap*.065),damage:Math.min(2,1+act*.08+lap*.18),bossHp:Math.min(12,(1+act*.12)*Math.pow(1.35,Math.min(lap,20))),tempo:Math.min(1.4,1+lap*.05),projectile:Math.min(1.3,1+lap*.04)};
+ // First 30 levels are unscaled. Health follows held levels, never measured DPS
+ // or kills. Boss growth is gentler; speed/damage retain circuit-only bounds.
+ const excess=Math.max(0,count(session?.buildLevel)-30);
+ const buildHp=Math.min(24,Math.pow(1+excess/60,1.5)),bossBuildHp=Math.min(4,1+excess*.006);
+ return {hp:Math.min(60,(1+act*.18)*Math.pow(1.9,Math.min(lap,10)))*buildHp,speed:Math.min(1.3,1+act*.025+lap*.065),damage:Math.min(2,1+act*.08+lap*.18),bossHp:Math.min(12,(1+act*.12)*Math.pow(1.35,Math.min(lap,20)))*bossBuildHp,tempo:Math.min(1.4,1+lap*.05),projectile:Math.min(1.3,1+lap*.04)};
 }
 // An act clear is a transition, never a restart: the caller retains the build,
 // inventory, score and choice progress. The world is cleared at this boundary.
@@ -40,8 +44,22 @@ export function advanceSurvivalAct(session){
  session.act=(count(session.act,2)+1)%3;
  if(session.act===0){session.lap=count(session.lap)+1;session.lapStartedAt=session.time;}
  session.legStartedAt=session.time;session.bossSpawned=false;session.won=false;
- session.transitionTime=0;session.spawnTimer=2;session.nextSupply=session.time+90;
+ session.transitionTime=0;session.spawnTimer=2;session.supplyInterval=SURVIVAL.supplyInterval;session.nextSupply=session.time+SURVIVAL.supplyInterval;
  return true;
+}
+
+// Preserve the number of supplies already consumed in an older 90s schedule.
+// Carry-cap misses count as consumed too, so restoring never duplicates gifts.
+export function takeSurvivalSupply(session){
+ if(!session||session.finished||session.won||session.bossSpawned)return false;
+ const start=session.legStartedAt||0;
+ if(session.supplyInterval!==SURVIVAL.supplyInterval){
+  const next=Number.isFinite(session.nextSupply)?session.nextSupply:start+90;
+  const ordinal=Math.max(1,Math.min(3,Math.round((next-start)/90)));
+  session.nextSupply=start+ordinal*SURVIVAL.supplyInterval;session.supplyInterval=SURVIVAL.supplyInterval;
+ }
+ if(session.nextSupply>=start+SURVIVAL.duration||session.time<session.nextSupply)return false;
+ session.nextSupply+=SURVIVAL.supplyInterval;return true;
 }
 
 // LCG state belongs to the run, never Math.random or a global mutable generator.
@@ -51,7 +69,7 @@ function random(session){
 }
 
 // A higher cap alone did not create crowds: the old late-game feed was cleared
-// before enemies accumulated. Compress arrivals to 270s, retaining the fixed pool.
+// before enemies accumulated. Compress arrivals to 180s, retaining the fixed pool.
 // Durability/speed still rise per minute: more targets must not mean instant tanks.
 const PHASES=Object.freeze([
  {cap:96,spawnInterval:.4,label:'첫 물결'},
@@ -125,7 +143,7 @@ export function survivalSpawn(session,player,arena=SURVIVAL.arena){
 
 // Incremental kills required for the next choice, not a cumulative threshold.
 // After eight choices, denser waves must not double the number of upgrades.
-export function survivalChoiceKills(choices){return Math.min(300,8+6*count(choices)+20*Math.max(0,count(choices)-8));}
+export function survivalChoiceKills(choices){return Math.max(8,Math.floor(Math.min(300,8+6*count(choices)+20*Math.max(0,count(choices)-8))*2/3));}
 
 export function tickSurvival(session,dt,alive=0){
  const result={spawn:0,boss:false};
