@@ -1,0 +1,30 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {defenseRankEntry,validDefenseRank,defensePlaces,parseDefenseTowers,createDefenseRanking} from '../src/defense-ranking.js';
+const state={phase:'won',wave:12,coreHp:18,kills:340,time:303.4,towers:[{formId:'prism',laws:[],level:5},{laws:['chain'],level:2}]};
+const entry=defenseRankEntry(state,{uid:'a',name:'씨앗'});
+assert.equal(entry.score,1218340);assert.equal(entry.time,304);assert.equal(entry.towers,'prism:5,chain:2');assert(validDefenseRank(entry));
+assert.equal(defenseRankEntry({...state,phase:'draft'},{uid:'a',name:'씨앗'}),null);
+const lost=defenseRankEntry({...state,phase:'lost',wave:8,coreHp:-1,kills:100},{uid:'b',name:'씨앗'});
+assert.equal(lost.cleared,7);assert.equal(lost.hp,0);
+for(const bad of [{score:1},{hp:21},{kills:346},{towers:'prism:6'},{towers:'bad:1'},{towers:Array(9).fill('chain:1').join(',')},{time:0}])assert(!validDefenseRank({...entry,...bad}));
+assert.deepEqual(parseDefenseTowers('chain:2,chain:5,seed:1'),[['chain',2],['chain',5],['seed',1]],'separate towers remain visible');
+assert.deepEqual(defensePlaces([{...entry,uid:'b'},entry,lost]).map(e=>e.rank),[1,1,3]);
+let remote=null,rev=0,offline=false,uid='a',race=false;
+const map=new Map(),storage={getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};
+const reply=(body,status=200)=>({ok:status===200,status,json:async()=>structuredClone(body),headers:{get:()=>String(rev)}});
+const ranking=createDefenseRanking({storage,authProvider:async()=>({uid,idToken:'test'}),fetchImpl:async(url,o)=>{
+ assert(url.includes('/seedDefenseRanking/v1'));assert(!url.includes('seedSurvivalRanking'));
+ if(offline)throw Error('offline');
+ if(o.method==='PUT'){if(race){race=false;remote={...entry,hp:20,score:1220340};rev++;}if(o.headers['if-match']!==String(rev))return reply(null,412);remote=JSON.parse(o.body);rev++;return reply(remote);}
+ return reply(url.includes('/v1.json')?remote?{a:remote}:{}:remote);
+}});
+offline=true;await assert.rejects(ranking.submit(entry));assert.equal(map.size,1);
+offline=false;uid='b';await ranking.flush();assert.equal(remote,null,'pending A is not sent as B');
+uid='a';await ranking.flush();assert.equal(remote.score,entry.score);assert.equal(map.size,0);
+await ranking.submit({...entry,hp:17,score:1217340});assert.equal(remote.hp,18);
+race=true;await ranking.submit({...entry,hp:19,score:1219340});assert.equal(remote.hp,20,'another device better result is retained');
+assert.equal((await ranking.board()).mine.rank,1);
+const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url))).rules.seedDefenseRanking.v1;
+assert.deepEqual(rules['.indexOn'],['score']);assert(rules.$uid['.write'].includes('auth.uid == $uid'));assert.equal(rules.$uid.$other['.validate'],false);
+console.log('Defense ranking: wave/HP/kill order, terminal-only results, eight tower snapshots, identity, offline retry, concurrency and rules passed.');

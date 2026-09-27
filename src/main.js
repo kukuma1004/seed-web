@@ -74,6 +74,7 @@ import {AUSTIN,PHASES,AUSTIN_ARENA,AUSTIN_ART,createAustin,tickAustin,damageAust
 import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanName,escapeHtml,rankingTable,formatScore,NAME_MAX,formatTime,clearBonus,CLEAR_BONUS} from './score.js';
 import {createOnlineRanking,SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
 import {createSurvivalRanking} from './survival-ranking.js';
+import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defense-ranking.js';
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
@@ -808,22 +809,28 @@ async function refreshSurvivalAccount(choice=null,expected=null){
   }
  }
 }
-const survivalRanking=createSurvivalRanking({storage:rawStorage,authProvider:async()=>{
+const modeRankingAuth=async()=>{
  if(localInspection||!account.user()||account.user().isAnonymous)throw new Error('registered-account-required');
  return account.tokenSession();
-}});
+};
+const survivalRanking=createSurvivalRanking({storage:rawStorage,authProvider:modeRankingAuth});
+const defenseRanking=createDefenseRanking({storage:rawStorage,authProvider:modeRankingAuth});
 let survivalRankView=0;
-function showSurvivalRanking(back=showSurvivalSetup){
+function showSurvivalRanking(back=showSurvivalSetup){showModeRanking('survival',back);}
+function showDefenseRanking(back=showDungeon){showModeRanking('defense',back);}
+function showModeRanking(kind,back){
+ const defense=kind==='defense',service=defense?defenseRanking:survivalRanking,label=defense?'씨앗 수호전':'물량생존전';
  const view=++survivalRankView;mode='ranking';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen','survival-overlay');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel survival-panel survival-ranking-panel"><header><p class="eyebrow">SEED · 물량생존전</p><h2>밀려오는 숲 · 명예의 전당</h2><p class="survival-note">계정별 최고 점수 · 동점은 공동 순위 · 여정 랭킹과 별도</p></header><div class="survival-rank-scroll"><p id="survival-ranking-status" role="status">기록을 확인하는 중…</p><div id="survival-ranking-list"></div></div><footer class="survival-actions"><button id="survival-ranking-refresh">새로고침</button><button id="survival-ranking-back">돌아가기</button></footer></div>`;
- $('#survival-ranking-back').onclick=()=>{survivalRankView++;back();};$('#survival-ranking-refresh').onclick=()=>showSurvivalRanking(back);
- if(localInspection){$('#survival-ranking-status').textContent='로컬 검토 화면 · 실제 온라인 기록은 조회하거나 등록하지 않아요.';$('#survival-ranking-list').innerHTML='<h3>TOP 10</h3><p class="survival-note">실제 플레이 기록이 여기에 표시됩니다.</p><h3>내 최고기록</h3><p class="survival-note">점수 · 순위 · 보스 격파 · 생존 시간 · 사용한 조합</p>';return;}
- const row=e=>`<li><div class="survival-rank-heading"><b>${e.rank?e.rank+'위':'순위 집계 범위 밖'} · ${escapeHtml(e.name)}</b><strong>${formatScore(e.score)}점</strong></div><p>${e.bosses}보스 · ${e.kills.toLocaleString()}처치 · ${survivalClock(e.time)}</p><p class="survival-rank-build">${escapeHtml(buildText({laws:e.laws,forms:e.forms,relic:'',wardens:0,austins:0}))||'기본 씨앗'}</p>${e.uid===account.user()?.uid?'':rankSafety(e)}</li>`;
- survivalRanking.flush().catch(()=>{}).then(()=>survivalRanking.board()).then(({top,mine})=>{
+ $('#overlay').innerHTML=`<div class="menu-panel survival-panel survival-ranking-panel"><header><p class="eyebrow">SEED · ${label}</p><h2>${defense?'씨앗 수호전':'밀려오는 숲'} · 명예의 전당</h2><p class="survival-note">${defense?'막아낸 습격 → 남은 체력 → 처치 수':'계정별 최고 점수'} · 동점은 공동 순위</p></header><div class="survival-rank-scroll"><p id="survival-ranking-status" role="status">기록을 확인하는 중…</p><div id="survival-ranking-list"></div></div><footer class="survival-actions"><button id="survival-ranking-refresh">새로고침</button><button id="survival-ranking-back">돌아가기</button></footer></div>`;
+ $('#survival-ranking-back').onclick=()=>{survivalRankView++;back();};$('#survival-ranking-refresh').onclick=()=>showModeRanking(kind,back);
+ const row=e=>`<li><div class="survival-rank-heading"><b>${e.rank?e.rank+'위':'순위 집계 범위 밖'} · ${escapeHtml(e.name)}</b><strong>${defense?e.cleared+'/12 습격':formatScore(e.score)+'점'}</strong></div><p>${defense?'정원 체력 '+e.hp+'/20':e.bosses+'보스'} · ${e.kills.toLocaleString()}처치 · ${survivalClock(e.time)}</p>${defense?defenseRankBuild(e):rankBuild({build:{laws:e.laws,forms:e.forms,relic:'',wardens:0,austins:0}},0,false)}${localInspection||e.uid===account.user()?.uid?'':rankSafety(e)}</li>`;
+ if(localInspection){const sample=defense?{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',cleared:12,hp:18,kills:340,time:300,towers:'prism:5,frostnet:4,chain:3,seed:1'}:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',score:15000,bosses:1,kills:600,time:330,laws:'chain:3,orbit:2',forms:'prism:2,frostnet:1'};$('#survival-ranking-status').textContent='로컬 배치 시연 · 실제 온라인 기록은 조회하거나 등록하지 않아요.';$('#survival-ranking-list').innerHTML='<h3>조합 그림 시연</h3><ol>'+row(sample)+'</ol><h3>내 최고기록</h3><p class="survival-note">공개 버전에서는 TOP 10과 내 기록을 따로 표시해요.</p>';return;}
+
+ service.flush().catch(()=>{}).then(()=>service.board()).then(({top,mine})=>{
   if(view!==survivalRankView||!$('#survival-ranking-list'))return;
   $('#survival-ranking-status').textContent='상위 10명 · 내 최고기록은 아래에서 따로 확인하세요.';
-  $('#survival-ranking-list').innerHTML=`<h3>TOP 10</h3><ol>${visibleRanking(top,runStorage).map(row).join('')||'<li>아직 등록된 기록이 없어요. 첫 기록에 도전해 보세요!</li>'}</ol><h3>내 최고기록</h3><ol>${mine?row(mine):'<li>이 계정으로 등록된 생존전 기록이 아직 없어요.</li>'}</ol>`;bindRankSafety();
+  $('#survival-ranking-list').innerHTML=`<h3>TOP 10</h3><ol>${visibleRanking(top,runStorage).map(row).join('')||'<li>아직 등록된 기록이 없어요. 첫 기록에 도전해 보세요!</li>'}</ol><h3>내 최고기록</h3><ol>${mine?row(mine):'<li>이 계정으로 등록된 기록이 아직 없어요.</li>'}</ol>`;bindRankSafety();
  }).catch(()=>{if(view===survivalRankView&&$('#survival-ranking-status'))$('#survival-ranking-status').textContent=account.user()&&!account.user().isAnonymous?'랭킹을 불러오지 못했어요. 잠시 후 새로고침해 주세요.':'Google 계정으로 로그인하면 온라인 기록을 볼 수 있어요.';});
 }
 function showSurvivalSetup(refresh=true){
@@ -1682,7 +1689,14 @@ async function showSeedDefense(){
  mode='defense';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  try{
   const {mountSeedDefense}=await import('./seed-defense-view.js');
-  defenseScreen=mountSeedDefense({storage:rawStorage,owner:account.user()?.uid||'guest',audio,onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
+  const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
+   const entry=defenseRankEntry(state,{uid:owner,name:playerName});
+   const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
+   if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
+   if(!decision.eligible||owner!==account.user()?.uid)return '온라인 기록은 같은 계정으로 로그인한 정상 플레이만 등록해요.';
+   try{await defenseRanking.submit(entry);return '계정 최고기록 확인 완료 · 사용한 씨앗도 랭킹에 남았어요.';}catch{return '온라인 등록 대기 · 이 계정에 보관하고 랭킹을 열면 다시 전송해요.';}
+  },onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
  }catch(error){console.error('씨앗 수호전 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='수호전을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 function showDungeon(){
@@ -1736,12 +1750,16 @@ function showJourneys(){
  $('#back-menu').onclick=showDungeon;
 }
 // Every visible ranking line shows its build. Legacy runs explain why they cannot.
-function rankBuild(entry,place){
+function rankBuild(entry,place,showBoss=true){
  const b=parseBuild(entry.build);
  if(!b)return '<div class="rank-build none">조합 기록 없음</div>';
- const boss=`<span class="rank-boss">${bossText(entry.build,isAct3(entry.region)?ACT.JOHAN:runAct(entry))}</span>`;
+ const boss=showBoss?`<span class="rank-boss">${bossText(entry.build,isAct3(entry.region)?ACT.JOHAN:runAct(entry))}</span>`:'';
  const chips=[...b.forms.map(([id,lv])=>`<span class="rank-chip form">${formArt(id,'rank-art')}${FORMS[id].name} <i>Lv.${lv}</i></span>`),...b.laws.map(([id,lv])=>`<span class="rank-chip">${lawArt(id,'rank-art')}${LAWS[id].name} <i>Lv.${lv}</i></span>`),b.relic?`<span class="rank-chip relic">${relicArt(b.relic,'rank-art')}유물 ${RELICS[b.relic].name}</span>`:''].join('');
  return `<div class="rank-build" title="${escapeHtml(buildText(entry.build))}">${boss}${chips}</div>`;
+}
+function defenseRankBuild(entry){
+ const towers=parseDefenseTowers(entry.towers);if(!towers)return '<div class="rank-build none">씨앗 조합 기록 없음</div>';
+ return '<div class="rank-build">'+towers.map(([id,lv],i)=>`<span class="rank-chip ${FORMS[id]?'form':''}">${FORMS[id]?formArt(id,'rank-art'):LAWS[id]?lawArt(id,'rank-art'):'<span class="rank-art rank-seed">♧</span>'}${i+1}. ${FORMS[id]?.name||LAWS[id]?.name||'씨앗'} <i>강화 ${lv}</i></span>`).join('')+'</div>';
 }
 function rankSafety(entry){
  if(!entry?.uid||entry.uid===online.uid())return '';
@@ -1834,7 +1852,7 @@ function showRanking(view='online'){
  const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='johan'?'폭풍비행사 요한 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>${boardLabel}</p><h2>명예의 전당</h2>${tabs}<p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
- if(!locked){$('.rank-season .rank-tabs').insertAdjacentHTML('beforeend','<button class="primary" id="hall-survival-ranking">물량생존전</button>');$('#hall-survival-ranking').onclick=()=>showSurvivalRanking(()=>showRanking(view));}
+ if(!locked){$('.rank-season .rank-tabs').insertAdjacentHTML('beforeend','<button class="primary" id="hall-survival-ranking">물량생존전</button><button class="primary" id="hall-defense-ranking">씨앗 수호전</button>');$('#hall-survival-ranking').onclick=()=>showSurvivalRanking(()=>showRanking(view));$('#hall-defense-ranking').onclick=()=>showDefenseRanking(()=>showRanking(view));}
  if(!remote)return;
  const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
  online.flush().catch(()=>0).then(readBoard).then(board=>{
