@@ -26,27 +26,27 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,onClose=()=>{}}={}){
  const key='seed-defense-preparation-v1:'+encodeURIComponent(owner),root=document.createElement('section');
  root.id='seed-defense';root.setAttribute('aria-label','씨앗 수호전');
- root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-book">조합 162</button><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
+ root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-book">조합 162</button><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><button class="td-quick-start">다음 습격 시작</button><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><button class="td-panel-close" aria-label="씨앗 정보 닫기">×</button><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
  host.append(root);document.body.classList.add('seed-defense-open');
  const $=s=>root.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),back=document.createElement('canvas'),bg=back.getContext('2d',{alpha:false});
  let state=createDefense(Date.now()>>>0),selected=0,paused=false,ended=false,frame=0,last=0,uiAt=0,uiKey='',saveNote='준비 상태는 이 기기에 저장돼요',width=1,height=1,scale=1,ox=0,oy=0,dirty=true,frames=[],lastEffects=0,renderCosts=[],announced='',confirming=false;
  const assets={},loads=[],listeners=[];
  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
  const load=(id,file)=>{const img=new Image();assets[id]=img;loads.push(new Promise(resolve=>{img.onload=()=>{dirty=true;resolve();};img.onerror=resolve;img.src=BASE+'assets/'+file;}));};
- load('combo','combo-projectiles-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('floor','seed-defense-garden-v1.webp');load('stone','garden-stone-v4.png');load('awaken','seed-awaken-bodies-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('solo','seed-solo-bodies-v3.webp');load('seed','seed-body-directions-v6.png');load('fusion','seed-fusion-bodies-v1.png');load('projectile','mobile/seed-projectile-dna-v1.png');load('hound','mobile/enemy-hound-v4.webp');load('runner','mobile/enemy-runner-v1.webp');load('shield','mobile/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
+ load('combo','combo-projectiles-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('floor','seed-defense-garden-v1.webp');load('stone','garden-stone-v4.png');load('flagstones','seed-defense-stones-v1.webp');load('awaken','seed-awaken-bodies-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('solo','seed-solo-bodies-v3.webp');load('seed','seed-body-directions-v6.png');load('fusion','seed-fusion-bodies-v1.png');load('projectile','mobile/seed-projectile-dna-v1.png');load('hound','mobile/enemy-hound-v4.webp');load('runner','mobile/enemy-runner-v1.webp');load('shield','mobile/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
  function read(){try{return restoreDefense(JSON.parse(storage.getItem(key)));}catch{return null;}}
  const saved=read();if(saved){state=saved;selected=state.selectedPad;}
  let combat=createDefenseCombat(state,{sound}),visuals=[],bookOpen=false,bookKind='fusion',bookPage=0,bookWasPaused=false,moving=false,visualClock=0;
  const evolutionCues=[],bodyCache=new Map(),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function celebrate(t,previous,kind){for(let i=evolutionCues.length-1;i>=0;i--)if(evolutionCues[i].id===t.id)evolutionCues.splice(i,1);if(evolutionCues.length>=4)evolutionCues.shift();evolutionCues.push({id:t.id,x:t.x,y:t.y,start:visualClock,previous,ink:color(t.laws[0]),title:kind+' · '+name(t)});root.classList.add('td-evolved');hint(kind+' · '+name(t)+' — 새로운 공격이 깨어났어요');}
- function body(t,x,y,sizeMultiplier=1){const key=(t.formId||'seed');let parts=bodyCache.get(key);if(!parts){parts=defenseBodyParts(t);bodyCache.set(key,parts);}for(const p of parts)sprite(p.atlas,x+p.dx*sizeMultiplier,y,p.size*sizeMultiplier,p.cell,p.cols||4,p.rows||3);}
+ function body(t,x,y,sizeMultiplier=1){sizeMultiplier*=1.32;const key=(t.formId||'seed');let parts=bodyCache.get(key);if(!parts){parts=defenseBodyParts(t);bodyCache.set(key,parts);}for(const p of parts)sprite(p.atlas,x+p.dx*sizeMultiplier,y,p.size*sizeMultiplier,p.cell,p.cols||4,p.rows||3);}
  function save(){if(!['build','draft'].includes(state.phase))return;try{const data=checkpointDefense(state);if(data){storage.setItem(key,JSON.stringify(data));saveNote='이번 준비 저장됨 · 이 기기 전용';}}catch{saveNote='저장 공간이 부족해요 · 종료 전 확인해 주세요';}}
  function clearSave(){try{storage.removeItem(key);}catch{}}
  function sound(id){audio?.play(id);}
  function resize(){const r=$('.td-board').getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);const dpr=Math.min(1.5,window.devicePixelRatio||1);canvas.width=back.width=Math.round(width*dpr);canvas.height=back.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);bg.setTransform(dpr,0,0,dpr,0,0);scale=Math.min(width/118,height/54);ox=(width-118*scale)/2+8*scale;oy=(height-54*scale)/2-4*scale;dirty=true;placeButtons();}
  function placeButtons(){for(const b of $('.td-pads').children){const p=state.pads[Number(b.dataset.pad)];b.style.left=(ox+p.x*scale)+'px';b.style.top=(oy+p.y*scale)+'px';}}
  $('.td-pads').innerHTML=PADS.map((p,i)=>`<button data-pad="${i}" aria-label="${i+1}번 화단 선택"><span>${i+1}</span></button>`).join('');
- for(const b of $('.td-pads').children)b.onclick=()=>{moving=false;selected=Number(b.dataset.pad);state.selectedPad=selected;uiKey='';sound('pickup');updateUI();};
+ for(const b of $('.td-pads').children)b.onclick=()=>{root.classList.add('td-inspecting');moving=false;selected=Number(b.dataset.pad);state.selectedPad=selected;uiKey='';sound('pickup');updateUI();};
  const tower=()=>state.towers.find(t=>t.pad===selected);
  listen(canvas,'click',e=>{
   if(bookOpen||confirming||!['build','draft'].includes(state.phase)){hint('씨앗 배치는 습격 사이에 바꿀 수 있어요');return;}
@@ -54,25 +54,26 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   const pad=moving?selected:state.pads.findIndex((_,i)=>!state.towers.some(t=>t.pad===i));
   if(pad<0){hint('씨앗은 최대 8개예요 · 씨앗을 선택해 위치를 옮겨 보세요');return;}
   const error=defensePlacement(state,x,y,pad);if(error){hint(error);return;}
-  if(placeDefensePad(state,pad,x,y)){selected=pad;moving=false;combat.reset();dirty=true;placeButtons();save();uiKey='';updateUI();hint(tower()?'씨앗을 새 위치로 옮겼어요':'이 위치에 씨앗을 심을 수 있어요 · 사거리를 확인하세요');}
+  if(placeDefensePad(state,pad,x,y)){root.classList.add('td-inspecting');selected=pad;moving=false;combat.reset();dirty=true;placeButtons();save();uiKey='';updateUI();hint(tower()?'씨앗을 새 위치로 옮겼어요':'이 위치에 씨앗을 심을 수 있어요 · 사거리를 확인하세요');}
  });
  function hint(message){$('.td-hint').textContent=message;}
- function togglePause(){if(ended||bookOpen||confirming||['won','lost'].includes(state.phase))return;paused=!paused;audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';$('#td-pause').setAttribute('aria-label',paused?'계속하기':'일시정지');hint(paused?'잠시 쉬는 중 · ▶를 눌러 계속하세요':'');uiKey='';updateUI();}
- $('#td-pause').onclick=togglePause;
+ function togglePause(){if(paused&&!bookOpen&&!confirming)$('.td-dialog').hidden=true;if(ended||bookOpen||confirming||['won','lost'].includes(state.phase))return;paused=!paused;audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';$('#td-pause').setAttribute('aria-label',paused?'계속하기':'일시정지');hint(paused?'잠시 쉬는 중 · ▶를 눌러 계속하세요':'');uiKey='';updateUI();}
+ $('#td-pause').onclick=()=>{if(ended||bookOpen||confirming||['won','lost'].includes(state.phase))return;if(paused){togglePause();return;}togglePause();dialog('<div><small>씨앗 수호전</small><h2>잠시 쉬어 가세요</h2><button id="td-resume">계속 방어하기</button><button id="td-pause-leave">저장하고 돌아가기</button></div>');$('#td-resume').onclick=()=>{$('.td-dialog').hidden=true;togglePause();};$('#td-pause-leave').onclick=()=>{$('.td-dialog').hidden=true;$('#td-leave').click();};};
  function dialog(html){$('.td-dialog').hidden=false;$('.td-dialog').innerHTML=html;}
  function showBook(){
   if(!bookOpen){bookWasPaused=paused;bookOpen=true;paused=true;audio?.setPaused(true);}
   const forms=Object.values(DEFENSE_CATALOG).filter(f=>f.kind===bookKind),pages=Math.ceil(forms.length/9);bookPage=Math.min(bookPage,pages-1);
   $('.td-dialog').classList.add('td-book-dialog');
   dialog(`<div class="td-book-sheet"><header><div><small>모든 조합을 수호전에서도</small><h2>씨앗의 162가지 길</h2></div><button id="td-book-close">돌아가기</button></header><nav>${Object.entries(KIND).map(([id,label])=>`<button data-book-kind="${id}" aria-pressed="${bookKind===id}">${label} ${DEFENSE_CATALOG_COUNTS[id]}</button>`).join('')}</nav><p class="td-book-guide">같은 법칙 3단계 → 단독 · 다른 법칙 2개 → 융합<br>융합에서 한 법칙 3단계 → 완성 · 양쪽 법칙 3단계 → 쌍둥이</p><div class="td-book-grid">${forms.slice(bookPage*9,bookPage*9+9).map(f=>`<article>${art(f)}<div><b>${esc(f.name)}</b><small>${esc(recipe(f))}</small><p>${esc(f.desc||DEFENSE_LAWS[f.id]?.desc||'')}</p>${SIGNATURES[f.id]?`<small class="td-gold">궁극기 · ${esc(SIGNATURES[f.id].name)}</small>`:''}</div></article>`).join('')}</div><footer><button id="td-book-prev" ${bookPage===0?'disabled':''}>이전</button><span>${bookPage+1} / ${pages}</span><button id="td-book-next" ${bookPage>=pages-1?'disabled':''}>다음</button></footer></div>`);
-  $('#td-book-close').onclick=()=>{bookOpen=false;paused=bookWasPaused;$('.td-dialog').hidden=true;$('.td-dialog').classList.remove('td-book-dialog');audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';last=performance.now();uiKey='';updateUI();};
+  $('#td-book-close').onclick=()=>{bookOpen=false;paused=bookWasPaused;$('.td-dialog').hidden=true;$('.td-dialog').classList.remove('td-book-dialog');audio?.setPaused(paused);$('#td-pause').textContent=paused?'▶':'Ⅱ';$('#td-pause').setAttribute('aria-label',paused?'계속하기':'일시정지');last=performance.now();uiKey='';updateUI();};
   for(const b of root.querySelectorAll('[data-book-kind]'))b.onclick=()=>{bookKind=b.dataset.bookKind;bookPage=0;showBook();};
   $('#td-book-prev').onclick=()=>{bookPage--;showBook();};$('#td-book-next').onclick=()=>{bookPage++;showBook();};
  }
  $('#td-book').onclick=showBook;
  function close(){if(ended)return;save();combat.dispose();ended=true;cancelAnimationFrame(frame);observer.disconnect();listeners.forEach(fn=>fn());root.remove();document.body.classList.remove('seed-defense-open');audio?.setPaused(false);onClose();}
- $('#td-leave').onclick=()=>{if(state.phase!=='wave')return close();paused=true;confirming=true;audio?.setPaused(true);dialog('<div><h2>이번 습격을 나갈까요?</h2><p>마지막 준비 상태가 남아 있어요.<br>이번 습격의 처치와 햇살은 저장되지 않아요.</p><button id="td-quit-yes">준비 상태로 저장하고 나가기</button><button id="td-quit-no">계속 방어하기</button></div>');$('#td-quit-yes').onclick=close;$('#td-quit-no').onclick=()=>{confirming=false;paused=false;$('.td-dialog').hidden=true;audio?.setPaused(false);last=performance.now();};};
- $('#td-start').onclick=()=>{if(paused){togglePause();return;}if(startDefenseWave(state)){moving=false;hint(defenseWaveInfo(state.wave).title+' · 씨앗들이 정원을 지키고 있어요');sound('evolve');uiKey='';updateUI();}};
+ $('#td-leave').onclick=()=>{if(state.phase!=='wave')return close();paused=true;confirming=true;audio?.setPaused(true);dialog('<div><h2>이번 습격을 나갈까요?</h2><p>마지막 준비 상태가 남아 있어요.<br>이번 습격의 처치와 햇살은 저장되지 않아요.</p><button id="td-quit-yes">준비 상태로 저장하고 나가기</button><button id="td-quit-no">계속 방어하기</button></div>');$('#td-quit-yes').onclick=close;$('#td-quit-no').onclick=()=>{confirming=false;paused=false;$('.td-dialog').hidden=true;audio?.setPaused(false);$('#td-pause').textContent='Ⅱ';$('#td-pause').setAttribute('aria-label','일시정지');last=performance.now();uiKey='';updateUI();};};
+ $('.td-panel-close').onclick=()=>root.classList.remove('td-inspecting');
+ $('#td-start').onclick=()=>{if(paused){togglePause();return;}if(startDefenseWave(state)){root.classList.remove('td-inspecting');moving=false;hint(defenseWaveInfo(state.wave).title+' · 씨앗들이 정원을 지키고 있어요');sound('evolve');uiKey='';updateUI();}};
  function updateUI(){
   $('#td-heart').textContent=`♡ ${Math.ceil(state.coreHp)} / 20`;$('#td-sun').textContent=`✦ ${Math.floor(state.currency)} 햇살`;$('#td-wave').textContent=`습격 ${state.wave} / ${DEFENSE.waves}`;
   const t=tower(),offers=t?getDefenseOffers(state,t.id):[],sig=[selected,state.phase,state.currency,t?.level,t?.laws?.join(','),JSON.stringify(t?.lawRanks),t?.formId,Math.floor(t?.ultimateCharge||0),state.draftCredit,offers.join(','),paused,saveNote,moving].join('|');
@@ -93,31 +94,35 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   else html+=`<div class="td-next"><small>다음 습격</small><p>${esc(info.title)}</p><small>${esc(info.desc)}</small></div>`;
   $('.td-scroll').innerHTML=html;
   if($('#td-plant'))$('#td-plant').onclick=()=>{if(plantDefense(state,selected)){dirty=true;sound('pickup');save();uiKey='';updateUI();}};
-  if($('#td-move'))$('#td-move').onclick=()=>{moving=!moving;hint(moving?'옮길 땅을 눌러 주세요 · 길과 다른 씨앗 주변은 비워 주세요':'위치 옮기기를 취소했어요');uiKey='';updateUI();};
+  if($('#td-move'))$('#td-move').onclick=()=>{moving=!moving;if(moving)root.classList.remove('td-inspecting');hint(moving?'옮길 땅을 눌러 주세요 · 길과 다른 씨앗 주변은 비워 주세요':'위치 옮기기를 취소했어요');uiKey='';updateUI();};
   if($('#td-upgrade'))$('#td-upgrade').onclick=()=>{if(upgradeDefense(state,t.id)){hint('강화 Lv.'+t.level+' · 피해와 사거리가 늘었어요');sound('evolve');save();uiKey='';updateUI();}};
   for(const b of root.querySelectorAll('[data-law]'))b.onclick=()=>{const previous={...t,laws:[...t.laws]};if(chooseDefenseLaw(state,t.id,b.dataset.law)){const evolved=t.formId!==previous.formId;sound(evolved?'fusion':'evolve');if(evolved){combat.reset();celebrate(t,previous,'융합 진화');}else hint(DEFENSE_LAWS[b.dataset.law].name+' 법칙 '+t.lawRanks[b.dataset.law]+'단계 · 진화 조건을 확인하세요');save();uiKey='';updateUI();if(evolved)$('.td-scroll').scrollTop=0;}};
   if($('#td-ultimate'))$('#td-ultimate').onclick=()=>{if(!paused&&combat.surge(t.id)){sound('evolve');hint(SIGNATURES[t.formId]?.name||'궁극기');uiKey='';updateUI();}};
   for(const b of root.querySelectorAll('[data-evolution]'))b.onclick=()=>{const previous={...t,laws:[...t.laws]};if(evolveDefense(state,t.id,b.dataset.evolution)){combat.reset();sound('fusion');celebrate(t,previous,KIND[DEFENSE_FORMS[t.formId].kind]);save();uiKey='';updateUI();$('.td-scroll').scrollTop=0;}};
   $('#td-start').textContent=paused?'계속하기':state.phase==='wave'?'습격 방어 중':state.phase==='won'?'정원을 지켰어요':state.phase==='lost'?'도전 종료':state.phase==='draft'||state.draftCredit>0?'씨앗에 법칙을 먼저 부여':'다음 습격 시작';
   $('#td-start').disabled=!paused&&(state.phase==='wave'||state.phase==='draft'||state.draftCredit>0||['won','lost'].includes(state.phase));
-  $('#td-save-note').textContent=saveNote;
+  $('#td-save-note').textContent=saveNote;root.classList.toggle('td-in-wave',state.phase==='wave');$('.td-quick-start').hidden=state.phase==='wave'||['won','lost'].includes(state.phase);$('.td-quick-start').textContent=state.phase==='draft'||state.draftCredit>0?'씨앗 선택 · 법칙 부여':'다음 습격 시작';$('.td-quick-start').onclick=()=>{if(state.phase==='draft'||state.draftCredit>0)root.classList.add('td-inspecting');else $('#td-start').click();};
  }
  function ground(){
-  bg.fillStyle='#091d22';bg.fillRect(0,0,width,height);bg.save();bg.translate(ox,oy);bg.scale(scale,scale);
+  bg.fillStyle='#10251d';bg.fillRect(0,0,width,height);
+  // Fill unused portrait margins with the same painted garden, while the full
+  // playable route and pointer transform stay unchanged.
+  if(assets.floor?.naturalWidth){const img=assets.floor,s=Math.max(width/img.width,height/img.height);bg.save();bg.globalAlpha=.6;bg.drawImage(img,(width-img.width*s)/2,(height-img.height*s)/2,img.width*s,img.height*s);bg.restore();}
+  bg.save();bg.translate(ox,oy);bg.scale(scale,scale);
   paintDefenseGround(bg,assets,PATH,state);
   bg.restore();dirty=false;
  }
  function sprite(id,x,y,size,cell=0,cols=2,rows=2){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*.82,size,size);return true;}
  function draw(now){
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,12,state.coreHp>10?5:3,4,3);
-  const chosen=tower()||(['build','draft'].includes(state.phase)?{...state.pads[selected],laws:[],level:1}:null);if(chosen){ctx.beginPath();ctx.arc(chosen.x,chosen.y,defenseTowerStats(chosen).range,0,Math.PI*2);ctx.fillStyle=color(chosen.laws[0])+'0b';ctx.strokeStyle=color(chosen.laws[0])+'55';ctx.lineWidth=.16;ctx.fill();ctx.stroke();}
+  const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
+  const chosen=tower()||(['build','draft'].includes(state.phase)?{...state.pads[selected],laws:[],level:1}:null);if(chosen&&state.phase!=='wave'){ctx.beginPath();ctx.arc(chosen.x,chosen.y,defenseTowerStats(chosen).range,0,Math.PI*2);ctx.fillStyle=color(chosen.laws[0])+'0b';ctx.strokeStyle=color(chosen.laws[0])+'55';ctx.lineWidth=.16;ctx.fill();ctx.stroke();}
   for(const t of state.towers){
-   const ink=color(t.laws[0]);ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,2.7,1.25,0,0,Math.PI*2);ctx.fill();
-   const bob=Math.sin(now*.002+t.id)*.15;
+   const ink=color(t.laws[0]);ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,3.35,1.45,0,0,Math.PI*2);ctx.fill();
+   const bob=reducedMotion?0:Math.sin(now*.002+t.id)*.15;
    const cue=evolutionCues.find(c=>c.id===t.id),age=cue?visualClock-cue.start:99;
    const changing=cue&&!reducedMotion&&age<.5,bodyScale=reducedMotion?1:changing?1-.55*Math.min(1,age/.5):age<1?1+.18*Math.sin((age-.5)*Math.PI*2):1;
-   body(changing?cue.previous:t,t.x,t.y+bob,bodyScale);if(!t.formId&&t.laws.length)sprite('projectile',t.x+2.3,t.y-2.2,2.5,LAW_CELL[t.laws[0]],4,4);
+   body(changing?cue.previous:t,t.x,t.y+bob,bodyScale);if(!t.formId&&t.laws.length)sprite('projectile',t.x+3,t.y-3,3,LAW_CELL[t.laws[0]],4,4);
    if(cue&&!reducedMotion&&age>.4&&age<.85){ctx.save();ctx.globalAlpha=Math.sin((age-.4)/.45*Math.PI)*.65;ctx.fillStyle='#fff5c9';ctx.beginPath();ctx.ellipse(t.x,t.y-2.8,2.3,3.7,0,0,Math.PI*2);ctx.fill();ctx.restore();}
    if(!t.formId&&t.laws.includes('orbit'))for(let j=0;j<3;j++){const a=now*.0015+j*Math.PI*2/3;ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(t.x+Math.cos(a)*3.4,t.y+Math.sin(a)*2.4,.5,.18,a,0,Math.PI*2);ctx.fill();}
    ctx.fillStyle=ink;for(let j=0;j<t.level;j++){ctx.beginPath();ctx.arc(t.x-1.5+j*.75,t.y+2.25,.2,0,Math.PI*2);ctx.fill();}
@@ -127,7 +132,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   }
   for(const e of state.enemies){
    const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
-   const boss=e.kind==='boss',sz=boss?8:e.kind==='shield'||e.kind==='resilient'?5.5:4.1;
+   const boss=e.kind==='boss',sz=boss?8.8:e.kind==='shield'||e.kind==='resilient'?6.1:4.7;
    ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();sprite(boss?'boss':e.kind==='fast'?'runner':e.kind==='shield'||e.kind==='resilient'?'shield':'hound',e.x,e.y+Math.sin(now*.012+e.id)*.14,sz,face);
    if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}
    if(e.slowTime>0&&e.slow<1){ctx.strokeStyle='#91dcff';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(e.x,e.y,1.5,0,Math.PI*2);ctx.stroke();}
@@ -146,8 +151,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  function result(){if(announced===state.phase)return;announced=state.phase;clearSave();sound(state.phase==='won'?'evolve':'hurt');dialog(`<div><small>씨앗 수호전 · 도전 결과</small><h2>${state.phase==='won'?'정원이 다시 숨 쉬어요':'다음 씨앗을 기약하며'}</h2><p>${state.wave}차 습격 · ${state.kills}마리 처치<br>${state.towers.filter(t=>t.formId).length}개 씨앗이 융합 진화했어요</p><p>직선에는 관통, 굴곡에는 공전.<br>입구의 둔화와 출구의 화력을 나눠 보세요.</p><button id="td-retry">새 씨앗으로 다시</button><button id="td-home">던전으로 돌아가기</button></div>`);$('#td-retry').onclick=()=>{combat.dispose();state=createDefense(Date.now()>>>0);combat=createDefenseCombat(state,{sound});selected=0;moving=false;evolutionCues.length=0;dirty=true;placeButtons();paused=false;announced='';$('.td-dialog').hidden=true;uiKey='';save();updateUI();};$('#td-home').onclick=close;}
  function loop(now){if(ended||document.hidden){frame=0;return;}frame=requestAnimationFrame(loop);if(last&&now-last<(paused||state.phase!=='wave'?1000/30:1000/60)-.5)return;const workStart=performance.now();const raw=last?(now-last)/1000:0;last=now;visualClock+=Math.min(.05,raw);for(let i=evolutionCues.length-1;i>=0;i--)if(visualClock-evolutionCues[i].start>2.6)evolutionCues.splice(i,1);if(!evolutionCues.length)root.classList.remove('td-evolved');if(raw>0&&raw<1){frames.push(raw*1000);if(frames.length>120)frames.shift();}if(!paused&&!confirming){const phase=state.phase;stepDefense(state,Math.min(.05,raw),combat);audio?.tick(Math.min(.05,raw));if(phase!==state.phase){combat.reset();if(['build','draft'].includes(state.phase)){save();sound('pickup');hint('습격을 막았어요 · 원하는 씨앗에 다음 법칙을 주세요');}if(['won','lost'].includes(state.phase))result();uiKey='';}const effect=state.effects.at(-1);if(effect&&effect!==lastEffects){lastEffects=effect;sound(effect.kind==='chain'?'chain':effect.kind==='burst'?'burstHit':'hit');}}draw(now);renderCosts.push(performance.now()-workStart);if(renderCosts.length>120)renderCosts.shift();if(now-uiAt>150){uiAt=now;updateUI();if(new URLSearchParams(location.search).has('inspect'))$('#seed-defense-inspection').textContent=JSON.stringify({phase:state.phase,wave:state.wave,simulationTime:state.time,coreHp:state.coreHp,currency:state.currency,kills:state.kills,towers:state.towers.map(t=>({id:t.id,pad:t.pad,x:t.x,y:t.y,laws:t.laws,fusion:t.fusion,formId:t.formId,lawRanks:t.lawRanks,ultimateCharge:t.ultimateCharge,level:t.level})),enemies:state.enemies.length,shots:state.shots.length,effects:state.effects.length,fields:state.fields.length,paused,evolutionCues:evolutionCues.map(c=>({title:c.title,age:visualClock-c.start})),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)]||0,workMsP95:[...renderCosts].sort((a,b)=>a-b)[Math.floor(renderCosts.length*.95)]||0,assetsReady:Object.values(assets).filter(i=>i.complete&&i.naturalWidth).length,assetCount:Object.keys(assets).length,combat:combat.diagnostics(),catalog:DEFENSE_CATALOG_COUNTS,renderer:'cached Canvas2D',dpr:Math.min(1.5,devicePixelRatio||1)});}}
  const observer=new ResizeObserver(resize);observer.observe($('.td-board'));
- listen(document,'visibilitychange',()=>{if(document.hidden){paused=true;cancelAnimationFrame(frame);frame=0;save();audio?.setPaused(true);$('#td-pause').textContent='▶';hint('전투를 멈췄어요 · ▶를 눌러 계속하세요');}else{last=performance.now();if(!frame)frame=requestAnimationFrame(loop);uiKey='';updateUI();}});
- listen(window,'pagehide',save);listen(window,'keydown',e=>{if(e.code==='Escape'||e.code==='KeyP'){e.preventDefault();togglePause();}if(e.code==='Space'){e.preventDefault();$('#td-start').click();}});
+ listen(document,'visibilitychange',()=>{if(document.hidden){paused=true;cancelAnimationFrame(frame);frame=0;save();audio?.setPaused(true);$('#td-pause').textContent='▶';$('#td-pause').setAttribute('aria-label','계속하기');hint('전투를 멈췄어요 · ▶를 눌러 계속하세요');}else{last=performance.now();if(!frame)frame=requestAnimationFrame(loop);uiKey='';updateUI();}});
+ listen(window,'pagehide',save);listen(window,'keydown',e=>{if(e.code==='Escape'||e.code==='KeyP'){e.preventDefault();$('#td-pause').click();}if(e.code==='Space'){e.preventDefault();$('#td-start').click();}});
  audio?.setScene('garden');audio?.setPaused(false);resize();updateUI();hint(saved?'이 기기에 저장된 준비 상태를 불러왔어요':'① 원하는 땅 선택 → ② 씨앗 심기 → ③ 법칙 부여 → 습격 시작');Promise.all(loads).then(()=>{if(!ended)dirty=true;});frame=requestAnimationFrame(loop);
  return {close};
 }
