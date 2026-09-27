@@ -2,7 +2,7 @@ import {DEFENSE_FORMS,FUSIONS,defenseFusionOf,defenseFormKind,defenseRankTotal,d
 export {FUSIONS,getDefenseEvolutionOptions};
 export {DEFENSE_CATALOG,DEFENSE_FORMS,DEFENSE_CATALOG_COUNTS,defenseDamageMultiplier} from './seed-defense-catalog.js';
 // Renderer-independent, seeded tower defence. All distances are garden units.
-export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:1.5,plantCost:30});
+export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:2,fastSpeed:3,plantCost:30});
 export const PATH = Object.freeze([{x:-4,y:12},{x:76,y:12},{x:76,y:30},{x:24,y:30},{x:24,y:48},{x:104,y:48}].map(Object.freeze));
 export const PADS = Object.freeze([{x:18,y:21},{x:42,y:21},{x:63,y:21},{x:85,y:25},{x:14,y:39},{x:37,y:39},{x:59,y:39},{x:82,y:40}].map(Object.freeze));
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
