@@ -6,10 +6,10 @@ import {applySpriteLighting} from './sprite-lighting.js';
 import {THEMES,normalizeTheme} from './themes.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
-export const SEED_BODY_ART='seed-body-directions-v6.png';
-export const SEED_SOLO_BODY_ART='seed-solo-bodies-v3.webp';
-export const SEED_FUSION_BODY_ART='seed-fusion-bodies-v1.png';
-export const SEED_AWAKEN_BODY_ART='seed-awaken-bodies-v1.webp';
+export const SEED_BODY_ART='cute/seed-body-v1.webp';
+export const SEED_SOLO_BODY_ART='cute/seed-solo-v1.webp';
+export const SEED_FUSION_BODY_ART='cute/seed-fusion-v1.webp';
+export const SEED_AWAKEN_BODY_ART='cute/seed-awaken-v1.webp';
 export const THEME_CREST_ART='theme-crests-v1.webp';
 export const BODY_SIZE=1.18;
 export const EVOLUTION_SIZE=1.22;
@@ -49,10 +49,8 @@ export function stableSeedFrame(facing,cameraYaw,current=0,margin=.13){
  const fromCurrent=Math.abs(Math.atan2(Math.sin(angle-centre),Math.cos(angle-centre)));
  return fromCurrent<=Math.PI/4+margin?current:seedFrame(facing,cameraYaw);
 }
-// The four painted cells do not share an identical transparent baseline.
-// Correct that in the sprite transform so turning never makes the feet hop.
-const FRAME_BASELINE_GAP=Object.freeze([0,1,48,42]);
-const FRAME_CENTRE_X=Object.freeze([206.5,213.6,205.2,206.3]);
+// Production cells share a centred silhouette and feet at y=240 of 256.
+// No per-direction legacy offsets: turning must never make the feet hop.
 
 export function createSeedBody(scene,{occlusion=true}={}){
  const root=new THREE.Group();scene.add(root);
@@ -60,7 +58,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
  const texture=loader.load(import.meta.env.BASE_URL+'assets/'+SEED_BODY_ART);
  texture.colorSpace=THREE.SRGBColorSpace;texture.repeat.set(.5,.5);texture.offset.set(0,.5);
  const material=applySpriteLighting(new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.8,highlight:1.07,rim:0xa1ffe0,rimStrength:.075});
- const sprite=new THREE.Sprite(material);sprite.center.set(.5,.055);sprite.scale.set(BODY_SIZE,BODY_SIZE,1);root.add(sprite);
+ const sprite=new THREE.Sprite(material);sprite.center.set(.5,.0625);sprite.scale.set(BODY_SIZE,BODY_SIZE,1);root.add(sprite);
  // One atlas-backed crest sits behind the body. It gives each cosmetic theme a
  // readable silhouette without changing collision or adding parts per law.
  const themeMaterial=new THREE.SpriteMaterial({map:null,transparent:true,opacity:.62,depthWrite:false,toneMapped:false});
@@ -73,7 +71,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
  const ensureThemeCrest=()=>{if(themeTexture||themeLoading)return;themeLoading=true;themeTexture=loader.load(import.meta.env.BASE_URL+'assets/'+THEME_CREST_ART,applyThemeCrest);themeTexture.colorSpace=THREE.SRGBColorSpace;themeTexture.repeat.set(.25,1);themeTexture.minFilter=themeTexture.magFilter=THREE.LinearFilter;};
  // A faint copy draws through walls so the seed is never lost behind cover.
  const ghostMaterial=new THREE.SpriteMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.38,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0x9ff5d2});
- const ghost=new THREE.Sprite(ghostMaterial);ghost.center.set(.5,.055);ghost.scale.set(BODY_SIZE,BODY_SIZE,1);ghost.renderOrder=2;root.add(ghost);
+ const ghost=new THREE.Sprite(ghostMaterial);ghost.center.set(.5,.0625);ghost.scale.set(BODY_SIZE,BODY_SIZE,1);ghost.renderOrder=2;root.add(ghost);
 
  let applyEvolution=()=>{};
  const sources={
@@ -82,9 +80,9 @@ export function createSeedBody(scene,{occlusion=true}={}){
   awaken:{file:SEED_AWAKEN_BODY_ART,tiles:AWAKEN_BODY_TILES,ready:false,loading:false,texture:null}
  };
  const evolutionMaterial=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.76,highlight:1.1,rim:0xffe8ae,rimStrength:.085});
- const evolutionSprite=new THREE.Sprite(evolutionMaterial);evolutionSprite.center.set(.5,.055);evolutionSprite.scale.set(EVOLUTION_SIZE,EVOLUTION_SIZE,1);evolutionSprite.visible=false;root.add(evolutionSprite);
+ const evolutionSprite=new THREE.Sprite(evolutionMaterial);evolutionSprite.center.set(.5,.0625);evolutionSprite.scale.set(EVOLUTION_SIZE,EVOLUTION_SIZE,1);evolutionSprite.visible=false;root.add(evolutionSprite);
  const evolutionGhostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
- const evolutionGhost=new THREE.Sprite(evolutionGhostMaterial);evolutionGhost.center.set(.5,.055);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhost.renderOrder=2;evolutionGhost.visible=false;root.add(evolutionGhost);
+ const evolutionGhost=new THREE.Sprite(evolutionGhostMaterial);evolutionGhost.center.set(.5,.0625);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhost.renderOrder=2;evolutionGhost.visible=false;root.add(evolutionGhost);
  const secondaryMaterial=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.68,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const secondaryAura=new THREE.Mesh(new THREE.TorusGeometry(.48,.025,5,36),secondaryMaterial);secondaryAura.rotation.x=Math.PI/2;secondaryAura.position.y=.12;secondaryAura.visible=false;root.add(secondaryAura);
 
@@ -126,8 +124,8 @@ export function createSeedBody(scene,{occlusion=true}={}){
   const {phase=0,pace=0}=root.userData.motion||{},step=Math.sin(phase)*pace;
   const crestPulse=1+Math.sin(phase*.55)*.025+pace*.018;themeCrest.scale.setScalar(1.62*crestPulse);themeMaterial.opacity=.54+pace*.12;
   material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.032;
-  const bob=Math.max(0,step)*.01,baseY=-FRAME_BASELINE_GAP[frame]/384*BODY_SIZE,baseX=(206.5-FRAME_CENTRE_X[frame])/384*BODY_SIZE;
-  sprite.position.set(baseX,baseY+bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018),BODY_SIZE*(1-step*.011),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
+  const bob=Math.max(0,step)*.01;
+  sprite.position.set(0,bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018),BODY_SIZE*(1-step*.011),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
   evolutionSprite.position.set(0,bob,0);evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.018),EVOLUTION_SIZE*(1-step*.011),1);evolutionGhost.position.copy(evolutionSprite.position);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
  };
  return root;

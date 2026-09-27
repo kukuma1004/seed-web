@@ -3,6 +3,24 @@ import {seedFrame} from './seed-body.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 
 const atlases=new Map();
+// The same compact paintings are used in Journey, Survival and Seed Defense.
+// Keep the original atlas layout and cache by the resolved filename: changing
+// quality must not upload a second copy of each common enemy texture.
+export const CUTE_ACTOR_ART=Object.freeze({
+ 'enemy-hound-v4.png':'cute/enemy-hound-v4.webp',
+ 'enemy-caster-v4.png':'cute/enemy-caster-v4.webp',
+ 'enemy-shield-v4.png':'cute/enemy-shield-v4.webp',
+ 'enemy-turret-v4.png':'cute/enemy-turret-v4.webp',
+ 'enemy-catcher-v1.webp':'cute/enemy-catcher-v1.webp',
+ 'enemy-pitcher-v1.webp':'cute/enemy-pitcher-v1.webp',
+ 'enemy-runner-v1.webp':'cute/enemy-runner-v1.webp',
+ 'enemy-batter-v1.webp':'cute/enemy-batter-v1.webp',
+ 'enemy-relay-atlas-v1.webp':'cute/enemy-relay-atlas-v1.webp',
+ 'enemy-act3-flight-atlas-v2.webp':'cute/enemy-act3-flight-atlas-v2.webp'
+});
+// Ground sprites are normalized to feet at pixel 240 of each 256px cell.
+export const CUTE_ACTOR_BASELINE=16/256;
+const cuteActorFiles=new Set(Object.values(CUTE_ACTOR_ART));
 const reducedAtlases=Object.freeze({
  'enemy-hound-v4.png':'mobile/enemy-hound-v4.webp','enemy-caster-v4.png':'mobile/enemy-caster-v4.webp',
  'enemy-shield-v4.png':'mobile/enemy-shield-v4.webp','enemy-turret-v4.png':'mobile/enemy-turret-v4.webp',
@@ -17,9 +35,14 @@ const reducedAtlases=Object.freeze({
  'boss-johan-cannons-v1.webp':'mobile/boss-johan-cannons-v1.webp','boss-johan-core-v1.webp':'mobile/boss-johan-core-v1.webp',
  'boss-johan-thrusters-v1.webp':'mobile/boss-johan-thrusters-v1.webp','boss-johan-phase-v1.webp':'mobile/boss-johan-phase-v1.webp'
 });
+const originalByReduced=new Map(Object.entries(reducedAtlases).map(([original,file])=>[file,original]));
 let reduced=false;
 export function configureActorArt({reducedTextures=false}={}){reduced=Boolean(reducedTextures);}
-export function actorArtFile(file,{reducedTextures=reduced}={}){return reducedTextures?(reducedAtlases[file]||file):file;}
+export function actorArtFile(file,{reducedTextures=reduced}={}){
+ // Explicit mobile paths from older renderers resolve to the same painting.
+ const original=originalByReduced.get(file)||file;
+ return CUTE_ACTOR_ART[original]||(reducedTextures?(reducedAtlases[file]||file):file);
+}
 // The see-through silhouette costs one extra draw per actor. It is drawn only while the quality allows it and something
 // may stand between the camera and the actor (occlusionTest, set by the game from the room's cover); 2026-09-15 phone pass.
 const silhouettes={enabled:true,test:null};
@@ -79,6 +102,9 @@ function billboard(mesh,camera,size,baseline){
 }
 
 export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],atlasFrame=null,topDownFacing=false,baseline=.04,preserveBody=false,occlusion=true,lighting=true}){
+ // Legacy per-species baselines belonged to the old differently padded art.
+ // Flight art retains its authored anchor because its whole body rolls.
+ if(!topDownFacing&&cuteActorFiles.has(actorArtFile(file)))baseline=CUTE_ACTOR_BASELINE;
  const body=e.body||e.motion?.body||e.g;
  // Turret head/orbit materials remain live gameplay references until death.
  for(const child of [...body.children])if(preserveBody)child.visible=false;else release(child);

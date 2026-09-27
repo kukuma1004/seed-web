@@ -6,7 +6,7 @@ const FILES=['enemy-hound-v4.webp','enemy-runner-v1.webp','enemy-shield-v4.webp'
 const ACT_FILES=[FILES,['enemy-pitcher-v1.webp','enemy-runner-v1.webp','enemy-catcher-v1.webp'],['enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp']];
 const SIZES=[.78,.86,1.28];
 const QUIET_SIZES=[1.02,1.00,1.38];
-const QUIET_FOLDER='labs/survival-readability/';
+const CUTE_FOLDER='cute/';
 const DEFEAT_LIMIT=24,FLECK_LIMIT=96;
 const SPEEDS=[10,15,6];
 const FRAME_CELLS=[[0,1],[1,1],[0,0],[1,0]];
@@ -20,7 +20,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  const root=new THREE.Group();root.name='survival-garden-art';root.visible=false;scene.add(root);
  const geometries=new Set(),materials=new Set(),textures=new Set(),loader=new THREE.TextureLoader();
  const prefix=baseUrl&&!baseUrl.endsWith('/')?baseUrl+'/':baseUrl;
- let act=0,readability=false,quietMap=null,quietActors=null,quietFrames=null;const textureCache=new Map();
+ let act=0,readability=true,quietMap=null,gardenMap=null;const textureCache=new Map();
  let disposed=false,rendered=0,overflow=0,lastTime=0,defeatCursor=0;
  const defeats=Array.from({length:DEFEAT_LIMIT},()=>({active:false}));
  const geometry=g=>{geometries.add(g);return g;};
@@ -43,8 +43,8 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  // One baked painterly surface: cracks, moss, flowers and shallow lighting are
  // part of the same draw. Mobile reads a 768px derivative, never the source art.
  // The supplied journey texture is untouched; this map belongs to this mode.
- const paintedGarden=texture(GARDEN_SURFACE,mobile?'mobile/':'');
- paintedGarden.wrapS=paintedGarden.wrapT=THREE.RepeatWrapping;
+ const paintedGarden=quietMap=texture('quiet-stone-v1.webp',CUTE_FOLDER);
+ paintedGarden.wrapS=paintedGarden.wrapT=THREE.MirroredRepeatWrapping;
  const shadedStone=new THREE.Color(.76,.83,.84),sunlitStone=new THREE.Color(1,.97,.82);
  const vertices=[],uvs=[],colors=[],indices=[];
  const nx=Math.ceil(halfWidth*2/1.85),nz=Math.ceil(halfDepth*2/1.85),dx=halfWidth*2/nx,dz=halfDepth*2/nz;
@@ -138,7 +138,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  // Sparse resting seed petals: a quiet golden navigation landmark, no light.
  const flecks=batch(petalGeometry,material(new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,toneMapped:false})),FLECK_LIMIT,'survival-defeat-petals');
  flecks.setColorAt(0,color.setHex(0xffffff));flecks.instanceColor.setUsage(THREE.DynamicDrawUsage);
- const originalUV=new Float32Array(floorGeometry.attributes.uv.array),originalColors=new Float32Array(floorGeometry.attributes.color.array),gardenMap=floor.material.map;
+ const originalUV=new Float32Array(floorGeometry.attributes.uv.array),originalColors=new Float32Array(floorGeometry.attributes.color.array);
  const frames=FRAME_CELLS.map(([column,row])=>{
   const g=geometry(new THREE.PlaneGeometry(1,1)),uv=g.attributes.uv,pad=.003;
   for(let i=0;i<uv.count;i++)uv.setXY(i,column*.5+pad+uv.getX(i)*(.5-pad*2),row*.5+pad+uv.getY(i)*(.5-pad*2));
@@ -146,7 +146,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  });
  const bodies=[];
  for(let kind=0;kind<KINDS.length;kind++){
-  const m=material(new THREE.MeshBasicMaterial({map:texture(FILES[kind]),alphaTest:.09,depthWrite:true,toneMapped:false}));
+  const m=material(new THREE.MeshBasicMaterial({map:texture(FILES[kind],CUTE_FOLDER),alphaTest:.09,depthWrite:true,toneMapped:false}));
   for(let direction=0;direction<4;direction++){
    // Every direction can hold the entire wave. Allocation is fixed at startup,
    // while a global limit prevents the rendered population exceeding capacity.
@@ -168,23 +168,14 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  const diamond=new THREE.LineSegments(diamondGeometry,material(new THREE.LineBasicMaterial({color:0xe3d5a5,transparent:true,opacity:.7,toneMapped:false})));root.add(diamond);diamond.visible=false;
  const bases=batch(geometry(new THREE.PlaneGeometry(1.3,1.3)),material(new THREE.MeshBasicMaterial({color:0xdfd8bc,toneMapped:false})),4,'survival-stadium-bases');
  for(const {x,z} of SURVIVAL_BASES){position.set(x,.029,z);roll.setFromAxisAngle(axis,Math.PI/4);quaternion.copy(flatQuaternion).multiply(roll);matrix.compose(position,quaternion,new THREE.Vector3(1,1,1));bases.setMatrixAt(bases.count++,matrix);}bases.instanceMatrix.needsUpdate=true;bases.visible=false;
- // Atlas cells are equal 256px squares, feet at y=240. Load the local
- // comparison art only when B is selected; the public renderer never requests it.
+ // Both styles share the existing 2x2 role atlases, four frame geometries,
+ // three materials and twelve instance buffers. Act 3 keeps its fixed role
+ // cells and flight rotation; changing style never changes enemy behaviour.
  function applyActorArt(){
-  const quiet=readability&&act===0;
-  if(quiet&&!quietActors){
-   quietActors=texture('garden-creatures-v1.webp',QUIET_FOLDER);
-   quietFrames=KINDS.map((_,kind)=>Array.from({length:4},(_,direction)=>{
-    const g=geometry(new THREE.PlaneGeometry(1,1)),uv=g.attributes.uv;
-    const padX=.5/1024,padY=.5/768;
-    for(let i=0;i<uv.count;i++)uv.setXY(i,direction/4+padX+uv.getX(i)*(.25-2*padX),(2-kind)/3+padY+uv.getY(i)*(1/3-2*padY));
-    return g;
-   }));
-  }
   for(let k=0;k<3;k++)for(let direction=0;direction<4;direction++){
    const b=bodies[k*4+direction];
-   b.material.map=quiet?quietActors:texture(ACT_FILES[act][k]);b.material.needsUpdate=true;
-   b.geometry=quiet?quietFrames[k][direction]:act===2?frames[k===2?2:k]:frames[direction];
+   b.material.map=texture(ACT_FILES[act][k],readability?CUTE_FOLDER:'mobile/');b.material.needsUpdate=true;
+   b.geometry=act===2?frames[k===2?2:k]:frames[direction];
   }
  }
  // Retune the existing floor buffers only when the comparison changes. Smaller
@@ -201,15 +192,12 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
    }
   }
   uv.needsUpdate=true;c.needsUpdate=true;
+  if(!readability&&!gardenMap){gardenMap=texture(GARDEN_SURFACE,mobile?'mobile/':'');gardenMap.wrapS=gardenMap.wrapT=THREE.RepeatWrapping;}
   floor.material.map=readability?quietMap:gardenMap;floor.material.needsUpdate=true;
  }
  function setReadability(enabled){
   if(disposed)return;
   const next=Boolean(enabled);if(next===readability)return;readability=next;
-  if(readability&&!quietMap){
-   quietMap=texture('quiet-stone-v1.webp',QUIET_FOLDER);
-   quietMap.wrapS=quietMap.wrapT=THREE.MirroredRepeatWrapping;
-  }
   applyGardenFloor();
   applyActorArt();
  }
@@ -241,11 +229,11 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
    const p=e.g.position,yaw=Math.atan2(camera.position.x-p.x,camera.position.z-p.z),facing=e.g.rotation.y-yaw;
    const angle=Math.atan2(Math.sin(facing),Math.cos(facing));
    const direction=Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3,b=bodies[kind*4+direction];
-   const phase=Number.isFinite(e.phase)?e.phase:0,gait=e.frostLock>0?0:Math.sin(time*SPEEDS[kind]+phase),size=(readability&&act===0?QUIET_SIZES:SIZES)[kind];
+   const phase=Number.isFinite(e.phase)?e.phase:0,gait=e.frostLock>0?0:Math.sin(time*SPEEDS[kind]+phase),size=(readability?QUIET_SIZES:SIZES)[kind];
    const impact=Math.min(1,Math.max(0,(e.hit||0)/.14)),bob=Math.abs(gait)*(kind===2?.018:.035);
    // Camera-up translation anchors the actual feet at the ground, matching the
    // existing actor billboards even when the camera follows across the arena.
-   position.copy(p).addScaledVector(up,size*(readability&&act===0?.4375:.46));position.y+=.035+bob;
+   position.copy(p).addScaledVector(up,size*(readability&&act!==2?.4375:.46));position.y+=.035+bob;
    roll.setFromAxisAngle(axis,act===2?-e.g.rotation.y:gait*(kind===2?.018:.04));quaternion.copy(camera.quaternion).multiply(roll);
    scale.set(size*(e.rushState==='brace'?1.12:1+impact*.06),size*(e.rushState==='brace'?.78:e.rushState==='rush'?1.1:1-impact*.04),1);matrix.compose(position,quaternion,scale);b.setMatrixAt(b.count,matrix);
    color.setHex(impact>0?0xffe2bd:e.frostLock>0?0x87dcf3:e.slow>0?0xb0dce2:e.rushState==='brace'?0xffb66b:0xffffff);b.setColorAt(b.count++,color);
@@ -256,7 +244,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   for(const d of defeats){
    if(!d.active)continue;const age=time-d.time;
    if(age>=.42||age<0){d.active=false;continue;}
-   const t=age/.42,size=(readability&&act===0?QUIET_SIZES:SIZES)[d.kind],fade=1-t;
+   const t=age/.42,size=(readability?QUIET_SIZES:SIZES)[d.kind],fade=1-t;
    // Brief, directional collapse uses the existing directional atlas batches.
    if(t<.6){
     const b=bodies[d.kind*4+d.direction];
@@ -286,7 +274,8 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   d.direction=Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3;
  }
  function setActive(active){if(disposed)return;root.visible=Boolean(active);if(!root.visible){clear();flecks.count=0;for(const d of defeats)d.active=false;}}
- function state(){return {readability:readability?'quiet':'classic',act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?5:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:readability&&act===0?'quiet-stone-v1.webp':GARDEN_SURFACE,groundTextureSize:readability&&act===0?768:mobile?768:1024,actorTextureSize:readability&&act===0?1024:512,actorArt:readability&&act===0?'garden-creatures-v1.webp':ACT_FILES[act],mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
+ function state(){return {readability:readability?'quiet':'classic',act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?5:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:act===1?'stadium-clay-hd-v1.webp':act===2?'act3-storm-route-v1.webp':readability?'quiet-stone-v1.webp':GARDEN_SURFACE,groundTextureSize:readability&&act===0?768:mobile?768:1024,actorTextureSize:512,actorArt:ACT_FILES[act],actorFolder:readability?CUTE_FOLDER:'mobile/',mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
  function dispose(){if(disposed)return;setActive(false);disposed=true;root.removeFromParent();for(const b of bodies)b.dispose();for(const b of [edging,leaves,rocks,shadows,undergrowth,flecks,bases])b.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ applyGardenFloor();
  return {setReadability,setAct,setActive,update,defeat,state,dispose};
 }

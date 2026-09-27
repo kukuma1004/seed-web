@@ -10,9 +10,12 @@ try{
  const art=createSurvivalArt(scene,camera,{baseUrl:'/seed/',capacity:3,mobile:true});
  const root=scene.getObjectByName('survival-garden-art');
  assert.equal(root.visible,false);assert.equal(art.update([],0),0);
- assert.equal(loaded.length,4);assert(loaded.every(t=>t.userData.url.startsWith('/seed/assets/mobile/')));
+ assert.equal(loaded.length,4);assert(loaded.every(t=>t.userData.url.startsWith('/seed/assets/cute/')));
+ assert.equal(art.state().readability,'quiet','approved cute style is the normal default');
+ assert.equal(art.state().actorFolder,'cute/');
+ assert(loaded.every(t=>!t.userData.url.includes('/labs/')),'normal renderer uses production asset paths');
  const floor=root.getObjectByName('survival-garden-floor'),surface=floor.material.map;
- assert.match(surface.userData.url,/mobile\/survival-garden-paving-v1.webp$/);
+ assert.match(surface.userData.url,/cute\/quiet-stone-v1.webp$/);
  assert.equal(art.state().groundTextureSize,768);
  const originalFloorUv=Array.from(floor.geometry.attributes.uv.array),originalFloorColors=Array.from(floor.geometry.attributes.color.array);
  const positionAttribute=floor.geometry.attributes.position,colorAttribute=floor.geometry.attributes.color,joins=new Map();
@@ -46,14 +49,39 @@ try{
  assert.equal(loaded.length,4,'no added texture for groundcover or kill feedback');
  art.setActive(false);assert.equal(root.visible,false);assert.equal(shadow.count,0);assert.equal(art.state().rendered,0);
  art.setActive(true);assert.equal(art.update([],5),0);assert(bodies.every(b=>b.count===0));
- // Cycle all themes twice; texture/material/geometry counts must plateau.
- art.setActive(true);art.setAct(1);art.update(enemies,5);art.setAct(2);art.update(enemies,5);
- const texturePeak=loaded.length,geometryPeak=new Set(root.children.map(o=>o.geometry)).size,materialPeak=new Set(root.children.map(o=>o.material)).size;
- for(let i=0;i<15;i++){art.setAct(i%3);art.update(enemies,6+i);}
- assert.equal(loaded.length,texturePeak,'texture cache bounded across acts and laps');
- assert.equal(new Set(root.children.map(o=>o.geometry)).size,geometryPeak);assert.equal(new Set(root.children.map(o=>o.material)).size,materialPeak);
+ // Warm both styles and all themes once. Style changes reuse all twelve
+ // batch objects, all buffers and three materials, including flight role cells.
+ const sceneChildren=[...root.children],allFrameGeometry=new Set(bodies.map(b=>b.geometry));
+ const instanceBuffers=bodies.map(b=>b.instanceMatrix.array),colorBuffers=bodies.map(b=>b.instanceColor.array);
+ const materials=bodies.map(b=>b.material),classicFloors=new Map();
+ for(const cute of [false,true])for(let act=0;act<3;act++){
+  art.setReadability(cute);art.setAct(act);art.update(enemies,5);
+  assert.equal(art.state().readability,cute?'quiet':'classic');
+  assert(bodies.every(b=>b.material.map.userData.url.includes(cute?'/cute/':'/mobile/')));
+  assert.equal(new Set(bodies.map(b=>b.material)).size,3,'one shared material per role');
+  for(let k=0;k<3;k++)assert(bodies.slice(k*4,k*4+4).every(b=>b.material===bodies[k*4].material));
+  if(act===2){
+   assert.equal(new Set(bodies.map(b=>b.material.map)).size,1,'all flight roles share one map');
+   for(let k=0;k<3;k++)assert.equal(new Set(bodies.slice(k*4,k*4+4).map(b=>b.geometry)).size,1,'flight role cell does not change by heading');
+   assert.equal(new Set(bodies.map(b=>b.geometry)).size,3,'flight scouts, interceptors and brutes retain distinct cells');
+  }
+  if(!cute)classicFloors.set(act,{map:floor.material.map,uv:Array.from(floor.geometry.attributes.uv.array),colors:Array.from(floor.geometry.attributes.color.array)});
+ }
+ const texturePeak=loaded.length;
+ for(let i=0;i<36;i++){
+  const act=i%3,cute=Math.floor(i/3)%2===0;
+  art.setReadability(cute);art.setAct(act);art.update(enemies,6+i);
+  assert.equal(loaded.length,texturePeak,'cached maps plateau across repeated style and act switches');
+  assert.deepEqual(root.children,sceneChildren,'style switches allocate no new scene objects');
+  assert(bodies.every((b,j)=>b.instanceMatrix.array===instanceBuffers[j]&&b.instanceColor.array===colorBuffers[j]&&b.material===materials[j]&&allFrameGeometry.has(b.geometry)),'fixed geometry, material and instance buffer ownership');
+  if(!cute){
+   const classic=classicFloors.get(act);assert.equal(floor.material.map,classic.map);
+   assert.deepEqual(Array.from(floor.geometry.attributes.uv.array),classic.uv,'classic floor UV restored exactly');
+   assert.deepEqual(Array.from(floor.geometry.attributes.color.array),classic.colors,'classic floor shades restored exactly');
+  }
+ }
  assert.equal(art.state().maxBodyBatches,12);assert.equal(art.state().capacity,3);
- art.setAct(0);assert.equal(floor.material.map,surface);assert.deepEqual(Array.from(floor.geometry.attributes.uv.array),originalFloorUv);assert.deepEqual(Array.from(floor.geometry.attributes.color.array),originalFloorColors);art.setActive(false);
+ art.setReadability(true);art.setAct(0);assert.equal(floor.material.map,surface);assert.deepEqual(Array.from(floor.geometry.attributes.uv.array),originalFloorUv);assert.deepEqual(Array.from(floor.geometry.attributes.color.array),originalFloorColors);art.setActive(false);
  const resources=new Set();root.traverse(o=>{if(o.geometry)resources.add(o.geometry);if(o.material)resources.add(o.material);});for(const t of loaded)resources.add(t);
  const disposed=new Map();for(const resource of resources)resource.addEventListener('dispose',()=>disposed.set(resource,(disposed.get(resource)||0)+1));
  art.dispose();art.dispose();assert.deepEqual(scene.children,[existing]);assert.equal(art.state().disposed,true);
@@ -64,5 +92,5 @@ try{
  const n=loaded.length,borrowed=createSurvivalArt(scene,camera,{groundTexture:shared});
  assert.equal(loaded.length-n,4);assert.equal(borrowed.state().sharedGround,false);
  borrowed.dispose();assert.equal(sharedDisposals,0);shared.dispose();
- console.log('Survival garden: fixed 12 body batches, bounded population, pooled transforms, hit tint, lifecycle and resource disposal passed.');
+ console.log('Survival garden: default cute assets, exact classic restoration, all acts, fixed 12 body batches, bounded population, pooled transforms, lifecycle and resource disposal passed.');
 }finally{THREE.TextureLoader.prototype.load=originalLoad;}

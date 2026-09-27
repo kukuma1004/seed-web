@@ -1,3 +1,4 @@
+import {SEED_BODY_ART} from './seed-body.js';
 // 정원 장면 · 카드 목록이 아니라 실제로 보이는 정원.
 // 게임과 같은 렌더러를 쓰고, 장면만 바꿔 그린다(모드가 정원일 때만).
 // 식물은 씨앗 색과 성장 단계, 갈래로 모양이 달라진다. 그림이 준비되면 이 모양만 교체하면 된다.
@@ -42,7 +43,7 @@ export const seedColor=id=>SEEDS[id]?.law?LAWS[SEEDS[id].law].color:0xf2c14e;
 let sleepingSeedTexture=null;
 function sleepingSeedMap(){
  if(sleepingSeedTexture)return sleepingSeedTexture;
- sleepingSeedTexture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/seed-body-directions-v6.png');
+ sleepingSeedTexture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+'assets/'+SEED_BODY_ART);
  sleepingSeedTexture.colorSpace=THREE.SRGBColorSpace;sleepingSeedTexture.repeat.set(.5,.5);sleepingSeedTexture.offset.set(0,.5);
  return sleepingSeedTexture;
 }

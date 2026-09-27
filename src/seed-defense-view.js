@@ -6,6 +6,8 @@ import './combo-art.css';
 import {formArt} from './form-art.js';
 import {SIGNATURES} from './actives.js';
 import {createDefenseCombat,DEFENSE_COMBAT} from './seed-defense-combat.js';
+import {actorArtFile,CUTE_ACTOR_BASELINE} from './actor-art.js';
+import {SEED_BODY_ART,SEED_SOLO_BODY_ART,SEED_FUSION_BODY_ART,SEED_AWAKEN_BODY_ART} from './seed-body.js';
 
 const BASE=import.meta.env.BASE_URL;
 const BODY={collapse:0,frostguard:1,frostnet:5,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
@@ -33,13 +35,15 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const assets={},loads=[],listeners=[];
  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
  const load=(id,file)=>{const img=new Image();assets[id]=img;loads.push(new Promise(resolve=>{img.onload=()=>{dirty=true;resolve();};img.onerror=resolve;img.src=BASE+'assets/'+file;}));};
- load('combo','combo-projectiles-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('floor','seed-defense-garden-v1.webp');load('stone','garden-stone-v4.png');load('flagstones','seed-defense-stones-v1.webp');load('awaken','seed-awaken-bodies-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('solo','seed-solo-bodies-v3.webp');load('seed','seed-body-directions-v6.png');load('fusion','seed-fusion-bodies-v1.png');load('projectile','mobile/seed-projectile-dna-v1.png');load('hound','mobile/enemy-hound-v4.webp');load('runner','mobile/enemy-runner-v1.webp');load('shield','mobile/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
+ load('combo','combo-projectiles-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('floor','seed-defense-garden-v1.webp');load('stone','garden-stone-v4.png');load('flagstones','seed-defense-stones-v1.webp');load('awaken',SEED_AWAKEN_BODY_ART);load('plants','garden-growth-atlas-v3.webp');load('solo',SEED_SOLO_BODY_ART);load('seed',SEED_BODY_ART);load('fusion',SEED_FUSION_BODY_ART);load('projectile','mobile/seed-projectile-dna-v1.png');
+ // Canvas2D crops the same front/right/back/left cells as the 3D billboard rigs.
+ load('hound',actorArtFile('enemy-hound-v4.png'));load('runner',actorArtFile('enemy-runner-v1.webp'));load('shield',actorArtFile('enemy-shield-v4.png'));load('boss','mobile/warden-memory-v4.webp');
  function read(){try{return restoreDefense(JSON.parse(storage.getItem(key)));}catch{return null;}}
  const saved=read();if(saved){state=saved;selected=state.selectedPad;}
  let combat=createDefenseCombat(state,{sound}),visuals=[],bookOpen=false,bookKind='fusion',bookPage=0,bookWasPaused=false,moving=false,visualClock=0;
  const evolutionCues=[],bodyCache=new Map(),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function celebrate(t,previous,kind){for(let i=evolutionCues.length-1;i>=0;i--)if(evolutionCues[i].id===t.id)evolutionCues.splice(i,1);if(evolutionCues.length>=4)evolutionCues.shift();evolutionCues.push({id:t.id,x:t.x,y:t.y,start:visualClock,previous,ink:color(t.laws[0]),title:kind+' · '+name(t)});root.classList.add('td-evolved');hint(kind+' · '+name(t)+' — 새로운 공격이 깨어났어요');}
- function body(t,x,y,sizeMultiplier=1){sizeMultiplier*=1.32;const key=(t.formId||'seed');let parts=bodyCache.get(key);if(!parts){parts=defenseBodyParts(t);bodyCache.set(key,parts);}for(const p of parts)sprite(p.atlas,x+p.dx*sizeMultiplier,y,p.size*sizeMultiplier,p.cell,p.cols||4,p.rows||3);}
+ function body(t,x,y,sizeMultiplier=1){sizeMultiplier*=1.32;const key=(t.formId||'seed');let parts=bodyCache.get(key);if(!parts){parts=defenseBodyParts(t);bodyCache.set(key,parts);}for(const p of parts)sprite(p.atlas,x+p.dx*sizeMultiplier,y+1,p.size*sizeMultiplier,p.cell,p.cols||4,p.rows||3,1-CUTE_ACTOR_BASELINE);}
  function save(){if(!['build','draft'].includes(state.phase))return;try{const data=checkpointDefense(state);if(data){storage.setItem(key,JSON.stringify(data));saveNote='이번 준비 저장됨 · 이 기기 전용';}}catch{saveNote='저장 공간이 부족해요 · 종료 전 확인해 주세요';}}
  function clearSave(){try{storage.removeItem(key);}catch{}}
  function sound(id){audio?.play(id);}
@@ -112,7 +116,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   paintDefenseGround(bg,assets,PATH,state);
   bg.restore();dirty=false;
  }
- function sprite(id,x,y,size,cell=0,cols=2,rows=2){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*.82,size,size);return true;}
+ function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
  function draw(now){
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
   const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
@@ -133,7 +137,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   for(const e of state.enemies){
    const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
    const boss=e.kind==='boss',sz=boss?8.8:e.kind==='shield'||e.kind==='resilient'?6.1:4.7;
-   ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();sprite(boss?'boss':e.kind==='fast'?'runner':e.kind==='shield'||e.kind==='resilient'?'shield':'hound',e.x,e.y+Math.sin(now*.012+e.id)*.14,sz,face);
+   ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();sprite(boss?'boss':e.kind==='fast'?'runner':e.kind==='shield'||e.kind==='resilient'?'shield':'hound',e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,face,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
    if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}
    if(e.slowTime>0&&e.slow<1){ctx.strokeStyle='#91dcff';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(e.x,e.y,1.5,0,Math.PI*2);ctx.stroke();}
   }
