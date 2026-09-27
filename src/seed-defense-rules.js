@@ -25,7 +25,7 @@ const canBuild=s=>s.phase==='build'||s.phase==='draft';
 const matchFusion=defenseFusionOf;
 function random(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/4294967296;}
 export function defensePoint(progress){let p=clamp(progress,0,DEFENSE_PATH_LENGTH);for(let i=0;i<SEGMENTS.length;i++){if(p<=SEGMENTS[i]){const t=p/SEGMENTS[i];return {x:PATH[i].x+(PATH[i+1].x-PATH[i].x)*t,y:PATH[i].y+(PATH[i+1].y-PATH[i].y)*t};}p-=SEGMENTS[i];}return {...PATH.at(-1)};}
-export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:2,seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:80,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:1,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'씨앗을 심고 첫 법칙을 선택하세요.'};s.offers=getDefenseOffers(s);return s;}
+export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:3,pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:80,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:1,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'씨앗을 심고 첫 법칙을 선택하세요.'};s.offers=getDefenseOffers(s);return s;}
 export function defenseUpgradeCost(t){return t&&t.level<5?25+t.level*15:Infinity;}
 export function defenseTowerName(t){return !t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗';}
 export function defenseTowerStats(t){
@@ -39,7 +39,22 @@ export function getDefenseOffers(s,towerId){
  return t?.laws.length===2?[...t.laws]:[...IDS];
 }
 export function defenseCanChoose(s,towerId,id){const t=s.towers.find(t=>t.id===towerId);return !!(canBuild(s)&&s.draftCredit===1&&t&&DEFENSE_LAWS[id]&&getDefenseOffers(s,towerId).includes(id)&&(t.laws.includes(id)||(t.laws.length<2&&(t.laws.length===0||matchFusion([...t.laws,id])))));}
-export function plantDefense(s,padIndex){if(!canBuild(s)||!Number.isInteger(padIndex)||!PADS[padIndex]||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex))return false;s.currency-=DEFENSE.plantCost;const p=PADS[padIndex];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,laws:[],lawRanks:{},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=getDefenseOffers(s);return true;}
+// Free positions share the same bounded eight tower slots. Empty slots do not block ground.
+export function defensePlacement(s,x,y,pad=-1){
+ if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>98||y<5||y>55)return '정원 안쪽 땅을 골라 주세요';
+ for(let i=1;i<PATH.length;i++)if(segmentDistance2({x,y},PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y)<36)return '적이 다니는 길에는 심을 수 없어요';
+ if(dist2({x,y},PATH.at(-1))<81)return '정원의 심장 주변은 비워 주세요';
+ if(s.towers.some(t=>t.pad!==pad&&dist2(t,{x,y})<49))return '다른 씨앗과 조금 떨어뜨려 주세요';
+ return '';
+}
+export function placeDefensePad(s,pad,x,y){
+ if(!canBuild(s)||!Number.isInteger(pad)||pad<0||pad>=8||defensePlacement(s,x,y,pad))return false;
+ s.pads[pad]={x,y};const t=s.towers.find(t=>t.pad===pad);if(t){t.x=x;t.y=y;}s.selectedPad=pad;return true;
+}
+export function plantDefense(s,padIndex){
+ const p=s.pads?.[padIndex];if(!canBuild(s)||!Number.isInteger(padIndex)||!p||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex)||defensePlacement(s,p.x,p.y,padIndex))return false;
+ s.currency-=DEFENSE.plantCost;s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,laws:[],lawRanks:{},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=getDefenseOffers(s);return true;
+}
 export function upgradeDefense(s,id){const t=s.towers.find(t=>t.id===id),cost=defenseUpgradeCost(t);if(!canBuild(s)||!t||s.currency<cost||!Number.isFinite(cost))return false;s.currency-=cost;t.level++;return true;}
 export function chooseDefenseLaw(s,towerId,id){
  if(!defenseCanChoose(s,towerId,id))return false;
@@ -117,14 +132,15 @@ export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0
 export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
-export function checkpointDefense(s){if(!canBuild(s))return null;return {version:2,seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
+export function checkpointDefense(s){if(!canBuild(s))return null;return {version:3,pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
 export function restoreDefense(raw){
- try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![1,2].includes(r.version)||!['build','draft'].includes(r.phase))return null;
+ try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![1,2,3].includes(r.version)||!['build','draft'].includes(r.phase))return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
  if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,11)||!integer(r.coreHp,1,20)||!integer(r.currency,0,10000)||!finite(r.time,0,100000)||!integer(r.kills,0,1000)||!integer(r.leaked,0,1000)||!integer(r.selectedPad,0,7)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1000000))return null;
  if(r.phase==='draft'&&(r.draftCredit!==1||r.wave===0)||r.phase==='build'&&r.wave>0&&r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>8)return null;
  if((Array.isArray(r.enemies)&&r.enemies.length)||(Array.isArray(r.shots)&&r.shots.length)||(Array.isArray(r.fields)&&r.fields.length))return null;
  const s=createDefense(r.seed);for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
+ if(r.version===3){if(!Array.isArray(r.pads)||r.pads.length!==8||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));}
  const pads=new Set(),ids=new Set();for(const t of r.towers){
   if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,7)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,12)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
   // v1 did not record which ingredient received repeats. Preserve those points
@@ -134,8 +150,8 @@ export function restoreDefense(raw){
   const formId=r.version===1?matchFusion(t.laws):t.formId;
   if(formId!==null&&typeof formId!=='string')return null;
   const ultimateCharge=r.version===1?0:t.ultimateCharge;if(!finite(ultimateCharge,0,30))return null;
-  const tower={id:t.id,pad:t.pad,...PADS[t.pad],level:t.level,laws:[...t.laws],lawRanks:{...ranks},formId,fusion:matchFusion(t.laws),reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
-  if(!validDefenseForm(tower))return null;pads.add(t.pad);ids.add(t.id);s.towers.push(tower);
+  const tower={id:t.id,pad:t.pad,...s.pads[t.pad],level:t.level,laws:[...t.laws],lawRanks:{...ranks},formId,fusion:matchFusion(t.laws),reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
+  if(!validDefenseForm(tower)||defensePlacement(s,tower.x,tower.y,tower.pad))return null;pads.add(t.pad);ids.add(t.id);s.towers.push(tower);
  }
  const spent=s.towers.reduce((n,t)=>n+defenseRankTotal(t),0);if(spent!==r.wave+1-r.draftCredit)return null;
  if(r.stats)for(const key of Object.keys(s.stats)){if(!finite(r.stats[key],0,1e9))return null;s.stats[key]=r.stats[key];}
