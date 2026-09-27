@@ -703,7 +703,7 @@ const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>rel
 // the unfinished attempt; saving its rewards as well would respawn the same
 // enemies while preserving their kills, score, choice gauge and drops.
 function saveLeaveState(){
- if(mode==='defense')return false;
+ if(mode==='defense'||mode==='adventure')return false;
  if(survivalSession)return saveSurvival();
  if(developerRun)return false;
  if(!['playing','evolving','cards','forms','relics','dash','solo','awaken'].includes(mode)||roomCleared)return false;
@@ -1330,6 +1330,7 @@ async function enforceCurrentWebAccess(){
    return false;
   }
   if(mode==='defense')defenseScreen?.close();
+  if(mode==='adventure')adventureScreen?.close();
   saveLeaveState();cloud.syncNow().catch(()=>null);touch.reset();keys.clear();audio.setPaused(true);
   if(betaLocked){if(mode!=='beta-lock')showBetaLock();}
   else if(mode!=='season-pause')showSeasonPause();
@@ -1683,7 +1684,15 @@ function bindNameField(onSubmit=null){
  $('#name-form').onsubmit=ev=>{ev.preventDefault();if(!requireName())return;if(onSubmit)onSubmit();else showDungeon();};
 }
 // Existing two main modes stay prominent; the new defence slice is a separate trial.
-let defenseScreen=null;
+let defenseScreen=null,adventureScreen=null;
+async function showSeedAdventure(){
+ mode='adventure';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ try{
+  const {mountSeedAdventure}=await import('./seed-adventure-view.js');
+  adventureScreen=mountSeedAdventure({audio,onClose:()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
+ }catch(error){console.error('씨앗의 모험 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='모험을 불러오지 못했어요. 다시 눌러 주세요.';}
+}
+
 async function showSeedDefense(){
  mode='defense';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  try{
@@ -1701,8 +1710,8 @@ async function showSeedDefense(){
 function showDungeon(){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
- $('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#back-menu').onclick=showIntro;
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/adventure/moon-garden-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>직접 베고 던지는 RPG · 로컬 시제품</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ $('#open-adventure').onclick=()=>void showSeedAdventure();$('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#back-menu').onclick=showIntro;
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
 function showJourneys(){
@@ -1929,7 +1938,7 @@ function restart(saved=null){if(gameplayPaused()){showSeasonPause();return;}if(m
  }}
 
 function togglePause(){if(saveExitBusy||mode!=='playing'&&mode!=='evolving')return;paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;$('#pause').textContent=paused?'▶':'Ⅱ';$('#toast').textContent='';audio.setPaused(paused);if(paused){void webTelemetry.playPause();exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms,{survival:Boolean(survivalSession),killScale:survivalSession?SURVIVAL.killChargeScale:1});}else{pauseBuild.hide();$('#pause').focus({preventScroll:true});}}
-window.addEventListener('keydown',e=>{if(mode==='defense')return;if(e.target?.closest?.('input,textarea'))return;if(mode==='ready'&&['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,summary,a,select'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
+window.addEventListener('keydown',e=>{if(mode==='defense'||mode==='adventure')return;if(e.target?.closest?.('input,textarea'))return;if(mode==='ready'&&['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,summary,a,select'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
 function refreshCloudOnReturn(){
  if(mode==='ready'&&$('#survival-cloud-status'))void refreshSurvivalAccount();
@@ -1939,7 +1948,7 @@ function refreshCloudOnReturn(){
   if(mode==='ready')location.reload();else pendingCloudReload=true;
  }).catch(()=>{}).finally(()=>{foregroundCloudSync=null;});
 }
-document.addEventListener('visibilitychange',()=>{if(mode==='defense')return;if(document.hidden){saveLeaveState();if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();void webTelemetry.playPause();audio.setPaused(true);stopAnimation();}else{last=performance.now();realLast=Date.now();startAnimation();if(!paused)audio.setPaused(false);enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();}});
+document.addEventListener('visibilitychange',()=>{if(mode==='defense'||mode==='adventure')return;if(document.hidden){saveLeaveState();if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();void webTelemetry.playPause();audio.setPaused(true);stopAnimation();}else{last=performance.now();realLast=Date.now();startAnimation();if(!paused)audio.setPaused(false);enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();}});
 if(!account.native&&!import.meta.env.DEV){
  setInterval(()=>{if(!document.hidden)enforceCurrentWebAccess().catch(()=>{});},WEB_ACCESS_POLL_MS);
  window.addEventListener('focus',()=>{enforceCurrentWebAccess().catch(()=>{});refreshCloudOnReturn();});
@@ -1991,7 +2000,7 @@ if(!mirrorSession&&!survivalSession?.lab&&mode==='playing'&&!roomCleared&&!bossF
 // 예전에는 기록 시간이 그만큼 줄어 '분당 처치'가 부풀려졌다. 실제 시계는 그렇게 줄지 않는다.
 let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],frameCounter=0,animationHandle=0;
 const framePacer=createFramePacer();
-function startAnimation(){if(mode!=='defense'&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
+function startAnimation(){if(mode!=='defense'&&mode!=='adventure'&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
 function stopAnimation(){if(animationHandle)cancelAnimationFrame(animationHandle);animationHandle=0;}
 function animate(now){animationHandle=0;if(document.hidden)return;startAnimation();if(!framePacer(now,mode==='playing'&&!paused?60:30))return;let raw=(now-last)/1000;last=now;
  {const realNow=Date.now();const realDelta=(realNow-realLast)/1000;realLast=realNow;if(mode==='playing'&&!paused&&!survivalSession?.benchmark&&realDelta>0&&realDelta<2){elapsed+=realDelta;paceReal+=realDelta;paceGame+=Math.min(2,Math.max(0,raw));webTelemetry.playTick(realDelta);}}if(perfEnabled)try{perf.frame(raw*1000,mode==='playing'&&!paused,perfSnapshot);perf.beginFrame();if(perf.due())perf.sampleState(perfSnapshot());}catch{}frames.push(raw*1000);if(frames.length>180)frames.shift();const visualDt=Math.min(.1,Math.max(0,raw)),timeScale=cameraFeel.stepEffects(visualDt),dt=survivalSession?.benchmark?(()=>{for(let i=0;i<4;i++)stepSurvivalBenchmark(1/60);return 4/60;})():advanceFrame(raw*timeScale,now*.001,(step,time)=>update(step,time));if(survivalSession&&!survivalSession.lab&&!survivalSession.finished&&survivalSession.time>=survivalAutosaveAt){survivalAutosaveAt=survivalSession.time+15;saveSurvival();}audio.tick(visualDt);perfT=performance.now();if(!paused)vfx.update(visualDt);perfMark(PS.particles);frameCounter++;
@@ -2184,7 +2193,7 @@ function perfFinishNow(outcome){
  return report;
 }
 window.addEventListener('pagehide',()=>{stopAnimation();audio.setPaused(true);void webTelemetry.playPause();perfFinish('closed');});
-window.addEventListener('pageshow',()=>{last=performance.now();realLast=Date.now();startAnimation();if(!document.hidden&&!paused)audio.setPaused(false);});
+window.addEventListener('pageshow',()=>{if(mode==='adventure')return;last=performance.now();realLast=Date.now();startAnimation();if(!document.hidden&&!paused)audio.setPaused(false);});
 mountPerfDevMenu({storage:rawStorage,version:GAME_VERSION,live:()=>perf.state()});
 let sizedW=0,sizedH=0;
 function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight;sizedW=w;sizedH=viewHeight;const h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;viewLayout=responsiveView(w,h,touch.enabled);document.body.classList.toggle('phone-landscape',viewLayout.phone);camera.zoom=viewLayout.zoom;camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
@@ -2199,7 +2208,7 @@ screen.orientation?.addEventListener?.('change',()=>{requestAnimationFrame(settl
  });
 function runLocalStartupLab(){
  if(!localInspection)return;const params=new URLSearchParams(location.search);
- let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('defenseLab'))void showSeedDefense();else if(params.has('survivalLab'))showSurvivalSetup();else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
+ let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('adventureLab'))void showSeedAdventure();else if(params.has('defenseLab'))void showSeedDefense();else if(params.has('survivalLab'))showSurvivalSetup();else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
 }
 if(survivalComparisonEnabled)survivalComparison=mountSurvivalComparison({getActive:()=>Boolean(survivalSession)&&mode==='playing',getVariant:()=>survivalReadability?'quiet':'classic',setVariant:value=>{survivalReadability=value==='quiet';survivalArt?.setReadability(survivalReadability);player.scale.setScalar(survivalReadability?1.55:1.25);},getPaused:()=>paused,setPaused:value=>{paused=value;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;audio.setPaused(paused);document.getElementById('pause').textContent=paused?'▶':'Ⅱ';}});
 applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();const startupCloud=localInspection?Promise.resolve({changed:false}):account.ready().then(()=>{backfillPersonalBests();return cloud.start();}),startupSeason=localInspection?Promise.resolve(DEFAULT_SEASON_STATUS):loadSeasonStatus({enabled:!import.meta.env.DEV});Promise.all([startupCloud,startupSeason]).then(async([result,status])=>{startupCloudReady=true;seasonStatus=status;await refreshAccessMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();void backfillBossVeterans();void webTelemetry.visit();if(result&&result.ok===false&&result.reason!=='signed-out')$('#toast').textContent='클라우드 저장을 불러오지 못했어요 · 이 기기 저장으로 열었어요(연결되면 합쳐져요)';runLocalStartupLab();scheduleShaderWarm();}).catch(async()=>{startupCloudReady=true;seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAccessMode();showEntry();void webTelemetry.visit();runLocalStartupLab();scheduleShaderWarm();});startAnimation();

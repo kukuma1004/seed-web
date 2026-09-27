@@ -111,3 +111,7 @@ body.menu-mode:has(.dungeon-panel) #app-actions{top:max(14px,env(safe-area-inset
  #overlay .home-panel .legal-note{font-size:11px;line-height:1.5}
  .dungeon-mode:before,.journey-card:before{background-size:44px 1px}
 }
+
+/* Local adventure is an additional mode; existing destinations stay intact. */
+.dungeon-modes:has(.mode-adventure){grid-template-columns:repeat(4,minmax(0,1fr))}.mode-adventure .mode-art{object-position:center}.mode-adventure .mode-caption strong{font-size:clamp(19px,2vw,28px)}
+@media(max-width:600px) and (min-height:501px){.dungeon-modes:has(.mode-adventure){grid-template-columns:1fr;grid-template-rows:repeat(4,minmax(135px,1fr));min-height:580px}}
