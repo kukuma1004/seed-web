@@ -8,16 +8,16 @@ export const DUEL_SPAWN=Object.freeze([{x:11.5,y:10.8},{x:23.5,y:10.8}]);
 export const DUEL_RULES=Object.freeze({roundsToWin:2,roundSeconds:75,guardMax:100,guardRegen:14,blockDamage:.2,parryWindow:.16,guardBreakStun:1.05,dodgeCd:1,meterMax:100});
 const skill=(name,cooldown,desc)=>Object.freeze({name,cooldown,desc});
 export const DUEL_CHARACTERS=Object.freeze({
- pierce:Object.freeze({id:'pierce',name:'창 씨앗',role:'긴 사거리 · 찌르기',hp:170,speed:4.5,reach:2.5,arc:.62,damage:[11,11,17],cadence:.34,heavy:{damage:22,reach:2.6},parry:1,tile:4,ink:'#dbf6b1',
+ pierce:Object.freeze({id:'pierce',name:'창 씨앗',role:'긴 사거리 · 찌르기',hp:178,speed:4.5,reach:2.5,arc:.62,damage:[11,11,17],cadence:.34,heavy:{damage:22,reach:2.6},parry:1,tile:4,ink:'#dbf6b1',
   skills:[skill('돌진 찌르기',4.5,'앞으로 달려가며 꿰뚫어요'),skill('관통 투창',3.5,'멀리 날아가 둘을 꿰뚫는 창')],ult:skill('천 개의 창',0,'세 줄의 창이 앞을 쓸어요'),
   blurb:'가장 멀리서 찌르지만, 붙으면 약해요.'}),
  burst:Object.freeze({id:'burst',name:'불꽃 씨앗',role:'한 방 · 막기 파괴',hp:152,speed:3.8,reach:1.6,arc:1.1,damage:[11,11,16],cadence:.48,heavy:{damage:26,reach:1.9,breaker:1.25},parry:1,tile:5,ink:'#ffaa65',
   skills:[skill('불씨 심기',5,'잠시 뒤 터지는 불씨를 발밑에'),skill('화염 도약',6,'뛰어올라 내려찍어요 · 막기를 부숴요')],ult:skill('대폭발',0,'둘레를 크게 터뜨려요'),
   blurb:'느리지만 세고, 막고 있는 상대를 잘 부숴요.'}),
- reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:168,speed:4.2,reach:1.7,arc:.9,damage:[9,9,14],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
+ reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:176,speed:4.3,reach:1.7,arc:.9,damage:[10,10,15],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
   skills:[skill('거울 방패',6,'잠깐 모든 공격을 막고 탄을 되돌려요'),skill('수정 탄',3,'벽에 두 번 튕기는 수정')],ult:skill('거울 감옥',0,'상대를 거울에 가둬 묶어요'),
   blurb:'반격 막기 판정이 넓고, 날아오는 탄을 되돌려요.'}),
- gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:148,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
+ gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:140,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
   skills:[skill('끌어당기기',6.5,'앞의 상대를 끌어와 묶어요 · 막기 무시'),skill('중력장',7,'둘레의 상대를 느리게')],ult:skill('블랙홀',0,'상대를 빨아들이며 계속 때려요'),
   blurb:'막고 있는 상대도 끌어와 무너뜨려요.'})
 });
@@ -47,6 +47,8 @@ function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=fals
   if(kind==='heavy'||kind==='skill'&&breaker>1){def.guard-=45*breaker;}
   def.guard-=damage*1.3;const chip=damage*DUEL_RULES.blockDamage;def.hp-=chip;event(s,'block');fx(s,'block',def.x,def.y,{ink:c.ink});
   if(def.guard<=0){def.guard=0;def.blocking=false;def.state='broken';def.t=DUEL_RULES.guardBreakStun;def.stun=DUEL_RULES.guardBreakStun;event(s,'guardBreak');fx(s,'guardBreak',def.x,def.y,{});s.message='막기 파괴!';s.freeze=.08;s.shake=.45;}
+  // 막힌 평타는 공격한 쪽이 튕겨 연타가 끊긴다(막은 쪽이 먼저 움직일 수 있다).
+  if(kind==='light'&&att.state==='attack'){att.cancelAt=-1;att.t=Math.max(att.t,.24);att.buffer=null;att.combo=0;const v=norm(att.x-def.x,att.y-def.y);att.kx+=v.x*2.2;att.ky+=v.y*2.2;}
   att.meter=clamp(att.meter+3,0,100);checkKo(s);return true;
  }
  def.hp-=damage;def.stun=Math.max(def.stun,stun);def.state='hit';def.t=stun;def.blocking=false;def.buffer=null;def.flash=.14;att.chain=(att.chainTime>0?att.chain:0)+1;att.chainTime=.9;
@@ -87,7 +89,9 @@ function act(s,f,input,dt){
  if(!f.blocking)f.guard=Math.min(DUEL_RULES.guardMax,f.guard+DUEL_RULES.guardRegen*dt);if(f.comboTime<=0)f.combo=0;
  f.x+=f.kx*dt;f.y+=f.ky*dt;const k=Math.exp(-8*dt);f.kx*=k;f.ky*=k;
  // 공격이 나간 뒤(맞든 안 맞든) 끊는 순간부터는 다음 공격·연계 강공격·회피로 이어 갈 수 있다.
- const cancel=Boolean(f.stun<=0&&f.buffer&&(f.state==='attack'||f.state==='heavy')&&f.hitDone&&f.t<=f.cancelAt&&f.t>0);
+ // 2026-09-28 사용자: "기본 공격만 계속 누르면 (상대가) 죽는다" — 1→2→3타 뒤에 곧바로 다시 1타로 이어져 끝없이 묶였다.
+ // 3타 뒤에는 강공격·회피로만 끊을 수 있고, 다시 평타를 치려면 3타 동작이 끝나야 한다.
+ const cancel=Boolean(f.stun<=0&&f.buffer&&(f.state==='attack'||f.state==='heavy')&&f.hitDone&&f.t<=f.cancelAt&&f.t>0&&!(f.state==='attack'&&f.step===2&&f.buffer.act==='attack'));
  const busy=!cancel&&(f.stun>0||['attack','heavy','skill','dash','leap','dodge'].includes(f.state)&&f.t>0);
  const wants=a=>Boolean(input[a])||f.buffer?.act===a;
  if(!busy&&f.stun<=0&&['hit','broken','stagger','jailed'].includes(f.state))f.state='idle';
@@ -95,7 +99,7 @@ function act(s,f,input,dt){
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
- if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step;fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:c.reach*(step===2?1.12:1),life:.26,max:.26,team:f.team});melee(s,f,c.reach*(step===2?1.12:1),c.arc*(step===2?1.25:1),c.damage[step],{kind:'light',stun:step===2?.45:.24,knock:step===2?1.4:.5});}
+ if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step;fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:c.reach*(step===2?1.12:1),life:.26,max:.26,team:f.team});melee(s,f,c.reach*(step===2?1.12:1),c.arc*(step===2?1.25:1),c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});}
  if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach,life:.34,max:.34,team:f.team});melee(s,f,c.heavy.reach,c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});}
  if(f.state==='dash'){f.x+=f.dx*13*dt;f.y+=f.dy*13*dt;if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
@@ -112,7 +116,7 @@ function act(s,f,input,dt){
  if(wants('skill2')&&useSkill(s,f,1)){f.buffer=null;clampArena(f);return;}
  // 연계 강공격: 평타가 나간 직후 이어 누르면 준비가 짧고(0.24초) 조금 더 세다.
  if(wants('heavy')){const link=was==='attack';f.buffer=null;f.state='heavy';f.linked=link;f.total=f.t=link?.36:.58;f.cancelAt=.06;f.hitDone=false;f.blocking=false;f.combo=0;lunge(s,f,link?5.5:3.2);event(s,link?'link':'charge');clampArena(f);return;}
- if(wants('attack')){f.buffer=null;f.step=f.combo%3;f.combo++;f.comboTime=c.cadence+.45;f.state='attack';f.total=f.t=c.cadence*(f.step===2?1.3:1);f.hitAt=f.t-.1;f.cancelAt=f.t-.17;f.hitDone=false;f.blocking=false;lunge(s,f,f.step===2?4.2:2.6);event(s,'swing'+f.step);clampArena(f);return;}
+ if(wants('attack')){f.buffer=null;f.step=f.combo%3;f.combo++;f.comboTime=c.cadence+.45;f.state='attack';f.total=f.t=c.cadence*(f.step===2?1.3:1)+(f.step===2?.16:0);f.hitAt=f.t-.1;f.cancelAt=f.t-.17;f.hitDone=false;f.blocking=false;lunge(s,f,f.step===2?4.2:2.6);event(s,'swing'+f.step);clampArena(f);return;}
  const mv=norm(input.x||0,input.y||0),moving=Math.hypot(input.x||0,input.y||0)>.1,speed=c.speed*(f.blocking?.45:1)*(f.slow>0?.55:1);
  if(moving){f.x+=mv.x*speed*dt;f.y+=mv.y*speed*dt;}
  clampArena(f);
@@ -153,9 +157,12 @@ export const DUEL_AI=Object.freeze({easy:{react:.32,block:.35,parry:.05,heavyRea
 export function duelAi(s,team,dt){
  const f=s.fighters[team],o=s.fighters[1-team],c=DUEL_CHARACTERS[f.char],cfg=DUEL_AI[s.difficulty]||DUEL_AI.normal,ai=s.ai[team],d=dist(f,o),v=norm(o.x-f.x,o.y-f.y),input={aimX:v.x,aimY:v.y};
  const threat=(o.state==='attack'&&o.t>.08)||(o.state==='heavy'&&o.t>.15)||(o.state==='dash')||s.shots.some(q=>q.owner!==team&&Math.hypot(q.x-f.x,q.y-f.y)<3.5);
+ // 방금 맞았으면(1.5초) 더 빨리·자주 막는다. 막아서 상대가 튕기면 바로 반격.
+ if(f.hp<(ai.hp??f.hp))ai.hurtAt=s.time;ai.hp=f.hp;const wary=s.time-(ai.hurtAt??-9)<1.5,react=wary?cfg.react*.55:cfg.react,block=wary?Math.min(.95,cfg.block+.3):cfg.block;
+ if(o.state==='attack'&&o.cancelAt<0&&d<c.reach+.6&&f.stun<=0){ai.guarding=false;input.attack=true;return input;}
  if(threat&&d<(DUEL_CHARACTERS[o.char].reach+2.2)){ai.seen=(ai.seen||0)+dt;
-  if(ai.seen>=cfg.react){if(o.state==='heavy'&&rnd(s)<cfg.heavyRead*dt*8){input.dodge=true;input.x=-v.y;input.y=v.x;ai.seen=0;return input;}
-   if(!ai.guarding&&rnd(s)<cfg.block){ai.guarding=true;ai.guardFor=.35+rnd(s)*.3;ai.parryTry=rnd(s)<cfg.parry;}}}
+  if(ai.seen>=react){if(o.state==='heavy'&&rnd(s)<cfg.heavyRead*dt*8){input.dodge=true;input.x=-v.y;input.y=v.x;ai.seen=0;return input;}
+   if(!ai.guarding&&rnd(s)<block){ai.guarding=true;ai.guardFor=.35+rnd(s)*.3;ai.parryTry=rnd(s)<cfg.parry;}}}
  else ai.seen=0;
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;

@@ -2,7 +2,7 @@ import {DEFENSE_FORMS,FUSIONS,defenseFusionOf,defenseFormKind,defenseRankTotal,d
 export {FUSIONS,getDefenseEvolutionOptions};
 export {DEFENSE_CATALOG,DEFENSE_FORMS,DEFENSE_CATALOG_COUNTS,defenseDamageMultiplier} from './seed-defense-catalog.js';
 // Renderer-independent, seeded tower defence. All distances are garden units.
-export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:2,fastSpeed:3,plantCost:30,rerollCost:15});
+export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:2,fastSpeed:3,plantCost:30,rerollCost:15,maxSeeds:16,maxStars:12});
 export const PATH = Object.freeze([{x:-4,y:12},{x:76,y:12},{x:76,y:30},{x:24,y:30},{x:24,y:48},{x:104,y:48}].map(Object.freeze));
 // 2026-09-28 사용자: "배치할 때 안 예쁘다 · 칸막이처럼 영역이 정해져야" — 아무 데나 심던 방식 대신 정해진 화단 칸.
 // 가로 8·세로 9 간격이라 이웃 칸의 씨앗이 겹치지 않고, 길에서 7 이상 떨어진 칸만 쓴다(길 사이 두 줄 + 양옆).
@@ -12,7 +12,10 @@ export const DEFENSE_CELLS = Object.freeze([
  ...[6,14,38,46,54,62,70,78,86,94].map(x=>({x,y:39}))
 ].map(Object.freeze));
 export const DEFENSE_CELL_SIZE = Object.freeze({w:8,h:9});
-export const PADS = Object.freeze([{x:14,y:21},{x:38,y:21},{x:62,y:21},{x:86,y:21},{x:14,y:39},{x:38,y:39},{x:62,y:39},{x:86,y:39}].map(Object.freeze));
+export const PADS = Object.freeze([{x:14,y:21},{x:38,y:21},{x:62,y:21},{x:86,y:21},{x:14,y:39},{x:38,y:39},{x:62,y:39},{x:86,y:39},
+ {x:22,y:21},{x:46,y:21},{x:94,y:21},{x:6,y:30},{x:94,y:30},{x:54,y:39},{x:70,y:39},{x:6,y:39}].map(Object.freeze));
+// 2026-09-28 사용자: "씨앗 8개가 한계면 순환이 올라가면 못 깨는 거 아니야?" — 순환(36습격)을 넘길 때마다 씨앗 칸 +2(최대 16).
+export function defenseSeedCap(s){return Math.min(DEFENSE.maxSeeds,8+2*Math.floor(Math.max(0,s?.wave||0)/36));}
 // 누른 곳이 속한 칸(칸 안쪽이면). 없으면 null.
 export function defenseCellAt(x,y){return DEFENSE_CELLS.find(c=>Math.abs(c.x-x)<=DEFENSE_CELL_SIZE.w/2&&Math.abs(c.y-y)<=DEFENSE_CELL_SIZE.h/2)||null;}
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
@@ -39,7 +42,7 @@ function random(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/
 export function defensePoint(progress){let p=clamp(progress,0,DEFENSE_PATH_LENGTH);for(let i=0;i<SEGMENTS.length;i++){if(p<=SEGMENTS[i]){const t=p/SEGMENTS[i];return {x:PATH[i].x+(PATH[i+1].x-PATH[i].x)*t,y:PATH[i].y+(PATH[i+1].y-PATH[i].y)*t};}p-=SEGMENTS[i];}return {...PATH.at(-1)};}
 export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:5,runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:90,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:0,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'땅을 골라 씨앗을 심으세요. 무작위 법칙이 싹터요.'};s.offers=getDefenseOffers(s);return s;}
 export function defenseUpgradeCost(t){return t&&t.level<5?25+t.level*15:Infinity;}
-export function defenseTowerName(t){return !t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗';}
+export function defenseTowerName(t){return (!t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗')+(t?.stars?` ★${t.stars}`:'');}
 export function defenseTowerStats(t){
  if(t.formId)return {...defenseFormStats(t),upgradeCost:defenseUpgradeCost(t)};
  const id=t.laws[0]||'seed',growth=1+(t.level-1)*.42+Math.max(0,defenseRankTotal(t)-t.laws.length)*.85;
@@ -61,12 +64,12 @@ export function defensePlacement(s,x,y,pad=-1){
  return '';
 }
 export function placeDefensePad(s,pad,x,y){
- if(!canAct(s)||!Number.isInteger(pad)||pad<0||pad>=8||defensePlacement(s,x,y,pad))return false;
+ if(!canAct(s)||!Number.isInteger(pad)||pad<0||pad>=s.pads.length||defensePlacement(s,x,y,pad))return false;
  s.pads[pad]={x,y};const t=s.towers.find(t=>t.pad===pad);if(t){t.x=x;t.y=y;}s.selectedPad=pad;return true;
 }
 export function plantDefense(s,padIndex){
- const p=s.pads?.[padIndex];if(!canAct(s)||!Number.isInteger(padIndex)||!p||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex)||defensePlacement(s,p.x,p.y,padIndex))return false;
- s.currency-=DEFENSE.plantCost;const law=IDS[Math.floor(random(s)*IDS.length)];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
+ const p=s.pads?.[padIndex];if(s.towers.length>=defenseSeedCap(s)){s.lastEvent=`씨앗은 지금 ${defenseSeedCap(s)}개까지예요 · 순환을 넘기면 늘어나요`;return false;}if(!canAct(s)||!Number.isInteger(padIndex)||!p||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex)||defensePlacement(s,p.x,p.y,padIndex))return false;
+ s.currency-=DEFENSE.plantCost;const law=IDS[Math.floor(random(s)*IDS.length)];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,stars:0,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
 }
 export function upgradeDefense(s,id){const t=s.towers.find(t=>t.id===id),cost=defenseUpgradeCost(t);if(!canAct(s)||!t||s.currency<cost||!Number.isFinite(cost))return false;s.currency-=cost;t.level++;return true;}
 export function chooseDefenseLaw(s,towerId,id){
@@ -89,15 +92,17 @@ export function defenseMergeResult(s,fromId,toId){
  const a=s.towers.find(t=>t.id===fromId),b=s.towers.find(t=>t.id===toId);if(!a||!b||a===b)return {ok:false,reason:'합칠 씨앗을 골라요'};
  const laws=[...new Set([...b.laws,...a.laws])];if(laws.length>2)return {ok:false,reason:'법칙은 두 가지까지만 합칠 수 있어요'};if(!laws.length)return {ok:false,reason:'법칙이 없는 씨앗이에요'};
  const lawRanks=Object.fromEntries(laws.map(l=>[l,Math.min(3,(a.lawRanks[l]||0)+(b.lawRanks[l]||0))]));
+ // 3단계를 넘친 만큼과 합쳐지는 씨앗의 별은 별(★)이 된다(최대 12).
+ const overflow=laws.reduce((n,l)=>n+Math.max(0,(a.lawRanks[l]||0)+(b.lawRanks[l]||0)-3),0),stars=Math.min(DEFENSE.maxStars,(b.stars||0)+(a.stars||0)+overflow),gained=stars-(b.stars||0);
  if(laws.length===2&&!defenseFusionOf(laws))return {ok:false,reason:'이 두 법칙은 합칠 수 없어요'};
- const same=laws.every(l=>lawRanks[l]===(b.lawRanks[l]||0))&&laws.length===b.laws.length;if(same)return {ok:false,reason:'더 오를 단계가 없어요'};
+ const same=laws.every(l=>lawRanks[l]===(b.lawRanks[l]||0))&&laws.length===b.laws.length;if(same&&gained<=0)return {ok:false,reason:(b.stars||0)>=DEFENSE.maxStars?'별이 가득 찼어요':'더 오를 단계가 없어요'};
  const formId=bestForm({laws,lawRanks}),form=formId?DEFENSE_FORMS[formId]:null;
- return {ok:true,laws,lawRanks,formId,level:Math.max(a.level,b.level),name:form?form.name:`${DEFENSE_LAWS[laws[0]].name} 씨앗 ${lawRanks[laws[0]]}단계`,kind:form?.kind||'base'};
+ return {ok:true,laws,lawRanks,formId,stars,gained,level:Math.max(a.level,b.level),name:(form?form.name:`${DEFENSE_LAWS[laws[0]].name} 씨앗 ${lawRanks[laws[0]]}단계`)+(stars?` ★${stars}`:''),kind:form?.kind||'base'};
 }
 export function mergeDefense(s,fromId,toId){
  if(!canAct(s))return false;const r=defenseMergeResult(s,fromId,toId);if(!r.ok){s.lastEvent=r.reason;return false;}
  const a=s.towers.find(t=>t.id===fromId),b=s.towers.find(t=>t.id===toId);
- Object.assign(b,{laws:r.laws,lawRanks:r.lawRanks,formId:r.formId,fusion:r.laws.length===2?defenseFusionOf(r.laws):null,level:r.level,ultimateCharge:Math.max(a.ultimateCharge||0,b.ultimateCharge||0),shotTime:0,mirrorTime:0});
+ Object.assign(b,{laws:r.laws,lawRanks:r.lawRanks,stars:r.stars,formId:r.formId,fusion:r.laws.length===2?defenseFusionOf(r.laws):null,level:r.level,ultimateCharge:Math.max(a.ultimateCharge||0,b.ultimateCharge||0),shotTime:0,mirrorTime:0});
  s.towers.splice(s.towers.indexOf(a),1);s.selectedPad=b.pad;s.merges=(s.merges||0)+1;s.lastEvent=`합체 · ${r.name}`;effect(s,'burst',b.x,b.y,'#fff1b9',{radius:4,life:.6,maxLife:.6});return true;
 }
 // 한 단계짜리 씨앗은 햇살을 조금 써서 법칙을 다시 뽑을 수 있다.
@@ -108,7 +113,7 @@ export function defenseNextSteps(t){
 }
 // 2026-09-28 사용자: "폐기하고 다시 새롭게 할 수 없나? 조합 올렸다가 맘에 안 들 수도 있잖아"
 // 씨앗 뽑기: 들인 햇살(심기 × 합친 씨앗 수 + 강화)의 절반을 돌려받고 자리를 비운다. 습격 중에도 된다.
-export function defenseRemoveRefund(t){if(!t)return 0;const seeds=Math.max(1,defenseRankTotal(t));let upgrades=0;for(let l=1;l<t.level;l++)upgrades+=defenseUpgradeCost({level:l});return Math.floor((seeds*DEFENSE.plantCost+upgrades)*.5);}
+export function defenseRemoveRefund(t){if(!t)return 0;const seeds=Math.max(1,defenseRankTotal(t)+(t.stars||0));let upgrades=0;for(let l=1;l<t.level;l++)upgrades+=defenseUpgradeCost({level:l});return Math.floor((seeds*DEFENSE.plantCost+upgrades)*.5);}
 export function removeDefense(s,id){
  const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t)return false;const refund=defenseRemoveRefund(t);
  s.towers.splice(s.towers.indexOf(t),1);s.currency+=refund;s.selectedPad=t.pad;s.lastEvent=`${defenseTowerName(t)}을(를) 뽑았어요 · 햇살 ${refund} 돌려받음`;effect(s,'burst',t.x,t.y,'#e9dfae',{radius:3,life:.5,maxLife:.5});return true;
@@ -200,24 +205,24 @@ export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0
 export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
-export function checkpointDefense(s){if(!canBuild(s))return null;return {version:5,runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
+export function checkpointDefense(s){if(!canBuild(s))return null;return {version:5,runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
 export function restoreDefense(raw){
  // 합체 방식(v5)부터는 예전 준비 저장(법칙 고르기 방식)을 불러오지 않는다.
  try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||r.version!==5||r.phase!=='build')return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
- if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,1000000)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,7)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
- if(r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>8)return null;
+ if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,1000000)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,DEFENSE.maxSeeds-1)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
+ if(r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>defenseSeedCap({wave:r.wave}))return null;
  if((Array.isArray(r.enemies)&&r.enemies.length)||(Array.isArray(r.shots)&&r.shots.length)||(Array.isArray(r.fields)&&r.fields.length))return null;
  const s=createDefense(r.seed);
  if(r.version>=4){if(typeof r.runId!=='string'||! /^[\w-]{1,90}$/.test(r.runId)||!r.bossWins||Object.keys(s.bossWins).some((id,i)=>!integer(r.bossWins[id],0,Math.max(0,Math.floor((r.wave-12*(i+1))/36)+1))))return null;s.runId=r.runId;s.bossWins=Object.fromEntries(Object.keys(s.bossWins).map(id=>[id,r.bossWins[id]]));if(!Array.isArray(r.pendingBosses)||r.pendingBosses.length>90||r.pendingBosses.some(e=>!e||!Object.hasOwn(s.bossWins,e.boss)||!integer(e.ordinal,1,s.bossWins[e.boss])||!integer(e.wave,1,r.wave)||defenseWaveInfo(e.wave).bossId!==e.boss))return null;s.pendingBosses=r.pendingBosses.map(e=>({boss:e.boss,ordinal:e.ordinal,wave:e.wave}));}
  else s.runId=`legacy-${r.seed}`;
  for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
- if(r.version>=3){if(!Array.isArray(r.pads)||r.pads.length!==8||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));}
+ if(r.version>=3){if(!Array.isArray(r.pads)||![8,DEFENSE.maxSeeds].includes(r.pads.length)||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));while(s.pads.length<DEFENSE.maxSeeds)s.pads.push({...PADS[s.pads.length]});}
  // 화단 칸이 생기기 전 저장: 심은 씨앗부터 가장 가까운 빈 칸으로 옮겨 앉힌다.
  {const used=new Set(),planted=new Set(r.towers.map(t=>t?.pad));const order=[...s.pads.keys()].sort((a,b)=>Number(planted.has(b))-Number(planted.has(a)));
   for(const i of order){const p=s.pads[i],cell=DEFENSE_CELLS.filter(c=>!used.has(c)).sort((a,b)=>dist2(a,p)-dist2(b,p))[0];used.add(cell);s.pads[i]={x:cell.x,y:cell.y};}}
  const pads=new Set(),ids=new Set();for(const t of r.towers){
-  if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,7)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,r.wave+1)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
+  if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,DEFENSE.maxSeeds-1)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,r.wave+1)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
   // v1 did not record which ingredient received repeats. Preserve those points
   // as generic reinforcement, not invented law ranks or free branch eligibility.
   const ranks=r.version===1?Object.fromEntries(t.laws.map(l=>[l,1])):t.lawRanks;
@@ -225,7 +230,8 @@ export function restoreDefense(raw){
   const formId=r.version===1?matchFusion(t.laws):t.formId;
   if(formId!==null&&typeof formId!=='string')return null;
   const ultimateCharge=r.version===1?0:t.ultimateCharge;if(!finite(ultimateCharge,0,30))return null;
-  const tower={id:t.id,pad:t.pad,...s.pads[t.pad],level:t.level,laws:[...t.laws],lawRanks:{...ranks},formId,fusion:matchFusion(t.laws),reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
+  const stars=t.stars??0;if(!integer(stars,0,DEFENSE.maxStars))return null;
+  const tower={id:t.id,pad:t.pad,...s.pads[t.pad],level:t.level,stars,laws:[...t.laws],lawRanks:{...ranks},formId,fusion:matchFusion(t.laws),reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
   // 합체 방식에서는 늘 가능한 가장 높은 형태로 진화해 있다. 다른 형태·단계 조작은 받지 않는다.
   if(!validDefenseForm(tower)||tower.formId!==bestForm(tower)||defensePlacement(s,tower.x,tower.y,tower.pad))return null;pads.add(t.pad);ids.add(t.id);s.towers.push(tower);
  }

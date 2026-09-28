@@ -114,3 +114,14 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
 #seed-defense .td-ranks{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 2px}#seed-defense .td-rank{font-size:12px;color:var(--law);letter-spacing:.5px;font-weight:700}
 #seed-defense .td-next-steps{margin:4px 0 4px 16px;padding:0;font-size:12px;line-height:1.55;color:#dfe6d6}#seed-defense .td-next-steps b{font-weight:700}
 #seed-defense #td-remove{opacity:.85}#seed-defense #td-remove.td-danger{border-color:#ff9d8a;background:#4a2320e8;color:#ffd9cf;opacity:1}
+#seed-defense .td-star-note{margin:4px 0;font-size:12px;color:#ffe3a0}#seed-defense .td-star-note b{color:#ffd36b}
+/* 스킬 자동/수동 전환(2026-09-28). 작은 세로 화면에서는 줄을 하나 더 쓴다. */
+#seed-defense #td-auto-skill{min-width:46px;padding:7px 9px;font-size:12px;color:#f0dfa6;white-space:nowrap}
+@media(max-width:580px) and (min-height:501px){
+ #seed-defense .td-top{grid-template-columns:minmax(0,1fr) 58px 46px 64px 44px}
+ #seed-defense .td-meters{grid-column:1/6}
+ #seed-defense #td-auto-skill{grid-column:2;grid-row:1;font-size:10px;padding:4px}
+ #seed-defense #td-speed{grid-column:3;grid-row:1}
+ #seed-defense #td-book{grid-column:4;grid-row:1}
+ #seed-defense #td-pause{grid-column:5;grid-row:1}
+}

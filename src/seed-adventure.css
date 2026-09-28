@@ -79,3 +79,11 @@
 .sa-build .sa-build-art{display:block;width:22px;height:22px;border-radius:5px;background-size:400% 300%}
 @media(max-height:550px) and (min-width:601px){#seed-adventure .sa-law{grid-template-columns:40px 1fr}#seed-adventure .sa-law .sa-law-art{width:40px;height:40px}}
 #seed-adventure .sa-continue small{display:block;font-size:11px;opacity:.8;margin-top:3px}
+
+/* 2026-09-28 사용자: "패드로 터치할 때 오른쪽 버튼들이 조금 작다" — 터치가 되는 큰 화면(태블릿)에서는 조작 버튼 묶음을 키운다.
+   키보드를 붙인 패드는 주 입력이 마우스처럼 잡히기도 해서 any-pointer로 본다. */
+@media (any-pointer:coarse) and (min-width:700px) and (min-height:500px){
+ #seed-adventure .sa-actions{transform:scale(1.32);transform-origin:right bottom}
+ #seed-adventure .sa-move{transform:scale(1.25);transform-origin:left bottom}
+}
+@media (any-pointer:coarse) and (max-height:550px){#seed-adventure .sa-actions{transform:scale(1.1);transform-origin:right bottom}}

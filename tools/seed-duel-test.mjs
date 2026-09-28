@@ -29,5 +29,8 @@ const run=(s,sec,pin={},ein={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,type
  for(const c of DUEL_ORDER)assert.ok(wins[c]>=games*.12&&wins[c]<=games*.45,`${c} balance ${JSON.stringify(wins)}`);
  console.log('Duel AI balance',JSON.stringify(wins),'of',games);
 }
+// 평타만 연타하면 보통 AI를 이기지 못한다(3타 뒤 끊김·막히면 튕김·맞으면 AI가 더 막고 반격).
+{let win=0,n=0;for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=3;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let f=0;while(s.phase!=='over'&&f++<60*600){const me=s.fighters[0],o=s.fighters[1],dx=o.x-me.x,dy=o.y-me.y,d=Math.hypot(dx,dy);stepDuel(s,1/60,{x:d>1.4?dx/d:0,y:d>1.4?dy/d:0,aimX:dx,aimY:dy,attack:f%6===0});}n++;if(s.winner===0)win++;}}
+ assert.ok(win<=n*.3,`attack spam must not beat normal AI (${win}/${n})`);console.log('Attack spam vs normal AI',win,'of',n);}
 assert.equal(Object.keys(DUEL_CHARACTERS).length,4);assert.equal(DUEL_RULES.roundsToWin,2);
 console.log('Duel: light/heavy/block/parry/guard break, grab, reflect shield, dodge, best-of-3 AI matches and balance passed.');

@@ -1710,7 +1710,9 @@ async function showSeedAdventure(){
   const {mountSeedAdventure}=await import('./seed-adventure-view.js');
   // 2026-09-28: 모험도 계정과 잇는다. 문 앞 저장·도감·JP·보스 칭호 모두 계정 저장(클라우드 동기화)에. 연습은 보상 없음.
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
-  adventureScreen=mountSeedAdventure({audio,storage:runStorage,owner,practice,
+  // 2026-09-28 사용자: "펫은 모험에선 못 가져가나?" — 계정에서 고른 보스 동행이 모험에도 따라온다(본편처럼 꾸밈만).
+  const petId=readBossPet(runStorage,profile).id,pet=petId?BOSS_PETS[petId]:null;
+  adventureScreen=mountSeedAdventure({audio,storage:runStorage,owner,practice,pet:pet?{id:pet.id,name:pet.name,file:pet.file}:null,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
    onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest')),
