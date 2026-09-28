@@ -102,7 +102,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  setText('.sa-potion span',String(s.potions));$('.sa-potion').classList.toggle('empty',!s.potions);
  const boss=s.enemies.find(e=>e.type==='boss');$('.sa-boss').hidden=!boss;if(boss){$('.sa-boss i').style.width=boss.hp/boss.maxHp*100+'%';setText('.sa-boss span',ADVENTURE_BOSSES[boss.bossId]?.name||'수호자');$('.sa-boss small').textContent=boss.tell>0||boss.charging>0?(BOSS_TELL[boss.tellKind]||'붉은 예고 밖으로 회피하세요'):boss.hp<boss.maxHp*.5?'성난 수호자 · 공격이 빨라졌어요':'틈을 노려 3단 콤보를 넣으세요';}
  const combo=$('.sa-combo');combo.classList.toggle('on',s.hits>=3);if(s.hits>=3){setText('.sa-combo b',s.hits+' HIT');}setText('.sa-combo span',s.phase==='playing'?'●'.repeat(p.combo)+'○'.repeat(3-p.combo):'');setText('.sa-objective',s.phase==='playing'&&s.region?(s.region.message||'출구를 지키는 무리를 물리치세요'):s.phase==='playing'?(s.roomType==='treasure'?(s.props.some(o=>o.kind==='chest')?'보물 상자를 부수세요 · 항아리와 상자에도 햇살이 들어 있어요':'보물을 모으는 중'):s.enemies.length?`모든 적을 물리치세요 · ${s.enemies.length} 남음`:s.cleared?'방을 지켰어요 · 떨어진 것을 모으는 중':'다음 무리가 다가옵니다'):s.phase==='setup'?'잊힌 정원에 달빛이 스며듭니다':'');root.classList.toggle('sa-in-menu',s.phase!=='playing'||paused);}
- const BOSS_TELL={charge:'돌진 · 옆으로 비켜 서세요',slam:'내려찍기 · 붉은 원 밖으로 회피',punches:'주먹 난사 · 부채꼴 사이로 빠져나가세요',pitch:'강속구 · 공이 날아오는 줄을 피하세요',swing:'배트 휘두르기 · 등 뒤나 멀리로',rain:'공 소나기 · 수호자와 거리를 벌리세요',spiral:'폭풍 소용돌이 · 틈을 찾아 회피',strikes:'낙뢰 · 표시된 원 밖으로'};
+ const BOSS_TELL={triple:'연속 돌진 · 계속 옆으로',curve:'휘는 공 · 끝까지 따라와요, 회피로 끊으세요',beam:'번개 광선 · 휘두르는 방향 반대로',chase:'따라오는 낙뢰 · 멈추지 말고 달리세요',charge:'돌진 · 옆으로 비켜 서세요',slam:'내려찍기 · 붉은 원 밖으로 회피',punches:'주먹 난사 · 부채꼴 사이로 빠져나가세요',pitch:'강속구 · 공이 날아오는 줄을 피하세요',swing:'배트 휘두르기 · 등 뒤나 멀리로',rain:'공 소나기 · 수호자와 거리를 벌리세요',spiral:'폭풍 소용돌이 · 틈을 찾아 회피',strikes:'낙뢰 · 표시된 원 밖으로'};
  // 2026-09-28 사용자: 문 고르기 화면이 구리다 → 기존 그림으로 꾸민다. 아치 창에는 그 방의 장면(막 배경·모드 그림·성소),
  // 가운데 문장에는 보상 그림(법칙 문·조합 카드·아이템·유물·보스 초상)을 넣는다. 새 그림은 없다.
  function doorScene(d,next){const act=next.act;if(d.room==='treasure')return 'menu/mode-journey-v1.webp';if(d.room==='fountain')return 'garden-sanctuary-v2.webp';if(d.room==='shop')return 'menu/mode-defense-v1.webp';if(d.room==='elite')return 'menu/mode-survival-v1.webp';return act===1?'stadium-clay-hd-v1.webp':act===2?'act3-storm-route-v1.webp':'adventure/moon-garden-v1.webp';}
@@ -151,11 +151,20 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  let clayPattern=null;
  // 넓은 지역 바닥: 막마다 타일(정원 포장돌·야구장 흙·폭풍 항로)을 깔고 가장자리는 어둡게.
  const floorPatterns={};
- function paintRegionFloor(){const R=s.region,act=adventureRoomInfo(s.room).act,key=act===1?'clay':act===2?'storm':'paving',im=assets[key];ctx.fillStyle='#050c10';ctx.fillRect(0,0,width,height);
-  const a=point(0,0),b=point(R.w,R.h);if(im?.naturalWidth){floorPatterns[key]??=ctx.createPattern(im,'repeat');ctx.save();ctx.beginPath();ctx.rect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.clip();ctx.translate(a.x,a.y);const tile=(act===2?16:act===1?6:9)*scale,k=tile/im.naturalWidth;ctx.scale(k,k);ctx.fillStyle=floorPatterns[key];ctx.fillRect(0,0,(b.x-a.x)/k,(b.y-a.y)/k);ctx.restore();}
-  if(act===1){ctx.fillStyle='#0b182244';ctx.fillRect(a.x,a.y,b.x-a.x,b.y-a.y);}
-  const edge=ctx.createLinearGradient(a.x,0,a.x+scale*2,0);ctx.lineWidth=scale*.5;ctx.strokeStyle='#050c10';ctx.strokeRect(a.x,a.y,b.x-a.x,b.y-a.y);ctx.strokeStyle='#e8d9aa33';ctx.lineWidth=2;ctx.strokeRect(a.x+scale*.3,a.y+scale*.3,b.x-a.x-scale*.6,b.y-a.y-scale*.6);
-  // 풀·꽃 장식(1막).
+ function regionShape(R){if(R._shape)return R._shape;const shape=new Path2D(),w=REGION.path;for(const n of R.nodes){shape.moveTo(n.x+n.r,n.y);shape.arc(n.x,n.y,n.r,0,Math.PI*2);}// 겹치는 조각이 서로 지우지 않게(0이 아닌 감김 규칙) 모든 조각을 같은 방향으로 감는다.
+ for(const q of R.paths){const dx=q.bx-q.ax,dy=q.by-q.ay,l=Math.hypot(dx,dy)||1,nx=-dy/l*w,ny=dx/l*w;let pts=[[q.ax+nx,q.ay+ny],[q.bx+nx,q.by+ny],[q.bx-nx,q.by-ny],[q.ax-nx,q.ay-ny]];let area=0;for(let i=0;i<4;i++){const [x1,y1]=pts[i],[x2,y2]=pts[(i+1)%4];area+=x1*y2-x2*y1;}if(area<0)pts=pts.reverse();shape.moveTo(...pts[0]);for(const pt of pts.slice(1))shape.lineTo(...pt);shape.closePath();}return R._shape=shape;}
+ // 2026-09-28 사용자: "맵이 단조롭다" — 숲 바닥(어둡게) 위에 공터·오솔길만 밝은 길바닥으로, 가장자리에 나무를 두른다.
+ function paintRegionFloor(){const R=s.region,act=adventureRoomInfo(s.room).act,key=act===1?'clay':act===2?'storm':'paving',im=assets[key];ctx.fillStyle=act===2?'#0a1422':act===1?'#1a120c':'#08140e';ctx.fillRect(0,0,width,height);
+  const shape=regionShape(R);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
+  if(assets.paving?.naturalWidth&&act===0){floorPatterns.forest??=ctx.createPattern(assets.paving,'repeat');ctx.save();ctx.globalAlpha=.28;const k=14/assets.paving.naturalWidth;ctx.scale(k,k);ctx.fillStyle=floorPatterns.forest;ctx.fillRect(0,0,R.w/k,R.h/k);ctx.restore();ctx.fillStyle='#04100acc';ctx.fillRect(0,0,R.w,R.h);}
+  ctx.save();ctx.clip(shape);
+  if(im?.naturalWidth){floorPatterns[key]??=ctx.createPattern(im,'repeat');const tile=act===2?16:act===1?6:8,k=tile/im.naturalWidth;ctx.save();ctx.scale(k,k);ctx.fillStyle=floorPatterns[key];ctx.fillRect(0,0,R.w/k,R.h/k);ctx.restore();}
+  if(act===1){ctx.fillStyle='#0b182233';ctx.fillRect(0,0,R.w,R.h);}
+  // 공터마다 분위기: 야영지 모닥불, 막다른 보물 공터 금빛, 제단·습격지 은은한 빛.
+  ctx.restore();ctx.restore();
+  for(const n of R.nodes){if(Math.abs(n.x-s.player.x)>20||Math.abs(n.y-s.player.y)>14)continue;if(n.role==='camp')glow('warm',n.x,n.y,2.4,.75);else if(n.role==='hoard')glow('warm',n.x,n.y,n.r*.8,.5);else if(n.role==='start')glow('seed',n.x,n.y,n.r*.8,.45);else if(n.role==='ruin')glow('moon',n.x,n.y,n.r*.8,.35);}
+  // 숲 가장자리 나무.
+  const pl=assets.plants;if(pl?.naturalWidth){const cw=pl.naturalWidth/4,ch=pl.naturalHeight/3;for(const t of R.trees){if(Math.abs(t.x-s.player.x)>17||Math.abs(t.y-s.player.y)>12)continue;const q=point(t.x,t.y),z=t.size*scale,cell=[7,11,6,10][t.cell%4];ctx.drawImage(pl,cell%4*cw,Math.floor(cell/4)*ch,cw,ch,q.x-z/2,q.y-z*.88,z,z);}}
   if(act===0&&assets.plants?.naturalWidth){const im2=assets.plants,cw=im2.naturalWidth/4,ch=im2.naturalHeight/3;for(const d of R.decor){if(Math.abs(d.x-s.player.x)>16||Math.abs(d.y-s.player.y)>11)continue;const q=point(d.x,d.y),z=d.size*scale*.8,cell=[0,1,3,4,5,8,9][d.cell%7];ctx.globalAlpha=.85;ctx.drawImage(im2,cell%4*cw,Math.floor(cell/4)*ch,cw,ch,q.x-z/2,q.y-z*.9,z,z);}ctx.globalAlpha=1;}
  }
  // 장애물: 1막 이끼 돌판·나무, 2막 장비 상자, 3막 수정 기둥. 깊이 순서에 맞춰 적·씨앗과 함께 그린다.
@@ -182,7 +191,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function label(x,y,text){const q=point(x,y);ctx.font=`bold ${Math.max(12,scale*.34)}px 'Malgun Gothic',sans-serif`;ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#061014cc';ctx.strokeText(text,q.x,q.y);ctx.fillStyle='#fce6af';ctx.fillText(text,q.x,q.y);}
  // 작은 지도: 가 본 곳만 밝게, 장애물·깨어 있는 적·이벤트·출구·씨앗.
  function paintMinimap(){const c=$('.sa-minimap'),R=s.region;c.hidden=!R||s.phase!=='playing';if(c.hidden)return;const g=c.getContext('2d'),k=c.width/R.w,cell=REGION.cell,cols=Math.ceil(R.w/cell);g.clearRect(0,0,c.width,c.height);g.fillStyle='#050c10d8';g.fillRect(0,0,c.width,c.height);
-  g.fillStyle='#35503f';for(let i=0;i<R.explored.length;i++)if(R.explored[i])g.fillRect(i%cols*cell*k,Math.floor(i/cols)*cell*k,cell*k+.5,cell*k+.5);
+  g.save();g.scale(k,k);g.fillStyle='#1d2d25';g.fill(regionShape(R));g.clip(regionShape(R));g.fillStyle='#4d7a5c';for(let i=0;i<R.explored.length;i++)if(R.explored[i])g.fillRect(i%cols*cell,Math.floor(i/cols)*cell,cell+.1,cell+.1);g.restore();
   g.fillStyle='#0b1a1acc';for(const o of R.obstacles){g.beginPath();g.arc(o.x*k,o.y*k,Math.max(1.5,o.r*k),0,Math.PI*2);g.fill();}
   for(const ev of R.events){g.fillStyle=ev.state==='done'?'#9ec49a':ev.state==='failed'?'#6b6b6b':'#f0c56f';g.beginPath();g.arc(ev.x*k,ev.y*k,4,0,Math.PI*2);g.fill();}
   g.fillStyle='#ff7a66';for(const e of s.enemies)if(!e.dormant||R.explored[Math.floor(e.y/cell)*cols+Math.floor(e.x/cell)]){g.fillRect(e.x*k-1.5,e.y*k-1.5,e.guard?4:3,e.guard?4:3);}
@@ -195,8 +204,15 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  // 공격 예고. 보스는 공격마다 모양이 다르다(원·줄·부채꼴·고리·낙뢰 표시).
  function paintTell(e){const k=e.type==='boss'?e.tellKind:'',total={charge:.8,slam:.95,punches:.7,pitch:.6,swing:.75,rain:.9,spiral:.95,strikes:1.05}[k]||(e.role==='fast'?.55:.68),grow=1-Math.min(1,e.tell/total);
   const ring=(x,y,r)=>{circle(x,y,r,'#f47c6752',1,true,1);circle(x,y,r,'#ffae85',2,false,1);circle(x,y,r*grow,'#ffae85',2,false,1);};
-  if(!k){ring(e.tx,e.ty,1);return;}
+  if(!k){
+   // 적 역할마다 다른 예고: 돌격은 돌진할 줄, 방패는 둘레 충격파, 원거리는 겨누는 선, 근접은 발밑 원.
+   if(e.role==='fast'){const a=point(e.x,e.y),b=point(e.x+e.dx*5.2,e.y+e.dy*5.2);ctx.save();ctx.strokeStyle='#ff9b75aa';ctx.lineWidth=scale*.5;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.strokeStyle='#ffd0a8';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(a.x+(b.x-a.x)*grow,a.y+(b.y-a.y)*grow);ctx.stroke();ctx.restore();return;}
+   if(e.role==='tank'){ring(e.x,e.y,2.1);return;}
+   if(e.role==='ranged'){const a=point(e.x,e.y),b=point(e.tx,e.ty);ctx.save();ctx.setLineDash([6,6]);ctx.strokeStyle='#ffae8599';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x,a.y-scale*.5);ctx.lineTo(b.x,b.y-scale*.5);ctx.stroke();ctx.restore();return;}
+   ring(e.tx,e.ty,1);return;}
   if(k==='slam'){ring(e.tx,e.ty,2.1);return;}
+  if(k==='chase'){ring(e.tx,e.ty,1.3);return;}
+  if(k==='beam'){const a0=Math.atan2(e.ty-e.y,e.tx-e.x)-1.3,p0=point(e.x,e.y);ctx.save();ctx.translate(p0.x,p0.y);ctx.scale(1,.72);ctx.fillStyle='#f47c6726';ctx.beginPath();ctx.moveTo(0,0);ctx.arc(0,0,9*scale,a0,a0+2.6);ctx.closePath();ctx.fill();ctx.strokeStyle='#ffae85';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(Math.cos(a0)*9*scale,Math.sin(a0)*9*scale);ctx.stroke();ctx.restore();return;}
   if(k==='rain'||k==='spiral'){ring(e.x,e.y,3);return;}
   if(k==='strikes'){for(const m of e.marks)ring(m.x,m.y,m.r);return;}
   const a=Math.atan2(e.ty-e.y,e.tx-e.x),p=point(e.x,e.y);ctx.save();ctx.translate(p.x,p.y);ctx.scale(1,.72);ctx.rotate(a);ctx.fillStyle='#f47c6740';ctx.strokeStyle='#ffae85';ctx.lineWidth=2;
@@ -251,7 +267,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  if(s.phase==='playing'){glow('seed',s.player.x,s.player.y,2.2,.75);for(let i=0;i<12;i++){const x=2+(i*7.13)%21,y=2+(i*3.71+s.time*.07)%12,p=point(x,y);ctx.fillStyle=i%3?'#c6dfe54d':'#f8dd9e80';ctx.fillRect(p.x+Math.sin(s.time*.5+i)*9,p.y,1.5,1.5);}}
  for(const f of s.effects)if(f.type==='slash'||f.type==='ultimate')glow('spell',f.x,f.y,f.type==='ultimate'?f.radius:2.8,Math.min(.9,f.life/f.max));
  for(const f of s.fields){circle(f.x,f.y,f.r,INK.gravity+'55',2,true);circle(f.x,f.y,f.r*.8,INK.gravity,1);}
- for(const e of s.enemies)if(e.tell>0)paintTell(e);
+ for(const e of s.enemies)if(e.tell>0)paintTell(e);for(const e of s.enemies)if(e.beam&&e.beam.angle!==undefined){const a=point(e.x,e.y),b=point(e.x+Math.cos(e.beam.angle)*9,e.y+Math.sin(e.beam.angle)*9);ctx.save();ctx.globalCompositeOperation='lighter';ctx.strokeStyle='#fff3a8cc';ctx.lineWidth=scale*.45;ctx.beginPath();ctx.moveTo(a.x,a.y-scale);ctx.lineTo(b.x,b.y-scale*.4);ctx.stroke();ctx.strokeStyle='#ffffff';ctx.lineWidth=3;ctx.stroke();ctx.restore();}
  if(s.phase==='playing'){const p=s.player;circle(p.x,p.y,.52,'#e8d89899',1.3);const pos=point(p.x,p.y);ctx.strokeStyle='#e6e9d350';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pos.x+p.aimX*scale*.7,pos.y+p.aimY*scale*.7);ctx.lineTo(pos.x+p.aimX*scale*2,pos.y+p.aimY*scale*2);ctx.stroke();}
  // Two atlas afterimages communicate a dodge without a particle system or extra asset.
  if(s.phase==='playing'&&s.player.dashing>0){const p=s.player;ctx.save();for(let i=2;i>0;i--){ctx.globalAlpha=.12/i;sprite('seed',p.x-p.dx*i*.25,p.y-p.dy*i*.25,1.95,p.aimX,p.aimY);}ctx.restore();}

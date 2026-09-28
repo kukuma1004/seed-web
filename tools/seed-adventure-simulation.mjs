@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {performance} from 'node:perf_hooks';
-import {createAdventure,startAdventure,stepAdventure,chooseAdventure,chooseAttackShape,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,ROOMS,ADVENTURE,ADVENTURE_FORMS} from '../src/seed-adventure-rules.js';
+import {createAdventure,startAdventure,stepAdventure,chooseAdventure,chooseAttackShape,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureRoute,adventureWalkable,ROOMS,ADVENTURE,ADVENTURE_FORMS} from '../src/seed-adventure-rules.js';
 import {createAdventureCombat} from '../src/seed-adventure-combat.js';
 
 // Real rule progression: no health edits, forced wins, enemy removals or skipped rooms.
@@ -23,7 +23,7 @@ for(const shape of ['slash','throw'])for(const initial of ['recall','split','orb
   const p=s.player,byDist=list=>list.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
   const awake=byDist(s.enemies.filter(e=>e.hp>0&&!e.dormant)),near=awake||byDist(s.enemies.filter(e=>e.hp>0))||s.props[0]||s.pickups[0];
   let tx,ty;
-  if(s.region){const R=s.region,goal=awake||(near&&!s.enemies.length?null:near)||(R.gate.open?R.gate:null);const t=goal||R.gate;const close=Math.hypot(t.x-p.x,t.y-p.y)>(awake&&s.weapon!=='slash'?4:1.4);tx=close?t.x:p.x;ty=close?t.y:p.y;
+  if(s.region){const R=s.region,goal=awake||(near&&!s.enemies.length?null:near)||(R.gate.open?R.gate:null);const goalT=goal||R.gate,t=Math.hypot(goalT.x-p.x,goalT.y-p.y)>3?adventureRoute(s,p,goalT):goalT;const close=Math.hypot(goalT.x-p.x,goalT.y-p.y)>(awake&&s.weapon!=='slash'?4:1.4);tx=close?t.x:p.x;ty=close?t.y:p.y;
    // 바위에 걸리면 잠깐 옆으로 비켜 간다.
    bot.moved=(bot.moved||0)*.95+Math.hypot(p.x-(bot.px??p.x),p.y-(bot.py??p.y));bot.px=p.x;bot.py=p.y;if(close&&bot.moved<.02&&!bot.side)bot.side=40;if(bot.side>0){bot.side--;const vx=tx-p.x,vy=ty-p.y;tx=p.x-vy;ty=p.y+vx;}}
   else{const a=s.time*.38,close=near&&(s.weapon==='slash'||!s.enemies.length)&&Math.hypot(near.x-p.x,near.y-p.y)>1.6;tx=close?near.x:12+Math.cos(a)*6.3;ty=close?near.y:8+Math.sin(a)*4.1;}
@@ -37,7 +37,7 @@ for(const shape of ['slash','throw'])for(const initial of ['recall','split','orb
  }
  }finally{combat.dispose();}
  frames.sort((a,b)=>a-b);
- assert.ok(['won','lost'].includes(s.phase),'run must end without a stuck room: '+JSON.stringify({phase:s.phase,room:s.room,type:s.roomType,kind:s.choiceKind,enemies:s.enemies.length,props:s.props.length,pickups:s.pickups.length}));
+ assert.ok(['won','lost'].includes(s.phase),'run must end without a stuck room: '+JSON.stringify({player:[s.player.x.toFixed(1),s.player.y.toFixed(1)],near:[...s.enemies].sort((a,b)=>Math.hypot(a.x-s.player.x,a.y-s.player.y)-Math.hypot(b.x-s.player.x,b.y-s.player.y)).slice(0,2).map(e=>[e.x.toFixed(1),e.y.toFixed(1),e.dormant,adventureWalkable(s,e.x,e.y),JSON.stringify(adventureRoute(s,s.player,e))]),pw:adventureWalkable(s,s.player.x,s.player.y),gate:s.region?.gate,phase:s.phase,room:s.room,type:s.roomType,kind:s.choiceKind,enemies:s.enemies.length,props:s.props.length,pickups:s.pickups.length}));
  assert.ok(peakShots<=ADVENTURE.maxShots&&peakEffects<=ADVENTURE.maxEffects);
  runs.push({shape,initial,result:s.phase,room:s.room+1,rooms:ROOMS.length,level:s.level,bosses:s.bossesDefeated,form:s.formId?`${ADVENTURE_FORMS[s.formId].kind}:${s.formId}`:null,laws:s.laws.map(l=>l+s.ranks[l]).join('+'),coins:s.coins,potions:s.potions,visited:[...rooms].sort().join(','),seconds:Math.round(s.time),kills:s.kills,hp:Math.round(s.player.hp),peakShots,peakEffects,p95RulesMs:+frames[Math.floor(frames.length*.95)].toFixed(3)});
 }

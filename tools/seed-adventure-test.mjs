@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_JP,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_ARENA,REGION,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
+import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureWalkable,adventureRoute,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_JP,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_ARENA,REGION,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
 import {composeAdventureAttack} from '../src/seed-adventure-attacks.js';
 import {createAdventureCombat} from '../src/seed-adventure-combat.js';
 import {LAWS} from '../src/laws.js';
@@ -136,7 +136,8 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
 {
  const fresh=()=>{const s=createAdventure(11);startAdventure(s,'slash','burst');s.player.inv=1e9;return s;};
  const s=fresh(),R=s.region;assert.ok(R);assert.equal(s.arena.maxX,REGION.w-1.4);
- assert.ok(R.obstacles.length>=12,'obstacles');assert.ok(s.enemies.length>=20,'several packs');assert.ok(s.enemies.every(e=>e.dormant),'packs sleep until approached');
+ assert.ok(R.nodes.length>=7&&R.paths.length>=R.nodes.length-1,'clearings joined by paths');assert.ok(R.obstacles.length>=4,'cover in clearings');assert.ok(s.enemies.length>=15,'several packs');
+ assert.ok(R.nodes.some(n=>n.role==='hoard'),'a dead-end hoard');assert.ok([s.player,...s.enemies,...s.props].every(o=>adventureWalkable(s,o.x,o.y)),'everything stands on open ground');assert.ok(s.enemies.every(e=>e.dormant),'packs sleep until approached');
  assert.ok(s.enemies.some(e=>e.guard),'exit guard pack');assert.ok(s.props.some(o=>o.kind==='cache'),'small chests');assert.deepEqual(R.events.map(e=>e.type).sort(),['guard','raid']);
  assert.deepEqual(JSON.stringify(fresh().region.obstacles),JSON.stringify(R.obstacles),'same seed, same region');
  // 멀리 있는 무리는 움직이지 않고, 가까이 가면 무리 전체가 깨어난다.
@@ -157,6 +158,9 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  const k=fresh(),kg=k.region.events.find(e=>e.type==='guard');for(const n of k.enemies)n.hp=0;k.enemies=[];k.player.x=kg.x+3;k.player.y=kg.y;
  for(let t=0;t<60&&kg.state==='active'||t<1;t+=.05){for(const e of k.enemies)if(e.march&&Math.hypot(e.x-kg.portal.x,e.y-kg.portal.y)>1.5)e.hp=0;stepAdventure(k,.05,{});}
  assert.equal(kg.state,'done');assert.equal(kg.hp,kg.maxHp);assert.ok(k.props.some(o=>o.kind==='cache'&&o.big),'defended altar gives a big chest');
+ // 숲 속으로는 못 들어가고, 먼 공터로 가는 길을 찾을 수 있다.
+ const f=fresh();f.player.x=1.5;f.player.y=1.5;tick(f,.02);assert.ok(adventureWalkable(f,f.player.x,f.player.y,.2),'forest pushes back to the path');
+ const way=adventureRoute(f,f.player,f.region.gate);assert.ok(way&&adventureWalkable(f,way.x,way.y),'route to the exit');
 }
 // 저장·부정기록 방지·햇살 적립
 {
