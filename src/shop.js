@@ -61,6 +61,13 @@ export function earnCoins(storage,amount){
  const current=readShop(storage),add=Number.isInteger(amount)&&amount>0?amount:0;
  current.coins=Math.min(9_999_999,current.coins+add);writeShop(storage,current);return current;
 }
+// 햇살을 물건 없이 쓰기(씨앗 맞추기의 +5 이동·부스터·판 안 도구). 모자라면 쓰지 않는다.
+export function spendCoins(storage,amount){
+ const current=readShop(storage),price=Number.isInteger(amount)&&amount>0?amount:0;
+ if(!price)return {ok:false,reason:'amount',shop:current};
+ if(current.coins<price)return {ok:false,reason:'coins',shop:current};
+ current.coins-=price;writeShop(storage,current);return {ok:true,price,shop:readShop(storage)};
+}
 // 보스·이벤트 보상은 현재 여정 가방이 아니라 창고에 쌓인다. 가져갈
 // 개수는 플레이어가 출발 상점에서 직접 정하므로 carry는 건드리지 않는다.
 export function stashItem(storage,id,n=1){

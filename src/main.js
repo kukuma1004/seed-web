@@ -88,7 +88,7 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,goldenFruitPotion,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
-import {SHOP_STOCK_MAX,SHOP_PRICES,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem} from './shop.js';
+import {SHOP_STOCK_MAX,SHOP_PRICES,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,spendCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem} from './shop.js';
 import {SUPPORT_RELEASED,SUPPORT_PRODUCTS,supportRewardLines,supportPriceLabel,supportRoom} from './support.js';
 import {createBilling,completeSupportPurchase,recoverSupportPurchases} from './billing.js';
 import './shop.css';
@@ -1737,7 +1737,11 @@ async function showSeedPuzzle(){
  try{
   const {mountSeedPuzzle}=await import('./seed-puzzle-view.js');
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
+  // 2026-09-28 로열 매치식: +5 이동·시작 전 부스터·판 안 도구를 햇살(JP)로 산다. 계정이 바뀌었으면 쓰지 않는다.
+  const sameOwner=()=>owner===(account.user()?.uid||'guest');
   puzzleScreen=mountSeedPuzzle({audio,storage:runStorage,owner,practice,
+   wallet:()=>readShop(runStorage).coins,
+   onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
    onClose:back});

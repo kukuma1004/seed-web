@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem,stashTotal,carryTotal} from '../src/shop.js';
+import {SHOP_KEY,SHOP_STOCK_MAX,SHOP_PRICES,STARTING_COINS,TONIC_CARRY_MAX,STASH_ITEMS,normalizeShop,readShop,writeShop,earnCoins,spendCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem,stashTotal,carryTotal} from '../src/shop.js';
 
 const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};};
 const empty={potion:0,tonic:0,wind:0,shell:0,sprout:0};
@@ -113,4 +113,8 @@ assert.equal(STASH_ITEMS.sprout.max,999,'다시 싹도 보관은 999(9/22), 출�
  assert.equal(grantGiftSet(s,'chuseok-2026-boss-potions',set).granted,false,'기기당 한 번만 지급');
  assert.equal(setCarry(s,'sprout',5).carry.sprout,1,'다시 싹 여정 소지 한도는 1개');
 }
+// 씨앗 맞추기: 물건 없이 햇살만 쓴다. 모자라면 쓰지 않는다.
+{const mem=new Map(),st={getItem:k=>mem.get(k)??null,setItem:(k,v)=>mem.set(k,v)};earnCoins(st,100);const before=readShop(st).coins;
+ assert.equal(spendCoins(st,before+1).ok,false);assert.equal(readShop(st).coins,before);assert.equal(spendCoins(st,0).ok,false);assert.equal(spendCoins(st,1.5).ok,false);
+ const r=spendCoins(st,60);assert.ok(r.ok);assert.equal(readShop(st).coins,before-60);}
 console.log('상점 보관함: 구매·가져갈 개수 고르기·새 여정에서만 꺼내기·다시 싹 선물 한 번·예전 저장 옮기기 통과');
