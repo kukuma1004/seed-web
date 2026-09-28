@@ -1,0 +1,51 @@
+#seed-duel{position:fixed;inset:0;z-index:150;background:#071215;color:#f2e9cf;font-family:'Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none}
+#seed-duel *{box-sizing:border-box}#seed-duel canvas{position:absolute;inset:0;width:100%;height:100%}
+#seed-duel button{font:inherit;color:inherit;border:1px solid #b9a97866;background:#15282be8;border-radius:8px;cursor:pointer;min-height:44px;padding:8px 14px}
+#seed-duel button:focus-visible{outline:2px solid #fce6af;outline-offset:2px}
+.seed-duel-open #hud,.seed-duel-open #touch-controls{visibility:hidden}
+.sd-top{position:absolute;top:max(10px,env(safe-area-inset-top));left:max(16px,env(safe-area-inset-left));right:max(16px,env(safe-area-inset-right));display:grid;grid-template-columns:1fr auto 1fr auto;gap:14px;align-items:start;pointer-events:none;visibility:hidden}
+#seed-duel.sd-playing .sd-top,#seed-duel.sd-playing .sd-controls{visibility:visible}
+.sd-side b{display:block;font-size:13px;margin-bottom:4px;text-shadow:0 2px 4px #000}.sd-p1{text-align:right}
+.sd-hp,.sd-guard,.sd-meter{position:relative;background:#101a1e;border:1px solid #e3c9a555;overflow:hidden}
+.sd-hp{height:14px;transform:skewX(-12deg)}.sd-guard{height:5px;margin-top:3px}.sd-meter{height:5px;margin-top:3px}
+.sd-hp i,.sd-guard i,.sd-meter i{position:absolute;inset:0 auto 0 0;width:100%;transition:width .12s}
+.sd-p1 .sd-hp i,.sd-p1 .sd-guard i,.sd-p1 .sd-meter i{inset:0 0 0 auto}
+.sd-hp i{background:linear-gradient(0deg,#7a3a34,#d9776a)}.sd-guard i{background:#9ccfe8}.sd-meter i{background:#f0c56f}
+.sd-side.ult-ready .sd-meter{box-shadow:0 0 10px #f0c56f}
+.sd-center{text-align:center;text-shadow:0 2px 5px #000}.sd-rounds{display:block;font-size:12px;letter-spacing:2px;color:#f0c56f}.sd-timer{font:28px Georgia,serif}
+#seed-duel .sd-pause{pointer-events:auto;width:44px;padding:0;border-radius:50%}
+.sd-message{position:absolute;top:30%;left:50%;transform:translateX(-50%);font:bold 30px Georgia,'Malgun Gothic',serif;color:#fce6af;text-shadow:0 3px 0 #3b2a10,0 0 18px #f0c56f88;pointer-events:none;white-space:nowrap}
+.sd-message.pop{animation:sd-pop .5s ease-out}@keyframes sd-pop{from{transform:translateX(-50%) scale(1.5);opacity:0}to{transform:translateX(-50%) scale(1);opacity:1}}
+.sd-controls{position:absolute;inset:auto 0 0 0;height:230px;pointer-events:none;visibility:hidden}
+.sd-stick{position:absolute;left:max(26px,env(safe-area-inset-left));bottom:30px;width:130px;height:130px;border-radius:50%;background:#0b1b21a8;border:1px solid #cdbb8e55;pointer-events:auto}
+.sd-stick i{position:absolute;left:calc(50% - 27px);top:calc(50% - 27px);width:54px;height:54px;border-radius:50%;background:#cdbb8e55}
+.sd-buttons{position:absolute;right:max(20px,env(safe-area-inset-right));bottom:20px;width:300px;height:210px;pointer-events:none}
+#seed-duel .sd-buttons button{position:absolute;pointer-events:auto;border-radius:50%;padding:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:13px;font-weight:700;background:#102127cc}
+.sd-buttons small{font-size:9px;opacity:.6;font-weight:400}
+#seed-duel .sd-attack{right:0;bottom:0;width:84px;height:84px;border-color:#fce6afaa}
+#seed-duel .sd-block{right:92px;bottom:0;width:70px;height:70px;border-color:#9ccfe8aa}
+#seed-duel .sd-heavy{right:6px;bottom:92px;width:66px;height:66px;border-color:#ff9b75aa}
+#seed-duel .sd-dodge{right:172px;bottom:4px;width:58px;height:58px}
+#seed-duel .sd-skill{width:62px;height:62px;font-size:11px;border-color:#b7e3a0aa}
+#seed-duel .sd-skill:nth-of-type(2){right:84px;bottom:80px}#seed-duel .sd-skill:nth-of-type(3){right:160px;bottom:70px}
+#seed-duel .sd-ult{right:82px;bottom:150px;width:58px;height:58px;opacity:.5}#seed-duel .sd-ult.ready{opacity:1;border-color:#f0c56f;box-shadow:0 0 14px #f0c56f99}
+#seed-duel .cooldown{opacity:.45}#seed-duel .down{transform:scale(.92);background:#2d4a44!important}
+.sd-pc{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);font-size:11px;color:#cfd8cc99;white-space:nowrap;pointer-events:none}
+@media(pointer:coarse){.sd-pc{display:none}}
+.sd-modal{position:absolute;inset:0;display:grid;place-items:center;background:#030a0db0;z-index:4;overflow:auto;padding:12px}.sd-modal[hidden]{display:none}
+.sd-paper{width:min(900px,96vw);max-height:calc(100dvh - 24px);overflow:auto;padding:22px 26px;border:1px solid #a392685e;background:linear-gradient(130deg,#142a2cf5,#08161df5);border-radius:10px;text-align:center;box-shadow:0 20px 80px #0008}
+.sd-paper.sd-small{width:min(420px,92vw)}.sd-paper h1{margin:4px 0;font:32px Georgia,'Batang',serif}.sd-eyebrow{font:11px Georgia;letter-spacing:4px;color:#cbbb91;margin:0}
+.sd-paper>p{font-size:13px;color:#dfe6d6}.sd-paper small{display:block;margin-top:8px;font-size:11px;color:#b9c9bc}
+.sd-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin:12px 0}
+#seed-duel .sd-card{display:flex;gap:12px;align-items:center;text-align:left;border-radius:12px;padding:10px;border-color:color-mix(in srgb,var(--ink) 40%,#b9a978 60%)}
+#seed-duel .sd-card.on{background:linear-gradient(135deg,#2c4232f0,#132227f0);border:2px solid var(--ink);box-shadow:0 0 16px color-mix(in srgb,var(--ink) 40%,transparent)}
+.sd-portrait{flex:0 0 86px;width:86px;height:86px;background-size:400% 300%;background-repeat:no-repeat;border-radius:10px;background-color:#0b1a1e}
+.sd-portrait.big{display:block;margin:10px auto;width:130px;height:130px}
+.sd-card span:last-child{display:flex;flex-direction:column;gap:3px}.sd-card b{font-size:16px}.sd-card small{margin:0!important;color:var(--ink)!important}.sd-card em{font-style:normal;font-size:11.5px;color:#dfe6d6}.sd-card i{font-style:normal;font-size:10.5px;color:#b9c9bc;display:flex;gap:6px;align-items:center}
+.sd-card .sd-law{width:22px;height:22px}
+.sd-row{display:flex;gap:6px;justify-content:center;align-items:center;flex-wrap:wrap;margin:8px 0}.sd-row span{font-size:12px;color:#cbbb91;margin-right:4px}
+#seed-duel .sd-chip{min-height:36px;padding:6px 12px;font-size:12px}#seed-duel .sd-chip.on{border-color:#fce6af;background:#344238}
+#seed-duel .sd-primary{display:block;width:min(360px,100%);margin:12px auto 6px;background:linear-gradient(135deg,#e9d49a,#adb674);color:#193325;font-weight:700}
+#seed-duel .sd-back,#seed-duel .sd-pickagain{display:block;width:min(360px,100%);margin:6px auto}
+@media(max-width:700px){.sd-cards{grid-template-columns:1fr}.sd-portrait{flex-basis:64px;width:64px;height:64px}}
+@media(max-height:500px){.sd-paper{padding:12px 16px}.sd-paper h1{font-size:22px}.sd-cards{grid-template-columns:repeat(2,1fr);gap:6px;margin:6px 0}.sd-portrait{flex-basis:56px;width:56px;height:56px}.sd-card em{display:none}.sd-buttons{transform:scale(.85);transform-origin:right bottom}.sd-stick{transform:scale(.85);transform-origin:left bottom}}

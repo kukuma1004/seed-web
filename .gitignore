@@ -113,3 +113,4 @@ art-source/
 !tools/survival-emulator-check.mjs
 
 !tools/seed-defense-test.mjs
+!tools/seed-duel-test.mjs

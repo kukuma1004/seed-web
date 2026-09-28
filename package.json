@@ -6,6 +6,7 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "test:adventure": "node tools/seed-adventure-test.mjs && node tools/seed-adventure-simulation.mjs",
+    "test:duel": "node tools/seed-duel-test.mjs",
     "test:identities": "node tools/identity-coverage-test.mjs && node tools/final-identity-art-test.mjs && node tools/twin-interactions-test.mjs && node tools/final-branch-combat-test.mjs && node tools/final-branch-distinctness-test.mjs && node tools/final-branch-balance-test.mjs",
     "test:web-telemetry": "node tools/web-telemetry-test.mjs",
     "preview": "vite preview --host 127.0.0.1",
