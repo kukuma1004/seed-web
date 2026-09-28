@@ -126,3 +126,4 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
  #seed-defense #td-pause{grid-column:5;grid-row:1}
 }
 #seed-defense .td-rank-badge{display:grid;grid-template-columns:auto 1fr;gap:0 8px;align-items:center;margin:6px 0;padding:6px 8px;border:1px solid color-mix(in srgb,var(--law) 45%,transparent);border-radius:8px;background:#0b1a16aa}#seed-defense .td-chevrons{grid-row:1/3;color:var(--law);font-size:13px;letter-spacing:1px}#seed-defense .td-rank-badge b{font-size:13px}#seed-defense .td-rank-badge small{font-size:11px;color:var(--law)}#seed-defense .td-merit{font-size:14px;color:#ffe3a0;letter-spacing:2px;margin:2px 0}#seed-defense .td-merit span{font-size:11px;letter-spacing:0;color:#cfd8c6}
+#seed-defense .td-rank-img{grid-row:1/3;width:44px;height:44px;background-size:400% 100%;background-repeat:no-repeat;filter:drop-shadow(0 2px 4px #000a)}

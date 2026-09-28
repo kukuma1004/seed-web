@@ -4,6 +4,11 @@
 > 받은 파일은 PNG 그대로 주면 된다(Claude가 칸 정렬·투명도 확인 뒤 webp로 변환).
 > 참고 그림: `art-refs/duel/*.png` (지금 게임에 쓰는 캐릭터 그림을 한 명씩 잘라 둔 것, 흰 배경)
 
+## 진행 상황(2026-09-28)
+
+- 완료: 창·불꽃 동작 시트(`public/assets/duel/pierce·burst-motion-v1.webp`, 칸마다 같은 배율·발 높이로 다시 맞춤), 계급장(`public/assets/defense/rank-badges-v1.webp`), 대전 바닥(`public/assets/duel/arena-floor-v1.webp`)
+- 남음: 동작 시트 7장(거울·중력·분열·연쇄·귀환·공전·빙결) — 받으면 `seed-duel-view.js`의 `MOTION` 목록에 이름만 더하면 된다
+
 ## 우선순위
 
 1. **대전 캐릭터 동작 시트** — 9장(캐릭터마다 1장). 먼저 창·불꽃 2장으로 시험 → 괜찮으면 나머지 7장

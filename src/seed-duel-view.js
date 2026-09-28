@@ -17,6 +17,9 @@ const SOUND={hit:['hit'],heavyHit:['burstHit',{pitch:.85}],block:['reflect',{pit
 const WX0=-6,WY0=-6,WX1=41,WY1=27,BAKE=40;
 // 버튼 그림: 모험의 씨앗 동작 그림(adventure/seed-combat-v1, 4×2칸)과 이펙트 소재(vfx-atlas, 4×4칸).
 const POSE={attack:1,heavy:2,block:5,dodge:3};
+// GPT 동작 그림(4×2: 서기·1타·2타·3타·강공격 모으기·내리치기·막기·맞음)이 있는 캐릭터. 없으면 서 있는 그림 + 기울기 연출.
+const MOTION=['pierce','burst'];
+const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-duel';root.setAttribute('aria-label','씨앗 대전');
@@ -31,7 +34,7 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  const cam={x:(DUEL_SPAWN[0].x+DUEL_SPAWN[1].x)/2,y:DUEL_SPAWN[0].y,k:0},trails=[[],[]],prevPos=[null,null],pops=[];
  const move={x:0,y:0},listen=(t,n,f,o)=>{t.addEventListener(n,f,o);listeners.push(()=>t.removeEventListener(n,f,o));};
  const load=(k,f)=>{const im=new Image();im.onload=()=>{floor=null;};im.src=BASE+'assets/'+f;assets[k]=im;};
- load('solo','cute/seed-solo-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('dna','mobile/seed-projectile-dna-v1.png');load('paving','survival-garden-paving-v1.webp');load('grass','ground-garden-v5.webp');
+ load('solo','cute/seed-solo-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('dna','mobile/seed-projectile-dna-v1.png');load('paving','survival-garden-paving-v1.webp');load('arena','duel/arena-floor-v1.webp');for(const id of MOTION)load('motion-'+id,`duel/${id}-motion-v1.webp`);load('grass','ground-garden-v5.webp');
  const ready=k=>assets[k]?.complete&&assets[k].naturalWidth>0;
  function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;dpr=Math.min(1.5,devicePixelRatio||1,Math.max(1,Math.sqrt(2.6e6/Math.max(1,width*height))));canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);cam.k=0;}
  function close(){if(closed)return;closed=true;cancelAnimationFrame(raf);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-duel-open');onClose();}
@@ -145,7 +148,7 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   roundRect(g,R.x-.6,R.y-.6,R.w+1.2,R.h+1.2,2.6);g.lineWidth=.14;g.strokeStyle='#c9bd8f88';g.stroke();
   // 돌바닥.
   g.save();roundRect(g,R.x,R.y,R.w,R.h,2.1);g.clip();g.fillStyle='#5b5a4c';g.fillRect(R.x,R.y,R.w,R.h);
-  if(ready('paving')){g.fillStyle=tilePattern(g,assets.paving,7);g.fillRect(R.x,R.y,R.w,R.h);}
+  if(ready('arena')){g.fillStyle=tilePattern(g,assets.arena,9);g.fillRect(R.x,R.y,R.w,R.h);}else if(ready('paving')){g.fillStyle=tilePattern(g,assets.paving,7);g.fillRect(R.x,R.y,R.w,R.h);}
   const cx=(A.minX+A.maxX)/2,cy=(A.minY+A.maxY)/2,light=g.createRadialGradient(cx,cy,1,cx,cy,Math.max(R.w,R.h)*.62);light.addColorStop(0,'#fff3c61c');light.addColorStop(.55,'#0000');light.addColorStop(1,'#050c0e8c');g.fillStyle=light;g.fillRect(R.x,R.y,R.w,R.h);
   g.restore();roundRect(g,R.x,R.y,R.w,R.h,2.1);g.lineWidth=.22;g.strokeStyle='#161b16cc';g.stroke();roundRect(g,R.x+.18,R.y+.18,R.w-.36,R.h-.36,1.95);g.lineWidth=.08;g.strokeStyle='#efe2b455';g.stroke();
   // 가운데 문양: 두 겹 원과 세 잎.
@@ -189,7 +192,7 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  // 빠르게 움직이는 동안(회피·돌진·도약·강공격) 지나온 자리에 잔상.
  function trail(f,dt){const t=trails[f.team],fast=['dodge','dash','leap'].includes(f.state)||f.state==='heavy'&&f.linked&&f.t>.12;if(fast)t.push({x:f.x,y:f.y,life:.22});for(let i=t.length-1;i>=0;i--){t[i].life-=dt;if(t[i].life<=0)t.splice(i,1);}if(t.length>10)t.shift();}
  // ── 씨앗: 몸동작(웅크림·늘어남·기울기·구르기·들썩임)과 무기, 맞으면 하얗게 번쩍.
- function body(f,x,y,{sx=1,sy=1,rot=0,alpha=1,flash=0}={}){const c=DUEL_CHARACTERS[f.char],im=assets.solo,sz=2.5,face=f.fx<0?-1:1;if(!im?.naturalWidth)return;const cw=im.naturalWidth/4,ch=im.naturalHeight/3,src=[c.tile%4*cw,Math.floor(c.tile/4)*ch,cw,ch];
+ function body(f,x,y,{sx=1,sy=1,rot=0,alpha=1,flash=0,frame=-1}={}){const c=DUEL_CHARACTERS[f.char],mo=frame>=0?assets['motion-'+f.char]:null,useMotion=mo?.naturalWidth>0,im=useMotion?mo:assets.solo,sz=useMotion?2.75:2.5,face=f.fx<0?-1:1;if(!im?.naturalWidth)return;const cw=im.naturalWidth/4,ch=useMotion?im.naturalHeight/2:im.naturalHeight/3,src=useMotion?[frame%4*cw,Math.floor(frame/4)*ch,cw,ch]:[c.tile%4*cw,Math.floor(c.tile/4)*ch,cw,ch];
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(rot);ctx.scale(face*sx,sy);ctx.drawImage(im,...src,-sz/2,-sz*.92,sz,sz);if(flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=flash;ctx.drawImage(im,...src,-sz/2,-sz*.92,sz,sz);}ctx.restore();}
  function fighterDraw(f){
   const c=DUEL_CHARACTERS[f.char],face=f.fx<0?-1:1,prev=prevPos[f.team],speed=prev?Math.hypot(f.x-prev.x,f.y-prev.y):0;prevPos[f.team]={x:f.x,y:f.y};
@@ -208,13 +211,15 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   // 그림자(뜨면 작아짐)·편 표시 고리.
   const shadow=1-Math.min(.5,lift*.2);ctx.fillStyle='#02090a70';ctx.beginPath();ctx.ellipse(f.x,f.y+.05,.72*shadow,.27*shadow,0,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle=f.team===0?'#8fd3ff':'#ff8a7a';ctx.lineWidth=.07;ctx.beginPath();ctx.ellipse(f.x,f.y+.05,.8,.33,0,0,Math.PI*2);ctx.stroke();
-  for(const [i,g] of trails[f.team].entries())body(f,g.x,g.y,{alpha:g.life*1.6*(i/trails[f.team].length),sx:1.05,flash:.5});
+  {const tf=MOTION.includes(f.char)&&assets['motion-'+f.char]?.naturalWidth>0?motionFrame(f):-1;for(const [i,g] of trails[f.team].entries())body(f,g.x,g.y,{alpha:g.life*1.6*(i/trails[f.team].length),sx:1.05,flash:.5,frame:tf});}
   // 강공격 기 모으기.
   if(f.state==='heavy'&&f.t>.12){const k=1-(f.t-.12)/Math.max(.01,f.total-.12);vfx.fx(ctx,'orb',f.x+f.fx*.5,f.y-1,1+k*1.6,{color:c.ink,alpha:.55+k*.4});vfx.fx(ctx,'ring',f.x,f.y-.9,3.2-k*1.8,{color:c.ink,alpha:.35+k*.4,rotation:clock*4});}
-  const x=f.x+f.fx*lx,y=f.y-lift;
-  const behind=f.fy<-.3;if(behind)weapon(f,x,y);
-  body(f,x,y,{sx,sy,rot,flash:f.flash>0?f.flash/.14*.8:0});
-  if(!behind)weapon(f,x,y);
+  const x=f.x+f.fx*lx,y=f.y-lift,hasMotion=MOTION.includes(f.char)&&assets['motion-'+f.char]?.naturalWidth>0,frame=hasMotion?motionFrame(f):-1;
+  // 동작 그림이 있으면 자세는 그림이 맡고, 기울기는 조금만(구르기 회전은 그대로). 무기도 그림에 있어 따로 그리지 않는다.
+  if(hasMotion&&f.state!=='dodge')rot*=.35;
+  const behind=f.fy<-.3;if(behind&&!hasMotion)weapon(f,x,y);
+  body(f,x,y,{sx,sy,rot,frame,flash:f.flash>0?f.flash/.14*.8:0});
+  if(!behind&&!hasMotion)weapon(f,x,y);
   if(f.blocking){const a=Math.atan2(f.fy,f.fx),perfect=s.time-f.blockSince<=DUEL_RULES.parryWindow*c.parry;ctx.save();ctx.globalCompositeOperation='lighter';ctx.translate(f.x,f.y-.85);ctx.scale(1,.8);ctx.strokeStyle=perfect?'#fff6c8':c.ink;ctx.lineWidth=.18;ctx.beginPath();ctx.arc(0,0,1.1,a-1,a+1);ctx.stroke();ctx.lineWidth=.06;ctx.strokeStyle='#ffffffaa';ctx.stroke();ctx.restore();if(perfect)vfx.fx(ctx,'star',f.x+f.fx*1.1,f.y-.85+f.fy*.8,1.1,{color:'#fff6c8',alpha:.8});}
   if(f.shield>0)vfx.fx(ctx,'ring',f.x,f.y-.85,2.8,{color:c.ink,alpha:.85,rotation:clock*2});
   if(['broken','stagger','jailed'].includes(f.state)){for(let i=0;i<3;i++){const a=clock*5+i*2.1;vfx.fx(ctx,'star',f.x+Math.cos(a)*.55,f.y-2.3+Math.sin(a)*.16,.55,{color:'#ffe08a',alpha:.9});}}
