@@ -2,6 +2,7 @@
 // 식물은 플레이 기록을 보여 주는 장식이며, 각 막 최종 보스 격파로 아주 작은 영구 성장점이 남는다.
 import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
+import {normalizeDecor} from './garden-decor.js';
 
 export const GARDEN_KEY='seed-garden-v1';
 // 훈련장은 비교 규칙과 보상을 다시 정할 때까지 보류한다. 구현과 기록은
@@ -74,7 +75,8 @@ const plant=p=>{
   branch:BRANCHES.includes(p.branch)?p.branch:PLAY_STYLES[style].branch,active:false};
 };
 const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
-export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[]});
+// decor: 씨앗 맞추기 별로 꾸민 것(garden-decor.js) · puzzleStars: 씨앗 맞추기에서 모은 별(기기마다 다르면 큰 쪽).
+export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[],decor:[],puzzleStars:0});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
@@ -99,6 +101,8 @@ export function normalizeGarden(value){
  if(Number.isInteger(value.fragments)&&value.fragments>0)g.fragments=Math.min(999,value.fragments);
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
+ g.decor=normalizeDecor(value.decor);
+ if(Number.isInteger(value.puzzleStars)&&value.puzzleStars>0)g.puzzleStars=Math.min(1e6,value.puzzleStars);
  return g;
 }
 export function readGarden(storage){try{return autoPlantSeeds(normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY))));}catch{return emptyGarden();}}

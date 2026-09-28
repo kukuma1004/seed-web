@@ -5,6 +5,7 @@ import {SEED_BODY_ART} from './seed-body.js';
 import * as THREE from 'three';
 import {LAWS} from './laws.js';
 import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN,bossGardenMilestones} from './garden.js';
+import {decorScene} from './garden-decor.js';
 
 const V=THREE.Vector3;
 // The painted terrace has two beds in each of three depth rows. These fallback
@@ -27,6 +28,8 @@ const PLOT_ANCHORS=Object.freeze([
 // 정원 배경(메인 화면). PC 1920×1080 · 휴대폰 1280×720(assets/mobile/).
 export const GARDEN_BACKDROP_ART='garden-sanctuary-v2.webp';
 const CENTER_ANCHOR=Object.freeze({u:.5,v:453/900});
+// 씨앗 맞추기의 정원 가꾸기 화면(2D)이 3D 정원과 같은 자리에 그리도록 내보낸다.
+export const GARDEN_PLOT_ANCHORS=PLOT_ANCHORS,GARDEN_CENTER_ANCHOR=CENTER_ANCHOR;
 // 식물 12종 4×3. 2026-09-22 Higgsfield로 다시 그린 v4는 밤 배경에서 만화처럼 떠 보이고 빛 둘레에 분홍 테두리가 남아 쓰지 않았다(원본은 art-source에 보관).
 export const GARDEN_GROWTH_ART='assets/garden-growth-atlas-v3.webp';
 // 4 x 3 atlas cells. Keeping the selection in data makes it easy to test and
@@ -191,8 +194,10 @@ export function createGardenScene({mobile=false}={}){
  // of tiny triangles and keeps the title screen light on older phones.
  const matrix=new THREE.Matrix4();
  const fireflyGeo=new THREE.SphereGeometry(.05,6,4),fireflyMat=new THREE.MeshBasicMaterial({color:0xffe9a8,transparent:true,opacity:.8,toneMapped:false});
- const fireflies=new THREE.InstancedMesh(fireflyGeo,fireflyMat,10);
- const flies=Array.from({length:10},()=>({a:Math.random()*6.28,r:1.6+Math.random()*4.2,y:.7+Math.random()*2,speed:.1+Math.random()*.2,phase:Math.random()*6.28}));
+ // 반딧불이는 기본 10마리 + 정원 가꾸기로 부른 만큼(최대 28마리 더). 인스턴스 한 묶음이라 드로우콜은 그대로.
+ const FLY_BASE=10,FLY_MAX=38;
+ const fireflies=new THREE.InstancedMesh(fireflyGeo,fireflyMat,FLY_MAX);fireflies.count=FLY_BASE;
+ const flies=Array.from({length:FLY_MAX},()=>({a:Math.random()*6.28,r:1.6+Math.random()*4.2,y:.7+Math.random()*2,speed:.1+Math.random()*.2,phase:Math.random()*6.28}));
  scene.add(fireflies);
 
  const plantGroup=new THREE.Group(),centerGroup=new THREE.Group();scene.add(plantGroup,centerGroup);
@@ -204,6 +209,39 @@ export function createGardenScene({mobile=false}={}){
  const fruitGeo=new THREE.IcosahedronGeometry(.14,1),fruitMat=new THREE.MeshStandardMaterial({color:0xffc857,emissive:0xffa21a,emissiveIntensity:.6,roughness:.38,metalness:.08});
  const bossBlossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,50),bossFruits=new THREE.InstancedMesh(fruitGeo,fruitMat,13);
  bossBlossoms.count=0;bossFruits.count=0;bossBlossoms.renderOrder=4;bossFruits.renderOrder=4;scene.add(bossBlossoms,bossFruits);
+ // 정원 가꾸기(씨앗 맞추기 별로 꾸민 것, garden-decor.js): 식물은 성장 아틀라스를 물들인 그림, 등불은 돌기둥 + 빛, 꽃비는 떨어지는 꽃잎.
+ const decorGroup=new THREE.Group();scene.add(decorGroup);let decorItems=[];
+ const petalMat=new THREE.MeshBasicMaterial({color:0xffc6dc,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const PETALS=36,petals=new THREE.InstancedMesh(blossomGeo,petalMat,PETALS);petals.count=0;petals.renderOrder=5;scene.add(petals);
+ const petalState=Array.from({length:PETALS},()=>({x:(Math.random()-.5)*9,y:Math.random()*5,z:-7+Math.random()*9,spin:Math.random()*6.28,speed:.35+Math.random()*.35}));
+ const lanternPost=new THREE.CylinderGeometry(.05,.08,.55,6),lanternHead=new THREE.BoxGeometry(.16,.2,.16);
+ const lanternStone=material(0x6f6a5c,{rough:.9,flat:true}),lanternFlame=new THREE.MeshBasicMaterial({color:0xffd58a,toneMapped:false});
+ let glowTexture=null;
+ const glowMap=()=>{
+  if(glowTexture)return glowTexture;const c=document.createElement('canvas');c.width=c.height=64;const g=c.getContext('2d'),gr=g.createRadialGradient(32,32,2,32,32,32);
+  gr.addColorStop(0,'rgba(255,244,200,1)');gr.addColorStop(.35,'rgba(255,196,110,.6)');gr.addColorStop(1,'rgba(255,170,80,0)');g.fillStyle=gr;g.fillRect(0,0,64,64);
+  glowTexture=new THREE.CanvasTexture(c);glowTexture.colorSpace=THREE.SRGBColorSpace;return glowTexture;
+ };
+ function buildDecor(garden){
+  clearGroup(decorGroup);decorItems=[];
+  const d=decorScene(garden.decor);
+  for(const item of d.items){
+   const group=new THREE.Group();
+   if(item.kind==='plant'){
+    const tinted=growthMaterial.clone();tinted.color.set(item.tint);
+    const plane=new THREE.Mesh(growthGeometries[item.tile],tinted);plane.scale.set(item.size,item.size,1);plane.position.y=.02;plane.renderOrder=3;plane.userData.sharedGardenArt=true;plane.userData.gardenTint=true;
+    group.add(plane);group.userData={art:true,sway:Math.random()*6.28};
+   }else{
+    const post=new THREE.Mesh(lanternPost,lanternStone);post.position.y=.28*item.size;post.scale.setScalar(item.size);post.userData.sharedGardenArt=true;
+    const head=new THREE.Mesh(lanternHead,lanternFlame);head.position.y=.62*item.size;head.scale.setScalar(item.size);head.userData.sharedGardenArt=true;
+    const glow=new THREE.Sprite(new THREE.SpriteMaterial({map:glowMap(),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}));
+    const size=.5*item.size;glow.scale.set(size,size,1);glow.position.y=.62*item.size;glow.userData.sharedGardenArt=true;glow.userData.gardenTint=true;
+    group.add(post,head,glow);group.userData={glow,base:size,phase:Math.random()*6.28};
+   }
+   group.userData.anchor={u:item.u,v:item.v};decorGroup.add(group);decorItems.push(group);
+  }
+  fireflies.count=Math.min(FLY_MAX,FLY_BASE+d.fireflies);petals.count=d.petals?PETALS:0;
+ }
  // The painted beds already show every empty slot. The raycast meshes stay
  // present for tapping, but draw nothing until one slot is actually selected.
  const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
@@ -255,6 +293,7 @@ export function createGardenScene({mobile=false}={}){
   centerPick.position.set(centerSpot.x,.035,centerSpot.z);centerPick.updateMatrix();
   for(const plant of plants){const spot=plotSpots[plant.userData.plot];if(spot)plant.position.set(spot.x,0,spot.z);}
   if(center)center.position.set(centerSpot.x,0,centerSpot.z);
+  for(const item of decorItems){anchorWorld(item.userData.anchor,anchorPoint);item.position.set(anchorPoint.x,0,anchorPoint.z);}
   syncMilestones();
  };
 
@@ -280,7 +319,8 @@ export function createGardenScene({mobile=false}={}){
   center=buildCenter(centerStage(garden,{austinDefeated}),artKit);
   center.position.set(centerSpot.x,0,centerSpot.z);
   centerGroup.add(center);
-  milestoneCount=bossGardenMilestones(garden).earned;syncMilestones();
+  milestoneCount=bossGardenMilestones(garden).earned;
+  buildDecor(garden);syncAnchors();
   picks.push(centerPick);
   select(selected);
  }
@@ -301,6 +341,16 @@ export function createGardenScene({mobile=false}={}){
   }
   if(center?.userData.art)center.children[0]?.quaternion.copy(camera.quaternion);
   else if(center)center.rotation.y=Math.sin(time*.18)*.06;
+  for(const item of decorItems){
+   if(item.userData.art){const art=item.children[0];art.quaternion.copy(camera.quaternion);art.rotateZ(Math.sin(time*1.2+item.userData.sway)*.03);}
+   else{const k=item.userData.base*(1+Math.sin(time*5+item.userData.phase)*.06+Math.sin(time*11.3+item.userData.phase)*.03);item.userData.glow.scale.set(k,k,1);}
+  }
+  for(let i=0;i<petals.count;i++){
+   const p=petalState[i];p.y-=dt*p.speed;p.x+=Math.sin(time*.8+p.spin)*dt*.35;p.spin+=dt*1.6;if(p.y<0){p.y=4.5+Math.random();p.x=(Math.random()-.5)*9;p.z=-7+Math.random()*9;}
+   milestonePosition.set(p.x,p.y,p.z);milestoneRotation.setFromEuler(new THREE.Euler(p.spin,p.spin*.7,0));milestoneScale.setScalar(.55);
+   milestoneMatrix.compose(milestonePosition,milestoneRotation,milestoneScale);petals.setMatrixAt(i,milestoneMatrix);
+  }
+  if(petals.count)petals.instanceMatrix.needsUpdate=true;
   flies.forEach((f,i)=>{
    f.a+=dt*f.speed;
    const y=f.y+Math.sin(time*1.2+f.phase)*.35;

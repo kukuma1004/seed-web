@@ -116,4 +116,5 @@ art-source/
 !tools/seed-duel-test.mjs
 !tools/seed-puzzle-test.mjs
 !tools/seed-puzzle-simulation.mjs
+!tools/garden-decor-test.mjs
 art-refs/

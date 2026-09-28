@@ -90,9 +90,11 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
   if(older&&plot.seed===older.seed&&plot.branch===older.branch&&older.growth>plot.growth)return {...plot,growth:older.growth};
   return plot;
  });
+ // 정원 꾸미기(씨앗 맞추기 별로 산 것)와 모은 별도 늘기만 한다.
  return normalizeGarden({...winner,mastery,records,plots,
   bossWins:Math.max(local.bossWins,remote.bossWins),
-  harvests:Math.max(local.harvests,remote.harvests)});
+  harvests:Math.max(local.harvests,remote.harvests),
+  decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars)});
 }
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);

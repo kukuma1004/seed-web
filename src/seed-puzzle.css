@@ -99,3 +99,32 @@
 /* 알림은 도구 막대·판 아래 줄을 가리지 않게: 세로 화면은 도구 막대 위, 가로 화면은 왼쪽 상황판 안. */
 #seed-puzzle.sp-playing .sp-toast{bottom:calc(max(10px,env(safe-area-inset-bottom)) + 96px)}
 #seed-puzzle.sp-playing.sp-wide .sp-toast{left:max(12px,env(safe-area-inset-left));transform:none;bottom:calc(max(10px,env(safe-area-inset-bottom)) + 104px);max-width:clamp(190px,24vw,280px);white-space:normal;border-radius:10px}
+/* 정원 가꾸기 · 도전 씨앗 */
+#seed-puzzle .sp-garden-card{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;width:100%;text-align:left;margin:8px 0 6px;padding:8px 14px 8px 8px;border-color:#8fcf5a88;background:linear-gradient(100deg,#16301ee8,#0f2226e8)}
+#seed-puzzle .sp-garden-card.ready{border-color:#b8f08a;box-shadow:0 0 16px #8fcf5a55;animation:sp-glow 2.2s ease-in-out infinite}
+@keyframes sp-glow{50%{box-shadow:0 0 26px #8fcf5a99}}
+.sp-garden-thumb{width:84px;height:52px;border-radius:8px;background-size:cover;background-position:center 60%;border:1px solid #cdbb8e66}
+.sp-garden-card small{display:block;font-size:12px;color:#c9f5c0}.sp-garden-card b{display:block;font-size:15px}.sp-garden-card i{font-style:normal;font-size:24px;color:#c9f5c0}
+#seed-puzzle .sp-garden-card.small{margin-top:10px}.sp-garden-card.small .sp-garden-thumb{width:64px;height:40px}
+.sp-status .sp-lives{color:#c9f5c0;font-variant-numeric:tabular-nums}
+.sp-life-note{font-size:13px!important;color:#c9f5c0!important}.sp-life-note small{display:inline!important;color:#b9c9bc!important}
+.sp-lives-big{font-size:20px!important;color:#c9f5c0!important;font-variant-numeric:tabular-nums}
+.sp-paper.sp-lives{width:min(440px,94vw)}
+.sp-garden-panel{position:absolute;left:0;right:0;bottom:0;max-height:52dvh;overflow:auto;padding:14px 16px max(14px,env(safe-area-inset-bottom));background:linear-gradient(180deg,#0f2226f2,#07151af8);border-top:1px solid #8fcf5a66;border-radius:16px 16px 0 0;z-index:3;text-align:center}
+.sp-garden-panel[hidden]{display:none}
+#seed-puzzle.sp-wide .sp-garden-panel{left:auto;top:0;width:min(360px,42vw);max-height:none;border-top:0;border-left:1px solid #8fcf5a66;border-radius:0;padding-top:max(14px,env(safe-area-inset-top))}
+.sp-garden-panel header{position:relative}.sp-garden-panel h2{margin:2px 0 4px;font:24px Georgia,'Batang',serif}.sp-garden-panel header p{margin:0 0 8px;font-size:13px;color:#dfe6d6}
+.sp-star-wallet{position:absolute;right:0;top:0;padding:4px 10px;border-radius:999px;background:#3a2c10;border:1px solid #f0c56f;color:#ffd873;font-size:16px}
+.sp-area-progress{position:relative;height:22px;border-radius:11px;background:#101a1e;border:1px solid #8fcf5a55;overflow:hidden;margin:6px 0 10px}
+.sp-area-progress i{position:absolute;inset:0 auto 0 0;background:linear-gradient(90deg,#3f7a2f,#8fcf5a);transition:width .4s}.sp-area-progress span{position:relative;font-size:12px;line-height:22px;text-shadow:0 1px 2px #000}
+.sp-decor-list{list-style:none;margin:0;padding:0;display:grid;grid-template-columns:1fr 1fr;gap:6px}
+#seed-puzzle .sp-decor-list button{width:100%;display:flex;justify-content:space-between;align-items:center;gap:6px;text-align:left;padding:8px 10px;opacity:.7}
+#seed-puzzle .sp-decor-list button.afford{opacity:1;border-color:#f0c56f;background:#2c2a14e8}
+#seed-puzzle .sp-decor-list button.done{opacity:.55;border-color:#8fcf5a66;background:#15281ce8}
+.sp-decor-list b{font-size:13px}.sp-decor-list span{font-size:12px;color:#ffd873;white-space:nowrap}.sp-decor-list .done span{color:#c9f5c0}
+.sp-garden-panel>small{display:block;margin-top:8px;font-size:11px;color:#b9c9bc}
+#seed-puzzle.sp-gardening .sp-hud,#seed-puzzle.sp-gardening .sp-toolbar{visibility:hidden}
+@media(max-height:500px){.sp-garden-panel h2{font-size:19px}.sp-decor-list{grid-template-columns:1fr}#seed-puzzle .sp-decor-list button{padding:5px 8px;min-height:36px}}
+/* 정원 가꾸기 중 알림: 세로 화면은 정원 그림 위, 가로 화면은 정원 그림 가운데 아래(목록을 가리지 않게). */
+#seed-puzzle.sp-gardening .sp-toast{bottom:auto;top:max(12px,env(safe-area-inset-top))}
+#seed-puzzle.sp-gardening.sp-wide .sp-toast{top:auto;bottom:max(12px,env(safe-area-inset-bottom));left:calc((100% - min(360px,42vw))/2)}

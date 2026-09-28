@@ -147,5 +147,25 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
 
 // 난이도 지킴이(짧게): 가르치는 앞 단계는 한 수 앞을 보는 사람이 다 깨고, 뒤 단계도 +5 이동 두 번이면 대부분 깬다.
 // 자세한 측정: node tools/seed-puzzle-simulation.mjs 20
+// 도전 씨앗(하트): 시작 때 하나, 깨면 돌려받기, 30분마다 하나 돋기, 햇살로 채우기.
+{const {PUZZLE_LIVES:L,puzzleLives,takePuzzleLife,refundPuzzleLife,refillPuzzleLives}=await import('../src/seed-puzzle-rules.js');
+ const t0=Date.UTC(2026,8,28,3,0);let p=normalizePuzzleProgress(null);assert.deepEqual(puzzleLives(p,t0),{lives:5,livesAt:0,nextIn:0,full:true});
+ let r=takePuzzleLife(p,t0);assert.ok(r.ok);p=r.progress;assert.equal(p.lives,4);assert.equal(p.livesAt,t0,'timer starts when a seed is used from full');
+ p=refundPuzzleLife(p,t0+1000);assert.equal(p.lives,5,'win returns the seed');assert.equal(p.livesAt,0);
+ for(let k=0;k<5;k++){r=takePuzzleLife(p,t0);assert.ok(r.ok);p=r.progress;}assert.equal(puzzleLives(p,t0).lives,0);assert.equal(takePuzzleLife(p,t0).ok,false,'no seed, no start');
+ assert.equal(puzzleLives(p,t0+L.regenMs-1).lives,0);assert.equal(puzzleLives(p,t0+L.regenMs).lives,1,'one grows back after 30 minutes');
+ const mid=puzzleLives(p,t0+L.regenMs*2.5);assert.equal(mid.lives,2);assert.equal(mid.nextIn,L.regenMs/2);
+ assert.equal(puzzleLives(p,t0+L.regenMs*9).lives,5,'never above max');
+ r=takePuzzleLife(p,t0+L.regenMs*2.5);assert.equal(r.progress.lives,1);assert.equal(puzzleLives(r.progress,t0+L.regenMs*3).lives,2,'regrowth keeps its timer');
+ assert.equal(refillPuzzleLives(p).lives,5);assert.equal(puzzleLives({lives:2,livesAt:t0+9e9},t0).lives,2,'a clock set back does not break it');
+ assert.equal(normalizePuzzleProgress({lives:99}).lives,5);assert.equal(normalizePuzzleProgress({lives:-2}).lives,0);}
+// 정원 가꾸기 별: 단계 별 + 오늘의 단계에서 날마다 새로 딴 별.
+{const {puzzleStarsEarned}=await import('../src/seed-puzzle-rules.js');const d=dailyPuzzleStage('20260928'),fake=(def,score)=>({def,score,phase:'won'});
+ let p=recordPuzzleResult(normalizePuzzleProgress(null),fake(S1,S1.stars[1])).progress;assert.equal(puzzleStarsEarned(p),3);
+ p=recordPuzzleResult(p,fake(d,d.stars[0])).progress;assert.equal(puzzleStarsEarned(p),4);
+ p=recordPuzzleResult(p,fake(d,d.stars[0])).progress;assert.equal(puzzleStarsEarned(p),4,'same daily result counts once');
+ p=recordPuzzleResult(p,fake(d,d.stars[2])).progress;assert.equal(puzzleStarsEarned(p),6,'better daily adds the difference');
+ p=recordPuzzleResult(p,fake(dailyPuzzleStage('20260929'),d.stars[1])).progress;assert.equal(puzzleStarsEarned(p),8,'next day counts again');}
+
 if(process.env.SKIP_BALANCE!=='1')for(const def of PUZZLE_STAGES.filter(d=>d.n<=4||d.n%6===0||d.n===30)){const g=measure(def,4,'greedy',{continues:2});assert.ok(def.n<=4?g.rate>=.75:g.plus>=.5,`${def.id} greedy ${g.rate} / +5 ${g.plus}`);}
 console.log('seed puzzle rules ok');

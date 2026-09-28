@@ -1,5 +1,8 @@
 import {PUZZLE,PUZZLE_STAGES,PUZZLE_STAGE_BY_ID,PUZZLE_POWERS,PUZZLE_TOOLS,PUZZLE_SHOP,PUZZLE_JP,createPuzzle,playPuzzleMove,tapPuzzle,usePuzzleTool,continuePuzzle,giveUpPuzzle,canTap,findHint,
- puzzleGoalState,puzzleStreakGift,dailyPuzzleStage,seoulDay,readPuzzleProgress,writePuzzleProgress,recordPuzzleResult,puzzleUnlocked,breakPuzzleStreak} from './seed-puzzle-rules.js';
+ puzzleGoalState,puzzleStreakGift,dailyPuzzleStage,seoulDay,readPuzzleProgress,writePuzzleProgress,recordPuzzleResult,puzzleUnlocked,breakPuzzleStreak,
+ PUZZLE_LIVES,puzzleLives,takePuzzleLife,refundPuzzleLife,refillPuzzleLives,puzzleStarsEarned} from './seed-puzzle-rules.js';
+import {DECOR,DECOR_AREAS,decorAreaIndex,decorTasks,decorStars,canDecorate,decorate} from './garden-decor.js';
+import {createPuzzleGarden} from './seed-puzzle-garden.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS} from './forms.js';
 import {createCanvasVfx} from './canvas-vfx.js';
@@ -47,13 +50,15 @@ function shapePath(g,shape,x,y,r){
 }
 
 // wallet(): 지금 햇살(JP). onSpend(jp): 햇살을 쓰고 성공하면 true. 연습(practice)에서는 돈을 받지 않고 모두 무료.
-export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},onClose=()=>{}}={}){
+// garden: {get(), set(next)} — SEED 정원 저장(정원 가꾸기가 여기에 꾸민 것을 남긴다). onOpenGarden(): 3D 정원 화면으로.
+export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},garden=null,onOpenGarden=null,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-puzzle';root.setAttribute('aria-label','씨앗 맞추기');
  root.innerHTML=`<canvas aria-label="씨앗 맞추기 판"></canvas>
  <aside class="sp-hud"><div class="sp-head"><button class="sp-pause" aria-label="일시정지">Ⅱ</button><div><small class="sp-no"></small><b class="sp-name"></b></div></div>
  <div class="sp-stats"><div class="sp-moves"><small>남은 이동</small><strong></strong></div><div class="sp-score"><small>점수</small><strong></strong></div></div>
  <div class="sp-bar" aria-hidden="true"><i></i></div><ul class="sp-goals" aria-label="목표"></ul><p class="sp-keys">끌어서 바꾸기 · 특수 씨앗은 눌러서 터뜨리기 · 방향키+Space 바꾸기 · Enter 터뜨리기 · H 힌트 · Esc 일시정지</p></aside>
  <nav class="sp-toolbar" aria-label="판 안 도구"><span class="sp-wallet"></span>${Object.values(PUZZLE_TOOLS).map(t=>`<button data-tool="${t.id}" title="${t.name} · ${t.text}"><i aria-hidden="true">${TOOL_ICON[t.id]}</i><b>${t.name}</b><small>${practice?'연습 무료':jpText(PUZZLE_SHOP.tools[t.id])}</small></button>`).join('')}</nav>
+ <aside class="sp-garden-panel" aria-label="정원 가꾸기" hidden></aside>
  <div class="sp-banner" aria-hidden="true"></div><p class="sp-toast" role="status" aria-live="polite"></p><div class="sp-modal"></div>`;
  host.append(root);document.body.classList.add('seed-puzzle-open');
  const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),hud=$('.sp-hud'),toolbar=$('.sp-toolbar'),modal=$('.sp-modal'),listeners=[];
@@ -67,7 +72,23 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  let vb=[],vmoss=[],vstone=[],vvine=[];
  const sprites=new Map(),effects=[],floaters=[],tiles=new Map();
  let queue=[],cur=null,curT=0,selected=-1,cursor=-1,drag=null,idleAt=0,hint=null,shake=0,announced=new Set(),resultTimer=0,keyboard=false,armed=null,picks=new Set();
- function close(){if(closed)return;quitRun();closed=true;cancelAnimationFrame(raf);clearTimeout(resultTimer);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
+ function close(){if(closed)return;quitRun();closed=true;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
+
+ // ── 정원 · 도전 씨앗
+ // 정원 저장은 본편(main)이 가진 것을 쓴다. 따로 붙지 않은 화면(시험)에서는 이 화면 안에서만 기억한다.
+ let localGarden={plots:[],decor:[],puzzleStars:0},gardenMode=false,fresh={},runLife=false;
+ const getGarden=()=>garden?.get?.()||localGarden;
+ const setGarden=next=>{if(garden?.set)garden.set(next);else localGarden=next;};
+ const painter=createPuzzleGarden({base:BASE});
+ const earnedStars=()=>Math.max(puzzleStarsEarned(progress),getGarden().puzzleStars||0);
+ const starWallet=()=>decorStars(earnedStars(),getGarden().decor);
+ // 모은 별을 정원 저장에도 남긴다(다른 기기에서 꾸밀 때 같은 별을 쓰도록 · 큰 쪽).
+ function syncGardenStars(){const g=getGarden(),earned=puzzleStarsEarned(progress);if(earned>(g.puzzleStars||0))setGarden({...g,puzzleStars:earned});}
+ const clockText=ms=>{const s=Math.max(0,Math.ceil(ms/1000));return `${Math.floor(s/60)}:${String(s%60).padStart(2,'0')}`;};
+ const livesNow=()=>puzzleLives(progress,Date.now());
+ const livesLine=()=>{const l=livesNow();return `${'●'.repeat(l.lives)}${'○'.repeat(PUZZLE_LIVES.max-l.lives)} ${l.lives}/${PUZZLE_LIVES.max}${l.full?'':` · 다음 씨앗 ${clockText(l.nextIn)}`}`;};
+ // 남은 시간 표시는 1초마다 다시 적는다(보이는 곳만).
+ const ticker=setInterval(()=>{root.querySelectorAll('[data-lives]').forEach(el=>{el.textContent=livesLine();});const go=root.querySelector('[data-needs-life]');if(go&&livesNow().lives>0){go.removeAttribute('data-needs-life');go.disabled=false;}},1000);
 
  // ── 햇살 쓰기
  function pay(jp,what){if(practice)return true;if(wallet()<jp){toast(`햇살이 모자라요 · ${what} ${jpText(jp)}`);return false;}const ok=onSpend(jp)===true;if(!ok)toast('햇살을 쓰지 못했어요');walletUpdate();return ok;}
@@ -166,6 +187,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const KEYS={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};
  listen(window,'keydown',e=>{
   if(e.target?.closest?.('input,textarea'))return;
+  if(e.code==='Escape'&&gardenMode&&modal.hidden){e.preventDefault();leaveGarden();return;}
   if(e.code==='Escape'){e.preventDefault();if(armed){armed=null;toolbarUpdate();return;}const k=modal.hidden?null:modal.dataset.kind;if(k==='pause'){resume();return;}if(k==='menu'){close();return;}if(k==='out')return;if(k){menu();return;}pause();return;}
   if(!canAct())return;
   if(e.code==='KeyH'){snap();hint=findHint(s);idleAt=clock-99;return;}
@@ -300,8 +322,11 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   ctx.drawImage(tile(sp.law),x-size/2,y-size/2,size,size);ctx.globalAlpha=1;
  }
  function cellBox(i,pad=2){return [bx+(i%N)*cs+pad,by+Math.floor(i/N)*cs+pad,cs-pad*2,cs-pad*2];}
+ function gardenRect(){const p=$('.sp-garden-panel').getBoundingClientRect(),wide=root.classList.contains('sp-wide');return wide?{x:0,y:0,w:Math.max(160,p.left-8),h:height}:{x:0,y:0,w:width,h:Math.max(160,p.top-8)};}
  function draw(now){
-  ctx.setTransform(dpr,0,0,dpr,0,0);drawBackdrop();
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  if(gardenMode){ctx.fillStyle='#071215';ctx.fillRect(0,0,width,height);painter.draw(ctx,gardenRect(),getGarden(),clock,{fresh});return;}
+  drawBackdrop();
   if(!s)return;
   const sh=shake>0?Math.sin(now*.09)*shake*cs*.12:0;ctx.save();ctx.translate(sh,0);
   for(let i=0;i<N*N;i++)if(vmoss[i])ctx.drawImage(mossTile(),bx+(i%N)*cs,by+Math.floor(i/N)*cs,cs,cs);
@@ -348,14 +373,16 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   quitRun();root.classList.remove('sp-playing');s=null;queue=[];cur=null;armed=null;clearTimeout(resultTimer);progress=readPuzzleProgress(storage,owner);
   const day=seoulDay(),daily=dailyPuzzleStage(day),dp=progress.daily.day===day?progress.daily:null,total=Object.values(progress.stages).reduce((a,p)=>a+p.stars,0);
   const card=d=>{const p=progress.stages[d.id],open=puzzleUnlocked(progress,d);return `<button class="sp-stage${p?.stars?' cleared':''}" data-stage="${d.id}" ${open?'':'disabled'} aria-label="단계 ${d.n} ${d.name}${open?'':' 잠김'}"><span class="sp-stage-n">${d.n}</span><b>${d.name}</b><span class="sp-stars">${open?starText(p?.stars||0):'🔒'}</span></button>`;};
+  syncGardenStars();const g=getGarden(),area=decorAreaIndex(g.decor),stars=starWallet(),doneHere=area<0?0:decorTasks(g.decor).filter(t=>t.done).length;
   show('menu',`<p class="sp-eyebrow">SEED · PUZZLE</p><h1>씨앗 맞추기</h1><p class="sp-lead">같은 법칙 셋을 맞춰 터뜨리세요. <b>넷 한 줄</b> 관통 · <b>네모</b> 연쇄 · <b>T·L</b> 폭발 · <b>다섯 한 줄</b> 햇살 — 특수 씨앗은 눌러서 바로 터뜨려요.</p>
-   <div class="sp-status"><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
+   <button class="sp-garden-card${stars&&area>=0?' ready':''}" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기 · ${area<0?'모두 꾸몄어요':`${DECOR_AREAS[area].name} ${doneHere}/6`}</small><b>${area<0?'SEED 정원을 끝까지 꾸몄어요':stars?`별 ★${stars}개로 정원을 꾸밀 수 있어요`:'단계에서 별을 모아 정원을 꾸며요'}</b></span><i aria-hidden="true">›</i></button>
+   <div class="sp-status"><span class="sp-lives" title="도전 씨앗 · 지면 하나 줄고, 30분마다 하나씩 돋아요">🌱 <span data-lives>${livesLine()}</span></span><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
    <button class="sp-daily" data-daily="${day}"><span><small>오늘의 단계 · ${dayLabel(day)}</small><b>이동 ${daily.moves}번 점수 도전</b></span><span class="sp-stars">${starText(dp?.stars||0)}</span><small>${dp?.best?`오늘 최고 ${dp.best.toLocaleString()}`:'오늘 누구나 같은 판'}</small></button>
    <div class="sp-stages">${PUZZLE_STAGES.map(card).join('')}</div>
    <div class="sp-row"><button class="sp-help-open">도움말</button><button class="sp-exit">돌아가기</button></div>
    <small>${practice?'연습 모드 · 햇살(JP)을 쓰지도 받지도 않고, 도감에도 남지 않아요.':`첫 깨기 햇살 ${PUZZLE_JP.firstClear(1)}~${PUZZLE_JP.firstClear(PUZZLE_STAGES.length)} JP · 새 별마다 ${PUZZLE_JP.newStar} JP · 오늘의 단계 첫 별 ${PUZZLE_JP.daily} JP · 조합 효과를 처음 쓰면 도감에 남아요.`}</small>`);
   modal.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>intro(PUZZLE_STAGE_BY_ID[b.dataset.stage]));
-  modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-exit').onclick=close;
+  modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-exit').onclick=close;modal.querySelector('[data-garden]').onclick=gardenScreen;
   const next=PUZZLE_STAGES.find(d=>puzzleUnlocked(progress,d)&&!progress.stages[d.id]?.stars);modal.querySelector(`[data-stage="${next?.id}"]`)?.scrollIntoView?.({block:'nearest'});
  }
  function goalLines(d){const g=d.goal,out=[];if(d.attack)out.push(`이동 ${d.moves}번 안에 최고 점수 · 별 ${d.stars.map(v=>v.toLocaleString()).join(' / ')}점`);
@@ -370,11 +397,54 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   show('intro',`<p class="sp-eyebrow">${d.daily?`오늘의 단계 · ${dayLabel(d.daily)}`:`단계 ${d.n}`}</p><h1>${escape(d.name)}</h1><ul class="sp-goal-list">${goalLines(d).map(l=>`<li>${l}</li>`).join('')}</ul><p class="sp-tip">${escape(d.tip)}</p>
    ${gift.length?`<p class="sp-gift">🔥 ${progress.streak}연승 선물 · ${gift.map(id=>`${powerBadge(id)}${PUZZLE_POWERS[id].name}`).join(' ')} <small>지면 사라져요</small></p>`:''}
    <h3>시작 전 부스터</h3><div class="sp-boosters">${boosterRow()}</div><p class="sp-cost"></p>
+   ${needsLife(d)?`<p class="sp-life-note">🌱 도전 씨앗 <span data-lives>${livesLine()}</span><br><small>시작할 때 하나 쓰고, 깨면 돌려받아요.</small></p>`:''}
    <div class="sp-row"><button class="sp-primary sp-go">시작</button><button class="sp-to-menu">단계 고르기</button></div>`);
   const sync=()=>{modal.querySelector('.sp-boosters').innerHTML=boosterRow();bind();const c=cost();modal.querySelector('.sp-cost').textContent=c?(practice?'연습 · 무료':`햇살 ${jpText(c)} 사용 · 가진 햇살 ${jpText(wallet())}`):'';};
   const bind=()=>modal.querySelectorAll('[data-booster]').forEach(b=>b.onclick=()=>{const id=b.dataset.booster;picks.has(id)?picks.delete(id):picks.add(id);sync();});
   bind();sync();
-  modal.querySelector('.sp-go').onclick=()=>{const c=cost();if(c&&!pay(c,'부스터'))return;start(d,[...gift,...picks]);};modal.querySelector('.sp-to-menu').onclick=menu;
+  modal.querySelector('.sp-go').onclick=()=>{
+   if(needsLife(d)&&livesNow().lives<=0){noLives(d);return;}
+   const c=cost();if(c&&!pay(c,'부스터'))return;
+   runLife=false;if(needsLife(d)){const r=takePuzzleLife(progress);if(!r.ok){noLives(d);return;}progress=r.progress;writePuzzleProgress(storage,progress,owner);runLife=true;}
+   start(d,[...gift,...picks]);};
+  modal.querySelector('.sp-to-menu').onclick=menu;
+ }
+ // 오늘의 단계와 연습은 도전 씨앗을 쓰지 않는다.
+ const needsLife=d=>!practice&&!d.daily;
+ function noLives(d){
+  show('lives',`<p class="sp-eyebrow">도전 씨앗</p><h1>씨앗이 다시 돋는 중이에요</h1><p class="sp-lives-big">🌱 <span data-lives>${livesLine()}</span></p>
+   <p>도전 씨앗은 30분마다 하나씩 돋아요. 그동안 <b>오늘의 단계</b>는 씨앗 없이 할 수 있고, 모은 별로 <b>정원</b>을 꾸밀 수 있어요.</p>
+   <div class="sp-row"><button class="sp-primary sp-refill">햇살 ${jpText(PUZZLE_LIVES.refill)}로 가득 채우기</button><button class="sp-retry" data-needs-life disabled>다시 도전</button></div>
+   <div class="sp-row"><button class="sp-to-garden">정원 가꾸기</button><button class="sp-to-menu">단계 고르기</button></div><small>${practice?'':`가진 햇살 ${jpText(wallet())}`}</small>`);
+  modal.querySelector('.sp-refill').onclick=()=>{if(!pay(PUZZLE_LIVES.refill,'도전 씨앗 채우기'))return;progress=refillPuzzleLives(progress);writePuzzleProgress(storage,progress,owner);toast('도전 씨앗을 가득 채웠어요');intro(d);};
+  modal.querySelector('.sp-retry').onclick=()=>intro(d);modal.querySelector('.sp-to-garden').onclick=gardenScreen;modal.querySelector('.sp-to-menu').onclick=menu;
+ }
+ // ── 정원 가꾸기(로열 매치의 성 꾸미기 → SEED 정원). 별로 꽃·등불·반딧불이를 들이고, 한 구역을 다 꾸미면 햇살 보상.
+ function gardenScreen(){
+  quitRun();s=null;queue=[];cur=null;modal.hidden=true;root.classList.remove('sp-playing');root.classList.add('sp-gardening');gardenMode=true;syncGardenStars();
+  const panel=$('.sp-garden-panel');panel.hidden=false;paintGardenPanel();resize();
+ }
+ function leaveGarden(){gardenMode=false;fresh={};$('.sp-garden-panel').hidden=true;root.classList.remove('sp-gardening');resize();menu();}
+ function paintGardenPanel(){
+  const panel=$('.sp-garden-panel'),g=getGarden(),area=decorAreaIndex(g.decor),stars=starWallet(),tasks=decorTasks(g.decor);
+  const a=area<0?null:DECOR_AREAS[area],done=tasks.filter(t=>t.done).length;
+  panel.innerHTML=`<header><p class="sp-eyebrow">SEED · 정원 가꾸기</p><h2>${a?escape(a.name):'다 꾸민 정원'}</h2><p>${a?escape(a.line):'꽃비가 내리는 SEED 정원을 끝까지 꾸몄어요.'}</p><strong class="sp-star-wallet" title="단계와 오늘의 단계에서 모은 별">★ ${stars}</strong></header>
+   ${a?`<div class="sp-area-progress"><i style="width:${done/6*100}%"></i><span>구역 ${area+1}/${DECOR_AREAS.length} · ${done}/6 · 다 꾸미면 햇살 ${jpText(a.reward)}</span></div>
+   <ul class="sp-decor-list">${tasks.map(t=>`<li><button data-decor="${t.id}" class="${t.done?'done':stars>=t.cost?'afford':''}" ${t.done?'disabled':''}><b>${escape(t.name)}</b><span>${t.done?'✓ 꾸몄어요':`★${t.cost}`}</span></button></li>`).join('')}</ul>`:''}
+   <div class="sp-row"><button class="sp-primary sp-play">단계 하러 가기</button>${onOpenGarden?'<button class="sp-open-garden">정원에서 보기</button>':''}<button class="sp-garden-back">돌아가기</button></div>
+   <small>별은 단계(★ 최대 3개)와 오늘의 단계에서 모여요. 꾸민 것은 SEED 정원에 그대로 남고 계정과 함께 옮겨 가요.</small>`;
+  panel.querySelectorAll('[data-decor]').forEach(b=>b.onclick=()=>buyDecor(b.dataset.decor));
+  panel.querySelector('.sp-play').onclick=leaveGarden;panel.querySelector('.sp-garden-back').onclick=leaveGarden;
+  panel.querySelector('.sp-open-garden')?.addEventListener('click',()=>{gardenMode=false;close();onOpenGarden();});
+ }
+ function buyDecor(id){
+  const g=getGarden(),earned=earnedStars();
+  if(!canDecorate(g.decor,id,earned)){toast(`별이 모자라요 · 단계에서 별을 더 모아요`);audio?.play('shotArc',{pitch:.6});return;}
+  const r=decorate(g.decor,id,earned);setGarden({...g,decor:r.list,puzzleStars:Math.max(g.puzzleStars||0,earned)});fresh[id]=clock;
+  audio?.play('evolve');const name=DECOR.find(d=>d.id===id)?.name;
+  if(r.area){const note=practice?'연습 · 보상 없음':(onCredit(r.area.reward)||`햇살 ${r.area.reward} JP`);banner(`${r.area.name} 완성!`,note);audio?.play('bossDefeat');}
+  else toast(`${name} · 정원에 들였어요`);
+  paintGardenPanel();
  }
  function pause(){if(!s||s.phase!=='play'||!modal.hidden)return;snap();const warn=!def.daily&&progress.streak>0&&s.log.length?` 그만두면 ${progress.streak}연승이 끊겨요.`:'';
   show('pause',`<p class="sp-eyebrow">일시정지</p><h1>${escape(def.name)}</h1><ul class="sp-goal-list">${goalLines(def).map(l=>`<li>${l}</li>`).join('')}</ul>
@@ -402,7 +472,11 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <div class="sp-row"><button class="sp-primary sp-back">돌아가기</button></div>`);
   modal.querySelector('.sp-back').onclick=()=>back();}
  function result(){
-  const prevStreak=progress.streak,record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;const saved=writePuzzleProgress(storage,progress,owner);
+  const prevStreak=progress.streak,record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;
+  // 깨면 도전 씨앗을 돌려받는다(지면 시작할 때 쓴 하나가 그대로 줄어 있다).
+  if(won&&runLife)progress=refundPuzzleLife(progress);runLife=false;
+  const saved=writePuzzleProgress(storage,progress,owner);syncGardenStars();
+  const g=getGarden(),canGarden=decorAreaIndex(g.decor)>=0&&decorTasks(g.decor).some(t=>!t.done&&starWallet()>=t.cost);
   let jpNote='';if(record.jp>0)jpNote=practice?`연습 · 햇살 ${record.jp} JP는 쌓이지 않아요`:(onCredit(record.jp)||`햇살 ${record.jp} JP 적립`);
   const next=!def.daily&&PUZZLE_STAGES[def.n]&&puzzleUnlocked(progress,PUZZLE_STAGES[def.n])?PUZZLE_STAGES[def.n]:null;
   const combos=s.combos.map(id=>ALL_FORMS[id]?.name).filter(Boolean),made=Object.entries(s.created).filter(([,n])=>n).map(([id,n])=>`${PUZZLE_POWERS[id].name} ${n}`).join(' · ');
@@ -414,8 +488,11 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    ${!won&&!def.daily&&prevStreak>0?`<p class="sp-meta">${prevStreak}연승이 끊겼어요 · 최고 ${record.progress.bestStreak}연승</p>`:''}
    ${combos.length?`<p class="sp-combos">이번 판 조합 효과 · ${combos.map(escape).join(' · ')}</p>`:''}
    <p class="sp-meta">최대 연쇄 ×${s.maxCombo}${made?` · ${made}`:''}${s.tools?` · 도구 ${s.tools}번`:''}${s.continues?` · 이어하기 ${s.continues}번`:''}${saved?'':' · 이 기기에 저장하지 못했어요'}</p>
+   ${needsLife(def)?`<p class="sp-meta">🌱 도전 씨앗 <span data-lives>${livesLine()}</span>${won?' · 깨서 돌려받았어요':''}</p>`:''}
+   ${canGarden?`<button class="sp-garden-card ready small" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기</small><b>별 ★${starWallet()}개로 정원을 꾸밀 수 있어요</b></span><i aria-hidden="true">›</i></button>`:''}
    <div class="sp-row">${next?'<button class="sp-primary sp-next">다음 단계</button>':''}<button class="${next?'':'sp-primary '}sp-again">다시 하기</button><button class="sp-to-menu">단계 고르기</button></div>`);
   if(next)modal.querySelector('.sp-next').onclick=()=>intro(next);modal.querySelector('.sp-again').onclick=()=>intro(def);modal.querySelector('.sp-to-menu').onclick=menu;
+  modal.querySelector('[data-garden]')?.addEventListener('click',gardenScreen);
   audio?.play(won?'evolve':'hurt');
  }
 
@@ -425,5 +502,6 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   debug:()=>({stage:def?.id||null,phase:s?.phase||null,score:s?.score||0,moves:s?.movesLeft??null,busy:busy(),sprites:sprites.size,modal:modal.hidden?null:modal.dataset.kind,
    hint:s?findHint(s):null,board:{x:bx,y:by,cell:cs},streak:progress.streak,
    plant:(i,o)=>{if(!s||!s.cells[i])return false;Object.assign(s.cells[i],o);Object.assign(sprites.get(s.cells[i].id),o);return true;},
+   lives:()=>livesNow(),stars:()=>({earned:earnedStars(),wallet:starWallet(),decor:[...getGarden().decor]}),garden:()=>gardenScreen(),
    start:(id,boosters=[])=>{const d=id==='daily'?dailyPuzzleStage(seoulDay()):PUZZLE_STAGE_BY_ID[id];if(d)start(d,boosters);},move:(a,b)=>tryMove(a,b),tap:i=>tryTap(i),tool:(t,i)=>tryTool(t,i),setMoves:n=>{if(s)s.movesLeft=n;hudUpdate();}})};
 }

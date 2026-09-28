@@ -1744,6 +1744,9 @@ async function showSeedPuzzle(){
    onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
+   // 2026-09-28 사용자: "성꾸미기 같은건 정원으로 연결" — 씨앗 맞추기 별로 꾸민 것은 SEED 정원 저장(계정 동기화)에 남고 3D 정원에 보인다.
+   garden:{get:()=>garden,set:next=>{if(!sameOwner())return;garden=normalizeGarden(next);writeGarden(runStorage,garden);refreshGardenEffects();gardenScene?.setGarden(garden,{austinDefeated:austinKnown()});}},
+   onOpenGarden:()=>showGarden(showDungeon),
    onClose:back});
   if(localInspection)window.seedPuzzle=puzzleScreen;
  }catch(error){console.error('씨앗 맞추기 시작 실패',error);back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}

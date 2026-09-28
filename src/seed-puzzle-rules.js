@@ -406,9 +406,32 @@ export const PUZZLE_SAVE_KEY='seed-puzzle-v1';
 export const puzzleSaveKey=(owner='guest')=>`${PUZZLE_SAVE_KEY}:${encodeURIComponent(owner||'guest')}`;
 export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*n,newStar:40,daily:100});
 const int=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
+// 도전 씨앗(로열 매치의 하트). 2026-09-28 사용자: "하트를 씨앗으로"
+// 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 30분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
+// 오늘의 단계와 연습은 쓰지 않는다. 시계는 기기 시각(Date.now)이다.
+export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:30*60e3,refill:120});
+export function puzzleLives(progress,now=Date.now()){
+ const p=progress||{},max=PUZZLE_LIVES.max;let lives=Number.isInteger(p.lives)?Math.max(0,Math.min(max,p.lives)):max,at=Number.isFinite(p.livesAt)?p.livesAt:0;
+ if(lives>=max)return {lives:max,livesAt:0,nextIn:0,full:true};
+ if(!at||at>now)at=now;
+ const grown=Math.floor((now-at)/PUZZLE_LIVES.regenMs);lives=Math.min(max,lives+grown);at+=grown*PUZZLE_LIVES.regenMs;
+ return lives>=max?{lives:max,livesAt:0,nextIn:0,full:true}:{lives,livesAt:at,nextIn:at+PUZZLE_LIVES.regenMs-now,full:false};
+}
+const setLives=(p,{lives,livesAt})=>{p.lives=lives;p.livesAt=livesAt;return p;};
+export function takePuzzleLife(progress,now=Date.now()){
+ const p=normalizePuzzleProgress(progress),l=puzzleLives(p,now);if(l.lives<=0)return {ok:false,progress:setLives(p,l)};
+ return {ok:true,progress:setLives(p,{lives:l.lives-1,livesAt:l.full?now:l.livesAt})};
+}
+export function refundPuzzleLife(progress,now=Date.now()){const p=normalizePuzzleProgress(progress),l=puzzleLives(p,now),lives=Math.min(PUZZLE_LIVES.max,l.lives+1);return setLives(p,{lives,livesAt:lives>=PUZZLE_LIVES.max?0:l.livesAt});}
+export function refillPuzzleLives(progress){return setLives(normalizePuzzleProgress(progress),{lives:PUZZLE_LIVES.max,livesAt:0});}
+// 정원 가꾸기에 쓰는 별: 단계마다 가장 많이 딴 별 + 오늘의 단계에서 날마다 딴 별.
+export function puzzleStarsEarned(progress){const p=normalizePuzzleProgress(progress);return Object.values(p.stages).reduce((a,s)=>a+s.stars,0)+p.dailyStars;}
 export function normalizePuzzleProgress(raw){
- const out={version:2,stages:{},daily:{day:'',best:0,stars:0,rewarded:false},streak:0,bestStreak:0};
+ const out={version:2,stages:{},daily:{day:'',best:0,stars:0,rewarded:false},streak:0,bestStreak:0,lives:PUZZLE_LIVES.max,livesAt:0,dailyStars:0};
  if(!raw||typeof raw!=='object')return out;
+ if(Number.isInteger(raw.lives))out.lives=Math.max(0,Math.min(PUZZLE_LIVES.max,raw.lives));
+ if(Number.isFinite(raw.livesAt)&&raw.livesAt>0&&out.lives<PUZZLE_LIVES.max)out.livesAt=Math.floor(raw.livesAt);
+ out.dailyStars=int(raw.dailyStars,1e6);
  for(const def of PUZZLE_STAGES){const v=raw.stages?.[def.id];if(!v||typeof v!=='object')continue;out.stages[def.id]={best:int(v.best,1e7),stars:int(v.stars,3),clears:int(v.clears,1e6)};}
  const d=raw.daily;if(d&&typeof d==='object'&&/^\d{8}$/.test(d.day||''))out.daily={day:d.day,best:int(d.best,1e7),stars:int(d.stars,3),rewarded:d.rewarded===true};
  out.streak=int(raw.streak,999);out.bestStreak=Math.max(out.streak,int(raw.bestStreak,999));
@@ -424,6 +447,8 @@ export function recordPuzzleResult(progress,s){
  const p=normalizePuzzleProgress(progress),stars=puzzleStars(s);let jp=0;const notes=[];
  if(s.def.daily){
   if(p.daily.day!==s.def.daily)p.daily={day:s.def.daily,best:0,stars:0,rewarded:false};
+  // 그날 새로 딴 별만큼 정원 가꾸기 별이 는다(같은 날 더 잘해도 늘어난 만큼만).
+  p.dailyStars+=Math.max(0,stars-p.daily.stars);
   p.daily.best=Math.max(p.daily.best,s.score);p.daily.stars=Math.max(p.daily.stars,stars);
   if(stars>0&&!p.daily.rewarded){p.daily.rewarded=true;jp+=PUZZLE_JP.daily;notes.push('오늘의 단계 첫 별');}
   return {progress:p,jp,notes,stars};
