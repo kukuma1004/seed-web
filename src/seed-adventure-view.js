@@ -1,8 +1,10 @@
-import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSSES,adventureRoomInfo,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure} from './seed-adventure-rules.js';
+import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSSES,adventureRoomInfo,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureEvolutions} from './seed-adventure-rules.js';
 import {createAdventureCombat} from './seed-adventure-combat.js';
 import {createCanvasVfx} from './canvas-vfx.js';
 import {formArt} from './form-art.js';
 import {itemArt,ITEM_ATLAS} from './item-art.js';
+import {relicArt} from './relic-art.js';
+import {lawArt} from './law-art.js';
 import './forms.css';
 import './combo-art.css';
 import './seed-adventure.css';
@@ -58,7 +60,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{}}={})
   if(!dt||cameraRoom!==s.room){cameraX=targetX;cameraY=targetY;cameraRoom=s.room;}
   else{const blend=1-Math.exp(-10*dt);cameraX+=(targetX-cameraX)*blend;cameraY+=(targetY-cameraY)*blend;}
   // 타격·피격 흔들림. 매 프레임 무작위 대신 시간 기반이라 멈춤 중에도 부드럽게 잦아든다.
-  const shake=reducedMotion?0:s.shake*s.shake*scale*.55,t=performance.now()/1000;
+  const shake=reducedMotion?0:s.shake*s.shake*scale*.35,t=performance.now()/1000;
   ox=width/2-cameraX*scale+Math.sin(t*83)*shake;oy=height/2-cameraY*scale+Math.cos(t*71)*shake;
  }
  // 콤보 단계마다 음높이를 올리고, 막타·회피 베기는 두 겹으로 친다.
@@ -87,10 +89,28 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{}}={})
  const boss=s.enemies.find(e=>e.type==='boss');$('.sa-boss').hidden=!boss;if(boss){$('.sa-boss i').style.width=boss.hp/boss.maxHp*100+'%';setText('.sa-boss span',ADVENTURE_BOSSES[boss.bossId]?.name||'수호자');$('.sa-boss small').textContent=boss.tell>0||boss.charging>0?(BOSS_TELL[boss.tellKind]||'붉은 예고 밖으로 회피하세요'):boss.hp<boss.maxHp*.5?'성난 수호자 · 공격이 빨라졌어요':'틈을 노려 3단 콤보를 넣으세요';}
  const combo=$('.sa-combo');combo.classList.toggle('on',s.hits>=3);if(s.hits>=3){setText('.sa-combo b',s.hits+' HIT');}setText('.sa-combo span',s.phase==='playing'?'●'.repeat(p.combo)+'○'.repeat(3-p.combo):'');setText('.sa-objective',s.phase==='playing'?(s.roomType==='treasure'?(s.props.some(o=>o.kind==='chest')?'보물 상자를 부수세요 · 항아리와 상자에도 햇살이 들어 있어요':'보물을 모으는 중'):s.enemies.length?`모든 적을 물리치세요 · ${s.enemies.length} 남음`:s.cleared?'방을 지켰어요 · 떨어진 것을 모으는 중':'다음 무리가 다가옵니다'):s.phase==='setup'?'잊힌 정원에 달빛이 스며듭니다':'');root.classList.toggle('sa-in-menu',s.phase!=='playing'||paused);}
  const BOSS_TELL={charge:'돌진 · 옆으로 비켜 서세요',slam:'내려찍기 · 붉은 원 밖으로 회피',punches:'주먹 난사 · 부채꼴 사이로 빠져나가세요',pitch:'강속구 · 공이 날아오는 줄을 피하세요',swing:'배트 휘두르기 · 등 뒤나 멀리로',rain:'공 소나기 · 수호자와 거리를 벌리세요',spiral:'폭풍 소용돌이 · 틈을 찾아 회피',strikes:'낙뢰 · 표시된 원 밖으로'};
+ // 2026-09-28 사용자: 문 고르기 화면이 구리다 → 기존 그림으로 꾸민다. 아치 창에는 그 방의 장면(막 배경·모드 그림·성소),
+ // 가운데 문장에는 보상 그림(법칙 문·조합 카드·아이템·유물·보스 초상)을 넣는다. 새 그림은 없다.
+ function doorScene(d,next){const act=next.act;if(d.room==='treasure')return 'menu/mode-journey-v1.webp';if(d.room==='fountain')return 'garden-sanctuary-v2.webp';if(d.room==='shop')return 'menu/mode-defense-v1.webp';if(d.room==='elite')return 'menu/mode-survival-v1.webp';return act===1?'stadium-clay-hd-v1.webp':act===2?'act3-storm-route-v1.webp':'adventure/moon-garden-v1.webp';}
+ function doorEmblem(d,next){
+  const img=(file,pos='center',size='contain')=>`<span class="sa-door-art" style="background-image:url('${BASE}assets/${file}');background-position:${pos};background-size:${size}"></span>`;
+  if(d.room==='boss'){const file={austin:'mobile/boss-austin-v1.webp',alwaysbeginner:'mobile/boss-always-beginner-v1.webp',tempestcarrier:'mobile/boss-act3-johan-atlas-v2.webp'}[next.actInfo.boss];return img(file,'0 0','200% 200%');}
+  if(d.room==='elite'&&!d.reward)return img('mobile/warden-memory-v4.webp','0 0','200% 200%');
+  if(d.room==='treasure')return relicArt('crystal','sa-door-art');
+  if(d.room==='shop')return itemArt('potion','sa-door-art');
+  if(d.room==='fountain')return itemArt('tonic','sa-door-art');
+  if(d.reward==='evolve'){const f=adventureEvolutions(s)[0];if(f)return formArt(f.id,'sa-door-art');}
+  if(d.reward==='law')return img('seed-law-portal-v1.webp');
+  if(d.reward==='grow')return itemArt('sprout','sa-door-art');
+  if(d.reward==='shape')return lawArt('recall','sa-door-art');
+  if(d.reward==='coins')return '<span class="sa-door-art sa-coin-art" aria-hidden="true">☀</span>';
+  return '';
+ }
  function doorCard(d,i){const room=ROOM_TYPES[d.room||'combat'],boss=d.room==='boss',next=adventureRoomInfo(s.room+1),reward=d.reward&&REWARDS[d.reward];
-  const title=boss?next.actInfo.bossName+'의 방':d.room==='shop'?'떠돌이 상인':d.room==='fountain'?'맑은 샘':d.room==='treasure'?'보물 방':reward.name;
-  const desc=boss?'체력 25% 회복 후 입장 · 이기면 큰 보상':d.room==='shop'?'햇살로 물약·버프·강화를 사요':d.room==='fountain'?'체력 회복 또는 물약 채우기':d.room==='treasure'?'적 없이 보물 상자를 부수면 법칙 보상':reward.desc;
-  return `<button class="sa-door ${d.room||'combat'}" data-door="${i}"><span class="sa-door-icon">${boss||['shop','fountain','treasure'].includes(d.room)?room.icon:reward.icon}</span><small class="sa-door-room">${room.name}</small><b>${title}</b><small>${desc}</small>${d.room==='elite'?'<em>정예 · 적이 더 세고, 깨면 성장 한 번 더</em>':''}</button>`;}
+  const evo=d.reward==='evolve'&&adventureEvolutions(s)[0];
+  const title=boss?next.actInfo.bossName+'의 방':d.room==='shop'?'떠돌이 상인':d.room==='fountain'?'맑은 샘':d.room==='treasure'?'보물 방':evo?evo.name:reward.name;
+  const desc=boss?'체력 25% 회복 후 입장 · 이기면 큰 보상':d.room==='shop'?'햇살로 물약·버프·강화를 사요':d.room==='fountain'?'체력 회복 또는 물약 채우기':d.room==='treasure'?'적 없이 보물 상자를 부수면 법칙 보상':evo?'이 방을 지키면 진화할 수 있어요':reward.desc;
+  return `<button class="sa-door ${d.room||'combat'}" data-door="${i}"><span class="sa-door-scene" style="background-image:url('${BASE}assets/${doorScene(d,next)}')"></span><span class="sa-door-emblem">${doorEmblem(d,next)}</span><span class="sa-door-plate"><small class="sa-door-room">${room.icon} ${room.name}</small><b>${title}</b><small>${desc}</small>${d.room==='elite'?'<em>정예 · 적이 더 세고, 깨면 성장 한 번 더</em>':''}</span></button>`;}
  function lawButton(id){return `<button data-law="${id}" class="sa-law " style="--law:${INK[id]}"><span>${LAWS[id].icon}</span><b>${LAWS[id].name}</b><small>${DETAIL[id]}</small></button>`;}
  function syncModal(){const key=paused?'paused':s.phase;if(key===modalKey)return;modalKey=key;const modal=$('.sa-modal');modal.hidden=key==='playing';if(modal.hidden){audio?.setPaused(false);start();return;}stop();audio?.setPaused(true);resetInput();
  if(key==='setup')modal.innerHTML=`<div class="sa-paper sa-small sa-beginning"><p class="sa-eyebrow">A SMALL SEED. YOUR OWN FIGHT.</p><div class="sa-seed-preview" aria-hidden="true" style="background-image:url('${BASE}assets/cute/seed-body-v1.webp')"></div><h1>씨앗의 모험</h1><p>이 씨앗이 무엇이 될지는<br>아직 정해지지 않았습니다.</p><button class="sa-primary sa-start">정원에 들어가기 →</button><button class="sa-back">던전으로</button><small>플레이하며 공격 형태와 법칙을 얻어요.<br>로컬 시제품 · 진행 저장·보상 미연결</small></div>`;

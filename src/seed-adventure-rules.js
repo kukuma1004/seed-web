@@ -24,9 +24,10 @@ export function adventureRoomInfo(room){const act=Math.floor(room/ROOMS_PER_ACT)
 
 // ① 3단 콤보. 막타는 넓게 휘둘러 적을 밀쳐 내고 잠깐 멈춘다. 회피 중·직후 공격은 막타와 같은 '회피 베기'.
 export const ADVENTURE_COMBO=Object.freeze([
- Object.freeze({damage:1,radius:1,arc:0,cooldown:1,knock:.8,stop:.045,lunge:.25,stun:.12}),
- Object.freeze({damage:1.15,radius:1.06,arc:0,cooldown:1,knock:1,stop:.055,lunge:.3,stun:.14}),
- Object.freeze({damage:1.85,radius:1.25,arc:.35,cooldown:1.4,knock:3.2,stop:.11,lunge:.6,stun:.5,finisher:true})
+ // 2026-09-28 사용자: "랙 걸리는 것처럼" — 일반 타격의 멈춤을 없애고 막타만 짧게(0.11→0.06초), 흔들림도 줄였다.
+ Object.freeze({damage:1,radius:1,arc:0,cooldown:1,knock:.8,stop:0,lunge:.25,stun:.12}),
+ Object.freeze({damage:1.15,radius:1.06,arc:0,cooldown:1,knock:1,stop:0,lunge:.3,stun:.14}),
+ Object.freeze({damage:1.85,radius:1.25,arc:.35,cooldown:1.4,knock:3.2,stop:.06,lunge:.6,stun:.5,finisher:true})
 ]);
 const COMBO_WINDOW=.45,BUFFER=.2,DASH_STRIKE=.45;
 export const ROOM_TYPES=Object.freeze({
@@ -253,7 +254,7 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false){
   if(heavy&&!boss&&e.tell>0){e.tell=0;e.cd=1.2;fx(s,'spark',e.x,e.y,{angle,heavy:true,life:.3,max:.3});}
   fx(s,'spark',e.x,e.y,{angle,heavy,life:heavy?.28:.2,max:heavy?.28:.2});
   if(meta.stop&&(s.time>=s.stopReady||heavy)){s.hitstop=Math.max(s.hitstop,meta.stop);s.stopReady=s.time+.09;}
-  s.shake=Math.max(s.shake,heavy?.36:.12);
+  s.shake=Math.max(s.shake,heavy?.22:.04);
  }
  if(!secondary){s.hits++;s.hitsTime=2;s.charge=clamp(s.charge+2.8,0,100);event(s,heavy?'finisher':'hit');
   const k=id=>1+(rank(s,id)-1)*.3;
@@ -263,7 +264,7 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false){
   if(s.laws.includes('gravity')&&s.fields.length<6)s.fields.push({x:e.x,y:e.y,life:.65+rank(s,'gravity')*.15,r:2.5,collapse:rank(s,'gravity')>=3});
  }
  if(e.hp<=0){s.kills++;s.charge=clamp(s.charge+4,0,100);fx(s,'leaf',e.x,e.y,{life:.6,max:.6});
-  if(e.type==='boss'){s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.25);s.shake=.6;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
+  if(e.type==='boss'){s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.15);s.shake=.45;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
   else if(random(s)<.6||s.elite)dropCoins(s,e.x,e.y,(e.role==='tank'?2:1)+(e.act||0)+(s.elite?2:0));}
 }
 function hurt(s,n){const p=s.player;if(p.inv>0||s.phase!=='playing')return;if(s.buffs.guard>0){s.buffs.guard=0;p.inv=.5;fx(s,'buff',p.x,p.y,{buff:'guard',radius:1.2,life:.5,max:.5});event(s,'reflect');return;}p.hp=Math.max(0,p.hp-n);p.inv=.7;s.shake=Math.max(s.shake,.2);event(s,'hurt');fx(s,'hurt',p.x,p.y,{radius:1});if(p.hp<=0){s.phase='lost';s.message='회피로 붉은 예고를 벗어나 보세요';}}
@@ -284,7 +285,7 @@ export function attackAdventure(s){
 }
 export function dodgeAdventure(s,x=0,y=0){const p=s.player;if(s.phase!=='playing'||p.dash>0)return false;const d=direction(x||y?x:p.aimX,x||y?y:p.aimY);p.dx=d.x;p.dy=d.y;p.dashing=.2;p.inv=.28;p.dash=s.buffs.swift>0?.88:1.25;p.dashStrike=DASH_STRIKE;p.attack=Math.min(p.attack,.05);p.lx=p.ly=0;fx(s,'dash',p.x,p.y,{life:.35,max:.35});event(s,'dash');return true;}
 // 궁극기: 씨앗 둘레 폭발 + 진화한 형태가 있으면 본편 궁극기(엔진의 surge)도 함께.
-export function ultimateAdventure(s,combat=null){if(s.phase!=='playing'||s.charge<100)return false;s.charge=0;s.player.inv=1;event(s,'ultimate');fx(s,'ultimate',s.player.x,s.player.y,{radius:7,life:.9,max:.9});s.hitstop=.14;s.shake=.5;for(const e of s.enemies)if(dist(e,s.player)<7)hit(s,e,95+s.level*12,false,{knock:2.5,stun:.6,angle:Math.atan2(e.y-s.player.y,e.x-s.player.x)});for(const prop of s.props)if(prop.hp>0&&dist(prop,s.player)<7)breakProp(s,prop);s.shots=s.shots.filter(b=>!b.hostile);s.charge=0;combat?.surge?.();return true;}
+export function ultimateAdventure(s,combat=null){if(s.phase!=='playing'||s.charge<100)return false;s.charge=0;s.player.inv=1;event(s,'ultimate');fx(s,'ultimate',s.player.x,s.player.y,{radius:7,life:.9,max:.9});s.hitstop=.08;s.shake=.35;for(const e of s.enemies)if(dist(e,s.player)<7)hit(s,e,95+s.level*12,false,{knock:2.5,stun:.6,angle:Math.atan2(e.y-s.player.y,e.x-s.player.x)});for(const prop of s.props)if(prop.hp>0&&dist(prop,s.player)<7)breakProp(s,prop);s.shots=s.shots.filter(b=>!b.hostile);s.charge=0;combat?.surge?.();return true;}
 
 function bossAct(s,e,p,dt){
  const b=ADVENTURE_BOSSES[e.bossId],enraged=e.hp<e.maxHp*.5;
@@ -341,7 +342,7 @@ export function stepAdventure(s,dt,input={},combat=null){
  for(const b of s.shots){b.life-=dt;b.age+=dt;b.px=b.x;b.py=b.y;if(!b.hostile&&b.recall&&b.age>.48){if(!b.returning){b.returning=true;b.hit.clear();b.remaining=s.laws.includes('pierce')?3:1;b.spent=false;b.life=.9;}const v=direction(p.x-b.x,p.y-b.y);b.dx=v.x;b.dy=v.y;if(dist(b,p)<.45){b.life=0;continue;}}
  b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;if(b.x<1.3||b.x>22.7||b.y<1.8||b.y>14.7){if(!b.hostile&&s.laws.includes('reflect')&&b.bounces<2){if(b.x<1.3||b.x>22.7)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,1.3,22.7);b.y=clamp(b.y,1.8,14.7);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
  if(b.hostile){if(s.laws.includes('orbit')&&!b.boss&&dist(b,p)<1.6){b.life=0;fx(s,'frost',b.x,b.y,{radius:.5});}else if(dist(b,p)<.45){hurt(s,b.damage);b.life=0;}}
- else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.05:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
+ else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.03:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
   if(b.life>0&&!b.spent)for(const prop of s.props)if(prop.hp>0&&!b.hit.has(prop.id)&&dist(prop,b)<.7){b.hit.add(prop.id);hitProp(s,prop);if(--b.remaining<=0){b.life=0;break;}}}}
  s.shots=s.shots.filter(b=>b.life>0);if(s.laws.includes('orbit')&&s.time<s.orbitUntil){for(const e of s.enemies)if(e.hp>0&&dist(e,p)<s.orbitRadius){e.orbitTick=(e.orbitTick||0)-dt;if(e.orbitTick<=0){e.orbitTick=.5;hit(s,e,9*(1+(rank(s,'orbit')-1)*.3),true);}}}
  for(const prop of s.props)prop.flash=Math.max(0,prop.flash-dt);s.props=s.props.filter(prop=>prop.hp>0);

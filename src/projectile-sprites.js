@@ -84,8 +84,12 @@ export function createProjectileSprites(scene,camera,{mobile=false,baseUrl='',ca
    batch=replacement;
   }
   travel.set(p.dir?.x||0,0,p.dir?.z||0);const angle=p.dir?Math.atan2(travel.dot(up),travel.dot(right)):0;
-  dummy.position.copy(ob.position);dummy.quaternion.copy(camera.quaternion).multiply(roll.setFromAxisAngle(zAxis,angle));
-  const visualSize=(family==='combo'?1.35:family==='ball'?1.05:.82)*(p.visualScale||size||1);dummy.scale.set(visualSize,visualSize,1);dummy.updateMatrix();
+  const visualSize=(family==='combo'?1.35:family==='ball'?1.05:.82)*(p.visualScale||size||1);
+  // 2026-09-28 사용자 신고(여정 · 얼어붙은 블랙홀): 땅에 붙은 큰 그림(차가운 우물·말뚝)은 판 가운데가 땅 높이라
+  // 아래 절반이 바닥에 묻혀 잘려 보였다. 판의 아래 끝이 바닥 위에 오도록 올린다(작은 탄은 그대로).
+  dummy.position.copy(ob.position);const half=visualSize*.5*.8;if(dummy.position.y<half)dummy.position.y=half;
+  dummy.quaternion.copy(camera.quaternion).multiply(roll.setFromAxisAngle(zAxis,angle));
+  dummy.scale.set(visualSize,visualSize,1);dummy.updateMatrix();
   batch.mesh.setMatrixAt(index,dummy.matrix);
   if(family==='combo')comboCounts[cell]++;else if(family==='ball')ballCount++;else counts[cell]++;
   used++;hidden++;

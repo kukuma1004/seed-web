@@ -52,3 +52,19 @@
 .sa-shop-coins{color:#f5d98a}
 @media(max-width:600px){.sa-shop{grid-template-columns:1fr}.sa-evo-grid{grid-template-columns:1fr}#seed-adventure .sa-potion{left:-52px;top:80px}}
 @media(max-height:550px) and (min-width:601px){.sa-evo-grid button>:first-child{flex-basis:46px;width:46px;height:46px}#seed-adventure .sa-potion{left:-56px;top:70px;width:46px!important;height:46px!important}}
+/* 2026-09-28 문 카드: 아치 창(장면) + 문장(보상 그림) + 이름판 */
+#seed-adventure .sa-door{position:relative;overflow:hidden;padding:0!important;min-height:250px;justify-content:flex-end;gap:0;border-radius:120px 120px 10px 10px;border:2px solid #cdbb8e99;background:#0c1d22!important;box-shadow:0 10px 30px #0008,inset 0 0 0 1px #0006}
+.sa-door-scene{position:absolute;inset:0 0 38% 0;background-size:cover;background-position:center;border-radius:118px 118px 0 0;filter:saturate(1.05) brightness(.8)}
+.sa-door-scene::after{content:'';position:absolute;inset:0;background:linear-gradient(180deg,#0000 35%,#0c1d22 100%),radial-gradient(ellipse at 50% 35%,#fff2c51f,#0000 60%);border-radius:inherit}
+.sa-door-emblem{position:relative;z-index:1;display:flex;justify-content:center;margin-top:auto;transform:translateY(8px)}
+#seed-adventure .sa-door-art{display:block;width:92px;height:92px;border-radius:14px;background-repeat:no-repeat;filter:drop-shadow(0 6px 10px #000c)}
+.sa-door-emblem .form-art{width:86px!important;height:86px!important;border:2px solid #f0c56f;border-radius:12px}
+.sa-coin-art{display:flex!important;align-items:center;justify-content:center;font-size:52px;color:#ffe08a;background:radial-gradient(circle,#fff2b0 0,#f0b43c 55%,#9a6a14 100%);border-radius:50%!important;width:74px!important;height:74px!important;text-shadow:0 1px 0 #7a5410}
+.sa-door-plate{position:relative;z-index:1;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 12px 14px;background:linear-gradient(180deg,#0c1d22e6,#08141af5)}
+#seed-adventure .sa-door:hover .sa-door-scene{filter:saturate(1.2) brightness(1)}
+#seed-adventure .sa-door.elite{border-color:#ff9b75cc}#seed-adventure .sa-door.elite .sa-door-scene{filter:sepia(.4) hue-rotate(-25deg) saturate(1.5) brightness(.7)}
+#seed-adventure .sa-door.boss{border-color:#f0c56f}#seed-adventure .sa-door.boss .sa-door-scene{filter:brightness(.55) saturate(1.3)}
+#seed-adventure .sa-door.treasure,#seed-adventure .sa-door.boss{box-shadow:0 0 24px #f0c56f55,0 10px 30px #0008}
+#seed-adventure .sa-door.fountain{border-color:#9ccfe8cc}#seed-adventure .sa-door.shop{border-color:#b7e3a0cc}
+@media(max-width:600px){#seed-adventure .sa-door{min-height:0;flex-direction:row;align-items:center;border-radius:14px}.sa-door-scene{inset:0;border-radius:12px;opacity:.45}.sa-door-emblem{margin:8px;transform:none}#seed-adventure .sa-door-art{width:60px;height:60px}.sa-door-emblem .form-art{width:56px!important;height:56px!important}.sa-door-plate{background:none;align-items:flex-start;text-align:left}}
+@media(max-height:550px) and (min-width:601px){#seed-adventure .sa-door{min-height:190px}#seed-adventure .sa-door-art{width:64px;height:64px}.sa-door-emblem .form-art{width:60px!important;height:60px!important}.sa-door-plate{padding:8px 10px 10px}}
