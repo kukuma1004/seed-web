@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
 import {performance} from 'node:perf_hooks';
-import {DEFENSE,DEFENSE_FORMS,createDefense,plantDefense,mergeDefense,defenseMergeResult,chooseDefenseLaw,upgradeDefense,startDefenseWave,stepDefense,defensePoint,defenseWaveInfo,getDefenseEvolutionOptions,evolveDefense,checkpointDefense,restoreDefense} from '../src/seed-defense-rules.js';
+import {DEFENSE,DEFENSE_FORMS,createDefense,plantDefense,mergeDefense,defenseMergeResult,rerollDefense,defenseSeedCap,chooseDefenseLaw,upgradeDefense,startDefenseWave,stepDefense,defensePoint,defenseWaveInfo,getDefenseEvolutionOptions,evolveDefense,checkpointDefense,restoreDefense} from '../src/seed-defense-rules.js';
 import {createDefenseCombat,DEFENSE_COMBAT} from '../src/seed-defense-combat.js';
 import {SOLO_FORMS,TWIN_FORMS} from '../src/forms.js';
 
@@ -29,20 +29,22 @@ test('all153 shared attacks execute normal and ultimate phases with finite bound
 
 test('mirror protection intercepts actual hostile projectiles and survives resets without charge refill',()=>{const s=fixture(['mirrorguard'],8);const c=createDefenseCombat(s);try{const t=s.towers[0];stepDefense(s,1/60,c);for(let i=0;i<120;i++){if(i%15===0)s.shots.push({id:s.nextId++,x:t.x+8.8,y:t.y,tx:104,ty:48,vx:-15,vy:0,speed:15,life:5,age:0,law:'hostile',damage:1,hit:[]});stepDefense(s,1/60,c);}assert(s.stats.blocked>0);t.ultimateCharge=17;c.reset();assert.equal(t.ultimateCharge,17);stepDefense(s,1/60,c);assert(t.ultimateCharge<18);assert(!c.surge(t.id));}finally{c.dispose();}});
 
-test('earned ultimate charge survives between-wave save/restore without reset exploits',()=>{const s=createDefense(19);plantDefense(s,1);plantDefense(s,2);const [a,b]=s.towers;a.laws=['burst'];a.lawRanks={burst:1};b.laws=['gravity'];b.lawRanks={gravity:1};assert(mergeDefense(s,b.id,a.id));s.towers[0].ultimateCharge=13.25;const restored=restoreDefense(checkpointDefense(s));assert(restored);assert.equal(restored.towers[0].ultimateCharge,13.25);const c=createDefenseCombat(restored);try{c.reset();assert.equal(restored.towers[0].ultimateCharge,13.25);assert(!c.surge(restored.towers[0].id));assert(startDefenseWave(restored));stepDefense(restored,.1,c);assert.equal(restored.towers[0].ultimateCharge,13.25);}finally{c.dispose();}});
+test('earned ultimate charge survives between-wave save/restore without reset exploits',()=>{const s=createDefense(19);s.currency=200;plantDefense(s,1);plantDefense(s,2);plantDefense(s,3);const [a,b,c0]=s.towers;for(const t of [a,b,c0])Object.assign(t,{line:'burst',laws:['burst'],lawRanks:{burst:1}});assert(mergeDefense(s,b.id,a.id));assert(mergeDefense(s,c0.id,a.id));assert.equal(a.tier,2);s.towers[0].ultimateCharge=13.25;const restored=restoreDefense(checkpointDefense(s));assert(restored);assert.equal(restored.towers[0].ultimateCharge,13.25);const c=createDefenseCombat(restored);try{c.reset();assert.equal(restored.towers[0].ultimateCharge,13.25);assert(!c.surge(restored.towers[0].id));assert(startDefenseWave(restored));stepDefense(restored,.1,c);assert.equal(restored.towers[0].ultimateCharge,13.25);}finally{c.dispose();}});
 
 // 합체 방식 전략(2026-09-28): 빈 자리에 심고, 합칠 수 있는 짝을 찾아 합친다. 전략마다 원하는 형태 쪽 짝을 먼저 고른다.
+// 계급장 방식 전략(2026-09-28): 빈 칸에 심고, 같은 계열·계급끼리 합친다(진급·높은 계급 먼저).
+// 짝이 없는 갓 심은 씨앗은 햇살이 넉넉하면 계열을 다시 뽑아 짝을 맞춰 본다. 강화는 높은 계급부터.
 function plan(state,seed,style){
- for(let round=0;round<10;round++){
-  for(const pad of [2,1,5,6,0,3,4,7])plantDefense(state,pad);
-  const rank=t=>Object.values(t.lawRanks).reduce((n,r)=>n+r,0),want=style==='solo'?1:style==='twin'||style==='final'?2:2;
+ for(let round=0;round<30;round++){
+  for(let pad=0;pad<16;pad++)plantDefense(state,pad);
   let best=null;
-  for(const a of state.towers)for(const b of state.towers){if(a===b)continue;const r=defenseMergeResult(state,a.id,b.id);if(!r.ok)continue;
-   const kind=r.kind,score=(kind===style?50:0)+({twin:40,final:30,solo:20,fusion:15,base:5}[kind]||0)+rank(b)-(style==='solo'&&r.laws.length>1?60:0)-(r.laws.length>want?100:0);
-   if(!best||score>best.score)best={a,b,score};}
-  if(!best||best.score<=0)break;mergeDefense(state,best.a.id,best.b.id);
+  for(const a of state.towers)for(const b of state.towers){if(a===b)continue;const r=defenseMergeResult(state,a.id,b.id);if(!r.ok)continue;const score=(r.promote?100:0)+r.tier*10+(r.gained||0)*5+(b.level-a.level);if(!best||score>best.score)best={a,b,score};}
+  if(best){mergeDefense(state,best.a.id,best.b.id);continue;}
+  const lonely=state.towers.find(t=>(t.tier||1)===1&&!(t.merit)&&!state.towers.some(o=>o!==t&&o.line===t.line&&(o.tier||1)===1));
+  if(lonely&&state.currency>=60&&rerollDefense(state,lonely.id))continue;
+  break;
  }
- for(const t of [...state.towers].sort((a,b)=>(a.level-b.level)||(Number(!!b.formId)-Number(!!a.formId))))upgradeDefense(state,t.id);
+ for(const t of [...state.towers].sort((a,b)=>((b.tier||1)-(a.tier||1))||(a.level-b.level)))upgradeDefense(state,t.id);
 }
 function run(seed,reload=false,style='broad'){let s=createDefense(seed),c=createDefenseCombat(s),frames=0,lastPhase=s.phase,maxBolts=0,maxVisuals=0;try{while(!['won','lost'].includes(s.phase)&&(s.wave<49||s.phase==='wave')&&frames++<30000){if(s.phase!=='wave'){c.reset();if(reload){const raw=checkpointDefense(s);c.dispose();s=restoreDefense(raw);assert(s);c=createDefenseCombat(s);}plan(s,seed,style);assert(startDefenseWave(s));}stepDefense(s,.1,c);for(const t of s.towers)if(t.ultimateCharge>=30)c.surge(t.id);if(frames%15===0){maxVisuals=Math.max(maxVisuals,checkVisuals(s,c));maxBolts=Math.max(maxBolts,c.diagnostics().bolts);}if(lastPhase==='wave'&&s.phase!=='wave')c.reset();lastPhase=s.phase;}assert(frames<30000,'combat run stalled');return {seed,reload,style,phase:s.phase,wave:s.wave,hp:s.coreHp,kills:s.kills,currency:s.currency,time:Number(s.time.toFixed(3)),bossWins:s.bossWins,forms:s.towers.map(t=>t.formId),maxBolts,maxVisuals};}finally{c.dispose();}}
 test('seeded strategies reach all three acts and a harder second loop with authored attacks',()=>{for(const seed of [1,2,3]){const result=run(seed);report.runs.push(result);console.log('Actual run',JSON.stringify(result));}for(const style of ['solo','final','twin']){const result=run(1,false,style);report.runs.push(result);assert(['build','lost'].includes(result.phase));assert(result.wave>=8,`${style} run wave ${result.wave}`);// 법칙이 무작위라 원하는 형태가 꼭 나온다는 보장은 없다. 합체로 실제 진화한 씨앗이 생기는지만 본다.
@@ -53,7 +55,7 @@ test('neglecting construction loses and short-range base orbit alone cannot clea
   const s=createDefense(1);let c=createDefenseCombat(s),steps=0;
   try{while(!['won','lost'].includes(s.phase)&&steps++<15000){
    if(s.phase!=='wave'){c.reset();if(mode==='all-base-orbit')for(const pad of [2,1,5,6,0,3,4,7])plantDefense(s,pad);else if(!s.towers.length)plantDefense(s,2);
-    if(mode==='all-base-orbit')for(const t of s.towers){t.laws=['orbit'];t.lawRanks={orbit:1};t.formId=null;}
+    if(mode==='all-base-orbit')for(const t of s.towers){Object.assign(t,{line:'orbit',tier:1,merit:0,laws:['orbit'],lawRanks:{orbit:1},formId:null});}
     if(mode==='all-base-orbit')for(const t of [...s.towers].sort((a,b)=>a.level-b.level))upgradeDefense(s,t.id);
     assert(startDefenseWave(s));
    }stepDefense(s,.1,c);

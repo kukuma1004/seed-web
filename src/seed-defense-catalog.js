@@ -14,9 +14,11 @@ export const defenseFusionOf=laws=>Object.values(FUSIONS).find(f=>f.laws.length=
 export const defenseFormKind=id=>DEFENSE_FORMS[id]?.kind||null;
 export const defenseRank=(t,id)=>t.lawRanks?.[id]||(t.laws.includes(id)?1:0);
 export const defenseRankTotal=t=>t.laws.reduce((n,id)=>n+defenseRank(t,id),0)+(t.reinforce||0);
-// 합체 방식(2026-09-28): 같은 법칙을 합쳐 오른 단계마다 크게 세진다(두 씨앗을 하나로 합친 값을 해야 하므로).
-// 별(★): 단계가 가득 찬 씨앗에 더 합친 만큼. 별 하나마다 피해 +30%(순환이 올라가도 계속 키울 수 있게).
-export const defenseDamageMultiplier=t=>.55*(1+Math.max(0,defenseRankTotal(t)-t.laws.length)*.75)*(1+.3*(t.stars||0));
+// 계급장 방식(2026-09-28): 계급마다 크게 세진다(2계급 = 씨앗 3개, 3계급 = 9개, 4계급 = 27개 몫).
+// 진급 점수 하나마다 +20%, 별(★) 하나마다 +30%(순환이 올라가도 계속 키울 수 있게).
+const TIER_POWER={1:1,2:2.2,3:4.2,4:7.5};
+const tierOf=t=>t.tier||(!t.formId?1:{solo:2,fusion:2,final:3,twin:4}[DEFENSE_FORMS[t.formId]?.kind]||1);
+export const defenseDamageMultiplier=t=>.55*TIER_POWER[tierOf(t)]*(1+.2*(t.merit||0))*(1+.3*(t.stars||0));
 
 // A chosen solo retains its own attack after a second law is added. That path can
 // become a twin; an uncommitted two-law seed instead keeps its automatic fusion.

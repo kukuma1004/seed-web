@@ -15,7 +15,8 @@ export const DEFENSE_CELL_SIZE = Object.freeze({w:8,h:9});
 export const PADS = Object.freeze([{x:14,y:21},{x:38,y:21},{x:62,y:21},{x:86,y:21},{x:14,y:39},{x:38,y:39},{x:62,y:39},{x:86,y:39},
  {x:22,y:21},{x:46,y:21},{x:94,y:21},{x:6,y:30},{x:94,y:30},{x:54,y:39},{x:70,y:39},{x:6,y:39}].map(Object.freeze));
 // 2026-09-28 사용자: "씨앗 8개가 한계면 순환이 올라가면 못 깨는 거 아니야?" — 순환(36습격)을 넘길 때마다 씨앗 칸 +2(최대 16).
-export function defenseSeedCap(s){return Math.min(DEFENSE.maxSeeds,8+2*Math.floor(Math.max(0,s?.wave||0)/36));}
+// 계급장 방식에서는 같은 계열을 3개씩 모아야 해서 칸이 더 필요하다 → 막(12습격)을 넘길 때마다 +2(8 → 최대 16).
+export function defenseSeedCap(s){return Math.min(DEFENSE.maxSeeds,8+2*Math.floor(Math.max(0,s?.wave||0)/12));}
 // 누른 곳이 속한 칸(칸 안쪽이면). 없으면 null.
 export function defenseCellAt(x,y){return DEFENSE_CELLS.find(c=>Math.abs(c.x-x)<=DEFENSE_CELL_SIZE.w/2&&Math.abs(c.y-y)<=DEFENSE_CELL_SIZE.h/2)||null;}
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
@@ -40,12 +41,12 @@ const canAct=s=>s.phase!=='lost'&&s.phase!=='won';
 const matchFusion=defenseFusionOf;
 function random(s){s.rng=(Math.imul(s.rng,1664525)+1013904223)>>>0;return s.rng/4294967296;}
 export function defensePoint(progress){let p=clamp(progress,0,DEFENSE_PATH_LENGTH);for(let i=0;i<SEGMENTS.length;i++){if(p<=SEGMENTS[i]){const t=p/SEGMENTS[i];return {x:PATH[i].x+(PATH[i+1].x-PATH[i].x)*t,y:PATH[i].y+(PATH[i+1].y-PATH[i].y)*t};}p-=SEGMENTS[i];}return {...PATH.at(-1)};}
-export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:5,runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:90,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:0,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'땅을 골라 씨앗을 심으세요. 무작위 법칙이 싹터요.'};s.offers=getDefenseOffers(s);return s;}
+export function createDefense(seed=1){const n=Number.isFinite(seed)?seed>>>0:1;const s={version:6,runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:90,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:0,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'땅을 골라 씨앗을 심으세요. 무작위 법칙이 싹터요.'};s.offers=getDefenseOffers(s);return s;}
 export function defenseUpgradeCost(t){return t&&t.level<5?25+t.level*15:Infinity;}
 export function defenseTowerName(t){return (!t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗')+(t?.stars?` ★${t.stars}`:'');}
 export function defenseTowerStats(t){
  if(t.formId)return {...defenseFormStats(t),upgradeCost:defenseUpgradeCost(t)};
- const id=t.laws[0]||'seed',growth=1+(t.level-1)*.42+Math.max(0,defenseRankTotal(t)-t.laws.length)*.85;
+ const id=t.laws[0]||'seed',growth=(1+(t.level-1)*.42)*(1+(t.merit||0)*.6)*(1+.3*(t.stars||0));
  const specs={seed:[14,.8,20],burst:[17,1.1,20],frost:[12,.9,21],chain:[14,1.15,21],pierce:[22,1.2,25],split:[11,1,20],reflect:[17,1.1,22],recall:[20,1.3,23],gravity:[12,1.4,21],orbit:[15,.85,14]};
  const [damage,interval,range]=specs[id]||specs.seed;return {id,damage:damage*growth,interval:interval/(1+(t.level-1)*.04),range:range+(t.level-1)*.6,upgradeCost:defenseUpgradeCost(t)};
 }
@@ -69,7 +70,7 @@ export function placeDefensePad(s,pad,x,y){
 }
 export function plantDefense(s,padIndex){
  const p=s.pads?.[padIndex];if(s.towers.length>=defenseSeedCap(s)){s.lastEvent=`씨앗은 지금 ${defenseSeedCap(s)}개까지예요 · 순환을 넘기면 늘어나요`;return false;}if(!canAct(s)||!Number.isInteger(padIndex)||!p||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex)||defensePlacement(s,p.x,p.y,padIndex))return false;
- s.currency-=DEFENSE.plantCost;const law=IDS[Math.floor(random(s)*IDS.length)];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,stars:0,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
+ s.currency-=DEFENSE.plantCost;const law=IDS[Math.floor(random(s)*IDS.length)];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,line:law,tier:1,merit:0,stars:0,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
 }
 export function upgradeDefense(s,id){const t=s.towers.find(t=>t.id===id),cost=defenseUpgradeCost(t);if(!canAct(s)||!t||s.currency<cost||!Number.isFinite(cost))return false;s.currency-=cost;t.level++;return true;}
 export function chooseDefenseLaw(s,towerId,id){
@@ -80,47 +81,53 @@ export function chooseDefenseLaw(s,towerId,id){
  if(t.laws.length===2&&(!t.formId||defenseFormKind(t.formId)==='fusion'))t.formId=t.fusion;
  s.draftCredit=0;s.phase='build';s.offers=[];s.lastEvent=`${defenseTowerName(t)} · ${DEFENSE_LAWS[id].name} ${t.lawRanks[id]}단계`;return true;
 }
-// 합체: 한 씨앗을 다른 씨앗 위에 놓으면 하나가 된다(놓인 쪽 자리에 남는다).
-// 같은 법칙은 단계가 더해지고(최대 3), 다른 법칙끼리는 융합. 가능한 가장 높은 형태로 저절로 진화한다:
-// 한 법칙 3단계 = 단독, 두 법칙 = 융합, 융합 + 한쪽 3단계 = 완성, 양쪽 3단계 = 쌍둥이.
-function bestForm(t){
- if(t.laws.length===1){const o=getDefenseEvolutionOptions({laws:t.laws,lawRanks:t.lawRanks,formId:null});return o[0]?.id||null;}
- const fusion=defenseFusionOf(t.laws);if(!fusion)return null;const o=getDefenseEvolutionOptions({laws:t.laws,lawRanks:t.lawRanks,formId:fusion});
- return (o.find(f=>f.kind==='twin')||o.find(f=>f.kind==='final'))?.id||fusion;
-}
+// 2026-09-28 사용자: "연쇄는 연쇄끼리 합치고, 모으면 다음 진화가 무작위로 — 계급장 키우기처럼(이병끼리 모아 일병)" · "같은 것 3개"
+// 계급장 방식: 씨앗마다 계열(심을 때 싹튼 법칙)과 계급(1 씨앗 · 2 단독·융합 · 3 완성 · 4 쌍둥이)이 있다.
+// 같은 계열·같은 계급끼리만 합친다. 합칠 때마다 진급 점수(merit)가 쌓이고, 같은 씨앗 3개 몫이 모이면
+// 다음 계급의 그 계열이 들어간 형태 중 하나로 무작위 진화한다(판마다 조합이 달라진다). 4계급끼리는 별(★)이 된다.
+export const DEFENSE_TIER_NAMES=Object.freeze(['','씨앗','1차 진화','완성 진화','쌍둥이 각성']);
+const TIER_KINDS=Object.freeze({2:['solo','fusion'],3:['final'],4:['twin']});
+export const defenseTierOf=t=>!t?0:t.tier||(!t.formId?1:{solo:2,fusion:2,final:3,twin:4}[DEFENSE_FORMS[t.formId]?.kind]||1);
+// 계급이 오를 때 나올 수 있는 형태(그 계열 법칙이 들어간 것).
+export function defenseTierPool(line,tier){const kinds=TIER_KINDS[tier]||[];return Object.values(DEFENSE_FORMS).filter(f=>kinds.includes(f.kind)&&f.requires.includes(line)).map(f=>f.id).sort();}
+// 형태에 맞는 법칙·단계(전투 엔진과 도감이 쓰는 모양 그대로).
+function formShape(formId,line){const f=DEFENSE_FORMS[formId];if(!f)return {laws:[line],lawRanks:{[line]:1}};const laws=[...f.requires];
+ const ranks=f.kind==='solo'||f.kind==='twin'?Object.fromEntries(laws.map(l=>[l,3])):f.kind==='final'?Object.fromEntries(laws.map(l=>[l,SOLO_LAW(f)===l?3:1])):Object.fromEntries(laws.map(l=>[l,1]));return {laws,lawRanks:ranks};}
+const SOLO_LAW=f=>DEFENSE_FORMS[f.addedSolo]?.requires?.[0]||f.requires[0];
 export function defenseMergeResult(s,fromId,toId){
  const a=s.towers.find(t=>t.id===fromId),b=s.towers.find(t=>t.id===toId);if(!a||!b||a===b)return {ok:false,reason:'합칠 씨앗을 골라요'};
- const laws=[...new Set([...b.laws,...a.laws])];if(laws.length>2)return {ok:false,reason:'법칙은 두 가지까지만 합칠 수 있어요'};if(!laws.length)return {ok:false,reason:'법칙이 없는 씨앗이에요'};
- const lawRanks=Object.fromEntries(laws.map(l=>[l,Math.min(3,(a.lawRanks[l]||0)+(b.lawRanks[l]||0))]));
- // 3단계를 넘친 만큼과 합쳐지는 씨앗의 별은 별(★)이 된다(최대 12).
- const overflow=laws.reduce((n,l)=>n+Math.max(0,(a.lawRanks[l]||0)+(b.lawRanks[l]||0)-3),0),stars=Math.min(DEFENSE.maxStars,(b.stars||0)+(a.stars||0)+overflow),gained=stars-(b.stars||0);
- if(laws.length===2&&!defenseFusionOf(laws))return {ok:false,reason:'이 두 법칙은 합칠 수 없어요'};
- const same=laws.every(l=>lawRanks[l]===(b.lawRanks[l]||0))&&laws.length===b.laws.length;if(same&&gained<=0)return {ok:false,reason:(b.stars||0)>=DEFENSE.maxStars?'별이 가득 찼어요':'더 오를 단계가 없어요'};
- const formId=bestForm({laws,lawRanks}),form=formId?DEFENSE_FORMS[formId]:null;
- return {ok:true,laws,lawRanks,formId,stars,gained,level:Math.max(a.level,b.level),name:(form?form.name:`${DEFENSE_LAWS[laws[0]].name} 씨앗 ${lawRanks[laws[0]]}단계`)+(stars?` ★${stars}`:''),kind:form?.kind||'base'};
+ const la=a.line||a.laws[0],lb=b.line||b.laws[0],ta=defenseTierOf(a),tb=defenseTierOf(b);
+ if(la!==lb)return {ok:false,reason:`같은 계열끼리만 합칠 수 있어요 · ${DEFENSE_LAWS[lb].name} 계열에는 ${DEFENSE_LAWS[lb].name} 씨앗을`};
+ if(ta!==tb)return {ok:false,reason:`같은 계급끼리만 합칠 수 있어요 · ${DEFENSE_TIER_NAMES[tb]}끼리`};
+ const merit=(b.merit||0)+(a.merit||0)+1,level=Math.max(a.level,b.level);
+ if(tb>=4){const stars=Math.min(DEFENSE.maxStars,(b.stars||0)+(a.stars||0)+merit);if(stars<=(b.stars||0))return {ok:false,reason:'별이 가득 찼어요'};return {ok:true,line:lb,tier:4,merit:0,stars,gained:stars-(b.stars||0),level,promote:false,name:`${DEFENSE_FORMS[b.formId].name} ★${stars}`,kind:'twin'};}
+ if(merit>=2){const stars=Math.min(DEFENSE.maxStars,Math.max(a.stars||0,b.stars||0)+(merit-2));return {ok:true,line:lb,tier:tb+1,merit:0,stars,gained:stars-(b.stars||0),level,promote:true,pool:defenseTierPool(lb,tb+1).length,name:`${DEFENSE_TIER_NAMES[tb+1]} · 무작위`,kind:'promote'};}
+ return {ok:true,line:lb,tier:tb,merit,stars:Math.max(a.stars||0,b.stars||0),gained:0,level,promote:false,name:`${defenseTowerName(b)} · 진급 ${merit+1}/3`,kind:'merit'};
 }
 export function mergeDefense(s,fromId,toId){
  if(!canAct(s))return false;const r=defenseMergeResult(s,fromId,toId);if(!r.ok){s.lastEvent=r.reason;return false;}
  const a=s.towers.find(t=>t.id===fromId),b=s.towers.find(t=>t.id===toId);
- Object.assign(b,{laws:r.laws,lawRanks:r.lawRanks,stars:r.stars,formId:r.formId,fusion:r.laws.length===2?defenseFusionOf(r.laws):null,level:r.level,ultimateCharge:Math.max(a.ultimateCharge||0,b.ultimateCharge||0),shotTime:0,mirrorTime:0});
- s.towers.splice(s.towers.indexOf(a),1);s.selectedPad=b.pad;s.merges=(s.merges||0)+1;s.lastEvent=`합체 · ${r.name}`;effect(s,'burst',b.x,b.y,'#fff1b9',{radius:4,life:.6,maxLife:.6});return true;
+ let formId=b.formId;if(r.promote){const pool=defenseTierPool(r.line,r.tier);formId=pool[Math.floor(random(s)*pool.length)];}
+ const shape=r.tier>1?formShape(formId,r.line):{laws:[r.line],lawRanks:{[r.line]:1}};
+ Object.assign(b,{line:r.line,tier:r.tier,merit:r.merit,stars:r.stars,formId:r.tier>1?formId:null,laws:shape.laws,lawRanks:shape.lawRanks,fusion:shape.laws.length===2?defenseFusionOf(shape.laws):null,level:r.level,ultimateCharge:Math.max(a.ultimateCharge||0,b.ultimateCharge||0),shotTime:0,mirrorTime:0});
+ s.towers.splice(s.towers.indexOf(a),1);s.selectedPad=b.pad;s.merges=(s.merges||0)+1;s.lastEvent=r.promote?`진급! ${DEFENSE_TIER_NAMES[r.tier]} · ${defenseTowerName(b)}`:`합체 · ${defenseTowerName(b)}${r.tier<4?` · 진급 ${r.merit+1}/3`:''}`;effect(s,'burst',b.x,b.y,'#fff1b9',{radius:r.promote?6:4,life:.6,maxLife:.6});return true;
 }
-// 한 단계짜리 씨앗은 햇살을 조금 써서 법칙을 다시 뽑을 수 있다.
-// 다음에 무엇을 합치면 어떤 형태가 되는지(법칙마다 3단계까지 채웠을 때). 패널·끌기 미리 보기에서 쓴다.
+// 다음 진급 안내(정보 창): 같은 계열·계급 씨앗이 몇 개 더 필요한지와 다음 계급에서 나올 수 있는 형태 수.
 export function defenseNextSteps(t){
- if(!t?.laws?.length)return [];
- return t.laws.filter(l=>(t.lawRanks[l]||0)<3).map(l=>{const ranks={...t.lawRanks,[l]:3},formId=bestForm({laws:t.laws,lawRanks:ranks});return {law:l,need:3-(t.lawRanks[l]||0),formId,name:formId?DEFENSE_FORMS[formId].name:'',kind:formId?DEFENSE_FORMS[formId].kind:''};});
+ if(!t)return [];const tier=defenseTierOf(t),line=t.line||t.laws[0];if(tier>=4)return [];
+ return [{law:line,need:2-(t.merit||0),tier:tier+1,pool:defenseTierPool(line,tier+1).length,name:DEFENSE_TIER_NAMES[tier+1],kind:'promote'}];
 }
-// 2026-09-28 사용자: "폐기하고 다시 새롭게 할 수 없나? 조합 올렸다가 맘에 안 들 수도 있잖아"
-// 씨앗 뽑기: 들인 햇살(심기 × 합친 씨앗 수 + 강화)의 절반을 돌려받고 자리를 비운다. 습격 중에도 된다.
-export function defenseRemoveRefund(t){if(!t)return 0;const seeds=Math.max(1,defenseRankTotal(t)+(t.stars||0));let upgrades=0;for(let l=1;l<t.level;l++)upgrades+=defenseUpgradeCost({level:l});return Math.floor((seeds*DEFENSE.plantCost+upgrades)*.5);}
+// 2026-09-28 사용자: "폐기하고 다시 새롭게 할 수 없나?" — 씨앗 뽑기: 들인 햇살(씨앗 수 × 심기 + 강화)의 절반을 돌려받는다.
+export const defenseSeedWorth=t=>!t?0:3**(defenseTierOf(t)-1)*((t.merit||0)+1)+(t.stars||0);
+export function defenseRemoveRefund(t){if(!t)return 0;let upgrades=0;for(let l=1;l<t.level;l++)upgrades+=defenseUpgradeCost({level:l});return Math.floor((defenseSeedWorth(t)*DEFENSE.plantCost+upgrades)*.5);}
 export function removeDefense(s,id){
  const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t)return false;const refund=defenseRemoveRefund(t);
  s.towers.splice(s.towers.indexOf(t),1);s.currency+=refund;s.selectedPad=t.pad;s.lastEvent=`${defenseTowerName(t)}을(를) 뽑았어요 · 햇살 ${refund} 돌려받음`;effect(s,'burst',t.x,t.y,'#e9dfae',{radius:3,life:.5,maxLife:.5});return true;
 }
+// 갓 심은(진급 점수 없는) 씨앗은 햇살을 조금 써서 계열을 다시 뽑을 수 있다.
 export function rerollDefense(s,id){
- const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t||t.formId||t.laws.length!==1||t.lawRanks[t.laws[0]]!==1||s.currency<DEFENSE.rerollCost)return false;
- const pool=IDS.filter(l=>l!==t.laws[0]),law=pool[Math.floor(random(s)*pool.length)];s.currency-=DEFENSE.rerollCost;t.laws=[law];t.lawRanks={[law]:1};s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗으로 바뀌었어요`;return true;
+ const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t||defenseTierOf(t)!==1||(t.merit||0)>0||s.currency<DEFENSE.rerollCost)return false;
+ const pool=IDS.filter(l=>l!==t.line),law=pool[Math.floor(random(s)*pool.length)];s.currency-=DEFENSE.rerollCost;Object.assign(t,{line:law,laws:[law],lawRanks:{[law]:1}});s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗으로 바뀌었어요`;return true;
 }
 export function evolveDefense(s,towerId,formId){
  if(!canAct(s))return false;const t=s.towers.find(t=>t.id===towerId);
@@ -136,7 +143,7 @@ export function defenseWaveInfo(wave){
  const w=Math.max(1,Math.floor(Number.isFinite(wave)?wave:1)),localWave=(w-1)%12+1,act=Math.floor((w-1)/12)%3,lap=Math.floor((w-1)/36),tier=act+lap*3,boss=localWave%4===0,final=localWave===12;
  // Pressure rises continuously at act boundaries. Crowd, speed and shot counts
  // stay capped; later loops primarily demand stronger placement and builds.
- const stage=Math.min(36,w),hp=(27+stage*7+stage*stage*2.7)*(1+Math.max(0,w-36)*.055);
+ const stage=Math.min(36,w),hp=(27+stage*7+stage*stage*2.7)*1.045**Math.max(0,w-36);
  return {wave:w,localWave,act,lap,final,boss,bossId:final?DEFENSE_ACTS[act].id:null,
   count:Math.min(90,9+localWave*3+tier*8)+(boss?1:0),interval:Math.max(.16,.76-localWave*.035-tier*.055),hp,
   bossHp:final?7500*(1+tier*.75):(27+localWave*7+localWave*localWave*2.7)*15*(1+tier*.5),
@@ -147,7 +154,7 @@ export function startDefenseWave(s){if(s.phase!=='build'||!s.towers.length)retur
 function effect(s,kind,x,y,color,extra={}){if(s.effects.length>=DEFENSE.maxEffects)return;s.effects.push({kind,x,y,tx:x,ty:y,color,life:.35,maxLife:.35,...extra});}
 function compact(a,predicate){let write=0;for(let i=0;i<a.length;i++)if(predicate(a[i]))a[write++]=a[i];a.length=write;}
 function slow(s,e,strength=.5,duration=1.6){e.slow=Math.min(e.slow||1,e.kind==='boss'?Math.max(.72,strength):strength);e.slowTime=Math.max(e.slowTime||0,duration);s.stats.slows++;}
-function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;if(e.bossId&&Object.hasOwn(s.bossWins,e.bossId)){const ordinal=++s.bossWins[e.bossId];s.pendingBosses.push({boss:e.bossId,ordinal,wave:s.wave});}s.currency+=e.kind==='boss'?28:e.kind==='shield'?5:3;effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
+function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;if(e.bossId&&Object.hasOwn(s.bossWins,e.bossId)){const ordinal=++s.bossWins[e.bossId];s.pendingBosses.push({boss:e.bossId,ordinal,wave:s.wave});}s.currency+=Math.round((e.kind==='boss'?28:e.kind==='shield'?5:3)*.6);effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
 function nearest(s,p,range,skip){let best=null,d=range*range;for(const e of s.enemies){if(e.hp<=0||skip?.includes(e.id))continue;const d2=dist2(e,p);if(d2<d){d=d2;best=e;}}return best;}
 function front(s,p,range,skip){let best=null;for(const e of s.enemies)if(e.hp>0&&dist2(p,e)<=range*range&&!skip?.includes(e.id)&&(!best||e.progress>best.progress))best=e;return best;}
 function chain(s,from,damage,count,icy=false,skip=[]){let prev=from;const hit=[...skip,from.id];if(icy)slow(s,from);for(let i=0;i<count;i++){const next=nearest(s,prev,12,hit);if(!next)break;effect(s,'chain',prev.x,prev.y,icy?'#8ce9ff':'#ffdd78',{tx:next.x,ty:next.y});hurt(s,next,damage,true);if(icy)slow(s,next);s.stats.chains++;hit.push(next.id);prev=next;}}
@@ -198,17 +205,18 @@ function tick(s,dt,combat){s.time+=dt;for(const e of s.effects)e.life-=dt;compac
  combat?.update(dt);
  moveShots(s,dt);compact(s.enemies,e=>e.hp>0);
  if(s.coreHp<=0){s.phase='lost';s.lastEvent='핵이 무너졌습니다. 위치와 법칙 조합을 바꿔 다시 도전하세요.';return;}
- if(s.spawned===info.count&&!s.enemies.length&&!s.shots.some(q=>q.law==='hostile')){s.currency+=25+s.wave*2;s.shots.length=0;s.fields.length=0;s.phase='build';s.draftCredit=0;s.offers=[];s.lastEvent=info.final?`${info.title}의 습격을 막았어요 · 다음 막으로 이어집니다`:'습격을 막았어요 · 씨앗을 더 심고 합체해 보세요';}
+ if(s.spawned===info.count&&!s.enemies.length&&!s.shots.some(q=>q.law==='hostile')){s.currency+=15+Math.min(30,s.wave);s.shots.length=0;s.fields.length=0;s.phase='build';s.draftCredit=0;s.offers=[];s.lastEvent=info.final?`${info.title}의 습격을 막았어요 · 다음 막으로 이어집니다`:'습격을 막았어요 · 씨앗을 더 심고 합체해 보세요';}
 }
 export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0||s.phase==='lost'||s.phase==='won')return s;let remaining=Math.min(.1,dt);while(remaining>1e-8){const step=Math.min(1/60,remaining);tick(s,step,combat);remaining-=step;if(s.phase==='lost'||s.phase==='won')break;}return s;}
 
 export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
-export function checkpointDefense(s){if(!canBuild(s))return null;return {version:5,runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
+export function checkpointDefense(s){if(!canBuild(s))return null;return {version:6,runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,line:t.line||t.laws[0],tier:defenseTierOf(t),merit:t.merit||0,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
 export function restoreDefense(raw){
  // 합체 방식(v5)부터는 예전 준비 저장(법칙 고르기 방식)을 불러오지 않는다.
- try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||r.version!==5||r.phase!=='build')return null;
+ // 계급장 방식(v6). 합체 방식(v5) 저장은 계급으로 바꿔 불러온다(형태 종류 → 계급, 첫 법칙 → 계열).
+ try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![5,6].includes(r.version)||r.phase!=='build')return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
  if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,1000000)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,DEFENSE.maxSeeds-1)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
  if(r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>defenseSeedCap({wave:r.wave}))return null;
@@ -223,17 +231,14 @@ export function restoreDefense(raw){
   for(const i of order){const p=s.pads[i],cell=DEFENSE_CELLS.filter(c=>!used.has(c)).sort((a,b)=>dist2(a,p)-dist2(b,p))[0];used.add(cell);s.pads[i]={x:cell.x,y:cell.y};}}
  const pads=new Set(),ids=new Set();for(const t of r.towers){
   if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,DEFENSE.maxSeeds-1)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,r.wave+1)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
-  // v1 did not record which ingredient received repeats. Preserve those points
-  // as generic reinforcement, not invented law ranks or free branch eligibility.
-  const ranks=r.version===1?Object.fromEntries(t.laws.map(l=>[l,1])):t.lawRanks;
-  if(!ranks||typeof ranks!=='object'||Array.isArray(ranks)||Object.keys(ranks).length!==t.laws.length||Object.keys(ranks).some(l=>!t.laws.includes(l)||!integer(ranks[l],1,3)))return null;
-  const formId=r.version===1?matchFusion(t.laws):t.formId;
-  if(formId!==null&&typeof formId!=='string')return null;
-  const ultimateCharge=r.version===1?0:t.ultimateCharge;if(!finite(ultimateCharge,0,30))return null;
-  const stars=t.stars??0;if(!integer(stars,0,DEFENSE.maxStars))return null;
-  const tower={id:t.id,pad:t.pad,...s.pads[t.pad],level:t.level,stars,laws:[...t.laws],lawRanks:{...ranks},formId,fusion:matchFusion(t.laws),reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
-  // 합체 방식에서는 늘 가능한 가장 높은 형태로 진화해 있다. 다른 형태·단계 조작은 받지 않는다.
-  if(!validDefenseForm(tower)||tower.formId!==bestForm(tower)||defensePlacement(s,tower.x,tower.y,tower.pad))return null;pads.add(t.pad);ids.add(t.id);s.towers.push(tower);
+  const formId=t.formId??null;if(formId!==null&&(typeof formId!=='string'||!DEFENSE_FORMS[formId]))return null;
+  const ultimateCharge=t.ultimateCharge;if(!finite(ultimateCharge,0,30))return null;
+  const kind=formId?DEFENSE_FORMS[formId].kind:'base',tier=r.version===5?{base:1,solo:2,fusion:2,final:3,twin:4}[kind]:t.tier,line=r.version===5?t.laws[0]:t.line,merit=r.version===5?(kind==='base'?Math.min(1,(t.lawRanks?.[line]||1)-1):0):t.merit,stars=t.stars??0;
+  if(!integer(tier,1,4)||!IDS.includes(line)||!integer(merit,0,tier>=4?0:1)||!integer(stars,0,DEFENSE.maxStars))return null;
+  if(tier===1?formId!==null:!defenseTierPool(line,tier).includes(formId))return null;
+  const shape=tier>1?formShape(formId,line):{laws:[line],lawRanks:{[line]:1}};
+  const tower={id:t.id,pad:t.pad,...s.pads[t.pad],level:t.level,line,tier,merit,stars,laws:shape.laws,lawRanks:shape.lawRanks,formId,fusion:shape.laws.length===2?matchFusion(shape.laws):null,reinforce:t.reinforce,ultimateCharge,angle:0,shotTime:0,mirrorTime:0};
+  if(defensePlacement(s,tower.x,tower.y,tower.pad))return null;pads.add(t.pad);ids.add(t.id);s.towers.push(tower);
  }
  // 단계 합은 심은 씨앗 수로 정해지지 않으니(합체) 따로 세지 않는다. 씨앗 하나의 단계는 최대 3.
  if(r.stats)for(const key of Object.keys(s.stats)){if(!finite(r.stats[key],0,1e9))return null;s.stats[key]=r.stats[key];}
