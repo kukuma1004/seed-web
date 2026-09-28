@@ -407,9 +407,10 @@ export const puzzleSaveKey=(owner='guest')=>`${PUZZLE_SAVE_KEY}:${encodeURICompo
 export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*n,newStar:40,daily:100});
 const int=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 // 도전 씨앗(로열 매치의 하트). 2026-09-28 사용자: "하트를 씨앗으로"
-// 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 30분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
+// 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 10분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
 // 오늘의 단계와 연습은 쓰지 않는다. 시계는 기기 시각(Date.now)이다.
-export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:30*60e3,refill:120});
+// 2026-09-28 사용자: 돋는 시간 30분 → 10분(수업 한 시간 안에 여러 번 도전할 수 있게).
+export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:10*60e3,refill:120});
 export function puzzleLives(progress,now=Date.now()){
  const p=progress||{},max=PUZZLE_LIVES.max;let lives=Number.isInteger(p.lives)?Math.max(0,Math.min(max,p.lives)):max,at=Number.isFinite(p.livesAt)?p.livesAt:0;
  if(lives>=max)return {lives:max,livesAt:0,nextIn:0,full:true};

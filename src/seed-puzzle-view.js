@@ -376,7 +376,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   syncGardenStars();const g=getGarden(),area=decorAreaIndex(g.decor),stars=starWallet(),doneHere=area<0?0:decorTasks(g.decor).filter(t=>t.done).length;
   show('menu',`<p class="sp-eyebrow">SEED · PUZZLE</p><h1>씨앗 맞추기</h1><p class="sp-lead">같은 법칙 셋을 맞춰 터뜨리세요. <b>넷 한 줄</b> 관통 · <b>네모</b> 연쇄 · <b>T·L</b> 폭발 · <b>다섯 한 줄</b> 햇살 — 특수 씨앗은 눌러서 바로 터뜨려요.</p>
    <button class="sp-garden-card${stars&&area>=0?' ready':''}" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기 · ${area<0?'모두 꾸몄어요':`${DECOR_AREAS[area].name} ${doneHere}/6`}</small><b>${area<0?'SEED 정원을 끝까지 꾸몄어요':stars?`별 ★${stars}개로 정원을 꾸밀 수 있어요`:'단계에서 별을 모아 정원을 꾸며요'}</b></span><i aria-hidden="true">›</i></button>
-   <div class="sp-status"><span class="sp-lives" title="도전 씨앗 · 지면 하나 줄고, 30분마다 하나씩 돋아요">🌱 <span data-lives>${livesLine()}</span></span><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
+   <div class="sp-status"><span class="sp-lives" title="도전 씨앗 · 지면 하나 줄고, 10분마다 하나씩 돋아요">🌱 <span data-lives>${livesLine()}</span></span><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
    <button class="sp-daily" data-daily="${day}"><span><small>오늘의 단계 · ${dayLabel(day)}</small><b>이동 ${daily.moves}번 점수 도전</b></span><span class="sp-stars">${starText(dp?.stars||0)}</span><small>${dp?.best?`오늘 최고 ${dp.best.toLocaleString()}`:'오늘 누구나 같은 판'}</small></button>
    <div class="sp-stages">${PUZZLE_STAGES.map(card).join('')}</div>
    <div class="sp-row"><button class="sp-help-open">도움말</button><button class="sp-exit">돌아가기</button></div>
@@ -413,7 +413,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const needsLife=d=>!practice&&!d.daily;
  function noLives(d){
   show('lives',`<p class="sp-eyebrow">도전 씨앗</p><h1>씨앗이 다시 돋는 중이에요</h1><p class="sp-lives-big">🌱 <span data-lives>${livesLine()}</span></p>
-   <p>도전 씨앗은 30분마다 하나씩 돋아요. 그동안 <b>오늘의 단계</b>는 씨앗 없이 할 수 있고, 모은 별로 <b>정원</b>을 꾸밀 수 있어요.</p>
+   <p>도전 씨앗은 10분마다 하나씩 돋아요. 그동안 <b>오늘의 단계</b>는 씨앗 없이 할 수 있고, 모은 별로 <b>정원</b>을 꾸밀 수 있어요.</p>
    <div class="sp-row"><button class="sp-primary sp-refill">햇살 ${jpText(PUZZLE_LIVES.refill)}로 가득 채우기</button><button class="sp-retry" data-needs-life disabled>다시 도전</button></div>
    <div class="sp-row"><button class="sp-to-garden">정원 가꾸기</button><button class="sp-to-menu">단계 고르기</button></div><small>${practice?'':`가진 햇살 ${jpText(wallet())}`}</small>`);
   modal.querySelector('.sp-refill').onclick=()=>{if(!pay(PUZZLE_LIVES.refill,'도전 씨앗 채우기'))return;progress=refillPuzzleLives(progress);writePuzzleProgress(storage,progress,owner);toast('도전 씨앗을 가득 채웠어요');intro(d);};

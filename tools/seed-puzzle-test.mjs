@@ -147,13 +147,13 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
 
 // 난이도 지킴이(짧게): 가르치는 앞 단계는 한 수 앞을 보는 사람이 다 깨고, 뒤 단계도 +5 이동 두 번이면 대부분 깬다.
 // 자세한 측정: node tools/seed-puzzle-simulation.mjs 20
-// 도전 씨앗(하트): 시작 때 하나, 깨면 돌려받기, 30분마다 하나 돋기, 햇살로 채우기.
+// 도전 씨앗(하트): 시작 때 하나, 깨면 돌려받기, 10분마다 하나 돋기, 햇살로 채우기.
 {const {PUZZLE_LIVES:L,puzzleLives,takePuzzleLife,refundPuzzleLife,refillPuzzleLives}=await import('../src/seed-puzzle-rules.js');
  const t0=Date.UTC(2026,8,28,3,0);let p=normalizePuzzleProgress(null);assert.deepEqual(puzzleLives(p,t0),{lives:5,livesAt:0,nextIn:0,full:true});
  let r=takePuzzleLife(p,t0);assert.ok(r.ok);p=r.progress;assert.equal(p.lives,4);assert.equal(p.livesAt,t0,'timer starts when a seed is used from full');
  p=refundPuzzleLife(p,t0+1000);assert.equal(p.lives,5,'win returns the seed');assert.equal(p.livesAt,0);
  for(let k=0;k<5;k++){r=takePuzzleLife(p,t0);assert.ok(r.ok);p=r.progress;}assert.equal(puzzleLives(p,t0).lives,0);assert.equal(takePuzzleLife(p,t0).ok,false,'no seed, no start');
- assert.equal(puzzleLives(p,t0+L.regenMs-1).lives,0);assert.equal(puzzleLives(p,t0+L.regenMs).lives,1,'one grows back after 30 minutes');
+ assert.equal(puzzleLives(p,t0+L.regenMs-1).lives,0);assert.equal(puzzleLives(p,t0+L.regenMs).lives,1,'one grows back after the regrow time');
  const mid=puzzleLives(p,t0+L.regenMs*2.5);assert.equal(mid.lives,2);assert.equal(mid.nextIn,L.regenMs/2);
  assert.equal(puzzleLives(p,t0+L.regenMs*9).lives,5,'never above max');
  r=takePuzzleLife(p,t0+L.regenMs*2.5);assert.equal(r.progress.lives,1);assert.equal(puzzleLives(r.progress,t0+L.regenMs*3).lives,2,'regrowth keeps its timer');
