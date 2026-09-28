@@ -101,6 +101,18 @@ export function mergeDefense(s,fromId,toId){
  s.towers.splice(s.towers.indexOf(a),1);s.selectedPad=b.pad;s.merges=(s.merges||0)+1;s.lastEvent=`합체 · ${r.name}`;effect(s,'burst',b.x,b.y,'#fff1b9',{radius:4,life:.6,maxLife:.6});return true;
 }
 // 한 단계짜리 씨앗은 햇살을 조금 써서 법칙을 다시 뽑을 수 있다.
+// 다음에 무엇을 합치면 어떤 형태가 되는지(법칙마다 3단계까지 채웠을 때). 패널·끌기 미리 보기에서 쓴다.
+export function defenseNextSteps(t){
+ if(!t?.laws?.length)return [];
+ return t.laws.filter(l=>(t.lawRanks[l]||0)<3).map(l=>{const ranks={...t.lawRanks,[l]:3},formId=bestForm({laws:t.laws,lawRanks:ranks});return {law:l,need:3-(t.lawRanks[l]||0),formId,name:formId?DEFENSE_FORMS[formId].name:'',kind:formId?DEFENSE_FORMS[formId].kind:''};});
+}
+// 2026-09-28 사용자: "폐기하고 다시 새롭게 할 수 없나? 조합 올렸다가 맘에 안 들 수도 있잖아"
+// 씨앗 뽑기: 들인 햇살(심기 × 합친 씨앗 수 + 강화)의 절반을 돌려받고 자리를 비운다. 습격 중에도 된다.
+export function defenseRemoveRefund(t){if(!t)return 0;const seeds=Math.max(1,defenseRankTotal(t));let upgrades=0;for(let l=1;l<t.level;l++)upgrades+=defenseUpgradeCost({level:l});return Math.floor((seeds*DEFENSE.plantCost+upgrades)*.5);}
+export function removeDefense(s,id){
+ const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t)return false;const refund=defenseRemoveRefund(t);
+ s.towers.splice(s.towers.indexOf(t),1);s.currency+=refund;s.selectedPad=t.pad;s.lastEvent=`${defenseTowerName(t)}을(를) 뽑았어요 · 햇살 ${refund} 돌려받음`;effect(s,'burst',t.x,t.y,'#e9dfae',{radius:3,life:.5,maxLife:.5});return true;
+}
 export function rerollDefense(s,id){
  const t=s.towers.find(t=>t.id===id);if(!canAct(s)||!t||t.formId||t.laws.length!==1||t.lawRanks[t.laws[0]]!==1||s.currency<DEFENSE.rerollCost)return false;
  const pool=IDS.filter(l=>l!==t.laws[0]),law=pool[Math.floor(random(s)*pool.length)];s.currency-=DEFENSE.rerollCost;t.laws=[law];t.lawRanks={[law]:1};s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗으로 바뀌었어요`;return true;

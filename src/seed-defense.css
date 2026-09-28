@@ -109,3 +109,8 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
  #seed-defense #td-book{grid-column:3;grid-row:1}
  #seed-defense #td-pause{grid-column:4;grid-row:1}
 }
+
+/* 법칙 단계·다음 합체 안내, 씨앗 뽑기(2026-09-28) */
+#seed-defense .td-ranks{display:flex;gap:10px;flex-wrap:wrap;margin:4px 0 2px}#seed-defense .td-rank{font-size:12px;color:var(--law);letter-spacing:.5px;font-weight:700}
+#seed-defense .td-next-steps{margin:4px 0 4px 16px;padding:0;font-size:12px;line-height:1.55;color:#dfe6d6}#seed-defense .td-next-steps b{font-weight:700}
+#seed-defense #td-remove{opacity:.85}#seed-defense #td-remove.td-danger{border-color:#ff9d8a;background:#4a2320e8;color:#ffd9cf;opacity:1}
