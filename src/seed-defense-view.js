@@ -1,7 +1,7 @@
 import {createFramePacer} from './frame-time.js';
-import {defensePlacement,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,mergeDefense,defenseMergeResult,rerollDefense,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,checkpointDefense,restoreDefense,defenseTowerName,evolveDefense,getDefenseEvolutionOptions,DEFENSE_FORMS,DEFENSE_CATALOG,DEFENSE_CATALOG_COUNTS} from './seed-defense-rules.js';
+import {defensePlacement,defenseCellAt,DEFENSE_CELLS,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,mergeDefense,defenseMergeResult,rerollDefense,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,checkpointDefense,restoreDefense,defenseTowerName,evolveDefense,getDefenseEvolutionOptions,DEFENSE_FORMS,DEFENSE_CATALOG,DEFENSE_CATALOG_COUNTS} from './seed-defense-rules.js';
 import './seed-defense.css';
-import {defenseBodyParts,paintDefenseGround,paintEvolutionCue} from './seed-defense-art.js';
+import {defenseBodyParts,defenseBedPath,paintDefenseGround,paintEvolutionCue} from './seed-defense-art.js';
 import './forms.css';
 import './combo-art.css';
 import {formArt} from './form-art.js';
@@ -30,21 +30,6 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 // 2026-09-28 사용자: 습격 사이에 '시작'을 누르지 않아도 다음 습격이 저절로 시작되게.
 // 씨앗 정보·배치 창, 도감, 대화창이 열려 있는 동안은 기다린다(정비할 시간은 남긴다).
 const DEFENSE_AUTO_START=3,DEFENSE_AUTO_INSPECT=6; // 씨앗 정보 창을 보고 있으면 조금 더 기다린다.
-// 심을 수 있는 땅을 반투명 흰 점선으로 보여 준다. 규칙(defensePlacement)을 반 칸 격자로 따라 그려서 규칙과 어긋나지 않는다.
-let buildZone=null;
-function buildZonePath(){
- if(buildZone)return buildZone;
- const step=.5,x0=0,y0=5,cols=Math.round(98/step),rows=Math.round(50/step),empty={towers:[]};
- const ok=(i,j)=>i>=0&&j>=0&&i<cols&&j<rows&&!defensePlacement(empty,x0+(i+.5)*step,y0+(j+.5)*step);
- const mask=[];for(let j=0;j<rows;j++)for(let i=0;i<cols;i++)mask[j*cols+i]=ok(i,j);
- const at=(i,j)=>i>=0&&j>=0&&i<cols&&j<rows&&mask[j*cols+i];
- const edges=new Path2D(),fill=new Path2D();
- // 가로 경계: 위·아래 이웃과 다른 칸끼리 이어 한 줄로.
- for(let j=0;j<=rows;j++)for(let i=0;i<cols;){const edge=k=>at(k,j-1)!==at(k,j);if(!edge(i)){i++;continue;}let e=i;while(e<cols&&edge(e))e++;edges.moveTo(x0+i*step,y0+j*step);edges.lineTo(x0+e*step,y0+j*step);i=e;}
- for(let i=0;i<=cols;i++)for(let j=0;j<rows;){const edge=k=>at(i-1,k)!==at(i,k);if(!edge(j)){j++;continue;}let e=j;while(e<rows&&edge(e))e++;edges.moveTo(x0+i*step,y0+j*step);edges.lineTo(x0+i*step,y0+e*step);j=e;}
- for(let j=0;j<rows;j++)for(let i=0;i<cols;){if(!at(i,j)){i++;continue;}let e=i;while(e<cols&&at(e,j))e++;fill.rect(x0+i*step,y0+j*step,(e-i)*step,step);i=e;}
- return buildZone={edges,fill};
-}
 export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,onClose=()=>{},onRanking=()=>{},onResult=async()=>'',onBossDefeated=()=>true}={}){
  const key='seed-defense-preparation-v1:'+encodeURIComponent(owner),root=document.createElement('section');
  root.id='seed-defense';root.setAttribute('aria-label','씨앗 수호전');
@@ -87,7 +72,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const tower=()=>state.towers.find(t=>t.pad===selected);
  listen(canvas,'click',e=>{
   if(bookOpen||confirming||['won','lost'].includes(state.phase))return;if(dragJustEnded){dragJustEnded=false;return;}
-  const rect=canvas.getBoundingClientRect(),x=Math.round(((e.clientX-rect.left-ox)/scale)*2)/2,y=Math.round(((e.clientY-rect.top-oy)/scale)*2)/2;
+  const rect=canvas.getBoundingClientRect(),cell=defenseCellAt((e.clientX-rect.left-ox)/scale,(e.clientY-rect.top-oy)/scale);if(!cell){closeSelection();hint('테두리가 있는 화단 칸을 눌러 주세요');return;}const {x,y}=cell;
   const pad=moving?selected:state.pads.findIndex((_,i)=>!state.towers.some(t=>t.pad===i));
   if(pad<0){hint('씨앗은 최대 8개예요 · 씨앗을 선택해 위치를 옮겨 보세요');return;}
   const error=defensePlacement(state,x,y,pad);if(error){closeSelection();hint(error);return;}
@@ -99,10 +84,10 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const worldAt=e=>{const r=canvas.getBoundingClientRect();return {x:(e.clientX-r.left-ox)/scale,y:(e.clientY-r.top-oy)/scale};};
  const towerAt=(x,y,skip=null)=>state.towers.filter(t=>t!==skip).sort((a,b)=>Math.hypot(a.x-x,a.y-y)-Math.hypot(b.x-x,b.y-y)).find(t=>Math.hypot(t.x-x,t.y-y)<4.2);
  function beginDrag(e,t){if(!t||bookOpen||confirming||['won','lost'].includes(state.phase))return false;drag={id:t.id,x:t.x,y:t.y,sx:e.clientX,sy:e.clientY,moved:false,target:null,preview:null};return true;}
- function moveDrag(e){if(!drag)return;if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>10)drag.moved=true;if(!drag.moved)return;const w=worldAt(e),from=state.towers.find(t=>t.id===drag.id);drag.x=w.x;drag.y=w.y;const target=towerAt(w.x,w.y,from);drag.target=target?.id||null;drag.preview=target?defenseMergeResult(state,drag.id,target.id):null;hint(drag.preview?(drag.preview.ok?`놓으면 합체 · ${drag.preview.name}`:drag.preview.reason):'빈 땅에 놓으면 옮겨요 · 다른 씨앗 위에 놓으면 합체');dirty=true;}
+ function moveDrag(e){if(!drag)return;if(Math.hypot(e.clientX-drag.sx,e.clientY-drag.sy)>10)drag.moved=true;if(!drag.moved)return;const w=worldAt(e),from=state.towers.find(t=>t.id===drag.id);drag.x=w.x;drag.y=w.y;const target=towerAt(w.x,w.y,from);drag.target=target?.id||null;drag.preview=target?defenseMergeResult(state,drag.id,target.id):null;hint(drag.preview?(drag.preview.ok?`놓으면 합체 · ${drag.preview.name}`:drag.preview.reason):'빈 화단 칸에 놓으면 옮겨요 · 다른 씨앗 위에 놓으면 합체');dirty=true;}
  function endDrag(e){if(!drag)return;const d=drag;drag=null;dirty=true;if(!d.moved)return;dragJustEnded=true;const from=state.towers.find(t=>t.id===d.id);if(!from)return;
   if(d.target){const target=state.towers.find(t=>t.id===d.target),previous={...target,laws:[...target.laws]};if(mergeDefense(state,d.id,d.target)){combat.reset();selected=target.pad;state.selectedPad=selected;const kind=target.formId?KIND[DEFENSE_FORMS[target.formId].kind]:'단계 상승';sound(target.formId!==previous.formId?'fusion':'evolve');celebrate(target,previous,'합체 · '+kind);placeButtons();save();uiKey='';updateUI();}else hint(state.lastEvent);return;}
-  const x=Math.round(d.x*2)/2,y=Math.round(d.y*2)/2,error=defensePlacement(state,x,y,from.pad);if(error){hint(error);return;}if(placeDefensePad(state,from.pad,x,y)){combat.reset();placeButtons();save();hint('씨앗을 옮겼어요');uiKey='';updateUI();}}
+  const cell=defenseCellAt(d.x,d.y);if(!cell){hint('화단 칸 위에 놓아 주세요');return;}const {x,y}=cell,error=defensePlacement(state,x,y,from.pad);if(error){hint(error);return;}if(placeDefensePad(state,from.pad,x,y)){combat.reset();placeButtons();save();hint('씨앗을 옮겼어요');uiKey='';updateUI();}}
  listen(canvas,'pointerdown',e=>{const w=worldAt(e);const t=towerAt(w.x,w.y);if(t&&beginDrag(e,t))canvas.setPointerCapture?.(e.pointerId);});
  listen(canvas,'pointermove',moveDrag);listen(canvas,'pointerup',endDrag);listen(canvas,'pointercancel',()=>{drag=null;dirty=true;});
  function hint(message){$('.td-hint').textContent=message;}
@@ -173,7 +158,9 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
  function draw(now){
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  if(['build','draft'].includes(state.phase)){const zone=buildZonePath();ctx.save();ctx.fillStyle='#ffffff0d';ctx.fill(zone.fill);ctx.setLineDash([.9,.7]);ctx.strokeStyle='#ffffff8c';ctx.lineWidth=.22;ctx.stroke(zone.edges);ctx.restore();}
+  // 화단 칸 자체는 바닥에 구워 두었다. 심을 칸을 고르거나 씨앗을 끄는 동안에만 빈 칸을 흰 점선으로 밝힌다.
+  const placingNow=root.classList.contains('td-placing')||moving||drag?.moved,hover=drag?.moved&&!drag.target?defenseCellAt(drag.x,drag.y):null,chosenPad=state.pads[selected];
+  if(placingNow||state.phase==='build'&&!state.towers.length){ctx.save();ctx.setLineDash([.9,.7]);ctx.lineWidth=.22;for(const c of DEFENSE_CELLS){const used=state.towers.some(t=>t.x===c.x&&t.y===c.y&&(!drag||t.id!==drag.id));if(used)continue;const on=c===hover||(!drag?.moved&&chosenPad&&chosenPad.x===c.x&&chosenPad.y===c.y&&!tower());defenseBedPath(ctx,c.x,c.y,.35);ctx.fillStyle=on?'#fff1b92e':'#ffffff0f';ctx.fill();ctx.strokeStyle=on?'#fff1b9e0':'#ffffff8c';ctx.stroke();}ctx.restore();}
   const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
   const chosen=tower()||(['build','draft'].includes(state.phase)?{...state.pads[selected],laws:[],level:1}:null);if(chosen&&state.phase!=='wave'){ctx.beginPath();ctx.arc(chosen.x,chosen.y,defenseTowerStats(chosen).range,0,Math.PI*2);ctx.fillStyle=color(chosen.laws[0])+'0b';ctx.strokeStyle=color(chosen.laws[0])+'55';ctx.lineWidth=.16;ctx.fill();ctx.stroke();}
   for(const t of state.towers){
@@ -211,7 +198,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    if(e.kind==='chain'||e.kind==='beam'||e.kind==='line'){const tx=e.tx??e.x,ty=e.ty??e.y;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo((e.x+tx)/2+.5,(e.y+ty)/2-.5);ctx.lineTo(tx,ty);ctx.stroke();}
    else{const radius=e.radius||e.r||1.3;ctx.save();ctx.translate(e.x,e.y);ctx.rotate((1-alpha)*.8);for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*radius*.45,Math.sin(a)*radius*.45);ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);ctx.stroke();}if(e.kind==='gravity'||e.kind==='well'){ctx.beginPath();ctx.ellipse(0,0,radius,radius*.45,.4,0,Math.PI*2);ctx.stroke();}ctx.restore();}
   }ctx.globalAlpha=1;for(const cue of evolutionCues)paintEvolutionCue(ctx,cue,visualClock-cue.start,reducedMotion);
-  if(drag?.moved){const from=state.towers.find(t=>t.id===drag.id),target=state.towers.find(t=>t.id===drag.target);if(target){ctx.strokeStyle=drag.preview?.ok?'#fff1b9':'#ff8a7a';ctx.lineWidth=.35;ctx.setLineDash([.8,.6]);ctx.beginPath();ctx.ellipse(target.x,target.y+.5,4,2.2,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);if(drag.preview?.ok){ctx.font='bold 1.5px system-ui';ctx.textAlign='center';ctx.lineWidth=.5;ctx.strokeStyle='#13201eee';ctx.strokeText(drag.preview.name,target.x,target.y-7.5);ctx.fillStyle='#fff1b9';ctx.fillText(drag.preview.name,target.x,target.y-7.5);}}if(from){ctx.globalAlpha=.6;body(from,drag.x,drag.y,.9);ctx.globalAlpha=1;}}
+  if(drag?.moved){const from=state.towers.find(t=>t.id===drag.id),target=state.towers.find(t=>t.id===drag.target);if(target){ctx.strokeStyle=drag.preview?.ok?'#fff1b9':'#ff8a7a';ctx.lineWidth=.35;ctx.setLineDash([.8,.6]);ctx.beginPath();ctx.ellipse(target.x,target.y+.5,4,2.2,0,0,Math.PI*2);ctx.stroke();ctx.setLineDash([]);if(drag.preview?.ok){ctx.font='bold 1.5px system-ui';ctx.textAlign='center';ctx.lineWidth=.5;ctx.strokeStyle='#13201eee';ctx.strokeText(drag.preview.name,target.x,target.y-7.5);ctx.fillStyle='#fff1b9';ctx.fillText(drag.preview.name,target.x,target.y-7.5);}}if(from){const at=hover||drag;ctx.globalAlpha=.6;body(from,at.x,at.y,.9);ctx.globalAlpha=1;}}
   ctx.restore();
  }
  function result(){if(announced===state.phase)return;announced=state.phase;clearSave();sound(state.phase==='won'?'evolve':'hurt');dialog(`<div><small>씨앗 수호전 · 도전 결과</small><h2>${state.phase==='won'?'정원이 다시 숨 쉬어요':'다음 씨앗을 기약하며'}</h2><p>${state.wave}차 습격 · ${state.kills}마리 처치<br>${state.towers.filter(t=>t.formId).length}개 씨앗이 융합 진화했어요</p><p>직선에는 관통, 굴곡에는 공전.<br>입구의 둔화와 출구의 화력을 나눠 보세요.</p><p id="td-rank-status" role="status">최고기록을 확인하는 중…</p><button id="td-result-ranking">수호전 랭킹 보기</button><button id="td-retry">새 씨앗으로 다시</button><button id="td-home">던전으로 돌아가기</button></div>`);const rankStatus=$('#td-rank-status');Promise.resolve(onResult(state)).then(message=>{if(rankStatus.isConnected)rankStatus.textContent=message;}).catch(()=>{if(rankStatus.isConnected)rankStatus.textContent='랭킹 연결을 확인해 주세요.';});$('#td-result-ranking').onclick=onRanking;$('#td-retry').onclick=()=>{closeSelection();combat.dispose();state=createDefense(Date.now()>>>0);combat=createDefenseCombat(state,{sound});selected=0;moving=false;evolutionCues.length=0;dirty=true;placeButtons();paused=false;announced='';$('.td-dialog').hidden=true;uiKey='';save();updateUI();};$('#td-home').onclick=close;}

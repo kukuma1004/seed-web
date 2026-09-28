@@ -7,14 +7,21 @@ export const MAX_STEP_SECONDS=1/60;
 export const MAX_SUBSTEPS=3;
 // Limit rendering on high-refresh displays without dropping elapsed simulation time.
 // Carry the deadline forward (not now + interval), including on 90/144 Hz screens.
+// 2026-09-28 사용자: "화면이 살짝 끊긴다" — 예전에는 마감보다 0.5ms만 일찍 와도 그 장면을 건너뛰었다.
+// 60Hz 화면의 장면 시각은 1~2ms씩 흔들리고, 60Hz보다 아주 조금 빠른 화면은 마감이 조금씩 밀려
+// 주기적으로 한 장면씩 빠졌다(툭 끊김).
+// 화면 간격을 재어 목표보다 빠르지 않은 화면은 모두 그리고, 높은 주사율(90·120·144Hz)만 약 60장으로 줄인다.
 export function createFramePacer(){
- let next=0,rate=0;
+ let next=0,rate=0,prev=0,gap=0;
  return (now,fps)=>{
   if(!Number.isFinite(now)||!Number.isFinite(fps)||fps<=0)return false;
-  const interval=1000/fps;
+  const interval=1000/fps,step=now-prev;prev=now;if(step>0&&step<250)gap=gap?gap*.9+step*.1:step;
   if(rate!==fps){rate=fps;next=now+interval;return true;}
-  if(now+.5<next)return false;
-  next+=interval*Math.max(1,Math.floor((now+.5-next)/interval)+1);
+  // 화면이 목표보다 빠르지 않으면(60Hz 화면에 60장) 한 장도 거르지 않는다.
+  if(gap>interval*.8){next=now+interval;return true;}
+  const early=Math.min(interval*.25,gap*.5);
+  if(now+early<next)return false;
+  next+=interval*Math.max(1,Math.floor((now+early-next)/interval)+1);
   return true;
  };
 }

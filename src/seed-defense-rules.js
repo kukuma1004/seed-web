@@ -4,7 +4,17 @@ export {DEFENSE_CATALOG,DEFENSE_FORMS,DEFENSE_CATALOG_COUNTS,defenseDamageMultip
 // Renderer-independent, seeded tower defence. All distances are garden units.
 export const DEFENSE = Object.freeze({width:100,height:60,maxEnemies:120,maxShots:180,maxEffects:100,waves:12,acts:3,defaultSpeed:2,fastSpeed:3,plantCost:30,rerollCost:15});
 export const PATH = Object.freeze([{x:-4,y:12},{x:76,y:12},{x:76,y:30},{x:24,y:30},{x:24,y:48},{x:104,y:48}].map(Object.freeze));
-export const PADS = Object.freeze([{x:18,y:21},{x:42,y:21},{x:63,y:21},{x:85,y:25},{x:14,y:39},{x:37,y:39},{x:59,y:39},{x:82,y:40}].map(Object.freeze));
+// 2026-09-28 사용자: "배치할 때 안 예쁘다 · 칸막이처럼 영역이 정해져야" — 아무 데나 심던 방식 대신 정해진 화단 칸.
+// 가로 8·세로 9 간격이라 이웃 칸의 씨앗이 겹치지 않고, 길에서 7 이상 떨어진 칸만 쓴다(길 사이 두 줄 + 양옆).
+export const DEFENSE_CELLS = Object.freeze([
+ ...[6,14,22,30,38,46,54,62,86,94].map(x=>({x,y:21})),
+ ...[6,14,86,94].map(x=>({x,y:30})),
+ ...[6,14,38,46,54,62,70,78,86,94].map(x=>({x,y:39}))
+].map(Object.freeze));
+export const DEFENSE_CELL_SIZE = Object.freeze({w:8,h:9});
+export const PADS = Object.freeze([{x:14,y:21},{x:38,y:21},{x:62,y:21},{x:86,y:21},{x:14,y:39},{x:38,y:39},{x:62,y:39},{x:86,y:39}].map(Object.freeze));
+// 누른 곳이 속한 칸(칸 안쪽이면). 없으면 null.
+export function defenseCellAt(x,y){return DEFENSE_CELLS.find(c=>Math.abs(c.x-x)<=DEFENSE_CELL_SIZE.w/2&&Math.abs(c.y-y)<=DEFENSE_CELL_SIZE.h/2)||null;}
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
 export const DEFENSE_LAWS = Object.freeze({
  burst:law('burst','폭발','#ff986b','적중 지점에서 작은 원으로 함께 터집니다.'),
@@ -44,9 +54,10 @@ export function defenseCanChoose(s,towerId,id){const t=s.towers.find(t=>t.id===t
 // Free positions share the same bounded eight tower slots. Empty slots do not block ground.
 export function defensePlacement(s,x,y,pad=-1){
  if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||x>98||y<5||y>55)return '정원 안쪽 땅을 골라 주세요';
+ if(!DEFENSE_CELLS.some(c=>c.x===x&&c.y===y))return '화단 칸 안에 심어 주세요';
  for(let i=1;i<PATH.length;i++)if(segmentDistance2({x,y},PATH[i-1].x,PATH[i-1].y,PATH[i].x,PATH[i].y)<36)return '적이 다니는 길에는 심을 수 없어요';
  if(dist2({x,y},PATH.at(-1))<81)return '정원의 심장 주변은 비워 주세요';
- if(s.towers.some(t=>t.pad!==pad&&dist2(t,{x,y})<49))return '다른 씨앗과 조금 떨어뜨려 주세요';
+ if(s.towers.some(t=>t.pad!==pad&&dist2(t,{x,y})<49))return '이미 씨앗이 자라는 칸이에요';
  return '';
 }
 export function placeDefensePad(s,pad,x,y){
@@ -190,6 +201,9 @@ export function restoreDefense(raw){
  else s.runId=`legacy-${r.seed}`;
  for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
  if(r.version>=3){if(!Array.isArray(r.pads)||r.pads.length!==8||r.pads.some(p=>!p||!finite(p.x,0,98)||!finite(p.y,5,55)))return null;s.pads=r.pads.map(p=>({x:p.x,y:p.y}));}
+ // 화단 칸이 생기기 전 저장: 심은 씨앗부터 가장 가까운 빈 칸으로 옮겨 앉힌다.
+ {const used=new Set(),planted=new Set(r.towers.map(t=>t?.pad));const order=[...s.pads.keys()].sort((a,b)=>Number(planted.has(b))-Number(planted.has(a)));
+  for(const i of order){const p=s.pads[i],cell=DEFENSE_CELLS.filter(c=>!used.has(c)).sort((a,b)=>dist2(a,p)-dist2(b,p))[0];used.add(cell);s.pads[i]={x:cell.x,y:cell.y};}}
  const pads=new Set(),ids=new Set();for(const t of r.towers){
   if(!t||!integer(t.id,1,r.nextId-1)||ids.has(t.id)||!integer(t.pad,0,7)||pads.has(t.pad)||!integer(t.level,1,5)||!integer(t.reinforce,0,r.wave+1)||!Array.isArray(t.laws)||t.laws.length>2||new Set(t.laws).size!==t.laws.length||t.laws.some(l=>!IDS.includes(l))||t.laws.length===2&&!matchFusion(t.laws))return null;
   // v1 did not record which ingredient received repeats. Preserve those points

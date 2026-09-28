@@ -12,6 +12,10 @@ for(const refresh of [30,60,90,120,144,165])for(const target of [30,60]){
  assert(Math.abs(rendered-(Math.min(refresh,target)*10+1))<=1,`${refresh} Hz / ${target} fps has uneven deadlines`);
  assert(Math.abs(elapsed-10)<1/target,`${refresh} Hz loses game time`);
 }
+// 60Hz 화면의 흔들리는 장면 시각(±1.5ms)과 60Hz보다 조금 빠른 화면에서 장면을 건너뛰지 않는다(끊김).
+for(const hz of [60,60.05,60.3,59.94]){const due=createFramePacer();let seed=7,rendered=0;const frames=Math.round(hz*20);
+ for(let i=0;i<=frames;i++){seed=(seed*1103515245+12345)>>>0;const now=i*1000/hz+(seed/4294967296-.5)*3;if(due(now,60))rendered++;}
+ assert(rendered>=frames-1,`${hz} Hz dropped ${frames+1-rendered} frames`);}
 {
  const due=createFramePacer();assert(due(0,30));assert(!due(8,30));
  assert(due(9,60),'combat resumes immediately');assert(!due(10,60));

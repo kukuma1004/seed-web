@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {defensePlacement,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,mergeDefense,defenseMergeResult,rerollDefense,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseCanChoose,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,checkpointDefense,restoreDefense,evolveDefense,getDefenseEvolutionOptions,DEFENSE_CATALOG,DEFENSE_FORMS,defenseHurt,defenseDamageMultiplier} from '../src/seed-defense-rules.js';
+import {defensePlacement,DEFENSE_CELLS,defenseCellAt,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,mergeDefense,defenseMergeResult,rerollDefense,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseCanChoose,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,checkpointDefense,restoreDefense,evolveDefense,getDefenseEvolutionOptions,DEFENSE_CATALOG,DEFENSE_FORMS,defenseHurt,defenseDamageMultiplier} from '../src/seed-defense-rules.js';
 
 import {DISCOVERY_FORMS,SOLO_FORMS,formStats} from '../src/forms.js';
 let checks=0;
@@ -62,15 +62,19 @@ test('speed multiplier accelerates both tower and enemy simulation without chang
  const a=run(1),b=run(1.5),c=run(2);for(const s of [b,c]){assert(Math.abs(s.time-a.time)<1e-8);assert.equal(s.kills,a.kills);assert.equal(s.spawned,a.spawned);assert.equal(s.rng,a.rng);assert(Math.abs(s.enemies[0].progress-a.enemies[0].progress)<.1);}
 });
 test('base-only builds face genuine late-wave loss without an evolved combat adapter',()=>{const a=simulate(1),b=simulate(1,true);assert.equal(a.s.phase,'lost');assert(a.s.wave>=8&&a.s.wave<=13);for(const key of ['phase','wave','coreHp','currency','kills','rng'])assert.equal(a.s[key],b.s[key]);});
-test('free placement rejects path, bounds and overlapping seeds; moving works during waves',()=>{
+test('cell placement: only garden-bed cells, one seed per cell; moving works during waves',()=>{
  const s=createDefense();assert(placeDefensePad(s,0,30,21));assert(plantDefense(s,0));const t=s.towers[0],money=s.currency;
  assert.equal(t.x,30);assert.equal(t.y,21);assert(placeDefensePad(s,0,54,39));assert.equal(t.x,54);assert.equal(s.currency,money);
- for(const [x,y] of [[20,12],[76,25],[24,40],[60,48],[-1,21],[99,39],[50,56],[NaN,21],[54,39],[58,39]])assert(!placeDefensePad(s,1,x,y));
- assert(placeDefensePad(s,1,10,21));assert(plantDefense(s,1));assert.equal(s.towers.length,2);
+ for(const [x,y] of [[20,12],[76,25],[24,40],[60,48],[-1,21],[99,39],[50,56],[NaN,21],[54,39],[58,39],[10,21],[31.5,21],[70,21],[30,39],[38,30]])assert(!placeDefensePad(s,1,x,y));
+ for(const c of DEFENSE_CELLS)assert.equal(defensePlacement({towers:[]},c.x,c.y),'',`${c.x},${c.y}`);for(const p of PADS)assert(DEFENSE_CELLS.some(c=>c.x===p.x&&c.y===p.y));
+ for(const a of DEFENSE_CELLS)for(const b of DEFENSE_CELLS)if(a!==b)assert(Math.hypot(a.x-b.x,a.y-b.y)>=8,'cells never overlap');
+ assert.deepEqual(defenseCellAt(9.5,24),{x:6,y:21});assert.equal(defenseCellAt(76,12),null);
+ assert(placeDefensePad(s,1,6,21));assert(plantDefense(s,1));assert.equal(s.towers.length,2);
  assert(startDefenseWave(s));assert(placeDefensePad(s,0,70,39),'seeds can be moved during a wave');assert.equal(t.x,70);
 });
-test('free-position checkpoint preserves exact location and rejects corrupt occupied positions',()=>{
- const s=createDefense();placeDefensePad(s,0,31.5,21.5);plantDefense(s,0);spendDraft(s);const raw=checkpointDefense(s),r=restoreDefense(raw);assert(r);assert.equal(r.towers[0].x,31.5);assert.equal(r.towers[0].y,21.5);assert.deepEqual(checkpointDefense(r),raw);
- for(const pos of [{x:20,y:12},{x:Infinity,y:21},{x:-2,y:30}]){const bad=structuredClone(raw);bad.pads[0]=pos;assert.equal(restoreDefense(bad),null);}
+test('cell checkpoint preserves location; saves from before cells snap to the nearest free cell',()=>{
+ const s=createDefense();placeDefensePad(s,0,46,39);plantDefense(s,0);spendDraft(s);const raw=checkpointDefense(s),r=restoreDefense(raw);assert(r);assert.equal(r.towers[0].x,46);assert.equal(r.towers[0].y,39);assert.deepEqual(checkpointDefense(r),raw);
+ for(const pos of [{x:Infinity,y:21},{x:-2,y:30}]){const bad=structuredClone(raw);bad.pads[0]=pos;assert.equal(restoreDefense(bad),null);}
+ const old=structuredClone(raw);old.pads[0]={x:31.5,y:21.5};old.pads[1]={x:42,y:21};const moved=restoreDefense(old);assert(moved);assert.deepEqual({x:moved.towers[0].x,y:moved.towers[0].y},{x:30,y:21});for(const p of moved.pads)assert(DEFENSE_CELLS.some(c=>c.x===p.x&&c.y===p.y));assert.equal(new Set(moved.pads.map(p=>p.x+','+p.y)).size,8);
 });
 console.log(`Seed defence: ${checks} tests passed.`);

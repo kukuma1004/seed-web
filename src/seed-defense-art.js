@@ -1,4 +1,4 @@
-import {defenseWaveInfo} from './seed-defense-rules.js';
+import {defenseWaveInfo,DEFENSE_CELLS,DEFENSE_CELL_SIZE} from './seed-defense-rules.js';
 import {DEFENSE_FORMS} from './seed-defense-catalog.js';
 const SOLO={reflect:0,split:1,chain:2,orbit:3,pierce:4,burst:5,recall:6,gravity:7,frost:8};
 const FUSION={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
@@ -13,6 +13,18 @@ export function defenseBodyParts(t){
  if(f.kind==='final'&&FUSION[f.base]!==undefined)return [{atlas:'fusion',cell:FUSION[f.base],dx:-.8,size:7.8},{atlas:'solo',cell:SOLO[DEFENSE_FORMS[f.addedSolo].requires[0]],dx:2.1,size:4.7}];
  return f.requires.map((law,i)=>({atlas:'solo',cell:SOLO[law],dx:i?1.7:-1.7,size:f.kind==='twin'?6.8:6.1}));
 }
+// 화단 칸 한 개의 둥근 사각형(가운데 x,y · 세계 단위).
+export function defenseBedPath(g,x,y,inset=0){const w=DEFENSE_CELL_SIZE.w-.7-inset*2,h=DEFENSE_CELL_SIZE.h-.9-inset*2,r=1.1,l=x-w/2,t=y-h/2+.4;g.beginPath();g.moveTo(l+r,t);g.arcTo(l+w,t,l+w,t+h,r);g.arcTo(l+w,t+h,l,t+h,r);g.arcTo(l,t+h,l,t,r);g.arcTo(l,t,l+w,t,r);g.closePath();}
+// 2026-09-28 사용자: "칸막이처럼 영역이 정해져야" — 정해진 화단 칸을 바닥에 한 번 구워 둔다(매 장면 비용 없음).
+// 흙을 살짝 어둡게, 테두리는 옅은 돌 띠, 네 귀퉁이에 작은 말뚝.
+function paintBeds(g){
+ for(const c of DEFENSE_CELLS){
+  defenseBedPath(g,c.x,c.y);g.fillStyle='#0d1a1266';g.fill();g.lineWidth=.34;g.strokeStyle='#0b150e88';g.stroke();
+  defenseBedPath(g,c.x,c.y,.22);g.lineWidth=.16;g.strokeStyle='#e9dfae5c';g.stroke();
+  const w=DEFENSE_CELL_SIZE.w-.7,h=DEFENSE_CELL_SIZE.h-.9;g.fillStyle='#b99a64b0';
+  for(const [dx,dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const px=c.x+dx*(w/2-.55),py=c.y+.4+dy*(h/2-.55);g.fillRect(px-.28,py-.28,.56,.56);}
+ }
+}
 export function paintDefenseGround(g,assets,path,state){
  if(assets.floor?.naturalWidth){g.save();g.filter='brightness(1.19) saturate(1.62) contrast(1.13)';g.drawImage(assets.floor,-8,4,118,54);g.restore();}
  else{g.fillStyle='#283c32';g.fillRect(-8,4,118,54);}
@@ -23,6 +35,7 @@ export function paintDefenseGround(g,assets,path,state){
  g.fillStyle=sunlight;g.fillRect(-8,4,118,54);
  const trace=()=>{g.beginPath();path.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));};
  g.lineJoin=g.lineCap='round';trace();g.strokeStyle='#182818a0';g.lineWidth=7.5;g.stroke();trace();g.strokeStyle='#64703d';g.lineWidth=6.2;g.stroke();
+ paintBeds(g);
  // Worn flagstones are baked into the ground canvas only when layout changes.
  for(let i=0;i<path.length-1;i++){
   const a=path[i],b=path[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),angle=Math.atan2(b.y-a.y,b.x-a.x);
