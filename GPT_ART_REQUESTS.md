@@ -7,7 +7,7 @@
 ## 진행 상황(2026-09-28)
 
 - 완료: 창·불꽃 동작 시트(`public/assets/duel/pierce·burst-motion-v1.webp`, 칸마다 같은 배율·발 높이로 다시 맞춤), 계급장(`public/assets/defense/rank-badges-v1.webp`), 대전 바닥(`public/assets/duel/arena-floor-v1.webp`)
-- 남음: 동작 시트 7장(거울·중력·분열·연쇄·귀환·공전·빙결) — 받으면 `seed-duel-view.js`의 `MOTION` 목록에 이름만 더하면 된다
+- PNG 원본 7장 추가 완료: `gpt-art-delivery/reflect·gravity·split·chain·recall·orbit·frost-motion-*.png`. 분열·귀환은 경계 여백을 보정한 `v2`를 우선 사용한다. 원본은 1774×887이므로 1024×512 셀 정렬·WebP 변환과 실제 게임 연결은 아직 필요하다.
 
 ## 우선순위
 

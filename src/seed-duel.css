@@ -99,3 +99,4 @@
 @media(min-width:860px){.sd-cards{grid-template-columns:repeat(3,1fr)}.sd-card .sd-portrait{flex-basis:70px;width:70px;height:70px}.sd-card em{font-size:11px}}
 #seed-duel .sd-card{padding:8px}
 @media(max-height:620px){.sd-card em{display:none}.sd-card .sd-portrait{flex-basis:54px;width:54px;height:54px}.sd-cards{gap:6px;margin:6px 0}}
+.sd-portrait.sd-portrait-motion{background-size:520% 260%;background-position:3.6% 12.5%}

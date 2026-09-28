@@ -18,7 +18,7 @@ const WX0=-6,WY0=-6,WX1=41,WY1=27,BAKE=40;
 // 버튼 그림: 모험의 씨앗 동작 그림(adventure/seed-combat-v1, 4×2칸)과 이펙트 소재(vfx-atlas, 4×4칸).
 const POSE={attack:1,heavy:2,block:5,dodge:3};
 // GPT 동작 그림(4×2: 서기·1타·2타·3타·강공격 모으기·내리치기·막기·맞음)이 있는 캐릭터. 없으면 서 있는 그림 + 기울기 연출.
-const MOTION=['pierce','burst'];
+const MOTION=['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost'];
 const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
@@ -39,7 +39,8 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;dpr=Math.min(1.5,devicePixelRatio||1,Math.max(1,Math.sqrt(2.6e6/Math.max(1,width*height))));canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);cam.k=0;}
  function close(){if(closed)return;closed=true;cancelAnimationFrame(raf);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-duel-open');onClose();}
  // ── 고르기 화면
- const portrait=(id,extra='')=>{const c=DUEL_CHARACTERS[id];return `<span class="sd-portrait ${extra}" style="background-image:url('${BASE}assets/cute/seed-solo-v1.webp');background-position:${c.tile%4*100/3}% ${Math.floor(c.tile/4)*50}%"></span>`;};
+ // 고르기 화면 얼굴도 싸울 때와 같은 동작 그림의 서 있는 칸으로(없으면 예전 단독 진화 그림).
+ const portrait=(id,extra='')=>{const c=DUEL_CHARACTERS[id];return MOTION.includes(id)?`<span class="sd-portrait sd-portrait-motion ${extra}" style="background-image:url('${BASE}assets/duel/${id}-motion-v1.webp')"></span>`:`<span class="sd-portrait ${extra}" style="background-image:url('${BASE}assets/cute/seed-solo-v1.webp');background-position:${c.tile%4*100/3}% ${Math.floor(c.tile/4)*50}%"></span>`;};
  function select(){
   const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(id,'sd-law')} 기술 ${c.skills[0].name} · 필살 ${c.ult.name}</i></span></button>`;};
   $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper"><p class="sd-eyebrow">SEED · DUEL · 시험 모드</p><h1>씨앗 대전</h1><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><div class="sd-cards">${DUEL_ORDER.map(card).join('')}</div>
