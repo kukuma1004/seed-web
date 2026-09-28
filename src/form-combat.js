@@ -1846,7 +1846,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(!item.ob?.parent)continue;
    if(item.ob.userData.paintedProjectile&&camera)item.ob.quaternion.copy(camera.quaternion);
    const body=item.renderBody||(item.renderBody={ob:item.ob,life:1,spriteKey:'combo',spriteCell:item.ob.userData.spriteCell??paintedCell(),visualScale:1});
-   body.visualScale=item.ob.userData.visualScale?.[0]??1;
+   // 2026-09-28 사용자: "얼어붙은 블랙홀 크기가 너무 커서 몹을 다 가린다" — 차가운 우물의 그림은 끌어당기는 범위(반지름×2.3)
+   // 크기로 그려져 적을 덮었다. 범위는 그대로 두고 가운데 표식 그림만 작게(최대 1.1) 그린다.
+   const scaleOf=item.ob.userData.visualScale?.[0]??1;body.visualScale=coldWells.includes(item)?Math.min(1.1,scaleOf):scaleOf;
    out.push(body);
   }
   if(renderless){

@@ -4,6 +4,10 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-28-h',date:'9월 28일',title:'얼어붙은 블랙홀 그림 크기',
+  lines:['얼어붙은 블랙홀의 차가운 소용돌이 그림이 너무 커서 적을 가리던 문제를 고쳤어요. 끌어당기는 범위는 그대로예요.']
+ },
+ {
   id:'2026-09-28-g',date:'9월 28일',title:'씨앗의 모험 · 넓은 지역 탐험',
   lines:[
    '전투 방이 화면 여러 장 크기의 넓은 지역으로 바뀌었어요. 나무와 풀숲 사이를 돌아다니며 싸워요.',
