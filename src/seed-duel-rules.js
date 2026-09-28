@@ -11,17 +11,33 @@ export const DUEL_CHARACTERS=Object.freeze({
  pierce:Object.freeze({id:'pierce',name:'창 씨앗',role:'긴 사거리 · 찌르기',hp:178,speed:4.5,reach:2.5,arc:.62,damage:[11,11,17],cadence:.34,heavy:{damage:22,reach:2.6},parry:1,tile:4,ink:'#dbf6b1',
   skills:[skill('돌진 찌르기',4.5,'앞으로 달려가며 꿰뚫어요'),skill('관통 투창',3.5,'멀리 날아가 둘을 꿰뚫는 창')],ult:skill('천 개의 창',0,'세 줄의 창이 앞을 쓸어요'),
   blurb:'가장 멀리서 찌르지만, 붙으면 약해요.'}),
- burst:Object.freeze({id:'burst',name:'불꽃 씨앗',role:'한 방 · 막기 파괴',hp:152,speed:3.8,reach:1.6,arc:1.1,damage:[11,11,16],cadence:.48,heavy:{damage:26,reach:1.9,breaker:1.25},parry:1,tile:5,ink:'#ffaa65',
+ burst:Object.freeze({id:'burst',name:'불꽃 씨앗',role:'한 방 · 막기 파괴',hp:146,speed:3.8,reach:1.6,arc:1.1,damage:[11,11,16],cadence:.48,heavy:{damage:26,reach:1.9,breaker:1.25},parry:1,tile:5,ink:'#ffaa65',
   skills:[skill('불씨 심기',5,'잠시 뒤 터지는 불씨를 발밑에'),skill('화염 도약',6,'뛰어올라 내려찍어요 · 막기를 부숴요')],ult:skill('대폭발',0,'둘레를 크게 터뜨려요'),
   blurb:'느리지만 세고, 막고 있는 상대를 잘 부숴요.'}),
- reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:178,speed:4.3,reach:1.75,arc:.9,damage:[10,10,15],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
+ reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:170,speed:4.3,reach:1.75,arc:.9,damage:[10,10,15],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
   skills:[skill('거울 방패',6,'잠깐 모든 공격을 막고 탄을 되돌려요'),skill('수정 탄',3,'벽에 두 번 튕기는 수정')],ult:skill('거울 감옥',0,'상대를 거울에 가둬 묶어요'),
   blurb:'반격 막기 판정이 넓고, 날아오는 탄을 되돌려요.'}),
  gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:136,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
   skills:[skill('끌어당기기',6.5,'앞의 상대를 끌어와 묶어요 · 막기 무시'),skill('중력장',7,'둘레의 상대를 느리게')],ult:skill('블랙홀',0,'상대를 빨아들이며 계속 때려요'),
   blurb:'막고 있는 상대도 끌어와 무너뜨려요.'})
+ // 2026-09-28 사용자: "캐릭터 추가해 보자" — 나머지 다섯 법칙. 버튼 네 개 방식이라 기술(공격+회피) 하나와 필살 하나씩.
+ ,split:Object.freeze({id:'split',name:'분열 씨앗',role:'빠른 연타 · 꽃잎',hp:196,speed:4.9,reach:1.55,arc:1,damage:[9,9,13],cadence:.27,heavy:{damage:21,reach:1.7},parry:1,tile:1,ink:'#b5ec83',
+  skills:[skill('꽃잎 부채',2.8,'꽃잎 세 장을 부채꼴로 흩뿌려요'),skill('꽃잎 부채',3.2,'')],ult:skill('꽃잎 폭풍',0,'사방으로 꽃잎을 두 번 터뜨려요'),
+  blurb:'가장 빠르게 휘두르고 가볍게 뛰어요. 한 방은 약해요.'})
+ ,chain:Object.freeze({id:'chain',name:'연쇄 씨앗',role:'중거리 번개 · 기절',hp:146,speed:4.2,reach:1.7,arc:.95,damage:[9,9,13],cadence:.36,heavy:{damage:21,reach:1.9},parry:1,tile:2,ink:'#ffdd78',
+  skills:[skill('번개 사슬',5.5,'앞의 상대에게 번개를 꽂아 잠깐 기절시켜요'),skill('번개 사슬',4.5,'')],ult:skill('낙뢰',0,'상대 자리에 번개가 다섯 번 떨어져요'),
+  blurb:'거리를 두고 번개로 끊어 들어가요.'})
+ ,recall:Object.freeze({id:'recall',name:'귀환 씨앗',role:'부메랑 · 두 번 베기',hp:200,speed:4.5,reach:1.7,arc:.95,damage:[11,11,16],cadence:.34,heavy:{damage:21,reach:1.8},parry:1,tile:6,ink:'#9cf0ba',
+  skills:[skill('귀환 칼날',3.8,'던진 칼날이 갔다가 돌아오며 두 번 베어요'),skill('귀환 칼날',3.8,'')],ult:skill('칼날 회오리',0,'칼날 넷이 사방으로 날아갔다 돌아와요'),
+  blurb:'던지고 받으며 앞뒤로 두 번 벨 수 있어요.'})
+ ,orbit:Object.freeze({id:'orbit',name:'공전 씨앗',role:'붙어서 싸우기 · 고리',hp:140,speed:4,reach:1.4,arc:1.2,damage:[10,10,14],cadence:.4,heavy:{damage:22,reach:1.7},parry:1,tile:3,ink:'#ffeaa0',
+  skills:[skill('공전 고리',7.5,'몸 주위를 도는 구슬이 가까운 상대를 계속 때려요'),skill('공전 고리',6,'')],ult:skill('큰 고리',0,'더 크고 오래 도는 고리'),
+  blurb:'튼튼하고, 붙어 있을수록 강해요.'})
+ ,frost:Object.freeze({id:'frost',name:'빙결 씨앗',role:'느리게 묶기 · 제어',hp:158,speed:4.1,reach:1.6,arc:1,damage:[9,9,13],cadence:.38,heavy:{damage:21,reach:1.8},parry:1.2,tile:8,ink:'#8ce9ff',
+  skills:[skill('서리 숨결',5,'앞쪽 부채꼴에 서리를 뿜어 느리게 해요'),skill('서리 숨결',5,'')],ult:skill('눈보라',0,'주위를 느리게 하다 끝에 얼려요'),
+  blurb:'상대를 느리게 만들어 거리를 지배해요.'})
 });
-export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity']);
+export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost']);
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
@@ -68,6 +84,11 @@ function useSkill(s,f,i){
  if(f.char==='pierce'){if(i===0){f.state='dash';f.t=.3;f.dx=f.fx;f.dy=f.fy;f.hitDone=false;}else shoot(s,f,{damage:16,pierce:1,speed:14,kind:'lance'});}
  if(f.char==='burst'){if(i===0)s.hazards.push({kind:'mine',owner:f.team,x:f.x,y:f.y,t:.9,r:2.1});else{f.state='leap';f.t=.55;f.tx=clamp(o.x,DUEL_ARENA.minX,DUEL_ARENA.maxX);f.ty=clamp(o.y,DUEL_ARENA.minY,DUEL_ARENA.maxY);s.hazards.push({kind:'tell',owner:f.team,x:f.tx,y:f.ty,t:.55,r:2.1});}}
  if(f.char==='reflect'){if(i===0){f.shield=1.1;f.state='idle';f.t=0;fx(s,'shield',f.x,f.y,{ink:c.ink,life:1.1,max:1.1});}else shoot(s,f,{damage:12,bounces:2,speed:10,kind:'crystal'});}
+ if(f.char==='split')for(const off of [-.32,0,.32]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.6,damage:10,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}
+ if(f.char==='chain'){const v=norm(o.x-f.x,o.y-f.y);if(dist(f,o)<5.8&&v.x*f.fx+v.y*f.fy>.3&&o.inv<=0){strike(s,f,o,10,{kind:'skill',stun:.35,knock:.3});fx(s,'bolt',o.x,o.y,{ink:c.ink,fromX:f.x,fromY:f.y,life:.3,max:.3});}else fx(s,'bolt',f.x+f.fx*5,f.y+f.fy*5,{ink:c.ink,fromX:f.x,fromY:f.y,life:.3,max:.3});}
+ if(f.char==='recall')s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:f.fx,dy:f.fy,speed:11,life:1.6,damage:15,pierce:1,bounces:0,hit:new Set(),law:'recall',kind:'blade',turn:.55,age:0});
+ if(f.char==='orbit')s.hazards.push({kind:'ring',owner:f.team,x:f.x,y:f.y,t:2.2,r:1.6,tick:0,follow:true,damage:3});
+ if(f.char==='frost'){const v=norm(o.x-f.x,o.y-f.y);fx(s,'breath',f.x,f.y,{ink:c.ink,angle:Math.atan2(f.fy,f.fx),r:3.6,life:.4,max:.4});if(dist(f,o)<3.9&&v.x*f.fx+v.y*f.fy>.5){strike(s,f,o,9,{kind:'skill',stun:.25,knock:.4});o.slow=Math.max(o.slow,1.1);}}
  if(f.char==='gravity'){if(i===0){const v=norm(o.x-f.x,o.y-f.y);if(dist(f,o)<5.5&&v.x*f.fx+v.y*f.fy>.35&&o.inv<=0){o.x=f.x+f.fx*1.1;o.y=f.y+f.fy*1.1;strike(s,f,o,8,{kind:'grab',unblockable:true,stun:.6,knock:.2});fx(s,'pull',o.x,o.y,{ink:c.ink});}else fx(s,'miss',f.x+f.fx*2,f.y+f.fy*2,{});}else s.hazards.push({kind:'well',owner:f.team,x:f.x+f.fx*1.5,y:f.y+f.fy*1.5,t:2.6,r:2.6});}
  return true;
 }
@@ -76,6 +97,11 @@ function useUlt(s,f){
  if(f.char==='pierce')for(const off of [-.35,0,.35]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x,y:f.y,dx:Math.cos(a),dy:Math.sin(a),speed:15,life:1.4,damage:16,pierce:3,bounces:0,hit:new Set(),law:'pierce',kind:'lance',unblockable:false,breaker:1.5});}
  if(f.char==='burst'){if(dist(f,o)<4.2)strike(s,f,o,40,{kind:'skill',breaker:2,stun:.8,knock:2});fx(s,'boom',f.x,f.y,{r:4.2,ink:c.ink,life:.6,max:.6});}
  if(f.char==='reflect'){if(dist(f,o)<8){o.state='jailed';o.t=1.6;o.stun=1.6;o.blocking=false;fx(s,'jail',o.x,o.y,{ink:c.ink,life:1.6,max:1.6});}}
+ if(f.char==='split')for(const wave of [0,1])for(let k=0;k<8;k++){const a=k/8*Math.PI*2+wave*.39;s.shots.push({owner:f.team,x:f.x,y:f.y,dx:Math.cos(a),dy:Math.sin(a),speed:wave?8:10,life:.9,damage:9,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}
+ if(f.char==='chain')for(let k=0;k<5;k++)s.hazards.push({kind:'strike',owner:f.team,x:o.x,y:o.y,t:.45+k*.3,r:1.35,aim:true});
+ if(f.char==='recall')for(let k=0;k<4;k++){const a=Math.atan2(f.fy,f.fx)+k*Math.PI/2;s.shots.push({owner:f.team,x:f.x,y:f.y,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:1.8,damage:11,pierce:1,bounces:0,hit:new Set(),law:'recall',kind:'blade',turn:.6,age:0});}
+ if(f.char==='orbit')s.hazards.push({kind:'ring',owner:f.team,x:f.x,y:f.y,t:3.5,r:2.8,tick:0,follow:true,damage:5});
+ if(f.char==='frost')s.hazards.push({kind:'blizzard',owner:f.team,x:f.x,y:f.y,t:2.6,r:4.4,tick:0,follow:true});
  if(f.char==='gravity')s.hazards.push({kind:'hole',owner:f.team,x:f.x+f.fx*3,y:f.y+f.fy*3,t:2.2,r:3.4,tick:0});
  return true;
 }
@@ -139,15 +165,22 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  const [a,b]=s.fighters;act(s,a,playerInput,dt);act(s,b,enemyInput||duelAi(s,1,dt),dt);
  // 서로 겹치지 않게.
  const d=dist(a,b);if(d<.9&&d>1e-6){const push=(.9-d)/2,v=norm(b.x-a.x,b.y-a.y);a.x-=v.x*push;a.y-=v.y*push;b.x+=v.x*push;b.y+=v.y*push;clampArena(a);clampArena(b);}
- for(const q of s.shots){q.life-=dt;q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
-  if(q.x<A.minX-.5||q.x>A.maxX+.5||q.y<A.minY-.5||q.y>A.maxY+.5||DUEL_PILLARS.some(p=>Math.hypot(q.x-p.x,q.y-p.y)<p.r)){if(q.bounces>0){q.bounces--;if(q.x<A.minX||q.x>A.maxX)q.dx*=-1;else q.dy*=-1;q.x=clamp(q.x,A.minX,A.maxX);q.y=clamp(q.y,A.minY,A.maxY);}else q.life=0;}
+ for(const q of s.shots){q.life-=dt;
+  // 귀환 칼날: 잠깐 날아간 뒤 던진 씨앗에게 돌아온다(돌아오는 길에 한 번 더 벨 수 있다). 받으면 사라진다.
+  if(q.kind==='blade'){q.age+=dt;if(q.age>=q.turn){const home=s.fighters[q.owner],v=norm(home.x-q.x,home.y-q.y);if(!q.back){q.back=true;q.hit.clear();q.pierce=1;}q.dx=v.x;q.dy=v.y;q.speed=12;if(Math.hypot(home.x-q.x,home.y-q.y)<.6)q.life=0;}}
+  q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
+  if(q.kind!=='blade'&&(q.x<A.minX-.5||q.x>A.maxX+.5||q.y<A.minY-.5||q.y>A.maxY+.5||DUEL_PILLARS.some(p=>Math.hypot(q.x-p.x,q.y-p.y)<p.r))){if(q.bounces>0){q.bounces--;if(q.x<A.minX||q.x>A.maxX)q.dx*=-1;else q.dy*=-1;q.x=clamp(q.x,A.minX,A.maxX);q.y=clamp(q.y,A.minY,A.maxY);}else q.life=0;}
   const target=s.fighters[1-q.owner];if(q.life>0&&!q.hit.has(target.team)&&Math.hypot(q.x-target.x,q.y-target.y)<.6){
    if(target.shield>0){q.owner=target.team;q.dx*=-1;q.dy*=-1;q.hit.clear();fx(s,'parry',q.x,q.y,{ink:DUEL_CHARACTERS[target.char].ink});event(s,'reflect');continue;}
    q.hit.add(target.team);strike(s,s.fighters[q.owner],target,q.damage,{kind:'shot',stun:.3,knock:.8,breaker:q.breaker||1,dir:{x:q.dx,y:q.dy}});if(--q.pierce<0)q.life=0;}
  }
  s.shots=s.shots.filter(q=>q.life>0);
  for(const h of s.hazards){h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+  if(h.follow){h.x=owner.x;h.y=owner.y;}
   if(h.kind==='well'&&dist(h,o)<h.r){o.slow=.3;}
+  if(h.kind==='ring'){h.tick-=dt;if(h.tick<=0&&dist(h,o)<h.r+.3&&o.inv<=0){h.tick=.45;strike(s,owner,o,h.damage,{kind:'skill',stun:.15,knock:.5});}}
+  if(h.kind==='blizzard'){if(dist(h,o)<h.r){o.slow=Math.max(o.slow,.3);h.tick-=dt;if(h.tick<=0){h.tick=.5;strike(s,owner,o,3,{kind:'skill',unblockable:true,stun:.08,knock:0});}}if(h.t<=dt&&dist(h,o)<h.r&&o.inv<=0){o.state='jailed';o.t=.8;o.stun=.8;o.blocking=false;fx(s,'jail',o.x,o.y,{ink:'#8ce9ff',life:1.1,max:1.1});}}
+  if(h.kind==='strike'){if(h.aim&&h.t>.25){h.x+=(o.x-h.x)*Math.min(1,dt*3);h.y+=(o.y-h.y)*Math.min(1,dt*3);}if(h.t<=0){fx(s,'bolt',h.x,h.y,{ink:'#ffdd78',fromX:h.x,fromY:h.y-6,life:.3,max:.3});if(dist(h,o)<h.r&&o.inv<=0)strike(s,owner,o,7,{kind:'skill',stun:.3,knock:.4,breaker:1.2});event(s,'hit');}}
   if(h.kind==='hole'){if(dist(h,o)<h.r&&o.inv<=0){const v=norm(h.x-o.x,h.y-o.y);o.x+=v.x*2.6*dt;o.y+=v.y*2.6*dt;clampArena(o);h.tick-=dt;if(h.tick<=0){h.tick=.4;strike(s,owner,o,5,{kind:'skill',unblockable:true,stun:.2,knock:0});}}}
   if(h.kind==='mine'&&h.t<=0){fx(s,'boom',h.x,h.y,{r:h.r,ink:'#ffaa65',life:.4,max:.4});if(dist(h,o)<h.r)strike(s,owner,o,20,{kind:'skill',breaker:1.5,stun:.5,knock:1.6,dir:norm(o.x-h.x,o.y-h.y)});event(s,'heavyHit');}
  }
@@ -172,9 +205,9 @@ export function duelAi(s,team,dt){
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- if(f.meter>=100&&d<(f.char==='pierce'?9:4)){input.ult=true;return input;}
+ const ultRange={pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6}[f.char]||4;if(f.meter>=100&&d<ultRange){input.ult=true;return input;}
  // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만" — 두 번째 스킬은 쓰지 않는다(사람과 같은 조작).
- if(f.cd[0]<=0&&(f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
+ if(f.cd[0]<=0&&(f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  const want=c.reach*.85;
  if(d>want+.3){input.x=v.x;input.y=v.y;}else if(d<want-.9&&f.char==='pierce'){input.x=-v.x;input.y=-v.y;}
  else{input.x=-v.y*Math.sin(s.time*1.3);input.y=v.x*Math.sin(s.time*1.3);if(rnd(s)<cfg.aggro*dt*5)input.attack=true;}

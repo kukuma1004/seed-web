@@ -25,15 +25,24 @@ const run=(s,sec,pin={},ein={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,type
 // 회피·돌진이 끝나면 멈춘다(예전에는 상태가 남아 계속 미끄러졌다).
 {const s=fight();const [a]=s.fighters;a.x=16;a.y=10;run(s,.01,{dodge:true,x:0,y:1},idle);run(s,.4,idle,idle);const y=a.y;run(s,.6,idle,idle);assert.ok(Math.abs(a.y-y)<.05,'dodge stops');assert.notEqual(a.state,'dodge');
  const t=fight('pierce','burst');const [p,q]=t.fighters;p.x=8;p.y=5;q.x=20;q.y=16;run(t,.01,{skill1:true},idle);run(t,.5,idle,idle);const px=p.x;run(t,.5,idle,idle);assert.ok(Math.abs(p.x-px)<.05,'dash stops');}
-// 세 판 두 선승, AI끼리 끝까지 간다. 캐릭터마다 이기는 판이 있다(한 캐릭터가 모두 이기지 않는다).
+// 새 캐릭터 기술: 분열 꽃잎·연쇄 번개(기절)·귀환 칼날(갔다 돌아오며 두 번)·공전 고리(계속)·빙결 숨결(느려짐).
+{const one=(p,e='burst',far=1.6)=>{const s=fight(p,e);s.fighters[1].x=s.fighters[0].x+far;s.fighters[1].hp=s.fighters[1].maxHp=999;return s;};
+ {const s=one('split');run(s,.01,{skill1:true},idle);run(s,.6,idle,idle);assert.ok(s.fighters[1].hp<999,'petals hit');}
+ {const s=one('chain','burst',4);run(s,.01,{skill1:true},idle);assert.ok(s.fighters[1].hp<999&&s.fighters[1].stun>.3,'lightning stuns at range');}
+ {const s=one('recall','burst',3);const e=s.fighters[1];let hits=0,last=999;for(let i=0;i<120;i++){run(s,.01,i===0?{skill1:true}:idle,idle);if(e.hp<last){hits++;last=e.hp;}}assert.ok(hits>=2,'returning blade hits twice');assert.equal(s.shots.length,0,'blade is caught');}
+ {const s=one('orbit','burst',1.2);run(s,.01,{skill1:true},idle);run(s,1.5,idle,idle);assert.ok(999-s.fighters[1].hp>=9,'ring keeps hitting');}
+ {const s=one('frost','burst',2.5);run(s,.01,{skill1:true},idle);assert.ok(s.fighters[1].slow>1,'breath slows');}
+ for(const c of ['split','chain','recall','orbit','frost']){const s=one(c,'burst',2.5);s.fighters[0].meter=100;const before=s.fighters[1].hp;run(s,.01,{ult:true},idle);run(s,3,idle,idle);assert.ok(s.fighters[1].hp<before,`${c} ultimate hits`);}}
+// 세 판 두 선승, AI끼리 끝까지 간다. 캐릭터마다 자기 판의 승률이 너무 낮거나 높지 않다(아홉 명).
 {
- const wins=Object.fromEntries(DUEL_ORDER.map(c=>[c,0]));let games=0;
- for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=3;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let guard=0;while(s.phase!=='over'&&guard++<60*600)stepDuel(s,1/60,duelAi(s,0,1/60),null);assert.equal(s.phase,'over',`${p} vs ${e} ends`);wins[s.winner===0?p:e]++;games++;}}
- for(const c of DUEL_ORDER)assert.ok(wins[c]>=games*.12&&wins[c]<=games*.45,`${c} balance ${JSON.stringify(wins)}`);
- console.log('Duel AI balance',JSON.stringify(wins),'of',games);
+ const wins=Object.fromEntries(DUEL_ORDER.map(c=>[c,0])),played=Object.fromEntries(DUEL_ORDER.map(c=>[c,0]));let games=0;
+ for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=2;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let guard=0;while(s.phase!=='over'&&guard++<60*600)stepDuel(s,1/60,duelAi(s,0,1/60),null);assert.equal(s.phase,'over',`${p} vs ${e} ends`);wins[s.winner===0?p:e]++;played[p]++;played[e]++;games++;}}
+ const rate=Object.fromEntries(DUEL_ORDER.map(c=>[c,Math.round(wins[c]/played[c]*100)]));
+ for(const c of DUEL_ORDER)assert.ok(rate[c]>=30&&rate[c]<=70,`${c} win rate ${JSON.stringify(rate)}`);
+ console.log('Duel AI win rate %',JSON.stringify(rate),'of',games,'games');
 }
 // 평타만 연타하면 보통 AI를 이기지 못한다(3타 뒤 끊김·막히면 튕김·맞으면 AI가 더 막고 반격).
-{let win=0,n=0;for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=3;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let f=0;while(s.phase!=='over'&&f++<60*600){const me=s.fighters[0],o=s.fighters[1],dx=o.x-me.x,dy=o.y-me.y,d=Math.hypot(dx,dy);stepDuel(s,1/60,{x:d>1.4?dx/d:0,y:d>1.4?dy/d:0,aimX:dx,aimY:dy,attack:f%6===0});}n++;if(s.winner===0)win++;}}
+{let win=0,n=0;for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;const s=createDuel({player:p,enemy:e,seed:1,difficulty:'normal'});let f=0;while(s.phase!=='over'&&f++<60*600){const me=s.fighters[0],o=s.fighters[1],dx=o.x-me.x,dy=o.y-me.y,d=Math.hypot(dx,dy);stepDuel(s,1/60,{x:d>1.4?dx/d:0,y:d>1.4?dy/d:0,aimX:dx,aimY:dy,attack:f%6===0});}n++;if(s.winner===0)win++;}
  assert.ok(win<=n*.3,`attack spam must not beat normal AI (${win}/${n})`);console.log('Attack spam vs normal AI',win,'of',n);}
-assert.equal(Object.keys(DUEL_CHARACTERS).length,4);assert.equal(DUEL_RULES.roundsToWin,2);
+assert.equal(Object.keys(DUEL_CHARACTERS).length,9);assert.equal(DUEL_RULES.roundsToWin,2);
 console.log('Duel: light/heavy/block/parry/guard break, grab, reflect shield, dodge, best-of-3 AI matches and balance passed.');

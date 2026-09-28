@@ -93,3 +93,9 @@
 #seed-duel .sd-practice{display:block;width:min(360px,100%);margin:6px auto;border-color:#f0c56faa;color:#ffe3a0}
 #seed-duel.sd-practicing .sd-rounds{visibility:hidden}
 .sd-combo{top:auto;bottom:max(180px,26vh)}
+
+/* 아홉 캐릭터(2026-09-28): 넓은 화면은 세 줄, 카드를 조금 작게 */
+.sd-paper{width:min(1040px,96vw)}
+@media(min-width:860px){.sd-cards{grid-template-columns:repeat(3,1fr)}.sd-card .sd-portrait{flex-basis:70px;width:70px;height:70px}.sd-card em{font-size:11px}}
+#seed-duel .sd-card{padding:8px}
+@media(max-height:620px){.sd-card em{display:none}.sd-card .sd-portrait{flex-basis:54px;width:54px;height:54px}.sd-cards{gap:6px;margin:6px 0}}

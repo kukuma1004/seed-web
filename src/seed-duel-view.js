@@ -87,7 +87,7 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   {name:'기본 3연격',keys:['공격','공격','공격'],tip:'공격을 박자에 맞춰 세 번. 1·2타는 좌우로, 3타는 크게 휘둘러 밀어내요.',dummy:'idle',check:p=>p.chainTime>0&&p.chain>=3},
   {name:'연계 강공격',keys:['공격','공격+방어'],tip:'평타가 맞는 순간 공격과 방어를 같이 누르면 준비가 짧은 강공격으로 이어져요. 평타 3타 뒤에도 돼요.',dummy:'idle',on:'linkHit'},
   {name:'막기 부수기',keys:['공격+방어','공격+방어'],tip:'상대가 막고 있으면 평타는 튕겨 나가요. 강공격(공격+방어)을 두세 번 맞히면 막기가 부서져요.',dummy:'block',on:'guardBreak'},
-  {name:'기술 연계',keys:['공격','공격+회피'],tip:'평타가 맞은 뒤 공격과 회피를 같이 누르면 캐릭터 기술로 이어져요(창: 돌진 찌르기 · 불꽃: 불씨 · 거울: 방패 · 중력: 끌어당기기).',dummy:'idle',on:'skillCombo'},
+  {name:'기술 연계',keys:['공격','공격+회피'],tip:'평타가 맞은 뒤 공격과 회피를 같이 누르면 캐릭터 기술로 이어져요. 캐릭터마다 기술이 달라요(고르기 화면의 기술 이름).',dummy:'idle',on:'skillCombo'},
   {name:'반격 막기',keys:['상대가 휘두르기 직전','방어'],tip:'상대 공격이 닿기 바로 전에 방어를 누르면 상대가 크게 흔들려요. 미리 누르고 있으면 그냥 막기예요.',dummy:'attack',on:'parry'},
   {name:'회피로 피하기',keys:['상대가 휘두를 때','회피'],tip:'회피하는 순간은 맞지 않아요. 방향키와 같이 누르면 그쪽으로 굴러요.',dummy:'attack',on:'dodgeAvoid'},
   {name:'필살기',keys:['필살'],tip:'공격을 맞히고 맞으면 노란 게이지가 차요. 가득 차면 필살! 연습에서는 늘 가득 차 있어요.',dummy:'idle',on:'ultimate'},
@@ -173,11 +173,14 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   if(floor){const x0=(0-ox)/scale,y0=(0-oy)/scale,x1=(width-ox)/scale,y1=(height-oy)/scale,sx=Math.max(0,(x0-WX0)*BAKE),sy=Math.max(0,(y0-WY0)*BAKE),ex=Math.min(floor.width,(x1-WX0)*BAKE),ey=Math.min(floor.height,(y1-WY0)*BAKE);if(ex>sx&&ey>sy){const a=point(WX0+sx/BAKE,WY0+sy/BAKE),b=point(WX0+ex/BAKE,WY0+ey/BAKE);ctx.drawImage(floor,sx,sy,ex-sx,ey-sy,a.x,a.y,b.x-a.x,b.y-a.y);}}
   if(!s)return;
   ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  for(const h of s.hazards){const ink=DUEL_CHARACTERS[s.fighters[h.owner].char].ink;if(h.kind==='tell'||h.kind==='mine'){ctx.fillStyle=h.kind==='tell'?'#ff6b4a33':'#ffaa6533';ctx.beginPath();ctx.ellipse(h.x,h.y,h.r,h.r*.72,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=h.kind==='tell'?'#ff8a6acc':'#ffc28a99';ctx.lineWidth=.08;ctx.stroke();vfx.fx(ctx,'flame',h.x,h.y-.3,.8+.3*Math.sin(clock*20),{color:'#ffaa65',alpha:.9});}else vfx.field(ctx,{x:h.x,y:h.y,radius:h.r*.7,kind:'well'},1,clock*1000,ink);}
+  for(const h of s.hazards){const ink=DUEL_CHARACTERS[s.fighters[h.owner].char].ink;
+   if(h.kind==='ring'){ctx.save();ctx.strokeStyle=ink+'44';ctx.lineWidth=.08;ctx.beginPath();ctx.ellipse(h.x,h.y-.4,h.r,h.r*.62,0,0,Math.PI*2);ctx.stroke();ctx.restore();const n=h.r>2?5:3;for(let k=0;k<n;k++){const a=clock*5+k*Math.PI*2/n;vfx.fx(ctx,'orb',h.x+Math.cos(a)*h.r,h.y-.6+Math.sin(a)*h.r*.62,.75,{color:ink,alpha:.95});vfx.shot(ctx,'orbit',h.x+Math.cos(a)*h.r,h.y-.6+Math.sin(a)*h.r*.62,.9,{color:ink,alpha:.6,rotation:a});}continue;}
+   if(h.kind==='blizzard'){vfx.field(ctx,{x:h.x,y:h.y,radius:h.r*.8,kind:'web'},1,clock*1000,ink);for(let k=0;k<10;k++){const a=clock*1.5+k*.63,r=h.r*(.3+.7*((k*.37+clock*.4)%1));vfx.fx(ctx,k%3?'flecks':'mist',h.x+Math.cos(a)*r,h.y-.5+Math.sin(a)*r*.62,k%3?.7:1.6,{color:ink,alpha:.55});}continue;}
+   if(h.kind==='strike'){const k=Math.max(0,Math.min(1,1-h.t/.45));ctx.save();ctx.fillStyle='#ffdd7826';ctx.strokeStyle='#ffdd78cc';ctx.lineWidth=.08;ctx.beginPath();ctx.ellipse(h.x,h.y,h.r,h.r*.62,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.ellipse(h.x,h.y,h.r*k,h.r*.62*k,0,0,Math.PI*2);ctx.fillStyle='#ffdd7844';ctx.fill();ctx.restore();continue;}if(h.kind==='tell'||h.kind==='mine'){ctx.fillStyle=h.kind==='tell'?'#ff6b4a33':'#ffaa6533';ctx.beginPath();ctx.ellipse(h.x,h.y,h.r,h.r*.72,0,0,Math.PI*2);ctx.fill();ctx.strokeStyle=h.kind==='tell'?'#ff8a6acc':'#ffc28a99';ctx.lineWidth=.08;ctx.stroke();vfx.fx(ctx,'flame',h.x,h.y-.3,.8+.3*Math.sin(clock*20),{color:'#ffaa65',alpha:.9});}else vfx.field(ctx,{x:h.x,y:h.y,radius:h.r*.7,kind:'well'},1,clock*1000,ink);}
   for(const f of s.fighters){trail(f,dt);}
   const actors=[...s.fighters.map(f=>({y:f.y,f})),...DUEL_PILLARS.map((p,i)=>({y:p.y,p,i}))].sort((p,q)=>p.y-q.y);
   for(const o of actors){if(o.p){pillar(o.p,o.i);continue;}fighterDraw(o.f);}
-  for(const q of s.shots){const im=assets.dna,a2=Math.atan2(q.dy,q.dx),ink=DUEL_CHARACTERS[q.law]?.ink||'#fff';vfx.projectile(ctx,q.law,q.x,q.y-.7,a2,.6,ink,clock*1000);if(im?.naturalWidth){const cell=PROJECTILE_DNA_CELLS[q.law]??0,cw=im.naturalWidth/4,z=q.kind==='lance'?1.4:1;ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(a2);ctx.drawImage(im,cell%4*cw,Math.floor(cell/4)*cw,cw,cw,-z/2,-z/2,z,z);ctx.restore();}}
+  for(const q of s.shots){const im=assets.dna,a2=Math.atan2(q.dy,q.dx),ink=DUEL_CHARACTERS[q.law]?.ink||'#fff';vfx.projectile(ctx,q.law,q.x,q.y-.7,a2,.6,ink,clock*1000);if(im?.naturalWidth){const cell=PROJECTILE_DNA_CELLS[q.law]??0,cw=im.naturalWidth/4,z=q.kind==='lance'?1.4:1;ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(q.kind==='blade'||q.kind==='petal'?clock*14:a2);ctx.drawImage(im,cell%4*cw,Math.floor(cell/4)*cw,cw,cw,-z/2,-z/2,z,z);ctx.restore();}}
   for(const e of s.effects)effect(e);
   for(let i=pops.length-1;i>=0;i--){const p=pops[i];p.t+=dt;if(p.t>.9){pops.splice(i,1);continue;}const z=p.t<.12?1.4-p.t*3:1;ctx.save();ctx.globalAlpha=Math.min(1,(.9-p.t)*3);ctx.translate(p.x,p.y-p.t*.8);ctx.scale(z,z);ctx.font=`bold .75px Georgia,'Malgun Gothic'`;ctx.textAlign='center';ctx.lineWidth=.14;ctx.strokeStyle='#221607';ctx.strokeText(p.text,0,0);ctx.fillStyle=p.color;ctx.fillText(p.text,0,0);ctx.restore();}
   ctx.restore();
@@ -229,6 +232,11 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   if(f.char==='pierce'){const len=1.9+w.reach*1.3,bx=hx-ca*.5,by=hy-sa*.5,tx=hx+ca*len,ty=hy+sa*len*.8;ctx.save();ctx.lineCap='round';ctx.strokeStyle='#5a4128';ctx.lineWidth=.13;ctx.beginPath();ctx.moveTo(bx,by);ctx.lineTo(tx,ty);ctx.stroke();ctx.strokeStyle='#d9c79a';ctx.lineWidth=.06;ctx.stroke();ctx.translate(tx,ty);ctx.rotate(Math.atan2(ty-by,tx-bx));ctx.fillStyle='#e9fbff';ctx.strokeStyle=c.ink;ctx.lineWidth=.05;ctx.beginPath();ctx.moveTo(.55,0);ctx.lineTo(-.05,-.17);ctx.lineTo(0,0);ctx.lineTo(-.05,.17);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();if(w.active&&w.reach>.3)vfx.beam(ctx,'trail',hx,hy,tx+ca*.4,ty+sa*.3,.55,{color:c.ink,alpha:.7*w.reach});return;}
   if(f.char==='burst'){vfx.fx(ctx,'flame',hx,hy-.15,.9+(w.active?.5:0)+.08*Math.sin(clock*22),{color:'#ffaa65',alpha:.95});vfx.fx(ctx,'orb',hx,hy,.55,{color:'#ffe0a0',alpha:.8});return;}
   if(f.char==='reflect'){const bl=1.25;vfx.fx(ctx,'shard',hx+ca*bl*.45,hy+sa*bl*.36,bl,{color:c.ink,alpha:.95,rotation:w.a+Math.PI/4});return;}
+  if(f.char==='split'){for(const o of [-.35,.35])vfx.fx(ctx,'petal',hx+Math.cos(w.a+o)*.35,hy+Math.sin(w.a+o)*.28,.75+(w.active?.25:0),{color:c.ink,alpha:.95,rotation:clock*3+o*4});return;}
+  if(f.char==='chain'){vfx.fx(ctx,'orb',hx,hy,.6,{color:c.ink,alpha:.9});vfx.beam(ctx,'lightning',hx,hy,hx+Math.cos(w.a)*(w.active?1.5:.8),hy+Math.sin(w.a)*(w.active?1.2:.6)-.2,.45,{color:c.ink,alpha:.55+.35*Math.abs(Math.sin(clock*30))});return;}
+  if(f.char==='recall'){if(s.shots.some(q=>q.owner===f.team&&q.kind==='blade'))return;vfx.fx(ctx,'crescent',hx+ca*.35,hy+sa*.28,1.25,{color:c.ink,alpha:.95,rotation:w.a+Math.PI/2});return;}
+  if(f.char==='orbit'){for(let k=0;k<3;k++){const a=clock*4+k*Math.PI*2/3;vfx.fx(ctx,'orb',x+Math.cos(a)*.95,y-.8+Math.sin(a)*.55,.5,{color:c.ink,alpha:.9});}return;}
+  if(f.char==='frost'){vfx.fx(ctx,'shard',hx+ca*.4,hy+sa*.3,1.15,{color:c.ink,alpha:.95,rotation:w.a+Math.PI/4});vfx.fx(ctx,'mist',hx,hy,.9,{color:c.ink,alpha:.35});return;}
   if(f.char==='gravity'){vfx.fx(ctx,'orb',hx,hy,.75,{color:c.ink,alpha:.95});vfx.fx(ctx,'ring',hx,hy,1.05,{color:c.ink,alpha:.6,rotation:clock*6});}
  }
  // ── 효과
@@ -246,6 +254,11 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
    if(e.char==='burst')for(let i=0;i<(big?5:3);i++){const a=e.angle+(i/(big?4:2)-.5)*1.6*side;vfx.fx(ctx,'flame',e.x+Math.cos(a)*e.r*(.6+t*.4),e.y-.9+Math.sin(a)*e.r*.5,.9*fade,{color:'#ffaa65',alpha:fade});}
    if(e.char==='reflect')for(let i=0;i<(big?5:3);i++){const a=e.angle+(i/(big?4:2)-.5)*1.4*side;vfx.fx(ctx,'shard',e.x+Math.cos(a)*e.r*(.5+t*.7),e.y-.85+Math.sin(a)*e.r*(.4+t*.5),.7*fade,{color:ink,alpha:fade,rotation:a});}
    if(e.char==='gravity'){vfx.fx(ctx,'ring',e.x+Math.cos(e.angle)*e.r*.7,e.y-.8+Math.sin(e.angle)*e.r*.5,(big?2.4:1.6)*(1-t*.6),{color:ink,alpha:fade,rotation:clock*8});}
+   if(e.char==='split')for(let i=0;i<(big?6:3);i++){const a=e.angle+(i/(big?5:2)-.5)*1.7*side;vfx.fx(ctx,'petal',e.x+Math.cos(a)*e.r*(.5+t*.8),e.y-.85+Math.sin(a)*e.r*(.4+t*.6),.7*fade,{color:ink,alpha:fade,rotation:a+t*6});}
+   if(e.char==='chain'){const a=e.angle+side*.9*(1-t),tx=e.x+Math.cos(a)*e.r,ty=e.y-.8+Math.sin(a)*e.r*.78;vfx.beam(ctx,'lightning',e.x,e.y-.8,tx,ty,.7,{color:ink,alpha:fade});}
+   if(e.char==='recall')vfx.fx(ctx,'crescent',e.x+Math.cos(e.angle)*e.r*.7,e.y-.8+Math.sin(e.angle)*e.r*.55,(big?2:1.4)*(1-t*.3),{color:'#ffffff',alpha:fade*.7,rotation:e.angle+t*4*side});
+   if(e.char==='orbit')vfx.fx(ctx,'ring',e.x,e.y-.8,(big?3:2.2)*(.6+t*.5),{color:ink,alpha:fade*.8,rotation:clock*5});
+   if(e.char==='frost')for(let i=0;i<3;i++){const a=e.angle+(i-1)*.5*side;vfx.fx(ctx,'mist',e.x+Math.cos(a)*e.r*(.6+t*.5),e.y-.8+Math.sin(a)*e.r*.5,1.1,{color:ink,alpha:fade*.6});}
    if(big)vfx.fx(ctx,'shock',e.x+Math.cos(e.angle)*e.r*.8,e.y-.6+Math.sin(e.angle)*e.r*.6,1+t*2.4,{color:ink,alpha:fade*.8});return;}
   if(e.type==='heavySwing'){const fx=e.x+Math.cos(e.angle)*e.r*.8,fy=e.y-.6+Math.sin(e.angle)*e.r*.6;
    if(e.char==='pierce'){const len=e.r*1.6;vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,1.3,{color:ink,alpha:fade});vfx.beam(ctx,'lightning',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,.8,{color:'#ffffff',alpha:fade*.7});}
@@ -253,8 +266,15 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
    vfx.fx(ctx,'shock',fx,fy,1.2+t*3.6,{color:ink,alpha:fade});vfx.fx(ctx,'flecks',fx,fy-.2,1.5+t*2.4,{color:'#ffffff',alpha:fade});
    if(e.char==='burst')vfx.fx(ctx,'flame',fx,fy-.4,2.4*fade+.6,{color:'#ffaa65',alpha:fade});
    if(e.char==='gravity')vfx.fx(ctx,'ring',fx,fy,3.2*(1-t)+.4,{color:ink,alpha:fade,rotation:-clock*6});
+   if(e.char==='split')for(let i=0;i<8;i++){const a=i/8*Math.PI*2+t;vfx.fx(ctx,'petal',fx+Math.cos(a)*t*2.2,fy+Math.sin(a)*t*1.5,.8*fade,{color:ink,alpha:fade,rotation:a});}
+   if(e.char==='chain')for(let i=0;i<3;i++){const a=i/3*Math.PI*2+t*3;vfx.beam(ctx,'lightning',fx,fy,fx+Math.cos(a)*2,fy+Math.sin(a)*1.4,.6,{color:ink,alpha:fade});}
+   if(e.char==='recall')vfx.fx(ctx,'crescent',fx,fy-.2,2.6*(1-t*.4),{color:ink,alpha:fade,rotation:t*8});
+   if(e.char==='orbit')vfx.fx(ctx,'ring',fx,fy,1+t*3,{color:ink,alpha:fade,rotation:clock*6});
+   if(e.char==='frost')for(let i=0;i<5;i++){const a=i/5*Math.PI*2;vfx.fx(ctx,'shard',fx+Math.cos(a)*t*1.6,fy+Math.sin(a)*t*1.1,.8*fade,{color:ink,alpha:fade,rotation:a});}
    if(e.char==='reflect')for(let i=0;i<6;i++){const a=i/6*Math.PI*2;vfx.fx(ctx,'shard',fx+Math.cos(a)*t*2,fy+Math.sin(a)*t*1.4,.8*fade,{color:ink,alpha:fade,rotation:a});}
    if(e.linked)vfx.fx(ctx,'star',fx,fy-.3,2.4*fade,{color:'#ffd36b',alpha:fade});return;}
+  if(e.type==='bolt'){vfx.beam(ctx,'lightning',e.fromX,e.fromY-.9,e.x,e.y-.8,1,{color:ink,alpha:fade});vfx.fx(ctx,'star',e.x,e.y-.8,1.8*fade,{color:'#fffbe0',alpha:fade});return;}
+  if(e.type==='breath'){for(let i=0;i<7;i++){const k=i/6,a=e.angle+(k-.5)*1.1,r=e.r*(.35+.65*Math.min(1,t*2.2))*(.6+.4*Math.abs(Math.sin(i*1.7)));vfx.fx(ctx,i%2?'mist':'shard',e.x+Math.cos(a)*r,e.y-.8+Math.sin(a)*r*.7,i%2?1.5:.7,{color:ink,alpha:fade*.8,rotation:a});}return;}
   const kind={hit:'hit',heavy:'burst',block:'reflect',parry:'sunburst',guardBreak:'core',boom:'explosion',pull:'well',ult:'sunburst',jail:'portal',shield:'pulse',miss:'muzzle'}[e.type]||'hit';
   if(e.type==='hit'||e.type==='heavy'){const heavy=e.type==='heavy';vfx.fx(ctx,'star',e.x,e.y-.9,(heavy?2.6:1.7)*(1-t*.6),{color:'#ffffff',alpha:fade});vfx.fx(ctx,'flecks',e.x,e.y-.9,(heavy?2.6:1.6)*(.6+t),{color:ink,alpha:fade});if(heavy)vfx.fx(ctx,'shock',e.x,e.y-.7,1+t*2.8,{color:ink,alpha:fade});}
   else vfx.effect(ctx,{kind,x:e.x,y:e.y-.7,radius:e.r?e.r*.6:e.type==='guardBreak'?1.3:.9,law:''},t,e.type==='guardBreak'?'#ff7a66':ink,.6);
