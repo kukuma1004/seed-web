@@ -10,9 +10,9 @@ const device=()=>{const m=new Map();return createDefenseRanking({storage:{getIte
 const pc=device(),phone=device();await pc.submit(entry);assert.equal((await phone.board()).mine.score,entry.score);
 await phone.submit({...entry,hp:19,score:1219340});assert.equal((await pc.board()).mine.hp,19);
 await pc.submit(entry);assert.equal((await phone.board()).mine.hp,19);
-const endpoint=`${databaseURL}/seedDefenseRanking/v1/${uid}.json`;
+const endpoint=`${databaseURL}/seedDefenseRanking/v2/${uid}.json`;
 for(const [auth,body] of [[token('other'),entry],[token(uid,'anonymous'),entry],[token(uid),{...entry,score:99999999}],[token(uid),{...entry,hp:20,score:1220340,towers:'chain:6'}],[token(uid),{...entry,hp:20,score:1220340,extra:1}]]){
  const res=await request(endpoint+'?auth='+auth,{method:'PUT',body:JSON.stringify(body)});assert(!res.ok,'other accounts, anonymous writes, forged scores and invalid payloads denied');
 }
-const anon=await request(`${databaseURL}/seedDefenseRanking/v1.json?auth=${token(uid,'anonymous')}`,{});assert(!anon.ok);
+const anon=await request(`${databaseURL}/seedDefenseRanking/v2.json?auth=${token(uid,'anonymous')}`,{});assert(!anon.ok);
 console.log('LOCAL EMULATOR PASS: defense PC/phone best-record exchange; owner-only writes; anonymous, invalid score, level and extra-field rejection.');

@@ -5,7 +5,8 @@ import {isBadName} from './name-filter.js';
 import {ALL_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 
-export const DEFENSE_RANK_PATH='seedDefenseRanking/v1';
+// 2026-09-28 합체 방식으로 바꾸며 랭킹 초기화(사용자) → v2.
+export const DEFENSE_RANK_PATH='seedDefenseRanking/v2';
 const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
 // Completed waves dominate core health, which dominates kills. Equal results tie.
 export const defenseRankScore=e=>e.cleared*100000+e.hp*1000+Math.min(999,e.kills);
@@ -28,5 +29,5 @@ export function defenseRankEntry(state,{uid,name}){
 }
 export const defensePlaces=rows=>rows.sort((a,b)=>b.score-a.score||a.uid.localeCompare(b.uid)).map((e,i,all)=>({...e,rank:all.findIndex(v=>v.score===e.score)+1}));
 export function createDefenseRanking(options={}){
- return createBestRanking({config:FIREBASE,...options,path:DEFENSE_RANK_PATH,pendingPrefix:'seed-defense-rank-pending-v1:',valid:validDefenseRank,places:defensePlaces});
+ return createBestRanking({config:FIREBASE,...options,path:DEFENSE_RANK_PATH,pendingPrefix:'seed-defense-rank-pending-v2:',valid:validDefenseRank,places:defensePlaces});
 }

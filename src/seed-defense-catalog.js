@@ -14,7 +14,8 @@ export const defenseFusionOf=laws=>Object.values(FUSIONS).find(f=>f.laws.length=
 export const defenseFormKind=id=>DEFENSE_FORMS[id]?.kind||null;
 export const defenseRank=(t,id)=>t.lawRanks?.[id]||(t.laws.includes(id)?1:0);
 export const defenseRankTotal=t=>t.laws.reduce((n,id)=>n+defenseRank(t,id),0)+(t.reinforce||0);
-export const defenseDamageMultiplier=t=>.55*(1+Math.max(0,defenseRankTotal(t)-t.laws.length)*.06);
+// 합체 방식(2026-09-28): 같은 법칙을 합쳐 오른 단계마다 크게 세진다(두 씨앗을 하나로 합친 값을 해야 하므로).
+export const defenseDamageMultiplier=t=>.55*(1+Math.max(0,defenseRankTotal(t)-t.laws.length)*.75);
 
 // A chosen solo retains its own attack after a second law is added. That path can
 // become a twin; an uncommitted two-law seed instead keeps its automatic fusion.

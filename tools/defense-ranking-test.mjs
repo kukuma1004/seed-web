@@ -15,7 +15,7 @@ let remote=null,rev=0,offline=false,uid='a',race=false;
 const map=new Map(),storage={getItem:k=>map.get(k)||null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};
 const reply=(body,status=200)=>({ok:status===200,status,json:async()=>structuredClone(body),headers:{get:()=>String(rev)}});
 const ranking=createDefenseRanking({storage,authProvider:async()=>({uid,idToken:'test'}),fetchImpl:async(url,o)=>{
- assert(url.includes('/seedDefenseRanking/v1'));assert(!url.includes('seedSurvivalRanking'));
+ assert(url.includes('/seedDefenseRanking/v2'));assert(!url.includes('seedSurvivalRanking'));
  if(offline)throw Error('offline');
  if(o.method==='PUT'){if(race){race=false;remote={...entry,hp:20,score:1220340};rev++;}if(o.headers['if-match']!==String(rev))return reply(null,412);remote=JSON.parse(o.body);rev++;return reply(remote);}
  return reply(url.includes('/v1.json')?remote?{a:remote}:{}:remote);

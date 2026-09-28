@@ -605,6 +605,43 @@
             ".validate": "newData.isString() && newData.val().length <= 400 && newData.val().matches(/^[a-z][a-z0-9]*:[1-5](,[a-z][a-z0-9]*:[1-5]){0,7}$/)"
           }
         }
+      },
+      "v2": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".indexOn": [
+          "score"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && auth.uid == $uid && (!newData.exists() || !data.exists() || newData.child('score').val() > data.child('score').val())",
+          ".validate": "newData.hasChildren(['uid','name','score','cleared','hp','kills','time','towers']) && newData.child('score').val() == newData.child('cleared').val() * 100000 + newData.child('hp').val() * 1000 + (newData.child('kills').val() < 1000 ? newData.child('kills').val() : 999) && ((newData.child('cleared').val() == 12 && newData.child('hp').val() > 0) || (newData.child('hp').val() == 0))",
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == $uid"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100000020999 && newData.val() % 1 == 0"
+          },
+          "kills": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000000 && newData.val() % 1 == 0"
+          },
+          "time": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000000000 && newData.val() % 1 == 0"
+          },
+          "$other": {
+            ".validate": false
+          },
+          "cleared": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 1000000 && newData.val() % 1 == 0"
+          },
+          "hp": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 20 && newData.val() % 1 == 0"
+          },
+          "towers": {
+            ".validate": "newData.isString() && newData.val().length <= 400 && newData.val().matches(/^[a-z][a-z0-9]*:[1-5](,[a-z][a-z0-9]*:[1-5]){0,7}$/)"
+          }
+        }
       }
     }
   }
