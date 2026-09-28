@@ -4,7 +4,7 @@ export const WEB_TELEMETRY_ROOT='seedWebTelemetry/v1/days';
 const TELEMETRY_APP='seed-web-telemetry';
 const PROVIDERS=new Set(['google','apple','guest']);
 // 2026-09-28 사용자: "이용 현황에서 뭘 많이 하는지 보고 싶다" — 모드별로 들어간 횟수와 머문 시간(화면이 보일 때만).
-export const TELEMETRY_MODES=Object.freeze(['journey','survival','defense','adventure','duel']);
+export const TELEMETRY_MODES=Object.freeze(['journey','survival','defense','adventure','duel','puzzle']);
 
 export function seoulDay(time=Date.now()){
  return new Date(time+9*60*60*1000).toISOString().slice(0,10).replaceAll('-','');

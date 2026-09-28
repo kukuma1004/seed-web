@@ -1728,6 +1728,22 @@ async function showSeedDuel(){
  try{const {mountSeedDuel}=await import('./seed-duel-view.js');duelScreen=mountSeedDuel({audio,onClose:back});}
  catch(error){console.error('씨앗 대전 시작 실패',error);back();$('#toast').textContent='대전을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
+// 2026-09-28 사용자: "퍼즐게임 같은 거" → 씨앗 맞추기(3개 맞추기, PUZZLE_MATCH3_PLAN.md). 모험처럼 계정 저장소에 진행을 두고,
+// 첫 깨기·새 별 햇살(JP)과 조합 효과 도감 발견을 계정에 남긴다. 연습(로컬 검증·개발자 실험)은 보상 없음.
+let puzzleScreen=null;
+async function showSeedPuzzle(){
+ mode='puzzle';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ const back=()=>{puzzleScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
+ try{
+  const {mountSeedPuzzle}=await import('./seed-puzzle-view.js');
+  const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
+  puzzleScreen=mountSeedPuzzle({audio,storage:runStorage,owner,practice,
+   onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
+   onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
+   onClose:back});
+  if(localInspection)window.seedPuzzle=puzzleScreen;
+ }catch(error){console.error('씨앗 맞추기 시작 실패',error);back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}
+}
 async function showSeedDefense(){
  const serial=++defenseLoadSerial;
  mode='defense-loading';touch.reset();keys.clear();stopAnimation();
@@ -1761,8 +1777,8 @@ async function showSeedDefense(){
 function showDungeon(){
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/adventure/moon-garden-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>직접 베고 던지는 RPG · 시범 모험</small></span></button><button id="open-duel" class="dungeon-mode mode-duel"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/garden-sanctuary-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 대전</strong><small>막기·반격·강공격 수 싸움 · 시험 1:1</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
- $('#open-adventure').onclick=()=>void showSeedAdventure();$('#open-duel').onclick=()=>void showSeedDuel();$('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#back-menu').onclick=showIntro;
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/adventure/moon-garden-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>직접 베고 던지는 RPG · 시범 모험</small></span></button><button id="open-duel" class="dungeon-mode mode-duel"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/garden-sanctuary-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 대전</strong><small>막기·반격·강공격 수 싸움 · 시험 1:1</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-puzzle" class="dungeon-mode mode-puzzle"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/seed-law-atlas-v4-ui.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 맞추기</strong><small>같은 법칙 셋을 한 줄로 · 3개 맞추기 퍼즐</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ $('#open-adventure').onclick=()=>void showSeedAdventure();$('#open-duel').onclick=()=>void showSeedDuel();$('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#open-puzzle').onclick=()=>void showSeedPuzzle();$('#back-menu').onclick=showIntro;
 }
 // 던전 화면: 어떤 여정을 시작할지 고른다(스테이지를 직접 고르지는 않는다).
 function showJourneys(){
@@ -2245,7 +2261,7 @@ function perfFinishNow(outcome){
 }
 // 모드별 이용 현황: 1초마다 지금 어떤 모드 화면인지 보고, 화면이 보이고 멈춰 있지 않을 때만 센다.
 // 메뉴로 잠깐 나갔다 같은 모드로 돌아오면 이어서 세고, 다른 모드에 들어가면 새로 센다.
-{const trackedMode=()=>mode==='playing'||mode==='evolving'?(survivalSession?(survivalSession.benchmark?null:'survival'):'journey'):['defense','adventure','duel'].includes(mode)?mode:null;
+{const trackedMode=()=>mode==='playing'||mode==='evolving'?(survivalSession?(survivalSession.benchmark?null:'survival'):'journey'):['defense','adventure','duel','puzzle'].includes(mode)?mode:null;
  setInterval(()=>{if(document.hidden)return;const m=trackedMode();if(!m)return;void webTelemetry.modeEnter(m);if(!((m==='journey'||m==='survival')&&paused))webTelemetry.modeTick(1);},1000);}
 window.addEventListener('pagehide',()=>{void webTelemetry.modePause();stopAnimation();audio.setPaused(true);void webTelemetry.playPause();perfFinish('closed');});
 window.addEventListener('pageshow',()=>{if(mode==='adventure')return;last=performance.now();realLast=Date.now();startAnimation();if(!document.hidden&&!paused)audio.setPaused(false);});

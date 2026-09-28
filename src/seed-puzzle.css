@@ -1,0 +1,72 @@
+/* 씨앗 맞추기 — 씨앗 대전·수호전과 같은 종이 패널 · 금빛 테두리 말투. 세로 화면은 위에, 가로 화면은 왼쪽에 상황판. */
+#seed-puzzle{position:fixed;inset:0;z-index:150;background:#071215;color:#f2e9cf;font-family:'Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#seed-puzzle *{box-sizing:border-box}#seed-puzzle canvas{position:absolute;inset:0;width:100%;height:100%}
+#seed-puzzle button{font:inherit;color:inherit;border:1px solid #b9a97866;background:#15282be8;border-radius:8px;cursor:pointer;min-height:44px;padding:8px 14px}
+#seed-puzzle button:focus-visible{outline:2px solid #fce6af;outline-offset:2px}
+#seed-puzzle button:disabled{cursor:not-allowed;opacity:.55}
+.seed-puzzle-open #hud,.seed-puzzle-open #touch-controls{visibility:hidden}
+
+.sp-hud{position:absolute;top:max(10px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;visibility:hidden;text-shadow:0 2px 4px #000}
+#seed-puzzle.sp-playing .sp-hud{visibility:visible}
+.sp-head{display:flex;gap:10px;align-items:center;min-width:0}.sp-head small{display:block;font-size:11px;letter-spacing:1px;color:#d4bd7e}.sp-head b{display:block;font:20px Georgia,'Batang',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#seed-puzzle .sp-pause{width:44px;padding:0;border-radius:50%;flex:none}
+.sp-stats{display:flex;gap:16px;justify-content:flex-end}.sp-stats small{display:block;font-size:11px;color:#cbbb91}.sp-stats strong{display:block;font:26px Georgia,serif;line-height:1.1}
+.sp-moves strong{color:#fce6af}.sp-moves.low strong{color:#ff9b75;animation:sp-blink 1s infinite}
+@keyframes sp-blink{50%{opacity:.55}}
+.sp-bar{grid-column:1/-1;position:relative;height:10px;border-radius:6px;background:#101a1e;border:1px solid #e3c9a555;margin:4px 0 10px}
+.sp-bar i{position:absolute;inset:0 auto 0 0;border-radius:6px;background:linear-gradient(90deg,#b98b33,#f0c56f);transition:width .3s}
+.sp-bar em{position:absolute;top:50%;transform:translate(-50%,-50%);font-style:normal;font-size:17px;line-height:1;color:#5b5446;text-shadow:0 1px 2px #000}.sp-bar em.on{color:#ffd873;text-shadow:0 0 8px #f0c56f}
+.sp-goals{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
+.sp-goals li{display:flex;align-items:center;gap:6px;padding:4px 10px 4px 5px;border-radius:999px;background:#0b1b21d8;border:1px solid #cdbb8e44;font-size:13px}
+.sp-goals li b{font-variant-numeric:tabular-nums}.sp-goals li.done{border-color:#9ef0a0aa;color:#c9f5c0}.sp-goals li.done b:after{content:' ✓'}
+.sp-goals .sp-attack{padding-left:10px}
+.sp-goal-art.law-art{width:24px;height:24px;border-radius:50%}
+.sp-goal-ico{display:inline-block;width:24px;height:24px;border-radius:7px;flex:none;vertical-align:middle}
+.sp-ico-moss{background:radial-gradient(circle at 30% 35%,#a8e066 0 3px,transparent 4px),radial-gradient(circle at 65% 60%,#6fbf4a 0 4px,transparent 5px),#2f6b2f}
+.sp-ico-stone{background:linear-gradient(160deg,#8b877a,#4d4b43);box-shadow:inset 0 -4px #0003}
+.sp-ico-score{background:radial-gradient(circle,#ffd873 0 5px,#b98b33 6px 8px,transparent 9px)}
+.sp-keys{display:none;grid-column:1/-1;margin:6px 0 0;font-size:11px;color:#cfd8cc99;text-shadow:none}
+@media(pointer:fine){.sp-keys{display:block}}
+
+/* 가로 화면: 왼쪽 세로 상황판 */
+#seed-puzzle.sp-wide .sp-hud{right:auto;bottom:max(10px,env(safe-area-inset-bottom));width:clamp(190px,24vw,280px);grid-template-columns:1fr;align-content:center;gap:10px}
+#seed-puzzle.sp-wide .sp-stats{justify-content:flex-start;gap:22px}#seed-puzzle.sp-wide .sp-stats strong{font-size:32px}
+#seed-puzzle.sp-wide .sp-goals{flex-direction:column;align-items:flex-start}
+@media(max-height:430px){#seed-puzzle.sp-wide .sp-hud{gap:5px}#seed-puzzle.sp-wide .sp-stats strong{font-size:24px}.sp-head b{font-size:17px}.sp-goals li{font-size:12px;padding:2px 8px 2px 4px}.sp-goal-art.law-art,.sp-goal-ico{width:20px;height:20px}.sp-keys{display:none!important}}
+
+.sp-banner{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);text-align:center;pointer-events:none;opacity:0;z-index:2}
+.sp-banner b{display:block;font:bold clamp(28px,6vw,46px) Georgia,'Batang','Malgun Gothic',serif;color:#fce6af;text-shadow:0 3px 0 #3b2a10,0 0 22px #f0c56fbb;white-space:nowrap}
+.sp-banner small{display:block;margin-top:4px;font-size:14px;letter-spacing:3px;color:#ffe9b0;text-shadow:0 2px 4px #000}
+.sp-banner.pop{animation:sp-banner 1.3s ease-out forwards}
+@keyframes sp-banner{0%{opacity:0;transform:translate(-50%,-50%) scale(1.5)}12%{opacity:1;transform:translate(-50%,-50%) scale(1)}75%{opacity:1}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+.sp-toast{position:absolute;left:50%;bottom:max(14px,env(safe-area-inset-bottom));transform:translateX(-50%);margin:0;padding:8px 16px;border-radius:999px;background:#0b1b21ee;border:1px solid #cdbb8e55;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;white-space:nowrap;z-index:3}
+.sp-toast.on{opacity:1}
+
+.sp-modal{position:absolute;inset:0;display:grid;place-items:center;background:#030a0db0;z-index:4;overflow:auto;padding:12px}.sp-modal[hidden]{display:none}
+.sp-paper{width:min(760px,96vw);max-height:calc(100dvh - 24px);overflow:auto;padding:20px 24px;border:1px solid #a392685e;background:linear-gradient(130deg,#142a2cf5,#08161df5);border-radius:12px;text-align:center;box-shadow:0 20px 80px #0008}
+.sp-paper.sp-intro,.sp-paper.sp-pause,.sp-paper.sp-result{width:min(460px,94vw)}
+.sp-paper h1{margin:4px 0 8px;font:32px Georgia,'Batang',serif}.sp-paper h3{margin:14px 0 6px;font:17px Georgia,'Batang',serif;color:#fce6af}
+.sp-eyebrow{font:11px Georgia;letter-spacing:4px;color:#cbbb91;margin:0}
+.sp-paper>p,.sp-lead{font-size:14px;color:#dfe6d6;line-height:1.6}.sp-paper>small{display:block;margin-top:10px;font-size:12px;color:#b9c9bc;line-height:1.5}
+.sp-row{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:14px}
+#seed-puzzle .sp-primary{background:linear-gradient(180deg,#8a6a2a,#5b4418);border-color:#f0c56f;color:#fff6dc;font-weight:700;min-width:120px}
+#seed-puzzle .sp-daily{display:grid;grid-template-columns:1fr auto;gap:2px 14px;align-items:center;width:100%;text-align:left;margin:6px 0 12px;padding:10px 16px;border-color:#f0c56faa;background:linear-gradient(100deg,#3a2c10e8,#15282be8)}
+.sp-daily small{font-size:12px;color:#e8d49c}.sp-daily b{display:block;font-size:17px}.sp-daily>small{grid-column:1/-1}
+.sp-stars{font-size:18px;letter-spacing:2px;color:#ffd873;text-shadow:0 0 6px #f0c56f66;white-space:nowrap}
+.sp-stages{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+#seed-puzzle .sp-stage{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:10px;min-width:0}
+#seed-puzzle .sp-stage.cleared{border-color:#f0c56f88;background:#1d302ae8}
+.sp-stage-n{font:22px Georgia,serif;color:#fce6af}.sp-stage b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.sp-stage small{font-size:11px;color:#b9c9bc}.sp-stage .sp-stars{font-size:14px}
+.sp-goal-list{list-style:none;margin:10px auto;padding:0;display:grid;gap:6px;text-align:left;width:fit-content;max-width:100%}
+.sp-goal-list li{display:flex;align-items:center;gap:8px;font-size:15px}
+.sp-tip{padding:10px 12px;border-radius:8px;background:#0b1b21aa;border:1px dashed #cdbb8e55;font-size:14px!important}
+.sp-rules,.sp-shapes{list-style:none;margin:8px 0;padding:0;display:grid;gap:6px;text-align:left;font-size:14px;line-height:1.5}
+.sp-shapes{grid-template-columns:repeat(auto-fill,minmax(230px,1fr))}.sp-shapes li{display:flex;gap:10px;align-items:center}.sp-help-art.law-art{width:40px;height:40px}
+.sp-paper .sp-result-stars{margin:6px 0;font-size:46px;letter-spacing:6px;color:#4a4638}
+.sp-result-stars span{display:inline-block}.sp-result-stars span.on{color:#ffd873;text-shadow:0 0 14px #f0c56f;animation:sp-star .5s both}
+@keyframes sp-star{from{transform:scale(2.2) rotate(-30deg);opacity:0}to{transform:none;opacity:1}}
+.sp-result-score{font:26px Georgia,serif!important;margin:4px 0!important}.sp-result-score small{font:13px 'Malgun Gothic',sans-serif;color:#cbbb91}
+.sp-reward{color:#ffe9b0!important;font-weight:700}.sp-combos{color:#c9e8ff!important}.sp-meta{font-size:12px!important;color:#b9c9bc!important}
+@media(max-width:600px){.sp-stages{grid-template-columns:repeat(2,minmax(0,1fr))}.sp-paper{padding:16px 14px}.sp-paper h1{font-size:26px}.sp-head b{font-size:17px}.sp-stats strong{font-size:22px}}
+@media(max-height:500px){.sp-paper{padding:12px 16px}.sp-paper h1{font-size:22px;margin:2px 0}.sp-lead{margin:4px 0}.sp-stages{grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}#seed-puzzle .sp-stage{padding:5px 4px;min-height:0}.sp-stage small{display:none}#seed-puzzle .sp-daily{margin:4px 0 8px;padding:6px 12px}}
+@media(prefers-reduced-motion:reduce){.sp-banner.pop{animation-duration:.01s}.sp-result-stars span.on{animation:none}.sp-moves.low strong{animation:none}}

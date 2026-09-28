@@ -471,7 +471,7 @@
                   "$eventId": {
                     ".write": "auth != null && auth.uid == $uid && $day.matches(/^20[0-9]{6}$/) && ($platform == 'web' || $platform == 'android') && $eventId.matches(/^[A-Za-z0-9_-]{8,48}$/) && newData.hasChildren(['mode', 'startedAt', 'activeSeconds']) && (!data.exists() || (newData.child('mode').val() == data.child('mode').val() && newData.child('startedAt').val() == data.child('startedAt').val() && newData.child('activeSeconds').val() >= data.child('activeSeconds').val()))",
                     "mode": {
-                      ".validate": "newData.val() == 'journey' || newData.val() == 'survival' || newData.val() == 'defense' || newData.val() == 'adventure' || newData.val() == 'duel'"
+                      ".validate": "newData.val() == 'journey' || newData.val() == 'survival' || newData.val() == 'defense' || newData.val() == 'adventure' || newData.val() == 'duel' || newData.val() == 'puzzle'"
                     },
                     "startedAt": {
                       ".validate": "newData.isNumber() && newData.val() > 0 && newData.val() <= now + 300000"

@@ -3,7 +3,7 @@ import {seoulDay,WEB_TELEMETRY_ROOT} from './web-telemetry.js';
 const count=items=>Object.keys(items||{}).length;
 const countEvents=users=>Object.values(users||{}).reduce((sum,events)=>sum+count(events),0);
 
-export const USAGE_MODE_NAMES=Object.freeze({journey:'여정',survival:'물량생존전',defense:'씨앗 수호전',adventure:'씨앗의 모험',duel:'씨앗 대전'});
+export const USAGE_MODE_NAMES=Object.freeze({journey:'여정',survival:'물량생존전',defense:'씨앗 수호전',adventure:'씨앗의 모험',duel:'씨앗 대전',puzzle:'씨앗 맞추기'});
 const MODE_IDS=Object.keys(USAGE_MODE_NAMES);
 function summarizeModes(value){const out=Object.fromEntries(MODE_IDS.map(id=>[id,{entries:0,seconds:0}]));
  for(const platform of Object.values(value?.modeSessions||{}))for(const user of Object.values(platform||{}))for(const record of Object.values(user||{})){const m=out[record?.mode];if(!m)continue;m.entries++;m.seconds+=Number.isFinite(record.activeSeconds)?Math.max(0,Math.min(86400,record.activeSeconds)):0;}

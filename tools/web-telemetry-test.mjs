@@ -57,7 +57,7 @@ const day=summarizeUsageDay('20260924',{visitors:{a:true,b:true},appVisitors:{c:
 assert.deepEqual({...day,modes:undefined},{day:'20260924',webDevices:2,appDevices:1,webStarts:2,appStarts:1,activeSeconds:181,cleared:1,deaths:1,modes:undefined});
 // 모드별: 들어간 횟수·머문 시간, 모르는 모드는 무시.
 const modeDay=summarizeUsageDay('20260924',{modeSessions:{web:{a:{x:{mode:'duel',activeSeconds:90},y:{mode:'defense',activeSeconds:300}}},android:{c:{z:{mode:'duel',activeSeconds:30},w:{mode:'hack',activeSeconds:999}}}}});
-assert.deepEqual(modeDay.modes.duel,{entries:2,seconds:120});assert.deepEqual(modeDay.modes.defense,{entries:1,seconds:300});assert.deepEqual(modeDay.modes.journey,{entries:0,seconds:0});
+assert.deepEqual(modeDay.modes.duel,{entries:2,seconds:120});assert.deepEqual(modeDay.modes.puzzle,{entries:0,seconds:0});assert.deepEqual(modeDay.modes.defense,{entries:1,seconds:300});assert.deepEqual(modeDay.modes.journey,{entries:0,seconds:0});
 assert.deepEqual(usageModeTotals([modeDay,modeDay]).duel,{entries:4,seconds:240});
 assert.equal(usageTotals([day,day]).activeSeconds,362);
 assert.equal(usageTotals([day,day]).cleared,2);
@@ -79,5 +79,6 @@ assert.match(rules.$day.sessions.$platform.$uid.$eventId.outcome['.validate'],/c
  const off=createWebTelemetry({enabled:false,session:()=>{throw new Error('no');}});assert.equal(await off.modeEnter('duel'),false);}
 assert.match(rules.$day.modeSessions.$platform.$uid.$eventId['.write'],/auth\.uid == \$uid/);
 assert.match(rules.$day.modeSessions.$platform.$uid.$eventId.mode['.validate'],/duel/);
+assert.match(rules.$day.modeSessions.$platform.$uid.$eventId.mode['.validate'],/puzzle/);
 assert.equal(rules.$day.modeSessions.$platform.$uid.$eventId.$other['.validate'],false);
 console.log('Web telemetry counting, privacy and platform gating passed.');
