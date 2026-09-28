@@ -14,10 +14,10 @@ export const DUEL_CHARACTERS=Object.freeze({
  burst:Object.freeze({id:'burst',name:'불꽃 씨앗',role:'한 방 · 막기 파괴',hp:152,speed:3.8,reach:1.6,arc:1.1,damage:[11,11,16],cadence:.48,heavy:{damage:26,reach:1.9,breaker:1.25},parry:1,tile:5,ink:'#ffaa65',
   skills:[skill('불씨 심기',5,'잠시 뒤 터지는 불씨를 발밑에'),skill('화염 도약',6,'뛰어올라 내려찍어요 · 막기를 부숴요')],ult:skill('대폭발',0,'둘레를 크게 터뜨려요'),
   blurb:'느리지만 세고, 막고 있는 상대를 잘 부숴요.'}),
- reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:176,speed:4.3,reach:1.7,arc:.9,damage:[10,10,15],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
+ reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:164,speed:4.2,reach:1.7,arc:.9,damage:[9,9,14],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
   skills:[skill('거울 방패',6,'잠깐 모든 공격을 막고 탄을 되돌려요'),skill('수정 탄',3,'벽에 두 번 튕기는 수정')],ult:skill('거울 감옥',0,'상대를 거울에 가둬 묶어요'),
   blurb:'반격 막기 판정이 넓고, 날아오는 탄을 되돌려요.'}),
- gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:140,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
+ gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:154,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
   skills:[skill('끌어당기기',6.5,'앞의 상대를 끌어와 묶어요 · 막기 무시'),skill('중력장',7,'둘레의 상대를 느리게')],ult:skill('블랙홀',0,'상대를 빨아들이며 계속 때려요'),
   blurb:'막고 있는 상대도 끌어와 무너뜨려요.'})
 });
@@ -94,16 +94,17 @@ function act(s,f,input,dt){
  const cancel=Boolean(f.stun<=0&&f.buffer&&(f.state==='attack'||f.state==='heavy')&&f.hitDone&&f.t<=f.cancelAt&&f.t>0&&!(f.state==='attack'&&f.step===2&&f.buffer.act==='attack'));
  const busy=!cancel&&(f.stun>0||['attack','heavy','skill','dash','leap','dodge'].includes(f.state)&&f.t>0);
  const wants=a=>Boolean(input[a])||f.buffer?.act===a;
- if(!busy&&f.stun<=0&&['hit','broken','stagger','jailed'].includes(f.state))f.state='idle';
+ // 2026-09-28 사용자: "회피를 누르면 쭉 밀린다" — 회피·돌진이 끝나도 상태가 남아 매 장면 계속 미끄러졌다. 끝난 동작은 모두 대기로.
+ if(!busy&&f.stun<=0&&(['hit','broken','stagger','jailed'].includes(f.state)||f.t<=0&&['dodge','dash','leap','skill','attack','heavy'].includes(f.state)))f.state='idle';
  // 방향: 이동 중이면 이동 쪽, 아니면 조준 쪽(없으면 상대 쪽).
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
  if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step;fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:c.reach*(step===2?1.12:1),life:.26,max:.26,team:f.team});melee(s,f,c.reach*(step===2?1.12:1),c.arc*(step===2?1.25:1),c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});}
  if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach,life:.34,max:.34,team:f.team});melee(s,f,c.heavy.reach,c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});}
- if(f.state==='dash'){f.x+=f.dx*13*dt;f.y+=f.dy*13*dt;if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
+ if(f.state==='dash'&&f.t>0){f.x+=f.dx*13*dt;f.y+=f.dy*13*dt;if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
- if(f.state==='dodge'){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
+ if(f.state==='dodge'&&f.t>0){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
  // 휘두르는 동안에도 조금은 움직일 수 있다(발이 묶인 답답함 줄이기).
  if(busy&&(f.state==='attack'||f.state==='heavy')&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=(input.x/m)*c.speed*.28*dt;f.y+=(input.y/m)*c.speed*.28*dt;}}
  if(busy){clampArena(f);return;}

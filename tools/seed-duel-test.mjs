@@ -22,6 +22,9 @@ const run=(s,sec,pin={},ein={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,type
 {const s=fight();const [a,b]=s.fighters;b.hp=b.maxHp=999;run(s,.01,{attack:true},idle);run(s,.12,idle,idle);run(s,.01,{attack:true},idle);let steps=new Set();for(let i=0;i<40;i++){run(s,.01,i%12===0?{attack:true}:idle,idle);if(a.state==='attack')steps.add(a.step);}assert.ok(steps.has(1)&&steps.has(2),'combo reaches the third hit');
  const t=fight();const [c,d]=t.fighters;d.hp=d.maxHp=999;run(t,.01,{attack:true},idle);run(t,.08,idle,idle);run(t,.01,{heavy:true},idle);for(let i=0;i<30&&c.state!=='heavy';i++)run(t,.01,idle,idle);assert.equal(c.state,'heavy');assert.equal(c.linked,true,'attack then heavy links');assert.ok(c.total<.4,'linked heavy starts faster');
  const u=fight();const [e]=u.fighters;run(u,.01,{heavy:true},idle);assert.equal(e.linked,false,'a plain heavy is not linked');}
+// 회피·돌진이 끝나면 멈춘다(예전에는 상태가 남아 계속 미끄러졌다).
+{const s=fight();const [a]=s.fighters;a.x=16;a.y=10;run(s,.01,{dodge:true,x:0,y:1},idle);run(s,.4,idle,idle);const y=a.y;run(s,.6,idle,idle);assert.ok(Math.abs(a.y-y)<.05,'dodge stops');assert.notEqual(a.state,'dodge');
+ const t=fight('pierce','burst');const [p,q]=t.fighters;p.x=8;p.y=5;q.x=20;q.y=16;run(t,.01,{skill1:true},idle);run(t,.5,idle,idle);const px=p.x;run(t,.5,idle,idle);assert.ok(Math.abs(p.x-px)<.05,'dash stops');}
 // 세 판 두 선승, AI끼리 끝까지 간다. 캐릭터마다 이기는 판이 있다(한 캐릭터가 모두 이기지 않는다).
 {
  const wins=Object.fromEntries(DUEL_ORDER.map(c=>[c,0]));let games=0;
