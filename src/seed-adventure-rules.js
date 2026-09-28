@@ -8,17 +8,22 @@ export const ADVENTURE_LAWS=LAWS;
 // 2026-09-28 사용자: "조합은?? 162개 가능해??" — 수호전과 같은 성장 규칙으로 본편 162가지(기본 9·단독 9·융합 36·완성 72·쌍둥이 36)를 모두 연다.
 // 법칙은 두 개까지, 법칙마다 1~3단계. 두 법칙 = 융합, 한 법칙 3단계 = 단독 진화, 융합 + 한쪽 3단계 = 완성 진화, 양쪽 3단계 = 쌍둥이.
 export const ADVENTURE_FORMS=DEFENSE_FORMS;
-export const ADVENTURE={width:24,height:16,maxShots:72,maxEffects:140,maxEnemies:22,maxPickups:40,maxPotions:3};
+export const ADVENTURE={width:24,height:16,maxShots:72,maxEffects:140,maxEnemies:64,maxPickups:48,maxPotions:3};
+// 보스 방·보물 방은 한 화면짜리 작은 방, 전투·정예는 넓은 지역(아래 REGION).
 export const ADVENTURE_ARENA=Object.freeze({minX:1.4,maxX:22.6,minY:2,maxY:14.4});
+// 2026-09-28 사용자: "디아블로같이 광활한 맵" → B안(넓은 지역을 자유롭게 돌아다니고, 지역 끝 출구에서 다음 문을 고른다).
+// 지역 하나는 화면 서너 장 크기. 적 무리는 가까이 가야 깨어나고, 습격지·수호 제단은 원하면 들르는 이벤트다.
+// 출구는 그 앞을 지키는 무리를 물리치면 열린다.
+export const REGION=Object.freeze({w:64,h:40,cell:4});
 
 // 한 판 = 세 막 × (방 다섯 + 보스 방). 방을 깨면 들어가기 전에 고른 문의 보상을 받고 다음 문을 고른다(하데스식).
 // 2026-09-28 사용자: "방이 많아야" · "물약 얻는 상자·부서지는 것·버프" — 보물 방·상점·샘물, 항아리·나무 상자, 버프 구슬.
 export const ADVENTURE_ACTS=Object.freeze([
- Object.freeze({id:'garden',name:'잊힌 정원',boss:'austin',bossName:'오스틴',rooms:Object.freeze(['이끼 낀 문턱','달빛 회랑','잊힌 화단','무너진 온실','시계탑 아래'])}),
- Object.freeze({id:'stadium',name:'별빛 야구장',boss:'alwaysbeginner',bossName:'항상초심',rooms:Object.freeze(['외야 잔디','더그아웃 통로','불펜','관중석 아래','투수 마운드'])}),
- Object.freeze({id:'skyway',name:'폭풍 항로',boss:'tempestcarrier',bossName:'요한',rooms:Object.freeze(['구름 선착장','번개 회랑','바람 돛대','뇌운 갑판','폭풍의 눈'])})
+ Object.freeze({id:'garden',name:'잊힌 정원',boss:'austin',bossName:'오스틴',rooms:Object.freeze(['이끼 낀 들판','무너진 온실','시계탑 광장'])}),
+ Object.freeze({id:'stadium',name:'별빛 야구장',boss:'alwaysbeginner',bossName:'항상초심',rooms:Object.freeze(['외야 잔디밭','관중석 아래','투수 마운드'])}),
+ Object.freeze({id:'skyway',name:'폭풍 항로',boss:'tempestcarrier',bossName:'요한',rooms:Object.freeze(['구름 선착장','뇌운 갑판','폭풍의 눈'])})
 ]);
-export const ROOMS_PER_ACT=6;
+export const ROOMS_PER_ACT=4;
 export const ROOMS=Object.freeze(ADVENTURE_ACTS.flatMap(a=>[...a.rooms,a.bossName+'의 방']));
 export function adventureRoomInfo(room){const act=Math.floor(room/ROOMS_PER_ACT),local=room%ROOMS_PER_ACT;return {act,local,boss:local===ROOMS_PER_ACT-1,name:ROOMS[room],actInfo:ADVENTURE_ACTS[act]};}
 
@@ -63,7 +68,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const direction=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 const pick=(s,list)=>list[Math.floor(random(s)*list.length)];
-export function createAdventure(seed=1){return {seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:1,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
+export function createAdventure(seed=1){return {seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:1,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
@@ -101,14 +106,16 @@ function spawnRoom(s){
  const info=adventureRoomInfo(s.room),p=s.player;
  s.phase='playing';s.enemies.length=0;s.shots.length=0;s.fields.length=0;s.pendingCuts.length=0;s.pickups.length=0;s.props.length=0;s.orbitUntil=0;s.summoned=false;s.clearTimer=0;s.cleared=false;
  p.x=12;p.y=10;p.inv=1;p.attack=.4;p.combo=0;p.comboTime=0;p.buffer=0;p.lx=p.ly=0;s.wave=0;s.spawn=1.2;s.message=info.name;
+ s.arena={...ADVENTURE_ARENA};s.region=null;
  if(info.boss){s.roomType='boss';spawnBoss(s,info);s.spawn=Infinity;event(s,'bossWarning');return;}
+ if(s.roomType!=='treasure'){buildRegion(s,info);return;}
  if(s.roomType==='treasure'){spawnProps(s,4,true);s.wave=2;s.message=info.name+' · 보물 상자';return;}
  spawnProps(s,3+Math.floor(random(s)*3));spawnWave(s);
 }
-function spawnEnemy(s,role,x,y){
+function spawnEnemy(s,role,x,y,extra={}){
  const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1+info.act*.9+info.local*.12)*(s.elite?1.45:1);
  const hp=Math.round(base.hp*scale+(s.elite&&role==='tank'?20:0));
- s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25});
+ s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25,...extra});
 }
 function spawnWave(s){
  s.wave++;const info=adventureRoomInfo(s.room),count=Math.min(ADVENTURE.maxEnemies,4+info.local+info.act*2+s.wave+(s.elite?2:0));
@@ -116,6 +123,58 @@ function spawnWave(s){
  for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+.5*s.wave;spawnEnemy(s,roles[(i+s.wave)%roles.length],clamp(12+Math.cos(a)*8,2,22),clamp(7.5+Math.sin(a)*5,2.5,13.5));}
  s.spawn=0;
 }
+// 넓은 지역 만들기. 같은 씨앗(판 번호)이면 같은 지역이 나온다.
+function buildRegion(s,info){
+ const W=REGION.w,H=REGION.h,p=s.player,r=()=>random(s),act=info.act;
+ s.arena={minX:1.4,maxX:W-1.4,minY:2,maxY:H-1.6};s.wave=2;s.spawn=Infinity;
+ const start={x:4.5,y:H/2},gate={x:W-4,y:H/2,open:false,r:1.6};
+ const top=r()<.5,raidAt={x:W*.42,y:top?H*.26:H*.74},altar={x:W*.6,y:top?H*.76:H*.24},portal={x:Math.min(W-6,W*.6+13),y:top?H*.76-4:H*.24+4};
+ const events=[{type:'raid',x:raidAt.x,y:raidAt.y,r:3.4,state:'idle',time:0,duration:32+act*4,spawnAt:0},{type:'guard',x:altar.x,y:altar.y,portal,hp:100,maxHp:100,state:'idle',wave:0,spawned:0,next:0,waves:3,perWave:4+act}];
+ // 길과 이벤트 둘레는 비워 둔다.
+ const segDist=(q,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=clamp(((q.x-a.x)*dx+(q.y-a.y)*dy)/((dx*dx+dy*dy)||1),0,1);return Math.hypot(q.x-a.x-dx*t,q.y-a.y-dy*t);};
+ const keep=[{...start,r:5},{...gate,r:6},{...raidAt,r:5.5},{...altar,r:4},{...portal,r:3}];
+ const free=(x,y,pad)=>keep.every(k=>Math.hypot(x-k.x,y-k.y)>k.r+pad)&&segDist({x,y},portal,altar)>2.2+pad;
+ const obstacles=[];for(let tries=0;obstacles.length<24&&tries<600;tries++){const x=4+r()*(W-8),y=4+r()*(H-8),rad=.9+r()*1.1;if(!free(x,y,rad))continue;if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+rad+2.4))continue;obstacles.push({x,y,r:rad,cell:Math.floor(r()*4)});}
+ const decor=[];for(let i=0;i<44;i++){const x=2+r()*(W-4),y=2.5+r()*(H-4);if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+.6))continue;decor.push({x,y,cell:Math.floor(r()*12),size:.7+r()*.6});}
+ s.region={w:W,h:H,start,gate,obstacles,decor,events,explored:new Array(Math.ceil(W/REGION.cell)*Math.ceil(H/REGION.cell)).fill(false),message:''};
+ p.x=start.x;p.y=start.y;
+ // 적 무리: 지역 곳곳에 자고 있다가 가까이 가면 깨어난다. 출구 앞 무리는 출구를 지킨다.
+ const roles=['melee','melee','ranged','tank','fast'];let pack=0;
+ const placePack=(cx,cy,count,guard=false)=>{pack++;for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+r(),d=.9+r()*1.4;spawnEnemy(s,guard&&i===0?'tank':roles[Math.floor(r()*roles.length)],clamp(cx+Math.cos(a)*d,3,W-3),clamp(cy+Math.sin(a)*d,3,H-3),{dormant:true,pack,guard});}};
+ const packs=[];for(let tries=0;packs.length<5+(s.elite?1:0)&&tries<400;tries++){const x=13+r()*(W-26),y=5+r()*(H-10);if(!free(x,y,1.5))continue;if(packs.some(q=>Math.hypot(q.x-x,q.y-y)<9))continue;if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+2.2))continue;packs.push({x,y});}
+ for(const q of packs)placePack(q.x,q.y,3+Math.floor(r()*2)+(info.local>0?1:0)+(s.elite?1:0));
+ placePack(W-10,H/2,5+act+(s.elite?2:0),true);
+ // 항아리·나무 상자·작은 보물 상자(열면 물건만, 보상 화면 없음).
+ s.props.length=0;for(let tries=0;s.props.length<16&&tries<500;tries++){const x=3+r()*(W-6),y=3+r()*(H-6);if(!free(x,y,.4)||obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+1))continue;const cache=s.props.length<2,kind=cache?'cache':r()<.35?'crate':'pot';s.props.push({id:++s.serial,kind,x,y,hp:cache?2:kind==='crate'?2:1,maxHp:cache?2:kind==='crate'?2:1,flash:0});}
+ s.message=info.name+' · 출구를 지키는 무리를 물리치세요';
+}
+// 지역 이벤트. 습격지: 원 안에 서 있는 동안 시간이 흐르고, 사방에서 적이 몰려온다. 끝까지 버티면 보물 상자.
+// 수호 제단: 가까이 가면 문에서 적이 줄지어 나와 제단으로 걸어간다. 씨앗이 움직이는 포탑이 되어 막는다.
+function eventLoot(s,ev,big=false){s.props.push({id:++s.serial,kind:'cache',x:ev.x,y:ev.y,hp:1,maxHp:1,flash:0,big});event(s,'evolve');fx(s,'buff',ev.x,ev.y,{buff:'focus',radius:2,life:.8,max:.8});}
+function updateEvents(s,dt){
+ const R=s.region,p=s.player,info=adventureRoomInfo(s.room);if(!R)return;
+ for(const ev of R.events){
+  if(ev.type==='raid'){
+   const inside=Math.hypot(p.x-ev.x,p.y-ev.y)<ev.r;
+   if(ev.state==='idle'&&inside){ev.state='active';R.message='습격지 · 원 안에서 버티세요';event(s,'bossWarning');}
+   if(ev.state!=='active')continue;
+   if(inside)ev.time+=dt;ev.spawnAt-=dt;
+   if(ev.spawnAt<=0){ev.spawnAt=2.3;const n=2+(info.act>0?1:0);for(let i=0;i<n&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=random(s)*Math.PI*2;spawnEnemy(s,random(s)<.25?'ranged':random(s)<.5?'fast':'melee',clamp(ev.x+Math.cos(a)*9,3,R.w-3),clamp(ev.y+Math.sin(a)*7,3,R.h-3),{raid:true});}}
+   if(ev.time>=ev.duration){ev.state='done';R.message='습격지를 지켜 냈어요 · 보물 상자';for(const e of s.enemies)if(e.raid)e.hp=Math.min(e.hp,1);eventLoot(s,ev);}
+  }else if(ev.type==='guard'){
+   if(ev.state==='idle'&&Math.hypot(p.x-ev.x,p.y-ev.y)<6){ev.state='active';ev.next=1.2;R.message='수호 제단 · 줄지어 오는 적을 막으세요';event(s,'bossWarning');}
+   if(ev.state!=='active')continue;
+   ev.next-=dt;
+   if(ev.next<=0&&ev.wave<ev.waves){if(ev.spawned<ev.perWave){ev.spawned++;ev.next=.75;spawnEnemy(s,ev.spawned%3===0?'tank':'melee',ev.portal.x,ev.portal.y,{march:true,target:{x:ev.x,y:ev.y}});fx(s,'enemyRing',ev.portal.x,ev.portal.y,{radius:1});}else{ev.wave++;ev.spawned=0;ev.next=ev.wave<ev.waves?6:0;}}
+   const marching=s.enemies.some(e=>e.march&&e.hp>0);
+   if(ev.hp<=0){ev.state='failed';R.message='제단이 무너졌어요';for(const e of s.enemies)if(e.march){e.march=false;e.dormant=false;}}
+   else if(ev.wave>=ev.waves&&!marching){ev.state='done';R.message='제단을 지켜 냈어요 · 보물 상자';eventLoot(s,ev,true);}
+  }
+ }
+}
+function blockCircle(s,o,r){const R=s.region;if(!R)return false;let hitAny=false;for(const b of R.obstacles){const dx=o.x-b.x,dy=o.y-b.y,d=Math.hypot(dx,dy),m=b.r+r;if(d<m&&d>1e-6){o.x=b.x+dx/d*m;o.y=b.y+dy/d*m;hitAny=true;}}return hitAny;}
+const insideObstacle=(s,x,y)=>Boolean(s.region&&s.region.obstacles.some(b=>Math.hypot(x-b.x,y-b.y)<b.r));
+function wakePack(s,e){if(!e.dormant)return;for(const n of s.enemies)if(n.pack===e.pack&&n.dormant){n.dormant=false;n.cd=Math.max(n.cd,.6+random(s)*.6);}}
 // ③ 막의 수호자. 막마다 다른 공격 세 가지를 돌려 쓴다. 체력 절반에서 부하를 부르고(한 번) 조금 빨라진다.
 export const ADVENTURE_BOSSES=Object.freeze({
  austin:Object.freeze({name:'오스틴',hp:2200,patterns:Object.freeze(['charge','slam','punches'])}),
@@ -181,9 +240,9 @@ function makeDoors(s){
  if(next.local>=1){
   const flags=s.actFlags,options=[];
   if(!flags.treasure)options.push('treasure');
-  if(next.local>=2&&!flags.shop)options.push('shop');
+  if(next.local>=1&&!flags.shop)options.push('shop');
   if(!flags.fountain&&s.player.hp<s.player.maxHp*.75)options.push('fountain','fountain');
-  if(next.local>=2)options.push('elite');
+  if(next.local>=1)options.push('elite');
   if(options.length&&random(s)<.8){const room=pick(s,options);if(room==='elite')combat(true);else doors.push({room,reward:room==='treasure'?'law':null});}
  }
  if(doors.length<3&&random(s)<.45)combat();
@@ -225,6 +284,7 @@ function breakProp(s,prop){
  prop.hp=0;fx(s,'break',prop.x,prop.y,{kind:prop.kind,radius:prop.kind==='chest'?1.4:.9,life:.5,max:.5});event(s,prop.kind==='chest'?'evolve':'hit');
  const act=adventureRoomInfo(s.room).act,r=random(s);
  if(prop.kind==='chest'){dropCoins(s,prop.x,prop.y,20+act*10);drop(s,'potion',prop.x,prop.y);drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});s.clearTimer=1.4;return;}
+ if(prop.kind==='cache'){dropCoins(s,prop.x,prop.y,(prop.big?16:10)+act*5);drop(s,random(s)<.6?'potion':'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});if(prop.big)s.charge=clamp(s.charge+25,0,100);return;}
  if(prop.kind==='crate'){dropCoins(s,prop.x,prop.y,3+act*2);if(r<.3)drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});else if(r<.4)drop(s,'potion',prop.x,prop.y);return;}
  if(r<.55)dropCoins(s,prop.x,prop.y,2+act);else if(r<.68)drop(s,'potion',prop.x,prop.y);else if(r<.85)drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});
 }
@@ -244,7 +304,7 @@ function cut(s,c,seen=new Set()){
 // 본편 조합 엔진(seed-adventure-combat.js)이 주는 피해. 법칙 효과·밀치기 없이 피해만, 콤보 수에는 들어간다.
 export function adventureFormHit(s,e,damage){if(!e||e.hp<=0||!Number.isFinite(damage)||damage<=0)return false;hit(s,e,damage,true,null,true);return true;}
 function hit(s,e,damage,secondary=false,meta=null,formHit=false){
- if(e.hp<=0)return;damage*=formHit?1:power(s);e.hp-=damage;e.flash=.13;const heavy=Boolean(meta?.finisher);
+ if(e.hp<=0)return;if(e.dormant)wakePack(s,e);damage*=formHit?1:power(s);e.hp-=damage;e.flash=.13;const heavy=Boolean(meta?.finisher);
  if(!formHit||damage>=8)fx(s,'number',e.x,e.y,{text:Math.round(damage),heavy,form:formHit,life:heavy?.8:.6,max:heavy?.8:.6});
  if(formHit){s.hits++;s.hitsTime=2;s.charge=clamp(s.charge+.6,0,100);}
  if(meta){
@@ -265,7 +325,7 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false){
  }
  if(e.hp<=0){s.kills++;s.charge=clamp(s.charge+4,0,100);fx(s,'leaf',e.x,e.y,{life:.6,max:.6});
   if(e.type==='boss'){s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.15);s.shake=.45;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
-  else if(random(s)<.6||s.elite)dropCoins(s,e.x,e.y,(e.role==='tank'?2:1)+(e.act||0)+(s.elite?2:0));}
+  else if(!e.noDrop&&!e.raid&&(random(s)<.6||s.elite))dropCoins(s,e.x,e.y,(e.role==='tank'?2:1)+(e.act||0)+(s.elite?2:0));}
 }
 function hurt(s,n){const p=s.player;if(p.inv>0||s.phase!=='playing')return;if(s.buffs.guard>0){s.buffs.guard=0;p.inv=.5;fx(s,'buff',p.x,p.y,{buff:'guard',radius:1.2,life:.5,max:.5});event(s,'reflect');return;}p.hp=Math.max(0,p.hp-n);p.inv=.7;s.shake=Math.max(s.shake,.2);event(s,'hurt');fx(s,'hurt',p.x,p.y,{radius:1});if(p.hp<=0){s.phase='lost';s.message='회피로 붉은 예고를 벗어나 보세요';}}
 export function attackAdventure(s){
@@ -311,7 +371,7 @@ function bossAct(s,e,p,dt){
  return false;
 }
 export function stepAdventure(s,dt,input={},combat=null){
- if(s.phase!=='playing'||!Number.isFinite(dt)||dt<=0)return;dt=clamp(dt,0,.05);const p=s.player,A=ADVENTURE_ARENA;
+ if(s.phase!=='playing'||!Number.isFinite(dt)||dt<=0)return;dt=clamp(dt,0,.05);const p=s.player,A=s.arena;
  s.shake=Math.max(0,s.shake-dt*2.2);
  if(input.attack&&p.attack>0)p.buffer=BUFFER;
  // 타격 멈춤: 짧게 세상이 멈춘다. 입력은 기억해 두었다가 멈춤이 끝나면 이어진다.
@@ -324,6 +384,8 @@ export function stepAdventure(s,dt,input={},combat=null){
  const d=direction(input.x||0,input.y||0),moving=Boolean(input.x||input.y),speed=(p.dashing>0?15:p.attack>.29?2.15:4.3)*(s.buffs.swift>0&&p.dashing<=0?1.3:1);p.moving=moving;
  const lunge=Math.exp(-14*dt);p.x+=p.lx*dt;p.y+=p.ly*dt;p.lx*=lunge;p.ly*=lunge;
  p.x=clamp(p.x+(p.dashing>0?p.dx:moving?d.x:0)*speed*dt,A.minX,A.maxX);p.y=clamp(p.y+(p.dashing>0?p.dy:moving?d.y:0)*speed*dt,A.minY,A.maxY);
+ blockCircle(s,p,.4);
+ if(s.region){const R=s.region,c=REGION.cell,cols=Math.ceil(R.w/c);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const cx=Math.floor(p.x/c)+dx,cy=Math.floor(p.y/c)+dy;if(cx>=0&&cy>=0&&cx<cols&&cy<Math.ceil(R.h/c))R.explored[cy*cols+cx]=true;}}
  if(input.attack||p.buffer>0){if(attackAdventure(s))p.buffer=0;}
  for(const c of s.pendingCuts){c.delay-=dt;if(c.delay<=0)cut(s,c,c.seen);}s.pendingCuts=s.pendingCuts.filter(c=>c.delay>0);
  for(const f of s.fields){f.life-=dt;for(const e of s.enemies)if(e.type!=='boss'&&e.hp>0&&dist(e,f)<f.r){const v=direction(f.x-e.x,f.y-e.y);e.x+=v.x*dt*2.8;e.y+=v.y*dt*2.8;}if(f.life<=0&&f.collapse){fx(s,'burst',f.x,f.y,{radius:2.8});for(const e of s.enemies)if(e.hp>0&&dist(e,f)<2.8)hit(s,e,28,true);}}s.fields=s.fields.filter(f=>f.life>0);
@@ -332,15 +394,21 @@ export function stepAdventure(s,dt,input={},combat=null){
   e.x=clamp(e.x+e.kx*dt,A.minX,A.maxX);e.y=clamp(e.y+e.ky*dt,A.minY,A.maxY);e.kx*=knock;e.ky*=knock;
   e.cd-=dt;e.slow=Math.max(0,e.slow-dt);e.flash=Math.max(0,e.flash-dt);e.stun=Math.max(0,e.stun-dt);
   if(e.type==='boss'){bossAct(s,e,p,dt);continue;}
+  // 자는 무리: 가까이 오면 무리 전체가 깨어난다. 멀리 있는 자는 적은 계산하지 않는다.
+  if(e.dormant){if(dist(e,p)<8.5)wakePack(s,e);else continue;}
+  // 수호 제단으로 행진하는 적: 씨앗은 보지 않고 제단으로만 간다. 닿으면 제단이 깎이고 사라진다.
+  if(e.march){if(e.stun>0)continue;const t=e.target,v=direction(t.x-e.x,t.y-e.y);e.x+=v.x*e.speed*.85*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*.85*(e.slow>0?.5:1)*dt;if(Math.hypot(t.x-e.x,t.y-e.y)<1.2){const ev=s.region?.events.find(ev=>ev.type==='guard');if(ev){ev.hp=Math.max(0,ev.hp-Math.round(10*e.power));fx(s,'hurt',t.x,t.y,{radius:1.4});event(s,'hurt');}e.hp=0;e.noDrop=true;}continue;}
   if(e.tell>0){e.tell-=dt;if(e.tell<=0){if(e.role==='ranged'){const v=direction(e.tx-e.x,e.ty-e.y);shot(s,e.x,e.y,v.x,v.y,{hostile:true,damage:Math.round(15*e.power),speed:6.5,life:4});}else{fx(s,'enemyRing',e.tx,e.ty,{radius:1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1)hurt(s,Math.round(17*e.power));if(e.role==='fast'){e.x=clamp(e.tx,A.minX,A.maxX);e.y=clamp(e.ty,A.minY,A.maxY);}}e.cd=e.role==='fast'?1.8:1.4;}continue;}
   if(e.stun>0)continue;
   const range=e.role==='ranged'?7:e.role==='fast'?2.6:1.35;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}else if(e.cd<=0){e.tell=e.role==='fast'?.5:.6;e.tx=p.x;e.ty=p.y;e.pattern++;}
+  blockCircle(s,e,e.r);
   // Keep a readable ring around the seed instead of stacking sprites.
   for(const n of s.enemies)if(n.id<e.id&&n.hp>0){const gap=dist(e,n),r=e.r+n.r;if(gap<r&&gap>.001){e.x+=(e.x-n.x)/gap*dt;e.y+=(e.y-n.y)/gap*dt;}}
  }
  combat?.update?.(dt);
  for(const b of s.shots){b.life-=dt;b.age+=dt;b.px=b.x;b.py=b.y;if(!b.hostile&&b.recall&&b.age>.48){if(!b.returning){b.returning=true;b.hit.clear();b.remaining=s.laws.includes('pierce')?3:1;b.spent=false;b.life=.9;}const v=direction(p.x-b.x,p.y-b.y);b.dx=v.x;b.dy=v.y;if(dist(b,p)<.45){b.life=0;continue;}}
- b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;if(b.x<1.3||b.x>22.7||b.y<1.8||b.y>14.7){if(!b.hostile&&s.laws.includes('reflect')&&b.bounces<2){if(b.x<1.3||b.x>22.7)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,1.3,22.7);b.y=clamp(b.y,1.8,14.7);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
+ b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;const x0=A.minX-.1,x1=A.maxX+.1,y0=A.minY-.2,y1=A.maxY+.3;if(b.x<x0||b.x>x1||b.y<y0||b.y>y1){if(!b.hostile&&s.laws.includes('reflect')&&b.bounces<2){if(b.x<x0||b.x>x1)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,x0,x1);b.y=clamp(b.y,y0,y1);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
+ if(insideObstacle(s,b.x,b.y)){b.life=0;fx(s,'hit',b.x,b.y,{radius:.5,life:.2,max:.2});continue;}
  if(b.hostile){if(s.laws.includes('orbit')&&!b.boss&&dist(b,p)<1.6){b.life=0;fx(s,'frost',b.x,b.y,{radius:.5});}else if(dist(b,p)<.45){hurt(s,b.damage);b.life=0;}}
  else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.03:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
   if(b.life>0&&!b.spent)for(const prop of s.props)if(prop.hp>0&&!b.hit.has(prop.id)&&dist(prop,b)<.7){b.hit.add(prop.id);hitProp(s,prop);if(--b.remaining<=0){b.life=0;break;}}}}
@@ -357,6 +425,10 @@ export function stepAdventure(s,dt,input={},combat=null){
  // 방을 다 깨면 떨어진 물건을 모으는 짧은 틈을 두고 보상으로 넘어간다.
  const info=adventureRoomInfo(s.room);
  if(s.roomType==='treasure'&&!info.boss){if(!s.props.some(prop=>prop.kind==='chest')){if(!s.cleared){s.cleared=true;s.clearTimer=Math.max(s.clearTimer,1.4);}s.clearTimer-=dt;if(s.clearTimer<=0){for(const item of s.pickups)collect(s,item);s.pickups.length=0;s.cleared=false;openReward(s);}}return;}
+ if(s.region){updateEvents(s,dt);const R=s.region;
+  if(!R.gate.open&&!s.enemies.some(e=>e.guard&&e.hp>0)){R.gate.open=true;R.message='출구가 열렸어요 · 빛나는 문으로 가세요';event(s,'pickup');}
+  if(R.gate.open&&Math.hypot(p.x-R.gate.x,p.y-R.gate.y)<R.gate.r+.4){for(const item of s.pickups)collect(s,item);s.pickups.length=0;s.enemies.length=0;openReward(s);}
+  return;}
  if(!s.enemies.length){
   if(!info.boss&&s.wave<2){s.spawn+=dt;if(s.spawn>1.0)spawnWave(s);return;}
   if(!s.cleared){s.cleared=true;s.clearTimer=1.1;}

@@ -2,7 +2,7 @@ import {Group,Vector3} from 'three';
 import {createFormCombat} from './form-combat.js';
 import {DISCOVERY_FORMS,TWIN_FORMS,formStats} from './forms.js';
 import {createTwinInteractionEngine} from './twin-interactions.js';
-import {adventureFormHit,adventureEffect,ADVENTURE_ARENA} from './seed-adventure-rules.js';
+import {adventureFormHit,adventureEffect} from './seed-adventure-rules.js';
 
 // 2026-09-28 사용자: "조합은?? 162개 가능해?? 알피지인데"
 // 수호전과 같은 방식으로 본편의 실제 조합 공격 엔진(form-combat)을 그림 없이 돌린다. 모험의 방은 본편 방과
@@ -16,18 +16,19 @@ const vector=v=>v&&Number.isFinite(v.x)&&Number.isFinite(v.z);
 export function createAdventureCombat(s,{sound=()=>{}}={}){
  const scene=new Group(),wrappers=new WeakMap(),shotWrappers=new WeakMap(),list=[],hostiles=[],bodies=[],direction=new V(),target=new V();
  let entry=null,signature='',lastSound=-1,step=1/60,resonances=0;
- const A=ADVENTURE_ARENA;
  function nearby(pos,r,out){out.length=0;for(const w of list)if(!w.dead&&(w.g.position.x-pos.x)**2+(w.g.position.z-pos.z)**2<=r*r)out.push(w);return out;}
  function sync(){
   list.length=0;hostiles.length=0;
-  for(const e of s.enemies){if(e.hp<=0)continue;let w=wrappers.get(e);if(!w){w={source:e,g:{position:new V()},slow:0,type:e.type==='boss'?'warden':e.role==='tank'?'shield':'hound'};Object.defineProperties(w,{dead:{get:()=>e.hp<=0},hp:{get:()=>e.hp},maxHp:{get:()=>e.maxHp}});wrappers.set(e,w);}
+  for(const e of s.enemies){if(e.hp<=0||e.dormant&&Math.abs(e.x-s.player.x)+Math.abs(e.y-s.player.y)>18)continue;let w=wrappers.get(e);if(!w){w={source:e,g:{position:new V()},slow:0,type:e.type==='boss'?'warden':e.role==='tank'?'shield':'hound'};Object.defineProperties(w,{dead:{get:()=>e.hp<=0},hp:{get:()=>e.hp},maxHp:{get:()=>e.maxHp}});wrappers.set(e,w);}
    w.g.position.set(e.x,0,e.y);w.sx=e.x;w.sy=e.y;w.slow=Math.max(0,w.slow-step);list.push(w);}
   for(const b of s.shots){if(!b.hostile||b.life<=0)continue;let w=shotWrappers.get(b);if(!w){w={ob:{position:new V()},boss:Boolean(b.boss),dir:new V(),struck:false};Object.defineProperty(w,'life',{get:()=>b.life,set:v=>{b.life=v;}});shotWrappers.set(b,w);}w.ob.position.set(b.x,0,b.y);w.dir.set(b.dx,0,b.dy).normalize();hostiles.push(w);}
  }
  // 엔진이 끌어당기거나 밀어낸 적의 자리·둔화를 모험 쪽으로 돌려준다.
- function writeBack(){for(const w of list){const e=w.source;if(e.hp<=0)continue;const dx=w.g.position.x-w.sx,dy=w.g.position.z-w.sy;if(e.type!=='boss'&&(Math.abs(dx)>1e-5||Math.abs(dy)>1e-5)){e.x=clamp(e.x+dx,A.minX,A.maxX);e.y=clamp(e.y+dy,A.minY,A.maxY);}if(w.slow>0)e.slow=Math.max(e.slow,Math.min(2,w.slow));}}
- function boundary(a,b,d){let hit=false;if(b.x<A.minX||b.x>A.maxX){b.x=clamp(b.x,A.minX,A.maxX);d.x*=-1;hit=true;}if(b.z<A.minY||b.z>A.maxY){b.z=clamp(b.z,A.minY,A.maxY);d.z*=-1;hit=true;}return hit;}
- function constrain(pos){pos.x=clamp(pos.x,A.minX,A.maxX);pos.z=clamp(pos.z,A.minY,A.maxY);}
+ // 방마다 크기가 다르다(넓은 지역·작은 방).
+ const arena=()=>s.arena;
+ function writeBack(){const A=arena();for(const w of list){const e=w.source;if(e.hp<=0)continue;const dx=w.g.position.x-w.sx,dy=w.g.position.z-w.sy;if(e.type!=='boss'&&(Math.abs(dx)>1e-5||Math.abs(dy)>1e-5)){e.x=clamp(e.x+dx,A.minX,A.maxX);e.y=clamp(e.y+dy,A.minY,A.maxY);}if(w.slow>0)e.slow=Math.max(e.slow,Math.min(2,w.slow));}}
+ function boundary(a,b,d){const A=arena();let hit=false;if(b.x<A.minX||b.x>A.maxX){b.x=clamp(b.x,A.minX,A.maxX);d.x*=-1;hit=true;}if(b.z<A.minY||b.z>A.maxY){b.z=clamp(b.z,A.minY,A.maxY);d.z*=-1;hit=true;}return hit;}
+ function constrain(pos){const A=arena();pos.x=clamp(pos.x,A.minX,A.maxX);pos.z=clamp(pos.z,A.minY,A.maxY);}
  function emit(kind,args){
   if(!entry)return;const a=args.find(vector);if(!a)return;
   const line=['arc','trail','lance','rewindTrace','frostWeb'].includes(kind),b=line?args.slice(args.indexOf(a)+1).find(vector):null;

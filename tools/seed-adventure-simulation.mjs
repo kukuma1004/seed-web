@@ -8,9 +8,9 @@ import {createAdventureCombat} from '../src/seed-adventure-combat.js';
 const runs=[];
 for(const shape of ['slash','throw'])for(const initial of ['recall','split','orbit']){
  const s=createAdventure(67+runs.length);startAdventure(s);chooseAttackShape(s,shape);
- const combat=createAdventureCombat(s),frames=[];let guard=0,peakShots=0,peakEffects=0;const rooms=new Set();
+ const combat=createAdventureCombat(s),frames=[],bot={};let guard=0,peakShots=0,peakEffects=0;const rooms=new Set();
  try{
- while(!['won','lost'].includes(s.phase)&&guard++<60*2400){
+ while(!['won','lost'].includes(s.phase)&&guard++<60*3600){
   if(s.phase==='choice'){
    const o=adventureOffers(s),evo=o.evolutions[0],law=[initial,'pierce','chain','burst','frost'].find(l=>o.laws.includes(l))||o.laws[0];
    if(o.shapes.length)chooseAttackShape(s,o.shapes[0]);
@@ -20,9 +20,13 @@ for(const shape of ['slash','throw'])for(const initial of ['recall','split','orb
   if(s.phase==='fountain'){chooseAdventure(s,s.player.hp<s.player.maxHp*.7?'heal':'potion')||chooseAdventure(s,'heal');continue;}
   if(s.phase==='shop'){rooms.add('shop');for(let i=0;i<s.shop.length;i++)buyAdventure(s,i);leaveAdventureShop(s);continue;}
   if(s.phase==='doors'){const p=s.player,rank=d=>d.room==='fountain'&&p.hp<p.maxHp*.6?9:d.room==='boss'?9:d.room==='treasure'?6:d.room==='shop'&&s.coins>=40?5:d.reward==='evolve'?5:d.reward==='law'?4:d.reward==='grow'?3:2;const best=s.doors.map((d,i)=>[rank(d)-(d.room==='elite'&&p.hp<p.maxHp*.7?5:0),i]).sort((a,b)=>b[0]-a[0])[0];rooms.add(s.doors[best[1]].room);chooseAdventureDoor(s,best[1]);continue;}
-  const p=s.player,near=s.enemies.filter(e=>e.hp>0).sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0]||s.props[0]||s.pickups[0];
-  const a=s.time*.38,close=near&&(s.weapon==='slash'||!s.enemies.length)&&Math.hypot(near.x-p.x,near.y-p.y)>1.6;
-  const tx=close?near.x:12+Math.cos(a)*6.3,ty=close?near.y:8+Math.sin(a)*4.1;
+  const p=s.player,byDist=list=>list.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
+  const awake=byDist(s.enemies.filter(e=>e.hp>0&&!e.dormant)),near=awake||byDist(s.enemies.filter(e=>e.hp>0))||s.props[0]||s.pickups[0];
+  let tx,ty;
+  if(s.region){const R=s.region,goal=awake||(near&&!s.enemies.length?null:near)||(R.gate.open?R.gate:null);const t=goal||R.gate;const close=Math.hypot(t.x-p.x,t.y-p.y)>(awake&&s.weapon!=='slash'?4:1.4);tx=close?t.x:p.x;ty=close?t.y:p.y;
+   // 바위에 걸리면 잠깐 옆으로 비켜 간다.
+   bot.moved=(bot.moved||0)*.95+Math.hypot(p.x-(bot.px??p.x),p.y-(bot.py??p.y));bot.px=p.x;bot.py=p.y;if(close&&bot.moved<.02&&!bot.side)bot.side=40;if(bot.side>0){bot.side--;const vx=tx-p.x,vy=ty-p.y;tx=p.x-vy;ty=p.y+vx;}}
+  else{const a=s.time*.38,close=near&&(s.weapon==='slash'||!s.enemies.length)&&Math.hypot(near.x-p.x,near.y-p.y)>1.6;tx=close?near.x:12+Math.cos(a)*6.3;ty=close?near.y:8+Math.sin(a)*4.1;}
   const dx=tx-p.x,dy=ty-p.y;
   if(s.enemies.some(e=>e.tell>0&&Math.hypot(e.tx-p.x,e.ty-p.y)<2.2))dodgeAdventure(s,dx,dy);
   if(p.hp<p.maxHp*.4)usePotionAdventure(s);

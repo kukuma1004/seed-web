@@ -68,3 +68,7 @@
 #seed-adventure .sa-door.fountain{border-color:#9ccfe8cc}#seed-adventure .sa-door.shop{border-color:#b7e3a0cc}
 @media(max-width:600px){#seed-adventure .sa-door{min-height:0;flex-direction:row;align-items:center;border-radius:14px}.sa-door-scene{inset:0;border-radius:12px;opacity:.45}.sa-door-emblem{margin:8px;transform:none}#seed-adventure .sa-door-art{width:60px;height:60px}.sa-door-emblem .form-art{width:56px!important;height:56px!important}.sa-door-plate{background:none;align-items:flex-start;text-align:left}}
 @media(max-height:550px) and (min-width:601px){#seed-adventure .sa-door{min-height:190px}#seed-adventure .sa-door-art{width:64px;height:64px}.sa-door-emblem .form-art{width:60px!important;height:60px!important}.sa-door-plate{padding:8px 10px 10px}}
+/* 2026-09-28 넓은 지역 작은 지도 */
+#seed-adventure .sa-minimap{position:absolute;inset:auto;top:max(64px,calc(env(safe-area-inset-top) + 56px));right:max(24px,env(safe-area-inset-right));width:150px;height:94px;border-radius:6px;pointer-events:none;box-shadow:0 4px 14px #0008;opacity:.92}
+@media(max-width:600px){#seed-adventure .sa-minimap{width:110px;height:69px;top:56px;right:12px}}
+@media(max-height:550px) and (min-width:601px){#seed-adventure .sa-minimap{width:120px;height:75px;top:52px}}

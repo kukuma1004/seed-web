@@ -1,14 +1,16 @@
 import assert from 'node:assert/strict';
-import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
+import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_ARENA,REGION,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
 import {composeAdventureAttack} from '../src/seed-adventure-attacks.js';
 import {createAdventureCombat} from '../src/seed-adventure-combat.js';
 import {LAWS} from '../src/laws.js';
 import {DEFENSE_CATALOG_COUNTS} from '../src/seed-defense-catalog.js';
 
-const begin=(weapon='slash',law='recall')=>{const s=createAdventure(42);startAdventure(s,weapon,law);s.player.attack=0;s.player.inv=1000;s.props.length=0;return s;};
+// 규칙 단위 시험은 한 화면짜리 작은 방에서(넓은 지역은 아래 따로 시험).
+const small=s=>{s.region=null;s.arena={...ADVENTURE_ARENA};s.enemies=[];s.props.length=0;s.player.x=12;s.player.y=10;return s;};
+const begin=(weapon='slash',law='recall')=>{const s=createAdventure(42);startAdventure(s,weapon,law);small(s);s.wave=0;s.spawn=0;s.player.attack=0;s.player.inv=1000;return s;};
 const dummy=(id,x,y,hp=1000)=>({id,type:'hound',x,y,hp,maxHp:hp,r:.42,speed:0,cd:1000,tell:0,slow:0,frost:0,flash:0,pattern:0});
 const tick=(s,seconds,input={},combat=null)=>{for(let t=0;t<seconds;t+=1/60)stepAdventure(s,1/60,input,combat);};
-const clearRoom=s=>{s.enemies=[];s.wave=2;tick(s,1.3);};
+const clearRoom=s=>{s.enemies=[];if(s.region){s.player.x=s.region.gate.x;s.player.y=s.region.gate.y;tick(s,.1);}else{s.wave=2;tick(s,1.3);}};
 
 assert.equal(Object.keys(LAWS).length,9);
 assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,'모험도 162가지(기본 9 + 형태 153)');
@@ -46,7 +48,7 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
 {
  const s=createAdventure(7);startAdventure(s);assert.equal(s.phase,'awakening');assert.deepEqual(s.shapes,[]);assert.deepEqual(s.laws,[]);
  assert.equal(chooseAttackShape(s,'mage'),false);assert.equal(chooseAttackShape(s,'slash'),true);assert.equal(s.phase,'playing');assert.equal(cycleAdventureAttack(s),false,'unearned throw is unavailable');
- s.enemies=[];s.wave=1;s.spawn=0;tick(s,1.2);assert.equal(s.phase,'playing');assert.equal(s.wave,2,'second wave follows without a choice');
+ assert.ok(s.region,'first room is a wide region');assert.equal(s.region.gate.open,false,'exit starts closed');tick(s,.2);assert.equal(s.phase,'playing','no reward before reaching the exit');
  clearRoom(s);assert.equal(s.choiceKind,'law');assert.deepEqual(adventureOffers(s).laws,['recall','split','orbit']);
  assert.equal(chooseAdventure(s,'shape','throw'),false,'shape mixing is a later growth');
  assert.equal(chooseAdventure(s,'law','recall'),true);assert.equal(s.phase,'doors');
@@ -103,12 +105,12 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
 }
 // ② 방·문·보상, ③ 막마다 다른 수호자
 {
- assert.equal(ROOMS.length,ADVENTURE_ACTS.length*ROOMS_PER_ACT);assert.equal(ROOMS.length,18);
+ assert.equal(ROOMS.length,ADVENTURE_ACTS.length*ROOMS_PER_ACT);assert.equal(ROOMS.length,12);
  for(let a=0;a<3;a++){const info=adventureRoomInfo(a*ROOMS_PER_ACT+ROOMS_PER_ACT-1);assert.equal(info.boss,true);assert.equal(info.actInfo.id,ADVENTURE_ACTS[a].id);}
  const s=begin();s.room=ROOMS_PER_ACT-2;clearRoom(s);chooseAdventure(s,'grow');assert.equal(s.phase,'doors');assert.deepEqual(s.doors,[{room:'boss',reward:'boss'}],'only the boss door before a boss');
  chooseAdventureDoor(s,0);const boss=s.enemies.find(e=>e.type==='boss');assert.equal(boss.bossId,'austin');
- for(const [room,id] of [[11,'alwaysbeginner'],[17,'tempestcarrier']]){const b=begin();b.room=room-1;b.phase='doors';b.doors=[{room:'boss',reward:'boss'}];chooseAdventureDoor(b,0);assert.equal(b.enemies[0].bossId,id);assert.equal(b.enemies[0].act,Math.floor(room/ROOMS_PER_ACT));}
- for(const room of [5,11,17]){const b=begin();b.room=room-1;b.phase='doors';b.doors=[{room:'boss',reward:'boss'}];chooseAdventureDoor(b,0);b.player.inv=1e9;const e=b.enemies[0];const seen=new Set();for(let i=0;i<60*30;i++){if(e.tellKind)seen.add(e.tellKind);stepAdventure(b,1/60,{});if(b.phase!=='playing')break;}assert.ok(seen.size>=3,e.bossId+' uses several patterns: '+[...seen]);}
+ for(const [room,id] of [[7,'alwaysbeginner'],[11,'tempestcarrier']]){const b=begin();b.room=room-1;b.phase='doors';b.doors=[{room:'boss',reward:'boss'}];chooseAdventureDoor(b,0);assert.equal(b.enemies[0].bossId,id);assert.equal(b.enemies[0].act,Math.floor(room/ROOMS_PER_ACT));}
+ for(const room of [3,7,11]){const b=begin();b.room=room-1;b.phase='doors';b.doors=[{room:'boss',reward:'boss'}];chooseAdventureDoor(b,0);b.player.inv=1e9;const e=b.enemies[0];const seen=new Set();for(let i=0;i<60*30;i++){if(e.tellKind)seen.add(e.tellKind);stepAdventure(b,1/60,{});if(b.phase!=='playing')break;}assert.ok(seen.size>=3,e.bossId+' uses several patterns: '+[...seen]);}
  const e=begin();e.phase='doors';e.doors=[{room:'elite',reward:'law'}];chooseAdventureDoor(e,0);const strong=e.enemies[0].maxHp;const n=begin();n.phase='doors';n.doors=[{room:'combat',reward:'law'}];chooseAdventureDoor(n,0);assert.ok(strong>n.enemies[0].maxHp);
  clearRoom(e);const lv=e.level;chooseAdventure(e,'law',adventureOffers(e).laws[0]);assert.equal(e.level,lv+1,'elite bonus growth');
  const m=begin();m.phase='doors';m.room=ROOMS_PER_ACT-1;m.doors=[{room:'combat',reward:'law'}];chooseAdventureDoor(m,0);assert.ok(m.enemies.every(x=>['batter','pitcher','catcher','runner'].includes(x.art)));
@@ -130,4 +132,30 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  assert.equal(leaveAdventureShop(shop),true);assert.equal(shop.phase,'doors');
  const f=begin();f.player.hp=30;f.phase='doors';f.doors=[{room:'fountain',reward:null}];chooseAdventureDoor(f,0);assert.equal(f.phase,'fountain');assert.equal(chooseAdventure(f,'heal'),true);assert.ok(f.player.hp>60);assert.equal(f.phase,'doors');
 }
-console.log('Adventure: combo & hit-stop, 162 forms through the authored engine, 18 rooms with treasure/shop/fountain/elite, breakables, pickups, potions, buffs, bosses and win/loss passed.');
+// 넓은 지역(B안): 자는 무리·출구 수호 무리·장애물·습격지·수호 제단
+{
+ const fresh=()=>{const s=createAdventure(11);startAdventure(s,'slash','burst');s.player.inv=1e9;return s;};
+ const s=fresh(),R=s.region;assert.ok(R);assert.equal(s.arena.maxX,REGION.w-1.4);
+ assert.ok(R.obstacles.length>=12,'obstacles');assert.ok(s.enemies.length>=20,'several packs');assert.ok(s.enemies.every(e=>e.dormant),'packs sleep until approached');
+ assert.ok(s.enemies.some(e=>e.guard),'exit guard pack');assert.ok(s.props.some(o=>o.kind==='cache'),'small chests');assert.deepEqual(R.events.map(e=>e.type).sort(),['guard','raid']);
+ assert.deepEqual(JSON.stringify(fresh().region.obstacles),JSON.stringify(R.obstacles),'same seed, same region');
+ // 멀리 있는 무리는 움직이지 않고, 가까이 가면 무리 전체가 깨어난다.
+ const e=s.enemies.find(e=>!e.guard),before={x:e.x,y:e.y};tick(s,1);assert.deepEqual({x:e.x,y:e.y},before);
+ s.player.x=e.x-4;s.player.y=e.y;tick(s,.05);assert.ok(s.enemies.filter(n=>n.pack===e.pack).every(n=>!n.dormant),'whole pack wakes');
+ // 장애물은 씨앗과 탄을 막는다.
+ const o=R.obstacles[0];s.player.x=o.x;s.player.y=o.y+.01;tick(s,.02);assert.ok(Math.hypot(s.player.x-o.x,s.player.y-o.y)>=o.r+.39,'seed pushed out of rocks');
+ // 출구: 수호 무리를 모두 물리치면 열리고, 닿으면 보상.
+ const g=fresh();g.player.x=g.region.gate.x;g.player.y=g.region.gate.y;tick(g,.1);assert.equal(g.phase,'playing','closed exit');
+ for(const n of g.enemies)if(n.guard)n.hp=0;tick(g,.05);assert.equal(g.region.gate.open,true);g.player.x=g.region.gate.x;g.player.y=g.region.gate.y;tick(g,.05);assert.equal(g.phase,'choice');
+ // 습격지: 원 안에서 버티면 보물 상자.
+ const r=fresh(),raid=r.region.events.find(e=>e.type==='raid');for(const n of r.enemies)n.hp=0;r.enemies=[];r.player.x=raid.x;r.player.y=raid.y;
+ const caches=r.props.filter(o=>o.kind==='cache').length;for(let t=0;t<raid.duration+3&&raid.state!=='done';t+=.05){r.player.x=raid.x;r.player.y=raid.y;stepAdventure(r,.05,{});}
+ assert.equal(raid.state,'done');assert.ok(r.props.filter(o=>o.kind==='cache').length>caches,'raid reward chest');
+ // 수호 제단: 줄지어 온 적이 제단에 닿으면 깎인다. 막으면 보물 상자.
+ const d=fresh(),guard=d.region.events.find(e=>e.type==='guard');for(const n of d.enemies)n.hp=0;d.enemies=[];d.player.x=guard.x+3;d.player.y=guard.y;
+ for(let t=0;t<16;t+=.05)stepAdventure(d,.05,{});assert.ok(['active','failed'].includes(guard.state));assert.ok(d.enemies.some(e=>e.march),'marchers walk to the altar');assert.ok(guard.hp<guard.maxHp,'unguarded altar takes damage');
+ const k=fresh(),kg=k.region.events.find(e=>e.type==='guard');for(const n of k.enemies)n.hp=0;k.enemies=[];k.player.x=kg.x+3;k.player.y=kg.y;
+ for(let t=0;t<60&&kg.state==='active'||t<1;t+=.05){for(const e of k.enemies)if(e.march&&Math.hypot(e.x-kg.portal.x,e.y-kg.portal.y)>1.5)e.hp=0;stepAdventure(k,.05,{});}
+ assert.equal(kg.state,'done');assert.equal(kg.hp,kg.maxHp);assert.ok(k.props.some(o=>o.kind==='cache'&&o.big),'defended altar gives a big chest');
+}
+console.log('Adventure: combo & hit-stop, 162 forms through the authored engine, 12 rooms (wide regions with sleeping packs, exit guards, obstacles, raid and altar events), treasure/shop/fountain/elite, breakables, pickups, potions, buffs, bosses and win/loss passed.');
