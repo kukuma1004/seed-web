@@ -118,3 +118,8 @@ body.menu-mode:has(.dungeon-panel) #app-actions{top:max(14px,env(safe-area-inset
 /* 2026-09-28 씨앗 맞추기 추가로 여섯 갈래: 3 × 2. 그림은 법칙 문양 아틀라스(판처럼 보이는 격자) 그대로. */
 .dungeon-modes:has(.mode-puzzle){grid-template-columns:repeat(3,minmax(0,1fr))}.mode-puzzle .mode-art{object-position:center}
 @media(max-width:600px) and (min-height:501px){.dungeon-modes:has(.mode-puzzle){grid-template-columns:1fr;grid-template-rows:repeat(6,minmax(135px,1fr));min-height:880px}}
+/* 2026-09-28 정원을 처음 화면 앞으로: 정원 그림을 깐 버튼 */
+.home-panel #go-garden{position:relative;padding-right:45px;overflow:hidden;background-image:linear-gradient(90deg,#0d1a15f0 0%,#0d1a15b8 50%,#0d1a1522 100%),var(--garden-art);background-size:cover;background-position:center 38%;border-color:#c9d88a}
+.home-panel #go-garden strong{color:#f4f0c8}.home-panel #go-garden small{color:#cfe3a4}
+.home-panel #go-garden:after{content:'❀';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:22px;color:#ffe6a3;text-shadow:0 0 10px #ffd27a}
+.home-panel .menu-list #go-garden{grid-column:1/-1}

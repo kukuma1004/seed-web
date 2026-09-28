@@ -78,6 +78,7 @@ import {createSurvivalRanking} from './survival-ranking.js';
 import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defense-ranking.js';
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
+import {GARDEN_THEMES,themeUnlocked,themeItemCount} from './garden-themes.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
 import {PATCH_NOTES,hasUnseenNotes,markNotesSeen,latestNoteId} from './patch-notes.js';
@@ -1409,7 +1410,7 @@ async function backfillBossVeterans(){
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
- const gardenLine=gardenSummary(),knownForms=adminMode?Object.keys(DISCOVERY_FORMS).length:profile.forms.filter(id=>DISCOVERY_FORMS[id]).length;
+ const knownForms=adminMode?Object.keys(DISCOVERY_FORMS).length:profile.forms.filter(id=>DISCOVERY_FORMS[id]).length;
  const permanentStats=[titleInfo.clearStatBonus?`완주: 모든 능력 +${Math.round(titleInfo.clearStatBonus*1000)/10}%`:'',titleInfo.moveSpeedBonus?`이속 +${Math.round(titleInfo.moveSpeedBonus*1000)/10}%`:'',titleInfo.maxHpBonus?`최대 HP +${titleInfo.maxHpBonus}`:'',titleInfo.cooldownBonus?`순환 +${Math.round(titleInfo.cooldownBonus*1000)/10}%`:''].filter(Boolean).join(' · ')||'보유 효과 없음';
  const personalBests=user?accountProfile.bestScores:{act1:readRanking(runStorage)[0]?.score||0,act2:readRanking(actStorage(runStorage,2))[0]?.score||0,act3:readRanking(act3Storage(runStorage))[0]?.score||0};
  const recordProfile=`<section class="account-records"><header><strong>막별 최고 기록</strong><button type="button" id="account-ranking">전체 보기</button></header><div><span><b>오스틴</b><em>${personalBests.act1?formatScore(personalBests.act1)+'점':'도전 전'}</em></span><span><b>항상초심</b><em>${personalBests.act2?formatScore(personalBests.act2)+'점':'도전 전'}</em></span><span><b>요한</b><em>${personalBests.act3?formatScore(personalBests.act3)+'점':'도전 전'}</em></span></div></section>`;
@@ -1420,7 +1421,7 @@ function showAccount(error=''){
  $('#overlay').innerHTML=`<div class="menu-panel account-panel">${user||localInspection?'<button type="button" id="account-back" class="account-back" aria-label="프로필에서 돌아가기">‹ 돌아가기</button>':''}<p class="eyebrow">SEED · PROFILE & ACCOUNT</p><div class="account-mark">♧</div><h2>${linked?'나의 프로필':'어떻게 시작할까요'}</h2>
   <p class="account-copy">${linked?'이 계정으로 SEED의 기록을 이어갑니다.':'Google 또는 Apple 계정으로 시작할 수 있어요. 먼저 둘러보고 싶으면 게스트로 시작하세요.'}</p>
   ${user?`<div class="account-status"><strong>${escapeHtml(account.label())}</strong><span>${user.isAnonymous?'나중에 Google 또는 Apple 계정에 연결하면 현재 기록을 그대로 지킬 수 있어요.':'이 UID로 여러 기기의 기록을 이어갑니다.'}</span>${badgeLine?`<em class="account-badge">✦ ${escapeHtml(badgeLine)}</em>`:''}<small>UID ${escapeHtml(user.uid)}</small></div>`:''}
-  <section class="profile-collection"><button type="button" id="profile-garden"><span class="profile-collection-icon" aria-hidden="true">♧</span><span><strong>나의 정원</strong><small>${escapeHtml(gardenLine)}</small></span><em>›</em></button><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 공개 도감 · ':''}${knownForms}/${Object.keys(DISCOVERY_FORMS).length} 발견</small></span><em>›</em></button></section>
+  <section class="profile-collection"><button type="button" id="profile-discoveries"><span class="profile-collection-icon" aria-hidden="true">✦</span><span><strong>진화 도감</strong><small>${adminMode?'관리자 공개 도감 · ':''}${knownForms}/${Object.keys(DISCOVERY_FORMS).length} 발견</small></span><em>›</em></button></section>
   ${recordProfile}
   ${permanentStatsProfile(titleInfo)}
   ${titleProfile}
@@ -1440,7 +1441,6 @@ function showAccount(error=''){
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest,'guest');
  if($('#account-back'))$('#account-back').onclick=()=>{if(publicWebBetaLocked()&&!adminMode&&!betaTesterMode)showBetaLock();else showIntro();};
  if($('#account-continue'))$('#account-continue').onclick=async()=>{await refreshAccessMode();showEntry();};
- $('#profile-garden').onclick=()=>showGarden(showAccount);
  $('#profile-discoveries').onclick=()=>showDiscoveries(showAccount);
  if($('#account-ranking'))$('#account-ranking').onclick=()=>showRanking('online');
  document.querySelectorAll('[data-equip-title]').forEach(button=>button.onclick=()=>{const id=button.dataset.equipTitle;if(!seedTitle.state().titles.some(title=>title.id===id))return;writeAccountProfile(runStorage,{...readAccountProfile(runStorage),equippedTitle:id});seedTitle.setEquipped(id);showAccount();});
@@ -1477,9 +1477,10 @@ function showIntro(){document.body.classList.remove('survival-result');$('#overl
   ${nameFieldHtml()}
   <div class="menu-list">
    <button id="go-dungeon" class="primary menu-item"><strong>던전으로</strong><small>문지기 너머로 가는 길</small></button>
+   <button id="go-garden" class="menu-item" style="--garden-art:url(${import.meta.env.BASE_URL}assets/garden/hub-v1.webp)"><strong>정원</strong><small>${escapeHtml(gardenHomeLine())}</small></button>
    ${adminMode?'<div class="home-admin-actions"><button id="developer-usage" class="menu-item developer-entry"><strong>이용 현황</strong><small>접속 기기 · 플레이 시간</small></button><button id="developer-lab" class="menu-item developer-entry"><strong>개발자 실험실</strong><small>조합 · 보스 확인</small></button></div>':''}
    <button id="ranking-link" class="menu-item"><strong>명예의 전당</strong><small>모두의 기록</small></button>
-   <button id="account-link" class="menu-item"><strong>프로필·계정</strong><small>${escapeHtml(account.label())} · 정원 · 도감 · 칭호</small></button>
+   <button id="account-link" class="menu-item"><strong>프로필·계정</strong><small>${escapeHtml(account.label())} · 도감 · 칭호</small></button>
   </div>
   ${cloudSaveFailed?'<p class="cloud-save-warning" role="alert">이 기기에는 저장됐지만 계정 저장은 아직 확인되지 않았어요. 다른 기기로 옮기기 전에 연결 상태를 확인해 주세요. <button id="retry-cloud-save" type="button">계정 저장 다시 시도</button></p>':''}
   <p class="legal-note"><a href="https://kukuma1004.github.io/seed-web/privacy.html" target="_blank" rel="noopener">개인정보 처리방침</a> · <a href="https://kukuma1004.github.io/seed-web/terms.html" target="_blank" rel="noopener">랭킹 이용규칙</a> · 광고와 결제가 없는 게임입니다</p>
@@ -1487,6 +1488,7 @@ function showIntro(){document.body.classList.remove('survival-result');$('#overl
  bindNameField();
  online.flush().catch(()=>0);
  $('#go-dungeon').onclick=showDungeon;
+ $('#go-garden').onclick=()=>showGardenHub();
  if($('#retry-cloud-save'))$('#retry-cloud-save').onclick=async()=>{const button=$('#retry-cloud-save');button.disabled=true;button.textContent='확인 중…';try{const result=await cloud.flush();if(result.ok&&!cloud.isDirty()){cloudSaveFailed=false;showIntro();return;}}catch{}button.disabled=false;button.textContent='계정 저장 다시 시도';};
  if($('#developer-lab'))$('#developer-lab').onclick=showDeveloperLab;
  if($('#developer-usage'))$('#developer-usage').onclick=showDeveloperUsage;
@@ -1730,7 +1732,7 @@ async function showSeedDuel(){
 }
 // 2026-09-28 사용자: "퍼즐게임 같은 거" → 씨앗 맞추기(3개 맞추기, PUZZLE_MATCH3_PLAN.md). 모험처럼 계정 저장소에 진행을 두고,
 // 첫 깨기·새 별 햇살(JP)과 조합 효과 도감 발견을 계정에 남긴다. 연습(로컬 검증·개발자 실험)은 보상 없음.
-let puzzleScreen=null;
+let puzzleScreen=null,gardenHubScreen=null;
 async function showSeedPuzzle(){
  mode='puzzle';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  const back=()=>{puzzleScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
@@ -1750,6 +1752,27 @@ async function showSeedPuzzle(){
    onClose:back});
   if(localInspection)window.seedPuzzle=puzzleScreen;
  }catch(error){console.error('씨앗 맞추기 시작 실패',error);back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}
+}
+// 2026-09-28 사용자: "정원메뉴는 앞으로 빼야 … 정원에 들어가서 다시 테마로 들어가는건데 테마는 단계별로 잠궈놔야 … 일단 첫번째 온실만 열어 놓고
+// … 구성물을 배치할 때는 마음대로 배치할 수 있게 하고 구성물은 제이피 게임내 통화로 살 수 있게" — 처음 화면의 정원 → 허브 → 테마 정원.
+function gardenHomeLine(){
+ const opened=GARDEN_THEMES.filter(t=>themeUnlocked(garden,t.id)).length,placed=GARDEN_THEMES.reduce((n,t)=>n+themeItemCount(garden,t.id),0);
+ return `테마 정원 ${opened}/${GARDEN_THEMES.length} 열림 · 구성물 ${placed}`;
+}
+async function showGardenHub(start=null){
+ mode='garden-hub';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ const owner=account.user()?.uid||'guest',sameOwner=()=>owner===(account.user()?.uid||'guest');
+ const resume=()=>{gardenHubScreen=null;last=performance.now();realLast=Date.now();startAnimation();};
+ try{
+  const {mountGardenHub}=await import('./garden-hub-view.js');
+  gardenHubScreen=mountGardenHub({audio,start,
+   wallet:()=>readShop(runStorage).coins,
+   onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
+   garden:{get:()=>garden,set:next=>{if(!sameOwner())return;garden=normalizeGarden(next);writeGarden(runStorage,garden);}},
+   onOpenSanctuary:()=>{resume();showGarden(()=>showGardenHub());},
+   onClose:()=>{resume();showIntro();}});
+  if(localInspection)window.seedGardenHub=gardenHubScreen;
+ }catch(error){console.error('정원 열기 실패',error);resume();showIntro();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 async function showSeedDefense(){
  const serial=++defenseLoadSerial;
@@ -1905,10 +1928,6 @@ function showGarden(back=showIntro){
  refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
  $('#overlay').hidden=false;$('#overlay').classList.remove('intro','menu-screen','ranking-overlay');$('#overlay').classList.add('garden-mode');
  paintGardenPanel();
-}
-function gardenSummary(){
- const planted=garden.plots.filter(Boolean).length;
- return planted?`플레이 흔적으로 자란 식물 ${planted}/${garden.plots.length}`:garden.fragments?`씨앗 조각 ${garden.fragments}/3 · 모이면 자동으로 심겨요`:'여정을 마치면 식물이 저절로 심겨요';
 }
 function showDiscoveries(back=showIntro){
  mode='discoveries';touch.reset();keys.clear();

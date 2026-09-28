@@ -3,6 +3,7 @@
 import {LAWS} from './laws.js';
 import {ALL_FORMS,SECOND_FORMS} from './forms.js';
 import {normalizeDecor} from './garden-decor.js';
+import {emptyThemes,normalizeThemes,normalizeBag,normalizeOpened} from './garden-themes.js';
 
 export const GARDEN_KEY='seed-garden-v1';
 // 훈련장은 비교 규칙과 보상을 다시 정할 때까지 보류한다. 구현과 기록은
@@ -76,7 +77,8 @@ const plant=p=>{
 };
 const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
 // decor: 씨앗 맞추기 별로 꾸민 것(garden-decor.js) · puzzleStars: 씨앗 맞추기에서 모은 별(기기마다 다르면 큰 쪽).
-export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[],decor:[],puzzleStars:0});
+// themes: 테마 정원마다 놓은 구성물 · bag: 치워 둔 구성물 · themesOpened: 열린 테마(garden-themes.js).
+export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[],decor:[],puzzleStars:0,themes:emptyThemes(),bag:{},themesOpened:[]});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
@@ -103,6 +105,7 @@ export function normalizeGarden(value){
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
  g.decor=normalizeDecor(value.decor);
  if(Number.isInteger(value.puzzleStars)&&value.puzzleStars>0)g.puzzleStars=Math.min(1e6,value.puzzleStars);
+ g.themes=normalizeThemes(value.themes);g.bag=normalizeBag(value.bag);g.themesOpened=normalizeOpened(value.themesOpened);
  return g;
 }
 export function readGarden(storage){try{return autoPlantSeeds(normalizeGarden(JSON.parse(storage?.getItem(GARDEN_KEY))));}catch{return emptyGarden();}}
