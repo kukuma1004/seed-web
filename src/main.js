@@ -113,7 +113,7 @@ import {mountPerfDevMenu} from './perf-dev-menu.js';
 import {createProjectileSprites,projectileCellGeometry} from './projectile-sprites.js';
 import {createAccountAuth,FIREBASE_APP} from './account-auth.js';
 import {anonymousTelemetrySession,createWebTelemetry} from './web-telemetry.js';
-import {readUsageDays,usageTotals} from './usage-dashboard.js';
+import {readUsageDays,usageTotals,usageModeTotals,USAGE_MODE_NAMES} from './usage-dashboard.js';
 import {createCloudSync} from './cloud-sync.js';
 import {CLOUD_OWNER_KEY,readCheckpointBackups,setCheckpointBackup} from './cloud-save.js';
 import {readAccountProfile,writeAccountProfile,recordBestScore,accountBadgeLine,BADGES} from './account-profile.js';
@@ -1543,7 +1543,7 @@ function showDeveloperUsage(){
    const rows=await readUsageDays({tokenSession:()=>account.tokenSession(),databaseURL:FIREBASE.databaseURL});
    if(mode!=='developer-usage'||!target.isConnected)return;
    const today=rows[0],week=usageTotals(rows),starts=week.webStarts+week.appStarts;
-   target.innerHTML=`<div class="usage-cards"><div><small>오늘 방문 기기</small><strong>${today.webDevices+today.appDevices}</strong><span>웹 ${today.webDevices} · Android ${today.appDevices}</span></div><div><small>오늘 판 시작</small><strong>${today.webStarts+today.appStarts}</strong><span>웹 ${today.webStarts} · Android ${today.appStarts}</span></div><div><small>오늘 실제 전투</small><strong>${minutes(today.activeSeconds)}</strong><span>일시정지·백그라운드 제외</span></div></div><p class="usage-summary">최근 7일 판 시작 ${starts.toLocaleString('ko-KR')}회 · 실제 전투 ${minutes(week.activeSeconds)} · 한 판 평균 ${starts?minutes(week.activeSeconds/starts):'기록 없음'} · 완주 ${week.cleared}회 · 사망 ${week.deaths}회</p><div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>날짜</th><th>웹 기기</th><th>앱 기기</th><th>판 시작</th><th>전투 시간</th><th>완주</th><th>사망</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${row.day.slice(4,6)}/${row.day.slice(6)}</td><td>${row.webDevices}</td><td>${row.appDevices}</td><td>${row.webStarts+row.appStarts}</td><td>${minutes(row.activeSeconds)}</td><td>${row.cleared}</td><td>${row.deaths}</td></tr>`).join('')}</tbody></table></div><p class="developer-note">방문 수는 사람이 아닌 브라우저·앱 설치별 추정치예요. 새 앱 통계와 전투 시간은 해당 버전 설치 이후부터 기록돼요. 종료 직전 수초는 누락될 수 있어요.</p>`;
+   target.innerHTML=`<div class="usage-cards"><div><small>오늘 방문 기기</small><strong>${today.webDevices+today.appDevices}</strong><span>웹 ${today.webDevices} · Android ${today.appDevices}</span></div><div><small>오늘 판 시작</small><strong>${today.webStarts+today.appStarts}</strong><span>웹 ${today.webStarts} · Android ${today.appStarts}</span></div><div><small>오늘 실제 전투</small><strong>${minutes(today.activeSeconds)}</strong><span>일시정지·백그라운드 제외</span></div></div><p class="usage-summary">최근 7일 판 시작 ${starts.toLocaleString('ko-KR')}회 · 실제 전투 ${minutes(week.activeSeconds)} · 한 판 평균 ${starts?minutes(week.activeSeconds/starts):'기록 없음'} · 완주 ${week.cleared}회 · 사망 ${week.deaths}회</p><div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>날짜</th><th>웹 기기</th><th>앱 기기</th><th>판 시작</th><th>전투 시간</th><th>완주</th><th>사망</th></tr></thead><tbody>${rows.map(row=>`<tr><td>${row.day.slice(4,6)}/${row.day.slice(6)}</td><td>${row.webDevices}</td><td>${row.appDevices}</td><td>${row.webStarts+row.appStarts}</td><td>${minutes(row.activeSeconds)}</td><td>${row.cleared}</td><td>${row.deaths}</td></tr>`).join('')}</tbody></table></div>${(()=>{const modes=usageModeTotals(rows),todayModes=today.modes||{},ids=Object.keys(USAGE_MODE_NAMES).sort((x,y)=>modes[y].seconds-modes[x].seconds);return `<h3 class="usage-mode-title">모드별 (최근 7일)</h3><div class="usage-table-wrap"><table class="usage-table"><thead><tr><th>모드</th><th>들어간 횟수</th><th>머문 시간</th><th>한 번 평균</th><th>오늘</th></tr></thead><tbody>${ids.map(id=>`<tr><td>${USAGE_MODE_NAMES[id]}</td><td>${modes[id].entries}</td><td>${minutes(modes[id].seconds)}</td><td>${modes[id].entries?minutes(modes[id].seconds/modes[id].entries):'-'}</td><td>${todayModes[id]?.entries||0}회 · ${minutes(todayModes[id]?.seconds||0)}</td></tr>`).join('')}</tbody></table></div>`;})()}<p class="developer-note">방문 수는 사람이 아닌 브라우저·앱 설치별 추정치예요. 새 앱 통계와 전투 시간은 해당 버전 설치 이후부터 기록돼요. 종료 직전 수초는 누락될 수 있어요.</p>`;
   }catch(error){if(mode==='developer-usage'&&target.isConnected)target.textContent=error?.message||'통계를 불러오지 못했어요.';}
   finally{loading=false;if(button.isConnected)button.disabled=false;}
  };
@@ -2243,7 +2243,11 @@ function perfFinishNow(outcome){
  if(adminMode&&!localInspection)account.tokenSession().then(session=>uploadSession(report,{session,databaseURL:FIREBASE.databaseURL})).then(r=>{if(r&&!r.ok)console.info('PERF UPLOAD SKIPPED',r.reason);}).catch(()=>{});
  return report;
 }
-window.addEventListener('pagehide',()=>{stopAnimation();audio.setPaused(true);void webTelemetry.playPause();perfFinish('closed');});
+// 모드별 이용 현황: 1초마다 지금 어떤 모드 화면인지 보고, 화면이 보이고 멈춰 있지 않을 때만 센다.
+// 메뉴로 잠깐 나갔다 같은 모드로 돌아오면 이어서 세고, 다른 모드에 들어가면 새로 센다.
+{const trackedMode=()=>mode==='playing'||mode==='evolving'?(survivalSession?(survivalSession.benchmark?null:'survival'):'journey'):['defense','adventure','duel'].includes(mode)?mode:null;
+ setInterval(()=>{if(document.hidden)return;const m=trackedMode();if(!m)return;void webTelemetry.modeEnter(m);if(!((m==='journey'||m==='survival')&&paused))webTelemetry.modeTick(1);},1000);}
+window.addEventListener('pagehide',()=>{void webTelemetry.modePause();stopAnimation();audio.setPaused(true);void webTelemetry.playPause();perfFinish('closed');});
 window.addEventListener('pageshow',()=>{if(mode==='adventure')return;last=performance.now();realLast=Date.now();startAnimation();if(!document.hidden&&!paused)audio.setPaused(false);});
 mountPerfDevMenu({storage:rawStorage,version:GAME_VERSION,live:()=>perf.state()});
 let sizedW=0,sizedH=0;

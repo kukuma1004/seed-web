@@ -3,6 +3,8 @@
 export const WEB_TELEMETRY_ROOT='seedWebTelemetry/v1/days';
 const TELEMETRY_APP='seed-web-telemetry';
 const PROVIDERS=new Set(['google','apple','guest']);
+// 2026-09-28 사용자: "이용 현황에서 뭘 많이 하는지 보고 싶다" — 모드별로 들어간 횟수와 머문 시간(화면이 보일 때만).
+export const TELEMETRY_MODES=Object.freeze(['journey','survival','defense','adventure','duel']);
 
 export function seoulDay(time=Date.now()){
  return new Date(time+9*60*60*1000).toISOString().slice(0,10).replaceAll('-','');
@@ -33,7 +35,7 @@ export function createWebTelemetry({enabled=false,platform='web',databaseURL,ses
  const visited=new Set();
  const eventCounts=new Map();
  const app=platform==='android';
- let play=null;
+ let play=null,modePlay=null;
  const currentSession=()=>{
   if(!sessionPromise)sessionPromise=Promise.resolve().then(session).catch(error=>{sessionPromise=null;throw error;});
   return sessionPromise;
@@ -96,8 +98,26 @@ export function createWebTelemetry({enabled=false,platform='web',databaseURL,ses
  }
  function playPause(){return flushPlay(true);}
  function endPlay(outcome='left'){if(play)play.outcome=['cleared','ended','left','closed','restart'].includes(outcome)?outcome:'left';const pending=flushPlay(true);play=null;return pending;}
+ // 모드 기록: 들어가는 순간 0초로 한 번(들어간 횟수), 그 뒤 30초마다·나갈 때 머문 시간을 덮어쓴다(늘기만 함).
+ function flushMode(force=false){
+  const current=modePlay;if(!enabled||!current)return Promise.resolve(false);
+  const seconds=Math.min(86400,Math.floor(current.seconds));
+  if(seconds<=current.queuedSeconds||(!force&&seconds-current.queuedSeconds<30))return current.pending;
+  current.queuedSeconds=seconds;
+  current.pending=current.pending.catch(()=>false).then(async()=>{const auth=await currentSession().catch(()=>null);return auth?put(`${current.day}/modeSessions/${app?'android':'web'}/${auth.uid}/${current.id}`,JSON.stringify({mode:current.mode,startedAt:current.startedAt,activeSeconds:seconds})):false;});
+  return current.pending;
+ }
+ function modeEnter(mode){
+  if(!enabled||!TELEMETRY_MODES.includes(mode))return Promise.resolve(false);
+  if(modePlay?.mode===mode)return modePlay.pending;
+  modeLeave();const startedAt=now();
+  modePlay={id:eventId(),day:seoulDay(startedAt),startedAt,mode,seconds:0,queuedSeconds:-1,pending:Promise.resolve(false)};
+  return flushMode(true);
+ }
+ function modeTick(seconds){if(!enabled||!modePlay||!Number.isFinite(seconds)||seconds<=0)return;modePlay.seconds+=Math.min(2,seconds);if(modePlay.seconds-modePlay.queuedSeconds>=30)void flushMode();}
+ function modeLeave(){const pending=flushMode(true);modePlay=null;return pending;}
  return {
-  visit,
+  visit,modeEnter,modeTick,modePause:()=>flushMode(true),modeLeave,
   playStart:startPlay,playTick,playPause,endPlay,
   loginFailure:(provider,error)=>{
    if(app)return Promise.resolve(false);

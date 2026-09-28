@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {createWebTelemetry,loginFailureReason,seoulDay} from '../src/web-telemetry.js';
 import {summarizeWebDay} from './web-telemetry-report.mjs';
-import {summarizeUsageDay,usageTotals,readUsageDays} from '../src/usage-dashboard.js';
+import {summarizeUsageDay,usageTotals,usageModeTotals,readUsageDays} from '../src/usage-dashboard.js';
 import {readFileSync} from 'node:fs';
 
 assert.equal(seoulDay(Date.parse('2026-09-23T14:59:00Z')),'20260923');
@@ -54,7 +54,11 @@ assert.deepEqual(summarizeWebDay({visitors:{a:true,b:true},starts:{a:{x:true,y:t
  browsers:2,starts:2,loginFailures:1,failureKinds:{'google/network':1}
 });
 const day=summarizeUsageDay('20260924',{visitors:{a:true,b:true},appVisitors:{c:true},starts:{a:{x:true,y:true}},appStarts:{c:{z:true}},sessions:{web:{a:{x:{activeSeconds:61,outcome:'cleared'}}},android:{c:{z:{activeSeconds:120,outcome:'ended'}}}}});
-assert.deepEqual(day,{day:'20260924',webDevices:2,appDevices:1,webStarts:2,appStarts:1,activeSeconds:181,cleared:1,deaths:1});
+assert.deepEqual({...day,modes:undefined},{day:'20260924',webDevices:2,appDevices:1,webStarts:2,appStarts:1,activeSeconds:181,cleared:1,deaths:1,modes:undefined});
+// 모드별: 들어간 횟수·머문 시간, 모르는 모드는 무시.
+const modeDay=summarizeUsageDay('20260924',{modeSessions:{web:{a:{x:{mode:'duel',activeSeconds:90},y:{mode:'defense',activeSeconds:300}}},android:{c:{z:{mode:'duel',activeSeconds:30},w:{mode:'hack',activeSeconds:999}}}}});
+assert.deepEqual(modeDay.modes.duel,{entries:2,seconds:120});assert.deepEqual(modeDay.modes.defense,{entries:1,seconds:300});assert.deepEqual(modeDay.modes.journey,{entries:0,seconds:0});
+assert.deepEqual(usageModeTotals([modeDay,modeDay]).duel,{entries:4,seconds:240});
 assert.equal(usageTotals([day,day]).activeSeconds,362);
 assert.equal(usageTotals([day,day]).cleared,2);
 assert.equal(usageTotals([day,day]).deaths,2);
@@ -66,4 +70,14 @@ assert.match(rules['.read'],/kukuma1004@gmail\.com/);
 assert.match(rules.$day.sessions.$platform.$uid.$eventId['.write'],/auth\.uid == \$uid/);
 assert.match(rules.$day.sessions.$platform.$uid.$eventId['.write'],/activeSeconds/);
 assert.match(rules.$day.sessions.$platform.$uid.$eventId.outcome['.validate'],/cleared/);
+// 모드 기록: 들어갈 때 0초로 한 번, 30초마다·나갈 때 머문 시간. 다른 모드로 가면 새 기록.
+{const w=[];let n=0;const t=createWebTelemetry({enabled:true,databaseURL:'https://example.invalid',now:()=>Date.parse('2026-09-23T15:00:00Z'),session:async()=>({uid:'u1',token:async()=>'t'}),eventId:()=>`mode-${String(++n).padStart(8,'0')}`,fetchImpl:async(url,options)=>{w.push({url,options});return {ok:true};}});
+ await t.modeEnter('duel');assert.match(w.at(-1).url,/20260924\/modeSessions\/web\/u1\/mode-00000001\.json/);assert.deepEqual(JSON.parse(w.at(-1).options.body),{mode:'duel',startedAt:Date.parse('2026-09-23T15:00:00Z'),activeSeconds:0});
+ await t.modeEnter('duel');assert.equal(w.length,1,'same mode continues');for(let i=0;i<31;i++)t.modeTick(1);await t.modePause();assert.equal(JSON.parse(w.at(-1).options.body).activeSeconds,31);
+ await t.modeEnter('defense');assert.equal(JSON.parse(w.at(-1).options.body).mode,'defense');assert.match(w.at(-1).url,/mode-00000002/);
+ assert.equal(await t.modeEnter('hack'),false);
+ const off=createWebTelemetry({enabled:false,session:()=>{throw new Error('no');}});assert.equal(await off.modeEnter('duel'),false);}
+assert.match(rules.$day.modeSessions.$platform.$uid.$eventId['.write'],/auth\.uid == \$uid/);
+assert.match(rules.$day.modeSessions.$platform.$uid.$eventId.mode['.validate'],/duel/);
+assert.equal(rules.$day.modeSessions.$platform.$uid.$eventId.$other['.validate'],false);
 console.log('Web telemetry counting, privacy and platform gating passed.');

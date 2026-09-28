@@ -3,12 +3,17 @@ import {seoulDay,WEB_TELEMETRY_ROOT} from './web-telemetry.js';
 const count=items=>Object.keys(items||{}).length;
 const countEvents=users=>Object.values(users||{}).reduce((sum,events)=>sum+count(events),0);
 
+export const USAGE_MODE_NAMES=Object.freeze({journey:'여정',survival:'물량생존전',defense:'씨앗 수호전',adventure:'씨앗의 모험',duel:'씨앗 대전'});
+const MODE_IDS=Object.keys(USAGE_MODE_NAMES);
+function summarizeModes(value){const out=Object.fromEntries(MODE_IDS.map(id=>[id,{entries:0,seconds:0}]));
+ for(const platform of Object.values(value?.modeSessions||{}))for(const user of Object.values(platform||{}))for(const record of Object.values(user||{})){const m=out[record?.mode];if(!m)continue;m.entries++;m.seconds+=Number.isFinite(record.activeSeconds)?Math.max(0,Math.min(86400,record.activeSeconds)):0;}
+ return out;}
 export function summarizeUsageDay(day,value){
  const sessions=Object.values(value?.sessions||{}).flatMap(platform=>Object.values(platform||{}).flatMap(users=>Object.values(users||{})));
  const activeSeconds=sessions.reduce((sum,record)=>sum+(Number.isFinite(record?.activeSeconds)?Math.max(0,Math.min(86400,record.activeSeconds)):0),0);
  const cleared=sessions.filter(record=>record?.outcome==='cleared').length;
  const deaths=sessions.filter(record=>record?.outcome==='ended').length;
- return {day,webDevices:count(value?.visitors),appDevices:count(value?.appVisitors),webStarts:countEvents(value?.starts),appStarts:countEvents(value?.appStarts),activeSeconds:Math.round(activeSeconds),cleared,deaths};
+ return {day,webDevices:count(value?.visitors),appDevices:count(value?.appVisitors),webStarts:countEvents(value?.starts),appStarts:countEvents(value?.appStarts),activeSeconds:Math.round(activeSeconds),cleared,deaths,modes:summarizeModes(value)};
 }
 
 export async function readUsageDays({tokenSession,databaseURL,fetchImpl=globalThis.fetch,now=Date.now,days=7}={}){
@@ -24,3 +29,5 @@ export async function readUsageDays({tokenSession,databaseURL,fetchImpl=globalTh
 }
 
 export const usageTotals=rows=>rows.reduce((sum,row)=>({webDevices:sum.webDevices+row.webDevices,appDevices:sum.appDevices+row.appDevices,webStarts:sum.webStarts+row.webStarts,appStarts:sum.appStarts+row.appStarts,activeSeconds:sum.activeSeconds+row.activeSeconds,cleared:sum.cleared+row.cleared,deaths:sum.deaths+row.deaths}),{webDevices:0,appDevices:0,webStarts:0,appStarts:0,activeSeconds:0,cleared:0,deaths:0});
+// 모드별 합계(최근 며칠).
+export const usageModeTotals=rows=>Object.fromEntries(MODE_IDS.map(id=>[id,rows.reduce((sum,row)=>({entries:sum.entries+(row.modes?.[id]?.entries||0),seconds:sum.seconds+(row.modes?.[id]?.seconds||0)}),{entries:0,seconds:0})]));

@@ -4,6 +4,10 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-28-x',date:'9월 28일',title:'이용 현황 · 모드별 기록',
+  lines:['어떤 모드를 많이 하는지 알 수 있도록 모드별로 들어간 횟수와 머문 시간만 이름 없이 세요(화면이 보일 때만).']
+ },
+ {
   id:'2026-09-28-w',date:'9월 28일',title:'씨앗 대전 · 아홉 캐릭터 균형',
   lines:['컴퓨터끼리 2880판을 붙여 아홉 캐릭터 모두 승률 48~52%가 되게 체력을 맞췄어요.']
  },
