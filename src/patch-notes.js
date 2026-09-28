@@ -4,6 +4,12 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-28-e',date:'9월 28일',title:'씨앗이 잎 칼을 휘둘러요',
+  lines:[
+   '씨앗의 모험에서 1타 베기·2타 올려 베기·3타 도약 내려찍기·구르기·피격 동작 그림이 새로 들어왔어요.'
+  ]
+ },
+ {
   id:'2026-09-28-d',date:'9월 28일',title:'수호전 공격 연출 새 단장',
   lines:[
    '씨앗 수호전의 폭발·번개·중력·서리·꽃잎 효과가 본편과 같은 빛나는 이펙트 그림으로 바뀌었어요.',
