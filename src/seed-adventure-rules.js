@@ -68,7 +68,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const direction=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 const pick=(s,list)=>list[Math.floor(random(s)*list.length)];
-export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${seed>>>0}-${Math.floor(Math.random()*1e9)}`,earned:0,credited:0,seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:1,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
+export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${seed>>>0}-${Math.floor(Math.random()*1e9)}`,earned:0,credited:0,seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:2,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
@@ -113,9 +113,9 @@ function spawnRoom(s){
  spawnProps(s,3+Math.floor(random(s)*3));spawnWave(s);
 }
 function spawnEnemy(s,role,x,y,extra={}){
- const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1+info.act*.9+info.local*.12)*(s.elite?1.45:1);
+ const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1+info.act*1.1+info.local*.2)*(s.elite?1.45:1);
  const hp=Math.round(base.hp*scale+(s.elite&&role==='tank'?20:0));
- s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25,...extra});
+ s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.45+info.local*.08,...extra});
 }
 function spawnWave(s){
  s.wave++;const info=adventureRoomInfo(s.room),count=Math.min(ADVENTURE.maxEnemies,4+info.local+info.act*2+s.wave+(s.elite?2:0));
@@ -177,9 +177,9 @@ const insideObstacle=(s,x,y)=>Boolean(s.region&&s.region.obstacles.some(b=>Math.
 function wakePack(s,e){if(!e.dormant)return;for(const n of s.enemies)if(n.pack===e.pack&&n.dormant){n.dormant=false;n.cd=Math.max(n.cd,.6+random(s)*.6);}}
 // ③ 막의 수호자. 막마다 다른 공격 세 가지를 돌려 쓴다. 체력 절반에서 부하를 부르고(한 번) 조금 빨라진다.
 export const ADVENTURE_BOSSES=Object.freeze({
- austin:Object.freeze({name:'오스틴',hp:2200,patterns:Object.freeze(['charge','slam','punches'])}),
- alwaysbeginner:Object.freeze({name:'항상초심',hp:3800,patterns:Object.freeze(['pitch','swing','pitch','rain'])}),
- tempestcarrier:Object.freeze({name:'요한',hp:5600,patterns:Object.freeze(['strikes','spiral','slam','strikes'])})
+ austin:Object.freeze({name:'오스틴',hp:2300,patterns:Object.freeze(['charge','slam','punches'])}),
+ alwaysbeginner:Object.freeze({name:'항상초심',hp:4900,patterns:Object.freeze(['pitch','swing','pitch','rain'])}),
+ tempestcarrier:Object.freeze({name:'요한',hp:7200,patterns:Object.freeze(['strikes','spiral','slam','strikes'])})
 });
 function spawnBoss(s,info){const b=ADVENTURE_BOSSES[info.actInfo.boss],hp=b.hp*(1+(s.level-1)*.04);s.enemies.push({id:++s.serial,type:'boss',role:'boss',bossId:info.actInfo.boss,art:info.actInfo.boss,act:info.act,x:12,y:6,hp,maxHp:hp,r:1.1,speed:1.05+info.act*.12,cd:1.6,tell:0,tellKind:'',tx:0,ty:0,marks:[],slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25,charging:0,cx:0,cy:0});}
 
@@ -218,7 +218,7 @@ export function chooseAdventure(s,kind,id){
  else if(kind==='heal'&&offers.heal){p.maxHp+=5;p.hp+=p.maxHp*.6;note='체력 회복';}
  else if(kind==='potion'&&offers.potion){s.potions++;note='물약 +1';}
  else return false;
- p.hp=Math.min(p.maxHp,p.hp+(s.choiceKind==='boss'?p.maxHp*.6:s.phase==='choice'?8:0));
+ p.hp=Math.min(p.maxHp,p.hp+(s.choiceKind==='boss'?p.maxHp*.4:s.phase==='choice'?5:0));
  finishReward(s,note);return true;
 }
 function finishReward(s,note=''){
@@ -284,9 +284,9 @@ function breakProp(s,prop){
  prop.hp=0;fx(s,'break',prop.x,prop.y,{kind:prop.kind,radius:prop.kind==='chest'?1.4:.9,life:.5,max:.5});event(s,prop.kind==='chest'?'evolve':'hit');
  const act=adventureRoomInfo(s.room).act,r=random(s);
  if(prop.kind==='chest'){dropCoins(s,prop.x,prop.y,20+act*10);drop(s,'potion',prop.x,prop.y);drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});s.clearTimer=1.4;return;}
- if(prop.kind==='cache'){dropCoins(s,prop.x,prop.y,(prop.big?16:10)+act*5);drop(s,random(s)<.6?'potion':'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});if(prop.big)s.charge=clamp(s.charge+25,0,100);return;}
+ if(prop.kind==='cache'){dropCoins(s,prop.x,prop.y,(prop.big?16:10)+act*5);drop(s,random(s)<.35?'potion':'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});if(prop.big)s.charge=clamp(s.charge+25,0,100);return;}
  if(prop.kind==='crate'){dropCoins(s,prop.x,prop.y,3+act*2);if(r<.3)drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});else if(r<.4)drop(s,'potion',prop.x,prop.y);return;}
- if(r<.55)dropCoins(s,prop.x,prop.y,2+act);else if(r<.68)drop(s,'potion',prop.x,prop.y);else if(r<.85)drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});
+ if(r<.55)dropCoins(s,prop.x,prop.y,2+act);else if(r<.62)drop(s,'potion',prop.x,prop.y);else if(r<.85)drop(s,'buff',prop.x,prop.y,{buff:pick(s,BUFF_DROPS)});
 }
 function hitProp(s,prop){if(prop.hp<=0)return;prop.hp--;prop.flash=.15;if(prop.hp<=0)breakProp(s,prop);else event(s,'hit');}
 function collect(s,item){const p=s.player;
@@ -350,15 +350,15 @@ export function ultimateAdventure(s,combat=null){if(s.phase!=='playing'||s.charg
 function bossAct(s,e,p,dt){
  const b=ADVENTURE_BOSSES[e.bossId],enraged=e.hp<e.maxHp*.5;
  if(enraged&&!s.summoned){s.summoned=true;event(s,'bossWarning');for(const [x,y] of [[4,8],[20,8]])spawnEnemy(s,e.bossId==='tempestcarrier'?'fast':'melee',x,y);}
- if(e.charging>0){e.charging-=dt;e.x=clamp(e.x+e.cx*13*dt,2,22);e.y=clamp(e.y+e.cy*13*dt,2.5,14);if(dist(e,p)<1.4)hurt(s,Math.round(20*e.power));if(e.charging<=0)fx(s,'enemyRing',e.x,e.y,{radius:1.4});return true;}
+ if(e.charging>0){e.charging-=dt;e.x=clamp(e.x+e.cx*13*dt,2,22);e.y=clamp(e.y+e.cy*13*dt,2.5,14);if(dist(e,p)<1.4)hurt(s,Math.round(24*e.power));if(e.charging<=0)fx(s,'enemyRing',e.x,e.y,{radius:1.4});return true;}
  if(e.tell>0){e.tell-=dt;if(e.tell>0)return true;
   const kind=e.tellKind,dmg=n=>Math.round(n*e.power);event(s,'bossAttack');
   if(kind==='charge'){e.charging=.55;const v=direction(e.tx-e.x,e.ty-e.y);e.cx=v.x;e.cy=v.y;}
-  else if(kind==='slam'){fx(s,'enemyRing',e.tx,e.ty,{radius:2.1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<2.1)hurt(s,dmg(22));e.x=e.tx;e.y=e.ty;s.shake=Math.max(s.shake,.3);}
-  else if(kind==='punches'||kind==='pitch'){const base=Math.atan2(p.y-e.y,p.x-e.x),n=kind==='pitch'?3:5,spread=kind==='pitch'?.16:.28;for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*spread;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:kind==='pitch'?'ball':'glove',damage:dmg(kind==='pitch'?15:13),speed:kind==='pitch'?8.5:5.8,life:4});}}
-  else if(kind==='swing'){const a=Math.atan2(e.ty-e.y,e.tx-e.x);fx(s,'enemyArc',e.x,e.y,{angle:a,radius:3.4,life:.3,max:.3});const pa=Math.atan2(p.y-e.y,p.x-e.x)-a;if(dist(p,e)<3.4+.3&&Math.cos(pa)>.35)hurt(s,dmg(24));}
-  else if(kind==='rain'||kind==='spiral'){const rings=kind==='spiral'?2:1;for(let r=0;r<rings;r++)for(let i=0;i<12;i++){const a=i/12*Math.PI*2+r*.26;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:e.bossId==='alwaysbeginner'?'ball':'',damage:dmg(14),speed:4.2-r*.9,life:4.5});}fx(s,'enemyRing',e.x,e.y,{radius:3});if(dist(p,e)<3)hurt(s,dmg(18));}
-  else if(kind==='strikes'){for(const m of e.marks){fx(s,'bolt',m.x,m.y,{radius:m.r,life:.35,max:.35});if(Math.hypot(p.x-m.x,p.y-m.y)<m.r)hurt(s,dmg(18));}s.shake=Math.max(s.shake,.25);}
+  else if(kind==='slam'){fx(s,'enemyRing',e.tx,e.ty,{radius:2.1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<2.1)hurt(s,dmg(30));e.x=e.tx;e.y=e.ty;s.shake=Math.max(s.shake,.3);}
+  else if(kind==='punches'||kind==='pitch'){const base=Math.atan2(p.y-e.y,p.x-e.x),n=kind==='pitch'?3:5,spread=kind==='pitch'?.16:.28;for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*spread;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:kind==='pitch'?'ball':'glove',damage:dmg(kind==='pitch'?20:18),speed:kind==='pitch'?8.5:5.8,life:4});}}
+  else if(kind==='swing'){const a=Math.atan2(e.ty-e.y,e.tx-e.x);fx(s,'enemyArc',e.x,e.y,{angle:a,radius:3.4,life:.3,max:.3});const pa=Math.atan2(p.y-e.y,p.x-e.x)-a;if(dist(p,e)<3.4+.3&&Math.cos(pa)>.35)hurt(s,dmg(32));}
+  else if(kind==='rain'||kind==='spiral'){const rings=kind==='spiral'?2:1;for(let r=0;r<rings;r++)for(let i=0;i<12;i++){const a=i/12*Math.PI*2+r*.26;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:e.bossId==='alwaysbeginner'?'ball':'',damage:dmg(19),speed:4.2-r*.9,life:4.5});}fx(s,'enemyRing',e.x,e.y,{radius:3});if(dist(p,e)<3)hurt(s,dmg(25));}
+  else if(kind==='strikes'){for(const m of e.marks){fx(s,'bolt',m.x,m.y,{radius:m.r,life:.35,max:.35});if(Math.hypot(p.x-m.x,p.y-m.y)<m.r)hurt(s,dmg(25));}s.shake=Math.max(s.shake,.25);}
   e.cd=(enraged?1.05:1.4);e.tellKind='';e.marks=[];return true;
  }
  const range=5;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}
@@ -398,7 +398,7 @@ export function stepAdventure(s,dt,input={},combat=null){
   if(e.dormant){if(dist(e,p)<8.5)wakePack(s,e);else continue;}
   // 수호 제단으로 행진하는 적: 씨앗은 보지 않고 제단으로만 간다. 닿으면 제단이 깎이고 사라진다.
   if(e.march){if(e.stun>0)continue;const t=e.target,v=direction(t.x-e.x,t.y-e.y);e.x+=v.x*e.speed*.85*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*.85*(e.slow>0?.5:1)*dt;if(Math.hypot(t.x-e.x,t.y-e.y)<1.2){const ev=s.region?.events.find(ev=>ev.type==='guard');if(ev){ev.hp=Math.max(0,ev.hp-Math.round(10*e.power));fx(s,'hurt',t.x,t.y,{radius:1.4});event(s,'hurt');}e.hp=0;e.noDrop=true;}continue;}
-  if(e.tell>0){e.tell-=dt;if(e.tell<=0){if(e.role==='ranged'){const v=direction(e.tx-e.x,e.ty-e.y);shot(s,e.x,e.y,v.x,v.y,{hostile:true,damage:Math.round(15*e.power),speed:6.5,life:4});}else{fx(s,'enemyRing',e.tx,e.ty,{radius:1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1)hurt(s,Math.round(17*e.power));if(e.role==='fast'){e.x=clamp(e.tx,A.minX,A.maxX);e.y=clamp(e.ty,A.minY,A.maxY);}}e.cd=e.role==='fast'?1.8:1.4;}continue;}
+  if(e.tell>0){e.tell-=dt;if(e.tell<=0){if(e.role==='ranged'){const v=direction(e.tx-e.x,e.ty-e.y);shot(s,e.x,e.y,v.x,v.y,{hostile:true,damage:Math.round(18*e.power),speed:6.5,life:4});}else{fx(s,'enemyRing',e.tx,e.ty,{radius:1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1)hurt(s,Math.round(20*e.power));if(e.role==='fast'){e.x=clamp(e.tx,A.minX,A.maxX);e.y=clamp(e.ty,A.minY,A.maxY);}}e.cd=e.role==='fast'?1.8:1.4;}continue;}
   if(e.stun>0)continue;
   const range=e.role==='ranged'?7:e.role==='fast'?2.6:1.35;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}else if(e.cd<=0){e.tell=e.role==='fast'?.5:.6;e.tx=p.x;e.ty=p.y;e.pattern++;}
   blockCircle(s,e,e.r);
@@ -440,6 +440,12 @@ export function stepAdventure(s,dt,input={},combat=null){
 // 저장은 문 앞(방과 방 사이)에서만 한다. 방 안에서 나가면 마지막 문 앞부터 다시 한다(본편 '방 입구 저장'과 같은 원칙).
 // 불러올 때는 규칙상 가능한 범위인지 모두 검사하고, 하나라도 어긋나면 저장을 버린다.
 export const ADVENTURE_SAVE_VERSION=1;
+// 계정 저장(클라우드 동기화)에 실리는 칸. 계정마다 따로이고, 로그아웃하면 이 기기에서 지워진다.
+export const ADVENTURE_SAVE_KEY='seed-adventure-run-v1';
+// Firebase 저장 규칙(seedUsers/$uid/save)은 모르는 칸이 있으면 저장 전체를 거부한다. 'adventure' 칸을 허용하는 규칙
+// (docs/firebase-rules-with-seed.json)이 콘솔에 게시되기 전에는 false로 두고, 계정별 이 기기 저장만 쓴다.
+export const ADVENTURE_CLOUD_READY=false;
+export const adventureTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const ADVENTURE_JP=Object.freeze({perRoomMax:400,perRunMax:4000});
 export function adventureCheckpoint(s){
  if(s?.phase!=='doors'||!Array.isArray(s.doors)||!s.doors.length)return null;const p=s.player;

@@ -1,4 +1,4 @@
-import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSSES,REGION,adventureRoomInfo,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureEvolutions,adventureCheckpoint,restoreAdventure,adventureCredit} from './seed-adventure-rules.js';
+import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSSES,REGION,adventureRoomInfo,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureEvolutions,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_SAVE_KEY,ADVENTURE_CLOUD_READY,adventureTombstone} from './seed-adventure-rules.js';
 import {createAdventureCombat} from './seed-adventure-combat.js';
 import {createCanvasVfx} from './canvas-vfx.js';
 import {formArt} from './form-art.js';
@@ -43,9 +43,10 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  // 2026-09-28 사용자: 이미 있는 탄환 그림을 재활용. 법칙 탄은 본편 탄환 DNA 4×4, 융합 탄은 조합 카드 탄환 4×3.
  load('projectile','mobile/seed-projectile-dna-v1.png');load('combo','combo-projectiles-v1.webp');
  function resetInput(){keys.clear();move.x=move.y=0;pointerAttack=false;mouse=null;mouseHeld=false;aimDragged=false;stickPointers.clear();for(const e of root.querySelectorAll('.sa-stick i'))e.style.transform='';}
- const saveKey='seed-adventure-run-v1:'+encodeURIComponent(owner);let lastForm=null,lastBossRoom=-1,creditNote='';
+ // 클라우드 규칙이 게시되면 계정 저장 칸 하나(기기 사이 동기화), 그 전에는 계정별 이 기기 칸.
+ const saveKey=ADVENTURE_CLOUD_READY?ADVENTURE_SAVE_KEY:ADVENTURE_SAVE_KEY+':'+encodeURIComponent(owner);let lastForm=null,lastBossRoom=-1,creditNote='';
  function readSave(){try{return restoreAdventure(storage?.getItem(saveKey));}catch{return null;}}
- function clearSave(){try{storage?.removeItem(saveKey);}catch{}}
+ function clearSave(){try{storage?.setItem(saveKey,JSON.stringify(adventureTombstone()));}catch{}}
  function credit(){const jp=adventureCredit(s);creditNote='';if(jp>0&&!practice){const note=onCredit(jp);creditNote=typeof note==='string'&&note?note:`햇살 ${jp} JP 적립`;}else if(practice&&jp>0)creditNote='연습 · 보상은 저장되지 않아요';}
  function persist(){credit();const cp=adventureCheckpoint(s);if(cp)try{storage?.setItem(saveKey,JSON.stringify(cp));}catch{}}
  // 판의 진행을 계정으로: 새 형태는 도감에, 보스는 공통 칭호에.

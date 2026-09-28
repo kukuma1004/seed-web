@@ -365,6 +365,9 @@
               ".validate": false
             }
           },
+          "adventure": {
+            ".validate": "newData.hasChildren(['version','savedAt']) && newData.child('version').val() == 1 && newData.child('savedAt').isNumber() && newData.child('savedAt').val() <= now + 300000"
+          },
           "$other": {
             ".validate": false
           }

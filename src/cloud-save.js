@@ -10,6 +10,7 @@ import {NAME_KEY,cleanName} from './score.js';
 import {ACCOUNT_PROFILE_KEY,normalizeAccountProfile,mergeBestScores} from './account-profile.js';
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,normalizeMirrorCheckpoint,normalizeMirrorRecord} from './mirror-trial.js';
 import {BOSS_PET_KEY,normalizeBossPet} from './boss-pets.js';
+import {ADVENTURE_SAVE_KEY,ADVENTURE_CLOUD_READY,restoreAdventure} from './seed-adventure-rules.js';
 
 export const CLOUD_SCHEMA=1;
 export const CLOUD_META_KEY='seed-cloud-meta-v1';
@@ -17,7 +18,7 @@ export const CLOUD_OWNER_KEY='seed-cloud-owner-v1';
 export const SOUND_KEY='seed-sound-v1';
 export const SYNC_KEYS=Object.freeze([
  DISCOVERIES_KEY,GARDEN_KEY,SHOP_KEY,SAVE_KEY,ACT2_STORAGE_KEYS[SAVE_KEY],ACT3_STORAGE_KEYS[SAVE_KEY],
- THEME_KEY,SOUND_KEY,NAME_KEY,ACCOUNT_PROFILE_KEY,MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,BOSS_PET_KEY
+ THEME_KEY,SOUND_KEY,NAME_KEY,ACCOUNT_PROFILE_KEY,MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,BOSS_PET_KEY,...(ADVENTURE_CLOUD_READY?[ADVENTURE_SAVE_KEY]:[])
 ]);
 const syncSet=new Set(SYNC_KEYS);
 const json=(storage,key)=>{try{const raw=storage?.getItem(key);return raw==null?null:JSON.parse(raw);}catch{return null;}};
@@ -25,6 +26,9 @@ const json=(storage,key)=>{try{const raw=storage?.getItem(key);return raw==null?
 const checkpoint=value=>{if(isCheckpointTombstone(value))return {version:1,cleared:true,savedAt:value.savedAt};const cleaned=withoutHidden(value);return validCheckpoint(cleaned)?cleaned:null;};
 // 두 기기의 저장 중 더 최근에 저장(또는 지운) 쪽. 둘 다 시각이 없으면(예전 저장) 예전처럼 이긴 쪽 것을 쓴다.
 const newerCheckpoint=(a,b,fallback)=>{const sa=checkpointStamp(a),sb=checkpointStamp(b);return sa===sb?fallback:sa>sb?a:b;};
+// 2026-09-28 사용자: "클라우드 저장도 진행하자" — 씨앗의 모험 문 앞 저장도 기기 사이를 오간다.
+// 규칙 검사(restoreAdventure)를 통과한 저장, 또는 판이 끝나 지운 표시({cleared,savedAt})만 싣는다. 두 기기 중 더 최근 것이 이긴다.
+const adventureSave=value=>{if(isCheckpointTombstone(value))return {version:1,cleared:true,savedAt:value.savedAt};return value&&restoreAdventure(value)&&Number.isFinite(value.savedAt)?JSON.parse(JSON.stringify(value)):null;};
 const int=(value,min,max,fallback=0)=>Number.isInteger(value)?Math.max(min,Math.min(max,value)):fallback;
 
 export function normalizeCloudMeta(value){
@@ -41,7 +45,7 @@ export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now()}={
   checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY]),act3:json(storage,ACT3_STORAGE_KEYS[SAVE_KEY])},
   mirror:{checkpoint:json(storage,MIRROR_CHECKPOINT_KEY),record:json(storage,MIRROR_RECORD_KEY)},
   settings:{theme:storage?.getItem(THEME_KEY),sound:storage?.getItem(SOUND_KEY)},
-  player:{name:storage?.getItem(NAME_KEY)},account:json(storage,ACCOUNT_PROFILE_KEY),bossPet:json(storage,BOSS_PET_KEY)
+  player:{name:storage?.getItem(NAME_KEY)},account:json(storage,ACCOUNT_PROFILE_KEY),bossPet:json(storage,BOSS_PET_KEY),...(ADVENTURE_CLOUD_READY?{adventure:json(storage,ADVENTURE_SAVE_KEY)}:{})
  });
 }
 
@@ -60,7 +64,7 @@ export function normalizeCloudSnapshot(value){
   // applyCloudSnapshot deliberately leaves QUALITY_KEY untouched.
   settings:{quality:1,theme:normalizeTheme(value?.settings?.theme),sound:value?.settings?.sound==='off'?'off':'on'},
   player:{name:cleanName(value?.player?.name)},
-  account:normalizeAccountProfile(value?.account),bossPet:normalizeBossPet(value?.bossPet)
+  account:normalizeAccountProfile(value?.account),bossPet:normalizeBossPet(value?.bossPet),...(ADVENTURE_CLOUD_READY?{adventure:adventureSave(value?.adventure)}:{})
  };
 }
 
@@ -103,7 +107,8 @@ export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={})
   mirror:{checkpoint:newerCheckpoint(local.mirror.checkpoint,remote.mirror.checkpoint,winner.mirror.checkpoint),record:{bestFloor:Math.max(local.mirror.record.bestFloor,remote.mirror.record.bestFloor),clears:Math.max(local.mirror.record.clears,remote.mirror.record.clears),perfectDodges:Math.max(local.mirror.record.perfectDodges,remote.mirror.record.perfectDodges)}},
   discoveries:{version:1,forms:union(local.discoveries.forms,remote.discoveries.forms,2000),bosses:union(local.discoveries.bosses,remote.discoveries.bosses,20),records},
   account:{...winner.account,bossRuns:mergeBossRuns(local.account.bossRuns,remote.account.bossRuns),badges:union(local.account.badges,remote.account.badges,40),skins:union(local.account.skins,remote.account.skins,80),appliedGrants:union(local.account.appliedGrants,remote.account.appliedGrants,100),lastRewardAt:Math.max(local.account.lastRewardAt,remote.account.lastRewardAt),bestScores:mergeBestScores(local.account.bestScores,remote.account.bestScores),austinWins:Math.max(local.account.austinWins,remote.account.austinWins),alwaysWins:Math.max(local.account.alwaysWins,remote.account.alwaysWins),johanWins:Math.max(local.account.johanWins,remote.account.johanWins)},
-  bossPet:local.bossPet.updatedAt===remote.bossPet.updatedAt?winner.bossPet:local.bossPet.updatedAt>remote.bossPet.updatedAt?local.bossPet:remote.bossPet
+  bossPet:local.bossPet.updatedAt===remote.bossPet.updatedAt?winner.bossPet:local.bossPet.updatedAt>remote.bossPet.updatedAt?local.bossPet:remote.bossPet,
+  ...(ADVENTURE_CLOUD_READY?{adventure:newerCheckpoint(local.adventure,remote.adventure,winner.adventure)}:{})
  });
 }
 
@@ -137,7 +142,7 @@ export function applyCloudSnapshot(storage,value){
  const put=(key,val)=>storage?.setItem(key,typeof val==='string'?val:JSON.stringify(val));
  put(DISCOVERIES_KEY,next.discoveries);put(GARDEN_KEY,next.garden);put(SHOP_KEY,next.shop);put(ACCOUNT_PROFILE_KEY,next.account);put(BOSS_PET_KEY,next.bossPet);
  const save=(key,val)=>val?put(key,val):storage?.removeItem(key);
- save(SAVE_KEY,next.checkpoints.act1);save(ACT2_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act2);save(ACT3_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act3);save(MIRROR_CHECKPOINT_KEY,next.mirror.checkpoint);save(MIRROR_RECORD_KEY,next.mirror.record);
+ save(SAVE_KEY,next.checkpoints.act1);save(ACT2_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act2);save(ACT3_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act3);save(MIRROR_CHECKPOINT_KEY,next.mirror.checkpoint);save(MIRROR_RECORD_KEY,next.mirror.record);if(ADVENTURE_CLOUD_READY)save(ADVENTURE_SAVE_KEY,next.adventure);
  put(THEME_KEY,next.settings.theme);put(SOUND_KEY,next.settings.sound);
  if(next.player.name)put(NAME_KEY,next.player.name);else storage?.removeItem(NAME_KEY);
  return !same(before,next);

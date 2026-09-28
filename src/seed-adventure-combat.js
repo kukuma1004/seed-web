@@ -7,7 +7,7 @@ import {adventureFormHit,adventureEffect} from './seed-adventure-rules.js';
 // 2026-09-28 사용자: "조합은?? 162개 가능해?? 알피지인데"
 // 수호전과 같은 방식으로 본편의 실제 조합 공격 엔진(form-combat)을 그림 없이 돌린다. 모험의 방은 본편 방과
 // 거의 같은 크기라 좌표를 그대로 쓴다(x→x, y→z). 잎 칼 콤보는 손으로, 씨앗의 형태 공격은 바라보는 쪽으로 저절로 나간다.
-export const ADVENTURE_COMBAT={damage:.5,maxBolts:24,maxVisuals:160};
+export const ADVENTURE_COMBAT={damage:.42,maxBolts:24,maxVisuals:160};
 const V=Vector3;
 const INK={burst:'#ffaa65',frost:'#b2f1ff',chain:'#ffe391',pierce:'#dbf6b1',split:'#ffa88f',reflect:'#91e4ff',recall:'#a0ebc9',gravity:'#d2a0ff',orbit:'#f4db9e'};
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));

@@ -1708,9 +1708,9 @@ async function showSeedAdventure(){
  mode='adventure';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  try{
   const {mountSeedAdventure}=await import('./seed-adventure-view.js');
-  // 2026-09-28: 모험도 계정과 잇는다. 저장은 계정별로 이 기기에, 도감·JP·보스 칭호는 계정 저장(클라우드)에. 연습은 보상 없음.
+  // 2026-09-28: 모험도 계정과 잇는다. 문 앞 저장·도감·JP·보스 칭호 모두 계정 저장(클라우드 동기화)에. 연습은 보상 없음.
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
-  adventureScreen=mountSeedAdventure({audio,storage:rawStorage,owner,practice,
+  adventureScreen=mountSeedAdventure({audio,storage:runStorage,owner,practice,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
    onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest')),

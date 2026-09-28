@@ -21,6 +21,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedUsers['$uid'].save;
  const snapshot=collectCloudSnapshot(memory());
  for(const field of Object.keys(snapshot))assert.ok(Object.hasOwn(rules,field),`Firebase save rules reject ${field}`);
+ // 모험 저장 칸: 규칙 문서에 먼저 들어가 있어야 ADVENTURE_CLOUD_READY를 켤 수 있다.
+ assert.ok(Object.hasOwn(rules,'adventure'),'Firebase save rules document the adventure save');
  for(const field of Object.keys(snapshot.mirror))assert.ok(Object.hasOwn(rules.mirror,field),`Firebase mirror rules reject ${field}`);
  for(const field of Object.keys(snapshot.bossPet))assert.ok(Object.hasOwn(rules.bossPet,field),`Firebase boss pet rules reject ${field}`);
 }
