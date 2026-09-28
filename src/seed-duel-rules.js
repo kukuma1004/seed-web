@@ -14,10 +14,10 @@ export const DUEL_CHARACTERS=Object.freeze({
  burst:Object.freeze({id:'burst',name:'불꽃 씨앗',role:'한 방 · 막기 파괴',hp:152,speed:3.8,reach:1.6,arc:1.1,damage:[11,11,16],cadence:.48,heavy:{damage:26,reach:1.9,breaker:1.25},parry:1,tile:5,ink:'#ffaa65',
   skills:[skill('불씨 심기',5,'잠시 뒤 터지는 불씨를 발밑에'),skill('화염 도약',6,'뛰어올라 내려찍어요 · 막기를 부숴요')],ult:skill('대폭발',0,'둘레를 크게 터뜨려요'),
   blurb:'느리지만 세고, 막고 있는 상대를 잘 부숴요.'}),
- reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:164,speed:4.2,reach:1.7,arc:.9,damage:[9,9,14],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
+ reflect:Object.freeze({id:'reflect',name:'거울 씨앗',role:'막기 전문 · 반격',hp:178,speed:4.3,reach:1.75,arc:.9,damage:[10,10,15],cadence:.34,heavy:{damage:21,reach:1.9},parry:1.9,tile:0,ink:'#91e4ff',
   skills:[skill('거울 방패',6,'잠깐 모든 공격을 막고 탄을 되돌려요'),skill('수정 탄',3,'벽에 두 번 튕기는 수정')],ult:skill('거울 감옥',0,'상대를 거울에 가둬 묶어요'),
   blurb:'반격 막기 판정이 넓고, 날아오는 탄을 되돌려요.'}),
- gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:154,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
+ gravity:Object.freeze({id:'gravity',name:'중력 씨앗',role:'잡기 · 제어',hp:136,speed:3.9,reach:1.7,arc:.9,damage:[9,9,12],cadence:.38,heavy:{damage:21,reach:2},parry:1,tile:7,ink:'#d2a0ff',
   skills:[skill('끌어당기기',6.5,'앞의 상대를 끌어와 묶어요 · 막기 무시'),skill('중력장',7,'둘레의 상대를 느리게')],ult:skill('블랙홀',0,'상대를 빨아들이며 계속 때려요'),
   blurb:'막고 있는 상대도 끌어와 무너뜨려요.'})
 });
@@ -28,8 +28,9 @@ const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function rnd(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 
 function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0};}
-export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal'}={}){
- const s={seed:seed>>>0,phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
+// practice: 콤보 연습(쓰러지지 않고 체력이 다시 차며, 시간이 흐르지 않는다).
+export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false}={}){
+ const s={seed:seed>>>0,practice:Boolean(practice),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
  return s;
 }
 function event(s,type){s.events.push(type);if(s.events.length>24)s.events.shift();}
@@ -57,7 +58,7 @@ function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=fals
  att.meter=clamp(att.meter+8,0,100);def.meter=clamp(def.meter+5,0,100);def.lastHitBy=att.team;event(s,kind==='heavy'?'heavyHit':'hit');fx(s,kind==='heavy'?'heavy':'hit',def.x,def.y,{ink:DUEL_CHARACTERS[att.char].ink,text:Math.round(damage)});
  checkKo(s);return true;
 }
-function checkKo(s){for(const f of s.fighters)if(f.hp<=0&&s.phase==='fight'){f.hp=0;endRound(s,1-f.team,'쓰러뜨렸어요');}}
+function checkKo(s){for(const f of s.fighters)if(f.hp<=0&&s.phase==='fight'){if(s.practice){f.hp=f.maxHp;f.guard=DUEL_RULES.guardMax;continue;}f.hp=0;endRound(s,1-f.team,'쓰러뜨렸어요');}}
 function endRound(s,winner,why){s.wins[winner]++;s.phase='roundEnd';s.ready=1.8;s.message=`${winner===0?'승리':'패배'} · ${why}`;event(s,winner===0?'win':'lose');if(s.wins[winner]>=DUEL_RULES.roundsToWin){s.phase='over';s.winner=winner;s.message=winner===0?'대전 승리!':'대전 패배';}}
 function melee(s,f,reach,arc,damage,opts={}){const o=s.fighters[1-f.team],v=norm(o.x-f.x,o.y-f.y),front=v.x*f.fx+v.y*f.fy;if(dist(f,o)<=reach+.45&&front>Math.cos(arc))return strike(s,f,o,damage,opts);return false;}
 function shoot(s,f,extra){s.shots.push({owner:f.team,x:f.x+f.fx*.6,y:f.y+f.fy*.6,dx:f.fx,dy:f.fy,speed:11,life:1.2,damage:12,pierce:0,bounces:0,hit:new Set(),law:f.char,...extra});}
@@ -134,7 +135,7 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  if(s.phase!=='fight')return;
  s.shake=Math.max(0,(s.shake||0)-dt*1.6);
  if(s.freeze>0){s.freeze-=dt;return;}
- s.time+=dt;s.roundTime-=dt;
+ s.time+=dt;if(!s.practice)s.roundTime-=dt;
  const [a,b]=s.fighters;act(s,a,playerInput,dt);act(s,b,enemyInput||duelAi(s,1,dt),dt);
  // 서로 겹치지 않게.
  const d=dist(a,b);if(d<.9&&d>1e-6){const push=(.9-d)/2,v=norm(b.x-a.x,b.y-a.y);a.x-=v.x*push;a.y-=v.y*push;b.x+=v.x*push;b.y+=v.y*push;clampArena(a);clampArena(b);}
@@ -172,7 +173,7 @@ export function duelAi(s,team,dt){
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
  if(f.meter>=100&&d<(f.char==='pierce'?9:4)){input.ult=true;return input;}
- if(f.cd[1]<=0&&((f.char==='pierce'||f.char==='reflect')&&d>3&&d<10||f.char==='gravity'&&d<3||f.char==='burst'&&d<6)&&rnd(s)<dt*2){input.skill2=true;return input;}
+ // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만" — 두 번째 스킬은 쓰지 않는다(사람과 같은 조작).
  if(f.cd[0]<=0&&(f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  const want=c.reach*.85;
  if(d>want+.3){input.x=v.x;input.y=v.y;}else if(d<want-.9&&f.char==='pierce'){input.x=-v.x;input.y=-v.y;}

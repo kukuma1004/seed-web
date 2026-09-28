@@ -22,8 +22,8 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-duel';root.setAttribute('aria-label','씨앗 대전');
  const pose=(act,label,key)=>`<button data-act="${act}" class="sd-${act}"><i class="sd-ico sd-pose" style="background-image:url('${BASE}assets/adventure/seed-combat-v1.webp');background-position:${POSE[act]%4*100/3}% ${Math.floor(POSE[act]/4)*100}%"></i><b class="sd-lbl">${label}</b><small>${key}</small></button>`;
  root.innerHTML=`<canvas aria-label="씨앗 대전"></canvas><header class="sd-top"><div class="sd-side sd-p0"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><div class="sd-center"><span class="sd-rounds"></span><strong class="sd-timer"></strong></div><div class="sd-side sd-p1"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><button class="sd-pause" aria-label="그만하기">Ⅱ</button></header><div class="sd-message"></div><div class="sd-combo" aria-hidden="true"></div>
- <div class="sd-controls"><div class="sd-stick" role="button" aria-label="이동"><i></i></div><div class="sd-buttons"><button data-act="ult" class="sd-ult"><i class="sd-ico sd-fx" style="background-image:url('${BASE}assets/vfx-atlas-v1.webp')"></i><b class="sd-lbl">필살</b><small>O</small></button><button data-act="skill1" class="sd-skill"><i class="sd-ico sd-law"></i><b class="sd-lbl">스킬1</b><small>U</small></button><button data-act="skill2" class="sd-skill"><i class="sd-ico sd-law"></i><b class="sd-lbl">스킬2</b><small>I</small></button>${pose('heavy','강공격','L')}${pose('block','막기','K')}${pose('dodge','회피','Space')}${pose('attack','공격','J')}</div></div>
- <div class="sd-pc">WASD 이동 · J 공격(연타로 3연격) · 공격 뒤 L = 연계 강공격 · K 누르고 막기(맞기 직전 누르면 반격 막기) · Space 회피 · U/I 스킬 · O 필살</div><div class="sd-modal"></div>`;
+ <div class="sd-controls"><div class="sd-stick" role="button" aria-label="이동"><i></i></div><div class="sd-buttons"><button data-act="ult" class="sd-ult"><i class="sd-ico sd-fx" style="background-image:url('${BASE}assets/vfx-atlas-v1.webp')"></i><b class="sd-lbl">필살</b><small>O</small></button>${pose('block','방어','K')}${pose('dodge','회피','Space')}${pose('attack','공격','J')}<button class="sd-chord sd-chord-heavy" data-chord="heavy" aria-label="공격과 방어 같이 · 강공격"><b>+</b><span>강공격</span></button><button class="sd-chord sd-chord-skill" data-chord="skill1" aria-label="공격과 회피 같이 · 기술"><b>+</b><span class="sd-lbl">기술</span></button></div></div>
+ <div class="sd-pc">WASD 이동 · J 공격 · K 방어(누르고 있기 · 맞기 직전 = 반격 막기) · Space 회피 · O 필살 · J+K 같이 = 강공격 · J+Space 같이 = 기술</div><div class="sd-drill" hidden></div><div class="sd-modal"></div>`;
  host.append(root);document.body.classList.add('seed-duel-open');
  const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),assets={},keys=new Set(),held=new Set(),pressed=new Set(),listeners=[];
  const vfx=createCanvasVfx({onReady:()=>{floor=null;}}),pacer=createFramePacer();
@@ -38,27 +38,40 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  // ── 고르기 화면
  const portrait=(id,extra='')=>{const c=DUEL_CHARACTERS[id];return `<span class="sd-portrait ${extra}" style="background-image:url('${BASE}assets/cute/seed-solo-v1.webp');background-position:${c.tile%4*100/3}% ${Math.floor(c.tile/4)*50}%"></span>`;};
  function select(){
-  const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(id,'sd-law')} ${c.skills[0].name} · ${c.skills[1].name} · 필살 ${c.ult.name}</i></span></button>`;};
-  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper"><p class="sd-eyebrow">SEED · DUEL · 시험 모드</p><h1>씨앗 대전</h1><p>공격은 막기에, 막기는 강공격·잡기에 져요. 맞기 직전에 막으면 <b>반격 막기</b>. 공격을 이어 누르면 <b>3연격</b>, 공격 뒤 강공격은 <b>연계 강공격</b>.</p><div class="sd-cards">${DUEL_ORDER.map(card).join('')}</div>
+  const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(id,'sd-law')} 기술 ${c.skills[0].name} · 필살 ${c.ult.name}</i></span></button>`;};
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper"><p class="sd-eyebrow">SEED · DUEL · 시험 모드</p><h1>씨앗 대전</h1><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><div class="sd-cards">${DUEL_ORDER.map(card).join('')}</div>
    <div class="sd-row"><span>상대</span>${['random',...DUEL_ORDER].map(id=>`<button class="sd-chip${pick.enemy===id?' on':''}" data-enemy="${id}">${id==='random'?'무작위':DUEL_CHARACTERS[id].name}</button>`).join('')}</div>
    <div class="sd-row"><span>난이도</span>${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([id,n])=>`<button class="sd-chip${pick.difficulty===id?' on':''}" data-diff="${id}">${n}</button>`).join('')}</div>
-   <button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-back">돌아가기</button><small>보상·랭킹 없는 시험 모드예요.</small></div>`;
+   <button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-practice">콤보 연습 · 기술 익히기</button><button class="sd-back">돌아가기</button><small>보상·랭킹 없는 시험 모드예요.</small></div>`;
   root.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{pick.player=b.dataset.pick;select();});
   root.querySelectorAll('[data-enemy]').forEach(b=>b.onclick=()=>{pick.enemy=b.dataset.enemy;select();});
   root.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>{pick.difficulty=b.dataset.diff;select();});
-  $('.sd-go').onclick=start;$('.sd-back').onclick=close;
+  $('.sd-go').onclick=()=>start(false);$('.sd-practice').onclick=()=>start(true);$('.sd-back').onclick=close;
  }
- function start(){const others=DUEL_ORDER.filter(id=>id!==pick.player),enemy=pick.enemy==='random'?others[Math.floor(Math.random()*others.length)]:pick.enemy;s=createDuel({player:pick.player,enemy,seed:Date.now()>>>0,difficulty:pick.difficulty});$('.sd-modal').hidden=true;audio?.unlock?.();$('.sd-p0 b').textContent=DUEL_CHARACTERS[pick.player].name+' (나)';$('.sd-p1 b').textContent=DUEL_CHARACTERS[enemy].name;
+ function start(practice=false){const others=DUEL_ORDER.filter(id=>id!==pick.player),enemy=pick.enemy==='random'||practice&&pick.enemy===pick.player?others[Math.floor(Math.random()*others.length)]:pick.enemy;s=createDuel({player:pick.player,enemy,seed:Date.now()>>>0,difficulty:pick.difficulty,practice});drill.on=practice;root.classList.toggle('sd-practicing',practice);if(practice){s.phase='fight';s.message='';drill.idx=0;drill.done=new Set();drillStart();}$('.sd-drill').hidden=!practice;$('.sd-modal').hidden=true;audio?.unlock?.();$('.sd-p0 b').textContent=DUEL_CHARACTERS[pick.player].name+' (나)';$('.sd-p1 b').textContent=DUEL_CHARACTERS[enemy].name;
   root.querySelectorAll('.sd-skill .sd-law').forEach(i=>{i.innerHTML=lawArt(pick.player,'sd-law-art');});root.style.setProperty('--me',DUEL_CHARACTERS[pick.player].ink);
   root.classList.add('sd-playing');cam.k=0;trails[0].length=trails[1].length=0;last=0;if(!raf)raf=requestAnimationFrame(loop);}
- function result(){const win=s.winner===0;$('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">${win?'VICTORY':'DEFEAT'}</p><h1>${win?'대전 승리!':'대전 패배'}</h1>${portrait(s.fighters[win?0:1].char,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><button class="sd-primary sd-again">다시 붙기</button><button class="sd-pickagain">캐릭터 다시 고르기</button><button class="sd-back">돌아가기</button></div>`;$('.sd-again').onclick=start;$('.sd-pickagain').onclick=()=>{root.classList.remove('sd-playing');select();};$('.sd-back').onclick=close;}
+ function result(){const win=s.winner===0;$('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">${win?'VICTORY':'DEFEAT'}</p><h1>${win?'대전 승리!':'대전 패배'}</h1>${portrait(s.fighters[win?0:1].char,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><button class="sd-primary sd-again">다시 붙기</button><button class="sd-pickagain">캐릭터 다시 고르기</button><button class="sd-back">돌아가기</button></div>`;$('.sd-again').onclick=()=>start(false);$('.sd-pickagain').onclick=()=>{root.classList.remove('sd-playing');select();};$('.sd-back').onclick=close;}
  // ── 입력
- function input(){const i={x:move.x+((keys.has('KeyD')||keys.has('ArrowRight'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft'))?1:0),y:move.y+((keys.has('KeyS')||keys.has('ArrowDown'))?1:0)-((keys.has('KeyW')||keys.has('ArrowUp'))?1:0),block:held.has('block')||keys.has('KeyK')};
+ // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만 · 같이 누르면 다른 기술" — 같이 누르기(0.07초 안)를 알아챈다.
+ // 공격 → (0.07초 안에) 방어 = 강공격, 방어를 누른 채 공격 = 강공격, 공격 ↔ 회피 같이 = 기술. 혼자면 0.07초 뒤 그대로 나간다.
+ // 터치는 엄지 하나로 두 버튼을 동시에 누르기 어려워서, 두 버튼 사이의 '+' 자리가 같이 누르기다.
+ const CHORD_MS=70;let pend=null,suppressBlock=false;
+ const blockHeld=()=>held.has('block')||keys.has('KeyK');
+ function fire(a){pressed.add(a);}
+ function press(a){const now=performance.now(),recent=pend&&now-pend.t<=CHORD_MS;
+  if(a==='block'){if(recent&&pend.a==='attack'){pend=null;suppressBlock=true;fire('heavy');}return;}
+  if(a==='attack'){if(blockHeld()){suppressBlock=true;fire('heavy');return;}if(recent&&pend.a==='dodge'){pend=null;fire('skill1');return;}if(pend)fire(pend.a);pend={a,t:now};return;}
+  if(a==='dodge'){if(recent&&pend.a==='attack'){pend=null;fire('skill1');return;}if(pend)fire(pend.a);pend={a,t:now};return;}
+  fire(a);}
+ function input(){if(pend&&performance.now()-pend.t>CHORD_MS){fire(pend.a);pend=null;}if(!blockHeld())suppressBlock=false;
+  const i={x:move.x+((keys.has('KeyD')||keys.has('ArrowRight'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft'))?1:0),y:move.y+((keys.has('KeyS')||keys.has('ArrowDown'))?1:0)-((keys.has('KeyW')||keys.has('ArrowUp'))?1:0),block:blockHeld()&&!suppressBlock};
   if(Math.hypot(i.x,i.y)>.1){i.aimX=i.x;i.aimY=i.y;}for(const a of pressed)i[a]=true;pressed.clear();return i;}
- const KEY={KeyJ:'attack',KeyL:'heavy',Space:'dodge',KeyU:'skill1',KeyI:'skill2',KeyO:'ult'};
- listen(window,'keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(e.code==='Escape'){close();return;}if(!s||s.phase==='over')return;if(KEY[e.code]||['KeyW','KeyA','KeyS','KeyD','KeyK','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;keys.add(e.code);if(KEY[e.code])pressed.add(KEY[e.code]);});
- listen(window,'keyup',e=>keys.delete(e.code));listen(window,'blur',()=>{keys.clear();held.clear();move.x=move.y=0;});
- root.querySelectorAll('[data-act]').forEach(b=>{const a=b.dataset.act;listen(b,'pointerdown',e=>{e.preventDefault();if(a==='block')held.add('block');else pressed.add(a);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>{if(a==='block')held.delete('block');b.classList.remove('down');});});
+ const KEY={KeyJ:'attack',KeyK:'block',Space:'dodge',KeyO:'ult',KeyL:'heavy',KeyU:'skill1'};
+ listen(window,'keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(e.code==='Escape'){close();return;}if(!s||s.phase==='over')return;if(KEY[e.code]||['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;keys.add(e.code);if(KEY[e.code])press(KEY[e.code]);});
+ listen(window,'keyup',e=>keys.delete(e.code));listen(window,'blur',()=>{keys.clear();held.clear();move.x=move.y=0;pend=null;});
+ root.querySelectorAll('[data-act]').forEach(b=>{const a=b.dataset.act;listen(b,'pointerdown',e=>{e.preventDefault();if(a==='block')held.add('block');press(a);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>{if(a==='block')held.delete('block');b.classList.remove('down');});});
+ root.querySelectorAll('[data-chord]').forEach(b=>{listen(b,'pointerdown',e=>{e.preventDefault();fire(b.dataset.chord);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>b.classList.remove('down'));});
  const stick=$('.sd-stick');let stickId=null;
  listen(stick,'pointerdown',e=>{e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);});listen(stick,'pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
  for(const n of ['pointerup','pointercancel','lostpointercapture'])listen(stick,n,()=>{stickId=null;move.x=move.y=0;stick.querySelector('i').style.transform='';});
@@ -66,13 +79,46 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  $('.sd-pause').onclick=close;
  // ── 루프
  function loop(now){raf=requestAnimationFrame(loop);if(closed||document.hidden||!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;
-  if(s&&s.phase!=='over'){stepDuel(s,dt,input());for(const ev of s.events){const [id,o]=SOUND[ev]||[];if(id)audio?.play(id,o);if(ev==='link')pop(s.fighters[0].x,s.fighters[0].y-2.6,'연계!','#ffd36b');}s.events.length=0;if(s.phase==='over'){setTimeout(result,900);}}
+  if(s&&s.phase!=='over'){stepDuel(s,dt,input(),enemyInput(dt));drillEvents(s.events);for(const ev of s.events){const [id,o]=SOUND[ev]||[];if(id)audio?.play(id,o);if(ev==='link')pop(s.fighters[0].x,s.fighters[0].y-2.6,'연계!','#ffd36b');}s.events.length=0;if(s.phase==='over'){setTimeout(result,900);}}
   camera(dt);draw(dt);if(now-uiAt>90){uiAt=now;hud();}}
+ // ── 콤보 연습(2026-09-28 사용자: "콤보 연습이 있으면 좋겠다 · 콤보가 뭔지도 모르겠다 · 나중에 PvP")
+ // 과제를 하나씩: 무엇을 누르는지·왜 쓰는지 알려 주고, 연습 상대(서 있기·막기·공격)가 과제에 맞춰 움직인다. 성공하면 다음 과제.
+ const DRILLS=[
+  {name:'기본 3연격',keys:['공격','공격','공격'],tip:'공격을 박자에 맞춰 세 번. 1·2타는 좌우로, 3타는 크게 휘둘러 밀어내요.',dummy:'idle',check:p=>p.chainTime>0&&p.chain>=3},
+  {name:'연계 강공격',keys:['공격','공격+방어'],tip:'평타가 맞는 순간 공격과 방어를 같이 누르면 준비가 짧은 강공격으로 이어져요. 평타 3타 뒤에도 돼요.',dummy:'idle',on:'linkHit'},
+  {name:'막기 부수기',keys:['공격+방어','공격+방어'],tip:'상대가 막고 있으면 평타는 튕겨 나가요. 강공격(공격+방어)을 두세 번 맞히면 막기가 부서져요.',dummy:'block',on:'guardBreak'},
+  {name:'기술 연계',keys:['공격','공격+회피'],tip:'평타가 맞은 뒤 공격과 회피를 같이 누르면 캐릭터 기술로 이어져요(창: 돌진 찌르기 · 불꽃: 불씨 · 거울: 방패 · 중력: 끌어당기기).',dummy:'idle',on:'skillCombo'},
+  {name:'반격 막기',keys:['상대가 휘두르기 직전','방어'],tip:'상대 공격이 닿기 바로 전에 방어를 누르면 상대가 크게 흔들려요. 미리 누르고 있으면 그냥 막기예요.',dummy:'attack',on:'parry'},
+  {name:'회피로 피하기',keys:['상대가 휘두를 때','회피'],tip:'회피하는 순간은 맞지 않아요. 방향키와 같이 누르면 그쪽으로 굴러요.',dummy:'attack',on:'dodgeAvoid'},
+  {name:'필살기',keys:['필살'],tip:'공격을 맞히고 맞으면 노란 게이지가 차요. 가득 차면 필살! 연습에서는 늘 가득 차 있어요.',dummy:'idle',on:'ultimate'},
+  {name:'풀 콤보',keys:['공격','공격','공격+방어','공격+회피'],tip:'익힌 것을 한 번에! 끊기지 않고 4타 이상 맞혀 보세요.',dummy:'idle',check:p=>p.chainTime>0&&p.chain>=4}
+ ];
+ const drill={on:false,idx:0,done:new Set(),linkAt:-9,skillAt:-9,dummyCd:1,dummyHit:false,advanceAt:0};
+ function drillStart(){if(!s)return;const [p,e]=s.fighters,d=DRILLS[drill.idx];p.x=(DUEL_SPAWN[0].x+DUEL_SPAWN[1].x)/2-1;p.y=DUEL_SPAWN[0].y;e.x=p.x+1.9;e.y=p.y;s.message='';s.shots.length=0;s.hazards.length=0;p.fx=1;p.fy=0;p.cd=[0,0];p.state='idle';p.t=0;e.hp=e.maxHp;e.guard=DUEL_RULES.guardMax;e.state='idle';e.stun=0;p.chain=0;p.chainTime=0;drill.linkAt=drill.skillAt=-9;drill.dummyCd=1.2;drill.advanceAt=0;renderDrill();}
+ function dummyInput(dt){const [p,e]=s.fighters,d=DRILLS[drill.idx],dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy)||1,i={aimX:dx,aimY:dy};if(d.on==='ultimate')p.meter=100;p.cd[0]=Math.min(p.cd[0],1);// 연습에서는 기술 대기 1초까지만
+
+  if(d.dummy==='block'){i.block=true;return i;}
+  if(d.dummy==='attack'){drill.dummyCd-=dt;if(dist>2.2){i.x=dx/dist;i.y=dy/dist;}else if(drill.dummyCd<=0&&e.state!=='attack'){i.attack=true;drill.dummyCd=1.7;}return i;}
+  return i;}
+ function drillSuccess(){const d=DRILLS[drill.idx];if(drill.done.has(drill.idx)&&drill.advanceAt)return;drill.done.add(drill.idx);drill.advanceAt=performance.now()+1300;audio?.play('evolve');pop(s.fighters[0].x,s.fighters[0].y-3,'성공!','#9ef0a0');renderDrill();}
+ function drillEvents(events){if(!drill.on)return;const [p,e]=s.fighters,d=DRILLS[drill.idx],t=s.time;
+  for(const ev of events){if(ev==='link')drill.linkAt=t;if(ev==='heavyHit'&&t-drill.linkAt<.8&&d.on==='linkHit')drillSuccess();if(ev==='guardBreak'&&d.on==='guardBreak')drillSuccess();if(ev==='parry'&&d.on==='parry')drillSuccess();if(ev==='ultimate'&&d.on==='ultimate')drillSuccess();if(ev==='skill'&&p.chainTime>0)drill.skillAt=t;if((ev==='hit'||ev==='heavyHit')&&d.on==='skillCombo'&&t-drill.skillAt<.9&&p.chain>=2)drillSuccess();}
+  // 불꽃(불씨)·거울(방패) 기술은 곧바로 맞히는 기술이 아니라, 평타 뒤에 기술을 썼으면 성공.
+  if(d.on==='skillCombo'&&drill.skillAt===t&&['burst','reflect'].includes(p.char))drillSuccess();
+  if(d.on==='dodgeAvoid'){const hit=e.state==='attack'&&e.hitDone;if(hit&&!drill.dummyHit&&p.inv>0&&Math.hypot(p.x-e.x,p.y-e.y)<3.2)drillSuccess();drill.dummyHit=hit;}
+  if(d.check?.(p))drillSuccess();
+  if(drill.advanceAt&&performance.now()>drill.advanceAt){drill.advanceAt=0;if(drill.idx<DRILLS.length-1){drill.idx++;drillStart();}else renderDrill();}}
+ function renderDrill(){const box=$('.sd-drill');if(!drill.on){box.hidden=true;return;}const d=DRILLS[drill.idx];box.hidden=false;
+  box.innerHTML=`<div class="sd-drill-head"><b>콤보 연습 ${drill.idx+1}/${DRILLS.length}</b><span>${drill.done.size}개 성공</span></div><h3>${drill.done.has(drill.idx)?'✓ ':''}${d.name}</h3><div class="sd-drill-keys">${d.keys.map(k=>`<kbd>${k}</kbd>`).join('<i>→</i>')}</div><p>${d.tip}</p><div class="sd-drill-list">${DRILLS.map((x,n)=>`<button data-drill="${n}" class="${n===drill.idx?'on':''} ${drill.done.has(n)?'done':''}" aria-label="${x.name}">${drill.done.has(n)?'✓':n+1}</button>`).join('')}</div><div class="sd-drill-nav"><button data-drill-nav="-1">◀ 이전</button><button data-drill-nav="1">다음 ▶</button><button class="sd-drill-exit">연습 끝내기</button></div>`;
+  box.querySelectorAll('[data-drill]').forEach(b=>b.onclick=()=>{drill.idx=Number(b.dataset.drill);drillStart();});
+  box.querySelectorAll('[data-drill-nav]').forEach(b=>b.onclick=()=>{drill.idx=Math.max(0,Math.min(DRILLS.length-1,drill.idx+Number(b.dataset.drillNav)));drillStart();});
+  box.querySelector('.sd-drill-exit').onclick=()=>{drill.on=false;root.classList.remove('sd-playing','sd-practicing');box.hidden=true;s=null;select();};}
+ const enemyInput=dt=>drill.on&&s?dummyInput(dt):null;
  function pop(x,y,text,color){pops.push({x,y,text,color,t:0});if(pops.length>8)pops.shift();}
  function hud(){if(!s)return;for(const f of s.fighters){const side=$('.sd-p'+f.team);side.querySelector('.sd-hp i').style.width=Math.max(0,f.hp/f.maxHp*100)+'%';side.querySelector('.sd-guard i').style.width=f.guard/DUEL_RULES.guardMax*100+'%';side.querySelector('.sd-meter i').style.width=f.meter+'%';side.classList.toggle('ult-ready',f.meter>=100);}
-  $('.sd-rounds').textContent=`${'●'.repeat(s.wins[0])}${'○'.repeat(2-s.wins[0])}  ${s.round}R  ${'○'.repeat(2-s.wins[1])}${'●'.repeat(s.wins[1])}`;$('.sd-timer').textContent=Math.max(0,Math.ceil(s.roundTime));
+  $('.sd-rounds').textContent=`${'●'.repeat(s.wins[0])}${'○'.repeat(2-s.wins[0])}  ${s.round}R  ${'○'.repeat(2-s.wins[1])}${'●'.repeat(s.wins[1])}`;$('.sd-timer').textContent=s.practice?'연습':Math.max(0,Math.ceil(s.roundTime));
   const msg=s.phase==='ready'?`${s.round}라운드 · 준비`:s.message;if($('.sd-message').textContent!==msg){$('.sd-message').textContent=msg;$('.sd-message').classList.remove('pop');void $('.sd-message').offsetWidth;$('.sd-message').classList.add('pop');}
-  const p=s.fighters[0],c=DUEL_CHARACTERS[p.char];root.querySelectorAll('.sd-skill').forEach((b,i)=>{b.querySelector('.sd-lbl').textContent=p.cd[i]>0?Math.ceil(p.cd[i])+'초':c.skills[i].name;b.classList.toggle('cooldown',p.cd[i]>0);});$('.sd-ult').classList.toggle('ready',p.meter>=100);$('.sd-dodge').classList.toggle('cooldown',p.dodgeCd>0);
+  const p=s.fighters[0],c=DUEL_CHARACTERS[p.char];{const b=$('.sd-chord-skill');b.querySelector('.sd-lbl').textContent=p.cd[0]>0?Math.ceil(p.cd[0])+'초':'기술';b.classList.toggle('cooldown',p.cd[0]>0);}$('.sd-ult').classList.toggle('ready',p.meter>=100);$('.sd-dodge').classList.toggle('cooldown',p.dodgeCd>0);
   const combo=$('.sd-combo'),n=p.chainTime>0?p.chain:0,text=n>=2?`${n} HIT`:'';if(combo.textContent!==text){combo.textContent=text;combo.classList.remove('pop');if(text){void combo.offsetWidth;combo.classList.add('pop');}}}
  // ── 카메라: 두 씨앗이 모두 보이게, 가까우면 당겨 본다. 경기장 밖(숲)은 조금만.
  function camera(dt){
@@ -217,7 +263,7 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   if(e.text&&t<.85){const z=t<.1?1.5-t*5:1;ctx.save();ctx.globalAlpha=Math.min(1,fade*1.6);ctx.translate(e.x+.3,e.y-2.3-t*.9);ctx.scale(z,z);ctx.font=`bold ${e.type==='heavy'?.85:.62}px Georgia`;ctx.textAlign='center';ctx.lineWidth=.13;ctx.strokeStyle='#18242a';ctx.fillStyle=e.type==='heavy'?'#ffd36b':'#fff0cf';ctx.strokeText(e.text,0,0);ctx.fillText(e.text,0,0);ctx.restore();}
  }
  // 로컬 점검용(?inspect): 화면이 숨겨져 있어도 몇 초씩 진행해 보고 그린다.
- if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect')){root.seedDuelState=()=>s;root.seedDuelAdvance=(seconds,inputs={})=>{for(let t=0;t<seconds&&s&&s.phase!=='over';t+=1/60){const i=typeof inputs==='function'?inputs(t):inputs;stepDuel(s,1/60,i);clock+=1/60;camera(1/60);}s.events.length=0;draw(1/60);hud();return s;};}
+ if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect')){root.seedDuelState=()=>s;root.seedDuelPress=a=>press(a);root.seedDuelHold=(on)=>{if(on)held.add('block');else held.delete('block');};root.seedDuelInput=()=>input();root.seedDuelAdvance=(seconds,inputs={})=>{for(let t=0;t<seconds&&s&&s.phase!=='over';t+=1/60){const i=typeof inputs==='function'?inputs(t):inputs;stepDuel(s,1/60,i,enemyInput(1/60));drillEvents(s.events);s.events.length=0;clock+=1/60;camera(1/60);}s.events.length=0;draw(1/60);hud();return s;};}
  listen(window,'resize',resize);resize();select();raf=requestAnimationFrame(loop);
  return {close};
 }
