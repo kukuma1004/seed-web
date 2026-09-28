@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_ARENA,REGION,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
+import {createAdventure,startAdventure,stepAdventure,attackAdventure,dodgeAdventure,ultimateAdventure,adventureOffers,chooseAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,adventureRoomInfo,adventureEvolutions,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_JP,ROOMS,ROOMS_PER_ACT,ADVENTURE,ADVENTURE_ARENA,REGION,ADVENTURE_FORMS,ADVENTURE_ACTS,ADVENTURE_COMBO} from '../src/seed-adventure-rules.js';
 import {composeAdventureAttack} from '../src/seed-adventure-attacks.js';
 import {createAdventureCombat} from '../src/seed-adventure-combat.js';
 import {LAWS} from '../src/laws.js';
@@ -157,5 +157,22 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  const k=fresh(),kg=k.region.events.find(e=>e.type==='guard');for(const n of k.enemies)n.hp=0;k.enemies=[];k.player.x=kg.x+3;k.player.y=kg.y;
  for(let t=0;t<60&&kg.state==='active'||t<1;t+=.05){for(const e of k.enemies)if(e.march&&Math.hypot(e.x-kg.portal.x,e.y-kg.portal.y)>1.5)e.hp=0;stepAdventure(k,.05,{});}
  assert.equal(kg.state,'done');assert.equal(kg.hp,kg.maxHp);assert.ok(k.props.some(o=>o.kind==='cache'&&o.big),'defended altar gives a big chest');
+}
+// 저장·부정기록 방지·햇살 적립
+{
+ const s=createAdventure(5);startAdventure(s,'slash','burst');s.player.inv=1e9;clearRoom(s);chooseAdventure(s,'grow');assert.equal(s.phase,'doors');
+ assert.equal(adventureCheckpoint(createAdventure(1)),null,'only saved at a door');
+ const cp=adventureCheckpoint(s),back=restoreAdventure(JSON.stringify(cp));assert.ok(back);assert.equal(back.phase,'doors');assert.deepEqual(back.laws,s.laws);assert.deepEqual(back.ranks,s.ranks);assert.equal(back.room,s.room);assert.equal(back.runId,s.runId);
+ assert.equal(chooseAdventureDoor(back,0),true,'resume continues through the saved doors');
+ const bad=(patch)=>restoreAdventure({...cp,...patch});
+ assert.equal(bad({formId:'blackhole'}),null,'form not earned by these laws');
+ assert.equal(bad({laws:['burst','frost','chain'],ranks:{burst:1,frost:1,chain:1}}),null,'no third law');
+ assert.equal(bad({level:40}),null,'impossible level');assert.equal(bad({coins:999999}),null,'impossible coins');
+ assert.equal(bad({bossesDefeated:2}),null,'boss count must match the room');assert.equal(bad({hp:9999}),null,'hp above max');
+ assert.equal(bad({room:2,doors:[{room:'combat',reward:'law'}]}),null,'boss room must be behind a single boss door');
+ assert.equal(bad({credited:cp.earned+1}),null,'cannot credit more than earned');
+ // 햇살: 새로 번 만큼만 한 번. 같은 저장을 다시 불러와도 두 번 쌓이지 않는다.
+ const c=createAdventure(3);c.earned=120;assert.equal(adventureCredit(c),120);assert.equal(adventureCredit(c),0);c.earned=900;assert.equal(adventureCredit(c),ADVENTURE_JP.perRoomMax,'per-room cap');
+ const again=restoreAdventure({...cp,earned:120,credited:120});assert.equal(adventureCredit(again),0,'reloaded save does not pay twice');
 }
 console.log('Adventure: combo & hit-stop, 162 forms through the authored engine, 12 rooms (wide regions with sleeping packs, exit guards, obstacles, raid and altar events), treasure/shop/fountain/elite, breakables, pickups, potions, buffs, bosses and win/loss passed.');

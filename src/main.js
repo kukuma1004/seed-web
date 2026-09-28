@@ -1708,7 +1708,13 @@ async function showSeedAdventure(){
  mode='adventure';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  try{
   const {mountSeedAdventure}=await import('./seed-adventure-view.js');
-  adventureScreen=mountSeedAdventure({audio,onClose:()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
+  // 2026-09-28: 모험도 계정과 잇는다. 저장은 계정별로 이 기기에, 도감·JP·보스 칭호는 계정 저장(클라우드)에. 연습은 보상 없음.
+  const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
+  adventureScreen=mountSeedAdventure({audio,storage:rawStorage,owner,practice,
+   onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
+   onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
+   onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest')),
+   onClose:()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
  }catch(error){console.error('씨앗의 모험 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='모험을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 

@@ -1,5 +1,5 @@
 import {LAWS} from './laws.js';
-import {DEFENSE_FORMS,defenseFusionOf,getDefenseEvolutionOptions} from './seed-defense-catalog.js';
+import {DEFENSE_FORMS,defenseFusionOf,getDefenseEvolutionOptions,validDefenseForm} from './seed-defense-catalog.js';
 import {availableAttacks,composeAdventureAttack} from './seed-adventure-attacks.js';
 
 // This deliberately small manual-combat adapter shares identities, not the
@@ -68,7 +68,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const direction=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 const pick=(s,list)=>list[Math.floor(random(s)*list.length)];
-export function createAdventure(seed=1){return {seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:1,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
+export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${seed>>>0}-${Math.floor(Math.random()*1e9)}`,earned:0,credited:0,seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:1,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
@@ -198,7 +198,7 @@ function openReward(s){
  let kind=s.roomReward||'law';
  if(kind==='evolve'&&!adventureEvolutions(s).length)kind='law';
  if(kind==='shape'&&s.shapes.length>1)kind='grow';
- if(kind==='coins'){s.coins+=40;finishReward(s,'햇살 +40');return;}
+ if(kind==='coins'){s.coins+=40;s.earned+=40;finishReward(s,'햇살 +40');return;}
  s.choiceKind=kind;s.offerLaws=kind==='law'||kind==='boss'?lawChoices(s):[];
  s.phase='choice';s.shots.length=0;s.pendingCuts.length=0;event(s,'pickup');
  s.message=kind==='boss'?`${adventureRoomInfo(s.room).actInfo.bossName}를 쓰러뜨렸어요`:'방을 지켜 냈어요';
@@ -290,7 +290,7 @@ function breakProp(s,prop){
 }
 function hitProp(s,prop){if(prop.hp<=0)return;prop.hp--;prop.flash=.15;if(prop.hp<=0)breakProp(s,prop);else event(s,'hit');}
 function collect(s,item){const p=s.player;
- if(item.kind==='coin'){s.coins+=item.value;event(s,'coin');}
+ if(item.kind==='coin'){s.coins+=item.value;s.earned+=item.value;event(s,'coin');}
  else if(item.kind==='potion'){if(s.potions<ADVENTURE.maxPotions)s.potions++;else p.hp=Math.min(p.maxHp,p.hp+15);event(s,'pickup');}
  else if(item.kind==='buff')applyBuff(s,item.buff);
  fx(s,'collect',item.x,item.y,{kind:item.kind,life:.3,max:.3});}
@@ -434,4 +434,47 @@ export function stepAdventure(s,dt,input={},combat=null){
   if(!s.cleared){s.cleared=true;s.clearTimer=1.1;}
   s.clearTimer-=dt;if(s.clearTimer<=0){for(const item of s.pickups)collect(s,item);s.pickups.length=0;s.cleared=false;openReward(s);}
  }
+}
+
+// 2026-09-28 사용자: "모험에도 저장이 필요하고 부정기록 방지도 있어야 해 · 조합은 도감에, 햇살도 계정에".
+// 저장은 문 앞(방과 방 사이)에서만 한다. 방 안에서 나가면 마지막 문 앞부터 다시 한다(본편 '방 입구 저장'과 같은 원칙).
+// 불러올 때는 규칙상 가능한 범위인지 모두 검사하고, 하나라도 어긋나면 저장을 버린다.
+export const ADVENTURE_SAVE_VERSION=1;
+export const ADVENTURE_JP=Object.freeze({perRoomMax:400,perRunMax:4000});
+export function adventureCheckpoint(s){
+ if(s?.phase!=='doors'||!Array.isArray(s.doors)||!s.doors.length)return null;const p=s.player;
+ return {version:ADVENTURE_SAVE_VERSION,runId:s.runId,seed:s.seed,room:s.room,doors:s.doors.map(d=>({room:d.room,reward:d.reward??null})),actFlags:{...s.actFlags},
+  shapes:[...s.shapes],weapon:s.weapon,laws:[...s.laws],ranks:{...s.ranks},formId:s.formId,level:s.level,coins:s.coins,potions:s.potions,charge:Math.floor(s.charge),
+  hp:Math.round(p.hp*10)/10,maxHp:p.maxHp,kills:s.kills,time:Math.round(s.time*10)/10,bossesDefeated:s.bossesDefeated,earned:s.earned,credited:s.credited,savedAt:Date.now()};
+}
+const int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
+export function restoreAdventure(raw){
+ try{
+  const r=typeof raw==='string'?JSON.parse(raw):raw;
+  if(!r||r.version!==ADVENTURE_SAVE_VERSION||typeof r.runId!=='string'||!/^[\w-]{1,90}$/.test(r.runId)||!int(r.seed,0,4294967295)||!int(r.room,0,ROOMS.length-2))return null;
+  const next=adventureRoomInfo(r.room+1);
+  if(!Array.isArray(r.doors)||r.doors.length<1||r.doors.length>3||r.doors.some(d=>!d||!Object.hasOwn(ROOM_TYPES,d.room)||(d.reward!==null&&!Object.hasOwn(REWARDS,d.reward))))return null;
+  if(next.boss!==(r.doors.length===1&&r.doors[0].room==='boss'))return null;if(!next.boss&&r.doors.some(d=>d.room==='boss'))return null;
+  if(!Array.isArray(r.shapes)||r.shapes.length<1||r.shapes.length>2||new Set(r.shapes).size!==r.shapes.length||r.shapes.some(x=>!['slash','throw'].includes(x)))return null;
+  if(!availableAttacks(r.shapes).includes(r.weapon))return null;
+  if(!Array.isArray(r.laws)||r.laws.length>2||new Set(r.laws).size!==r.laws.length||r.laws.some(l=>!Object.hasOwn(LAWS,l)))return null;
+  if(!r.ranks||typeof r.ranks!=='object'||Object.keys(r.ranks).length!==r.laws.length||r.laws.some(l=>!int(r.ranks[l],1,3)))return null;
+  const rankTotal=r.laws.reduce((n,l)=>n+r.ranks[l],0),rooms=r.room+1;
+  // 방마다 법칙 보상 하나 + 상인의 법칙 강화(막마다 한 번)를 넘을 수 없다.
+  if(rankTotal>rooms+ADVENTURE_ACTS.length)return null;
+  if(r.formId!==null&&!(typeof r.formId==='string'&&DEFENSE_FORMS[r.formId]&&validDefenseForm({laws:r.laws,lawRanks:r.ranks,formId:r.formId})))return null;
+  if(r.formId===null&&r.laws.length===2)return null;
+  if(!int(r.level,1,rooms*2+2)||!int(r.coins,0,20000)||!int(r.potions,0,ADVENTURE.maxPotions)||!int(r.charge,0,100)||!int(r.kills,0,5000)||!int(r.earned,0,1e6)||!int(r.credited,0,r.earned))return null;
+  if(!Number.isFinite(r.time)||r.time<0||r.time>1e6||!Number.isFinite(r.maxHp)||r.maxHp<100||r.maxHp>100+r.level*10+rooms*25||!Number.isFinite(r.hp)||r.hp<=0||r.hp>r.maxHp)return null;
+  const bossRooms=ADVENTURE_ACTS.map((_,a)=>a*ROOMS_PER_ACT+ROOMS_PER_ACT-1).filter(i=>i<=r.room).length;if(r.bossesDefeated!==bossRooms)return null;
+  const flags=r.actFlags&&typeof r.actFlags==='object'?r.actFlags:{};
+  const s=createAdventure(r.seed);Object.assign(s,{runId:r.runId,seed:r.seed,room:r.room,phase:'doors',doors:r.doors.map(d=>({room:d.room,reward:d.reward})),actFlags:{act:int(flags.act,0,2)?flags.act:next.act,treasure:flags.treasure===true,shop:flags.shop===true,fountain:flags.fountain===true},
+   shapes:[...r.shapes],weapon:r.weapon,laws:[...r.laws],ranks:{...r.ranks},formId:r.formId,level:r.level,coins:r.coins,potions:r.potions,charge:r.charge,kills:r.kills,time:r.time,bossesDefeated:r.bossesDefeated,earned:r.earned,credited:r.credited,message:'저장한 문 앞에서 이어가요'});
+  s.player.hp=r.hp;s.player.maxHp=r.maxHp;return s;
+ }catch{return null;}
+}
+// 계정에 쌓을 햇살(JP): 이번 판에 새로 번 만큼, 방 하나·판 하나 상한 안에서만. 같은 저장을 다시 불러와도 두 번 쌓이지 않는다.
+export function adventureCredit(s){
+ const due=Math.max(0,s.earned-s.credited),room=Math.min(due,ADVENTURE_JP.perRoomMax),left=Math.max(0,ADVENTURE_JP.perRunMax-s.credited);
+ const jp=Math.min(room,left);s.credited=s.earned;return jp;
 }
