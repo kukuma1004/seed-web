@@ -9,7 +9,8 @@ export function availableAttacks(shapes){return shapes.length===2?['slash','thro
 export function composeAdventureAttack({weapon,laws=[],form=null,level=1}){
  const hybrid=weapon==='hybrid',cut=weapon!=='throw',ranged=weapon!=='slash';
  const split=laws.includes('split'),recall=laws.includes('recall');
- const plan={cooldown:hybrid?.55:cut?.43:.34,cuts:[],shots:[],returnCuts:[],orbitDuration:cut?.8:1,orbitRadius:cut?1.9:2.7};
+ // 2026-09-28 사용자: 속도감 — 공격 간격 약 20% 짧게.
+ const plan={cooldown:hybrid?.45:cut?.35:.28,cuts:[],shots:[],returnCuts:[],orbitDuration:cut?.8:1,orbitRadius:cut?1.9:2.7};
  if(cut){
   const damage=(27+level*3)*(hybrid?.72:1);
   for(const offset of split?[-.62,0,.62]:[0]){

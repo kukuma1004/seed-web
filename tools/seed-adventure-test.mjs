@@ -63,7 +63,7 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  const mixed=composeAdventureAttack({weapon:'hybrid',laws:[]});assert.equal(mixed.cuts.length,1);assert.equal(mixed.shots.length,1);assert.ok(mixed.cooldown>slash.cooldown,'mixed attack has a commitment cost');
 }
 {
- const s=begin('slash','split');s.enemies=[dummy(1,13,10)];attackAdventure(s);assert.equal(s.enemies[0].hp,970,'overlapping split cuts hit an enemy once per swing');
+ const s=begin('slash','split');s.enemies=[dummy(1,13,10)];attackAdventure(s);assert.equal(s.enemies[0].hp,1000-Math.round(30*.9),'overlapping split cuts hit an enemy once per swing (split motion 0.9)');
  const o=begin('slash','orbit');o.enemies=[dummy(1,13,10)];tick(o,.8);assert.equal(o.enemies[0].hp,1000,'orbit offense requires a manual attack');attackAdventure(o);tick(o,.2);assert.ok(o.enemies[0].hp<970);
 }
 // ① 3단 콤보·타격감
@@ -174,5 +174,15 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  // 햇살: 새로 번 만큼만 한 번. 같은 저장을 다시 불러와도 두 번 쌓이지 않는다.
  const c=createAdventure(3);c.earned=120;assert.equal(adventureCredit(c),120);assert.equal(adventureCredit(c),0);c.earned=900;assert.equal(adventureCredit(c),ADVENTURE_JP.perRoomMax,'per-room cap');
  const again=restoreAdventure({...cp,earned:120,credited:120});assert.equal(adventureCredit(again),0,'reloaded save does not pay twice');
+}
+// 조합마다 다른 공격: 첫 법칙이 휘두르는 방식, 둘째 법칙이 막타. 융합하면 법칙 하나하나의 덧붙임 효과는 꺼진다.
+{
+ const o=begin('slash','orbit');o.enemies=[dummy(1,11,10)];attackAdventure(o);assert.ok(o.enemies[0].hp<1000,'orbit motion spins behind');
+ const pr=begin('slash','pierce');pr.enemies=[dummy(1,15.3,10)];attackAdventure(pr);assert.ok(pr.enemies[0].hp<1000,'pierce thrust reaches far');
+ const sl=begin('slash','recall');sl.enemies=[dummy(1,15.3,10)];attackAdventure(sl);assert.equal(sl.enemies[0].hp,1000,'plain slash does not');
+ const f=begin('slash','orbit');f.laws=['orbit','burst'];f.ranks={orbit:1,burst:1};f.enemies=[dummy(1,13.2,10,100000),dummy(2,14.6,10,100000)];f.player.combo=2;attackAdventure(f);tick(f,.05);assert.ok(f.effects.some(e=>e.type==='burst'),'second law sets the finisher');
+ const fused=begin('slash','orbit');fused.laws=['orbit','burst'];fused.ranks={orbit:1,burst:1};fused.formId=ADVENTURE_FORMS.sunring?'sunring':Object.values(ADVENTURE_FORMS).find(x=>x.kind==='fusion'&&x.requires.includes('orbit')&&x.requires.includes('burst')).id;
+ fused.enemies=[dummy(1,13.2,10,100000)];attackAdventure(fused);assert.equal(fused.orbitUntil,0,'fused seed: no separate orbit blades');
+ const hp=fused.enemies[0].hp;fused.player.attack=0;attackAdventure(fused);tick(fused,.02);assert.ok(!fused.effects.some(e=>e.type==='burst'&&e.radius===1.5),'fused seed: no separate burst on every hit');
 }
 console.log('Adventure: combo & hit-stop, 162 forms through the authored engine, 12 rooms (wide regions with sleeping packs, exit guards, obstacles, raid and altar events), treasure/shop/fountain/elite, breakables, pickups, potions, buffs, bosses and win/loss passed.');

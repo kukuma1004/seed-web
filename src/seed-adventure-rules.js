@@ -113,9 +113,9 @@ function spawnRoom(s){
  spawnProps(s,3+Math.floor(random(s)*3));spawnWave(s);
 }
 function spawnEnemy(s,role,x,y,extra={}){
- const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1+info.act*1.1+info.local*.2)*(s.elite?1.45:1);
+ const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1.1+info.act*1.95+info.local*.35)*(s.elite?1.45:1);
  const hp=Math.round(base.hp*scale+(s.elite&&role==='tank'?20:0));
- s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.45+info.local*.08,...extra});
+ s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*1.3*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.45+info.local*.08,...extra});
 }
 function spawnWave(s){
  s.wave++;const info=adventureRoomInfo(s.room),count=Math.min(ADVENTURE.maxEnemies,4+info.local+info.act*2+s.wave+(s.elite?2:0));
@@ -177,9 +177,9 @@ const insideObstacle=(s,x,y)=>Boolean(s.region&&s.region.obstacles.some(b=>Math.
 function wakePack(s,e){if(!e.dormant)return;for(const n of s.enemies)if(n.pack===e.pack&&n.dormant){n.dormant=false;n.cd=Math.max(n.cd,.6+random(s)*.6);}}
 // ③ 막의 수호자. 막마다 다른 공격 세 가지를 돌려 쓴다. 체력 절반에서 부하를 부르고(한 번) 조금 빨라진다.
 export const ADVENTURE_BOSSES=Object.freeze({
- austin:Object.freeze({name:'오스틴',hp:2300,patterns:Object.freeze(['charge','slam','punches'])}),
- alwaysbeginner:Object.freeze({name:'항상초심',hp:4900,patterns:Object.freeze(['pitch','swing','pitch','rain'])}),
- tempestcarrier:Object.freeze({name:'요한',hp:7200,patterns:Object.freeze(['strikes','spiral','slam','strikes'])})
+ austin:Object.freeze({name:'오스틴',hp:3800,patterns:Object.freeze(['charge','slam','punches'])}),
+ alwaysbeginner:Object.freeze({name:'항상초심',hp:8200,patterns:Object.freeze(['pitch','swing','pitch','rain'])}),
+ tempestcarrier:Object.freeze({name:'요한',hp:12500,patterns:Object.freeze(['strikes','spiral','slam','strikes'])})
 });
 function spawnBoss(s,info){const b=ADVENTURE_BOSSES[info.actInfo.boss],hp=b.hp*(1+(s.level-1)*.04);s.enemies.push({id:++s.serial,type:'boss',role:'boss',bossId:info.actInfo.boss,art:info.actInfo.boss,act:info.act,x:12,y:6,hp,maxHp:hp,r:1.1,speed:1.05+info.act*.12,cd:1.6,tell:0,tellKind:'',tx:0,ty:0,marks:[],slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25,charging:0,cx:0,cy:0});}
 
@@ -296,7 +296,7 @@ function collect(s,item){const p=s.player;
  fx(s,'collect',item.x,item.y,{kind:item.kind,life:.3,max:.3});}
 
 function cut(s,c,seen=new Set()){
- fx(s,'slash',c.x,c.y,{angle:c.angle,radius:c.radius,returning:Boolean(c.returning),narrow:c.cos>.5,finisher:Boolean(c.meta?.finisher),life:c.meta?.finisher?.32:.25,max:c.meta?.finisher?.32:.25});
+ fx(s,'slash',c.x,c.y,{angle:c.angle,radius:c.radius,returning:Boolean(c.returning),narrow:c.cos>.5,motion:c.motion||'',ring:c.cos<=-1,finisher:Boolean(c.meta?.finisher),life:c.meta?.finisher?.32:.25,max:c.meta?.finisher?.32:.25});
  const inArc=o=>{const a=Math.atan2(o.y-c.y,o.x-c.x)-c.angle;return Math.hypot(o.x-c.x,o.y-c.y)<c.radius+(o.r||.45)&&Math.cos(a)>c.cos;};
  for(const e of s.enemies){if(e.hp>0&&!seen.has(e.id)&&inArc(e)){seen.add(e.id);hit(s,e,c.damage,false,{...c.meta,angle:Math.atan2(e.y-c.y,e.x-c.x)});}}
  for(const prop of s.props)if(prop.hp>0&&!seen.has(prop.id)&&inArc(prop)){seen.add(prop.id);hitProp(s,prop);}
@@ -317,11 +317,15 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false){
   s.shake=Math.max(s.shake,heavy?.22:.04);
  }
  if(!secondary){s.hits++;s.hitsTime=2;s.charge=clamp(s.charge+2.8,0,100);event(s,heavy?'finisher':'hit');
+  // 2026-09-28 사용자: "공전·폭발을 골랐더니 공전은 그대로 살아 있고 도는 게 또 생겼다 · 융합해야 생기는 것 아닌가"
+  // 두 법칙이 융합하면(형태가 생기면) 법칙 하나하나의 덧붙임 효과는 끄고, 그 조합의 공격(본편 엔진)과 휘두르기 모양만 남긴다.
+  if(!s.formId){
   const k=id=>1+(rank(s,id)-1)*.3;
   if(s.laws.includes('frost')){e.slow=1.8;e.frost++;if(e.frost>=5){e.frost=0;e.hp-=32*k('frost');fx(s,'frost',e.x,e.y,{radius:1.4});}}
   if(s.laws.includes('burst')){fx(s,'burst',e.x,e.y,{radius:1.5});for(const n of s.enemies)if(n!==e&&n.hp>0&&dist(n,e)<1.5)hit(s,n,damage*.4*k('burst'),true);}
   if(s.laws.includes('chain')){let prev=e;const seen=new Set([e.id]);for(let i=0;i<1+rank(s,'chain');i++){const n=s.enemies.filter(n=>n.hp>0&&!seen.has(n.id)&&dist(n,prev)<3.7).sort((a,b)=>dist(a,prev)-dist(b,prev))[0];if(!n)break;fx(s,'chain',prev.x,prev.y,{tx:n.x,ty:n.y});hit(s,n,damage*.5,true);seen.add(n.id);prev=n;}}
   if(s.laws.includes('gravity')&&s.fields.length<6)s.fields.push({x:e.x,y:e.y,life:.65+rank(s,'gravity')*.15,r:2.5,collapse:rank(s,'gravity')>=3});
+  }
  }
  if(e.hp<=0){s.kills++;s.charge=clamp(s.charge+4,0,100);fx(s,'leaf',e.x,e.y,{life:.6,max:.6});
   if(e.type==='boss'){s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.15);s.shake=.45;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
@@ -335,15 +339,47 @@ export function attackAdventure(s){
  p.attack=plan.cooldown*c.cooldown;p.swing=step;p.comboTime=p.attack+COMBO_WINDOW;p.combo=c.finisher?0:step+1;p.dashStrike=0;
  if(p.dashing<=0){p.lx=Math.cos(angle)*c.lunge*12;p.ly=Math.sin(angle)*c.lunge*12;}
  event(s,dashStrike?'dashStrike':'combo'+(step+1));event(s,s.weapon==='throw'?'shot':'shotReturn');
- for(const cc of plan.cuts)cut(s,{...cc,damage:cc.damage*meta.damage,radius:cc.radius*c.radius,cos:cc.cos-c.arc,x:p.x,y:p.y,angle:angle+cc.offset,meta},seen);
+ const mo=MOTIONS[s.laws[0]]||MOTIONS.none;meta.damage*=mo.damage;p.attack*=mo.cooldown;
+ if(mo.pull)for(const e of s.enemies){if(e.hp<=0||e.type==='boss'||e.dormant)continue;const d=dist(e,p),a=Math.atan2(e.y-p.y,e.x-p.x)-angle;if(d<3.8&&d>1&&Math.cos(a)>.2){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*Math.min(1.3,d-.9);e.y+=v.y*Math.min(1.3,d-.9);}}
+ if(mo.lunge&&p.dashing<=0){p.lx*=mo.lunge;p.ly*=mo.lunge;}
+ for(const cc of plan.cuts){const arc=mo.arc===null?cc.cos-c.arc:Math.min(cc.cos-c.arc,mo.arc);cut(s,{...cc,damage:cc.damage*meta.damage,radius:cc.radius*c.radius*mo.radius,cos:arc,x:p.x,y:p.y,angle:angle+cc.offset,meta,motion:mo.id},seen);}
+ if(mo.fan&&plan.cuts.length)for(const off of [-.62,.62])cut(s,{...plan.cuts[0],damage:plan.cuts[0].damage*meta.damage*.55,radius:plan.cuts[0].radius*c.radius*.9,cos:.72,x:p.x,y:p.y,angle:angle+off,meta:{...meta,stop:0},motion:mo.id},seen);
  const returnHits=new Set();
  for(const cc of plan.returnCuts)if(s.pendingCuts.length<12)s.pendingCuts.push({...cc,damage:cc.damage*meta.damage,x:p.x,y:p.y,angle:angle+cc.offset,returning:true,seen:returnHits});
  const shots=c.finisher&&plan.shots.length?[...plan.shots,...[-.2,.2].map(o=>({...plan.shots[0],offset:plan.shots[0].offset+o}))]:plan.shots;
  for(const b of shots)shot(s,p.x,p.y,Math.cos(angle+b.offset),Math.sin(angle+b.offset),{...b,damage:b.damage*meta.damage,remaining:b.remaining+(c.finisher?1:0),heavy:Boolean(c.finisher)});
- if(s.laws.includes('orbit')){s.orbitUntil=s.time+plan.orbitDuration;s.orbitRadius=plan.orbitRadius;}
+ if(s.laws.includes('orbit')&&!s.formId){s.orbitUntil=s.time+plan.orbitDuration;s.orbitRadius=plan.orbitRadius;}
+ lawMotion(s,step,angle,meta);
  return true;
 }
-export function dodgeAdventure(s,x=0,y=0){const p=s.player;if(s.phase!=='playing'||p.dash>0)return false;const d=direction(x||y?x:p.aimX,x||y?y:p.aimY);p.dx=d.x;p.dy=d.y;p.dashing=.2;p.inv=.28;p.dash=s.buffs.swift>0?.88:1.25;p.dashStrike=DASH_STRIKE;p.attack=Math.min(p.attack,.05);p.lx=p.ly=0;fx(s,'dash',p.x,p.y,{life:.35,max:.35});event(s,'dash');return true;}
+export function dodgeAdventure(s,x=0,y=0){const p=s.player;if(s.phase!=='playing'||p.dash>0)return false;const d=direction(x||y?x:p.aimX,x||y?y:p.aimY);p.dx=d.x;p.dy=d.y;p.dashing=.2;p.inv=.28;p.dash=s.buffs.swift>0?.62:.9;p.dashStrike=DASH_STRIKE;p.attack=Math.min(p.attack,.05);p.lx=p.ly=0;fx(s,'dash',p.x,p.y,{life:.35,max:.35});event(s,'dash');return true;}
+// 법칙마다 휘두르는 방식(첫 법칙)과 막타 특수 효과(둘째 법칙, 없으면 첫 법칙).
+export const MOTIONS=Object.freeze({
+ none:{id:'none',name:'잎 칼 베기',radius:1,arc:null,damage:1,cooldown:1},
+ pierce:{id:'pierce',name:'찌르며 돌진',radius:1.35,arc:.9,damage:1.05,cooldown:.95,lunge:2.2},
+ orbit:{id:'orbit',name:'회전 베기',radius:.95,arc:-1.1,damage:.9,cooldown:1.05},
+ burst:{id:'burst',name:'내려찍기',radius:1,arc:null,damage:1.2,cooldown:1.12},
+ split:{id:'split',name:'부채꼴 연속 베기',radius:1,arc:null,damage:.9,cooldown:.9,fan:true},
+ recall:{id:'recall',name:'칼날 던졌다 받기',radius:1,arc:null,damage:1,cooldown:1},
+ chain:{id:'chain',name:'번개 베기',radius:1.05,arc:null,damage:1,cooldown:.92},
+ gravity:{id:'gravity',name:'끌어와 베기',radius:1,arc:null,damage:1,cooldown:1.05,pull:true},
+ frost:{id:'frost',name:'넓은 냉기 베기',radius:1.12,arc:-.3,damage:.95,cooldown:1},
+ reflect:{id:'reflect',name:'튕기는 참격',radius:1,arc:null,damage:1,cooldown:1}
+});
+export const FINISHERS=Object.freeze({pierce:'꿰뚫는 창',orbit:'두 바퀴 회전',burst:'폭발 내려찍기',split:'꽃잎 부채',recall:'돌아오는 칼날',chain:'낙뢰 셋',gravity:'중력 우물',frost:'서리 파동',reflect:'튕기는 수정'});
+function lawMotion(s,step,angle,meta){
+ if(!meta.finisher)return;const law=s.laws[1]||s.laws[0];if(!law)return;const p=s.player,dmg=(22+s.level*3)*(1+(rank(s,law)-1)*.25),fx0=p.x+Math.cos(angle)*1.6,fy0=p.y+Math.sin(angle)*1.6;
+ const inR=(x,y,r)=>s.enemies.filter(e=>e.hp>0&&Math.hypot(e.x-x,e.y-y)<r+e.r);
+ if(law==='burst'){fx(s,'burst',fx0,fy0,{radius:2.4});for(const e of inR(fx0,fy0,2.4))hit(s,e,dmg,true);s.shake=Math.max(s.shake,.3);}
+ else if(law==='orbit'){s.pendingCuts.push({x:p.x,y:p.y,angle,radius:2.6,cos:-1,damage:dmg*.8,offset:0,delay:.16,returning:true,seen:new Set()});}
+ else if(law==='pierce'){shot(s,p.x,p.y,Math.cos(angle),Math.sin(angle),{damage:dmg,speed:17,life:.7,remaining:6,shape:'lance'});}
+ else if(law==='split'){for(let i=-2;i<=2;i++){const a=angle+i*.28;shot(s,p.x,p.y,Math.cos(a),Math.sin(a),{damage:dmg*.45,speed:13,life:.55,remaining:1});}}
+ else if(law==='recall'){shot(s,p.x,p.y,Math.cos(angle),Math.sin(angle),{damage:dmg*.7,speed:12,life:1.2,remaining:4,recall:true,blade:true,shape:'returnblade'});}
+ else if(law==='chain'){const near=s.enemies.filter(e=>e.hp>0&&!e.dormant&&dist(e,p)<7).sort((a,b)=>dist(a,p)-dist(b,p)).slice(0,3);for(const e of near){fx(s,'bolt',e.x,e.y,{radius:1,life:.35,max:.35});hit(s,e,dmg*.8,true);}}
+ else if(law==='gravity'){if(s.fields.length<6)s.fields.push({x:fx0,y:fy0,life:1.1,r:3,collapse:true});}
+ else if(law==='frost'){fx(s,'frost',p.x,p.y,{radius:3.2});for(const e of inR(p.x,p.y,3.2)){e.slow=2.2;hit(s,e,dmg*.6,true);}}
+ else if(law==='reflect'){shot(s,p.x,p.y,Math.cos(angle),Math.sin(angle),{damage:dmg*.7,speed:14,life:1.4,remaining:3,bounces:-2});}
+}
 // 궁극기: 씨앗 둘레 폭발 + 진화한 형태가 있으면 본편 궁극기(엔진의 surge)도 함께.
 export function ultimateAdventure(s,combat=null){if(s.phase!=='playing'||s.charge<100)return false;s.charge=0;s.player.inv=1;event(s,'ultimate');fx(s,'ultimate',s.player.x,s.player.y,{radius:7,life:.9,max:.9});s.hitstop=.08;s.shake=.35;for(const e of s.enemies)if(dist(e,s.player)<7)hit(s,e,95+s.level*12,false,{knock:2.5,stun:.6,angle:Math.atan2(e.y-s.player.y,e.x-s.player.x)});for(const prop of s.props)if(prop.hp>0&&dist(prop,s.player)<7)breakProp(s,prop);s.shots=s.shots.filter(b=>!b.hostile);s.charge=0;combat?.surge?.();return true;}
 
@@ -381,7 +417,7 @@ export function stepAdventure(s,dt,input={},combat=null){
  if(p.comboTime<=0)p.combo=0;if(p.attack<=0)p.swing=-1;
  s.hitsTime=Math.max(0,s.hitsTime-dt);if(s.hitsTime<=0)s.hits=0;
  if(Number.isFinite(input.aimX)&&Math.hypot(input.aimX,input.aimY)>.05){const d=direction(input.aimX,input.aimY);p.aimX=d.x;p.aimY=d.y;}
- const d=direction(input.x||0,input.y||0),moving=Boolean(input.x||input.y),speed=(p.dashing>0?15:p.attack>.29?2.15:4.3)*(s.buffs.swift>0&&p.dashing<=0?1.3:1);p.moving=moving;
+ const d=direction(input.x||0,input.y||0),moving=Boolean(input.x||input.y),speed=(p.dashing>0?18:p.attack>.29?3.1:5.6)*(s.buffs.swift>0&&p.dashing<=0?1.3:1);p.moving=moving;
  const lunge=Math.exp(-14*dt);p.x+=p.lx*dt;p.y+=p.ly*dt;p.lx*=lunge;p.ly*=lunge;
  p.x=clamp(p.x+(p.dashing>0?p.dx:moving?d.x:0)*speed*dt,A.minX,A.maxX);p.y=clamp(p.y+(p.dashing>0?p.dy:moving?d.y:0)*speed*dt,A.minY,A.maxY);
  blockCircle(s,p,.4);
@@ -398,21 +434,21 @@ export function stepAdventure(s,dt,input={},combat=null){
   if(e.dormant){if(dist(e,p)<8.5)wakePack(s,e);else continue;}
   // 수호 제단으로 행진하는 적: 씨앗은 보지 않고 제단으로만 간다. 닿으면 제단이 깎이고 사라진다.
   if(e.march){if(e.stun>0)continue;const t=e.target,v=direction(t.x-e.x,t.y-e.y);e.x+=v.x*e.speed*.85*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*.85*(e.slow>0?.5:1)*dt;if(Math.hypot(t.x-e.x,t.y-e.y)<1.2){const ev=s.region?.events.find(ev=>ev.type==='guard');if(ev){ev.hp=Math.max(0,ev.hp-Math.round(10*e.power));fx(s,'hurt',t.x,t.y,{radius:1.4});event(s,'hurt');}e.hp=0;e.noDrop=true;}continue;}
-  if(e.tell>0){e.tell-=dt;if(e.tell<=0){if(e.role==='ranged'){const v=direction(e.tx-e.x,e.ty-e.y);shot(s,e.x,e.y,v.x,v.y,{hostile:true,damage:Math.round(18*e.power),speed:6.5,life:4});}else{fx(s,'enemyRing',e.tx,e.ty,{radius:1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1)hurt(s,Math.round(20*e.power));if(e.role==='fast'){e.x=clamp(e.tx,A.minX,A.maxX);e.y=clamp(e.ty,A.minY,A.maxY);}}e.cd=e.role==='fast'?1.8:1.4;}continue;}
+  if(e.tell>0){e.tell-=dt;if(e.tell<=0){if(e.role==='ranged'){const v=direction(e.tx-e.x,e.ty-e.y);shot(s,e.x,e.y,v.x,v.y,{hostile:true,damage:Math.round(21*e.power),speed:7.6,life:4});}else{fx(s,'enemyRing',e.tx,e.ty,{radius:1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1)hurt(s,Math.round(23*e.power));if(e.role==='fast'){e.x=clamp(e.tx,A.minX,A.maxX);e.y=clamp(e.ty,A.minY,A.maxY);}}e.cd=e.role==='fast'?1.8:1.4;}continue;}
   if(e.stun>0)continue;
-  const range=e.role==='ranged'?7:e.role==='fast'?2.6:1.35;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}else if(e.cd<=0){e.tell=e.role==='fast'?.5:.6;e.tx=p.x;e.ty=p.y;e.pattern++;}
+  const range=e.role==='ranged'?7:e.role==='fast'?2.6:1.35;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}else if(e.cd<=0){e.tell=e.role==='fast'?.44:.52;e.tx=p.x;e.ty=p.y;e.pattern++;}
   blockCircle(s,e,e.r);
   // Keep a readable ring around the seed instead of stacking sprites.
   for(const n of s.enemies)if(n.id<e.id&&n.hp>0){const gap=dist(e,n),r=e.r+n.r;if(gap<r&&gap>.001){e.x+=(e.x-n.x)/gap*dt;e.y+=(e.y-n.y)/gap*dt;}}
  }
  combat?.update?.(dt);
  for(const b of s.shots){b.life-=dt;b.age+=dt;b.px=b.x;b.py=b.y;if(!b.hostile&&b.recall&&b.age>.48){if(!b.returning){b.returning=true;b.hit.clear();b.remaining=s.laws.includes('pierce')?3:1;b.spent=false;b.life=.9;}const v=direction(p.x-b.x,p.y-b.y);b.dx=v.x;b.dy=v.y;if(dist(b,p)<.45){b.life=0;continue;}}
- b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;const x0=A.minX-.1,x1=A.maxX+.1,y0=A.minY-.2,y1=A.maxY+.3;if(b.x<x0||b.x>x1||b.y<y0||b.y>y1){if(!b.hostile&&s.laws.includes('reflect')&&b.bounces<2){if(b.x<x0||b.x>x1)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,x0,x1);b.y=clamp(b.y,y0,y1);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
+ b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;const x0=A.minX-.1,x1=A.maxX+.1,y0=A.minY-.2,y1=A.maxY+.3;if(b.x<x0||b.x>x1||b.y<y0||b.y>y1){if(!b.hostile&&(s.laws.includes('reflect')||b.bounces<0)&&b.bounces<2){if(b.x<x0||b.x>x1)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,x0,x1);b.y=clamp(b.y,y0,y1);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
  if(insideObstacle(s,b.x,b.y)){b.life=0;fx(s,'hit',b.x,b.y,{radius:.5,life:.2,max:.2});continue;}
  if(b.hostile){if(s.laws.includes('orbit')&&!b.boss&&dist(b,p)<1.6){b.life=0;fx(s,'frost',b.x,b.y,{radius:.5});}else if(dist(b,p)<.45){hurt(s,b.damage);b.life=0;}}
  else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.03:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
   if(b.life>0&&!b.spent)for(const prop of s.props)if(prop.hp>0&&!b.hit.has(prop.id)&&dist(prop,b)<.7){b.hit.add(prop.id);hitProp(s,prop);if(--b.remaining<=0){b.life=0;break;}}}}
- s.shots=s.shots.filter(b=>b.life>0);if(s.laws.includes('orbit')&&s.time<s.orbitUntil){for(const e of s.enemies)if(e.hp>0&&dist(e,p)<s.orbitRadius){e.orbitTick=(e.orbitTick||0)-dt;if(e.orbitTick<=0){e.orbitTick=.5;hit(s,e,9*(1+(rank(s,'orbit')-1)*.3),true);}}}
+ s.shots=s.shots.filter(b=>b.life>0);if(s.laws.includes('orbit')&&!s.formId&&s.time<s.orbitUntil){for(const e of s.enemies)if(e.hp>0&&dist(e,p)<s.orbitRadius){e.orbitTick=(e.orbitTick||0)-dt;if(e.orbitTick<=0){e.orbitTick=.5;hit(s,e,9*(1+(rank(s,'orbit')-1)*.3),true);}}}
  for(const prop of s.props)prop.flash=Math.max(0,prop.flash-dt);s.props=s.props.filter(prop=>prop.hp>0);
  // 떨어진 물건: 튀어 나간 뒤 멈추고, 가까우면(방을 다 깨면 어디서든) 씨앗에게 빨려 온다.
  const cleared=!s.enemies.length&&s.clearTimer>0;
