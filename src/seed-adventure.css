@@ -9,3 +9,21 @@
 @media(prefers-reduced-motion:reduce){.sa-modal{backdrop-filter:none}}
 
 .sa-seed-preview{width:112px;height:112px;margin:0 auto 8px;background-size:200% 200%;background-position:0 0;filter:drop-shadow(0 8px 14px #b1d8a322)}.sa-beginning>p:not(.sa-eyebrow){font-size:16px;line-height:1.8}.sa-beginning .sa-primary{width:100%}.sa-beginning .sa-back{width:100%;margin-top:8px}.sa-build{flex-wrap:wrap;height:auto;min-height:28px}.sa-build>b:first-child{font-size:11px;white-space:nowrap}@media(max-height:550px) and (min-width:601px){.sa-seed-preview{width:62px;height:62px;margin-bottom:0}.sa-beginning>p:not(.sa-eyebrow){font-size:13px;margin:5px 0}.sa-beginning small{font-size:10px}.sa-beginning h1{margin:0}}
+/* 2026-09-28 ② 문 고르기 · ① 콤보 표시 */
+.sa-doors{display:flex;gap:10px;justify-content:center;margin:14px 0 6px}
+#seed-adventure .sa-door{flex:1;max-width:230px;display:flex;flex-direction:column;align-items:center;gap:6px;padding:18px 12px 14px;border-radius:60px 60px 8px 8px;border-color:#cdbb8e88;background:linear-gradient(180deg,#1d3a36f0,#0c1d22f0)}
+#seed-adventure .sa-door:hover{border-color:#fce6af;transform:translateY(-2px)}
+.sa-door-icon{font-size:30px;line-height:1;color:#fce6af;text-shadow:0 0 14px #fce6af88}
+.sa-door b{font-size:15px}.sa-door small{font-size:11px;color:#cbdbcc}
+.sa-door em{font-style:normal;font-size:10px;color:#ffb38f}
+#seed-adventure .sa-door.elite{border-color:#ff9b75cc;background:linear-gradient(180deg,#3a2426f0,#1d1216f0)}
+#seed-adventure .sa-door.boss{border-color:#f0c56fcc;background:linear-gradient(180deg,#3b2a18f0,#1a120cf0)}
+#seed-adventure .sa-heal{width:100%;margin:6px 0 10px;border-color:#e39a9a88}
+.sa-heal b,.sa-heal small{display:block}.sa-heal small{font-size:11px;color:#cbdbcc;margin-top:4px}
+.sa-combo{position:absolute;right:max(150px,16vw);top:40%;text-align:right;pointer-events:none;opacity:0;transition:opacity .2s}
+.sa-combo.on{opacity:1}
+.sa-combo b{display:block;font:italic 700 30px Georgia,serif;color:#ffe3a1;text-shadow:0 2px 0 #3b2a10,0 0 16px #ffb74d88}
+.sa-combo span{display:block;font-size:14px;letter-spacing:3px;color:#fce6af;opacity:1}
+.sa-combo:not(.on) span{opacity:0}
+@media(max-width:600px){.sa-doors{flex-direction:column;align-items:stretch}#seed-adventure .sa-door{max-width:none;border-radius:30px 30px 8px 8px}.sa-combo{right:18px;top:30%}.sa-combo b{font-size:22px}}
+@media(max-height:550px) and (min-width:601px){#seed-adventure .sa-door{padding:10px 10px 8px}.sa-door-icon{font-size:22px}.sa-combo b{font-size:24px}}
