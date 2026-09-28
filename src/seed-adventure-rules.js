@@ -444,7 +444,8 @@ export const ADVENTURE_SAVE_VERSION=1;
 export const ADVENTURE_SAVE_KEY='seed-adventure-run-v1';
 // Firebase 저장 규칙(seedUsers/$uid/save)은 모르는 칸이 있으면 저장 전체를 거부한다. 'adventure' 칸을 허용하는 규칙
 // (docs/firebase-rules-with-seed.json)이 콘솔에 게시되기 전에는 false로 두고, 계정별 이 기기 저장만 쓴다.
-export const ADVENTURE_CLOUD_READY=false;
+// 2026-09-28 사용자가 콘솔에 save.adventure 규칙을 게시함 → 켬.
+export const ADVENTURE_CLOUD_READY=true;
 export const adventureTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const ADVENTURE_JP=Object.freeze({perRoomMax:400,perRunMax:4000});
 export function adventureCheckpoint(s){

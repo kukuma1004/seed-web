@@ -392,4 +392,18 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.equal(readCheckpointBackups(old,89*864e5).act1?.checkpoint.austins,5);assert.deepEqual(readCheckpointBackups(old,91*864e5),{});
 }
 
+// 씨앗의 모험 문 앞 저장: 두 기기 중 더 최근 것, 끝난 판 표시는 옛 판을 되살리지 않는다, 조작한 저장은 싣지 않는다.
+{
+ const {createAdventure,startAdventure,chooseAdventure,adventureCheckpoint,restoreAdventure,ADVENTURE_SAVE_KEY,adventureTombstone}=await import('../src/seed-adventure-rules.js');
+ const run=createAdventure(9);startAdventure(run,'slash','burst');run.region=null;run.enemies=[];run.phase='choice';run.choiceKind='grow';chooseAdventure(run,'grow');
+ const older={...adventureCheckpoint(run),savedAt:1000},newer={...older,level:older.level,coins:older.coins+5,savedAt:2000};
+ const pc=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify(older)}),phone=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify(newer)});
+ const merged=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone),{prefer:'local'});
+ assert.equal(merged.adventure.coins,newer.coins,'newer adventure save wins');applyCloudSnapshot(pc,merged);assert.equal(restoreAdventure(pc.getItem(ADVENTURE_SAVE_KEY)).coins,newer.coins);
+ phone.setItem(ADVENTURE_SAVE_KEY,JSON.stringify(adventureTombstone(3000)));
+ const ended=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone),{prefer:'local'});assert.equal(ended.adventure.cleared,true,'ended run stays ended');
+ const forged=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify({...newer,level:99,savedAt:4000})});assert.equal(collectCloudSnapshot(forged).adventure,null,'forged save is not uploaded');
+ assert.ok(SYNC_KEYS.includes(ADVENTURE_SAVE_KEY));
+}
+
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');

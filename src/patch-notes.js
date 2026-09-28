@@ -4,6 +4,10 @@ export const NOTES_KEY='seed-notes-seen-v1';
 
 export const PATCH_NOTES=Object.freeze([
  {
+  id:'2026-09-28-k',date:'9월 28일',title:'모험 저장이 기기 사이를 오가요',
+  lines:['씨앗의 모험 문 앞 저장이 계정에 실려요. 휴대폰에서 하다가 컴퓨터에서 "이어하기"로 계속할 수 있어요. 두 기기 중 더 최근 저장이 이겨요.']
+ },
+ {
   id:'2026-09-28-j',date:'9월 28일',title:'씨앗의 모험 난이도 상향',
   lines:[
    '적과 보스가 더 세졌어요. 뒤 막으로 갈수록 적의 체력과 공격이 크게 올라가요.',

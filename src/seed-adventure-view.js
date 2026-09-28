@@ -45,7 +45,8 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function resetInput(){keys.clear();move.x=move.y=0;pointerAttack=false;mouse=null;mouseHeld=false;aimDragged=false;stickPointers.clear();for(const e of root.querySelectorAll('.sa-stick i'))e.style.transform='';}
  // 클라우드 규칙이 게시되면 계정 저장 칸 하나(기기 사이 동기화), 그 전에는 계정별 이 기기 칸.
  const saveKey=ADVENTURE_CLOUD_READY?ADVENTURE_SAVE_KEY:ADVENTURE_SAVE_KEY+':'+encodeURIComponent(owner);let lastForm=null,lastBossRoom=-1,creditNote='';
- function readSave(){try{return restoreAdventure(storage?.getItem(saveKey));}catch{return null;}}
+ // 예전(규칙 게시 전) 계정별 이 기기 칸에 남은 저장은 한 번 옮겨 온다.
+ function readSave(){try{const legacy=ADVENTURE_SAVE_KEY+':'+encodeURIComponent(owner);if(saveKey!==legacy&&!storage?.getItem(saveKey)&&storage?.getItem(legacy)){storage.setItem(saveKey,storage.getItem(legacy));storage.removeItem(legacy);}return restoreAdventure(storage?.getItem(saveKey));}catch{return null;}}
  function clearSave(){try{storage?.setItem(saveKey,JSON.stringify(adventureTombstone()));}catch{}}
  function credit(){const jp=adventureCredit(s);creditNote='';if(jp>0&&!practice){const note=onCredit(jp);creditNote=typeof note==='string'&&note?note:`햇살 ${jp} JP 적립`;}else if(practice&&jp>0)creditNote='연습 · 보상은 저장되지 않아요';}
  function persist(){credit();const cp=adventureCheckpoint(s);if(cp)try{storage?.setItem(saveKey,JSON.stringify(cp));}catch{}}
