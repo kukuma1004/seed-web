@@ -7,6 +7,7 @@ import './combo-art.css';
 import {formArt} from './form-art.js';
 import {SIGNATURES} from './actives.js';
 import {createDefenseCombat,DEFENSE_COMBAT} from './seed-defense-combat.js';
+import {createCanvasVfx} from './canvas-vfx.js';
 import {actorArtFile,CUTE_ACTOR_BASELINE} from './actor-art.js';
 import {SEED_BODY_ART,SEED_SOLO_BODY_ART,SEED_FUSION_BODY_ART,SEED_AWAKEN_BODY_ART} from './seed-body.js';
 
@@ -52,6 +53,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const $=s=>root.querySelector(s),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),back=document.createElement('canvas'),bg=back.getContext('2d',{alpha:false});
  let speed=DEFENSE.defaultSpeed,bossRetryAt=0,state=createDefense(Date.now()>>>0),selected=0,paused=false,ended=false,frame=0,last=0,uiAt=0,uiKey='',padKey='',panelRenders=0,saveNote='준비 상태는 이 기기에 저장돼요',width=1,height=1,scale=1,ox=0,oy=0,dirty=true,frames=[],lastEffects=0,renderCosts=[],announced='',confirming=false,autoWait=DEFENSE_AUTO_START,wasInspecting=false;
  const assets={},loads=[],listeners=[],framePacer=createFramePacer();
+ // 2026-09-28 사용자: 타워 공격이 허접해 보인다 → 본편 이펙트·탄 빛 소재를 법칙 색으로 물들여 쓴다(canvas-vfx.js).
+ const vfx=createCanvasVfx({onReady:()=>{dirty=true;}});
  const setLabel=(selector,text)=>{const el=$(selector);if(el.textContent!==text)el.textContent=text;};
  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
  const load=(id,file)=>{const img=new Image();assets[id]=img;loads.push(new Promise(resolve=>{img.onload=()=>{dirty=true;resolve();};img.onerror=resolve;img.src=BASE+'assets/'+file;}));};
@@ -171,7 +174,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    ctx.fillStyle=ink;for(let j=0;j<t.level;j++){ctx.beginPath();ctx.arc(t.x-1.5+j*.75,t.y+2.25,.2,0,Math.PI*2);ctx.fill();}
   }
   for(const f of state.fields){
-   const icy=f.kind==='web',ink=icy?'#8ce9ff':'#ba94ee',r=f.radius;ctx.save();ctx.translate(f.x,f.y);ctx.globalAlpha=.55*Math.min(1,f.life/.3);ctx.strokeStyle=ink;ctx.lineWidth=.22;ctx.beginPath();ctx.ellipse(0,0,r,r*.65,0,0,Math.PI*2);ctx.stroke();ctx.rotate(icy?0:now*.0009);for(let j=0;j<6;j++){const a=j*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*r*.25,Math.sin(a)*r*.25);ctx.lineTo(Math.cos(a+.35)*r*.75,Math.sin(a+.35)*r*.5);ctx.stroke();}ctx.restore();
+   const icy=f.kind==='web',ink=icy?'#8ce9ff':'#ba94ee',r=f.radius;if(vfx.ready()){vfx.field(ctx,f,Math.min(1,f.life/.3),now,ink);continue;}ctx.save();ctx.translate(f.x,f.y);ctx.globalAlpha=.55*Math.min(1,f.life/.3);ctx.strokeStyle=ink;ctx.lineWidth=.22;ctx.beginPath();ctx.ellipse(0,0,r,r*.65,0,0,Math.PI*2);ctx.stroke();ctx.rotate(icy?0:now*.0009);for(let j=0;j<6;j++){const a=j*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*r*.25,Math.sin(a)*r*.25);ctx.lineTo(Math.cos(a+.35)*r*.75,Math.sin(a+.35)*r*.5);ctx.stroke();}ctx.restore();
   }
   for(const e of state.enemies){
    const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
@@ -184,12 +187,14 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    if(e.slowTime>0&&e.slow<1){ctx.strokeStyle='#91dcff';ctx.lineWidth=.2;ctx.beginPath();ctx.arc(e.x,e.y,1.5,0,Math.PI*2);ctx.stroke();}
   }
   for(const q of state.shots){
-   const a=Math.atan2(q.vy||q.ty-q.y,q.vx||q.tx-q.x),ink=color(q.law);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(a);ctx.strokeStyle=ink+'90';ctx.lineWidth=.25;ctx.beginPath();ctx.moveTo(-1.5,0);ctx.lineTo(0,0);ctx.stroke();
+   const a=Math.atan2(q.vy||q.ty-q.y,q.vx||q.tx-q.x),ink=color(q.law);if(vfx.ready())vfx.projectile(ctx,baseLaw(q.law),q.x,q.y,a,2.2,ink,now);ctx.save();ctx.translate(q.x,q.y);ctx.rotate(a);ctx.strokeStyle=ink+'90';ctx.lineWidth=.25;ctx.beginPath();ctx.moveTo(-1.5,0);ctx.lineTo(0,0);ctx.stroke();
    if(!sprite('projectile',0,.8,['pierce','thunderlance','returnblade'].includes(q.law)?3.5:2.5,LAW_CELL[baseLaw(q.law)]??0,4,4)){ctx.fillStyle=ink;ctx.beginPath();ctx.ellipse(0,0,.7,.26,0,0,Math.PI*2);ctx.fill();}ctx.restore();
   }
-  for(const q of combat.visuals(visuals)){ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.angle);ctx.strokeStyle=color(q.law)+'90';ctx.lineWidth=.23;if(!q.orbit){ctx.beginPath();ctx.moveTo(-q.size*.6,0);ctx.lineTo(0,0);ctx.stroke();}sprite(q.spriteKey==='orbit'?'orbit':q.spriteKey==='advancedOrbit'?'orbitAdvanced':q.spriteKey==='comet'?'comet':'combo',0,q.size*.32,q.size,q.cell,q.spriteKey==='comet'?1:q.spriteKey==='orbit'||q.spriteKey==='advancedOrbit'?2:4,q.spriteKey==='comet'?1:q.spriteKey==='orbit'||q.spriteKey==='advancedOrbit'?2:3);ctx.restore();}
-  for(const e of state.effects){
+  for(const q of combat.visuals(visuals)){if(vfx.ready()&&!q.orbit)vfx.projectile(ctx,q.law,q.x,q.y,q.angle,q.size*.62,color(q.law),now);else if(vfx.ready())vfx.fx(ctx,'orb',q.x,q.y,q.size*1.1,{color:color(q.law),alpha:.45});ctx.save();ctx.translate(q.x,q.y);ctx.rotate(q.angle);ctx.strokeStyle=color(q.law)+'90';ctx.lineWidth=.23;if(!q.orbit){ctx.beginPath();ctx.moveTo(-q.size*.6,0);ctx.lineTo(0,0);ctx.stroke();}sprite(q.spriteKey==='orbit'?'orbit':q.spriteKey==='advancedOrbit'?'orbitAdvanced':q.spriteKey==='comet'?'comet':'combo',0,q.size*.32,q.size,q.cell,q.spriteKey==='comet'?1:q.spriteKey==='orbit'||q.spriteKey==='advancedOrbit'?2:4,q.spriteKey==='comet'?1:q.spriteKey==='orbit'||q.spriteKey==='advancedOrbit'?2:3);ctx.restore();}
+  let vfxDrawn=0;for(let ei=state.effects.length-1;ei>=0;ei--){const e=state.effects[ei];
    const alpha=Math.min(1,Math.max(0,e.life/(e.maxLife||.35))),ink=typeof e.color==='string'?e.color:color(e.law);ctx.globalAlpha=alpha;ctx.strokeStyle=ink;ctx.fillStyle=ink;ctx.lineWidth=.3;
+   // 휴대폰 부담을 막으려고 소재 효과는 최근 60개까지만 그린다(더 오래된 것은 곧 사라진다).
+   if(vfx.ready()){if(++vfxDrawn<=60)vfx.effect(ctx,e,1-alpha,ink,1.6);continue;}
    if(e.kind==='chain'||e.kind==='beam'||e.kind==='line'){const tx=e.tx??e.x,ty=e.ty??e.y;ctx.beginPath();ctx.moveTo(e.x,e.y);ctx.lineTo((e.x+tx)/2+.5,(e.y+ty)/2-.5);ctx.lineTo(tx,ty);ctx.stroke();}
    else{const radius=e.radius||e.r||1.3;ctx.save();ctx.translate(e.x,e.y);ctx.rotate((1-alpha)*.8);for(let i=0;i<6;i++){const a=i*Math.PI/3;ctx.beginPath();ctx.moveTo(Math.cos(a)*radius*.45,Math.sin(a)*radius*.45);ctx.lineTo(Math.cos(a)*radius,Math.sin(a)*radius);ctx.stroke();}if(e.kind==='gravity'||e.kind==='well'){ctx.beginPath();ctx.ellipse(0,0,radius,radius*.45,.4,0,Math.PI*2);ctx.stroke();}ctx.restore();}
   }ctx.globalAlpha=1;for(const cue of evolutionCues)paintEvolutionCue(ctx,cue,visualClock-cue.start,reducedMotion);ctx.restore();
