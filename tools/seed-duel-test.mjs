@@ -33,12 +33,12 @@ const run=(s,sec,pin={},ein={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,type
  {const s=one('orbit','burst',1.2);run(s,.01,{skill1:true},idle);run(s,1.5,idle,idle);assert.ok(999-s.fighters[1].hp>=9,'ring keeps hitting');}
  {const s=one('frost','burst',2.5);run(s,.01,{skill1:true},idle);assert.ok(s.fighters[1].slow>1,'breath slows');}
  for(const c of ['split','chain','recall','orbit','frost']){const s=one(c,'burst',2.5);s.fighters[0].meter=100;const before=s.fighters[1].hp;run(s,.01,{ult:true},idle);run(s,3,idle,idle);assert.ok(s.fighters[1].hp<before,`${c} ultimate hits`);}}
-// 세 판 두 선승, AI끼리 끝까지 간다. 캐릭터마다 자기 판의 승률이 너무 낮거나 높지 않다(아홉 명).
+// 세 판 두 선승, AI끼리 끝까지 간다. 2026-09-28 사용자: "45~55%는 되어야 황밸" — 아홉 명 모두 자기 판 승률 45~55%(2880판).
 {
  const wins=Object.fromEntries(DUEL_ORDER.map(c=>[c,0])),played=Object.fromEntries(DUEL_ORDER.map(c=>[c,0]));let games=0;
- for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=2;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let guard=0;while(s.phase!=='over'&&guard++<60*600)stepDuel(s,1/60,duelAi(s,0,1/60),null);assert.equal(s.phase,'over',`${p} vs ${e} ends`);wins[s.winner===0?p:e]++;played[p]++;played[e]++;games++;}}
+ for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;for(let seed=1;seed<=40;seed++){const s=createDuel({player:p,enemy:e,seed,difficulty:'normal'});let guard=0;while(s.phase!=='over'&&guard++<60*600)stepDuel(s,1/60,duelAi(s,0,1/60),null);assert.equal(s.phase,'over',`${p} vs ${e} ends`);wins[s.winner===0?p:e]++;played[p]++;played[e]++;games++;}}
  const rate=Object.fromEntries(DUEL_ORDER.map(c=>[c,Math.round(wins[c]/played[c]*100)]));
- for(const c of DUEL_ORDER)assert.ok(rate[c]>=30&&rate[c]<=70,`${c} win rate ${JSON.stringify(rate)}`);
+ for(const c of DUEL_ORDER)assert.ok(rate[c]>=45&&rate[c]<=55,`${c} win rate ${JSON.stringify(rate)}`);
  console.log('Duel AI win rate %',JSON.stringify(rate),'of',games,'games');
 }
 // 평타만 연타하면 보통 AI를 이기지 못한다(3타 뒤 끊김·막히면 튕김·맞으면 AI가 더 막고 반격).
