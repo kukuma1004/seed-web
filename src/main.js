@@ -219,9 +219,9 @@ outputPass.material.needsUpdate=true;
 const pmrem=new THREE.PMREMGenerator(renderer);scene.environment=pmrem.fromScene(new RoomEnvironment(),.04).texture;scene.environmentIntensity=.35;
 scene.add(new THREE.HemisphereLight(0xcfe3ea,0x44564a,1.5));let sun=new THREE.DirectionalLight(0xffedcf,2.2);sun.position.set(-9,17,6);sun.castShadow=true;sun.shadow.mapSize.set(QUALITY_LEVELS[qualityLevel].shadowSize,QUALITY_LEVELS[qualityLevel].shadowSize);Object.assign(sun.shadow.camera,{left:-16,right:16,top:16,bottom:-16,far:50});sun.shadow.normalBias=.035;scene.add(sun);
 // 2026-09-29 처음 화면 그림(사용자가 GPT로 받은 home-v2): 메뉴 화면 뒤에 깔고, 그림이 화면을 덮는 동안은 3D를 그리지 않는다(배터리).
-// 그림을 못 불러오면 예전처럼 3D 정원이 보인다. 3D 정원은 정원 → 생명의 나무에서 그대로.
+// 그림을 못 불러오면 예전처럼 3D 정원이 보인다. CSS 변수 속 상대 주소는 CSS 파일(assets/) 기준으로 풀려 assets/assets/가 되므로 절대 주소로 넣는다. 3D 정원은 정원 → 생명의 나무에서 그대로.
 const MENU_ART=import.meta.env.BASE_URL+'assets/menu/home-v2.webp';let menuArtReady=false;
-{const im=new Image();im.onload=()=>{menuArtReady=true;document.documentElement.style.setProperty('--menu-art',`url("${MENU_ART}")`);document.body.classList.add('menu-art');};im.src=MENU_ART;}
+{const im=new Image();im.onload=()=>{menuArtReady=true;document.documentElement.style.setProperty('--menu-art',`url("${new URL(MENU_ART,document.baseURI).href}")`);document.body.classList.add('menu-art');};im.src=MENU_ART;}
 function menuArtCovers(){const o=document.getElementById('overlay');return menuArtReady&&!!o&&!o.hidden&&o.classList.contains('menu-screen')&&!o.classList.contains('survival-overlay');}
 const texloader=new THREE.TextureLoader(), stone=texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-v4.png'),normal=mobileDevice?null:texloader.load(import.meta.env.BASE_URL+'assets/garden-stone-normal.png');stone.colorSpace=THREE.SRGBColorSpace;for(let t of [stone,normal].filter(Boolean)){t.wrapS=t.wrapT=THREE.RepeatWrapping;t.repeat.set(.34,.34);t.anisotropy=mobileDevice?2:8;}
 // Higgsfield 1막 바닥(2026-09-22): 판석 4종 2×2 아틀라스(PC 1024 · 휴대폰 512). ?vfxtex=0 이면 예전 돌 그림(전후 비교, 로컬 점검 전용).
