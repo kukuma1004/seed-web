@@ -123,3 +123,7 @@ body.menu-mode:has(.dungeon-panel) #app-actions{top:max(14px,env(safe-area-inset
 .home-panel #go-garden strong{color:#f4f0c8}.home-panel #go-garden small{color:#cfe3a4}
 .home-panel #go-garden:after{content:'❀';position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:22px;color:#ffe6a3;text-shadow:0 0 10px #ffd27a}
 .home-panel .menu-list #go-garden{grid-column:1/-1}
+/* 2026-09-29 처음 화면 그림: 메뉴 화면(처음·도전 고르기·계정·새 소식 등) 뒤에 깐다. 생명의 나무가 오른쪽에 보이게. */
+body.menu-art #overlay.menu-screen:not(.survival-overlay){background:#0b1512 var(--menu-art) 72% 50%/cover no-repeat}
+body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #overlay.menu-screen:not(.survival-overlay):after{display:none}
+.mode-puzzle .mode-art{object-position:center 42%}.mode-duel .mode-art{object-position:center 92%}.mode-adventure .mode-art{object-position:center 86%}
