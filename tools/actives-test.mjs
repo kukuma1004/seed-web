@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {ACTIVE,LAW_TAGS,TAG_NAMES,SIGNATURES,ULTIMATE_ARCHETYPES,ultimateArchetype,activeState,overdriveTags,overdriveFinale,createActiveGauge,chargeActive,killCharge,bossCharge,activeReady,startActive,tickActive,cancelActive,activeSummary,validActiveGauge,validActiveCooldown} from '../src/actives.js';
-import {activeCombatEvolutions,orbitCore,canAcquireEvolution} from '../src/evolution-family.js';
+import {activeCombatEvolutions,orbitCore,canAcquireEvolution,orbitShieldRole} from '../src/evolution-family.js';
 import {ALL_FORMS,FORMS,SOLO_FORMS} from '../src/forms.js';
 import {LAWS} from '../src/laws.js';
 import {createFormCombat} from '../src/form-combat.js';
@@ -26,9 +26,15 @@ assert.equal(activeState(new Map([['nope',4]])).state,'LOCKED','unknown ids are 
 const tripleOrbit=new Map([['frostguard',5],['stormcrown',8],['mirrorguard',7],['collapse',4]]);
 assert.deepEqual(activeState(tripleOrbit).forms,['stormcrown','collapse'],'only one orbit family may enter an overdrive');
 assert.equal(orbitCore(tripleOrbit,ALL_FORMS),'stormcrown');
-assert.deepEqual(activeCombatEvolutions(tripleOrbit,ALL_FORMS).map(x=>x.id),['stormcrown','collapse'],'only the strongest orbit combat stays active');
-assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'mirrorguard',ALL_FORMS),false,'a second orbit evolution is not offered');
-assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'stormcrown',ALL_FORMS),true,'the active orbit core may still be upgraded');
+// 2026-09-29: 고리 진화도 여럿 얻고 모두 공격한다. 탄 막기는 코어 하나만, 나머지는 바깥 칸.
+const activeIds=activeCombatEvolutions(tripleOrbit,ALL_FORMS).map(x=>x.id);
+assert.equal(activeIds.length,tripleOrbit.size,'every held evolution attacks, including extra rings');
+assert.equal(canAcquireEvolution(new Map([['stormcrown',3]]),'mirrorguard',ALL_FORMS),true,'a second orbit evolution can be fused');
+const rings=[...tripleOrbit.keys()].filter(id=>orbitShieldRole(tripleOrbit,ALL_FORMS,id).ringScale>=1&&['stormcrown','frostguard','mirrorguard','starring','halobloom','ebbring','spearring','accretiondisk'].includes(id));
+assert.equal(rings.filter(id=>orbitShieldRole(tripleOrbit,ALL_FORMS,id).shield).length,1,'only one ring blocks hostile shots');
+assert.equal(orbitShieldRole(tripleOrbit,ALL_FORMS,'stormcrown').shield,true,'the strongest ring is the shield core');
+assert.equal(new Set(rings.map(id=>orbitShieldRole(tripleOrbit,ALL_FORMS,id).ringScale)).size,rings.length,'extra rings circle on separate lanes');
+assert.deepEqual(orbitShieldRole(tripleOrbit,ALL_FORMS,'collapse'),{shield:true,ringScale:1},'non-ring evolutions are untouched');
 
 // Tags: union of the laws inside the chosen evolutions, each once.
 assert.deepEqual(overdriveTags(['collapse','tidepull']),['CONTROL','EXPLOSION','RETURN']);

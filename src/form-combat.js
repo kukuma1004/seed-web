@@ -267,6 +267,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   mirrorParriesUsed++;return true;
  }
  // opts.twin: this combat is one attack of a twin awakening (TWIN.damage, self-repeating opening move starting after opts.openingDelay).
+ let shieldOn=true,ringScale=1;
  function set(id,nextLevel=1,opts={}){
   // Given a twin's own id, one combat fights with the twin's first attack (the game runs one combat per attack).
   if(TWIN_FORMS[id])return set(TWIN_FORMS[id].parts[0],nextLevel,{...opts,twin:true});
@@ -275,6 +276,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const curated=SECOND_FORMS[id]?.curated?SECOND_FORMS[id]:null;
   const kind=AWAKEN_FORMS[id]?.base||curated?.main||id;
   const asTwin=Boolean(opts.twin);
+  // 고리 진화가 여럿이면 탄 막기는 코어 하나만, 나머지는 바깥 칸을 돈다(evolution-family orbitShieldRole).
+  shieldOn=opts.shield!==false;ringScale=opts.ringScale||1;
   if(statId!==id||twin!==asTwin){clear();active=kind;statId=id;secondRecipe=curated;ownerId=opts.twinId||id;twin=asTwin;lastPlayerPosition.copy(player.position);if(kind==='frostguard')pulseTimer=formStats(id,L).novaEvery;if(AWAKEN_FORMS[id]||twin)awakenTimer=opts.openingDelay??(id==='bigcrunch'?4:2);S.damage=0;}
   {const form=sourceForm();paintedCellIndex=projectileAtlasTile(form);}
   if(level!==L||S.damage===0){level=L;refresh();}
@@ -1053,7 +1056,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   const hostileShots=enemyShots();
   orbit.children.forEach((ob,i)=>{
    const pose=orbitPose(active,i,orbit.children.length,angle,breathe,S);
-   ob.position.set(center.x+pose.x,pose.y,center.z+pose.z);
+   ob.position.set(center.x+pose.x*ringScale,pose.y,center.z+pose.z*ringScale);
    if(ob.userData.paintedOrbit){
     const a=angle+i*Math.PI*2/Math.max(1,orbit.children.length);
     const radial=active==='stormcrown'||active==='mirrorguard';
@@ -1062,7 +1065,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    ob.scale.set(...pose.scale);
    if(ob.userData.paintedOrbit&&active==='stormcrown')ob.scale.multiplyScalar(.72);
    if(active==='spearring')ob.visible=!(spearGone[i]>0);
-   if(ob.visible&&active!=='mirrorguard')for(const q of hostileShots){
+   if(shieldOn&&ob.visible&&active!=='mirrorguard')for(const q of hostileShots){
     if(!(q.life>0)||q.boss)continue;
     const dx=q.ob.position.x-ob.position.x,dz=q.ob.position.z-ob.position.z,distanceSq=dx*dx+dz*dz;
     if(active==='accretiondisk'&&debris<S.capacity&&distanceSq<S.catchRadius*S.catchRadius){
@@ -1105,7 +1108,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
      if(support(e,S.damage,{kind:'halobloom',indirect:true,direction:e.g.position.clone().sub(player.position).setY(0).normalize()})){haloCuts++;fx.pulse(e.g.position,'split',.42,.18);}
     }
    }else if(active==='mirrorguard'){
-    for(const q of hostileShots){
+    if(shieldOn)for(const q of hostileShots){
      if(!(q.life>0)||flat(q.ob.position,ob.position)>=.65)continue;
      if(q.boss&&!tryBossParry())continue;
      q.life=0;q.struck=true;
@@ -1745,7 +1748,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
     case 'mirrorguard':{
     let turned=0;
-    for(const q of enemyShots()){
+    if(shieldOn)for(const q of enemyShots()){
      if(!(q.life>0)||turned>=30||(q.boss&&!tryBossParry()))continue;
      q.life=0;q.struck=true;turned++;
      const aimAt=nearestEnemy(q.ob.position,14);
@@ -1811,7 +1814,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    case 'winterbreath':breath(pos,dir,Math.PI);break;
    case 'starring':{
     breathe=S.period/2;
-    for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,pos)<S.outer+.4){q.life=0;q.struck=true;}
+    if(shieldOn)for(const q of enemyShots())if(q.life>0&&!q.boss&&flat(q.ob.position,pos)<S.outer+.4){q.life=0;q.struck=true;}
     for(const e of enemies())if(!e.dead&&flat(e.g.position,pos)<S.outer+bossReach(e,.4,.9))support(e,S.damage*6,{kind:'starring',indirect:true,direction:e.g.position.clone().sub(pos).setY(0).normalize()});
     break;
    }

@@ -118,4 +118,5 @@ art-source/
 !tools/seed-puzzle-simulation.mjs
 !tools/garden-decor-test.mjs
 !tools/garden-themes-test.mjs
+!tools/garden_spot_part.py
 art-refs/

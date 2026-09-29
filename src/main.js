@@ -51,7 +51,7 @@ import {createContactShadows} from './contact-shadows.js';
 import {MIRROR_ATTACK_CADENCE,MIRROR_BREAK,MIRROR_GUARD,mirrorDamageAllowed,MIRROR_TRIAL_PROTOTYPE,clearMirrorCheckpoint,mirrorAttackCooldown,mirrorFloorRules,readMirrorCheckpoint,refundMirrorAttackCooldown,readMirrorRecord,recordMirrorResult,writeMirrorCheckpoint} from './mirror-trial.js';
 import {MIRROR_ARENA,MIRROR_BURST,MIRROR_VIEW,buildMirrorObstacleArt,createMirrorFighter,createMirrorPanels,mirrorFloorObstacles,mirrorProjectileSpeed,reflectMirrorPanels,tickMirrorFighter} from './mirror-fighter.js';
 import {projectileVisualScale,applyProjectileTheme} from './projectile-art.js';
-import {activeCombatEvolutions,orbitCore,isOrbitEvolution,canAcquireEvolution} from './evolution-family.js';
+import {activeCombatEvolutions,orbitCore,isOrbitEvolution,canAcquireEvolution,orbitShieldRole} from './evolution-family.js';
 import {lawArt} from './law-art.js';
 import * as THREE from 'three';
 import {SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,SURVIVAL_ACTS,survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,createSurvivalSession,survivalPressure,tickSurvivalRush,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,settleSurvivalKill,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from './survival-rules.js';
@@ -564,7 +564,7 @@ function syncForms(reset=false){
  const activeEntries=activeCombatEvolutions(heldForms,FORMS),wanted=new Map();
  for(const {id,level} of activeEntries)attackPartsOf(id).forEach((attack,i)=>wanted.set(combatKey(id,i),{id,attack,level,index:i}));
  for(const [key,combat] of formCombats)if(!wanted.has(key)){combat.dispose();formCombats.delete(key);formCooldowns.delete(key);formAttacks.delete(key);}
- for(const [key,{id,attack,level,index}] of wanted){let combat=formCombats.get(key);if(!combat){combat=createFormCombat(scene,formOptions());formCombats.set(key,combat);formCooldowns.set(key,0);}formAttacks.set(key,attack);if(reset)combat.clear();const twin=isTwinForm(id);combat.set(twin?attack:id,level,{twin,twinId:twin?id:null,openingDelay:2+index*AWAKEN_TWIN_STAGGER});}
+ for(const [key,{id,attack,level,index}] of wanted){let combat=formCombats.get(key);if(!combat){combat=createFormCombat(scene,formOptions());formCombats.set(key,combat);formCooldowns.set(key,0);}formAttacks.set(key,attack);if(reset)combat.clear();const twin=isTwinForm(id);combat.set(twin?attack:id,level,{twin,twinId:twin?id:null,openingDelay:2+index*AWAKEN_TWIN_STAGGER,...orbitShieldRole(heldForms,FORMS,id)});}
  player.userData.setEvolution?.(heldForms);
  updateFormLabel();
  syncLaws(); // 관통이 든 진화를 얻거나 잃으면 기본 탄 관통·치명타도 바로 따라간다
@@ -1281,7 +1281,7 @@ function cardChoice(mid=false,fixedOffer=null){
  if(survivalSession)saveSurvival();
 }
 
-function updateFormLabel(){const core=orbitCore(heldForms,FORMS);$('#form-label').textContent=[...[...heldForms].map(([f,l])=>FORMS[f].name+' Lv.'+l+(isOrbitEvolution(f)&&f!==core?' (공전 대기)':'')),...[...chosen].map(id=>LAW_PRESENTATION[id].name+' Lv.'+levelOf(levels,id)+(mutationLabel(mutations,id)?' '+mutationLabel(mutations,id):''))].join(' · ')||'아직 이름 없는 씨드';}
+function updateFormLabel(){const core=orbitCore(heldForms,FORMS);$('#form-label').textContent=[...[...heldForms].map(([f,l])=>FORMS[f].name+' Lv.'+l+(isOrbitEvolution(f)&&f!==core?' (바깥 고리)':'')),...[...chosen].map(id=>LAW_PRESENTATION[id].name+' Lv.'+levelOf(levels,id)+(mutationLabel(mutations,id)?' '+mutationLabel(mutations,id):''))].join(' · ')||'아직 이름 없는 씨드';}
 function beginEvolution(id){
   syncForms(true);
   touch.reset();mode='evolving';evolutionTime=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;player.visible=true;playerMotion.reset();
