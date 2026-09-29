@@ -7,7 +7,8 @@
 // 정원마다 자리 표는 src/garden-spots/<정원>.js (tools/garden_spot_build.py 가 만든다).
 // box: 조각이 놓이는 자리(장면 픽셀, 조각 그림 크기와 같은 비율) · at: 자리 표시(＋)를 띄우는 곳. 새 정원을 만들면 아래에 한 줄 추가.
 import greenhouse from './garden-spots/greenhouse.js';
-export const SPOT_SCENES=Object.freeze({greenhouse});
+import meadow from './garden-spots/meadow.js';
+export const SPOT_SCENES=Object.freeze({greenhouse,meadow});
 export const SPOT_STYLE_IDS=Object.freeze(['A','B','C']);
 // 값(JP): 소박한 A → 풍성한 B → 화려한 C. 테마 rate를 곱한다(화면이 넘긴다).
 // 2026-09-29 사용자: "정원 물품도 조금 더 비싸게" → 60·90·120 에서 올림.

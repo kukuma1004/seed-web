@@ -6,6 +6,7 @@
 # 결과: public/assets/garden/v2/<theme>/base.webp · <id><A|B|C>.webp, src/garden-spots/<theme>.js, 작업 폴더/확인_<id>.jpg · 확인_전체.jpg
 # 자리 범위 = 세 모습의 바뀐 곳을 모두 덮는 상자(+여백). 한 모습이라도 바뀐 곳이 거의 없으면 실패로 알려 준다(다시 그려 받기).
 import sys,os,json
+sys.stdout.reconfigure(encoding='utf-8')  # 윈도 콘솔(cp949)에서 한글 출력이 죽지 않게
 from collections import deque
 import numpy as np
 from PIL import Image,ImageFilter

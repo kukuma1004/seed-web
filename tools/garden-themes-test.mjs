@@ -42,8 +42,8 @@ assert.deepEqual(opened,[]);assert.ok(!themeUnlocked(g,'meadow'));
 for(const s of SPOT_SCENES.greenhouse.spots)g=chooseSpotStyle(g,'greenhouse',s.id,'A',{}).garden;
 {const rec=recordOpenedThemes(g);g=rec.garden;opened.push(...rec.fresh);}
 assert.deepEqual(opened,['meadow']);assert.ok(themeUnlocked(g,'meadow'));assert.ok(!themeUnlocked(g,'blossom'));
-// 초원(예전 방식)은 구성물 여섯 개로 벚꽃을 연다.
-{let h=g;for(let i=0;i<THEME_UNLOCK_PLACED;i++)h=buyObject(h,'meadow',`meadow.${i}`,{}).garden;assert.ok(themeUnlocked(h,'blossom'));}
+// 다음 정원도 같은 규칙: 초원이 자리 꾸미기면 자리를 모두, 아직 예전 방식이면 구성물 여섯 개로 벚꽃을 연다.
+{let h=g;if(SPOT_SCENES.meadow){for(const s of SPOT_SCENES.meadow.spots)h=chooseSpotStyle(h,'meadow',s.id,'A',{}).garden;}else for(let i=0;i<THEME_UNLOCK_PLACED;i++)h=buyObject(h,'meadow',`meadow.${i}`,{}).garden;assert.ok(themeUnlocked(h,'blossom'));}
 assert.equal(coins,1000-themeCatalog('greenhouse').slice(0,THEME_UNLOCK_PLACED).reduce((n,o)=>n+o.price,0));
 // 옮기기 · 뒤집기 · 크기(범위 안으로) · 맨 앞으로 · 그리는 차례(위쪽부터).
 g=moveObject(g,'greenhouse',0,{u:1.4,v:.3,s:9,f:1}).garden;assert.deepEqual(g.themes.greenhouse[0],{k:'greenhouse.0',u:1,v:.3,s:1.6,f:1});
