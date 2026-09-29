@@ -2300,9 +2300,17 @@ window.addEventListener('pagehide',()=>{void webTelemetry.modePause();stopAnimat
 window.addEventListener('pageshow',()=>{if(mode==='adventure')return;last=performance.now();realLast=Date.now();startAnimation();if(!document.hidden&&!paused)audio.setPaused(false);});
 mountPerfDevMenu({storage:rawStorage,version:GAME_VERSION,live:()=>perf.state()});
 let sizedW=0,sizedH=0;
-function resize(){const w=document.documentElement.clientWidth,viewHeight=document.documentElement.clientHeight;sizedW=w;sizedH=viewHeight;const h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;viewLayout=responsiveView(w,h,touch.enabled);document.body.classList.toggle('phone-landscape',viewLayout.phone);camera.zoom=viewLayout.zoom;camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
+// iPadOS·iOS 홈 화면 앱(standalone)은 화면이 상태 표시줄 밑까지 그려지는데 높이(100%·clientHeight)는 상태 표시줄만큼 짧게 알려 줘서
+// 위로 쏠리고 아래에 빈 띠가 생긴다(2026-09-29 사용자 아이패드). 화면 크기와 차이가 작을 때만(분할 화면 제외) 화면 높이로 맞춘다.
+function appViewHeight(){
+ const de=document.documentElement,w=de.clientWidth,h=de.clientHeight;
+ if(navigator.standalone!==true||!screen?.width)return h;
+ const full=w>h?Math.min(screen.width,screen.height):Math.max(screen.width,screen.height),fix=full>h&&full-h<=64&&Math.abs((w>h?Math.max(screen.width,screen.height):Math.min(screen.width,screen.height))-w)<=2;
+ de.classList.toggle('ios-full',fix);de.style.setProperty('--app-h',(fix?full:h)+'px');return fix?full:h;
+}
+function resize(){const w=document.documentElement.clientWidth,viewHeight=appViewHeight();sizedW=w;sizedH=viewHeight;const h=touch.enabled&&viewHeight>w?Math.max(250,viewHeight-160):viewHeight;syncPixelRatio(w,h);renderer.setSize(w,h,false);renderer.domElement.style.width='100%';renderer.domElement.style.height=h+'px';camera.aspect=w/h;viewLayout=responsiveView(w,h,touch.enabled);document.body.classList.toggle('phone-landscape',viewLayout.phone);camera.zoom=viewLayout.zoom;camera.updateProjectionMatrix();composer.setSize(w,h);sizeBloom(w,h);canvasRect=renderer.domElement.getBoundingClientRect();if(gardenScene)gardenScene.resize(w,h);if(touch.enabled&&mode==='playing'&&!paused)togglePause();}window.addEventListener('resize',resize);
 // 설치 앱에서 화면을 돌리면 resize 순간에 아직 옛 크기를 알려 주는 기기가 있다(iOS). 돌린 뒤 크기가 정말 바뀌었을 때만 한 번 더 맞춘다.
-const settleResize=()=>{if(document.documentElement.clientWidth!==sizedW||document.documentElement.clientHeight!==sizedH)resize();};
+const settleResize=()=>{if(document.documentElement.clientWidth!==sizedW||appViewHeight()!==sizedH)resize();};
 screen.orientation?.addEventListener?.('change',()=>{requestAnimationFrame(settleResize);setTimeout(settleResize,350);});
 // 정원에서는 화면을 눌러 식물과 빈 자리를 고른다.
  renderer.domElement.addEventListener('pointerdown',event=>{

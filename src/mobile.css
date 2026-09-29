@@ -61,3 +61,8 @@ body.native-app #app-actions,body.native-app #install-game{display:none!importan
 #context-lost{position:fixed;inset:0;z-index:80;display:grid;place-items:center;background:#071b21f0;color:#e8f5e8;text-align:center;padding:24px}#context-lost strong{display:block;font-size:20px;margin-bottom:8px}#context-lost span{display:block;font-size:13px;color:#a9c8bb;margin-bottom:16px}#context-lost button{min-height:44px;padding:0 24px}
 body.installed-app #app-actions{display:none!important}
 body:not(.menu-mode) #seed-version{display:none}
+/* iOS 홈 화면 앱: 높이를 화면 전체로(main.js appViewHeight) */
+html.ios-full,html.ios-full body{height:var(--app-h);min-height:var(--app-h)}
+html.ios-full #overlay{height:var(--app-h);bottom:auto}
+html.ios-full #garden-hub,html.ios-full #pause-build,html.ios-full #seed-adventure,html.ios-full #seed-defense,html.ios-full #seed-duel,html.ios-full #seed-puzzle,html.ios-full #active-cinematic{height:var(--app-h);bottom:auto}
+html.ios-full canvas{height:var(--app-h)}

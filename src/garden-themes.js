@@ -26,11 +26,13 @@ export const OBJECT_KINDS=Object.freeze({
  B:{label:'덤불·화단',price:80,size:.18},f:{label:'꽃',price:40,size:.13},p:{label:'화분',price:60,size:.15},
  d:{label:'소품',price:90,size:.16},S:{label:'구조물',price:320,size:.32},P:{label:'연못',price:220,size:.2},
 });
+// 2026-09-29 사용자: "정원 물품도 조금 더 비싸게" → 예전 방식 구성물 값도 1.8배.
+const PRICE_UP=1.8;
 const round10=n=>Math.max(10,Math.round(n/10)*10);
 // 모든 구성물: id = '<세트>.<칸>'. 공용 세트(etc)는 어느 테마에서나 판다.
 export const GARDEN_OBJECTS=Object.freeze(Object.fromEntries(Object.entries(GARDEN_OBJECT_ART).flatMap(([set,art])=>art.items.map(([name,kind],i)=>{
  const theme=GARDEN_THEMES.find(t=>t.id===set),rate=theme?.rate||1;
- return [`${set}.${i}`,Object.freeze({id:`${set}.${i}`,set,index:i,name,kind,price:round10(OBJECT_KINDS[kind].price*rate),size:OBJECT_KINDS[kind].size})];
+ return [`${set}.${i}`,Object.freeze({id:`${set}.${i}`,set,index:i,name,kind,price:round10(OBJECT_KINDS[kind].price*rate*PRICE_UP),size:OBJECT_KINDS[kind].size})];
 }))));
 export function themeCatalog(themeId){
  const all=Object.values(GARDEN_OBJECTS);

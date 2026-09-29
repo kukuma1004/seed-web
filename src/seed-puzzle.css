@@ -9,7 +9,8 @@
 .sp-hud{position:absolute;top:max(10px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));right:max(12px,env(safe-area-inset-right));display:grid;grid-template-columns:auto 1fr;gap:6px 12px;align-items:center;visibility:hidden;text-shadow:0 2px 4px #000}
 #seed-puzzle.sp-playing .sp-hud{visibility:visible}
 .sp-head{display:flex;gap:10px;align-items:center;min-width:0}.sp-head small{display:block;font-size:11px;letter-spacing:1px;color:#d4bd7e}.sp-head b{display:block;font:20px Georgia,'Batang',serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-#seed-puzzle .sp-pause{width:44px;padding:0;border-radius:50%;flex:none}
+/* 일시정지 버튼만(창 .sp-paper.sp-pause 와 이름이 같아 창이 44px로 쪼그라들던 문제, 9/29) */
+#seed-puzzle button.sp-pause{width:44px;padding:0;border-radius:50%;flex:none}
 .sp-stats{display:flex;gap:16px;justify-content:flex-end}.sp-stats small{display:block;font-size:11px;color:#cbbb91}.sp-stats strong{display:block;font:26px Georgia,serif;line-height:1.1}
 .sp-moves strong{color:#fce6af}.sp-moves.low strong{color:#ff9b75;animation:sp-blink 1s infinite}
 @keyframes sp-blink{50%{opacity:.55}}

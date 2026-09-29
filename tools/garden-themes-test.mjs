@@ -15,13 +15,13 @@ for(const [set,art] of Object.entries(GARDEN_OBJECT_ART)){assert.ok(existsSync(`
  for(const [name,kind,x,y,w,h] of art.items){assert.ok(OBJECT_KINDS[kind],name);assert.ok(x>=0&&y>=0&&w>0&&h>0&&x+w<=art.size[0]&&y+h<=art.size[1],name);}}
 // 값: 모두 10 JP 단위, 꽃이 가장 싸고 큰 구조물이 가장 비싸다. 뒤 테마일수록 같은 종류가 비싸다.
 const objs=Object.values(GARDEN_OBJECTS);assert.ok(objs.length>=150);
-for(const o of objs){assert.equal(o.price%10,0,o.id);assert.ok(o.price>=40&&o.price<=600,o.id);}
+for(const o of objs){assert.equal(o.price%10,0,o.id);assert.ok(o.price>=70&&o.price<=1100,o.id);}
 const price=(set,kind)=>objs.find(o=>o.set===set&&o.kind===kind)?.price;
 assert.ok(price('greenhouse','p')<price('blossom','p'));assert.ok(price('meadow','T')<price('fire','T'));
 // 가게: 테마 세트 + 공용 소품. 설렘의 정원은 전부 판다. 온실 첫 물건은 가볍게 살 수 있다.
 for(const id of GARDEN_THEME_IDS){const c=themeCatalog(id);assert.ok(c.length>=12,id);assert.ok(c.some(o=>o.set==='etc'),id);}
 assert.equal(themeCatalog('dream').length,objs.length);
-assert.ok(Math.min(...themeCatalog('greenhouse').map(o=>o.price))<=60);
+assert.ok(Math.min(...themeCatalog("greenhouse").map(o=>o.price))<=110);
 
 // 처음에는 온실만 열려 있다.
 let g=normalizeGarden({});

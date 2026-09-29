@@ -29,7 +29,7 @@ export function measure(def,games,player,o){
  return {rate:rows.filter(r=>r.plain).length/games,plus:rows.filter(r=>r.won).length/games,stars,avg:Math.round(rows.reduce((a,r)=>a+r.score,0)/games),
   near:lost.length?lost.filter(r=>r.near<=.15).length/lost.length:null,p50:q(wonScores,.5),p80:q(wonScores,.8),left50:q(rows.filter(r=>r.plain).map(r=>r.left),.5),left80:q(rows.filter(r=>r.plain).map(r=>r.left),.8),specials:rows.reduce((a,r)=>a+Object.values(r.created).reduce((x,y)=>x+y,0),0)/games};
 }
-if(import.meta.url===pathToFileURL(process.argv[1]).href){
+if(process.argv[1]&&import.meta.url===pathToFileURL(process.argv[1]).href){
  const games=Number(process.argv[2])||20,only=process.argv[3]?.split(','),t0=Date.now();
  for(const def of [...PUZZLE_STAGES,dailyPuzzleStage('20260928')]){
   if(only&&!only.includes(def.id))continue;

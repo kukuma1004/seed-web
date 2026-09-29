@@ -34,7 +34,7 @@ for(const def of [...PUZZLE_STAGES,dailyPuzzleStage('20260928')]){
  assert.equal(def.map.length,9,def.id);assert.ok(def.map.every(r=>r.length===9&&/^[.#m123vV]+$/.test(r)),`${def.id} map`);
  assert.ok(def.stars.length>=2&&def.stars[0]<def.stars[1],`${def.id} stars`);
  if(!def.attack){assert.equal(def.goal.score,undefined,`${def.id} has no score goal`);assert.ok(def.goal.collect?.length||def.goal.moss||def.goal.stone||def.goal.vine,`${def.id} has a goal`);
-  assert.ok(def.stars[1]<def.moves,`${def.id} ★★★ is reachable`);assert.ok(def.moves>=12&&def.moves<=45,`${def.id} moves ${def.moves}`);
+  assert.ok(def.stars[0]>=100,`${def.id} ★★ score`);assert.ok(def.moves>=10&&def.moves<=45,`${def.id} moves ${def.moves}`);
   for(const c of def.goal.collect||[])assert.ok(def.require.includes(c.law),`${def.id} collect law is on the board`);}
  const seeds=def.n<=40||def.n%97===0?[1,2,3,4]:[def.n];
  for(const seed of seeds){
@@ -111,9 +111,11 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.phase,'won');assert.equal(s.leftAtWin,s.movesLeft);assert.equal(puzzleStars(s),1);
  const sun=res.steps.find(x=>x.type==='suntime');assert.equal(sun.cells.length,Math.min(15,s.movesLeft));assert.ok(sun.cells.every(i=>['pierce','burst'].includes(sun.board[i].sp)));
  assert.ok(s.bonus>=s.movesLeft*PUZZLE.moveBonus);assert.equal(res.steps.at(-1).type,'end');}
-// 별은 남은 이동: 기준만큼 남기면 ★★·★★★, 이어하기(+5)로 깨면 ★ 하나.
-{const def={...S1,moss:[at(5,0),at(5,1)],goal:{moss:true},stars:[3,6]},won=left=>{const s=board(three(),{def,moss:[at(5,0),at(5,1)]});s.movesLeft=left+1;playPuzzleMove(s,at(4,2),at(5,2));return s;};
- assert.equal(puzzleStars(won(2)),1);assert.equal(puzzleStars(won(3)),2);assert.equal(puzzleStars(won(6)),3);const c=won(8);c.continues=1;assert.equal(puzzleStars(c),1,'continued run is one star');}
+// 별은 점수(햇살 타임 포함): 깨면 ★, 기준 점수로 ★★·★★★, 이어하기(+5)로 깨면 ★ 하나. 이동을 많이 남길수록 점수가 커진다.
+{const won=(left,stars)=>{const def={...S1,moss:[at(5,0),at(5,1)],goal:{moss:true},stars};const s=board(three(),{def,moss:[at(5,0),at(5,1)]});s.movesLeft=left+1;playPuzzleMove(s,at(4,2),at(5,2));return s;};
+ const few=won(1,[1e9,2e9]),many=won(12,[1e9,2e9]);assert.ok(many.score>few.score,'more moves left, more score');
+ assert.equal(puzzleStars(few),1);assert.equal(puzzleStars(won(12,[many.score-1,1e9])),2);assert.equal(puzzleStars(won(12,[10,20])),3);
+ const c=won(12,[10,20]);c.continues=1;assert.equal(puzzleStars(c),1,'continued run is one star');}
 
 // 이동을 다 쓰면 +5 이동(두 번까지) → 그다음은 진다. 포기하면 바로 진다.
 {const s=board(three());s.movesLeft=1;const r=playPuzzleMove(s,at(4,2),at(5,2));
@@ -148,7 +150,7 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  assert.deepEqual(normalizePuzzleProgress({stages:{s1:{best:-5,stars:9,clears:'x'},zz:{}},daily:{day:'bad'},streak:-3}).stages,{s1:{best:0,stars:3,clears:0}});
  let p=readPuzzleProgress(storage,'u1');assert.equal(puzzleUnlocked(p,PUZZLE_STAGE_BY_ID.s2),false);assert.equal(puzzleUnlocked(p,S1),true);
   // fake: 보통 단계는 깬 순간 남은 이동(left)으로 별, 오늘의 단계는 점수로 별.
- const fake=(def,left,phase='won')=>def.attack?{def,score:left,phase,continues:0,leftAtWin:0}:{def,leftAtWin:left,score:1000+left,phase,continues:0};const [a,b]=S1.stars;const S2=PUZZLE_STAGE_BY_ID.s2;
+ const fake=(def,score,phase='won')=>({def,score,phase,continues:0,leftAtWin:0});const [a,b]=S1.stars;const S2=PUZZLE_STAGE_BY_ID.s2;
  let r=recordPuzzleResult(p,fake(S1,a));assert.equal(r.stars,2);assert.equal(r.jp,PUZZLE_JP.firstClear(1)+PUZZLE_JP.newStar);p=r.progress;assert.equal(p.streak,1);
  r=recordPuzzleResult(p,fake(S1,a));assert.equal(r.jp,0,'no double reward');
  // 깬 단계를 다시 하면 연승은 그대로(늘지도 끊기지도 않는다), 선물도 없다.
@@ -156,7 +158,7 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  r=recordPuzzleResult(p,fake(S1,b));assert.equal(r.jp,PUZZLE_JP.newStar);p=r.progress;assert.equal(p.stages.s1.stars,3);assert.equal(p.streak,1,'replay does not grow the streak');assert.ok(!r.notes.includes('2연승'));
  assert.equal(recordPuzzleResult(p,fake(S1,0,'lost')).progress.streak,1,'replay loss keeps the streak');
  r=recordPuzzleResult(p,fake(S2,S2.stars[0]));p=r.progress;assert.equal(p.streak,2);assert.ok(r.notes.includes('2연승'));
- r=recordPuzzleResult(p,fake(PUZZLE_STAGE_BY_ID.s3,0,'lost'));assert.equal(r.jp,0);assert.equal(r.progress.streak,0,'loss on a new stage breaks the streak');assert.equal(r.progress.bestStreak,2);assert.equal(r.progress.stages.s1.best,1000+b);
+ r=recordPuzzleResult(p,fake(PUZZLE_STAGE_BY_ID.s3,0,'lost'));assert.equal(r.jp,0);assert.equal(r.progress.streak,0,'loss on a new stage breaks the streak');assert.equal(r.progress.bestStreak,2);assert.equal(r.progress.stages.s1.best,b);
  assert.equal(breakPuzzleStreak(p).streak,0);
  assert.equal(PUZZLE_JP.firstClear(999),PUZZLE_JP.firstClear(30),'first-clear reward stops growing at 30');
  assert.ok(writePuzzleProgress(storage,p,'u1'));assert.ok(mem.has(puzzleSaveKey('u1')));assert.equal(readPuzzleProgress(storage,'u2').stages.s1,undefined,'accounts keep separate progress');
@@ -181,7 +183,7 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  assert.equal(refillPuzzleLives(p).lives,5);assert.equal(puzzleLives({lives:2,livesAt:t0+9e9},t0).lives,2,'a clock set back does not break it');
  assert.equal(normalizePuzzleProgress({lives:99}).lives,5);assert.equal(normalizePuzzleProgress({lives:-2}).lives,0);}
 // 정원 가꾸기 별: 단계 별 + 오늘의 단계에서 날마다 새로 딴 별.
-{const {puzzleStarsEarned}=await import('../src/seed-puzzle-rules.js');const d=dailyPuzzleStage('20260928'),fake=(def,v)=>def.attack?{def,score:v,phase:'won',continues:0}:{def,leftAtWin:v,score:1,phase:'won',continues:0};
+{const {puzzleStarsEarned}=await import('../src/seed-puzzle-rules.js');const d=dailyPuzzleStage('20260928'),fake=(def,v)=>({def,score:v,phase:'won',continues:0});
  let p=recordPuzzleResult(normalizePuzzleProgress(null),fake(S1,S1.stars[1])).progress;assert.equal(puzzleStarsEarned(p),3);
  p=recordPuzzleResult(p,fake(d,d.stars[0])).progress;assert.equal(puzzleStarsEarned(p),4);
  p=recordPuzzleResult(p,fake(d,d.stars[0])).progress;assert.equal(puzzleStarsEarned(p),4,'same daily result counts once');

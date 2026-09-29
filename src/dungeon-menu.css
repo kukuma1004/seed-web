@@ -127,3 +127,7 @@ body.menu-mode:has(.dungeon-panel) #app-actions{top:max(14px,env(safe-area-inset
 body.menu-art #overlay.menu-screen:not(.survival-overlay){background:#0b1512 var(--menu-art) 72% 50%/cover no-repeat}
 body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #overlay.menu-screen:not(.survival-overlay):after{display:none}
 .mode-puzzle .mode-art{object-position:center 42%}.mode-duel .mode-art{object-position:center 92%}.mode-adventure .mode-art{object-position:center 86%}
+
+/* 2026-09-29 처음 화면: 판 내용을 상태 표시줄 아래에서 세로 가운데로(넘치면 위부터 — 자동 여백이라 잘리지 않는다) */
+.menu-panel.home-panel{padding-top:max(clamp(22px,4vh,46px),calc(env(safe-area-inset-top) + 18px))}
+.menu-panel.home-panel>:first-child{margin-top:auto}.menu-panel.home-panel>:last-child{margin-bottom:auto}

@@ -19,11 +19,12 @@ export const PUZZLE_POWERS=Object.freeze({
  burst:Object.freeze({id:'burst',name:'폭발 씨앗',make:'T·L 모양 다섯',text:'주변 5×5를 터뜨려요'}),
  sun:Object.freeze({id:'sun',name:'햇살 씨앗',make:'다섯 한 줄',text:'바꾼 씨앗과 같은 법칙을 모두 터뜨려요(누르면 가장 많은 법칙)'}),
 });
-// 햇살(JP)로 사는 것. 모두 판을 이기게 돕는 것이라, 보상(첫 깨기 90~380 JP)보다 싸게 둔다.
+// 햇살(JP)로 사는 것. 2026-09-29 사용자: "부스터·도구를 다 사도 다시 깨면 JP가 거의 복구된다 — 남용이다" → 약 3배로.
+// 한 판에 다 사면(부스터 900 + 도구 700) 첫 깨기 보상(90~380)의 몇 배가 들게 한다.
 export const PUZZLE_SHOP=Object.freeze({
- more:Object.freeze([150,300]),
- boosters:Object.freeze({pierce:60,burst:90,sun:150}),
- tools:Object.freeze({hammer:50,row:80,col:80,shuffle:30}),
+ more:Object.freeze([400,800]),
+ boosters:Object.freeze({pierce:200,burst:300,sun:450}),
+ tools:Object.freeze({hammer:150,row:220,col:220,shuffle:100}),
 });
 export const PUZZLE_TOOLS=Object.freeze({
  hammer:Object.freeze({id:'hammer',name:'가지치기 가위',text:'한 칸을 없애요(돌은 한 겹, 덩굴은 풀어요)'}),
@@ -57,8 +58,8 @@ export function puzzleComboForm(a,b){
 // map: 9줄 × 9글자. '.' 보통 · '#' 구멍 · 'm' 이끼 · '1'~'3' 돌(겹) · 'v' 덩굴 · 'V' 덩굴+이끼.
 // 판에 이끼·돌·덩굴이 있으면 모두 없애는 것이 목표에 들어간다. 그 밖에 goal.collect([{law,count}]).
 // 2026-09-29 사용자: "이동이 남았는데 넘어가서 별 3개를 못 받는다", "목적이 있어야 남은 이동에도 의미가 있다"
-//  → 점수 목표를 없애고 모든 단계를 목표(모으기·이끼·돌·덩굴)로. 별은 남은 이동: 깨면 ★, stars[0]번 이상 남기면 ★★, stars[1]번 이상 ★★★.
-//    +5 이동을 산 판은 ★ 하나. 남은 이동은 끝날 때 특수 씨앗이 되어 터지는 '햇살 타임'(점수·연출).
+//  → 점수 목표를 없애고 모든 단계를 목표(모으기·이끼·돌·덩굴)로. 남은 이동은 끝날 때 특수 씨앗이 되어 터지는 '햇살 타임'(추가 점수).
+//    별은 점수(puzzleStars 참고). stars: [★★ 점수, ★★★ 점수].
 // 판은 9×9(로열 매치와 비슷한 크기), 구멍으로 모양을 바꾼다. 1~10단계는 손으로, 11~999단계는 생성기(genStage)로 만든다.
 // attack: 목표 없이 이동을 다 쓰면 끝(오늘의 단계 — 점수 도전이라 별도 점수).
 const OPEN=Object.freeze(Array(9).fill('.........'));
@@ -91,7 +92,7 @@ const HAND_STAGES=[
 // 난이도: 번호가 커질수록 이동이 빠듯해지고(400단계쯤까지 오르고 그 뒤로는 유지), 5의 배수는 어려운 단계, 10의 배수는 아주 어려운 단계,
 // 끝자리 1·2는 쉬어 가는 단계(로열 매치처럼 톱니 모양). 이동 수 식은 tools/seed-puzzle-simulation.mjs 의 보통 봇 깨기 비율로 맞췄다.
 export const PUZZLE_STAGE_COUNT=999;
-export const PUZZLE_GEN=Object.freeze({workMoss:.42,workStone:.8,workVine:.62,workCollect:.12,base:7,easy:1.12,normal:1,hard:.9,veryHard:.82,growCut:.2,min:15,max:40,star2:.2,star3:.34});
+export const PUZZLE_GEN=Object.freeze({workMoss:.42,workStone:.8,workVine:.62,workCollect:.12,base:7,easy:1.12,normal:1,hard:.9,veryHard:.82,growCut:.2,min:15,max:40,star2:.22,star3:.34});
 const NAME_A=['이슬','바람','햇살','달빛','서리','불씨','꽃잎','뿌리','새싹','별빛','안개','노을','단풍','눈꽃','샘물','나비','구름','씨앗','이끼','덩굴'];
 const NAME_B=['정원','오솔길','화단','언덕','연못','숲','들판','온실','계곡','마당','다리','샘터','울타리','꽃밭','돌담','숲길','골짜기','쉼터','정자','뜰'];
 const MILESTONE=['문지기의 뜰','잠든 성벽','고목의 심장','별의 계단','서리 왕관','불꽃 제단','달의 문','폭풍의 눈','오래된 약속','정원의 끝'];
@@ -160,7 +161,8 @@ function genStage(n,scale=PUZZLE_TUNING[n]?.[3]??1){
  const G=PUZZLE_GEN,work=parsed.moss.length*G.workMoss+stoneHp*G.workStone+parsed.vines.length*G.workVine+col*G.workCollect;
  if(work>WORK_CAP(grow)&&scale>.3)return genStage(n,scale*.8);
  const moves=Math.max(G.min,Math.min(G.max,Math.round((G.base+work)*G[saw]*(1-G.growCut*grow))));
- const stars=[Math.max(2,Math.round(moves*G.star2)),Math.max(4,Math.round(moves*G.star3))];
+ // 보정표가 없을 때만 쓰는 별 점수(대략 이동 × 점수). 실제 값은 seed-puzzle-tuning.js.
+ const stars=[Math.round(moves*G.star2*1e3/100)*100,Math.round(moves*G.star3*1e3/100)*100];
  const name=n%50===0?MILESTONE[(n/50-1)%MILESTONE.length]:`${pk(NAME_A)} ${pk(NAME_B)}`;
  const tip=saw==='veryHard'?'아주 어려운 단계! 특수 씨앗과 조합 효과를 아껴 두세요.':saw==='hard'?'어려운 단계예요. 목표 가까이에서 맞춰요.':'목표를 먼저 보고, 남은 이동을 아껴 별을 모아요.';
  return stage(n,{name,tip,colors,moves,map,require,...(collect?{goal:{collect}}:{}),stars,level:saw});
@@ -373,11 +375,12 @@ export function puzzleGoalState(s){
 export const puzzleGoalMet=s=>!s.def.attack&&puzzleGoalState(s).every(p=>p.have>=p.need);
 // 목표까지 남은 정도(0~1). 이어하기(+5 이동) 화면에서 얼마나 아까운지 보여 줄 때 쓴다.
 export function puzzleGoalLeft(s){const parts=puzzleGoalState(s);if(!parts.length)return 0;return parts.reduce((a,p)=>a+Math.max(0,p.need-p.have)/Math.max(1,p.need),0)/parts.length;}
-// 별: 오늘의 단계는 점수, 보통 단계는 깬 순간 남은 이동(+5 이동을 샀으면 ★ 하나).
+// 별: 점수. 2026-09-29 사용자: "남은 이동만큼 특수 씨앗으로 터뜨려 추가 점수를 얻고, 점수로 별을 구분 — ★★★는 진짜 잘했을 때(운도 조금)".
+// 보통 단계: 깨면 ★, stars[0]점 이상 ★★, stars[1]점 이상 ★★★(보정: 보통 봇이 깬 판 점수의 가운데값 · 상위 10%). +5 이동으로 깬 판은 ★ 하나.
 export function puzzleStars(s){
  if(s.phase!=='won')return 0;
  if(s.def.attack){const [a,b,c]=s.def.stars;return s.score>=c?3:s.score>=b?2:s.score>=a?1:0;}
- if(s.continues>0)return 1;const [a,b]=s.def.stars;return 1+(s.leftAtWin>=a)+(s.leftAtWin>=b);
+ if(s.continues>0)return 1;const [a,b]=s.def.stars;return 1+(s.score>=a)+(s.score>=b);
 }
 
 // ── 행동. 모두 {ok,reason,steps}를 돌려주고, 화면은 steps 를 차례로 그린다.
@@ -483,13 +486,13 @@ export function replayPuzzle(def,seed,boosters,log){
 export const PUZZLE_SAVE_KEY='seed-puzzle-v1';
 export const puzzleSaveKey=(owner='guest')=>`${PUZZLE_SAVE_KEY}:${encodeURIComponent(owner||'guest')}`;
 // 첫 깨기 햇살은 30단계부터 380 JP로 고정(999단계까지 늘어나지 않게).
-export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*Math.min(30,n),newStar:40,daily:100});
+export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*Math.min(30,n),newStar:30,daily:100});
 const int=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 // 도전 씨앗(로열 매치의 하트). 2026-09-28 사용자: "하트를 씨앗으로"
 // 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 10분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
 // 오늘의 단계와 연습은 쓰지 않는다. 시계는 기기 시각(Date.now)이다.
 // 2026-09-28 사용자: 돋는 시간 30분 → 10분(수업 한 시간 안에 여러 번 도전할 수 있게).
-export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:10*60e3,refill:120});
+export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:10*60e3,refill:300});
 export function puzzleLives(progress,now=Date.now()){
  const p=progress||{},max=PUZZLE_LIVES.max;let lives=Number.isInteger(p.lives)?Math.max(0,Math.min(max,p.lives)):max,at=Number.isFinite(p.livesAt)?p.livesAt:0;
  if(lives>=max)return {lives:max,livesAt:0,nextIn:0,full:true};

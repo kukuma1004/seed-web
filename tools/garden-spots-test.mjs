@@ -17,10 +17,10 @@ assert.equal(chooseSpotStyle(G0,'greenhouse','1','A',{spend:broke}).ok,false);
 let r=chooseSpotStyle(G0,'greenhouse','1','A',{spend});assert.ok(r.ok);assert.equal(r.paid,spotPrice('A'));assert.equal(spotsFilled(r.garden,'greenhouse'),1);
 r=chooseSpotStyle(r.garden,'greenhouse','1','C',{spend});assert.equal(r.paid,spotPrice('C'));
 r=chooseSpotStyle(r.garden,'greenhouse','1','A',{spend:broke});assert.ok(r.ok,'owned style is free');assert.equal(r.paid,0);assert.deepEqual(spotEntry(r.garden,'greenhouse','1'),{on:'A',own:['A','C']});
-assert.equal(spotPrice('C',1.5),180);assert.equal(chooseSpotStyle(G0,'greenhouse','9','A',{spend}).ok,false);assert.equal(chooseSpotStyle(G0,'meadow','1','A',{spend}).ok,false);
+assert.equal(spotPrice('C',1.5),600);assert.equal(chooseSpotStyle(G0,'greenhouse','99','A',{spend}).ok,false);assert.equal(chooseSpotStyle(G0,'nope','1','A',{spend}).ok,false);
 const cleared=clearSpot(r.garden,'greenhouse','1');assert.equal(spotsFilled(cleared.garden,'greenhouse'),0);assert.deepEqual(spotEntry(cleared.garden,'greenhouse','1').own,['A','C']);
 // 저장 정리: 이상한 값은 버린다.
-assert.deepEqual(normalizeSpots({greenhouse:{'1':{on:'Z',own:['A','Q']},'7':{on:'A',own:['A']}},nope:{}}),{greenhouse:{'1':{on:null,own:['A']}}});
+assert.deepEqual(normalizeSpots({greenhouse:{'1':{on:'Z',own:['A','Q']},'77':{on:'A',own:['A']}},nope:{}}),{greenhouse:{'1':{on:null,own:['A']}}});
 assert.deepEqual(normalizeGarden({...r.garden}).spots,r.garden.spots,'garden keeps spots');
 // 다음 정원: 온실 자리를 모두 채우면 초원이 열린다.
 assert.equal(themeUnlocked(G0,'meadow'),false);assert.equal(themeLockInfo(G0,'meadow').spots,true);assert.equal(themeLockInfo(G0,'meadow').need,spotsTotal('greenhouse'));

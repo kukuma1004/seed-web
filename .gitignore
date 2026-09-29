@@ -121,7 +121,10 @@ art-source/
 !tools/garden_spot_part.py
 !tools/garden-spots-test.mjs
 !tools/garden_spot_export.py
+!tools/garden_spot_build.py
+!tools/garden_grid.py
 !tools/seed-puzzle-calibrate.mjs
 !tools/seed-puzzle-tuning-build.mjs
+!tools/seed-puzzle-calibrate-score.mjs
 art-refs/
 .calib/

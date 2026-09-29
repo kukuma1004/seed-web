@@ -4,20 +4,14 @@
 // 물건 그림은 GPT가 같은 빈 장면에 그려 넣은 그림에서 차이로 잘라 낸 조각이라(tools/garden_spot_part.py) 시점·빛·그림자가 배경과 맞는다.
 // 이 파일은 그림 좌표와 규칙만 가진다(화면은 garden-hub-view.js). garden-themes.js가 여기서 열림 조건을 읽는다.
 
-// box: 조각이 놓이는 자리(장면 픽셀, 조각 PNG의 크기와 같다) · at: 자리 표시(＋)를 띄우는 곳.
-export const SPOT_SCENES=Object.freeze({
- greenhouse:Object.freeze({size:Object.freeze([1536,1024]),spots:Object.freeze([
-  Object.freeze({id:'1',name:'왼쪽 화단',box:[120,300,625,620],at:[372,470],styles:Object.freeze({A:'허브 텃밭',B:'토마토·딸기 텃밭',C:'튤립·장미 꽃밭'})}),
-  Object.freeze({id:'2',name:'오른쪽 화단',box:[1030,200,1470,760],at:[1250,600],styles:Object.freeze({A:'초록 풀숲',B:'레몬나무',C:'수국 덤불'})}),
-  Object.freeze({id:'3',name:'가운데 뜰',box:[560,300,990,700],at:[773,585],styles:Object.freeze({A:'나무 작업대',B:'돌 분수',C:'유리 정자'})}),
-  Object.freeze({id:'4',name:'왼쪽 선반',box:[270,190,570,410],at:[420,300],styles:Object.freeze({A:'다육 화분',B:'모종과 씨앗 병',C:'난초와 약초 병'})}),
-  Object.freeze({id:'5',name:'오른쪽 선반',box:[1067,200,1493,493],at:[1290,380],styles:Object.freeze({A:'늘어진 덩굴',B:'과일 바구니',C:'꽃 화분'})}),
-  Object.freeze({id:'6',name:'천장 고리',box:[380,0,1220,300],at:[800,120],styles:Object.freeze({A:'고사리 바구니',B:'꽃바구니',C:'유리 등불'})}),
- ])}),
-});
+// 정원마다 자리 표는 src/garden-spots/<정원>.js (tools/garden_spot_build.py 가 만든다).
+// box: 조각이 놓이는 자리(장면 픽셀, 조각 그림 크기와 같은 비율) · at: 자리 표시(＋)를 띄우는 곳. 새 정원을 만들면 아래에 한 줄 추가.
+import greenhouse from './garden-spots/greenhouse.js';
+export const SPOT_SCENES=Object.freeze({greenhouse});
 export const SPOT_STYLE_IDS=Object.freeze(['A','B','C']);
 // 값(JP): 소박한 A → 풍성한 B → 화려한 C. 테마 rate를 곱한다(화면이 넘긴다).
-export const SPOT_PRICES=Object.freeze({A:60,B:90,C:120});
+// 2026-09-29 사용자: "정원 물품도 조금 더 비싸게" → 60·90·120 에서 올림.
+export const SPOT_PRICES=Object.freeze({A:150,B:250,C:400});
 export const spotScene=id=>SPOT_SCENES[id]||null;
 export const hasSpotScene=id=>Object.hasOwn(SPOT_SCENES,id);
 export const spotPrice=(style,rate=1)=>Math.max(10,Math.round(SPOT_PRICES[style]*rate/10)*10);
