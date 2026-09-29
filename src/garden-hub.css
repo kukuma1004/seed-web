@@ -83,3 +83,29 @@
  #garden-hub.gh-hub-view .gh-title{visibility:hidden}
  #garden-hub.gh-hub-view .gh-extra{right:auto;max-width:62%;padding-top:10px;background:radial-gradient(ellipse at 0 100%,#0b1512ee 30%,#0b151200 75%)}
 }
+
+/* 2026-09-29 자리 꾸미기(v2): 빈 장면 + 자리 표시(＋) + 아래 모습 고르기 */
+.gh-spotbox{position:relative;overflow:hidden}
+.gh-spotbox:before{content:'';position:absolute;inset:-30px;background:var(--bg) center/cover no-repeat;filter:blur(18px) brightness(.5) saturate(1.1);transform:scale(1.05)}
+.gh-spotstage{background-size:100% 100%;z-index:1}
+.gh-layers{position:absolute;inset:0;pointer-events:none}
+.gh-layer{position:absolute;display:block;max-width:none}
+.gh-layer.pop{animation:gh-grow .55s cubic-bezier(.2,1.4,.4,1)}
+@keyframes gh-grow{0%{opacity:0;transform:scale(.92)}100%{opacity:1;transform:none}}
+.gh-marks{position:absolute;inset:0}
+#garden-hub .gh-mark{position:absolute;transform:translate(-50%,-50%);width:44px;height:44px;min-height:0;padding:0;border-radius:50%;border:2px solid #fff3c4;background:radial-gradient(circle,#ffe9a0cc,#c89a3acc 60%,#6b4a14cc);color:#3a2408;font-size:22px;font-weight:700;box-shadow:0 0 0 4px #ffe9a033,0 0 18px #ffe28a;animation:gh-mark 1.8s ease-in-out infinite}
+#garden-hub .gh-mark.filled{width:34px;height:34px;font-size:15px;background:#1b2a24d9;color:#fce6af;border-color:#d7c08a;box-shadow:0 2px 8px #0008;animation:none;opacity:.85}
+#garden-hub .gh-mark.on{box-shadow:0 0 0 4px var(--tone),0 0 22px var(--tone);opacity:1}
+@keyframes gh-mark{50%{transform:translate(-50%,-50%) scale(1.12);box-shadow:0 0 0 7px #ffe9a022,0 0 26px #ffe28a}}
+.gh-spot-tray .gh-thumb img{width:100%;height:100%;object-fit:contain;display:block}
+.gh-spot-tray .gh-thumb .gh-plus{font-style:normal;font-size:26px;color:#fce6af}
+#garden-hub .gh-style.on{border-color:var(--tone);box-shadow:0 0 0 2px var(--tone) inset}
+#garden-hub .gh-spotchip.done{border-color:#9fd28a88}
+.gh-pick .gh-clear,.gh-pick .gh-done{margin-left:6px}
+.gh-spotbox.pan{justify-content:flex-start;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;scrollbar-width:none}
+.gh-spotbox.pan::-webkit-scrollbar{display:none}
+.gh-spotbox.pan .gh-spotstage{flex:none}
+.gh-spotbox.pan:before{position:fixed}
+@media (max-width:520px){#garden-hub .gh-mark{width:38px;height:38px;font-size:19px}#garden-hub .gh-mark.filled{width:30px;height:30px;font-size:13px}}
+.gh-spot-tray{position:relative;z-index:2;background:#0b1512}
+.gh-spotbox.pan .gh-progress,.gh-spotbox.pan .gh-quote{display:none}

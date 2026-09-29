@@ -1,6 +1,7 @@
 // 정원 테마: 정원 안의 작은 정원 9곳. 온실부터 하나씩 열리고, 구성물은 JP로 사서 마음대로 놓는다.
 // 저장은 정원(garden.js)의 themes · bag 칸에 들어가 클라우드로 함께 간다.
 import {GARDEN_OBJECT_ART} from './garden-theme-art.js';
+import {hasSpotScene,spotsFilled,spotsTotal,normalizeSpots,mergeSpots} from './garden-spots.js';
 
 // 열리는 차례. set: 이 테마 가게가 파는 그림 세트(설렘의 정원은 모든 세트를 판다).
 export const GARDEN_THEMES=Object.freeze([
@@ -55,6 +56,8 @@ export function normalizeBag(value){
  return out;
 }
 export const themeItemCount=(garden,id)=>(garden?.themes?.[id]||[]).length;
+// 열림 진행: 자리 꾸미기 정원(v2)은 채운 자리 / 전체 자리, 예전 정원은 놓은 구성물 / THEME_UNLOCK_PLACED.
+export const themeProgress=(garden,id)=>hasSpotScene(id)?{have:spotsFilled(garden,id),need:spotsTotal(id),spots:true}:{have:themeItemCount(garden,id),need:THEME_UNLOCK_PLACED,spots:false};
 export function ownedCount(garden){
  let n=Object.values(garden?.bag||{}).reduce((a,b)=>a+b,0);
  for(const id of GARDEN_THEME_IDS)n+=themeItemCount(garden,id);
@@ -64,12 +67,14 @@ export function ownedCount(garden){
 export function themeUnlocked(garden,id){
  const i=GARDEN_THEME_IDS.indexOf(id);if(i<0)return false;if(i===0)return true;
  if((garden?.themesOpened||[]).includes(id))return true;
- return themeItemCount(garden,GARDEN_THEME_IDS[i-1])>=THEME_UNLOCK_PLACED&&themeUnlocked(garden,GARDEN_THEME_IDS[i-1]);
+ const prev=themeProgress(garden,GARDEN_THEME_IDS[i-1]);
+ return prev.have>=prev.need&&themeUnlocked(garden,GARDEN_THEME_IDS[i-1]);
 }
 export function themeLockInfo(garden,id){
  const i=GARDEN_THEME_IDS.indexOf(id);if(themeUnlocked(garden,id))return {locked:false};
  const prev=GARDEN_THEMES[i-1];
- return {locked:true,prev:prev.id,prevName:prev.name,need:THEME_UNLOCK_PLACED,have:themeItemCount(garden,prev.id),prevOpen:themeUnlocked(garden,prev.id)};
+ const pr=themeProgress(garden,prev.id);
+ return {locked:true,prev:prev.id,prevName:prev.name,need:pr.need,have:pr.have,spots:pr.spots,prevOpen:themeUnlocked(garden,prev.id)};
 }
 // 조건을 채운 테마를 opened에 기록한다(앞 테마에서 물건을 치워도 계속 열린 채로).
 export function recordOpenedThemes(garden){
@@ -121,5 +126,5 @@ export function themeDrawOrder(items){return items.map((it,i)=>({...it,i})).sort
 export function mergeThemeProgress(local,remote,prefer='remote'){
  const a={themes:normalizeThemes(local?.themes),bag:normalizeBag(local?.bag)},b={themes:normalizeThemes(remote?.themes),bag:normalizeBag(remote?.bag)};
  const na=ownedCount(a),nb=ownedCount(b),pick=na===nb?(prefer==='local'?a:b):na>nb?a:b;
- return {themes:pick.themes,bag:pick.bag,themesOpened:normalizeOpened([...(local?.themesOpened||[]),...(remote?.themesOpened||[])])};
+ return {themes:pick.themes,bag:pick.bag,themesOpened:normalizeOpened([...(local?.themesOpened||[]),...(remote?.themesOpened||[])]),spots:mergeSpots(local?.spots,remote?.spots,prefer),spotsRefunded:[...new Set([...(local?.spotsRefunded||[]),...(remote?.spotsRefunded||[])])].filter(hasSpotScene)};
 }

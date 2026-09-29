@@ -4,12 +4,13 @@
 //   특수 씨앗은 색이 없어 맞춰지지 않고, 눌러서 바로 터뜨리거나(이동 1) 아무 이웃과 바꿔 터뜨린다. 특수끼리 바꾸면 조합 효과(이름은 도감의 융합·단독 진화 이름).
 // - 이동을 다 썼는데 못 깼으면 햇살(JP)로 +5 이동(두 번까지). 연승 선물 · 시작 전 부스터 · 판 안 도구(이동을 쓰지 않음).
 // 시드 난수만 쓰므로 같은 단계·시드·부스터·행동 기록이면 점수가 글자까지 같다(replayPuzzle).
-// 판 좌표: i = r*8 + c (r 0이 맨 위). 칸: {id,law,sp,dir} · sp: null(보통 씨앗) | 'pierce' | 'chain' | 'burst' | 'sun'.
+// 판 좌표: i = r*9 + c (r 0이 맨 위). 칸: {id,law,sp,dir} · sp: null(보통 씨앗) | 'pierce' | 'chain' | 'burst' | 'sun'.
 // 구멍(hole)은 판에 없는 칸, 돌(stone 1~3)은 씨앗 없이 자리를 막는 칸, 덩굴(vine)은 씨앗을 묶어 못 움직이게 한다(맞추면 풀린다). 이끼(moss)는 씨앗 밑에 깔린다.
 import {LAWS} from './laws.js';
 import {FORMS,SOLO_FORMS,soloFormOf} from './forms.js';
+import {PUZZLE_TUNING} from './seed-puzzle-tuning.js';
 
-export const PUZZLE=Object.freeze({size:8,cellScore:10,createScore:{pierce:60,chain:60,burst:100,sun:200},moveBonus:150,maxSteps:80,extraMoves:5,maxContinues:2});
+export const PUZZLE=Object.freeze({size:9,cellScore:10,createScore:{pierce:60,chain:60,burst:100,sun:200},moveBonus:150,maxSteps:80,extraMoves:5,maxContinues:2});
 export const PUZZLE_LAW_IDS=Object.freeze(Object.keys(LAWS));
 // 특수 씨앗 네 가지. 도감과 이어지도록 SEED 법칙 이름을 쓴다(햇살은 법칙이 아니다).
 export const PUZZLE_POWERS=Object.freeze({
@@ -53,12 +54,14 @@ export function puzzleComboForm(a,b){
 }
 
 // ── 단계
-// map: 8줄 × 8글자. '.' 보통 · '#' 구멍 · 'm' 이끼 · '1'~'3' 돌(겹) · 'v' 덩굴 · 'V' 덩굴+이끼.
-// 판에 이끼·돌·덩굴이 있으면 모두 없애는 것이 목표에 들어간다. 그 밖에 goal.score · goal.collect([{law,count}]).
-// stars: ★★ · ★★★ 점수(★ 하나는 깨기). attack: 목표 없이 이동을 다 쓰면 끝(오늘의 단계).
-// 이동과 별은 tools/seed-puzzle-simulation.mjs 의 보통 봇(절반은 좋은 수)으로 맞췄다: 1~8단계 90%↑ · 보통 80% · 5의 배수 60% · 30단계 45% 깨기.
-// 별은 보통 봇이 깬 판 점수의 가운데값(★★)과 상위 20%(★★★, ★★보다 15% 이상 위).
-const OPEN=Object.freeze(Array(8).fill('........'));
+// map: 9줄 × 9글자. '.' 보통 · '#' 구멍 · 'm' 이끼 · '1'~'3' 돌(겹) · 'v' 덩굴 · 'V' 덩굴+이끼.
+// 판에 이끼·돌·덩굴이 있으면 모두 없애는 것이 목표에 들어간다. 그 밖에 goal.collect([{law,count}]).
+// 2026-09-29 사용자: "이동이 남았는데 넘어가서 별 3개를 못 받는다", "목적이 있어야 남은 이동에도 의미가 있다"
+//  → 점수 목표를 없애고 모든 단계를 목표(모으기·이끼·돌·덩굴)로. 별은 남은 이동: 깨면 ★, stars[0]번 이상 남기면 ★★, stars[1]번 이상 ★★★.
+//    +5 이동을 산 판은 ★ 하나. 남은 이동은 끝날 때 특수 씨앗이 되어 터지는 '햇살 타임'(점수·연출).
+// 판은 9×9(로열 매치와 비슷한 크기), 구멍으로 모양을 바꾼다. 1~10단계는 손으로, 11~999단계는 생성기(genStage)로 만든다.
+// attack: 목표 없이 이동을 다 쓰면 끝(오늘의 단계 — 점수 도전이라 별도 점수).
+const OPEN=Object.freeze(Array(9).fill('.........'));
 function parseMap(rows){
  const out={hole:[],moss:[],stones:[],vines:[]};
  rows.forEach((row,r)=>[...row].forEach((ch,c)=>{const i=r*N+c;
@@ -68,46 +71,106 @@ function parseMap(rows){
 function stage(n,o){
  const map=o.map||OPEN,parsed=parseMap(map),goal={...(o.goal||{})};
  if(parsed.moss.length)goal.moss=true;if(parsed.stones.length)goal.stone=true;if(parsed.vines.length)goal.vine=true;
- return Object.freeze({id:`s${n}`,n,colors:6,require:[],...o,map,...parsed,goal:Object.freeze(goal)});
+ return Object.freeze({id:`s${n}`,n,colors:6,require:[],level:'normal',...o,map,...parsed,goal:Object.freeze(goal)});
 }
-export const PUZZLE_STAGES=Object.freeze([
- // 1~8: 특수 씨앗 네 가지를 하나씩 배운다. 로열 매치처럼 앞 단계는 이동이 넉넉하다.
- stage(1,{name:'첫 싹',tip:'이웃한 두 씨앗을 바꿔 같은 법칙 셋을 한 줄로.',colors:5,moves:30,goal:{score:1500},stars:[5800,6700]}),
- stage(2,{name:'관통 씨앗',tip:'넷을 한 줄로 맞추면 관통 씨앗! 눌러서 바로 터뜨려도 돼요.',colors:5,moves:30,goal:{score:3000},stars:[7100,8200]}),
- stage(3,{name:'이끼 걷기',tip:'이끼 위의 씨앗을 터뜨리면 이끼가 걷혀요.',colors:5,moves:30,map:['........','........','..mmmm..','..mmmm..','..mmmm..','..mmmm..','........','........'],stars:[5700,7200]}),
- stage(4,{name:'연쇄 씨앗',tip:'네모(2×2)로 맞추면 연쇄 씨앗. 남은 목표로 날아가요.',colors:5,moves:30,map:['mm....mm','mm....mm','........','........','........','........','mm....mm','mm....mm'],stars:[6300,8400]}),
- stage(5,{name:'폭발 씨앗',tip:'T·L 모양 다섯을 맞추면 폭발 씨앗. 주변 5×5를 날려요.',moves:30,map:['........','.1....1.','........','...11...','...11...','........','.1....1.','........'],stars:[4900,5700]}),
- stage(6,{name:'햇살 씨앗',tip:'다섯 한 줄이면 햇살 씨앗. 바꾼 씨앗과 같은 법칙이 전부 터져요.',moves:34,goal:{score:6000},stars:[7800,9000]}),
- stage(7,{name:'조합 효과',tip:'특수 씨앗끼리 바꾸면 조합 효과! 관통+폭발은 세 줄씩 가로세로로.',moves:38,goal:{score:7000},stars:[8500,9900]}),
- stage(8,{name:'묶인 씨앗',tip:'덩굴에 묶인 씨앗은 못 움직여요. 그 씨앗을 맞추면 풀려요.',moves:28,map:['........','........','.vv..vv.','........','........','.vv..vv.','........','........'],stars:[4700,5500]}),
- // 9~20: 방해물을 섞는다.
- stage(9,{name:'불꽃과 서리',tip:'폭발과 빙결 씨앗을 모아요.',moves:20,require:['burst','frost'],goal:{collect:[{law:'burst',count:25},{law:'frost',count:25}]},stars:[4000,4900]}),
- stage(10,{name:'돌담',tip:'돌 옆에서 맞추면 돌이 한 겹씩 깨져요.',moves:18,map:['........','........','........','111..111','11....11','........','........','........'],stars:[3300,3900]}),
- stage(11,{name:'구멍 난 정원',tip:'구멍 아래는 바로 밑에서 새 씨앗이 돋아요.',moves:35,map:['........','........','..#..#..','..#..#..','mm#mm#mm','mm#mm#mm','........','........'],stars:[3700,4600]}),
- stage(12,{name:'덩굴 울타리',tip:'묶인 씨앗도 같은 법칙끼리는 맞춰져요.',moves:28,map:['........','........','vvvvvvvv','........','........','vvvvvvvv','........','........'],stars:[4700,5500]}),
- stage(13,{name:'번개 수확',tip:'연쇄 씨앗을 모으면서 가운데 이끼도.',moves:24,require:['chain'],map:['........','........','........','.mmmmmm.','.mmmmmm.','........','........','........'],goal:{collect:[{law:'chain',count:35}]},stars:[5100,6000]}),
- stage(14,{name:'두 겹 돌',tip:'두 번 맞아야 깨지는 돌이에요.',moves:19,map:['........','........','.22..22.','........','........','.22..22.','........','........'],stars:[3300,4000]}),
- stage(15,{name:'모래시계',tip:'가운데가 좁아요. 특수 씨앗으로 뚫어요.',moves:28,map:['........','m......m','#m....m#','##m..m##','##m..m##','#m....m#','m......m','........'],stars:[4100,5500]}),
- stage(16,{name:'정원의 문',tip:'돌과 이끼를 함께.',moves:32,map:['mm....mm','m......m','...22...','..2..2..','..2..2..','...22...','m......m','mm....mm'],stars:[5400,6300]}),
- stage(17,{name:'엉킨 덩굴',tip:'덩굴 아래 이끼까지 걷어야 해요.',moves:20,map:['........','.V.V.V..','........','..V.V.V.','.V.V.V..','........','..V.V.V.','........'],stars:[3200,3800]}),
- stage(18,{name:'바람길',tip:'가운데 구멍 기둥 양쪽을 모두 치워요.',moves:20,map:['...##...','...##...','mm.##.mm','mm.##.mm','11.##.11','...##...','...##...','...##...'],stars:[2300,2800]}),
- stage(19,{name:'세 가지 수확',tip:'세 법칙을 한꺼번에 모아요.',moves:20,require:['orbit','split','reflect'],goal:{collect:[{law:'orbit',count:20},{law:'split',count:20},{law:'reflect',count:20}]},stars:[3900,4900]}),
- stage(20,{name:'첫 번째 성벽',tip:'세 겹 돌! 폭발 씨앗과 조합 효과를 아껴 두세요.',moves:26,map:['........','........','........','3..33..3','3..33..3','........','........','........'],stars:[5000,6200]}),
- // 21~30: 조합을 써야 깨지는 판.
- stage(21,{name:'이끼 바다',tip:'판 절반이 이끼예요. 연쇄 씨앗이 남은 이끼를 찾아가요.',moves:22,map:['mmmmmmmm','mmmmmmmm','mmmmmmmm','mmmmmmmm','........','........','........','........'],stars:[4200,5200]}),
- stage(22,{name:'감옥 정원',tip:'돌 안에 갇힌 이끼. 돌부터 깨요.',moves:18,map:['........','.111111.','.1mmmm1.','.1mmmm1.','.1mmmm1.','.111111.','........','........'],stars:[3100,3700]}),
- stage(23,{name:'덩굴 성',tip:'성벽 덩굴과 가운데 돌. 연쇄 씨앗이 남은 덩굴을 찾아가요.',moves:30,map:['v.v..v.v','........','v......v','...22...','...22...','v......v','........','v.v..v.v'],stars:[5600,6500]}),
- stage(24,{name:'별 모양 정원',tip:'모서리가 없어요. 가운데에서 크게!',moves:18,map:['##....##','#......#','..mmmm..','..mmmm..','..mmmm..','..mmmm..','#......#','##....##'],stars:[3100,3600]}),
- stage(25,{name:'점수 정원',tip:'8,000점! 햇살 씨앗과 조합 효과를 노려요.',moves:36,goal:{score:8000},stars:[9500,11000]}),
- stage(26,{name:'두 갈래 강',tip:'가운데 강(구멍) 양쪽 돌을 모두.',moves:33,map:['........','...##...','.2.##.2.','.2.##.2.','.2.##.2.','.2.##.2.','...##...','........'],stars:[3500,4400]}),
- stage(27,{name:'번개와 불꽃',tip:'연쇄·폭발 씨앗 모으기 + 덩굴.',moves:25,require:['chain','burst'],map:['........','........','v.v..v.v','........','........','v.v..v.v','........','........'],goal:{collect:[{law:'chain',count:25},{law:'burst',count:25}]},stars:[4900,5700]}),
- stage(28,{name:'겹겹의 벽',tip:'1·2·3겹 돌이 차례로. 폭발+폭발은 9×9!',moves:26,map:['........','11111111','........','22222222','........','.333333.','........','........'],stars:[5000,5800]}),
- stage(29,{name:'잠든 숲',tip:'이끼·돌·덩굴이 다 있어요.',moves:36,map:['mm.vv.mm','mm....mm','..2..2..','v......v','v......v','..2..2..','mm....mm','mm.vv.mm'],stars:[6200,7200]}),
- stage(30,{name:'정원의 심장',tip:'마지막 정원. 조합 효과를 아껴 두었다가 한 번에!',moves:36,map:['mm#..#mm','m..22..m','#.1..1.#','.2.VV.2.','.2.VV.2.','#.1..1.#','m..22..m','mm#..#mm'],stars:[5300,6700]}),
-]);
+// 1~10: 특수 씨앗과 방해물을 하나씩 배운다. 앞 단계도 너무 길지 않게(사용자: "1,2,3 해봤는데 좀 쉽네").
+const HAND_STAGES=[
+ stage(1,{name:'첫 싹',tip:'이웃한 두 씨앗을 바꿔 같은 법칙 셋을 한 줄로. 목표 씨앗을 모아요.',colors:5,moves:20,require:['orbit','split'],goal:{collect:[{law:'orbit',count:30},{law:'split',count:30}]},stars:[6,10]}),
+ stage(2,{name:'관통 씨앗',tip:'넷을 한 줄로 맞추면 관통 씨앗! 눌러서 바로 터뜨려도 돼요.',colors:5,moves:20,require:['pierce'],goal:{collect:[{law:'pierce',count:55}]},stars:[5,9]}),
+ stage(3,{name:'이끼 걷기',tip:'이끼 위의 씨앗을 터뜨리면 이끼가 걷혀요.',colors:5,moves:20,map:['.........','.mmmmmmm.','.mmmmmmm.','..mmmmm..','..mmmmm..','.........','.........','.........','.........'],stars:[4,8]}),
+ stage(4,{name:'연쇄 씨앗',tip:'네모(2×2)로 맞추면 연쇄 씨앗. 남은 목표로 날아가요.',colors:5,moves:22,map:['mmm...mmm','mm.....mm','m.......m','.........','.........','.........','m.......m','mm.....mm','mmm...mmm'],stars:[4,8]}),
+ stage(5,{name:'폭발 씨앗',tip:'T·L 모양 다섯을 맞추면 폭발 씨앗. 주변 5×5를 날려요.',moves:22,map:['.........','.1.....1.','.........','...111...','...1.1...','...111...','.........','.1.....1.','.........'],stars:[4,8]}),
+ stage(6,{name:'햇살 씨앗',tip:'다섯 한 줄이면 햇살 씨앗. 바꾼 씨앗과 같은 법칙이 전부 터져요.',moves:22,require:['burst','frost','chain'],goal:{collect:[{law:'burst',count:35},{law:'frost',count:35},{law:'chain',count:35}]},stars:[4,7]}),
+ stage(7,{name:'조합 효과',tip:'특수 씨앗끼리 바꾸면 조합 효과! 관통+폭발은 세 줄씩 가로세로로.',moves:24,map:['.........','.........','..22.22..','..2mmm2..','...mmm...','..2mmm2..','..22.22..','.........','.........'],stars:[4,7]}),
+ stage(8,{name:'묶인 씨앗',tip:'덩굴에 묶인 씨앗은 못 움직여요. 그 씨앗을 맞추면 풀려요.',moves:22,map:['.........','.........','.vv...vv.','.........','...vvv...','.........','.vv...vv.','.........','.........'],stars:[4,7]}),
+ stage(9,{name:'구멍 난 정원',tip:'구멍 아래는 바로 밑에서 새 씨앗이 돋아요.',moves:24,map:['.........','.........','..#...#..','..#...#..','.........','..mmmmm..','.mmmmmmm.','.........','.........'],stars:[4,7]}),
+ stage(10,{name:'첫 번째 성벽',tip:'세 겹 돌! 폭발 씨앗과 조합 효과를 아껴 두세요.',moves:24,map:['.........','.........','.........','3..333..3','3...3...3','.........','.........','.........','.........'],stars:[3,6],level:'veryHard'}),
+];
+
+// ── 11~999단계 생성기. 단계 번호만으로 같은 판이 나온다(시드 난수).
+// 난이도: 번호가 커질수록 이동이 빠듯해지고(400단계쯤까지 오르고 그 뒤로는 유지), 5의 배수는 어려운 단계, 10의 배수는 아주 어려운 단계,
+// 끝자리 1·2는 쉬어 가는 단계(로열 매치처럼 톱니 모양). 이동 수 식은 tools/seed-puzzle-simulation.mjs 의 보통 봇 깨기 비율로 맞췄다.
+export const PUZZLE_STAGE_COUNT=999;
+export const PUZZLE_GEN=Object.freeze({workMoss:.42,workStone:.8,workVine:.62,workCollect:.12,base:7,easy:1.12,normal:1,hard:.9,veryHard:.82,growCut:.2,min:15,max:40,star2:.2,star3:.34});
+const NAME_A=['이슬','바람','햇살','달빛','서리','불씨','꽃잎','뿌리','새싹','별빛','안개','노을','단풍','눈꽃','샘물','나비','구름','씨앗','이끼','덩굴'];
+const NAME_B=['정원','오솔길','화단','언덕','연못','숲','들판','온실','계곡','마당','다리','샘터','울타리','꽃밭','돌담','숲길','골짜기','쉼터','정자','뜰'];
+const MILESTONE=['문지기의 뜰','잠든 성벽','고목의 심장','별의 계단','서리 왕관','불꽃 제단','달의 문','폭풍의 눈','오래된 약속','정원의 끝'];
+// 좌우 대칭 구멍 모양. 각 함수는 (r,c) → 구멍이면 true.
+const SHAPES=[
+ ()=>false,
+ (r,c)=>(r===0||r===8)&&(c===0||c===8),
+ (r,c)=>Math.abs(r-4)+Math.abs(c-4)>6,
+ (r,c)=>r>=3&&r<=5&&c===4,
+ (r,c)=>(r===2||r===6)&&(c===2||c===6),
+ (r,c)=>c===4&&(r<2||r>6),
+ (r,c)=>(r>=3&&r<=5)&&(c===0||c===8),
+ (r,c)=>r===4&&(c<=1||c>=7),
+ (r,c)=>(r===0||r===8)&&Math.abs(c-4)>=3,
+ (r,c)=>(r<=1||r>=7)&&(c<=1||c>=7),
+];
+function genRng(n){let x=(Math.imul(n,2654435761)^0x9e3779b9)>>>0;return ()=>{x^=x<<13;x>>>=0;x^=x>>>17;x^=x<<5;x>>>=0;return x/4294967296;};}
+export function puzzleStageLevel(n){const tail=n%10;return tail===0?'veryHard':tail===5?'hard':(tail===1||tail===2)?'easy':'normal';}
+// 판 하나의 일(이끼·돌 겹·덩굴·모으기)이 이 상한을 넘으면 목표를 20%씩 줄여 다시 만든다(뒤 단계가 이동 45번으로도 모자라지 않게).
+const WORK_CAP=grow=>20+8*grow;
+function genStage(n,scale=PUZZLE_TUNING[n]?.[3]??1){
+ const R=genRng(n+Math.round((1-scale)*1e4)),ri=(a,b)=>a+Math.floor(R()*(b-a+1)),pk=list=>list[Math.floor(R()*list.length)];
+ const saw=puzzleStageLevel(n),grow=Math.min(1,Math.max(0,(n-10)/390));
+ const colors=n<25?5:6;
+ const grid=Array.from({length:9},()=>Array(9).fill('.'));
+ const shape=n<20?SHAPES[0]:SHAPES[Math.floor(R()*SHAPES.length)];
+ for(let r=0;r<9;r++)for(let c=0;c<9;c++)if(shape(r,c))grid[r][c]='#';
+ const free=(r,c)=>grid[r][c]==='.';
+ // 대칭: 왼쪽 반(가운데 줄 포함)에서 고르고 오른쪽에 거울처럼 놓는다.
+ const put=(r,c,ch)=>{let k=0;if(free(r,c)){grid[r][c]=ch;k++;}if(c!==4&&free(r,8-c)){grid[r][8-c]=ch;k++;}return k;};
+ const unlock={stone:11,vine:13,stone2:20,stone3:40,vineMoss:30};
+ const pool=['moss','collect','moss'];if(n>=unlock.stone)pool.push('stone');if(n>=unlock.vine)pool.push('vine');
+ const kinds=[],want=Math.min(3,1+(R()<.45+grow*.25?1:0)+(saw==='veryHard'&&R()<.35?1:0));
+ for(let t=0;t<30&&kinds.length<want;t++){const k=pk(pool);if(!kinds.includes(k))kinds.push(k);}
+ const amount=(lo,hi)=>Math.max(2,Math.round(scale*(lo+(hi-lo)*Math.min(1,grow*.7+R()*.45))));
+ if(kinds.includes('moss')){
+  // 이끼: 위아래 띠 · 가운데 덩어리 · 테두리 · 흩뿌림 중 하나.
+  const style=ri(0,3),target=amount(14,30);let placed=0;
+  for(let t=0;t<300&&placed<target;t++){
+   let r,c;
+   if(style===0){r=R()<.5?ri(0,2):ri(6,8);c=ri(0,4);}
+   else if(style===1){r=ri(2,6);c=ri(2,4);}
+   else if(style===2){r=ri(0,8);c=(r===0||r===8)?ri(0,4):pk([0,1]);}
+   else{r=ri(0,8);c=ri(0,4);}
+   placed+=put(r,c,'m');
+  }
+ }
+ if(kinds.includes('stone')){
+  const maxHp=n>=unlock.stone3?3:n>=unlock.stone2?2:1,target=amount(5,12),row=ri(1,7);let placed=0;
+  for(let t=0;t<300&&placed<target;t++){const r=R()<.6?row+ri(-1,1):ri(0,8),c=ri(0,4);if(r<0||r>8)continue;placed+=put(r,c,String(ri(1,maxHp)));}
+ }
+ if(kinds.includes('vine')){
+  const target=amount(5,13);let placed=0;
+  for(let t=0;t<300&&placed<target;t++){const r=ri(0,8),c=ri(0,4);
+   if(grid[r][c]==='.')placed+=put(r,c,'v');
+   else if(grid[r][c]==='m'&&n>=unlock.vineMoss){for(const cc of c===4?[4]:[c,8-c])if(grid[r][cc]==='m'){grid[r][cc]='V';placed++;}}}
+ }
+ const map=grid.map(row=>row.join('')),parsed=parseMap(map);
+ const laws=[...PUZZLE_LAW_IDS].sort((a,b)=>a.localeCompare(b));for(let k=laws.length-1;k>0;k--){const j=Math.floor(R()*(k+1));[laws[k],laws[j]]=[laws[j],laws[k]];}
+ let require=[],collect=null;
+ if(kinds.includes('collect')||(!parsed.moss.length&&!parsed.stones.length&&!parsed.vines.length)){
+  const k=ri(1,Math.min(3,1+Math.floor(n/15)));require=laws.slice(0,k);
+  collect=require.map(law=>({law,count:5*Math.max(5,Math.round(amount(25,45)/(k>2?1.3:1)/5))}));
+ }
+ const stoneHp=parsed.stones.reduce((a,x)=>a+x.hp,0),col=(collect||[]).reduce((a,c)=>a+c.count,0);
+ const G=PUZZLE_GEN,work=parsed.moss.length*G.workMoss+stoneHp*G.workStone+parsed.vines.length*G.workVine+col*G.workCollect;
+ if(work>WORK_CAP(grow)&&scale>.3)return genStage(n,scale*.8);
+ const moves=Math.max(G.min,Math.min(G.max,Math.round((G.base+work)*G[saw]*(1-G.growCut*grow))));
+ const stars=[Math.max(2,Math.round(moves*G.star2)),Math.max(4,Math.round(moves*G.star3))];
+ const name=n%50===0?MILESTONE[(n/50-1)%MILESTONE.length]:`${pk(NAME_A)} ${pk(NAME_B)}`;
+ const tip=saw==='veryHard'?'아주 어려운 단계! 특수 씨앗과 조합 효과를 아껴 두세요.':saw==='hard'?'어려운 단계예요. 목표 가까이에서 맞춰요.':'목표를 먼저 보고, 남은 이동을 아껴 별을 모아요.';
+ return stage(n,{name,tip,colors,moves,map,require,...(collect?{goal:{collect}}:{}),stars,level:saw});
+}
+// 보정표가 있으면 이동과 별 기준을 그 값으로(없는 단계는 생성기 식 그대로).
+const tuned=def=>{const t=PUZZLE_TUNING[def.n];return t?Object.freeze({...def,moves:t[0],stars:Object.freeze([t[1],t[2]])}):def;};
+export const PUZZLE_STAGES=Object.freeze([...HAND_STAGES,...Array.from({length:PUZZLE_STAGE_COUNT-HAND_STAGES.length},(_,k)=>genStage(k+HAND_STAGES.length+1))].map(tuned));
 export const PUZZLE_STAGE_BY_ID=Object.freeze(Object.fromEntries(PUZZLE_STAGES.map(s=>[s.id,s])));
 // 오늘의 단계: 날짜(서울 기준 YYYYMMDD)로 시드가 정해지는 점수 도전. 누구나 같은 판에서 시작한다.
-export function dailyPuzzleStage(day){const d=String(day).replace(/\D/g,'').slice(0,8);return Object.freeze({...stage(0,{name:'오늘의 단계',tip:'이동 25번 안에 최고 점수. 오늘 하루 같은 판이에요.',moves:25,attack:true,stars:[4000,6500,9000]}),id:`d${d}`,daily:d,seed:Number(d)>>>0});}
+export function dailyPuzzleStage(day){const d=String(day).replace(/\D/g,'').slice(0,8);return Object.freeze({...stage(0,{name:'오늘의 단계',tip:'이동 25번 안에 최고 점수. 오늘 하루 같은 판이에요.',moves:25,attack:true,stars:[5000,8000,11000]}),id:`d${d}`,daily:d,seed:Number(d)>>>0});}
 export function seoulDay(now=Date.now()){const d=new Date(now+9*3600e3);return `${d.getUTCFullYear()}${String(d.getUTCMonth()+1).padStart(2,'0')}${String(d.getUTCDate()).padStart(2,'0')}`;}
 
 // ── 판 만들기
@@ -115,7 +178,7 @@ export function seoulDay(now=Date.now()){const d=new Date(now+9*3600e3);return `
 export function createPuzzle(def,seed=1,boosters=[]){
  const n=Number.isFinite(seed)?seed>>>0:1;
  const s={version:2,stage:def.id,def,seed:n,rng:n||1,cells:Array(ALL).fill(null),hole:Array(ALL).fill(0),moss:Array(ALL).fill(0),stone:Array(ALL).fill(0),vine:Array(ALL).fill(0),
-  laws:[],movesLeft:def.moves,log:[],score:0,collected:{},phase:'play',nextId:1,combos:[],created:{pierce:0,chain:0,burst:0,sun:0},maxCombo:0,bonus:0,continues:0,tools:0,
+  laws:[],movesLeft:def.moves,leftAtWin:0,log:[],score:0,collected:{},phase:'play',nextId:1,combos:[],created:{pierce:0,chain:0,burst:0,sun:0},maxCombo:0,bonus:0,continues:0,tools:0,
   boosters:(Array.isArray(boosters)?boosters:[]).filter(id=>POWER_IDS.includes(id)).slice(0,6)};
  const pool=PUZZLE_LAW_IDS.filter(id=>!def.require.includes(id)),laws=[...def.require];
  while(laws.length<def.colors){const id=pick(s,pool);pool.splice(pool.indexOf(id),1);laws.push(id);}
@@ -219,7 +282,7 @@ function clearStep(s,{forced=[],effects=[],moved=[],combo,label=null}){
  if(!start.size)return null;
  const creations=[];
  for(const g of groups){const kind=creationOf(g);if(!kind)continue;const i=pivotOf(g,moved);const run=g.shapes.find(x=>x.kind!=='sq'&&x.cells.includes(i))||g.shapes.find(x=>x.kind!=='sq');
-  creations.push({i,kind,dir:run?.kind==='h'?'v':'h'});}
+  creations.push({i,kind,dir:run?.kind==='h'?'v':'h',law:g.law});}
  const matched=new Set(groups.flatMap(g=>[...g.cells]));
  const hit=detonate(s,start,effects);
  const cleared=[],stones=new Map(),vines=[],moss=[],hurt=new Set();
@@ -236,7 +299,8 @@ function clearStep(s,{forced=[],effects=[],moved=[],combo,label=null}){
  }
  const stoneOut=[];for(const [i,dmg] of stones){s.stone[i]=Math.max(0,s.stone[i]-dmg);stoneOut.push({i,hp:s.stone[i]});}
  const created=[];
- for(const c of creations){if(!open(s,c.i)||s.cells[c.i])continue;const cell=gem(s,null,{sp:c.kind,...(c.kind==='pierce'?{dir:c.dir}:{})});s.cells[c.i]=cell;s.created[c.kind]++;created.push({i:c.i,cell:copyCell(cell)});}
+ // 2026-09-29 사용자: "조합도 시드와 맞게 더 생기면" → 특수 씨앗은 맞춘 씨앗의 법칙(src)을 기억한다. 특수끼리 합치면 두 법칙의 SEED 융합(도감 이름).
+ for(const c of creations){if(!open(s,c.i)||s.cells[c.i])continue;const cell=gem(s,null,{sp:c.kind,src:c.law,...(c.kind==='pierce'?{dir:c.dir}:{})});s.cells[c.i]=cell;s.created[c.kind]++;created.push({i:c.i,cell:copyCell(cell)});}
  const gained=cleared.length*PUZZLE.cellScore*combo+created.reduce((n,c)=>n+PUZZLE.createScore[c.cell.sp],0)+(stoneOut.length+vines.length)*20;
  s.score+=gained;s.maxCombo=Math.max(s.maxCombo,combo);
  for(const e of effects)if(e.form&&!s.combos.includes(e.form))s.combos.push(e.form);
@@ -300,7 +364,6 @@ function shuffle(s){
 // ── 목표
 export function puzzleGoalState(s){
  const g=s.def.goal,parts=[];
- if(g.score)parts.push({kind:'score',have:s.score,need:g.score});
  for(const c of g.collect||[])parts.push({kind:'collect',law:c.law,have:Math.min(c.count,s.collected[c.law]||0),need:c.count});
  if(g.moss){const left=s.moss.reduce((a,b)=>a+b,0);parts.push({kind:'moss',have:s.def.moss.length-left,need:s.def.moss.length});}
  if(g.stone){const left=s.stone.filter(Boolean).length;parts.push({kind:'stone',have:s.def.stones.length-left,need:s.def.stones.length});}
@@ -310,9 +373,11 @@ export function puzzleGoalState(s){
 export const puzzleGoalMet=s=>!s.def.attack&&puzzleGoalState(s).every(p=>p.have>=p.need);
 // 목표까지 남은 정도(0~1). 이어하기(+5 이동) 화면에서 얼마나 아까운지 보여 줄 때 쓴다.
 export function puzzleGoalLeft(s){const parts=puzzleGoalState(s);if(!parts.length)return 0;return parts.reduce((a,p)=>a+Math.max(0,p.need-p.have)/Math.max(1,p.need),0)/parts.length;}
+// 별: 오늘의 단계는 점수, 보통 단계는 깬 순간 남은 이동(+5 이동을 샀으면 ★ 하나).
 export function puzzleStars(s){
- if(s.phase!=='won')return 0;const [a,b,c]=s.def.stars;
- return s.def.attack?(s.score>=c?3:s.score>=b?2:s.score>=a?1:0):1+(s.score>=a)+(s.score>=b);
+ if(s.phase!=='won')return 0;
+ if(s.def.attack){const [a,b,c]=s.def.stars;return s.score>=c?3:s.score>=b?2:s.score>=a?1:0;}
+ if(s.continues>0)return 1;const [a,b]=s.def.stars;return 1+(s.leftAtWin>=a)+(s.leftAtWin>=b);
 }
 
 // ── 행동. 모두 {ok,reason,steps}를 돌려주고, 화면은 steps 를 차례로 그린다.
@@ -353,11 +418,23 @@ export function usePuzzleTool(s,tool,i=0){
 export const puzzleContinuePrice=s=>s.continues<PUZZLE.maxContinues?PUZZLE_SHOP.more[s.continues]:null;
 export function continuePuzzle(s){
  if(s.phase!=='out'||s.continues>=PUZZLE.maxContinues)return {ok:false,reason:'이어할 수 없어요',steps:[]};
- s.continues++;s.movesLeft+=PUZZLE.extraMoves;s.phase='play';s.log.push(['+']);return {ok:true,steps:[]};
+ s.continues++;s.movesLeft+=PUZZLE.extraMoves;s.phase='play';s.log.push(['+']);
+ // 이동을 다 쓴 판은 둘 수가 없는 채로 멈췄을 수 있다 → 이어할 때 섞어 준다.
+ const steps=[];if(!findHint(s)){shuffle(s);steps.push({type:'shuffle',cells:s.cells.map(copyCell)});}return {ok:true,steps};
 }
 export function giveUpPuzzle(s){if(s.phase!=='out')return {ok:false,steps:[]};s.phase='lost';return {ok:true,steps:[{type:'end',phase:'lost',stars:0,score:s.score}]};}
+// 햇살 타임: 깬 순간 남은 이동만큼(최대 15) 보통 씨앗이 관통·폭발 씨앗이 되어 한꺼번에 터진다(로열 매치의 남은 이동 로켓).
+function sunTime(s,steps){
+ const n=Math.min(15,s.movesLeft),spots=[];if(!n)return;
+ for(let i=0;i<ALL;i++)if(s.cells[i]&&!s.cells[i].sp&&!s.vine[i]&&open(s,i))spots.push(i);
+ const picked=[];for(let k=0;k<n&&spots.length;k++){const j=Math.floor(random(s)*spots.length);picked.push(spots.splice(j,1)[0]);}
+ for(const [k,i] of picked.entries())s.cells[i]={...s.cells[i],law:null,sp:k%3===2?'burst':'pierce',dir:k%2?'v':'h'};
+ steps.push({type:'suntime',cells:picked,board:s.cells.map(copyCell)});
+ const before=s.score;cascade(s,steps,{forced:picked,label:'햇살 타임'});
+ s.bonus=s.movesLeft*PUZZLE.moveBonus+(s.score-before);s.score+=s.movesLeft*PUZZLE.moveBonus;
+}
 function settle(s,steps){
- if(puzzleGoalMet(s)){s.phase='won';s.bonus=s.movesLeft*PUZZLE.moveBonus;s.score+=s.bonus;steps.push({type:'bonus',moves:s.movesLeft,gained:s.bonus});}
+ if(puzzleGoalMet(s)){s.phase='won';s.leftAtWin=s.movesLeft;steps.push({type:'bonus',moves:s.movesLeft,gained:s.movesLeft*PUZZLE.moveBonus});sunTime(s,steps);}
  else if(s.movesLeft<=0)s.phase=s.def.attack?'won':s.continues<PUZZLE.maxContinues?'out':'lost';
  else if(!findHint(s)){shuffle(s);steps.push({type:'shuffle',cells:s.cells.map(copyCell)});}
  if(s.phase==='out')steps.push({type:'out',continues:s.continues,price:puzzleContinuePrice(s),left:puzzleGoalLeft(s)});
@@ -385,7 +462,8 @@ function comboSwap(s,steps,center,other){
  else if(p==='burst'&&q==='burst')add(square(center,4));
  else if(p==='burst'&&q==='pierce'){add(line(center,'h',1));add(line(center,'v',1));}
  else{add(line(center,'h'));add(line(center,'v'));}
- const form=POWER_LAW[p]&&POWER_LAW[q]?puzzleComboForm(POWER_LAW[p],POWER_LAW[q]):null;
+ // 이름: 두 특수 씨앗이 기억한 법칙(없으면 특수 씨앗 모양의 법칙) → 같은 법칙이면 단독 진화, 다르면 융합. 9법칙이라 45가지.
+ const la=x.src||POWER_LAW[x.sp],lb=y.src||POWER_LAW[y.sp],form=la&&lb?puzzleComboForm(la,lb):null;
  fx.cells=[...cells];fx.name=form?.name||label||null;fx.form=form?.id||null;
  cascade(s,steps,{forced:[...cells],effects:[fx],label:fx.name});
 }
@@ -404,7 +482,8 @@ export function replayPuzzle(def,seed,boosters,log){
 // 그래야 한 기기를 두 계정이 써도 서로의 별 때문에 첫 깨기 햇살을 못 받는 일이 없다.
 export const PUZZLE_SAVE_KEY='seed-puzzle-v1';
 export const puzzleSaveKey=(owner='guest')=>`${PUZZLE_SAVE_KEY}:${encodeURIComponent(owner||'guest')}`;
-export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*n,newStar:40,daily:100});
+// 첫 깨기 햇살은 30단계부터 380 JP로 고정(999단계까지 늘어나지 않게).
+export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*Math.min(30,n),newStar:40,daily:100});
 const int=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 // 도전 씨앗(로열 매치의 하트). 2026-09-28 사용자: "하트를 씨앗으로"
 // 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 10분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
@@ -443,6 +522,8 @@ export function writePuzzleProgress(storage,p,owner){const next=normalizePuzzleP
 export function puzzleUnlocked(progress,def){if(def.daily||def.n<=1)return true;return (progress.stages[`s${def.n-1}`]?.stars||0)>0;}
 // 한 번이라도 둔 판을 그만두면 진 것으로 쳐서 연승이 끊긴다(로열 매치와 같다). 오늘의 단계는 연승과 무관.
 export function breakPuzzleStreak(progress){const p=normalizePuzzleProgress(progress);p.streak=0;return p;}
+// 연승 선물·연승 끊김은 처음 깨는 단계에만(다시 하는 단계는 선물도 없고 연승도 걸려 있지 않다).
+export const puzzleStreakCounts=(progress,def)=>!def.daily&&!(progress?.stages?.[def.id]?.stars>0);
 // 판이 끝났을 때 진행을 갱신하고 이번에 줄 햇살을 센다(같은 결과를 두 번 넣어도 두 번 주지 않는다).
 export function recordPuzzleResult(progress,s){
  const p=normalizePuzzleProgress(progress),stars=puzzleStars(s);let jp=0;const notes=[];
@@ -458,6 +539,7 @@ export function recordPuzzleResult(progress,s){
  // 첫 별은 첫 깨기 보상에 들어 있다. 그 위의 별은 처음 얻을 때 하나씩.
  if(stars>0){if(!prev.stars){jp+=PUZZLE_JP.firstClear(s.def.n);notes.push('첫 깨기');}const more=Math.max(0,stars-Math.max(1,prev.stars));if(more){jp+=more*PUZZLE_JP.newStar;notes.push(`새 별 ${more}개`);}}
  p.stages[s.def.id]={best:Math.max(prev.best,s.phase==='won'?s.score:0),stars:Math.max(prev.stars,stars),clears:prev.clears+(stars>0?1:0)};
- if(s.phase==='won'){p.streak++;p.bestStreak=Math.max(p.bestStreak,p.streak);if(p.streak>=2)notes.push(`${p.streak}연승`);}else p.streak=0;
+ // 연승은 처음 깨는 단계만 센다(2026-09-29 사용자: "첫 번째 판을 계속 시도해도 연승 보너스가 남아 있다"). 깬 단계를 다시 하면 연승은 그대로.
+ if(!prev.stars){if(s.phase==='won'){p.streak++;p.bestStreak=Math.max(p.bestStreak,p.streak);if(p.streak>=2)notes.push(`${p.streak}연승`);}else p.streak=0;}
  return {progress:p,jp,notes,stars};
 }

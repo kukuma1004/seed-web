@@ -4,6 +4,8 @@ import {GARDEN_THEMES,GARDEN_THEME_IDS,GARDEN_OBJECTS,OBJECT_KINDS,THEME_UNLOCK_
 import {GARDEN_OBJECT_ART,GARDEN_THEME_ART} from '../src/garden-theme-art.js';
 import {normalizeGarden,emptyGarden} from '../src/garden.js';
 import {mergeGardenProgress} from '../src/cloud-save.js';
+import {SPOT_SCENES,chooseSpotStyle,spotsTotal} from '../src/garden-spots.js';
+import {recordOpenedThemes} from '../src/garden-themes.js';
 
 // 테마 9곳, 온실이 처음. 그림 파일이 다 있다.
 assert.equal(GARDEN_THEMES.length,9);assert.equal(GARDEN_THEME_IDS[0],'greenhouse');assert.equal(new Set(GARDEN_THEME_IDS).size,9);
@@ -24,7 +26,8 @@ assert.ok(Math.min(...themeCatalog('greenhouse').map(o=>o.price))<=60);
 // 처음에는 온실만 열려 있다.
 let g=normalizeGarden({});
 assert.deepEqual(GARDEN_THEME_IDS.filter(id=>themeUnlocked(g,id)),['greenhouse']);
-assert.deepEqual(themeLockInfo(g,'meadow'),{locked:true,prev:'greenhouse',prevName:'온실',need:THEME_UNLOCK_PLACED,have:0,prevOpen:true});
+// 온실은 자리 꾸미기(v2)라 초원은 온실 자리를 모두 채우면 열린다.
+assert.deepEqual(themeLockInfo(g,'meadow'),{locked:true,prev:'greenhouse',prevName:'온실',need:spotsTotal('greenhouse'),have:0,spots:true,prevOpen:true});
 assert.equal(themeLockInfo(g,'blossom').prevOpen,false);
 // 잠긴 테마 · 다른 테마 세트 · 돈이 모자라면 못 산다(돈은 빠지지 않는다).
 let coins=1000;const spend=p=>coins>=p?(coins-=p,true):false;
@@ -32,10 +35,15 @@ assert.equal(buyObject(g,'meadow','meadow.0',{spend}).reason,'locked');
 assert.equal(buyObject(g,'greenhouse','fire.0',{spend}).reason,'catalog');
 assert.equal(buyObject(g,'greenhouse','nope',{spend}).reason,'object');
 assert.equal(buyObject(g,'greenhouse','greenhouse.0',{spend:()=>false}).reason,'coins');assert.equal(coins,1000);
-// 온실에 여섯 개 놓으면 초원이 열린다(fresh로 알려 준다).
+// 예전 구성물을 온실에 여섯 개 놓아도 초원은 안 열리고, 온실 자리를 모두 채우면 열린다(fresh로 알려 준다).
 let opened=[];
 for(let i=0;i<THEME_UNLOCK_PLACED;i++){const r=buyObject(g,'greenhouse',`greenhouse.${i}`,{u:.1*i+.2,v:.6,spend});assert.ok(r.ok);g=r.garden;opened.push(...r.fresh);}
+assert.deepEqual(opened,[]);assert.ok(!themeUnlocked(g,'meadow'));
+for(const s of SPOT_SCENES.greenhouse.spots)g=chooseSpotStyle(g,'greenhouse',s.id,'A',{}).garden;
+{const rec=recordOpenedThemes(g);g=rec.garden;opened.push(...rec.fresh);}
 assert.deepEqual(opened,['meadow']);assert.ok(themeUnlocked(g,'meadow'));assert.ok(!themeUnlocked(g,'blossom'));
+// 초원(예전 방식)은 구성물 여섯 개로 벚꽃을 연다.
+{let h=g;for(let i=0;i<THEME_UNLOCK_PLACED;i++)h=buyObject(h,'meadow',`meadow.${i}`,{}).garden;assert.ok(themeUnlocked(h,'blossom'));}
 assert.equal(coins,1000-themeCatalog('greenhouse').slice(0,THEME_UNLOCK_PLACED).reduce((n,o)=>n+o.price,0));
 // 옮기기 · 뒤집기 · 크기(범위 안으로) · 맨 앞으로 · 그리는 차례(위쪽부터).
 g=moveObject(g,'greenhouse',0,{u:1.4,v:.3,s:9,f:1}).garden;assert.deepEqual(g.themes.greenhouse[0],{k:'greenhouse.0',u:1,v:.3,s:1.6,f:1});

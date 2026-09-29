@@ -119,4 +119,9 @@ art-source/
 !tools/garden-decor-test.mjs
 !tools/garden-themes-test.mjs
 !tools/garden_spot_part.py
+!tools/garden-spots-test.mjs
+!tools/garden_spot_export.py
+!tools/seed-puzzle-calibrate.mjs
+!tools/seed-puzzle-tuning-build.mjs
 art-refs/
+.calib/

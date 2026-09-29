@@ -1,8 +1,9 @@
 // 정원 입구(허브)와 테마 정원 꾸미기 화면.
 // 허브: 정원 그림 위 표지판을 눌러 테마로 들어간다(온실부터 차례로 열린다). 생명의 나무는 기존 3D 정원으로 간다.
 // 테마: 가게에서 JP로 구성물을 사서 아무 곳에나 끌어다 놓는다. 뒤집기 · 크기 · 앞으로 · 보관(가방).
-import {GARDEN_THEMES,GARDEN_OBJECTS,OBJECT_KINDS,THEME_UNLOCK_PLACED,THEME_MAX_ITEMS,themeCatalog,themeUnlocked,themeLockInfo,themeItemCount,buyObject,placeFromBag,moveObject,storeObject,bringToFront,themeDrawOrder} from './garden-themes.js';
+import {GARDEN_THEMES,GARDEN_OBJECTS,OBJECT_KINDS,THEME_UNLOCK_PLACED,THEME_MAX_ITEMS,themeCatalog,themeUnlocked,themeLockInfo,themeItemCount,themeProgress,recordOpenedThemes,buyObject,placeFromBag,moveObject,storeObject,bringToFront,themeDrawOrder} from './garden-themes.js';
 import {GARDEN_OBJECT_ART,GARDEN_THEME_ART} from './garden-theme-art.js';
+import {SPOT_STYLE_IDS,spotScene,hasSpotScene,spotEntry,spotsFilled,spotPrice,spotArt,spotBase,chooseSpotStyle,clearSpot} from './garden-spots.js';
 import './garden-hub.css';
 
 const BASE=import.meta.env.BASE_URL,ART=BASE+'assets/garden/';
@@ -19,7 +20,7 @@ function spriteStyle(obj,h){
  return {w:bw*k,h,css:`background-image:url(${ART}objects-${obj.set}-v1.webp);background-size:${art.size[0]*k}px ${art.size[1]*k}px;background-position:${-x*k}px ${-y*k}px`};
 }
 
-export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>0,onSpend=()=>false,onOpenSanctuary=null,onClose=()=>{},start=null}={}){
+export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>0,onSpend=()=>false,onCredit=()=>false,onOpenSanctuary=null,onClose=()=>{},start=null}={}){
  const root=document.createElement('section');root.id='garden-hub';root.setAttribute('aria-label','정원');
  host.append(root);document.body.classList.add('garden-hub-open');
  const listeners=[];let closed=false,view='hub',theme=null,toastTimer=0,sel=-1,drag=null,tab='shop',pick=null;
@@ -51,8 +52,8 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   const sc=$('.gh-scroll'),mh=$('.gh-map').offsetHeight;sc.scrollLeft=sc.scrollWidth-sc.clientWidth<sc.clientWidth*.3?(sc.scrollWidth-sc.clientWidth)/2:Math.max(0,(TREE[0]+SIGNS.greenhouse[0])/2/HUB[0]*sc.scrollWidth-sc.clientWidth/2);sc.scrollTop=Math.max(0,(85+537)/2/HUB[1]*mh-sc.clientHeight/2);
  }
  function sign(G,id,x,y){
-  const t=GARDEN_THEMES.find(q=>q.id===id),open=themeUnlocked(G,id),n=themeItemCount(G,id);
-  return `<button class="gh-sign${open?'':' locked'}" data-theme="${id}" style="left:${x/HUB[0]*100}%;top:${y/HUB[1]*100}%;--tone:${t.tone}"><b>${open?'':'<i aria-hidden="true">🔒</i>'}${esc(t.name)}</b>${open?`<small>구성물 ${n}</small>`:''}</button>`;
+  const t=GARDEN_THEMES.find(q=>q.id===id),open=themeUnlocked(G,id),pr=themeProgress(G,id);
+  return `<button class="gh-sign${open?'':' locked'}" data-theme="${id}" style="left:${x/HUB[0]*100}%;top:${y/HUB[1]*100}%;--tone:${t.tone}"><b>${open?'':'<i aria-hidden="true">🔒</i>'}${esc(t.name)}</b>${open?`<small>${pr.spots?`꾸민 자리 ${pr.have}/${pr.need}`:`구성물 ${pr.have}`}</small>`:''}</button>`;
  }
  function card(G,id){
   const t=GARDEN_THEMES.find(q=>q.id===id),open=themeUnlocked(G,id);
@@ -70,8 +71,8 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
  }
  function enter(id){
   const G=g();
-  if(!themeUnlocked(G,id)){const i=themeLockInfo(G,id);toast(i.prevOpen?`🔒 ${i.prevName}에 구성물을 ${i.need}개 놓으면 열려요 (${Math.min(i.have,i.need)}/${i.need})`:`🔒 앞 정원부터 차례로 열려요 · 지금은 ${i.prevName}도 잠겨 있어요`);return;}
-  themeView(id);
+  if(!themeUnlocked(G,id)){const i=themeLockInfo(G,id);toast(i.prevOpen?(i.spots?`🔒 ${i.prevName}의 자리 ${i.need}곳을 모두 꾸미면 열려요 (${Math.min(i.have,i.need)}/${i.need})`:`🔒 ${i.prevName}에 구성물을 ${i.need}개 놓으면 열려요 (${Math.min(i.have,i.need)}/${i.need})`):`🔒 앞 정원부터 차례로 열려요 · 지금은 ${i.prevName}도 잠겨 있어요`);return;}
+  if(hasSpotScene(id))spotView(id);else themeView(id);
  }
 
  // ── 테마 꾸미기
@@ -91,6 +92,77 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   $('.gh-stage').addEventListener('pointerdown',e=>{if(e.target===$('.gh-stage')||e.target===$('.gh-items')){sel=-1;paintItems();}});
   paintTray();layoutStage();paintItems();
   observe($('.gh-stagebox'));
+ }
+ // ── 자리 꾸미기(v2): 빈 장면 위 정해진 자리에 스타일 A·B·C를 골라 끼운다(garden-spots.js).
+ let spot=null;
+ function spotView(id){
+  view='spots';theme=GARDEN_THEMES.find(t=>t.id===id);spot=null;
+  // CSS 변수에 넣는 주소는 CSS 파일 기준으로 풀리므로 절대 주소로(처음 화면 그림 빈 화면 사고와 같은 함정).
+  const scene=spotScene(id),[W,H]=scene.size,base=new URL(BASE+spotBase(id),document.baseURI).href;
+  refundLegacy(id);
+  root.className='gh-theme-view gh-spots-view';root.style.setProperty('--tone',theme.tone);
+  root.innerHTML=`<header class="gh-top"><button class="gh-back" aria-label="정원으로">‹</button><div class="gh-title"><small>${esc(theme.en)}</small><b>${esc(theme.name)}</b></div><span class="gh-wallet" title="보유 JP"></span></header>
+  <div class="gh-body"><div class="gh-stagebox gh-spotbox" style="--bg:url(${base})"><div class="gh-stage gh-spotstage" style="background-image:url(${base})"><div class="gh-layers"></div><div class="gh-marks"></div>
+   <p class="gh-quote">“${esc(theme.quote)}”</p><p class="gh-progress"></p></div></div>
+  <section class="gh-tray gh-spot-tray"><div class="gh-pick"></div><div class="gh-list"></div></section></div>
+  <p class="gh-toast" role="status" aria-live="polite"></p>`;
+  $('.gh-back').onclick=hub;
+  $('.gh-stage').addEventListener('pointerdown',e=>{if(e.target.closest('.gh-mark'))return;spot=null;paintSpots();});
+  layoutSpots();paintSpots();observe($('.gh-stagebox'));
+  // 그림을 미리 받아 두면 고를 때 바로 뜬다.
+  for(const s of scene.spots)for(const st of SPOT_STYLE_IDS){const im=new Image();im.decoding='async';im.src=BASE+spotArt(id,s.id,st);}
+  void W,H;
+ }
+ // 예전(v1) 방식으로 이 정원에 놓았던 구성물은 한 번만 산 값만큼 햇살로 돌려준다.
+ function refundLegacy(id){
+  const G=g(),items=G.themes?.[id]||[];if((G.spotsRefunded||[]).includes(id))return;
+  const jpBack=items.reduce((a,it)=>a+(GARDEN_OBJECTS[it.k]?.price||0),0);
+  garden.set({...G,themes:{...G.themes,[id]:[]},spotsRefunded:[...(G.spotsRefunded||[]),id]});
+  if(jpBack>0&&onCredit(jpBack)!==false)setTimeout(()=>toast(`정원이 새로 바뀌었어요 · 예전 구성물 ${items.length}개 값 ${jp(jpBack)} JP를 돌려드렸어요`),300);
+ }
+ function layoutSpots(){
+  const box=$('.gh-stagebox'),st=$('.gh-stage');if(!box||!st)return;
+  // 세로 화면은 가로로 긴 장면이 너무 작아 자리 표시가 겹친다 → 1.6배까지 키우고 옆으로 밀어 보게 한다(처음엔 가운데).
+  const [aw,ah]=spotScene(theme.id).size,cw=box.clientWidth,ch=box.clientHeight,fit=Math.min(cw/aw,ch/ah),s=cw<ch?Math.min(ch/ah,cw*1.6/aw):fit,wide=aw*s>cw+1;
+  st.style.width=Math.floor(aw*s)+'px';st.style.height=Math.floor(ah*s)+'px';
+  box.classList.toggle('pan',wide);if(wide&&!box.dataset.centered){box.dataset.centered='1';box.scrollLeft=(aw*s-cw)/2;}
+ }
+ function paintSpots(){
+  const G=g(),id=theme.id,scene=spotScene(id),[W,H]=scene.size;
+  const pct=(v,t)=>`${v/t*100}%`;
+  // 뒤(자리 아래 끝이 위쪽)부터 그린다.
+  $('.gh-layers').innerHTML=[...scene.spots].sort((a,b)=>a.box[3]-b.box[3]).map(sp=>{const on=spotEntry(G,id,sp.id).on;if(!on)return '';const [x0,y0,x1,y1]=sp.box;
+   return `<img class="gh-layer${fresh===sp.id?' pop':''}" alt="" decoding="async" src="${BASE}${spotArt(id,sp.id,on)}" style="left:${pct(x0,W)};top:${pct(y0,H)};width:${pct(x1-x0,W)};height:${pct(y1-y0,H)}">`;}).join('');
+  $('.gh-marks').innerHTML=scene.spots.map(sp=>{const e=spotEntry(G,id,sp.id);return `<button class="gh-mark${spot===sp.id?' on':''}${e.on?' filled':''}" data-spot="${sp.id}" aria-label="${esc(sp.name)}${e.on?` · ${esc(sp.styles[e.on])}`:' · 비어 있음'}" style="left:${pct(sp.at[0],W)};top:${pct(sp.at[1],H)}"><span aria-hidden="true">${e.on?'✎':'＋'}</span></button>`;}).join('');
+  root.querySelectorAll('[data-spot]').forEach(b=>b.onclick=e=>{e.stopPropagation();spot=spot===b.dataset.spot?null:b.dataset.spot;paintSpots();});
+  fresh=null;
+  const done=spotsFilled(G,id),total=scene.spots.length,next=GARDEN_THEMES[GARDEN_THEMES.indexOf(theme)+1];
+  $('.gh-progress').textContent=`꾸민 자리 ${done}/${total}${next&&!themeUnlocked(G,next.id)?` · 모두 꾸미면 ${next.name}이 열려요`:''}`;
+  $('.gh-wallet').textContent=`${jp(wallet())} JP`;
+  paintSpotTray();
+ }
+ let fresh=null;
+ function paintSpotTray(){
+  const G=g(),id=theme.id,scene=spotScene(id),bar=$('.gh-pick'),list=$('.gh-list'),coins=wallet();
+  if(!spot){
+   bar.innerHTML=`<small>빛나는 <b>＋</b> 자리를 눌러 꾸며요 · 꾸민 자리 <b>${spotsFilled(G,id)}/${scene.spots.length}</b></small>`;
+   list.innerHTML=scene.spots.map(sp=>{const e=spotEntry(G,id,sp.id);return `<button class="gh-item gh-spotchip${e.on?' done':''}" data-pick="${sp.id}"><span class="gh-thumb">${e.on?`<img alt="" src="${BASE}${spotArt(id,sp.id,e.on)}">`:'<i class="gh-plus">＋</i>'}</span><b>${esc(sp.name)}</b><small>${e.on?esc(sp.styles[e.on]):'비어 있음'}</small></button>`;}).join('');
+   list.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{spot=b.dataset.pick;paintSpots();});return;
+  }
+  const sp=scene.spots.find(x=>x.id===spot),e=spotEntry(G,id,spot);
+  bar.innerHTML=`<span><b>${esc(sp.name)}</b> · 모습을 골라요</span>${e.on?'<button class="gh-clear">비우기</button>':''}<button class="gh-done">다 골랐어요</button>`;
+  bar.querySelector('.gh-clear')?.addEventListener('click',()=>{const r=clearSpot(g(),id,spot);if(r.ok){garden.set(r.garden);paintSpots();}});
+  bar.querySelector('.gh-done').onclick=()=>{spot=null;paintSpots();};
+  list.innerHTML=SPOT_STYLE_IDS.map(st=>{const own=e.own.includes(st),on=e.on===st,price=spotPrice(st,theme.rate);
+   return `<button class="gh-item gh-style${on?' on':''}${!own&&price>coins?' poor':''}" data-style="${st}" aria-pressed="${on}"><span class="gh-thumb"><img alt="" src="${BASE}${spotArt(id,spot,st)}"></span><b>${esc(sp.styles[st])}</b><small>${on?'끼워 있어요':own?'가진 모습 · 무료':`${jp(price)} JP`}</small></button>`;}).join('');
+  list.querySelectorAll('[data-style]').forEach(b=>b.onclick=()=>chooseStyle(b.dataset.style));
+ }
+ function chooseStyle(st){
+  const id=theme.id,r=chooseSpotStyle(g(),id,spot,st,{rate:theme.rate,spend:price=>onSpend(price)});
+  if(!r.ok){toast(r.reason==='coins'?'JP가 모자라요 · 던전과 씨앗 맞추기에서 모을 수 있어요':'지금은 고를 수 없어요');return;}
+  const rec=recordOpenedThemes(r.garden);garden.set(rec.garden);fresh=spot;audio?.play?.(r.paid?'evolve':'pickup');
+  const sp=spotScene(id).spots.find(x=>x.id===spot);paintSpots();
+  if(rec.fresh.length)announce(rec.fresh);else toast(`${sp.name} · ${sp.styles[st]}${r.paid?` (${jp(r.paid)} JP)`:''}`);
  }
  const stageRect=()=>{const st=$('.gh-stage');return {w:st.clientWidth,h:st.clientHeight};};
  function layoutStage(){
@@ -170,11 +242,11 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   if(r.fresh?.length)announce(r.fresh);else toast(tab==='shop'?`${o.name} · 끌어서 원하는 곳에 옮겨 보세요`:`${o.name}을(를) 놓았어요`);
  }
 
- function onResize(){if(closed)return;if(view==='hub')layoutHub();else if(!drag){layoutStage();paintItems();}}
+ function onResize(){if(closed)return;if(view==='hub')layoutHub();else if(view==='spots')layoutSpots();else if(!drag){layoutStage();paintItems();}}
  // 트레이가 그려지거나 화면이 돌아가면 크기를 다시 잰다.
  let ro=null;function observe(el){ro?.disconnect();if(typeof ResizeObserver==='function'&&el){ro=new ResizeObserver(()=>onResize());ro.observe(el);}}
- function onKey(e){if(e.code!=='Escape')return;e.preventDefault();if(view==='theme'){if(sel>=0){sel=-1;paintItems();}else hub();}else close();}
+ function onKey(e){if(e.code!=='Escape')return;e.preventDefault();if(view==='spots'){if(spot){spot=null;paintSpots();}else hub();}else if(view==='theme'){if(sel>=0){sel=-1;paintItems();}else hub();}else close();}
  listen(window,'resize',onResize);listen(window,'pointermove',onMove);listen(window,'pointerup',onUp);listen(window,'pointercancel',onUp);listen(window,'keydown',onKey);
- if(start&&themeUnlocked(g(),start))themeView(start);else hub();
- return {close,hub,enter,get view(){return view;},get theme(){return theme?.id||null;},debug:{select:i=>{sel=i;paintItems();},pick:k=>{pick=k;paintTray();},place:()=>pick&&place(GARDEN_OBJECTS[pick]),tab:t=>{tab=t;pick=null;paintTray();}}};
+ if(start&&themeUnlocked(g(),start))(hasSpotScene(start)?spotView:themeView)(start);else hub();
+ return {close,hub,enter,get view(){return view;},get theme(){return theme?.id||null;},debug:{spot:id=>{spot=id;paintSpots();},style:st=>chooseStyle(st),select:i=>{sel=i;paintItems();},pick:k=>{pick=k;paintTray();},place:()=>pick&&place(GARDEN_OBJECTS[pick]),tab:t=>{tab=t;pick=null;paintTray();}}};
 }

@@ -79,6 +79,7 @@ import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defens
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
 import {GARDEN_THEMES,themeUnlocked,themeItemCount} from './garden-themes.js';
+import {spotsFilled} from './garden-spots.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
 import {createGardenScene} from './garden-scene.js';
 import {PATCH_NOTES,hasUnseenNotes,markNotesSeen,latestNoteId} from './patch-notes.js';
@@ -1761,7 +1762,7 @@ async function showSeedPuzzle(){
 // 2026-09-28 사용자: "정원메뉴는 앞으로 빼야 … 정원에 들어가서 다시 테마로 들어가는건데 테마는 단계별로 잠궈놔야 … 일단 첫번째 온실만 열어 놓고
 // … 구성물을 배치할 때는 마음대로 배치할 수 있게 하고 구성물은 제이피 게임내 통화로 살 수 있게" — 처음 화면의 정원 → 허브 → 테마 정원.
 function gardenHomeLine(){
- const opened=GARDEN_THEMES.filter(t=>themeUnlocked(garden,t.id)).length,placed=GARDEN_THEMES.reduce((n,t)=>n+themeItemCount(garden,t.id),0);
+ const opened=GARDEN_THEMES.filter(t=>themeUnlocked(garden,t.id)).length,placed=GARDEN_THEMES.reduce((n,t)=>n+themeItemCount(garden,t.id)+spotsFilled(garden,t.id),0);
  return `테마 정원 ${opened}/${GARDEN_THEMES.length} 열림 · 구성물 ${placed}`;
 }
 async function showGardenHub(start=null){
@@ -1773,6 +1774,7 @@ async function showGardenHub(start=null){
   gardenHubScreen=mountGardenHub({audio,start,
    wallet:()=>readShop(runStorage).coins,
    onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
+   onCredit:jp=>{if(!sameOwner())return false;earnCoins(runStorage,jp);return true;},
    garden:{get:()=>garden,set:next=>{if(!sameOwner())return;garden=normalizeGarden(next);writeGarden(runStorage,garden);}},
    onOpenSanctuary:()=>{resume();showGarden(()=>showGardenHub());},
    onClose:()=>{resume();showIntro();}});

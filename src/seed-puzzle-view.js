@@ -1,5 +1,5 @@
 import {PUZZLE,PUZZLE_STAGES,PUZZLE_STAGE_BY_ID,PUZZLE_POWERS,PUZZLE_TOOLS,PUZZLE_SHOP,PUZZLE_JP,createPuzzle,playPuzzleMove,tapPuzzle,usePuzzleTool,continuePuzzle,giveUpPuzzle,canTap,findHint,
- puzzleGoalState,puzzleStreakGift,dailyPuzzleStage,seoulDay,readPuzzleProgress,writePuzzleProgress,recordPuzzleResult,puzzleUnlocked,breakPuzzleStreak,
+ puzzleGoalState,puzzleStreakGift,puzzleStreakCounts,dailyPuzzleStage,seoulDay,readPuzzleProgress,writePuzzleProgress,recordPuzzleResult,puzzleUnlocked,breakPuzzleStreak,
  PUZZLE_LIVES,puzzleLives,takePuzzleLife,refundPuzzleLife,refillPuzzleLives,puzzleStarsEarned} from './seed-puzzle-rules.js';
 import {DECOR,DECOR_AREAS,decorAreaIndex,decorTasks,decorStars,canDecorate,decorate} from './garden-decor.js';
 import {createPuzzleGarden} from './seed-puzzle-garden.js';
@@ -71,6 +71,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  // 화면 쪽 판: 칸마다 보이는 씨앗 id. 규칙의 판은 한 수에 끝까지 가 있고, 화면은 steps 를 따라 뒤따라간다.
  let vb=[],vmoss=[],vstone=[],vvine=[];
  const sprites=new Map(),effects=[],floaters=[],tiles=new Map();
+ const STAGE_PAGE=50;let stagePage=null;
  let queue=[],cur=null,curT=0,selected=-1,cursor=-1,drag=null,idleAt=0,hint=null,shake=0,announced=new Set(),resultTimer=0,keyboard=false,armed=null,picks=new Set();
  function close(){if(closed)return;quitRun();closed=true;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
 
@@ -161,7 +162,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   for(const st of rest)if(st.type==='clear'){for(const e of st.effects)drawEffect(e);}
   vb=s.cells.map(c=>c?.id??null);vmoss=[...s.moss];vstone=[...s.stone];vvine=[...s.vine];
   const keep=new Set(vb.filter(v=>v!=null));for(const [id,sp] of sprites)if(!keep.has(id)&&!sp.dying)sp.dying=.001;
-  for(let i=0;i<N*N;i++){const c=s.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp)sp=addSprite(c,i%N,Math.floor(i/N)-1);Object.assign(sp,{law:c.law,sp:c.sp,dir:c.dir,tx:i%N,ty:Math.floor(i/N),tw:null});sp.x=sp.tx;if(sp.y>sp.ty)sp.y=sp.ty;}
+  for(let i=0;i<N*N;i++){const c=s.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp)sp=addSprite(c,i%N,Math.floor(i/N)-1);Object.assign(sp,{law:c.law,sp:c.sp,src:c.src,dir:c.dir,tx:i%N,ty:Math.floor(i/N),tw:null});sp.x=sp.tx;if(sp.y>sp.ty)sp.y=sp.ty;}
   afterMove();
  }
 
@@ -199,7 +200,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  $('.sp-pause').onclick=()=>pause();
 
  // ── steps 재생(로열 매치처럼 빠르게)
- const DUR={swap:.12,bad:.28,clear:.22,shuffle:.45,bonus:.9,end:.2,out:.25};
+ const DUR={swap:.12,bad:.28,clear:.22,shuffle:.45,bonus:.7,suntime:.55,end:.2,out:.25};
  function begin(st){
   curT=0;
   if(st.type==='swap'){const A=spriteAt(st.a),B=spriteAt(st.b);if(!A||!B)return;tween(A,st.b%N,Math.floor(st.b/N),st.ok?DUR.swap:.13);tween(B,st.a%N,Math.floor(st.a/N),st.ok?DUR.swap:.13);
@@ -207,12 +208,14 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   else if(st.type==='clear')clear(st);
   else if(st.type==='fall'){vb=st.cells.map(c=>c?.id??null);vstone=[...st.stone];vvine=[...st.vine];
    const from=new Map(st.spawns.map(p=>[p.id,p.fromRow]));
-   for(let i=0;i<N*N;i++){const c=st.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp)sp=addSprite(c,i%N,from.get(c.id)??-1);Object.assign(sp,{law:c.law,sp:c.sp,dir:c.dir,tx:i%N,ty:Math.floor(i/N)});if(!sp.tw&&sp.x!==sp.tx)tween(sp,sp.tx,sp.ty,.1);}}
+   for(let i=0;i<N*N;i++){const c=st.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp)sp=addSprite(c,i%N,from.get(c.id)??-1);Object.assign(sp,{law:c.law,sp:c.sp,src:c.src,dir:c.dir,tx:i%N,ty:Math.floor(i/N)});if(!sp.tw&&sp.x!==sp.tx)tween(sp,sp.tx,sp.ty,.1);}}
   else if(st.type==='shuffle'){vb=st.cells.map(c=>c?.id??null);const keep=new Set(vb);
    for(const [id,sp] of sprites)if(!keep.has(id)&&!sp.dying)sp.dying=.001;
    for(let i=0;i<N*N;i++){const c=st.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp){sp=addSprite(c,i%N,Math.floor(i/N));sp.pop=1;}tween(sp,i%N,Math.floor(i/N),DUR.shuffle*.8);}
    banner('섞는 중…','');}
-  else if(st.type==='bonus'){if(st.moves)banner(`남은 이동 ${st.moves} × ${PUZZLE.moveBonus}`,`+${st.gained.toLocaleString()}`);audio?.play('pickup');}
+  else if(st.type==='bonus'){if(st.moves)banner('햇살 타임!',`남은 이동 ${st.moves}번이 특수 씨앗이 돼요`);audio?.play('pickup');}
+  // 햇살 타임: 남은 이동만큼 보통 씨앗이 관통·폭발 씨앗으로 바뀐 뒤 한꺼번에 터진다.
+  else if(st.type==='suntime'){for(const i of st.cells){const c=st.board[i];const sp=c&&sprites.get(c.id);if(sp){Object.assign(sp,{law:c.law,sp:c.sp,dir:c.dir});sp.pop=1;}burstAt(i,SUN,'burst');}audio?.play('evolve');}
   else if(st.type==='end'||st.type==='out')hudUpdate();
  }
  function stepDone(st,t){
@@ -317,6 +320,8 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    if(sp.sp==='pierce'){ctx.strokeStyle='#fffbe8';ctx.lineWidth=Math.max(2,cs*.06);ctx.lineCap='round';const v=sp.dir==='v',a=cs*.5,b=cs*.4,w=cs*.1;ctx.beginPath();
     if(v){ctx.moveTo(x-w,y-b);ctx.lineTo(x,y-a);ctx.lineTo(x+w,y-b);ctx.moveTo(x-w,y+b);ctx.lineTo(x,y+a);ctx.lineTo(x+w,y+b);}else{ctx.moveTo(x-b,y-w);ctx.lineTo(x-a,y);ctx.lineTo(x-b,y+w);ctx.moveTo(x+b,y-w);ctx.lineTo(x+a,y);ctx.lineTo(x+b,y+w);}ctx.stroke();}
    else if(sp.sp==='chain')for(let q=0;q<3;q++){const a=now*.004+q*2.09;vfx.fx(ctx,'star',x+Math.cos(a)*cs*.46,y+Math.sin(a)*cs*.46,cs*.3,{color:'#fff3b0',alpha:.9*k});}
+   // 기억한 법칙: 오른쪽 아래 작은 법칙 색 구슬(특수끼리 합치면 두 법칙의 융합 이름).
+   if(sp.src&&PUZZLE_LOOK[sp.src]){ctx.globalAlpha=k;ctx.beginPath();ctx.arc(x+cs*.3,y+cs*.3,cs*.13,0,Math.PI*2);ctx.fillStyle=PUZZLE_LOOK[sp.src].color;ctx.fill();ctx.lineWidth=Math.max(1.5,cs*.035);ctx.strokeStyle='#1a1208';ctx.stroke();}
    ctx.globalAlpha=1;return;}
   if(!PUZZLE_LOOK[sp.law]){ctx.globalAlpha=1;return;}
   ctx.drawImage(tile(sp.law),x-size/2,y-size/2,size,size);ctx.globalAlpha=1;
@@ -359,42 +364,55 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function hudUpdate(){
   if(!s)return;$('.sp-no').textContent=def.daily?`오늘의 단계 · ${dayLabel(def.daily)}`:`단계 ${def.n}`;$('.sp-name').textContent=def.name;
   $('.sp-moves strong').textContent=s.movesLeft;$('.sp-moves').classList.toggle('low',s.movesLeft<=5);$('.sp-score strong').textContent=s.score.toLocaleString();
-  const top=def.stars.at(-1)*1.08,bar=$('.sp-bar');bar.querySelector('i').style.width=`${clamp(s.score/top*100,0,100)}%`;
-  bar.querySelectorAll('em').forEach(e=>e.remove());def.stars.forEach((v,k)=>{const em=document.createElement('em');em.style.left=`${v/top*100}%`;em.className=s.score>=v?'on':'';em.textContent='★';em.title=`${def.attack?k+1:k+2}번째 별 ${v.toLocaleString()}점`;bar.append(em);});
+  // 오늘의 단계는 점수 막대, 보통 단계는 남은 이동 막대(별 표시는 '이만큼 남기고 깨면 ★★·★★★').
+  const bar=$('.sp-bar');bar.querySelectorAll('em').forEach(e=>e.remove());
+  if(def.attack){const top=def.stars.at(-1)*1.08;bar.querySelector('i').style.width=`${clamp(s.score/top*100,0,100)}%`;
+   def.stars.forEach((v,k)=>{const em=document.createElement('em');em.style.left=`${v/top*100}%`;em.className=s.score>=v?'on':'';em.textContent='★';em.title=`${k+1}번째 별 ${v.toLocaleString()}점`;bar.append(em);});}
+  else{const top=Math.max(def.moves,s.movesLeft);bar.querySelector('i').style.width=`${clamp(s.movesLeft/top*100,0,100)}%`;
+   def.stars.forEach((v,k)=>{const em=document.createElement('em');em.style.left=`${v/top*100}%`;em.className=s.continues===0&&s.movesLeft>=v?'on':'';em.textContent=k?'★★★':'★★';em.title=`이동 ${v}번 이상 남기고 깨면 ${k?'★★★':'★★'}`;bar.append(em);});}
   $('.sp-goals').innerHTML=def.attack?`<li class="sp-attack">이동 ${def.moves}번 안에 최고 점수</li>`:puzzleGoalState(s).map(p=>`<li class="${p.have>=p.need?'done':''}">${goalIcon(p)}<span>${goalName(p)}</span><b>${goalCount(p)}</b></li>`).join('');
  }
 
  // ── 화면들
  function show(kind,html){modal.hidden=false;modal.dataset.kind=kind;modal.innerHTML=`<div class="sp-paper sp-${kind}">${html}</div>`;modal.querySelector('button')?.focus({preventScroll:true});}
  // 한 번이라도 둔 판을 도중에 그만두면 연승이 끊긴다(로열 매치와 같다). 오늘의 단계는 상관없다.
- function quitRun(){if(s&&s.phase==='play'&&s.log.length&&!def.daily&&progress.streak>0){progress=breakPuzzleStreak(progress);writePuzzleProgress(storage,progress,owner);}}
+ function quitRun(){if(s&&s.phase==='play'&&s.log.length&&puzzleStreakCounts(progress,def)&&progress.streak>0){progress=breakPuzzleStreak(progress);writePuzzleProgress(storage,progress,owner);}}
  const powerBadge=id=>{const t=POWER_LOOK[id].tile;return `<span class="sp-power" aria-hidden="true" style="--ink:${POWER_LOOK[id].color};background-image:url('${BASE}${id==='sun'?'icons/seed-cute-v1-192.png':'assets/cute/seed-solo-v1.webp'}');${id==='sun'?'background-size:cover':`background-size:400% 300%;background-position:${(t%4)*100/3}% ${Math.floor(t/4)*50}%`}"></span>`;};
  function menu(){
   quitRun();root.classList.remove('sp-playing');s=null;queue=[];cur=null;armed=null;clearTimeout(resultTimer);progress=readPuzzleProgress(storage,owner);
   const day=seoulDay(),daily=dailyPuzzleStage(day),dp=progress.daily.day===day?progress.daily:null,total=Object.values(progress.stages).reduce((a,p)=>a+p.stars,0);
-  const card=d=>{const p=progress.stages[d.id],open=puzzleUnlocked(progress,d);return `<button class="sp-stage${p?.stars?' cleared':''}" data-stage="${d.id}" ${open?'':'disabled'} aria-label="단계 ${d.n} ${d.name}${open?'':' 잠김'}"><span class="sp-stage-n">${d.n}</span><b>${d.name}</b><span class="sp-stars">${open?starText(p?.stars||0):'🔒'}</span></button>`;};
+  const card=d=>{const p=progress.stages[d.id],open=puzzleUnlocked(progress,d);return `<button class="sp-stage${p?.stars?' cleared':''}${LEVEL_TAG[d.level]?` sp-level-${d.level}`:''}" data-stage="${d.id}" ${open?'':'disabled'} aria-label="단계 ${d.n} ${d.name}${LEVEL_TAG[d.level]?` ${LEVEL_TAG[d.level]}`:''}${open?'':' 잠김'}"><span class="sp-stage-n">${d.n}</span><b>${d.name}</b><span class="sp-stars">${open?starText(p?.stars||0):'🔒'}</span></button>`;};
+  // 999단계는 50개씩 나눠 보여 준다(처음에는 다음에 깰 단계가 든 묶음).
+  const next=PUZZLE_STAGES.find(d=>puzzleUnlocked(progress,d)&&!progress.stages[d.id]?.stars),pages=Math.ceil(PUZZLE_STAGES.length/STAGE_PAGE);
+  if(stagePage===null)stagePage=Math.floor(((next?.n||1)-1)/STAGE_PAGE);
+  const pageStages=PUZZLE_STAGES.slice(stagePage*STAGE_PAGE,(stagePage+1)*STAGE_PAGE),pageStars=k=>PUZZLE_STAGES.slice(k*STAGE_PAGE,(k+1)*STAGE_PAGE).reduce((a,d)=>a+(progress.stages[d.id]?.stars||0),0);
+  const chapters=Array.from({length:pages},(_,k)=>{const a=k*STAGE_PAGE+1,b=Math.min(PUZZLE_STAGES.length,(k+1)*STAGE_PAGE),open=puzzleUnlocked(progress,PUZZLE_STAGES[a-1]);return `<button class="sp-chapter${k===stagePage?' on':''}" data-page="${k}" ${open?'':'disabled'} aria-pressed="${k===stagePage}">${a}–${b}<small>${open?`★${pageStars(k)}`:'🔒'}</small></button>`;}).join('');
   syncGardenStars();const g=getGarden(),area=decorAreaIndex(g.decor),stars=starWallet(),doneHere=area<0?0:decorTasks(g.decor).filter(t=>t.done).length;
   show('menu',`<p class="sp-eyebrow">SEED · PUZZLE</p><h1>씨앗 맞추기</h1><p class="sp-lead">같은 법칙 셋을 맞춰 터뜨리세요. <b>넷 한 줄</b> 관통 · <b>네모</b> 연쇄 · <b>T·L</b> 폭발 · <b>다섯 한 줄</b> 햇살 — 특수 씨앗은 눌러서 바로 터뜨려요.</p>
    <button class="sp-garden-card${stars&&area>=0?' ready':''}" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기 · ${area<0?'모두 꾸몄어요':`${DECOR_AREAS[area].name} ${doneHere}/6`}</small><b>${area<0?'SEED 정원을 끝까지 꾸몄어요':stars?`별 ★${stars}개로 정원을 꾸밀 수 있어요`:'단계에서 별을 모아 정원을 꾸며요'}</b></span><i aria-hidden="true">›</i></button>
    <div class="sp-status"><span class="sp-lives" title="도전 씨앗 · 지면 하나 줄고, 10분마다 하나씩 돋아요">🌱 <span data-lives>${livesLine()}</span></span><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
    <button class="sp-daily" data-daily="${day}"><span><small>오늘의 단계 · ${dayLabel(day)}</small><b>이동 ${daily.moves}번 점수 도전</b></span><span class="sp-stars">${starText(dp?.stars||0)}</span><small>${dp?.best?`오늘 최고 ${dp.best.toLocaleString()}`:'오늘 누구나 같은 판'}</small></button>
-   <div class="sp-stages">${PUZZLE_STAGES.map(card).join('')}</div>
+   <div class="sp-chapters" role="tablist" aria-label="단계 묶음">${chapters}</div>
+   <div class="sp-stages">${pageStages.map(card).join('')}</div>
    <div class="sp-row"><button class="sp-help-open">도움말</button><button class="sp-exit">돌아가기</button></div>
-   <small>${practice?'연습 모드 · 햇살(JP)을 쓰지도 받지도 않고, 도감에도 남지 않아요.':`첫 깨기 햇살 ${PUZZLE_JP.firstClear(1)}~${PUZZLE_JP.firstClear(PUZZLE_STAGES.length)} JP · 새 별마다 ${PUZZLE_JP.newStar} JP · 오늘의 단계 첫 별 ${PUZZLE_JP.daily} JP · 조합 효과를 처음 쓰면 도감에 남아요.`}</small>`);
+   <small>${practice?'연습 모드 · 햇살(JP)을 쓰지도 받지도 않고, 도감에도 남지 않아요.':`첫 깨기 햇살 ${PUZZLE_JP.firstClear(1)}~${PUZZLE_JP.firstClear(PUZZLE_STAGES.length)} JP · 별은 남은 이동으로 · 새 별마다 ${PUZZLE_JP.newStar} JP · 오늘의 단계 첫 별 ${PUZZLE_JP.daily} JP · 조합 효과를 처음 쓰면 도감에 남아요.`}</small>`);
   modal.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>intro(PUZZLE_STAGE_BY_ID[b.dataset.stage]));
   modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-exit').onclick=close;modal.querySelector('[data-garden]').onclick=gardenScreen;
-  const next=PUZZLE_STAGES.find(d=>puzzleUnlocked(progress,d)&&!progress.stages[d.id]?.stars);modal.querySelector(`[data-stage="${next?.id}"]`)?.scrollIntoView?.({block:'nearest'});
+  modal.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{stagePage=Number(b.dataset.page);menu();});
+  modal.querySelector('.sp-chapter.on')?.scrollIntoView?.({block:'nearest',inline:'center'});
+  modal.querySelector(`[data-stage="${next?.id}"]`)?.scrollIntoView?.({block:'nearest'});
  }
  function goalLines(d){const g=d.goal,out=[];if(d.attack)out.push(`이동 ${d.moves}번 안에 최고 점수 · 별 ${d.stars.map(v=>v.toLocaleString()).join(' / ')}점`);
-  if(g.score)out.push(`<span class="sp-goal-ico sp-ico-score"></span> 점수 ${g.score.toLocaleString()}점`);for(const c of g.collect||[])out.push(`${lawArt(c.law,'sp-goal-art')} ${LAWS[c.law].name} ${c.count}개 모으기`);
+  for(const c of g.collect||[])out.push(`${lawArt(c.law,'sp-goal-art')} ${LAWS[c.law].name} ${c.count}개 모으기`);
   if(g.moss)out.push(`<span class="sp-goal-ico sp-ico-moss"></span> 이끼 ${d.moss.length}칸 모두 걷기`);if(g.stone)out.push(`<span class="sp-goal-ico sp-ico-stone"></span> 돌 ${d.stones.length}개 모두 깨기`);if(g.vine)out.push(`<span class="sp-goal-ico sp-ico-vine"></span> 덩굴 ${d.vines.length}개 모두 풀기`);
-  if(!d.attack)out.push(`이동 ${d.moves}번 · 별 ★★ ${d.stars[0].toLocaleString()} · ★★★ ${d.stars[1].toLocaleString()}점`);return out;}
+  if(!d.attack)out.push(`이동 ${d.moves}번 · 이동을 <b>${d.stars[0]}번</b> 남기고 깨면 ★★ · <b>${d.stars[1]}번</b> 남기면 ★★★`);return out;}
+ const LEVEL_TAG={hard:'어려운 단계',veryHard:'아주 어려운 단계'};
  // 시작 화면: 목표 · 연승 선물 · 시작 전 부스터(햇살로 사기).
  function intro(d){
-  picks=new Set();const gift=d.daily?[]:puzzleStreakGift(progress.streak);
+  picks=new Set();const gift=puzzleStreakCounts(progress,d)?puzzleStreakGift(progress.streak):[];
   const boosterRow=()=>Object.entries(PUZZLE_SHOP.boosters).map(([id,jp])=>`<button class="sp-booster${picks.has(id)?' on':''}" data-booster="${id}" aria-pressed="${picks.has(id)}">${powerBadge(id)}<b>${PUZZLE_POWERS[id].name}</b><small>${practice?'연습 무료':jpText(jp)}</small></button>`).join('');
   const cost=()=>[...picks].reduce((a,id)=>a+PUZZLE_SHOP.boosters[id],0);
-  show('intro',`<p class="sp-eyebrow">${d.daily?`오늘의 단계 · ${dayLabel(d.daily)}`:`단계 ${d.n}`}</p><h1>${escape(d.name)}</h1><ul class="sp-goal-list">${goalLines(d).map(l=>`<li>${l}</li>`).join('')}</ul><p class="sp-tip">${escape(d.tip)}</p>
+  show('intro',`<p class="sp-eyebrow">${d.daily?`오늘의 단계 · ${dayLabel(d.daily)}`:`단계 ${d.n}`}${LEVEL_TAG[d.level]?` · <span class="sp-level-${d.level}">${LEVEL_TAG[d.level]}</span>`:''}</p><h1>${escape(d.name)}</h1><ul class="sp-goal-list">${goalLines(d).map(l=>`<li>${l}</li>`).join('')}</ul><p class="sp-tip">${escape(d.tip)}</p>
    ${gift.length?`<p class="sp-gift">🔥 ${progress.streak}연승 선물 · ${gift.map(id=>`${powerBadge(id)}${PUZZLE_POWERS[id].name}`).join(' ')} <small>지면 사라져요</small></p>`:''}
    <h3>시작 전 부스터</h3><div class="sp-boosters">${boosterRow()}</div><p class="sp-cost"></p>
    ${needsLife(d)?`<p class="sp-life-note">🌱 도전 씨앗 <span data-lives>${livesLine()}</span><br><small>시작할 때 하나 쓰고, 깨면 돌려받아요.</small></p>`:''}
@@ -446,7 +464,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   else toast(`${name} · 정원에 들였어요`);
   paintGardenPanel();
  }
- function pause(){if(!s||s.phase!=='play'||!modal.hidden)return;snap();const warn=!def.daily&&progress.streak>0&&s.log.length?` 그만두면 ${progress.streak}연승이 끊겨요.`:'';
+ function pause(){if(!s||s.phase!=='play'||!modal.hidden)return;snap();const warn=puzzleStreakCounts(progress,def)&&progress.streak>0&&s.log.length?` 그만두면 ${progress.streak}연승이 끊겨요.`:'';
   show('pause',`<p class="sp-eyebrow">일시정지</p><h1>${escape(def.name)}</h1><ul class="sp-goal-list">${goalLines(def).map(l=>`<li>${l}</li>`).join('')}</ul>
   <div class="sp-row"><button class="sp-primary sp-resume">계속하기</button><button class="sp-restart">처음부터</button><button class="sp-help-open">도움말</button><button class="sp-to-menu">단계 고르기</button></div><small>처음부터·단계 고르기를 누르면 이번 판은 기록되지 않아요.${warn}</small>`);
   modal.querySelector('.sp-resume').onclick=resume;modal.querySelector('.sp-restart').onclick=()=>{quitRun();intro(def);};modal.querySelector('.sp-help-open').onclick=()=>help(pause);modal.querySelector('.sp-to-menu').onclick=menu;}
@@ -456,7 +474,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   const left=puzzleGoalState(s).filter(p=>p.have<p.need),price=st.price;
   show('out',`<p class="sp-eyebrow">OUT OF MOVES</p><h1>${st.left<=.2?'거의 다 왔어요!':'이동을 다 썼어요'}</h1><ul class="sp-goal-list">${left.map(p=>`<li>${goalIcon(p)} ${goalName(p)} <b>${p.kind==='score'?(p.need-p.have).toLocaleString()+'점':p.need-p.have+'개'}</b> 남았어요</li>`).join('')}</ul>
    <div class="sp-row"><button class="sp-primary sp-more">+${PUZZLE.extraMoves} 이동 · ${practice?'연습 무료':jpText(price)}</button><button class="sp-giveup">그만하기</button></div><small>${practice?'':`가진 햇살 ${jpText(wallet())} · `}한 판에 ${PUZZLE.maxContinues}번까지 이어할 수 있어요(${s.continues+1}/${PUZZLE.maxContinues}).</small>`);
-  modal.querySelector('.sp-more').onclick=()=>{if(!pay(price,`+${PUZZLE.extraMoves} 이동`))return;if(continuePuzzle(s).ok){modal.hidden=true;hudUpdate();banner(`+${PUZZLE.extraMoves} 이동`,'');idleAt=clock;}};
+  modal.querySelector('.sp-more').onclick=()=>{if(!pay(price,`+${PUZZLE.extraMoves} 이동`))return;const more=continuePuzzle(s);if(more.ok){queue.push(...more.steps);modal.hidden=true;hudUpdate();banner(`+${PUZZLE.extraMoves} 이동`,'');idleAt=clock;}};
   modal.querySelector('.sp-giveup').onclick=()=>{modal.hidden=true;queue.push(...giveUpPuzzle(s).steps);};
  }
  function help(back=menu){
@@ -465,14 +483,16 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <ul class="sp-rules"><li>특수 씨앗은 <b>눌러서 바로</b> 터뜨리거나, 아무 이웃과 <b>바꿔서</b> 터뜨려요(이동 1).</li><li><b>특수 씨앗끼리 바꾸기</b> → 조합 효과. 이름은 SEED 도감 이름이고 처음 쓰면 도감에 남아요.
     <br>관통+관통 가로세로 한 줄씩 · 관통+폭발 세 줄씩 · 폭발+폭발 9×9 · 연쇄+무엇 = 싣고 날아가서 터뜨리기 · 햇살+특수 = 가장 많은 법칙이 전부 그 특수 씨앗 · 햇살+햇살 = 판 전체</li>
     <li><b>이끼</b> 위 씨앗을 터뜨리면 걷혀요 · <b>돌</b>은 옆에서 맞추거나 특수 씨앗으로 한 겹씩 · <b>덩굴</b>에 묶인 씨앗은 못 움직이지만 맞추면 풀려요 · <b>구멍</b>은 판에 없는 칸.</li>
-    <li>연출 중에도 다음 수를 둘 수 있어요. 한동안 가만히 있으면 둘 곳을 반짝여 줘요.</li></ul>
+    <li>연출 중에도 다음 수를 둘 수 있어요. 한동안 가만히 있으면 둘 곳을 반짝여 줘요.</li>
+    <li><b>별</b> 목표를 모두 채우면 ★. 이동을 넉넉히 남기고 깨면 ★★·★★★(단계마다 기준이 달라요). 남은 이동은 <b>햇살 타임</b>에 특수 씨앗이 되어 터져요. +5 이동으로 깬 판은 ★ 하나.</li>
+    <li>끝자리 5는 <b>어려운 단계</b>, 끝자리 0은 <b>아주 어려운 단계</b>예요.</li></ul>
    <h3>햇살 쓰기</h3><ul class="sp-rules"><li><b>+${PUZZLE.extraMoves} 이동</b> ${PUZZLE_SHOP.more.map(jpText).join(' → ')} · <b>시작 전 부스터</b> ${Object.entries(PUZZLE_SHOP.boosters).map(([id,jp])=>`${PUZZLE_POWERS[id].name} ${jpText(jp)}`).join(' · ')}</li>
     <li><b>판 안 도구</b>(이동을 쓰지 않아요) ${Object.values(PUZZLE_TOOLS).map(t=>`${t.name} ${jpText(PUZZLE_SHOP.tools[t.id])}`).join(' · ')}</li>
-    <li><b>연승 선물</b> 연속으로 깨면 다음 단계에 ${[1,2,3].map(n=>`${n}연승 ${puzzleStreakGift(n).map(id=>PUZZLE_POWERS[id].name).join('+')}`).join(' · ')}. 지거나 도중에 그만두면 처음부터.</li></ul>
+    <li><b>연승 선물</b> 연속으로 깨면 다음 단계에 ${[1,2,3].map(n=>`${n}연승 ${puzzleStreakGift(n).map(id=>PUZZLE_POWERS[id].name).join('+')}`).join(' · ')}. 처음 깨는 단계만 세요. 지거나 도중에 그만두면 처음부터.</li></ul>
    <div class="sp-row"><button class="sp-primary sp-back">돌아가기</button></div>`);
   modal.querySelector('.sp-back').onclick=()=>back();}
  function result(){
-  const prevStreak=progress.streak,record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;
+  const prevStreak=progress.streak,counted=puzzleStreakCounts(progress,def),record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;
   // 깨면 도전 씨앗을 돌려받는다(지면 시작할 때 쓴 하나가 그대로 줄어 있다).
   if(won&&runLife)progress=refundPuzzleLife(progress);runLife=false;
   const saved=writePuzzleProgress(storage,progress,owner);syncGardenStars();
@@ -482,10 +502,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   const combos=s.combos.map(id=>ALL_FORMS[id]?.name).filter(Boolean),made=Object.entries(s.created).filter(([,n])=>n).map(([id,n])=>`${PUZZLE_POWERS[id].name} ${n}`).join(' · ');
   show('result',`<p class="sp-eyebrow">${won?(def.attack?'FINISH':'CLEAR'):'MOVES OUT'}</p><h1>${won?(def.attack?'도전 끝!':'단계 성공!'):'아쉬워요'}</h1>
    <p class="sp-result-stars" aria-label="별 ${record.stars}개">${[0,1,2].map(k=>`<span class="${k<record.stars?'on':''}" style="animation-delay:${.15+k*.22}s">★</span>`).join('')}</p>
-   <p class="sp-result-score">${s.score.toLocaleString()}점${s.bonus?` <small>(남은 이동 보너스 ${s.bonus.toLocaleString()})</small>`:''}</p>
+   <p class="sp-result-score">${def.attack?`${s.score.toLocaleString()}점`:won?(s.continues?'이어하기로 깬 판은 ★ 하나':`남은 이동 <b>${s.leftAtWin}</b>번 · ★★ ${def.stars[0]}번 · ★★★ ${def.stars[1]}번`):''}${won&&s.bonus?` <small>(햇살 타임 +${s.bonus.toLocaleString()}점)</small>`:''}</p>
    ${won?'':`<ul class="sp-goal-list">${puzzleGoalState(s).filter(p=>p.have<p.need).map(p=>`<li>${goalIcon(p)} ${goalName(p)} ${p.kind==='score'?(p.need-p.have).toLocaleString()+'점':p.need-p.have+'개'} 모자랐어요</li>`).join('')}</ul>`}
    ${record.notes.length||jpNote?`<p class="sp-reward">${escape([...record.notes,jpNote].filter(Boolean).join(' · '))}</p>`:''}
-   ${!won&&!def.daily&&prevStreak>0?`<p class="sp-meta">${prevStreak}연승이 끊겼어요 · 최고 ${record.progress.bestStreak}연승</p>`:''}
+   ${!won&&counted&&prevStreak>0?`<p class="sp-meta">${prevStreak}연승이 끊겼어요 · 최고 ${record.progress.bestStreak}연승</p>`:''}
    ${combos.length?`<p class="sp-combos">이번 판 조합 효과 · ${combos.map(escape).join(' · ')}</p>`:''}
    <p class="sp-meta">최대 연쇄 ×${s.maxCombo}${made?` · ${made}`:''}${s.tools?` · 도구 ${s.tools}번`:''}${s.continues?` · 이어하기 ${s.continues}번`:''}${saved?'':' · 이 기기에 저장하지 못했어요'}</p>
    ${needsLife(def)?`<p class="sp-meta">🌱 도전 씨앗 <span data-lives>${livesLine()}</span>${won?' · 깨서 돌려받았어요':''}</p>`:''}

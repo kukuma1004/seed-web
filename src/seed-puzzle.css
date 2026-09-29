@@ -54,6 +54,13 @@
 .sp-daily small{font-size:12px;color:#e8d49c}.sp-daily b{display:block;font-size:17px}.sp-daily>small{grid-column:1/-1}
 .sp-stars{font-size:18px;letter-spacing:2px;color:#ffd873;text-shadow:0 0 6px #f0c56f66;white-space:nowrap}
 .sp-stages{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:8px}
+/* 2026-09-29 999단계: 50개씩 묶음 · 어려운 단계 표시 */
+.sp-chapters{display:flex;gap:6px;overflow-x:auto;padding:2px 2px 8px;margin:4px 0 6px;scrollbar-width:thin;-webkit-overflow-scrolling:touch}
+#seed-puzzle .sp-chapter{flex:none;display:flex;flex-direction:column;align-items:center;min-width:74px;padding:5px 8px;border-radius:9px;font-size:13px}
+#seed-puzzle .sp-chapter small{font-size:11px;color:#b9c9bc}
+#seed-puzzle .sp-chapter.on{border-color:#fce6af;background:#3a3120;box-shadow:0 0 0 1px #fce6af66}
+#seed-puzzle .sp-stage.sp-level-hard{border-color:#ffb86b}#seed-puzzle .sp-stage.sp-level-veryHard{border-color:#ff7a8a;box-shadow:inset 0 0 12px #ff4d6d33}
+.sp-level-hard{color:#ffc27a}.sp-level-veryHard{color:#ff8fa0}
 #seed-puzzle .sp-stage{display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 6px;border-radius:10px;min-width:0}
 #seed-puzzle .sp-stage.cleared{border-color:#f0c56f88;background:#1d302ae8}
 .sp-stage-n{font:22px Georgia,serif;color:#fce6af}.sp-stage b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}.sp-stage small{font-size:11px;color:#b9c9bc}.sp-stage .sp-stars{font-size:14px}
