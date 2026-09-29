@@ -46,9 +46,9 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   $('.gh-back').onclick=close;
   $('.gh-tree').onclick=()=>{if(onOpenSanctuary){closed=true;ro?.disconnect();for(const off of listeners)off();root.remove();document.body.classList.remove('garden-hub-open');onOpenSanctuary();}};
   root.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>enter(b.dataset.theme));
-  layoutHub();observe($('.gh-scroll'));
-  // 처음 보는 자리: 가로는 생명의 나무와 온실 사이, 세로는 표지판들이 모인 띠가 가운데 오게.
-  const sc=$('.gh-scroll'),mh=$('.gh-map').offsetHeight;sc.scrollLeft=Math.max(0,(TREE[0]+SIGNS.greenhouse[0])/2/HUB[0]*sc.scrollWidth-sc.clientWidth/2);sc.scrollTop=Math.max(0,(85+537)/2/HUB[1]*mh-sc.clientHeight/2);
+  layoutHub();observe($('.gh-scroll'));if(ro&&$('.gh-extra'))ro.observe($('.gh-extra'));// 아래 줄이 접혀 높이가 바뀌어도 다시 맞춘다
+  // 처음 보는 자리: 조금만 넘치는 넓은 화면(패드·PC)은 가운데, 세로 화면은 생명의 나무와 온실 사이, 세로는 표지판들이 모인 띠가 가운데 오게.
+  const sc=$('.gh-scroll'),mh=$('.gh-map').offsetHeight;sc.scrollLeft=sc.scrollWidth-sc.clientWidth<sc.clientWidth*.3?(sc.scrollWidth-sc.clientWidth)/2:Math.max(0,(TREE[0]+SIGNS.greenhouse[0])/2/HUB[0]*sc.scrollWidth-sc.clientWidth/2);sc.scrollTop=Math.max(0,(85+537)/2/HUB[1]*mh-sc.clientHeight/2);
  }
  function sign(G,id,x,y){
   const t=GARDEN_THEMES.find(q=>q.id===id),open=themeUnlocked(G,id),n=themeItemCount(G,id);
@@ -61,6 +61,10 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
  // 세로 화면: 높이를 채우고 옆으로 밀어 본다. 넓은 화면: 폭에 맞춘다.
  function layoutHub(){
   const sc=$('.gh-scroll'),map=$('.gh-map');if(!sc||!map)return;
+  // 아래 줄(어둠·설렘 카드·다음 안내)이 그림 아랫부분을 가리지 않게 그림 영역을 그 위까지만 쓴다.
+  // 낮은 가로 휴대폰은 줄이 왼쪽 아래 작은 판이라 예전처럼 그림 위에 얹는다.
+  const ex=$('.gh-extra'),lowLandscape=matchMedia('(orientation:landscape) and (max-height:620px)').matches;
+  sc.style.bottom=ex&&!lowLandscape?ex.offsetHeight+'px':'';
   const cw=sc.clientWidth,ch=sc.clientHeight;let s=ch/HUB[1];if(HUB[0]*s<cw)s=cw/HUB[0];
   map.style.width=HUB[0]*s+'px';map.style.height=HUB[1]*s+'px';map.style.setProperty('--s',Math.max(.55,Math.min(1.25,s)));
  }
