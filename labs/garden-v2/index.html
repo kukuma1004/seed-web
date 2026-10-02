@@ -1,0 +1,8 @@
+<!doctype html><html lang="ko"><head><meta charset="UTF-8"><base href="/"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><title>SEED · 정원 v2 로컬 시연</title></head><body style="margin:0;background:#0b1512"><script type="module">
+import {mountGardenHub} from '../../src/garden-hub-view.js';
+import {gardenV2Fixture} from '../../src/garden-v2-lab.js';
+if(['127.0.0.1','localhost'].includes(location.hostname)){
+ let garden=gardenV2Fixture({}),coins=9999;
+ mountGardenHub({start:new URLSearchParams(location.search).get('view')==='dream'?'dream':'tree',garden:{get:()=>garden,set:next=>{garden=next;}},wallet:()=>coins,onSpend:n=>coins>=n?(coins-=n,true):false,onClose:()=>location.assign('/?inspect=1')});
+}else document.body.textContent='로컬 시연 전용 화면입니다.';
+</script></body></html>

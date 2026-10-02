@@ -97,7 +97,7 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
   bossWins:Math.max(local.bossWins,remote.bossWins),
   harvests:Math.max(local.harvests,remote.harvests),
   decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
-  ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree)});
+  ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree,{prefer})});
 }
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);

@@ -12,8 +12,22 @@ import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
 import {QUALITY_KEY} from '../src/quality.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,clearCloudLocalData,isSyncKey,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
+import {plantTreeSeed,clearTreePlot,craftTreeSeed} from '../src/tree-of-life.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
+// Tree v2: unrelated local settings never roll back newer planting/spending.
+{
+ const old={...emptyGarden(),tree:{bag:{frost:1},shards:{common:5},once:{migrated:true},updatedAt:1}};
+ const phone={...old,tree:plantTreeSeed(old.tree,'frost',1).tree};
+ const merged=mergeGardenProgress(old,phone,{prefer:'local'});
+ assert.equal(merged.tree.plots[1].seed,'frost');assert.equal(merged.tree.bag.frost,undefined);
+ const cleared={...phone,tree:clearTreePlot(phone.tree,1).tree};
+ assert.equal(mergeGardenProgress(phone,cleared,{prefer:'local'}).tree.plots[1],null);
+ const spent={...old,tree:craftTreeSeed(old.tree,'chain').tree};
+ assert.equal(mergeGardenProgress(old,spent,{prefer:'local'}).tree.shards.common,0);
+ const store=memory();applyCloudSnapshot(store,normalizeCloudSnapshot({garden:spent}));
+ assert.equal(collectCloudSnapshot(store).garden.tree.updatedAt,spent.tree.updatedAt,'tree timestamp survives account save');
+}
 
 // Every snapshot field must be accepted by the deployed per-user save schema.
 // A new client field rejected by $other silently breaks all cloud uploads.

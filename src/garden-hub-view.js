@@ -5,6 +5,7 @@ import {GARDEN_THEMES,GARDEN_OBJECTS,OBJECT_KINDS,THEME_UNLOCK_PLACED,THEME_MAX_
 import {GARDEN_OBJECT_ART,GARDEN_THEME_ART} from './garden-theme-art.js';
 import {SPOT_STYLE_IDS,spotScene,hasSpotScene,spotEntry,spotsFilled,spotPrice,spotArt,spotBase,chooseSpotStyle,clearSpot} from './garden-spots.js';
 import './garden-hub.css';
+import {createTreeView} from './tree-of-life-view.js';
 
 const BASE=import.meta.env.BASE_URL,ART=BASE+'assets/garden/';
 const HUB=[1281,778];
@@ -27,6 +28,7 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
  const listen=(t,n,f,o)=>{t.addEventListener(n,f,o);listeners.push(()=>t.removeEventListener(n,f,o));};
  const $=q=>root.querySelector(q);
  const g=()=>garden.get();
+ const treeView=createTreeView({root,garden,audio,toast,onBack:hub,BASE,observe});
  function close(){if(closed)return;closed=true;ro?.disconnect();clearTimeout(toastTimer);for(const off of listeners)off();root.remove();document.body.classList.remove('garden-hub-open');onClose();}
  function toast(text){const el=$('.gh-toast');if(!el)return;el.textContent=text;el.classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('show'),2200);}
  function announce(fresh){if(!fresh?.length)return;const t=GARDEN_THEMES.find(x=>x.id===fresh[0]);audio?.play?.('evolve');toast(`✦ ${t.name}이(가) 열렸어요!`);}
@@ -45,7 +47,7 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
    <p class="gh-hint">${info?`다음: <b>${esc(nextLocked.name)}</b> · ${esc(info.prevName)}에 구성물 ${Math.min(info.have,info.need)}/${info.need}`:'모든 테마 정원이 열렸어요'}</p></nav>
   <p class="gh-toast" role="status" aria-live="polite"></p>`;
   $('.gh-back').onclick=close;
-  $('.gh-tree').onclick=()=>{if(onOpenSanctuary){closed=true;ro?.disconnect();for(const off of listeners)off();root.remove();document.body.classList.remove('garden-hub-open');onOpenSanctuary();}};
+  $('.gh-tree').onclick=()=>{view='tree';treeView.show();};
   root.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>enter(b.dataset.theme));
   layoutHub();observe($('.gh-scroll'));if(ro&&$('.gh-extra'))ro.observe($('.gh-extra'));// 아래 줄이 접혀 높이가 바뀌어도 다시 맞춘다
   // 처음 보는 자리: 조금만 넘치는 넓은 화면(패드·PC)은 가운데, 세로 화면은 생명의 나무와 온실 사이, 세로는 표지판들이 모인 띠가 가운데 오게.
@@ -242,11 +244,11 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   if(r.fresh?.length)announce(r.fresh);else toast(tab==='shop'?`${o.name} · 끌어서 원하는 곳에 옮겨 보세요`:`${o.name}을(를) 놓았어요`);
  }
 
- function onResize(){if(closed)return;if(view==='hub')layoutHub();else if(view==='spots')layoutSpots();else if(!drag){layoutStage();paintItems();}}
+ function onResize(){if(closed)return;if(view==='hub')layoutHub();else if(view==='tree')treeView.layout();else if(view==='spots')layoutSpots();else if(!drag){layoutStage();paintItems();}}
  // 트레이가 그려지거나 화면이 돌아가면 크기를 다시 잰다.
  let ro=null;function observe(el){ro?.disconnect();if(typeof ResizeObserver==='function'&&el){ro=new ResizeObserver(()=>onResize());ro.observe(el);}}
- function onKey(e){if(e.code!=='Escape')return;e.preventDefault();if(view==='spots'){if(spot){spot=null;paintSpots();}else hub();}else if(view==='theme'){if(sel>=0){sel=-1;paintItems();}else hub();}else close();}
+ function onKey(e){if(e.code!=='Escape')return;e.preventDefault();if(view==='tree')hub();else if(view==='spots'){if(spot){spot=null;paintSpots();}else hub();}else if(view==='theme'){if(sel>=0){sel=-1;paintItems();}else hub();}else close();}
  listen(window,'resize',onResize);listen(window,'pointermove',onMove);listen(window,'pointerup',onUp);listen(window,'pointercancel',onUp);listen(window,'keydown',onKey);
- if(start&&themeUnlocked(g(),start))(hasSpotScene(start)?spotView:themeView)(start);else hub();
+ if(start==='tree'){view='tree';treeView.show();}else if(start&&themeUnlocked(g(),start))(hasSpotScene(start)?spotView:themeView)(start);else hub();
  return {close,hub,enter,get view(){return view;},get theme(){return theme?.id||null;},debug:{spot:id=>{spot=id;paintSpots();},style:st=>chooseStyle(st),select:i=>{sel=i;paintItems();},pick:k=>{pick=k;paintTray();},place:()=>pick&&place(GARDEN_OBJECTS[pick]),tab:t=>{tab=t;pick=null;paintTray();}}};
 }

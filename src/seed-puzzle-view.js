@@ -51,7 +51,7 @@ function shapePath(g,shape,x,y,r){
 
 // wallet(): 지금 햇살(JP). onSpend(jp): 햇살을 쓰고 성공하면 true. 연습(practice)에서는 돈을 받지 않고 모두 무료.
 // garden: {get(), set(next)} — SEED 정원 저장(정원 가꾸기가 여기에 꾸민 것을 남긴다). onOpenGarden(): 3D 정원 화면으로.
-export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},garden=null,onOpenGarden=null,onClose=()=>{}}={}){
+export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},onPlayed=()=>'',garden=null,onOpenGarden=null,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-puzzle';root.setAttribute('aria-label','씨앗 맞추기');
  root.innerHTML=`<canvas aria-label="씨앗 맞추기 판"></canvas>
  <aside class="sp-hud"><div class="sp-head"><button class="sp-pause" aria-label="일시정지">Ⅱ</button><div><small class="sp-no"></small><b class="sp-name"></b></div></div>
@@ -489,11 +489,13 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <div class="sp-row"><button class="sp-primary sp-back">돌아가기</button></div>`);
   modal.querySelector('.sp-back').onclick=()=>back();}
  function result(){
-  const prevStreak=progress.streak,counted=puzzleStreakCounts(progress,def),record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;
+  const prevStreak=progress.streak,counted=puzzleStreakCounts(progress,def),prevStars=def.daily?0:(progress.stages[def.id]?.stars||0),record=recordPuzzleResult(progress,s),won=s.phase==='won';progress=record.progress;
   // 깨면 도전 씨앗을 돌려받는다(지면 시작할 때 쓴 하나가 그대로 줄어 있다).
   if(won&&runLife)progress=refundPuzzleLife(progress);runLife=false;
   const saved=writePuzzleProgress(storage,progress,owner);syncGardenStars();
   const g=getGarden(),canGarden=decorAreaIndex(g.decor)>=0&&decorTasks(g.decor).some(t=>!t.done&&starWallet()>=t.cost);
+  // 생명의 나무: 놀고 오면 물방울, 아주 어려운 단계(끝자리 0)·50단계마다 처음 ★★★면 씨앗(main.js가 굴린다).
+  const treeNote=practice?'':onPlayed({stage:def.n||0,daily:!!def.daily,won:s.phase==='won',stars:record.stars,firstThree:!def.daily&&prevStars<3&&record.stars===3})||'';if(treeNote)record.notes.push(treeNote);
   let jpNote='';if(record.jp>0)jpNote=practice?`연습 · 햇살 ${record.jp} JP는 쌓이지 않아요`:(onCredit(record.jp)||`햇살 ${record.jp} JP 적립`);
   const next=!def.daily&&PUZZLE_STAGES[def.n]&&puzzleUnlocked(progress,PUZZLE_STAGES[def.n])?PUZZLE_STAGES[def.n]:null;
   const combos=s.combos.map(id=>ALL_FORMS[id]?.name).filter(Boolean),made=Object.entries(s.created).filter(([,n])=>n).map(([id,n])=>`${PUZZLE_POWERS[id].name} ${n}`).join(' · ');

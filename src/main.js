@@ -77,7 +77,10 @@ import {createOnlineRanking,SEASON,ACT,runAct,FIREBASE} from './online-ranking.j
 import {createSurvivalRanking} from './survival-ranking.js';
 import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defense-ranking.js';
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
-import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY} from './garden.js';
+import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY,dominantLaw} from './garden.js';
+import {rollTreeReward,waterTree,TREE_SEEDS,TREE_RARITY} from './tree-of-life.js';
+// 보스 방에 들어올 때까지 받은 피해(그 뒤로 더 맞지 않고 이기면 '노히트' — 전설 씨앗 조건).
+let bossFightDamage0=0;
 import {GARDEN_THEMES,themeUnlocked,themeItemCount} from './garden-themes.js';
 import {spotsFilled} from './garden-spots.js';
 import {renderGardenPanel,renderGardenPeek} from './garden-ui.js';
@@ -502,8 +505,15 @@ function ensureGardenScene(){
 const mutations=new Map(),runes=[];
 function austinKnown(){return Boolean(profile?.bosses?.includes('austin'));}
 function refreshGardenEffects(){gardenFx=gardenEffects(garden,activeSlots(garden,{austinDefeated:austinKnown()}));}
-function grantFinalBossGardenMemory(){
- const result=grantBossMastery(garden,rng);garden=result.garden;writeGarden(runStorage,garden);refreshGardenEffects();return {line:masteryLine(result),milestone:result.milestone||null};
+// 생명의 나무 v2(tree-of-life.js): 보스·어려운 도전에서만 씨앗, 놀고 오면 물방울. 보상 줄을 돌려준다.
+function treeRewardLine(notes){return notes.map(n=>n.type==='seed'?`${TREE_RARITY[n.rarity].name} 씨앗 '${TREE_SEEDS[n.seed].name}'`:n.type==='shard'?`씨앗 조각 +${n.count}`:'').filter(Boolean).join(' · ');}
+function treeReward(event){if(developerRun)return '';const r=rollTreeReward(garden.tree,event,rng);garden={...garden,tree:r.tree};writeGarden(runStorage,garden);const line=treeRewardLine(r.notes);return line?`생명의 나무 · ${line}`:'';}
+function treeWater(amount=1){if(developerRun)return;const r=waterTree(garden.tree,amount);garden={...garden,tree:r.tree};writeGarden(runStorage,garden);}
+function grantFinalBossGardenMemory(boss=null){
+ const result=grantBossMastery(garden,rng);garden=result.garden;writeGarden(runStorage,garden);refreshGardenEffects();
+ const act=boss==='tempestcarrier'?3:boss==='alwaysbeginner'?2:1,prof=readAccountProfile(runStorage),wins=boss==='tempestcarrier'?prof.johanWins:boss==='alwaysbeginner'?prof.alwaysWins:prof.austinWins;
+ const tree=boss?treeReward({type:'boss',boss,act,final:true,noHit:runDamageTaken<=bossFightDamage0,wins,law:dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms)))}):'';
+ return {line:[masteryLine(result),tree].filter(Boolean).join(' · '),milestone:result.milestone||null};
 }
 function grantGoldenFruitPotion(growth){
  if(growth?.milestone?.type!=='fruit')return '';
@@ -547,7 +557,11 @@ function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  // Read current discoveries to preserve data merged from another device.
  profile=readDiscoveries(runStorage);let saved=true;
  for(const id of result.awards){const reward=remember('bosses',id,true);saved=reward.saved&&saved;}
- if(saved&&result.counted)void cloud.flush().catch(()=>{});
+ if(saved&&result.counted){
+  const act=boss==='tempestcarrier'?3:boss==='alwaysbeginner'?2:1;
+  treeReward({type:'boss',boss,act,final:true,wins:result.wins,law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null});
+  treeWater(1);void cloud.flush().catch(()=>{});
+ }
  return saved;
 }
 function remember(kind,id,sharedBoss=false){if(developerRun||survivalSession&&!(sharedBoss&&kind==='bosses'))return {profile,saved:true};const before=discoveredCount(profile);const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='austinveteran')seedTitle.setAustinVeteranUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);if(kind==='bosses'&&id==='alwaysveteran')seedTitle.setAlwaysVeteranUnlocked(true);if(kind==='bosses'&&id==='tempestcarrier')seedTitle.setJohanUnlocked(true);if(kind==='bosses'&&id==='johanclear')seedTitle.setJohanClearUnlocked(true);if(kind==='bosses'&&id==='johanveteran')seedTitle.setJohanVeteranUnlocked(true);seedTitle.setDiscovered(discoveredCount(profile));const news=codexNews(before,discoveredCount(profile));if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
@@ -709,7 +723,7 @@ function saveBoundary(nextStage=stage,saveMode='entry',over={}){
 }
 // After a warden the journey simply continues: a little health back, and every enemy a little faster.
 function nextJourney(){austinRoom=false;cycle++;rerollUsed=false;stage=0;const before=hp;hp=Math.min(maxPlayerHp(),hp+JOURNEY_HEAL);wave();$('#toast').textContent=`여정 ${cycle+1} · 생명력 +${displayHp(hp-before)} · 적과 탄막이 조금 더 거세집니다`;}
-function enterAustin(){austinRoom=true;wave(isAct3(region));$('#toast').textContent=isAct3(region)?`${TEMPEST_CARRIER.name} 등장 · 발사구 섬광과 날개 움직임으로 탄막의 틈을 찾으세요`:isAct2(region)?`${ALWAYS_BEGINNER.name} 등장 · 투구선·베이스·부채꼴을 읽고 끝까지 버티세요`:`${AUSTIN.name} 등장 · 바닥 시계의 침이 다음 종소리의 빈틈을 가리킵니다`;}
+function enterAustin(){austinRoom=true;bossFightDamage0=runDamageTaken;wave(isAct3(region));$('#toast').textContent=isAct3(region)?`${TEMPEST_CARRIER.name} 등장 · 발사구 섬광과 날개 움직임으로 탄막의 틈을 찾으세요`:isAct2(region)?`${ALWAYS_BEGINNER.name} 등장 · 투구선·베이스·부채꼴을 읽고 끝까지 버티세요`:`${AUSTIN.name} 등장 · 바닥 시계의 침이 다음 종소리의 빈틈을 가리킵니다`;}
 function saveAfterBoss(){if(finalBossAhead())return saveBoundary(4,'austin');return saveBoundary(0,'entry',{cycle:cycle+1,hp:Math.min(maxPlayerHp(),hp+JOURNEY_HEAL),rerollUsed:false});}
 document.body.insertAdjacentHTML('beforeend','<button id="save-exit" hidden>저장된 방 입구부터 나중에 이어하기</button>');
 document.body.insertAdjacentHTML('beforeend','<button id="developer-lab-fab" hidden>실험실</button>');
@@ -1161,9 +1175,9 @@ function enemyDown(e){perf.event(PE.enemyDeath);
  cameraShake=Math.max(cameraShake,main?.4:.22);vfx.pulse(e.g.position,'amber',main?3.2:2,.6);vfx.burst(e.g.position,'amber',main?40:24,2);audio.play('bossDefeat');
  // Austin carries the main item reward. Turrets can only yield the smaller healing potion.
  if(main){if(e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier')relicRewardPending=true;invuln=Math.max(invuln,1.6);for(const p of enemyShots)release(p.ob);enemyShots=[];}
- if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const accountNow=readAccountProfile(runStorage),austinWins=Math.min(100000,accountNow.austinWins+1);writeAccountProfile(runStorage,{...accountNow,austinWins});if(austinWins>=10&&!seedTitle.isAustinVeteranUnlocked())remember('bosses','austinveteran');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+200 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}${austinWins===10?` · 칭호 '${AUSTIN_VETERAN_TITLE}' (이동 속도 +5%)`:''}`;}}
- else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const accountNow=readAccountProfile(runStorage),alwaysWins=Math.min(100000,accountNow.alwaysWins+1);writeAccountProfile(runStorage,{...accountNow,alwaysWins});if(alwaysWins>=10&&!seedTitle.isAlwaysVeteranUnlocked())remember('bosses','alwaysveteran');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+300 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}${alwaysWins===10?` · 칭호 '${ALWAYS_VETERAN_TITLE}' (최대 생명력 +10)`:''}`;}}
- else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isJohanUnlocked(),wallet=earnCoins(runStorage,400);remember('bosses','tempestcarrier');const accountNow=readAccountProfile(runStorage),johanWins=Math.min(100000,accountNow.johanWins+1);writeAccountProfile(runStorage,{...accountNow,johanWins});if(johanWins>=10&&!seedTitle.isJohanVeteranUnlocked())remember('bosses','johanveteran');const gardenGrowth=grantFinalBossGardenMemory();const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+400 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${JOHAN_TITLE}' (순환 +2%)`:''}${johanWins===10?` · 칭호 '${JOHAN_VETERAN_TITLE}' (순환 +3%)`:''}`;}}
+ if(e.type==='austin'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${AUSTIN.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isUnlocked(),wallet=earnCoins(runStorage,200);remember('bosses','austin');const accountNow=readAccountProfile(runStorage),austinWins=Math.min(100000,accountNow.austinWins+1);writeAccountProfile(runStorage,{...accountNow,austinWins});if(austinWins>=10&&!seedTitle.isAustinVeteranUnlocked())remember('bosses','austinveteran');const gardenGrowth=grantFinalBossGardenMemory(e.type);const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+200 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${AUSTIN.name} 격파! · +200 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${AUSTIN_TITLE}' (${AUSTIN_TITLE_PERK.text})`:''}${austinWins===10?` · 칭호 '${AUSTIN_VETERAN_TITLE}' (이동 속도 +5%)`:''}`;}}
+ else if(e.type==='alwaysbeginner'){austinsDefeated++;if(developerRun){bossRewardLine='개발자 실험 · 보상 저장 안 됨';$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isAlwaysBeginnerUnlocked(),wallet=earnCoins(runStorage,300);remember('bosses','alwaysbeginner');const accountNow=readAccountProfile(runStorage),alwaysWins=Math.min(100000,accountNow.alwaysWins+1);writeAccountProfile(runStorage,{...accountNow,alwaysWins});if(alwaysWins>=10&&!seedTitle.isAlwaysVeteranUnlocked())remember('bosses','alwaysveteran');const gardenGrowth=grantFinalBossGardenMemory(e.type);const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+300 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${ALWAYS_BEGINNER.name} 격파! · +300 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''} · 2막 기록${firstTitle?` · 칭호 '${ALWAYS_BEGINNER_TITLE}' (${ALWAYS_BEGINNER_TITLE_PERK.text})`:''}${alwaysWins===10?` · 칭호 '${ALWAYS_VETERAN_TITLE}' (최대 생명력 +10)`:''}`;}}
+ else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isJohanUnlocked(),wallet=earnCoins(runStorage,400);remember('bosses','tempestcarrier');const accountNow=readAccountProfile(runStorage),johanWins=Math.min(100000,accountNow.johanWins+1);writeAccountProfile(runStorage,{...accountNow,johanWins});if(johanWins>=10&&!seedTitle.isJohanVeteranUnlocked())remember('bosses','johanveteran');const gardenGrowth=grantFinalBossGardenMemory(e.type);const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+400 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${JOHAN_TITLE}' (순환 +2%)`:''}${johanWins===10?` · 칭호 '${JOHAN_VETERAN_TITLE}' (순환 +3%)`:''}`;}}
  else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;const relicFound=wardenRelicDrop(rng);if(relicFound)relicRewardPending=true;const bossSignal=act3BossAhead()?' · 폭풍 중심에서 거대한 기체음이 들립니다':act2BossAhead()?' · 관중석의 함성이 결승전을 부릅니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':'';$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50 JP (보유 ${wallet.coins} JP)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':bossSignal}${relicFound?' · 희귀 유물 발견!':''}`;}}
  else $('#toast').textContent=stageWarden?'쌍문지기 한 명 격파 · 남은 문지기를 쓰러뜨리세요':'정예 문지기 격파!';
 }
@@ -1748,6 +1762,7 @@ async function showSeedPuzzle(){
   // 2026-09-28 로열 매치식: +5 이동·시작 전 부스터·판 안 도구를 햇살(JP)로 산다. 계정이 바뀌었으면 쓰지 않는다.
   const sameOwner=()=>owner===(account.user()?.uid||'guest');
   puzzleScreen=mountSeedPuzzle({audio,storage:runStorage,owner,practice,
+   onPlayed:info=>{if(owner!==(account.user()?.uid||'guest'))return '';treeWater(.5);return info.won&&!info.daily?treeReward({type:'puzzle',stage:info.stage,stars:info.stars,firstThree:info.firstThree}):'';},
    wallet:()=>readShop(runStorage).coins,
    onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
@@ -1799,6 +1814,7 @@ async function showSeedDefense(){
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
    const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
    if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
+   if(owner===(account.user()?.uid||'guest')){treeWater(.5);treeReward({type:'defense',wave:state.wave,runId:state.runId});}
    if(!decision.eligible||owner!==account.user()?.uid)return '온라인 기록은 같은 계정으로 로그인한 정상 플레이만 등록해요.';
    try{await defenseRanking.submit(entry);return '계정 최고기록 확인 완료 · 사용한 씨앗도 랭킹에 남았어요.';}catch{return '온라인 등록 대기 · 이 계정에 보관하고 랭킹을 열면 다시 전송해요.';}
   },onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
@@ -1987,6 +2003,7 @@ function showEnd(deathReport=null,{cleared=false,newTitle=null,bonus=0}={}){perf
  const gardenBoss=austinsDefeated>0?(isAct3(region)?'tempestcarrier':isAct2(region)?'alwaysbeginner':'austin'):null;
  lastHarvest=harvestFromRun({levels:Object.fromEntries(effectiveLevels(levels,heldForms)),forms:Object.fromEntries(heldForms),wardens:wardensDefeated,austins:austinsDefeated,bossId:gardenBoss,score,kills,journey:cycle+1,elapsed,dashes:runDashes,damageTaken:runDamageTaken});
  garden=growPlants(addHarvest(garden,lastHarvest),lastHarvest.growth);writeGarden(runStorage,garden);refreshGardenEffects();
+ treeWater(1+Math.min(2,wardensDefeated));
  // 보낼 값은 판이 끝난 지금 그대로 찍어 둔다. 예전에는 flush()가 끝난 뒤에야 점수·처치를 읽어서,
  // 그 사이에 다음 판을 시작하면 앞뒤가 안 맞는 기록이 랭킹에 올라갔다.
  const entry={name,score,cycle,stage,kills,time:elapsed,act:isAct3(region)?ACT.JOHAN:isAct2(region)?ACT.ALWAYS_BEGINNER:ACT.AUSTIN,region,done:cleared,build};

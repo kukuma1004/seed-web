@@ -1,5 +1,8 @@
 // 생명의 나무 v2 규칙: 씨앗 등급·보상·조각·심기·물 주기·세계수·옮기기·합치기.
 import assert from 'node:assert/strict';
+import {existsSync} from 'node:fs';
+import {plotArt} from '../src/tree-of-life-view.js';
+import TREE_SCENE from '../src/garden-spots/tree.js';
 import {TREE_SEEDS,TREE_SEED_IDS,TREE_PLOTS,emptyTree,normalizeTree,rollTreeReward,craftTreeSeed,plantTreeSeed,clearTreePlot,waterTree,plotStage,migrateTree,mergeTree} from '../src/tree-of-life.js';
 const by=r=>TREE_SEED_IDS.filter(id=>TREE_SEEDS[id].rarity===r);
 assert.equal(by('common').length,9);assert.ok(by('rare').length>=10);assert.deepEqual(by('legend').sort(),['alwaysbeginner','clocktower','founder','tempestcarrier','worldtree']);
@@ -17,6 +20,11 @@ assert.ok(rollTreeReward(emptyTree(),{type:'puzzle',stage:50,stars:3,firstThree:
 assert.equal(rollTreeReward(emptyTree(),{type:'puzzle',stage:50,stars:2,firstThree:true},lo).notes.length,0);
 assert.ok(rollTreeReward(emptyTree(),{type:'puzzle',stage:30,stars:3,firstThree:true},lo).notes.some(n=>n.rarity==='common'));
 let d=rollTreeReward(emptyTree(),{type:'defense',wave:30},lo);assert.ok(d.notes.length);assert.equal(rollTreeReward(d.tree,{type:'defense',wave:35},lo).notes.length,0,'once per 10 waves');
+const round1=rollTreeReward(emptyTree(),{type:'defense',wave:30,runId:'first-run'},lo);
+assert.equal(rollTreeReward(round1.tree,{type:'defense',wave:30,runId:'first-run'},lo).notes.length,0,'same result cannot pay twice');
+assert.ok(rollTreeReward(round1.tree,{type:'defense',wave:30,runId:'second-run'},lo).notes.length,'a new run gets its own reward chance');
+const uuidRun=rollTreeReward(emptyTree(),{type:'defense',wave:30,runId:'12345678-1234-1234-1234-123456789abc'},lo);
+assert.ok(Object.keys(uuidRun.tree.once).some(k=>k.includes('12345678-1234')),'real UUID runs have separate receipts');
 // 조각으로 만들기.
 t.shards.common=5;let c=craftTreeSeed(t,'chain');assert.ok(c.ok);assert.equal(c.tree.shards.common,0);assert.equal(craftTreeSeed(c.tree,'chain').reason,'shards');assert.equal(craftTreeSeed(c.tree,'clocktower').ok,false);t=c.tree;
 // 심기: 가운데(0)는 전설만, 나머지는 전설 아님.
@@ -31,7 +39,34 @@ assert.equal(clearTreePlot(t,1).tree.plots[1],null);
 assert.equal(migrateTree(emptyTree(),{plots:[{seed:'founder'}]}).bag.founder,1);assert.equal(migrateTree(migrateTree(emptyTree(),{plots:[{seed:'founder'}]}),{plots:[{seed:'founder'}]}).bag.founder,1);
 assert.deepEqual(migrateTree(emptyTree(),{plots:[{seed:'frost'}]}).bag,{},'old seeds are not carried over');
 const m=mergeTree({plots:[{seed:'frost',water:3}],bag:{chain:1},shards:{common:2}},{plots:[{seed:'orbit',water:5}],bag:{chain:2},bloomed:['orbit']});
-assert.equal(m.plots[0].seed,'orbit');assert.equal(m.bag.chain,2);assert.equal(m.shards.common,2);assert.deepEqual(m.bloomed,['orbit']);
+assert.equal(m.plots[0].seed,'orbit');assert.equal(m.bag.chain,2);assert.equal(m.shards.common,0,'spent resources follow the chosen snapshot');assert.deepEqual(m.bloomed,['orbit']);
+// 오래된 기기의 다른 변경이 이기더라도 새 나무의 심기/소비/비우기가 되돌아가지 않는다.
+const oldBag=normalizeTree({bag:{frost:1},shards:{common:5},once:{migrated:true},updatedAt:1});
+const planted=plantTreeSeed(oldBag,'frost',1).tree;
+assert.deepEqual(mergeTree(oldBag,planted,{prefer:'local'}).bag,{});
+assert.equal(mergeTree(oldBag,planted,{prefer:'local'}).plots[1].seed,'frost');
+const cleared=clearTreePlot(planted,1).tree;
+assert.equal(mergeTree(planted,cleared,{prefer:'local'}).plots[1],null);
+assert.deepEqual(mergeTree(emptyTree(),cleared).plots,cleared.plots);
+const spent=craftTreeSeed(oldBag,'chain').tree;
+assert.equal(mergeTree(oldBag,spent,{prefer:'local'}).shards.common,0);
+assert.equal(plantTreeSeed(oldBag,'frost',1.5).ok,false);
+assert.equal(rollTreeReward(emptyTree(),{type:'puzzle',stage:0,stars:3,firstThree:true},lo).notes.length,0);
+const puzzle=rollTreeReward(emptyTree(),{type:'puzzle',stage:50,stars:3,firstThree:true},lo);
+assert.equal(rollTreeReward(puzzle.tree,{type:'puzzle',stage:50,stars:3,firstThree:true},lo).notes.length,0);
+const full=normalizeTree({bag:{frost:99},shards:{common:5}});
+assert.equal(craftTreeSeed(full,'frost').tree.shards.common,5,'a full bag never consumes shards');
 assert.deepEqual(normalizeTree({plots:[{seed:'nope'}],bag:{nope:3,frost:1.5},once:{'bad key!':true}}),emptyTree());
 assert.equal(TREE_PLOTS,7);
+assert.equal(TREE_SCENE.spots.length,TREE_PLOTS);
+assert.ok(existsSync('public/assets/garden/v2/tree/base.webp'));
+for(const id of TREE_SEED_IDS){
+ const index=TREE_SEEDS[id].rarity==='legend'?0:1;
+ const letter=plotArt({seed:id,water:999},index);
+ const file=index===0?`0${letter}`:`common-${letter}`;
+ assert.ok(existsSync(`public/assets/garden/v2/tree/${file}.webp`),`${id} bloom art`);
+}
+assert.equal(plotArt({seed:'frost',water:0},1),null);
+assert.equal(plotArt({seed:'frost',water:1},1),'A');
+assert.equal(plotArt({seed:'frost',water:4},1),'B');
 console.log('tree of life ok');
