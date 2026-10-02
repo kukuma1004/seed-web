@@ -1,3 +1,4 @@
+import {normalizeDuelStory} from './seed-duel-story-progress.js';
 import {normalizePuzzleProgress} from './seed-puzzle-progress.js';
 // 정원 · 플레이 방식이 식물의 모습으로 남는 개인 기록 공간.
 // 식물은 플레이 기록을 보여 주는 장식이며, 각 막 최종 보스 격파로 아주 작은 영구 성장점이 남는다.
@@ -81,7 +82,7 @@ const plant=p=>{
 const emptyMastery=()=>Object.fromEntries(MASTERY_KEYS.map(id=>[id,0]));
 // decor: 씨앗 맞추기 별로 꾸민 것(garden-decor.js) · puzzleStars: 씨앗 맞추기에서 모은 별(기기마다 다르면 큰 쪽).
 // themes: 테마 정원마다 놓은 구성물 · bag: 치워 둔 구성물 · themesOpened: 열린 테마(garden-themes.js).
-export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[],decor:[],puzzleStars:0,puzzle:null,themes:emptyThemes(),bag:{},themesOpened:[],spots:{},spotsRefunded:[],tree:emptyTree()});
+export const emptyGarden=()=>({version:6,plots:Array(PLOTS).fill(null),seeds:{},traits:{},mastery:emptyMastery(),bossWins:0,fragments:0,harvests:0,records:[],decor:[],puzzleStars:0,puzzle:null,duelStory:null,themes:emptyThemes(),bag:{},themesOpened:[],spots:{},spotsRefunded:[],tree:emptyTree()});
 const runRecord=value=>{
  if(!value||typeof value!=='object')return null;
  const law=Object.hasOwn(LAWS,value.law)?value.law:null;
@@ -107,6 +108,7 @@ export function normalizeGarden(value){
  if(Number.isInteger(value.harvests)&&value.harvests>0)g.harvests=Math.min(1e6,value.harvests);
  if(Array.isArray(value.records))g.records=value.records.map(runRecord).filter(Boolean).slice(0,MAX_RECORDS);
  g.decor=normalizeDecor(value.decor);
+ if(value.duelStory&&typeof value.duelStory==='object')g.duelStory=normalizeDuelStory(value.duelStory);
  if(value.puzzle&&typeof value.puzzle==='object')g.puzzle=normalizePuzzleProgress(value.puzzle);
  if(Number.isInteger(value.puzzleStars)&&value.puzzleStars>0)g.puzzleStars=Math.min(1e6,value.puzzleStars);
  if(g.puzzle)g.puzzleStars=Math.max(g.puzzleStars,Object.values(g.puzzle.stages).reduce((n,v)=>n+v.stars,0)+g.puzzle.dailyStars);

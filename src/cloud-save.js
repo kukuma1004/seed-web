@@ -1,3 +1,4 @@
+import {DUEL_STORY_SAVE_KEY,duelStorySaveKey,mergeDuelStory} from './seed-duel-story-progress.js';
 import {PUZZLE_SAVE_KEY,puzzleSaveKey,mergePuzzleProgress} from './seed-puzzle-progress.js';
 import {mergeBossRuns} from './boss-title-ledger.js';
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
@@ -45,6 +46,8 @@ export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now(),ow
  // Migrate only the explicitly owned legacy puzzle key. Guest/other UID keys stay local.
  const puzzle=ownerUid&&ownerUid!=='guest'?json(storage,puzzleSaveKey(ownerUid)):null;
  if(puzzle)garden.puzzle=mergePuzzleProgress(garden.puzzle,puzzle,{prefer:'remote'});
+ const story=ownerUid&&ownerUid!=='guest'?json(storage,duelStorySaveKey(ownerUid)):null;
+ if(story)garden.duelStory=mergeDuelStory(garden.duelStory,story);
  return normalizeCloudSnapshot({
   version:CLOUD_SCHEMA,revision,updatedAt,
   discoveries:json(storage,DISCOVERIES_KEY),garden,shop:shop??{version:3,coins:STARTING_COINS},
@@ -101,6 +104,7 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
   bossWins:Math.max(local.bossWins,remote.bossWins),
   harvests:Math.max(local.harvests,remote.harvests),
   decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
+  duelStory:local.duelStory||remote.duelStory?mergeDuelStory(local.duelStory,remote.duelStory,{prefer}):null,
   puzzle:local.puzzle||remote.puzzle?mergePuzzleProgress(local.puzzle,remote.puzzle,{prefer}):null,
   ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree,{prefer})});
 }
@@ -150,6 +154,7 @@ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
 export function applyCloudSnapshot(storage,value,{ownerUid=storage?.getItem(CLOUD_OWNER_KEY)||''}={}){
  const next=normalizeCloudSnapshot(value),before=collectCloudSnapshot(storage,{revision:next.revision,updatedAt:next.updatedAt});
  const put=(key,val)=>storage?.setItem(key,typeof val==='string'?val:JSON.stringify(val));
+ if(ownerUid&&ownerUid!=='guest'&&next.garden.duelStory)put(duelStorySaveKey(ownerUid),next.garden.duelStory);
  if(ownerUid&&ownerUid!=='guest'&&next.garden.puzzle)put(puzzleSaveKey(ownerUid),next.garden.puzzle);
  put(DISCOVERIES_KEY,next.discoveries);put(GARDEN_KEY,next.garden);put(SHOP_KEY,next.shop);put(ACCOUNT_PROFILE_KEY,next.account);put(BOSS_PET_KEY,next.bossPet);
  const save=(key,val)=>val?put(key,val):storage?.removeItem(key);
@@ -199,7 +204,7 @@ const sorted=list=>[...list].sort();
 const withoutStamp=value=>{const {revision,updatedAt,...rest}=normalizeCloudSnapshot(value);return {...rest,discoveries:{...rest.discoveries,forms:sorted(rest.discoveries.forms),bosses:sorted(rest.discoveries.bosses)},account:{...rest.account,badges:sorted(rest.account.badges),skins:sorted(rest.account.skins),appliedGrants:sorted(rest.account.appliedGrants)}};};
 export function snapshotAdds(mergedValue,remoteValue){return !same(withoutStamp(mergedValue),withoutStamp(remoteValue));}
 
-export function isSyncKey(key){return syncSet.has(key)||(typeof key==='string'&&key.startsWith(PUZZLE_SAVE_KEY+':'));}
+export function isSyncKey(key){return syncSet.has(key)||(typeof key==='string'&&(key.startsWith(PUZZLE_SAVE_KEY+':')||key.startsWith(DUEL_STORY_SAVE_KEY+':')));}
 
 export function clearCloudLocalData(storage){
  for(const key of SYNC_KEYS)try{storage?.removeItem(key);}catch{}

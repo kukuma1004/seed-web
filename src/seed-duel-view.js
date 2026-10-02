@@ -1,4 +1,6 @@
 import {createDuel,stepDuel,DUEL_CHARACTERS,DUEL_ORDER,DUEL_ARENA,DUEL_PILLARS,DUEL_SPAWN,DUEL_RULES} from './seed-duel-rules.js';
+import {DUEL_STORY_CHAPTERS,DUEL_STORY_STAGES,completeStoryMatch} from './seed-duel-story.js';
+import {readDuelStory,writeDuelStory,normalizeDuelStory,storyUnlocked,nextStoryStage} from './seed-duel-story-progress.js';
 import {createCanvasVfx} from './canvas-vfx.js';
 import {PROJECTILE_DNA_CELLS} from './projectile-sprites.js';
 import {lawArt} from './law-art.js';
@@ -21,41 +23,75 @@ const POSE={attack:1,heavy:2,block:5,dodge:3};
 const MOTION=['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost'];
 const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
+export function mountSeedDuel({host=document.body,audio,storage=localStorage,owner='guest',practice=false,canSave=()=>true,onProgress=()=>{},onSaveAccount=null,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-duel';root.setAttribute('aria-label','씨앗 대전');
  const pose=(act,label,key)=>`<button data-act="${act}" class="sd-${act}"><i class="sd-ico sd-pose" style="background-image:url('${BASE}assets/adventure/seed-combat-v1.webp');background-position:${POSE[act]%4*100/3}% ${Math.floor(POSE[act]/4)*100}%"></i><b class="sd-lbl">${label}</b><small>${key}</small></button>`;
- root.innerHTML=`<canvas aria-label="씨앗 대전"></canvas><header class="sd-top"><div class="sd-side sd-p0"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><div class="sd-center"><span class="sd-rounds"></span><strong class="sd-timer"></strong></div><div class="sd-side sd-p1"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><button class="sd-pause" aria-label="그만하기">Ⅱ</button></header><div class="sd-message"></div><div class="sd-combo" aria-hidden="true"></div>
+ root.innerHTML=`<canvas aria-label="씨앗 대전"></canvas><header class="sd-top"><div class="sd-side sd-p0"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><div class="sd-center"><span class="sd-rounds"></span><strong class="sd-timer"></strong></div><div class="sd-side sd-p1"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><button class="sd-pause" aria-label="일시정지">Ⅱ</button></header><div class="sd-story-hud" hidden></div><div class="sd-message"></div><div class="sd-combo" aria-hidden="true"></div>
  <div class="sd-controls"><div class="sd-stick" role="button" aria-label="이동"><i></i></div><div class="sd-buttons"><button data-act="ult" class="sd-ult"><i class="sd-ico sd-fx" style="background-image:url('${BASE}assets/vfx-atlas-v1.webp')"></i><b class="sd-lbl">필살</b><small>O</small></button>${pose('block','방어','K')}${pose('dodge','회피','Space')}${pose('attack','공격','J')}<button class="sd-chord sd-chord-heavy" data-chord="heavy" aria-label="공격과 방어 같이 · 강공격"><b>+</b><span>강공격</span></button><button class="sd-chord sd-chord-skill" data-chord="skill1" aria-label="공격과 회피 같이 · 기술"><b>+</b><span class="sd-lbl">기술</span></button></div></div>
  <div class="sd-pc">WASD 이동 · J 공격 · K 방어(누르고 있기 · 맞기 직전 = 반격 막기) · Space 회피 · O 필살 · J+K 같이 = 강공격 · J+Space 같이 = 기술</div><div class="sd-drill" hidden></div><div class="sd-modal"></div>`;
  host.append(root);document.body.classList.add('seed-duel-open');
  const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),assets={},keys=new Set(),held=new Set(),pressed=new Set(),listeners=[];
  const vfx=createCanvasVfx({onReady:()=>{floor=null;}}),pacer=createFramePacer();
  let s=null,raf=0,last=0,closed=false,width=1,height=1,scale=1,ox=0,oy=0,dpr=1,pick={player:'pierce',enemy:'random',difficulty:'normal'},uiAt=0,floor=null,clock=0;
+ let storyProgress=readDuelStory(storage,owner),storyStage=null,storySaved=false,saveNote='',resultTimer=0,paused=false;
  const cam={x:(DUEL_SPAWN[0].x+DUEL_SPAWN[1].x)/2,y:DUEL_SPAWN[0].y,k:0},trails=[[],[]],prevPos=[null,null],pops=[];
  const move={x:0,y:0},listen=(t,n,f,o)=>{t.addEventListener(n,f,o);listeners.push(()=>t.removeEventListener(n,f,o));};
- const load=(k,f)=>{const im=new Image();im.onload=()=>{floor=null;};im.src=BASE+'assets/'+f;assets[k]=im;};
+ const load=(k,f)=>{const im=new Image();im.onload=()=>{if(closed)return;floor=null;if(!raf){camera(0);draw(0);}};im.src=BASE+'assets/'+f;assets[k]=im;};
  load('solo','cute/seed-solo-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('dna','mobile/seed-projectile-dna-v1.png');load('paving','survival-garden-paving-v1.webp');load('arena','duel/arena-floor-v1.webp');for(const id of MOTION)load('motion-'+id,`duel/${id}-motion-v1.webp`);load('grass','ground-garden-v5.webp');
  const ready=k=>assets[k]?.complete&&assets[k].naturalWidth>0;
- function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;dpr=Math.min(1.5,devicePixelRatio||1,Math.max(1,Math.sqrt(2.6e6/Math.max(1,width*height))));canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);cam.k=0;}
- function close(){if(closed)return;closed=true;cancelAnimationFrame(raf);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-duel-open');onClose();}
+ function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;dpr=Math.min(1.5,devicePixelRatio||1,Math.max(1,Math.sqrt(2.6e6/Math.max(1,width*height))));canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);cam.k=0;if(!raf){camera(0);draw(0);}}
+ function close(){if(closed)return;closed=true;clearTimeout(resultTimer);cancelAnimationFrame(raf);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-duel-open');onClose();}
  // ── 고르기 화면
  // 고르기 화면 얼굴도 싸울 때와 같은 동작 그림의 서 있는 칸으로(없으면 예전 단독 진화 그림).
  const portrait=(id,extra='')=>{const c=DUEL_CHARACTERS[id];return MOTION.includes(id)?`<span class="sd-portrait sd-portrait-motion ${extra}" style="background-image:url('${BASE}assets/duel/${id}-motion-v1.webp')"></span>`:`<span class="sd-portrait ${extra}" style="background-image:url('${BASE}assets/cute/seed-solo-v1.webp');background-position:${c.tile%4*100/3}% ${Math.floor(c.tile/4)*50}%"></span>`;};
  function select(){
+  menuRest();storyStage=null;refreshStory();
   const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(id,'sd-law')} 기술 ${c.skills[0].name} · 필살 ${c.ult.name}</i></span></button>`;};
-  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper"><p class="sd-eyebrow">SEED · DUEL · 시험 모드</p><h1>씨앗 대전</h1><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><div class="sd-cards">${DUEL_ORDER.map(card).join('')}</div>
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper"><p class="sd-eyebrow">SEED · DUEL · 시험 모드</p><h1>씨앗 대전</h1><button class="sd-primary sd-story-open">이야기 모드 · 아홉 빛의 약속</button><small>혼자 떠나는 3장 · ${Object.keys(storyProgress.cleared).length}/9 대전 클리어</small><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><div class="sd-cards">${DUEL_ORDER.map(card).join('')}</div>
    <div class="sd-row"><span>상대</span>${['random',...DUEL_ORDER].map(id=>`<button class="sd-chip${pick.enemy===id?' on':''}" data-enemy="${id}">${id==='random'?'무작위':DUEL_CHARACTERS[id].name}</button>`).join('')}</div>
    <div class="sd-row"><span>난이도</span>${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([id,n])=>`<button class="sd-chip${pick.difficulty===id?' on':''}" data-diff="${id}">${n}</button>`).join('')}</div>
-   <button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-practice">콤보 연습 · 기술 익히기</button><button class="sd-back">돌아가기</button><small>보상·랭킹 없는 시험 모드예요.</small></div>`;
+   <button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-practice">콤보 연습 · 기술 익히기</button><button class="sd-back">돌아가기</button><small>자유 대전·연습은 보상 없이 즐겨요. 이야기 모드는 클리어한 상대를 기록해요.</small></div>`;
   root.querySelectorAll('[data-pick]').forEach(b=>b.onclick=()=>{pick.player=b.dataset.pick;select();});
   root.querySelectorAll('[data-enemy]').forEach(b=>b.onclick=()=>{pick.enemy=b.dataset.enemy;select();});
   root.querySelectorAll('[data-diff]').forEach(b=>b.onclick=()=>{pick.difficulty=b.dataset.diff;select();});
-  $('.sd-go').onclick=()=>start(false);$('.sd-practice').onclick=()=>start(true);$('.sd-back').onclick=close;
+  $('.sd-story-open').onclick=storyMap;$('.sd-go').onclick=()=>start(false);$('.sd-practice').onclick=()=>start(true);$('.sd-back').onclick=close;
  }
- function start(practice=false){const others=DUEL_ORDER.filter(id=>id!==pick.player),enemy=pick.enemy==='random'||practice&&pick.enemy===pick.player?others[Math.floor(Math.random()*others.length)]:pick.enemy;s=createDuel({player:pick.player,enemy,seed:Date.now()>>>0,difficulty:pick.difficulty,practice});drill.on=practice;root.classList.toggle('sd-practicing',practice);if(practice){s.phase='fight';s.message='';drill.idx=0;drill.done=new Set();drillStart();}$('.sd-drill').hidden=!practice;$('.sd-modal').hidden=true;audio?.unlock?.();$('.sd-p0 b').textContent=DUEL_CHARACTERS[pick.player].name+' (나)';$('.sd-p1 b').textContent=DUEL_CHARACTERS[enemy].name;
+ function start(practice=false){clearTimeout(resultTimer);paused=false;clearInput();storySaved=false;const others=DUEL_ORDER.filter(id=>id!==pick.player),enemy=storyStage?.enemy||(pick.enemy==='random'||practice&&pick.enemy===pick.player?others[Math.floor(Math.random()*others.length)]:pick.enemy);s=createDuel({player:pick.player,enemy,seed:Date.now()>>>0,difficulty:storyStage?.difficulty||pick.difficulty,practice});drill.on=practice;root.classList.toggle('sd-practicing',practice);if(practice){s.phase='fight';s.message='';drill.idx=0;drill.done=new Set();drillStart();}$('.sd-drill').hidden=!practice;$('.sd-modal').hidden=true;audio?.unlock?.();$('.sd-p0 b').textContent=DUEL_CHARACTERS[pick.player].name+' (나)';$('.sd-p1 b').textContent=DUEL_CHARACTERS[enemy].name;
   root.querySelectorAll('.sd-skill .sd-law').forEach(i=>{i.innerHTML=lawArt(pick.player,'sd-law-art');});root.style.setProperty('--me',DUEL_CHARACTERS[pick.player].ink);
-  root.classList.add('sd-playing');cam.k=0;trails[0].length=trails[1].length=0;last=0;if(!raf)raf=requestAnimationFrame(loop);}
- function result(){const win=s.winner===0;$('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">${win?'VICTORY':'DEFEAT'}</p><h1>${win?'대전 승리!':'대전 패배'}</h1>${portrait(s.fighters[win?0:1].char,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><button class="sd-primary sd-again">다시 붙기</button><button class="sd-pickagain">캐릭터 다시 고르기</button><button class="sd-back">돌아가기</button></div>`;$('.sd-again').onclick=()=>start(false);$('.sd-pickagain').onclick=()=>{root.classList.remove('sd-playing');select();};$('.sd-back').onclick=close;}
+  root.classList.add('sd-playing');const storyHud=$('.sd-story-hud');storyHud.hidden=!storyStage;if(storyStage)storyHud.textContent=`${storyStage.number}/9 · ${storyStage.title}`;cam.k=0;trails[0].length=trails[1].length=0;last=0;if(!raf)raf=requestAnimationFrame(loop);}
+ function result(){resultTimer=0;if(closed)return;menuRest(false);if(storyStage){recordStoryWin();storyResult();return;}const win=s.winner===0;$('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">${win?'VICTORY':'DEFEAT'}</p><h1>${win?'대전 승리!':'대전 패배'}</h1>${portrait(s.fighters[win?0:1].char,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><button class="sd-primary sd-again">다시 붙기</button><button class="sd-pickagain">캐릭터 다시 고르기</button><button class="sd-back">돌아가기</button></div>`;$('.sd-again').onclick=()=>start(false);$('.sd-pickagain').onclick=()=>{root.classList.remove('sd-playing');select();};$('.sd-back').onclick=close;}
+
+ // ── 혼자 깨는 이야기: 같은 대전 규칙, 다른 상대·대화·진행 기록.
+ function clearInput(){keys.clear();held.clear();pressed.clear();move.x=move.y=0;pend=null;suppressBlock=false;root.querySelectorAll('.down').forEach(b=>b.classList.remove('down'));$('.sd-stick i').style.transform='';}
+ function menuRest(reset=true){cancelAnimationFrame(raf);raf=0;clearTimeout(resultTimer);resultTimer=0;clearInput();paused=false;drill.on=false;$('.sd-drill').hidden=true;root.classList.remove('sd-practicing');if(reset){s=null;root.classList.remove('sd-playing');$('.sd-story-hud').hidden=true;$('.sd-message').textContent='';$('.sd-combo').textContent='';}camera(0);draw(0);}
+ function refreshStory(){if(!practice)storyProgress=readDuelStory(storage,owner);}
+ function storyMap(){
+  menuRest();storyStage=null;refreshStory();pick.player=storyProgress.hero;const next=nextStoryStage(storyProgress);
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-story-map"><p class="sd-eyebrow">SEED · 아홉 빛의 약속</p><h1>이야기 모드</h1><p>${next?'흩어진 빛을 찾아 아홉 수련자를 만나세요. 한 대전은 세 판 두 선승이에요.':'아홉 빛이 생명의 나무로 돌아왔어요. 원하는 상대에게 다시 도전해 보세요.'}</p><div class="sd-row sd-story-heroes" aria-label="함께할 씨앗">${DUEL_ORDER.map(id=>`<button class="sd-chip${pick.player===id?' on':''}" data-hero="${id}">${DUEL_CHARACTERS[id].name}</button>`).join('')}</div><small>상대마다 다른 씨앗으로 도전해도 돼요. 클리어한 대전부터 이어집니다.</small>
+  <div class="sd-story-chapters">${DUEL_STORY_CHAPTERS.map((ch,index)=>`<section><h2>${ch.name}</h2><p>${ch.intro}</p><div class="sd-story-stages">${DUEL_STORY_STAGES.filter(v=>v.chapter===index).map(v=>{const done=storyProgress.cleared[v.id],open=storyUnlocked(storyProgress,v.number);return `<button class="sd-story-stage${done?' done':''}${next===v.number?' next':''}" data-stage="${v.number}" ${open?'':'disabled'}>${portrait(v.enemy)}<span><b>${v.number}. ${v.title}</b><small>${done?`✓ 클리어 · 2:${done.losses}`:open?`도전 가능 · ${v.label}`:'앞 대전을 클리어하면 열려요'}</small></span></button>`;}).join('')}</div></section>`).join('')}</div>
+  <footer class="sd-story-footer">${next?`<button class="sd-primary sd-story-continue">${next===1?'이야기 시작':`${next}번째 대전 이어하기`}</button>`:'<p class="sd-story-ending">작은 씨앗이 아홉 빛을 연결했습니다.</p>'}<p class="sd-save-note" role="status">${saveNote|| (practice?'로컬 시연 · 진행은 이 화면에서만 유지돼요.':onSaveAccount?'클리어 기록은 계정 저장과 함께 연동돼요.': '클리어 기록은 이 기기에 저장돼요. 로그인하면 계정에 연결할 수 있어요.')}</p>${onSaveAccount&&!practice?'<button class="sd-account-save">계정 저장 확인</button>':''}<button class="sd-back">대전 메뉴로</button></footer></div>`;
+  root.querySelectorAll('[data-hero]').forEach(b=>b.onclick=()=>{pick.player=b.dataset.hero;root.querySelectorAll('[data-hero]').forEach(x=>x.classList.toggle('on',x===b));});
+  root.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>storyIntro(Number(b.dataset.stage)));
+  if(next)$('.sd-story-continue').onclick=()=>storyIntro(next);$('.sd-back').onclick=select;
+  const save=$('.sd-account-save');if(save)save.onclick=async()=>{save.disabled=true;save.textContent='저장 확인 중…';let ok=false;try{ok=canSave()&&await onSaveAccount();}catch{}if(closed||!save.isConnected)return;save.disabled=false;save.textContent=ok?'계정 저장 완료':'저장 다시 시도';saveNote=ok?'서버에 기록을 저장했어요. 다른 기기에서 같은 계정으로 이어갈 수 있어요.':'서버 저장을 확인하지 못했어요. 연결을 확인하고 다시 시도해 주세요.';$('.sd-save-note').textContent=saveNote;};
+ }
+ function storyIntro(n){refreshStory();const stage=DUEL_STORY_STAGES[n-1];if(!stage||!storyUnlocked(storyProgress,n))return;storyStage=stage;
+  $('.sd-modal').innerHTML=`<div class="sd-paper sd-small sd-story-dialogue"><p class="sd-eyebrow">${DUEL_STORY_CHAPTERS[stage.chapter].name}</p><h1>${stage.title}</h1>${portrait(stage.enemy,'big')}<b>${DUEL_CHARACTERS[stage.enemy].name}</b><blockquote>${stage.before}</blockquote><p class="sd-story-tip">${stage.tip}</p><small>나: ${DUEL_CHARACTERS[pick.player].name} · 상대: ${stage.label}</small><button class="sd-primary sd-story-fight">대전 시작</button><button class="sd-back">이야기 목록으로</button></div>`;
+  $('.sd-story-fight').onclick=()=>start(false);$('.sd-back').onclick=storyMap;
+ }
+ function recordStoryWin(){if(!storyStage||storySaved||s?.phase!=='over')return;storySaved=true;if(s.winner!==0){saveNote='이번 대전은 다시 도전해요. 이전 클리어 기록은 그대로 남아 있어요.';return;}refreshStory();const next=completeStoryMatch(storyProgress,storyStage,s);if(!next)return;storyProgress=next;
+  if(practice){saveNote='로컬 시연 · 클리어 기록은 이 화면에서만 유지돼요.';return;}
+  if(!canSave()||!writeDuelStory(storage,storyProgress,owner)){saveNote='이 기기에 기록을 저장하지 못했어요. 계정과 저장 공간을 확인해 주세요.';return;}
+  onProgress(storyProgress);saveNote=onSaveAccount?'이 기기에 클리어 기록을 남겼어요. 계정 저장 확인으로 서버 저장도 확인할 수 있어요.':'이 기기에 클리어 기록을 남겼어요.';
+ }
+ function storyResult(){const stage=storyStage,win=s.winner===0,ending=win&&nextStoryStage(storyProgress)===null;
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small sd-story-dialogue"><p class="sd-eyebrow">${win?'빛을 되찾았어요':'다시 도전할 수 있어요'}</p><h1>${ending?'아홉 빛의 약속':stage.title}</h1>${portrait(win?pick.player:stage.enemy,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><blockquote>${win?stage.after:'패배해도 지금까지 모은 빛은 사라지지 않아요.'}</blockquote>${ending?'<p>아홉 빛이 생명의 나무에 내려앉았습니다. 작은 씨앗은 어느 하나의 힘이 아닌, 서로 다른 싸움법을 이해하는 씨앗으로 자랐습니다.</p>':`<p class="sd-story-tip">${stage.tip}</p>`}<p class="sd-save-note" role="status">${saveNote}</p><button class="sd-primary sd-story-next">${!win?'같은 상대에게 다시 도전':ending?'이야기 목록으로':'다음 상대 만나기'}</button><button class="sd-back">이야기 목록으로</button></div>`;
+  $('.sd-story-next').onclick=()=>{if(!win)start(false);else if(ending)storyMap();else storyIntro(Math.min(9,stage.number+1));};$('.sd-back').onclick=storyMap;
+ }
+ function pause(){if(!s||s.phase==='over'||!$('.sd-modal').hidden)return;paused=true;cancelAnimationFrame(raf);raf=0;clearInput();
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">PAUSE</p><h1>잠깐 쉬어가기</h1><p>${storyStage?'클리어 기록은 남아요. 진행 중인 대전은 다시 시작해야 해요.':'계속하기를 누르면 이 대전으로 돌아와요.'}</p><button class="sd-primary sd-resume">계속하기</button><button class="sd-pickagain">${storyStage?'이야기 목록으로':'대전 메뉴로'}</button><button class="sd-back">던전으로 돌아가기</button></div>`;
+  $('.sd-resume').onclick=()=>{paused=false;$('.sd-modal').hidden=true;clearInput();last=0;if(!raf)raf=requestAnimationFrame(loop);};$('.sd-pickagain').onclick=()=>storyStage?storyMap():select();$('.sd-back').onclick=close;
+ }
  // ── 입력
  // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만 · 같이 누르면 다른 기술" — 같이 누르기(0.07초 안)를 알아챈다.
  // 공격 → (0.07초 안에) 방어 = 강공격, 방어를 누른 채 공격 = 강공격, 공격 ↔ 회피 같이 = 기술. 혼자면 0.07초 뒤 그대로 나간다.
@@ -72,18 +108,18 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
   const i={x:move.x+((keys.has('KeyD')||keys.has('ArrowRight'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft'))?1:0),y:move.y+((keys.has('KeyS')||keys.has('ArrowDown'))?1:0)-((keys.has('KeyW')||keys.has('ArrowUp'))?1:0),block:blockHeld()&&!suppressBlock};
   if(Math.hypot(i.x,i.y)>.1){i.aimX=i.x;i.aimY=i.y;}for(const a of pressed)i[a]=true;pressed.clear();return i;}
  const KEY={KeyJ:'attack',KeyK:'block',Space:'dodge',KeyO:'ult',KeyL:'heavy',KeyU:'skill1'};
- listen(window,'keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(e.code==='Escape'){close();return;}if(!s||s.phase==='over')return;if(KEY[e.code]||['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;keys.add(e.code);if(KEY[e.code])press(KEY[e.code]);});
- listen(window,'keyup',e=>keys.delete(e.code));listen(window,'blur',()=>{keys.clear();held.clear();move.x=move.y=0;pend=null;});
+ listen(window,'keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(e.code==='Escape'){e.preventDefault();if($('.sd-modal').hidden)pause();return;}if(!s||s.phase==='over'||!$('.sd-modal').hidden)return;if(KEY[e.code]||['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;keys.add(e.code);if(KEY[e.code])press(KEY[e.code]);});
+ listen(window,'keyup',e=>keys.delete(e.code));listen(window,'blur',clearInput);listen(document,'visibilitychange',()=>{last=0;clearInput();if(document.hidden){if($('.sd-modal').hidden)pause();cancelAnimationFrame(raf);raf=0;}});
  root.querySelectorAll('[data-act]').forEach(b=>{const a=b.dataset.act;listen(b,'pointerdown',e=>{e.preventDefault();if(a==='block')held.add('block');press(a);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>{if(a==='block')held.delete('block');b.classList.remove('down');});});
  root.querySelectorAll('[data-chord]').forEach(b=>{listen(b,'pointerdown',e=>{e.preventDefault();fire(b.dataset.chord);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>b.classList.remove('down'));});
  const stick=$('.sd-stick');let stickId=null;
  listen(stick,'pointerdown',e=>{e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);});listen(stick,'pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
  for(const n of ['pointerup','pointercancel','lostpointercapture'])listen(stick,n,()=>{stickId=null;move.x=move.y=0;stick.querySelector('i').style.transform='';});
  function moveStick(e){const r=stick.getBoundingClientRect(),x=e.clientX-r.left-r.width/2,y=e.clientY-r.top-r.height/2,d=Math.hypot(x,y),m=r.width*.36,k=Math.min(1,d/m);move.x=d>8?x/d:0;move.y=d>8?y/d:0;stick.querySelector('i').style.transform=`translate(${(x/(d||1))*k*m}px,${(y/(d||1))*k*m}px)`;}
- $('.sd-pause').onclick=close;
+ $('.sd-pause').onclick=pause;
  // ── 루프
- function loop(now){raf=requestAnimationFrame(loop);if(closed||document.hidden||!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;
-  if(s&&s.phase!=='over'){stepDuel(s,dt,input(),enemyInput(dt));drillEvents(s.events);for(const ev of s.events){const [id,o]=SOUND[ev]||[];if(id)audio?.play(id,o);if(ev==='link')pop(s.fighters[0].x,s.fighters[0].y-2.6,'연계!','#ffd36b');}s.events.length=0;if(s.phase==='over'){setTimeout(result,900);}}
+ function loop(now){raf=0;if(closed||document.hidden||paused||!$('.sd-modal').hidden)return;raf=requestAnimationFrame(loop);if(!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;
+  if(s&&s.phase!=='over'){stepDuel(s,dt,input(),enemyInput(dt));drillEvents(s.events);for(const ev of s.events){const [id,o]=SOUND[ev]||[];if(id)audio?.play(id,o);if(ev==='link')pop(s.fighters[0].x,s.fighters[0].y-2.6,'연계!','#ffd36b');}s.events.length=0;if(s.phase==='over'){recordStoryWin();resultTimer=setTimeout(result,900);}}
   camera(dt);draw(dt);if(now-uiAt>90){uiAt=now;hud();}}
  // ── 콤보 연습(2026-09-28 사용자: "콤보 연습이 있으면 좋겠다 · 콤보가 뭔지도 모르겠다 · 나중에 PvP")
  // 과제를 하나씩: 무엇을 누르는지·왜 쓰는지 알려 주고, 연습 상대(서 있기·막기·공격)가 과제에 맞춰 움직인다. 성공하면 다음 과제.
@@ -290,6 +326,6 @@ export function mountSeedDuel({host=document.body,audio,onClose=()=>{}}={}){
  }
  // 로컬 점검용(?inspect): 화면이 숨겨져 있어도 몇 초씩 진행해 보고 그린다.
  if(['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect')){root.seedDuelState=()=>s;root.seedDuelPress=a=>press(a);root.seedDuelHold=(on)=>{if(on)held.add('block');else held.delete('block');};root.seedDuelInput=()=>input();root.seedDuelAdvance=(seconds,inputs={})=>{for(let t=0;t<seconds&&s&&s.phase!=='over';t+=1/60){const i=typeof inputs==='function'?inputs(t):inputs;stepDuel(s,1/60,i,enemyInput(1/60));drillEvents(s.events);s.events.length=0;clock+=1/60;camera(1/60);}s.events.length=0;draw(1/60);hud();return s;};}
- listen(window,'resize',resize);resize();select();raf=requestAnimationFrame(loop);
+ listen(window,'resize',resize);resize();select();
  return {close};
 }

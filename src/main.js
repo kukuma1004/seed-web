@@ -1747,7 +1747,10 @@ let duelScreen=null;
 async function showSeedDuel(){
  mode='duel';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  const back=()=>{duelScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
- try{const {mountSeedDuel}=await import('./seed-duel-view.js');duelScreen=mountSeedDuel({audio,onClose:back});}
+ try{const {mountSeedDuel}=await import('./seed-duel-view.js');const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun),sameOwner=()=>owner===(account.user()?.uid||'guest');
+  duelScreen=mountSeedDuel({audio,storage:runStorage,owner,practice,canSave:sameOwner,
+   onProgress:p=>{if(!sameOwner())return;garden=readGarden(runStorage);garden.duelStory=p;writeGarden(runStorage,garden);},
+   onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const r=await cloud.flush();return r.ok&&!cloud.isDirty();}:null,onClose:back});}
  catch(error){console.error('씨앗 대전 시작 실패',error);back();$('#toast').textContent='대전을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 // 2026-09-28 사용자: "퍼즐게임 같은 거" → 씨앗 맞추기(3개 맞추기, PUZZLE_MATCH3_PLAN.md). 모험처럼 계정 저장소에 진행을 두고,
