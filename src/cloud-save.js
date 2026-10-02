@@ -2,6 +2,7 @@ import {mergeBossRuns} from './boss-title-ledger.js';
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
 import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS,MASTERY_KEYS,MAX_RECORDS} from './garden.js';
 import {mergeThemeProgress} from './garden-themes.js';
+import {mergeTree} from './tree-of-life.js';
 import {SHOP_KEY,normalizeShop,STASH_ITEMS,STARTING_COINS} from './shop.js';
 import {SAVE_KEY,validCheckpoint,withoutHidden,isCheckpointTombstone,checkpointStamp} from './run-save.js';
 import {ACT2_STORAGE_KEYS} from './act2.js';
@@ -96,7 +97,7 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
   bossWins:Math.max(local.bossWins,remote.bossWins),
   harvests:Math.max(local.harvests,remote.harvests),
   decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
-  ...mergeThemeProgress(local,remote,prefer)});
+  ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree)});
 }
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);

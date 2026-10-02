@@ -123,6 +123,7 @@ art-source/
 !tools/garden_spot_export.py
 !tools/garden_spot_build.py
 !tools/garden_grid.py
+!tools/tree-of-life-test.mjs
 !tools/seed-puzzle-calibrate.mjs
 !tools/seed-puzzle-tuning-build.mjs
 !tools/seed-puzzle-calibrate-score.mjs
