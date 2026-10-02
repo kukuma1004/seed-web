@@ -12,7 +12,9 @@ import blossom from './garden-spots/blossom.js';
 import autumn from './garden-spots/autumn.js';
 import snow from './garden-spots/snow.js';
 import moon from './garden-spots/moon.js';
-export const SPOT_SCENES=Object.freeze({greenhouse,meadow,blossom,autumn,snow,moon});
+import fire from './garden-spots/fire.js';
+import shadow from './garden-spots/shadow.js';
+export const SPOT_SCENES=Object.freeze({greenhouse,meadow,blossom,autumn,snow,moon,fire,shadow});
 export const SPOT_STYLE_IDS=Object.freeze(['A','B','C']);
 // 값(JP): 소박한 A → 풍성한 B → 화려한 C. 테마 rate를 곱한다(화면이 넘긴다).
 // 2026-09-29 사용자: "정원 물품도 조금 더 비싸게" → 60·90·120 에서 올림.
