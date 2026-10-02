@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {adventureRankEntry,validAdventureRank,adventureRankScore,duelRankEntry,validDuelRank,duelRankScore,puzzleRankEntry,validPuzzleRank,puzzleRankScore,createAdventureRanking} from '../src/mode-ranking.js';
 const store=()=>{const m=new Map();return {getItem:k=>m.get(k)||null,setItem:(k,v)=>m.set(k,String(v)),removeItem:k=>m.delete(k)};};
-const adventureState={phase:'won',room:11,kills:340,bossesDefeated:3,level:18,time:420,weapon:'던지기',laws:['recall','chain'],formId:'회귀화살'};
+const adventureState={phase:'won',room:11,kills:340,bossesDefeated:3,level:18,time:420,weapon:'throw',laws:['recall','chain'],formId:'returnblade'};
 const a=adventureRankEntry(adventureState,{uid:'u1',name:'씨앗'});assert(a&&validAdventureRank(a)&&a.score===adventureRankScore(a));
 assert(!validAdventureRank({...a,score:a.score+1}));assert(!validAdventureRank({...a,room:13}));
 const duelState={phase:'over',winner:0,wins:[2,0],time:180,difficulty:'hard',fighters:[{char:'thorn'},{char:'heart'}]};
@@ -13,3 +13,22 @@ const ranking=createAdventureRanking({storage:store(),authProvider:async()=>({ui
 const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedModeRanking;for(const mode of ['adventure','duel','puzzle']){assert.deepEqual(rules[mode]['.indexOn'],['score']);assert(rules[mode].$uid['.write'].includes('auth.uid == $uid'));assert.equal(rules[mode].$uid.$other['.validate'],false);}
 console.log('Mode rankings: adventure, duel, puzzle records, scores, identity queue and Firebase rules passed');
 
+
+// Display labels follow the combat catalog, including newly unlocked bosses.
+const {duelCharacterName,adventureBuildLabels}=await import('../src/mode-ranking-labels.js');
+const {DUEL_CHARACTERS}=await import('../src/seed-duel-rules.js');
+for(const [id,c] of Object.entries(DUEL_CHARACTERS))assert.equal(duelCharacterName(id),c.name);
+assert.deepEqual(adventureBuildLabels({weapon:'hybrid',laws:'recall,chain',form:'returnblade'}),{weapon:'베기 + 던지기',laws:'귀환 · 연쇄',form:'귀환의 칼날'});
+assert.equal(duelCharacterName('<bad>'),'씨앗');
+assert.equal(adventureBuildLabels({weapon:'bad',laws:'<bad>',form:'bad'}).laws,'법칙 없음');
+const {createRankingRetry}=await import('../src/ranking-retry.js');
+let clock=0,calls=0,ctx={uid:'a',linked:true};
+const retry=createRankingRetry({services:[{flush:async()=>{calls++;throw Error('offline');}},{flush:async()=>{calls++;}}],context:()=>ctx,now:()=>clock});
+const retried=await retry();assert.deepEqual(retried.map(r=>r.status),['rejected','fulfilled']);assert.equal(calls,2);
+await retry();assert.equal(calls,2,'menu revisits do not spam retries');
+clock=30000;await retry();assert.equal(calls,4);
+await retry({force:true});assert.equal(calls,6,'reconnection can retry immediately');
+for(const flag of ['testing','hidden','offline']){ctx={uid:'a',linked:true,[flag]:true};await retry({force:true});assert.equal(calls,6);}
+ctx={uid:'a',linked:false};await retry({force:true});assert.equal(calls,6);
+ctx={uid:'b',linked:true};await retry();assert.equal(calls,8,'new account bypasses old account cooldown');
+console.log('Mode ranking labels and bounded reconnect retries passed');
