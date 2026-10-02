@@ -76,6 +76,7 @@ import {killPoints,roomPoints,submitScore,readRanking,lastName,saveName,cleanNam
 import {createOnlineRanking,SEASON,ACT,runAct,FIREBASE} from './online-ranking.js';
 import {createSurvivalRanking} from './survival-ranking.js';
 import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defense-ranking.js';
+import {createAdventureRanking,createDuelRanking,createPuzzleRanking,adventureRankEntry,duelRankEntry,puzzleRankEntry} from './mode-ranking.js';
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
 import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY,dominantLaw} from './garden.js';
 import {rollTreeReward,waterTree,TREE_SEEDS,TREE_RARITY} from './tree-of-life.js';
@@ -854,17 +855,37 @@ const modeRankingAuth=async()=>{
 };
 const survivalRanking=createSurvivalRanking({storage:rawStorage,authProvider:modeRankingAuth});
 const defenseRanking=createDefenseRanking({storage:rawStorage,authProvider:modeRankingAuth});
+const adventureRanking=createAdventureRanking({storage:rawStorage,authProvider:modeRankingAuth});
+const duelRanking=createDuelRanking({storage:rawStorage,authProvider:modeRankingAuth});
+const puzzleRanking=createPuzzleRanking({storage:rawStorage,authProvider:modeRankingAuth});
 let survivalRankView=0;
 function showSurvivalRanking(back=showSurvivalSetup){showModeRanking('survival',back);}
 function showDefenseRanking(back=showDungeon){showModeRanking('defense',back);}
+async function submitExtraModeRanking(kind,entry,testRun){
+ if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
+ if(!entry)return '이번 기록은 랭킹 기준을 충족하지 않았어요.';
+ const service={adventure:adventureRanking,duel:duelRanking,puzzle:puzzleRanking}[kind];
+ const owner=account.user()?.uid;
+ const decision=rankingDecision({isTestRun:false,localInspection,score:entry.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
+ if(!service||owner!==entry.uid||!decision.eligible)return '온라인 기록은 같은 계정으로 로그인한 정상 플레이만 등록해요.';
+ try{await service.submit(entry);return '계정 최고기록 확인 완료 · 이 모드의 랭킹에 기록했어요.';}
+ catch(error){console.warn(`${kind} ranking submit failed`,error);return '온라인 등록 대기 · 랭킹을 열면 이 계정에서 다시 전송해요.';}
+}
 function showModeRanking(kind,back){
- const defense=kind==='defense',service=defense?defenseRanking:survivalRanking,label=defense?'씨앗 수호전':'물량생존전';
+ const configs={
+  survival:{service:survivalRanking,label:'물량생존전',heading:'밀려오는 숲',note:'계정별 최고 점수',sample:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',score:15000,bosses:1,kills:600,time:330,laws:'chain:3,orbit:2',forms:'prism:2,frostnet:1'},row:e=>`<p>${e.bosses}보스 · ${e.kills.toLocaleString()}처치 · ${survivalClock(e.time)}</p>${rankBuild({build:{laws:e.laws,forms:e.forms,relic:'',wardens:0,austins:0}},0,false)}`},
+  defense:{service:defenseRanking,label:'씨앗 수호전',heading:'씨앗 수호전',note:'막아낸 습격 → 남은 체력 → 처치 수',sample:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',cleared:12,hp:18,kills:340,time:300,towers:'prism:5,frostnet:4,chain:3,seed:1'},row:e=>`<p>정원 체력 ${e.hp}/20 · ${e.kills.toLocaleString()}처치 · ${survivalClock(e.time)}</p>${defenseRankBuild(e)}`},
+  adventure:{service:adventureRanking,label:'씨앗의 모험',heading:'씨앗의 모험',note:'도달 방 · 보스 · 처치 수',sample:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',room:8,bosses:2,kills:420,level:14,time:520,weapon:'던지기',laws:'귀환,연쇄',form:'회귀화살',score:8200000},row:e=>`<p>${e.room}번째 방 · 보스 ${e.bosses}회 · ${e.kills.toLocaleString()}처치 · Lv.${e.level} · ${survivalClock(e.time)}</p><small>공격 ${escapeHtml(e.weapon||'미정')} · ${escapeHtml(e.laws||'법칙 없음')} · ${escapeHtml(e.form||'기본형')}</small>`},
+  duel:{service:duelRanking,label:'씨앗 대전',heading:'씨앗 대전',note:'스토리 진행 · 승리 · 난이도',sample:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',storyStage:6,wins:2,losses:0,difficulty:3,time:180,character:'thorn',opponent:'heart',score:620000},row:e=>`<p>스토리 ${e.storyStage}단계 · ${e.wins}승 ${e.losses}패 · ${['','쉬움','보통','어려움'][e.difficulty]||'보통'} · ${survivalClock(e.time)}</p><small>${escapeHtml(e.character||'씨앗')} vs ${escapeHtml(e.opponent||'무작위')}</small>`},
+  puzzle:{service:puzzleRanking,label:'씨앗 맞추기',heading:'씨앗 맞추기',note:'전체 별 · 최고 연승 · 최근 단계',sample:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',totalStars:42,bestStreak:8,latestStage:18,latestStars:3,latestScore:32000,score:4292000},row:e=>`<p>별 ${e.totalStars}개 · 최고 ${e.bestStreak}연승 · 최근 ${e.latestStage}단계 ★${e.latestStars}</p><small>최근 점수 ${Number(e.latestScore||0).toLocaleString()}점</small>`}
+ };
+ const config=configs[kind]||configs.survival,service=config.service,label=config.label;
  const view=++survivalRankView;mode='ranking';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen','survival-overlay');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel survival-panel survival-ranking-panel"><header><p class="eyebrow">SEED · ${label}</p><h2>${defense?'씨앗 수호전':'밀려오는 숲'} · 명예의 전당</h2><p class="survival-note">${defense?'막아낸 습격 → 남은 체력 → 처치 수':'계정별 최고 점수'} · 동점은 공동 순위</p></header><div class="survival-rank-scroll"><p id="survival-ranking-status" role="status">기록을 확인하는 중…</p><div id="survival-ranking-list"></div></div><footer class="survival-actions"><button id="survival-ranking-refresh">새로고침</button><button id="survival-ranking-back">돌아가기</button></footer></div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel survival-panel survival-ranking-panel"><header><p class="eyebrow">SEED · ${label}</p><h2>${config.heading} · 명예의 전당</h2><p class="survival-note">${config.note} · 동점은 공동 순위</p></header><div class="survival-rank-scroll"><p id="survival-ranking-status" role="status">기록을 확인하는 중…</p><div id="survival-ranking-list"></div></div><footer class="survival-actions"><button id="survival-ranking-refresh">새로고침</button><button id="survival-ranking-back">돌아가기</button></footer></div>`;
  $('#survival-ranking-back').onclick=()=>{survivalRankView++;back();};$('#survival-ranking-refresh').onclick=()=>showModeRanking(kind,back);
- const row=e=>`<li><div class="survival-rank-heading"><b>${e.rank?e.rank+'위':'순위 집계 범위 밖'} · ${escapeHtml(e.name)}</b><strong>${defense?e.cleared+'단계 방어':formatScore(e.score)+'점'}</strong></div><p>${defense?'정원 체력 '+e.hp+'/20':e.bosses+'보스'} · ${e.kills.toLocaleString()}처치 · ${survivalClock(e.time)}</p>${defense?defenseRankBuild(e):rankBuild({build:{laws:e.laws,forms:e.forms,relic:'',wardens:0,austins:0}},0,false)}${localInspection||e.uid===account.user()?.uid?'':rankSafety(e)}</li>`;
- if(localInspection){const sample=defense?{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',cleared:12,hp:18,kills:340,time:300,towers:'prism:5,frostnet:4,chain:3,seed:1'}:{uid:'preview',rank:1,name:'화면 시연 · 실제 기록 아님',score:15000,bosses:1,kills:600,time:330,laws:'chain:3,orbit:2',forms:'prism:2,frostnet:1'};$('#survival-ranking-status').textContent='로컬 배치 시연 · 실제 온라인 기록은 조회하거나 등록하지 않아요.';$('#survival-ranking-list').innerHTML='<h3>조합 그림 시연</h3><ol>'+row(sample)+'</ol><h3>내 최고기록</h3><p class="survival-note">공개 버전에서는 TOP 10과 내 기록을 따로 표시해요.</p>';return;}
+ const row=e=>`<li><div class="survival-rank-heading"><b>${e.rank?e.rank+'위':'순위 집계 범위 밖'} · ${escapeHtml(e.name)}</b><strong>${kind==='defense'?e.cleared+'단계 방어':kind==='puzzle'?`${Number(e.totalStars||0).toLocaleString()}별`:formatScore(e.score)+'점'}</strong></div>${config.row(e)}${localInspection||e.uid===account.user()?.uid?'':rankSafety(e)}</li>`;
+ if(localInspection){const sample=config.sample;$('#survival-ranking-status').textContent='로컬 배치 시연 · 실제 온라인 기록은 조회하거나 등록하지 않아요.';$('#survival-ranking-list').innerHTML='<h3>기록 시연</h3><ol>'+row(sample)+'</ol><h3>내 최고기록</h3><p class="survival-note">공개 버전에서는 TOP 10과 내 기록을 따로 표시해요.</p>';return;}
 
  service.flush().catch(()=>{}).then(()=>service.board()).then(({top,mine})=>{
   if(view!==survivalRankView||!$('#survival-ranking-list'))return;
@@ -1738,6 +1759,8 @@ async function showSeedAdventure(){
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
    onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest')),
+   onResult:state=>submitExtraModeRanking('adventure',adventureRankEntry(state,{uid:owner,name:playerName}),practice),
+   onRanking:()=>{adventureScreen?.close();showModeRanking('adventure',showDungeon);},
    onClose:()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
  }catch(error){console.error('씨앗의 모험 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='모험을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
@@ -1750,7 +1773,9 @@ async function showSeedDuel(){
  try{const {mountSeedDuel}=await import('./seed-duel-view.js');const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun),sameOwner=()=>owner===(account.user()?.uid||'guest');
   duelScreen=mountSeedDuel({audio,storage:runStorage,owner,practice,canSave:sameOwner,
    onProgress:p=>{if(!sameOwner())return;garden=readGarden(runStorage);garden.duelStory=p;writeGarden(runStorage,garden);},
-   onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const r=await cloud.flush();return r.ok&&!cloud.isDirty();}:null,onClose:back});}
+   onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const r=await cloud.flush();return r.ok&&!cloud.isDirty();}:null,
+   onResult:(state,meta)=>submitExtraModeRanking('duel',duelRankEntry(state,{uid:owner,name:playerName,storyStage:meta?.storyStage||0}),practice),
+   onRanking:()=>{duelScreen?.close();showModeRanking('duel',showDungeon);},onClose:back});}
  catch(error){console.error('씨앗 대전 시작 실패',error);back();$('#toast').textContent='대전을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 // 2026-09-28 사용자: "퍼즐게임 같은 거" → 씨앗 맞추기(3개 맞추기, PUZZLE_MATCH3_PLAN.md). 모험처럼 계정 저장소에 진행을 두고,
@@ -1774,7 +1799,8 @@ async function showSeedPuzzle(){
    // 2026-09-28 사용자: "성꾸미기 같은건 정원으로 연결" — 씨앗 맞추기 별로 꾸민 것은 SEED 정원 저장(계정 동기화)에 남고 3D 정원에 보인다.
    garden:{get:()=>garden,set:next=>{if(!sameOwner())return;garden=normalizeGarden(next);writeGarden(runStorage,garden);refreshGardenEffects();gardenScene?.setGarden(garden,{austinDefeated:austinKnown()});}},
    onOpenGarden:()=>showGarden(showDungeon),
-   onClose:back});
+   onResult:payload=>{const entry=puzzleRankEntry(payload?.progress,{uid:owner,name:playerName,stage:payload?.stage,stars:payload?.stars,score:payload?.score});return submitExtraModeRanking('puzzle',entry,practice);},
+   onRanking:()=>{puzzleScreen?.close();showModeRanking('puzzle',showDungeon);},onClose:back});
   if(localInspection)window.seedPuzzle=puzzleScreen;
  }catch(error){console.error('씨앗 맞추기 시작 실패',error);back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}
 }
@@ -1981,6 +2007,7 @@ function showRanking(view='online'){
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>${boardLabel}</p><h2>명예의 전당</h2>${tabs}<p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(!locked){$('.rank-season .rank-tabs').insertAdjacentHTML('beforeend','<button class="primary" id="hall-survival-ranking">물량생존전</button><button class="primary" id="hall-defense-ranking">씨앗 수호전</button>');$('#hall-survival-ranking').onclick=()=>showSurvivalRanking(()=>showRanking(view));$('#hall-defense-ranking').onclick=()=>showDefenseRanking(()=>showRanking(view));}
+ if(!locked)for(const [kind,label] of [['adventure','씨앗의 모험'],['duel','씨앗 대전'],['puzzle','씨앗 맞추기']]){const button=document.createElement('button');button.className='primary';button.textContent=label;button.onclick=()=>showModeRanking(kind,()=>showRanking(view));$('.rank-season .rank-tabs').append(button);}
  if(!remote)return;
  const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
  online.flush().catch(()=>0).then(readBoard).then(board=>{

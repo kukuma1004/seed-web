@@ -694,6 +694,134 @@
           }
         }
       }
+    },
+    "seedModeRanking": {
+      "adventure": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".indexOn": [
+          "score"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && auth.uid == $uid && (!newData.exists() || !data.exists() || newData.child('score').val() > data.child('score').val())",
+          ".validate": "newData.hasChildren(['uid','name','score','room','kills','bosses','level','time','weapon','laws','form']) && newData.child('score').val() == newData.child('room').val() * 1000000 + newData.child('bosses').val() * 100000 + newData.child('kills').val() * 100 + newData.child('level').val() * 100 + ((10000 - newData.child('time').val()) > 0 ? (10000 - newData.child('time').val()) : 0)",
+          "$other": {
+            ".validate": false
+          },
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == $uid"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 30000000 && newData.val() % 1 == 0"
+          },
+          "room": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 12 && newData.val() % 1 == 0"
+          },
+          "kills": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0"
+          },
+          "bosses": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3 && newData.val() % 1 == 0"
+          },
+          "level": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 100 && newData.val() % 1 == 0"
+          },
+          "time": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 86400 && newData.val() % 1 == 0"
+          },
+          "weapon": {
+            ".validate": "newData.isString() && newData.val().length <= 12"
+          },
+          "laws": {
+            ".validate": "newData.isString() && newData.val().length <= 120"
+          },
+          "form": {
+            ".validate": "newData.isString() && newData.val().length <= 80"
+          }
+        }
+      },
+      "duel": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".indexOn": [
+          "score"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && auth.uid == $uid && (!newData.exists() || !data.exists() || newData.child('score').val() > data.child('score').val())",
+          ".validate": "newData.hasChildren(['uid','name','score','storyStage','wins','losses','difficulty','time','character','opponent']) && newData.child('score').val() == newData.child('storyStage').val() * 100000 + newData.child('wins').val() * 10000 + ((newData.child('wins').val() - newData.child('losses').val()) > 0 ? (newData.child('wins').val() - newData.child('losses').val()) : 0) * 1000 + newData.child('difficulty').val() * 100 + ((1000 - newData.child('time').val()) > 0 ? (1000 - newData.child('time').val()) : 0)",
+          "$other": {
+            ".validate": false
+          },
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == $uid"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3000000 && newData.val() % 1 == 0"
+          },
+          "storyStage": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 22 && newData.val() % 1 == 0"
+          },
+          "wins": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 == 0"
+          },
+          "losses": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 == 0"
+          },
+          "difficulty": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3 && newData.val() % 1 == 0"
+          },
+          "time": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000 && newData.val() % 1 == 0"
+          },
+          "character": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          },
+          "opponent": {
+            ".validate": "newData.isString() && newData.val().length <= 20"
+          }
+        }
+      },
+      "puzzle": {
+        ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".indexOn": [
+          "score"
+        ],
+        "$uid": {
+          ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && auth.uid == $uid && (!newData.exists() || !data.exists() || newData.child('score').val() > data.child('score').val())",
+          ".validate": "newData.hasChildren(['uid','name','score','totalStars','bestStreak','latestStage','latestStars','latestScore']) && newData.child('score').val() == newData.child('totalStars').val() * 100000 + newData.child('bestStreak').val() * 1000 + newData.child('latestScore').val()",
+          "$other": {
+            ".validate": false
+          },
+          "uid": {
+            ".validate": "newData.isString() && newData.val() == $uid"
+          },
+          "name": {
+            ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
+          },
+          "score": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 400000000 && newData.val() % 1 == 0"
+          },
+          "totalStars": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2997 && newData.val() % 1 == 0"
+          },
+          "bestStreak": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 999 && newData.val() % 1 == 0"
+          },
+          "latestStage": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 999 && newData.val() % 1 == 0"
+          },
+          "latestStars": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 3 && newData.val() % 1 == 0"
+          },
+          "latestScore": {
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 99999 && newData.val() % 1 == 0"
+          }
+        }
+      }
     }
   }
 }

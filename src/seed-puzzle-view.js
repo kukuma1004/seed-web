@@ -51,7 +51,7 @@ function shapePath(g,shape,x,y,r){
 
 // wallet(): 지금 햇살(JP). onSpend(jp): 햇살을 쓰고 성공하면 true. 연습(practice)에서는 돈을 받지 않고 모두 무료.
 // garden: {get(), set(next)} — SEED 정원 저장(정원 가꾸기가 여기에 꾸민 것을 남긴다). onOpenGarden(): 3D 정원 화면으로.
-export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},onPlayed=()=>'',garden=null,onOpenGarden=null,onSaveAccount=null,onClose=()=>{}}={}){
+export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='guest',practice=false,wallet=()=>0,onSpend=()=>false,onCredit=()=>'',onDiscover=()=>{},onPlayed=()=>'',onResult=()=>'',onRanking=()=>{},garden=null,onOpenGarden=null,onSaveAccount=null,onClose=()=>{}}={}){
  // Developer practice starts from the player's record but never changes it.
  if(practice){const key=puzzleSaveKey(owner),data=new Map([[key,JSON.stringify(readPuzzleProgress(storage,owner))]]);storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v))};let sample=JSON.parse(JSON.stringify(garden?.get?.()||{plots:[],decor:[],puzzleStars:0}));garden={get:()=>sample,set:next=>{sample=next;}};}
  const root=document.createElement('section');root.id='seed-puzzle';root.setAttribute('aria-label','씨앗 맞추기');
@@ -393,10 +393,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <button class="sp-daily" data-daily="${day}"><span><small>오늘의 단계 · ${dayLabel(day)}</small><b>이동 ${daily.moves}번 점수 도전</b></span><span class="sp-stars">${starText(dp?.stars||0)}</span><small>${dp?.best?`오늘 최고 ${dp.best.toLocaleString()}`:'오늘 누구나 같은 판'}</small></button>
    <div class="sp-chapters" role="tablist" aria-label="단계 묶음">${chapters}</div>
    <div class="sp-stages">${pageStages.map(card).join('')}</div>
-   <div class="sp-row"><button class="sp-help-open">도움말</button>${onSaveAccount&&!practice?'<button class="sp-account-save">계정 저장 확인</button>':''}<button class="sp-exit">돌아가기</button></div>
+   <div class="sp-row"><button class="sp-help-open">도움말</button><button class="sp-primary sp-rank-open">씨앗 맞추기 랭킹</button>${onSaveAccount&&!practice?'<button class="sp-account-save">계정 저장 확인</button>':''}<button class="sp-exit">돌아가기</button></div>
    <small>${practice?'연습 모드 · 햇살(JP)을 쓰지도 받지도 않고, 도감에도 남지 않아요.':`첫 깨기 햇살 ${PUZZLE_JP.firstClear(1)}~${PUZZLE_JP.firstClear(PUZZLE_STAGES.length)} JP · 별은 점수로(남은 이동은 햇살 타임 점수) · 새 별마다 ${PUZZLE_JP.newStar} JP · 오늘의 단계 첫 별 ${PUZZLE_JP.daily} JP · 조합 효과를 처음 쓰면 도감에 남아요.`}</small>`);
   modal.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>intro(PUZZLE_STAGE_BY_ID[b.dataset.stage]));
-  modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-exit').onclick=close;modal.querySelector('[data-garden]').onclick=gardenScreen;
+  modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-rank-open').onclick=onRanking;modal.querySelector('.sp-exit').onclick=close;modal.querySelector('[data-garden]').onclick=gardenScreen;
   modal.querySelectorAll('[data-page]').forEach(b=>b.onclick=()=>{stagePage=Number(b.dataset.page);menu();});
   const saveButton=modal.querySelector('.sp-account-save');if(saveButton)saveButton.onclick=async()=>{saveButton.disabled=true;saveButton.textContent='저장 확인 중…';try{const ok=await onSaveAccount();saveButton.textContent=ok?'계정에 저장됐어요':'연결 확인 후 다시 시도';if(ok&&!closed){menu();modal.querySelector('.sp-account-save').textContent='계정에 저장됐어요';toast('단계·별·연승을 계정에 저장했어요');}}catch{saveButton.textContent='연결 확인 후 다시 시도';}finally{saveButton.disabled=false;}};
   modal.querySelector('.sp-chapter.on')?.scrollIntoView?.({block:'nearest',inline:'center'});
@@ -515,7 +515,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <p class="sp-meta">최대 연쇄 ×${s.maxCombo}${made?` · ${made}`:''}${s.tools?` · 도구 ${s.tools}번`:''}${s.continues?` · 이어하기 ${s.continues}번`:''}${saved?'':' · 이 기기에 저장하지 못했어요'}</p>
    ${needsLife(def)?`<p class="sp-meta">🌱 도전 씨앗 <span data-lives>${livesLine()}</span>${won?' · 깨서 돌려받았어요':''}</p>`:''}
    ${canGarden?`<button class="sp-garden-card ready small" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기</small><b>별 ★${starWallet()}개로 정원을 꾸밀 수 있어요</b></span><i aria-hidden="true">›</i></button>`:''}
+   <p class="sp-meta sp-rank-status" role="status">랭킹을 확인하는 중…</p><button class="sp-primary sp-rank-open">씨앗 맞추기 랭킹 보기</button>
    <div class="sp-row">${next?'<button class="sp-primary sp-next">다음 단계</button>':''}<button class="${next?'':'sp-primary '}sp-again">다시 하기</button><button class="sp-to-menu">단계 고르기</button></div>`);
+  Promise.resolve(onResult({progress,stage:def.n||1,stars:record.stars,score:s.score,def,state:s})).then(note=>{const el=modal.querySelector('.sp-rank-status');if(el&&note)el.textContent=String(note);}).catch(()=>{});
+  modal.querySelector('.sp-rank-open').onclick=onRanking;
   if(next)modal.querySelector('.sp-next').onclick=()=>intro(next);modal.querySelector('.sp-again').onclick=()=>intro(def);modal.querySelector('.sp-to-menu').onclick=menu;
   modal.querySelector('[data-garden]')?.addEventListener('click',gardenScreen);
   audio?.play(won?'evolve':'hurt');
