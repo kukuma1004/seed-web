@@ -374,6 +374,36 @@
         },
         "$other": {
           ".validate": false
+        },
+        "duelStory": {
+          ".write": "auth != null && auth.uid == $uid && newData.exists()",
+          ".validate": "newData.hasChildren(['version','updatedAt','hero']) && newData.child('version').val() == 1 && newData.child('updatedAt').isNumber() && newData.child('updatedAt').val() >= 0 && newData.child('updatedAt').val() <= now + 300000 && newData.child('hero').isString() && newData.child('hero').val().length <= 16",
+          "version": {
+            ".validate": "newData.val() == 1"
+          },
+          "updatedAt": {
+            ".validate": "newData.isNumber()"
+          },
+          "hero": {
+            ".validate": "newData.isString()"
+          },
+          "cleared": {
+            "$stage": {
+              ".validate": "$stage.matches(/^s([1-9]|1[0-9]|2[0-2])$/) && newData.hasChildren(['losses','at']) && (newData.child('losses').val() == 0 || newData.child('losses').val() == 1) && newData.child('at').isNumber() && newData.child('at').val() >= 0 && newData.child('at').val() <= now + 300000",
+              "losses": {
+                ".validate": "newData.val() == 0 || newData.val() == 1"
+              },
+              "at": {
+                ".validate": "newData.isNumber()"
+              },
+              "$other": {
+                ".validate": false
+              }
+            }
+          },
+          "$other": {
+            ".validate": false
+          }
         }
       }
     },
