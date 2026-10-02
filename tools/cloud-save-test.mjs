@@ -13,8 +13,49 @@ import {QUALITY_KEY} from '../src/quality.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,clearCloudLocalData,isSyncKey,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 import {plantTreeSeed,clearTreePlot,craftTreeSeed} from '../src/tree-of-life.js';
+import {puzzleSaveKey,normalizePuzzleProgress,mergePuzzleProgress,readPuzzleProgress,writePuzzleProgress} from '../src/seed-puzzle-progress.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
+
+// Puzzle records travel PC -> phone -> PC via the existing garden payload.
+// A stale device must preserve best stars, but not resurrect spent lives/streaks.
+{
+ const pcStore=memory({[puzzleSaveKey('puzzle-user')]:JSON.stringify({version:2,stages:{s1:{stars:3,best:5000,clears:1}},streak:1,lives:4,livesAt:100}),[puzzleSaveKey('other-user')]:JSON.stringify({stages:{s999:{stars:3}}})});
+ const phoneStore=memory();let remote=null,uploads=0;
+ const account={ready:async()=>{},user:()=>({uid:'puzzle-user'}),tokenSession:async()=>({uid:'puzzle-user',idToken:'test-token'})};
+ const fetchImpl=async(url,options={})=>{
+  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(options.method==='PUT'){remote=JSON.parse(options.body);uploads++;}
+  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
+ };
+ const pc=createCloudSync({storage:pcStore,account,fetchImpl,debounceMs:60_000}),phone=createCloudSync({storage:phoneStore,account,fetchImpl,debounceMs:60_000});
+ try{
+  assert.equal((await pc.start()).ok,true);assert.equal(remote.garden.puzzle.stages.s1.stars,3,'legacy UID key migrates on first sync');
+  assert.equal(remote.garden.puzzle.stages.s999,undefined,'another account stays private');
+  await phone.start();let p=readPuzzleProgress(phone.storage,'puzzle-user');assert.equal(p.streak,1);assert.equal(p.lives,4);
+  p.stages.s2={stars:2,best:4000,clears:1};p.streak=0;p.lives=2;p.livesAt=200;
+  assert.equal(writePuzzleProgress(phone.storage,p,'puzzle-user',300),true);assert.equal(phone.isDirty(),true,'puzzle writes schedule upload');
+  await phone.flush();const before=uploads;
+  await pc.syncNow();p=readPuzzleProgress(pc.storage,'puzzle-user');assert.equal(p.stages.s1.stars,3);assert.equal(p.stages.s2.stars,2);assert.equal(p.streak,0);assert.equal(p.lives,2);
+  await pc.syncNow();assert.equal(uploads,before,'stable merges do not reupload on every visit');
+  assert.equal(readPuzzleProgress(pc.storage,'other-user').stages.s2,undefined);
+  const bad=memory({'seed-cloud-owner-v1':'other-user',[GARDEN_KEY]:JSON.stringify({puzzle:{stages:{s9:{stars:3}}}})});
+  const switchCloud=createCloudSync({storage:bad,account,fetchImpl,debounceMs:60_000});
+  try{await switchCloud.start();assert.equal(readPuzzleProgress(bad,'puzzle-user').stages.s9,undefined,'account switches do not import another garden');}finally{switchCloud.signOutCleanup();}
+ }finally{pc.signOutCleanup();phone.signOutCleanup();}
+}
+{
+ const old=normalizePuzzleProgress({dailyStars:11,daily:{day:'20260928',stars:2,best:100,rewarded:true}});
+ const newer=normalizePuzzleProgress({...old,updatedAt:2,daily:{day:'20260929',stars:3,best:200,rewarded:true}});
+ const merged=mergePuzzleProgress(old,newer);assert.equal(merged.dailyStars,14,'old aggregate is retained without counting the same day twice');
+ assert.equal(mergePuzzleProgress(merged,newer).dailyStars,14,'daily ledger merge is idempotent');
+ assert.equal(merged.dailyHistory['20260928'].rewarded,true);
+ const freshDay=normalizePuzzleProgress({daily:{day:'20260930',stars:1,best:50,rewarded:true}});
+ assert.equal(mergePuzzleProgress(merged,freshDay).dailyStars,15,'different days from two offline devices add their stars');
+ const s=memory();assert.equal(writePuzzleProgress(s,{...old,lives:3},'u',10),true);
+ const stale=normalizePuzzleProgress(old);stale.streak=0;writePuzzleProgress(s,stale,'u',5);
+ assert.ok(readPuzzleProgress(s,'u').updatedAt>10,'writes stay ordered even after the device clock moves back');
+}
 // Tree v2: unrelated local settings never roll back newer planting/spending.
 {
  const old={...emptyGarden(),tree:{bag:{frost:1},shards:{common:5},once:{migrated:true},updatedAt:1}};

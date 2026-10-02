@@ -1,3 +1,4 @@
+import {PUZZLE_SAVE_KEY,puzzleSaveKey,mergePuzzleProgress} from './seed-puzzle-progress.js';
 import {mergeBossRuns} from './boss-title-ledger.js';
 import {DISCOVERIES_KEY,normalizeDiscoveries} from './discoveries.js';
 import {GARDEN_KEY,normalizeGarden,autoPlantSeeds,SEEDS,MASTERY_KEYS,MAX_RECORDS} from './garden.js';
@@ -39,11 +40,14 @@ export function normalizeCloudMeta(value){
 
 export function readCloudMeta(storage){return normalizeCloudMeta(json(storage,CLOUD_META_KEY));}
 
-export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now()}={}){
- const shop=json(storage,SHOP_KEY);
+export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now(),ownerUid=storage?.getItem(CLOUD_OWNER_KEY)||''}={}){
+ const shop=json(storage,SHOP_KEY),garden=normalizeGarden(json(storage,GARDEN_KEY));
+ // Migrate only the explicitly owned legacy puzzle key. Guest/other UID keys stay local.
+ const puzzle=ownerUid&&ownerUid!=='guest'?json(storage,puzzleSaveKey(ownerUid)):null;
+ if(puzzle)garden.puzzle=mergePuzzleProgress(garden.puzzle,puzzle,{prefer:'remote'});
  return normalizeCloudSnapshot({
   version:CLOUD_SCHEMA,revision,updatedAt,
-  discoveries:json(storage,DISCOVERIES_KEY),garden:json(storage,GARDEN_KEY),shop:shop??{version:3,coins:STARTING_COINS},
+  discoveries:json(storage,DISCOVERIES_KEY),garden,shop:shop??{version:3,coins:STARTING_COINS},
   checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY]),act3:json(storage,ACT3_STORAGE_KEYS[SAVE_KEY])},
   mirror:{checkpoint:json(storage,MIRROR_CHECKPOINT_KEY),record:json(storage,MIRROR_RECORD_KEY)},
   settings:{theme:storage?.getItem(THEME_KEY),sound:storage?.getItem(SOUND_KEY)},
@@ -97,6 +101,7 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
   bossWins:Math.max(local.bossWins,remote.bossWins),
   harvests:Math.max(local.harvests,remote.harvests),
   decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
+  puzzle:local.puzzle||remote.puzzle?mergePuzzleProgress(local.puzzle,remote.puzzle,{prefer}):null,
   ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree,{prefer})});
 }
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
@@ -142,9 +147,10 @@ export function applyRewardGrants(snapshotValue,grantMap,now=Date.now()){
 }
 
 const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
-export function applyCloudSnapshot(storage,value){
+export function applyCloudSnapshot(storage,value,{ownerUid=storage?.getItem(CLOUD_OWNER_KEY)||''}={}){
  const next=normalizeCloudSnapshot(value),before=collectCloudSnapshot(storage,{revision:next.revision,updatedAt:next.updatedAt});
  const put=(key,val)=>storage?.setItem(key,typeof val==='string'?val:JSON.stringify(val));
+ if(ownerUid&&ownerUid!=='guest'&&next.garden.puzzle)put(puzzleSaveKey(ownerUid),next.garden.puzzle);
  put(DISCOVERIES_KEY,next.discoveries);put(GARDEN_KEY,next.garden);put(SHOP_KEY,next.shop);put(ACCOUNT_PROFILE_KEY,next.account);put(BOSS_PET_KEY,next.bossPet);
  const save=(key,val)=>val?put(key,val):storage?.removeItem(key);
  save(SAVE_KEY,next.checkpoints.act1);save(ACT2_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act2);save(ACT3_STORAGE_KEYS[SAVE_KEY],next.checkpoints.act3);save(MIRROR_CHECKPOINT_KEY,next.mirror.checkpoint);save(MIRROR_RECORD_KEY,next.mirror.record);if(ADVENTURE_CLOUD_READY)save(ADVENTURE_SAVE_KEY,next.adventure);
@@ -193,7 +199,7 @@ const sorted=list=>[...list].sort();
 const withoutStamp=value=>{const {revision,updatedAt,...rest}=normalizeCloudSnapshot(value);return {...rest,discoveries:{...rest.discoveries,forms:sorted(rest.discoveries.forms),bosses:sorted(rest.discoveries.bosses)},account:{...rest.account,badges:sorted(rest.account.badges),skins:sorted(rest.account.skins),appliedGrants:sorted(rest.account.appliedGrants)}};};
 export function snapshotAdds(mergedValue,remoteValue){return !same(withoutStamp(mergedValue),withoutStamp(remoteValue));}
 
-export function isSyncKey(key){return syncSet.has(key);}
+export function isSyncKey(key){return syncSet.has(key)||(typeof key==='string'&&key.startsWith(PUZZLE_SAVE_KEY+':'));}
 
 export function clearCloudLocalData(storage){
  for(const key of SYNC_KEYS)try{storage?.removeItem(key);}catch{}

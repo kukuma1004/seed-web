@@ -9,6 +9,8 @@
 import {LAWS} from './laws.js';
 import {FORMS,SOLO_FORMS,soloFormOf} from './forms.js';
 import {PUZZLE_TUNING} from './seed-puzzle-tuning.js';
+import {PUZZLE_LIVES,normalizePuzzleProgress} from './seed-puzzle-progress.js';
+export {PUZZLE_SAVE_KEY,PUZZLE_LIVES,puzzleSaveKey,normalizePuzzleProgress,readPuzzleProgress,writePuzzleProgress,mergePuzzleProgress} from './seed-puzzle-progress.js';
 
 export const PUZZLE=Object.freeze({size:9,cellScore:10,createScore:{pierce:60,chain:60,burst:100,sun:200},moveBonus:150,maxSteps:80,extraMoves:5,maxContinues:2});
 export const PUZZLE_LAW_IDS=Object.freeze(Object.keys(LAWS));
@@ -481,18 +483,13 @@ export function replayPuzzle(def,seed,boosters,log){
 }
 
 // ── 진행 저장. 햇살 보상은 첫 깨기와 새 별에만.
-// 계정 동기화(cloud-save SYNC_KEYS)는 서버 규칙이 필요해 아직 붙이지 않았다 → 이 기기에, 계정(uid)마다 따로 둔다.
-// 그래야 한 기기를 두 계정이 써도 서로의 별 때문에 첫 깨기 햇살을 못 받는 일이 없다.
-export const PUZZLE_SAVE_KEY='seed-puzzle-v1';
-export const puzzleSaveKey=(owner='guest')=>`${PUZZLE_SAVE_KEY}:${encodeURIComponent(owner||'guest')}`;
+// 단계·별·연승은 정원의 puzzle 칸을 통해 기존 계정 저장과 함께 동기화한다.
 // 첫 깨기 햇살은 30단계부터 380 JP로 고정(999단계까지 늘어나지 않게).
 export const PUZZLE_JP=Object.freeze({firstClear:n=>80+10*Math.min(30,n),newStar:30,daily:100});
-const int=(v,max)=>Number.isFinite(v)?Math.max(0,Math.min(max,Math.floor(v))):0;
 // 도전 씨앗(로열 매치의 하트). 2026-09-28 사용자: "하트를 씨앗으로"
 // 단계를 시작할 때 하나 쓰고, 깨면 돌려받는다 → 지거나 도중에 그만두면 하나가 줄어든다. 10분마다 하나씩 다시 돋고, 햇살로 한 번에 채울 수 있다.
 // 오늘의 단계와 연습은 쓰지 않는다. 시계는 기기 시각(Date.now)이다.
 // 2026-09-28 사용자: 돋는 시간 30분 → 10분(수업 한 시간 안에 여러 번 도전할 수 있게).
-export const PUZZLE_LIVES=Object.freeze({max:5,regenMs:10*60e3,refill:300});
 export function puzzleLives(progress,now=Date.now()){
  const p=progress||{},max=PUZZLE_LIVES.max;let lives=Number.isInteger(p.lives)?Math.max(0,Math.min(max,p.lives)):max,at=Number.isFinite(p.livesAt)?p.livesAt:0;
  if(lives>=max)return {lives:max,livesAt:0,nextIn:0,full:true};
@@ -509,19 +506,6 @@ export function refundPuzzleLife(progress,now=Date.now()){const p=normalizePuzzl
 export function refillPuzzleLives(progress){return setLives(normalizePuzzleProgress(progress),{lives:PUZZLE_LIVES.max,livesAt:0});}
 // 정원 가꾸기에 쓰는 별: 단계마다 가장 많이 딴 별 + 오늘의 단계에서 날마다 딴 별.
 export function puzzleStarsEarned(progress){const p=normalizePuzzleProgress(progress);return Object.values(p.stages).reduce((a,s)=>a+s.stars,0)+p.dailyStars;}
-export function normalizePuzzleProgress(raw){
- const out={version:2,stages:{},daily:{day:'',best:0,stars:0,rewarded:false},streak:0,bestStreak:0,lives:PUZZLE_LIVES.max,livesAt:0,dailyStars:0};
- if(!raw||typeof raw!=='object')return out;
- if(Number.isInteger(raw.lives))out.lives=Math.max(0,Math.min(PUZZLE_LIVES.max,raw.lives));
- if(Number.isFinite(raw.livesAt)&&raw.livesAt>0&&out.lives<PUZZLE_LIVES.max)out.livesAt=Math.floor(raw.livesAt);
- out.dailyStars=int(raw.dailyStars,1e6);
- for(const def of PUZZLE_STAGES){const v=raw.stages?.[def.id];if(!v||typeof v!=='object')continue;out.stages[def.id]={best:int(v.best,1e7),stars:int(v.stars,3),clears:int(v.clears,1e6)};}
- const d=raw.daily;if(d&&typeof d==='object'&&/^\d{8}$/.test(d.day||''))out.daily={day:d.day,best:int(d.best,1e7),stars:int(d.stars,3),rewarded:d.rewarded===true};
- out.streak=int(raw.streak,999);out.bestStreak=Math.max(out.streak,int(raw.bestStreak,999));
- return out;
-}
-export function readPuzzleProgress(storage,owner){try{return normalizePuzzleProgress(JSON.parse(storage?.getItem(puzzleSaveKey(owner))||'null'));}catch{return normalizePuzzleProgress(null);}}
-export function writePuzzleProgress(storage,p,owner){const next=normalizePuzzleProgress(p);try{storage?.setItem(puzzleSaveKey(owner),JSON.stringify(next));return true;}catch{return false;}}
 export function puzzleUnlocked(progress,def){if(def.daily||def.n<=1)return true;return (progress.stages[`s${def.n-1}`]?.stars||0)>0;}
 // 한 번이라도 둔 판을 그만두면 진 것으로 쳐서 연승이 끊긴다(로열 매치와 같다). 오늘의 단계는 연승과 무관.
 export function breakPuzzleStreak(progress){const p=normalizePuzzleProgress(progress);p.streak=0;return p;}
@@ -531,12 +515,13 @@ export const puzzleStreakCounts=(progress,def)=>!def.daily&&!(progress?.stages?.
 export function recordPuzzleResult(progress,s){
  const p=normalizePuzzleProgress(progress),stars=puzzleStars(s);let jp=0;const notes=[];
  if(s.def.daily){
-  if(p.daily.day!==s.def.daily)p.daily={day:s.def.daily,best:0,stars:0,rewarded:false};
+  if(p.daily.day!==s.def.daily)p.daily={day:s.def.daily,...(p.dailyHistory[s.def.daily]||{best:0,stars:0,rewarded:false})};
   // 그날 새로 딴 별만큼 정원 가꾸기 별이 는다(같은 날 더 잘해도 늘어난 만큼만).
   p.dailyStars+=Math.max(0,stars-p.daily.stars);
   p.daily.best=Math.max(p.daily.best,s.score);p.daily.stars=Math.max(p.daily.stars,stars);
   if(stars>0&&!p.daily.rewarded){p.daily.rewarded=true;jp+=PUZZLE_JP.daily;notes.push('오늘의 단계 첫 별');}
-  return {progress:p,jp,notes,stars};
+  p.dailyHistory[s.def.daily]={best:p.daily.best,stars:p.daily.stars,rewarded:p.daily.rewarded};
+  return {progress:normalizePuzzleProgress(p),jp,notes,stars};
  }
  const prev=p.stages[s.def.id]||{best:0,stars:0,clears:0};
  // 첫 별은 첫 깨기 보상에 들어 있다. 그 위의 별은 처음 얻을 때 하나씩.

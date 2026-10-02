@@ -1762,6 +1762,7 @@ async function showSeedPuzzle(){
   // 2026-09-28 로열 매치식: +5 이동·시작 전 부스터·판 안 도구를 햇살(JP)로 산다. 계정이 바뀌었으면 쓰지 않는다.
   const sameOwner=()=>owner===(account.user()?.uid||'guest');
   puzzleScreen=mountSeedPuzzle({audio,storage:runStorage,owner,practice,
+   onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const result=await cloud.flush();return result.ok&&!cloud.isDirty();}:null,
    onPlayed:info=>{if(owner!==(account.user()?.uid||'guest'))return '';treeWater(.5);return info.won&&!info.daily?treeReward({type:'puzzle',stage:info.stage,stars:info.stars,firstThree:info.firstThree}):'';},
    wallet:()=>readShop(runStorage).coins,
    onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,

@@ -38,8 +38,8 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   try{const [save,result]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true}),firebase(`seedUserRewards/${uid}`)]);remote=save.value;remoteEtag=save.etag;rewards=result;}catch(error){if(error.status!==401&&error.status!==403&&(dirty||meta().localRevision>meta().syncedRevision))scheduleRetry();return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
   // 2026-09-21: 서버에서 받아 오는 동안 새로 저장한 것이 있으면 그것도 '올려야 할 것'으로 본다.
   // (예전에는 시작할 때 읽은 표시만 봐서, 그 사이 저장을 서버의 옛 저장으로 덮어쓸 수 있었다.)
-  const fresh=meta(),local=collectCloudSnapshot(raw,{revision:fresh.localRevision,updatedAt:fresh.updatedAt||now()});
-  const sameOwner=!previousOwner||previousOwner===uid;
+  const fresh=meta(),sameOwner=!previousOwner||previousOwner===uid;
+  const local=sameOwner||migrating?collectCloudSnapshot(raw,{revision:fresh.localRevision,updatedAt:fresh.updatedAt||now(),ownerUid:previousOwner||uid}):normalizeCloudSnapshot(null);
   const localDirty=sameOwner&&fresh.localRevision>fresh.syncedRevision;
   let merged;
   if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:migrating||localDirty?'local':'remote'});
@@ -52,7 +52,7 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   const nextRevision=shouldUpload?Math.max(Number(remote?.revision)||0,m.localRevision,merged.revision)+1:Math.max(Number(remote?.revision)||0,merged.revision);
   merged={...merged,revision:nextRevision,updatedAt:shouldUpload?now():(Number(remote?.updatedAt)||merged.updatedAt)};
   if(sameOwner)rememberReplacedRuns(raw,replacedRuns(local,merged),now());
-  active=false;const changed=applyCloudSnapshot(raw,merged);active=true;
+  active=false;const changed=applyCloudSnapshot(raw,merged,{ownerUid:uid});active=true;
   if(shouldUpload)try{await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged,ifMatch:remoteEtag});}
   catch(error){
    // Another device saved between our read and write. Fetch and merge its new

@@ -166,6 +166,13 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  const d=dailyPuzzleStage('20260928');r=recordPuzzleResult(p,fake(d,d.stars[0]));assert.equal(r.jp,PUZZLE_JP.daily);assert.equal(r.progress.streak,p.streak,'daily does not touch the streak');
  r=recordPuzzleResult(r.progress,fake(d,d.stars[2]));assert.equal(r.jp,0);assert.equal(r.progress.daily.stars,3);
  r=recordPuzzleResult(r.progress,fake(dailyPuzzleStage('20260929'),d.stars[0]));assert.equal(r.jp,PUZZLE_JP.daily,'next day rewards again');
+ // A synced clear/daily receipt must suppress a second first-clear reward.
+ const {mergePuzzleProgress}=await import('../src/seed-puzzle-progress.js');
+ const synced=mergePuzzleProgress(normalizePuzzleProgress(null),r.progress);
+ assert.equal(recordPuzzleResult(synced,fake(S1,b)).jp,0,'synced first-clear receipt is reused');
+ const replayOldDay=recordPuzzleResult(synced,fake(d,d.stars[2]));
+ assert.equal(replayOldDay.jp,0,'an earlier day cannot redeem again after syncing a newer day');
+ assert.equal(replayOldDay.progress.dailyStars,synced.dailyStars,'earlier-day replay preserves earned stars');
  assert.ok(PUZZLE_LAW_IDS.length===9);}
 
 // 난이도 지킴이(짧게): 가르치는 앞 단계는 한 수 앞을 보는 사람이 다 깨고, 뒤 단계도 +5 이동 두 번이면 대부분 깬다.

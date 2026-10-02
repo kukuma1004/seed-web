@@ -4,13 +4,13 @@
 > 받은 파일은 PNG 그대로 주면 된다(Claude가 칸 정렬·투명도 확인 뒤 webp로 변환).
 > 참고 그림: `art-refs/duel/*.png` (지금 게임에 쓰는 캐릭터 그림을 한 명씩 잘라 둔 것, 흰 배경)
 
-## 진행 상황(2026-09-28)
+## 진행 상황 (2026-10-02 확인)
 
-- 완료: 창·불꽃 동작 시트(`public/assets/duel/pierce·burst-motion-v1.webp`, 칸마다 같은 배율·발 높이로 다시 맞춤), 계급장(`public/assets/defense/rank-badges-v1.webp`), 대전 바닥(`public/assets/duel/arena-floor-v1.webp`)
-- PNG 원본 7장 추가 완료: `gpt-art-delivery/reflect·gravity·split·chain·recall·orbit·frost-motion-*.png`. 분열·귀환은 경계 여백을 보정한 `v2`를 우선 사용한다. 원본은 1774×887이므로 1024×512 셀 정렬·WebP 변환과 실제 게임 연결은 아직 필요하다.
-
-- 2026-09-29 **6번 테마 정원 자리 꾸미기(온실 빈 정원 1장부터)** 추가
-- 2026-09-29 추가 요청: **5번 처음 화면 배경 · 씨앗 대전 · 씨앗의 모험 · 씨앗 맞추기 카드** (정원 개편 뒤 그림 톤 맞추기)
+- 대전 아홉 캐릭터 모두 8칸 동작 시트 WebP 연결 완료: `public/assets/duel/{pierce,burst,reflect,gravity,split,chain,recall,orbit,frost}-motion-v1.webp` (`src/seed-duel-view.js`의 MOTION 목록). 과거 아래 요청문의 “7장 연결 대기”는 더 이상 현재 상태가 아니다.
+- 수호전 계급장·대전 바닥·첫 화면 배경·대전/모험/맞추기 카드도 연결돼 있다.
+- 테마 정원 9곳 자리 꾸미기 완성. 설렘의 정원과 생명의 나무 v2 화면·보상 연결은 `fe383f3`에 로컬 완료.
+- 원본 그림과 요청문은 보존. 아래 목록은 새 작업 목록이 아니라 제작 당시 참고 요청문이다.
+- Android 새 빌드는 사용자 요청으로 보류 중. 이번 후속 작업은 씨앗 맞추기 계정 저장 연동(단계·별·연승·도전 씨앗).
 
 ## 우선순위
 
