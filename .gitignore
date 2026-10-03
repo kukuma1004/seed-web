@@ -133,3 +133,5 @@ art-source/
 !tools/seed-puzzle-calibrate-score.mjs
 art-refs/
 .calib/
+
+!tools/expansion-journey-test.mjs
