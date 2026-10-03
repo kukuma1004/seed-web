@@ -9,6 +9,9 @@ export const DUEL_SPAWN=Object.freeze([{x:11.5,y:10.8},{x:23.5,y:10.8}]);
 export const DUEL_RULES=Object.freeze({roundsToWin:2,roundSeconds:75,guardMax:100,guardRegen:14,blockDamage:.2,parryWindow:.16,guardBreakStun:1.05,dodgeCd:1,meterMax:100});
 const skill=(name,cooldown,desc)=>Object.freeze({name,cooldown,desc});
 export const DUEL_CHARACTERS=Object.freeze({
+ blastlance:Object.freeze({id:'blastlance',comboId:'blastlance',law:'pierce',name:'폭발 창 씨앗',role:'조준 창 · 끝에서 피는 폭발',hp:174,speed:4.25,reach:2.35,arc:.65,damage:[10,11,16],cadence:.38,heavy:{damage:24,reach:2.6},parry:1,tile:4,ink:'#ffb17a',
+  skills:[skill('꽃봉오리 투창',5.6,'방향을 고정한 뒤 창을 날려요 · 먼 창끝에서 더 크게 피어요'),skill('뒷걸음 불씨',5.2,'뒤로 물러나며 지연 불씨를 남겨요 · 무적은 없어요')],ult:skill('세 번의 개화',0,'세 사선에 창을 차례로 날려요 · 준비 중 끊을 수 있어요'),
+  blurb:'옆으로 피하면 창끝과 폭발을 함께 피할 수 있어요. 조준 중에는 빈틈이 커요.'}),
  pierce:Object.freeze({id:'pierce',name:'창 씨앗',role:'긴 사거리 · 찌르기',hp:182,speed:4.5,reach:2.5,arc:.62,damage:[11,11,17],cadence:.34,heavy:{damage:22,reach:2.6},parry:1,tile:4,ink:'#dbf6b1',
   skills:[skill('돌진 찌르기',4.5,'앞으로 달려가며 꿰뚫어요'),skill('관통 투창',3.5,'멀리 날아가 둘을 꿰뚫는 창')],ult:skill('천 개의 창',0,'세 줄의 창이 앞을 쓸어요'),
   blurb:'가장 멀리서 찌르지만, 붙으면 약해요.'}),
@@ -64,7 +67,7 @@ export const DUEL_CHARACTERS=Object.freeze({
  ,heart:Object.freeze({id:'heart',law:'gravity',name:'정원의 심장',role:'예고 중력장 · 유한 공전',hp:190,speed:4,reach:1.85,arc:1,damage:[10,10,15],cadence:.38,heavy:{damage:23,reach:2.1},parry:1,tile:7,ink:'#e5d18f',
   skills:[skill('심장의 자리',6.2,'상대 자리를 예고한 뒤 약하게 끌어요 · 피해는 한 번'),skill('정원의 공전',6.8,'돌 하나가 몸을 돌아 두 번까지 닿아요')],ult:skill('정원의 맥박',0,'예고 중력장과 돌 하나를 함께 펼쳐요'),blurb:'정원의 마지막 시험을 이기면 함께할 수 있어요. 예고한 자리는 따라오지 않아요.'})
 });
-export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart']);
+export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance']);
 export function availableDuelCharacters(progress){return DUEL_ORDER.filter(id=>id!=='heart'||[0,1].includes(progress?.cleared?.s22?.losses));}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
@@ -113,6 +116,17 @@ function shoot(s,f,extra){if(s.shots.length>=64)return;s.shots.push({owner:f.tea
 // Placed areas are capped per owner, so cooldown resets cannot make persistent particle or damage storms.
 function area(s,f,kind,extra={}){const own=s.hazards.filter(h=>h.owner===f.team&&h.kind===kind);if(own.length>=3){const old=own[0];s.hazards.splice(s.hazards.indexOf(old),1);}if(s.hazards.length>=32)s.hazards.shift();const h={kind,owner:f.team,x:f.x+f.fx*2.4,y:f.y+f.fy*2.4,r:1.65,t:3.2,arm:.45,ink:DUEL_CHARACTERS[f.char].ink,...extra};h.total=h.t;s.hazards.push(h);return h;}
 function fork(s,f,count,damage,kind='crystal'){for(let k=0;k<count;k++){const off=(k-(count-1)/2)*.28,a=Math.atan2(f.fy,f.fx)-off;shoot(s,f,{x:f.x-f.fy*off*2,y:f.y+f.fx*off*2,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.9,damage,kind,bounces:kind==='crystal'?1:0});}}
+function bloomLance(s,f,ult=false){
+ f.bloomCast=(f.bloomCast||0)+1;f.state='skill';f.t=ult?1.35:.8;f.total=f.t;f.blocking=false;
+ for(const [k,off] of (ult?[-.28,0,.28]:[0]).entries()){
+  const a=Math.atan2(f.fy,f.fx)+off,dx=Math.cos(a),dy=Math.sin(a),arm=ult?.6+k*.22:.45;
+  area(s,f,'bloomLanceTell',{x:f.x,y:f.y,dx,dy,endX:f.x+dx*7,endY:f.y+dy*7,r:.24,arm,t:arm+.08,cast:f.bloomCast,damage:ult?11:16,tipDamage:ult?7:12});
+ }
+}
+function bloomRetreat(s,f){
+ area(s,f,'bloomEmber',{x:f.x,y:f.y,r:1.15,arm:.65,t:.85,damage:10});
+ f.state='dash';f.t=.16;f.total=.16;f.dx=-f.fx;f.dy=-f.fy;f.hitDone=true;
+}
 function rush(s,f,{ult=false}={}){const length=ult?6.4:4.8;f.state='skill';f.t=ult?.51:.37;f.hitDone=false;area(s,f,'rushTell',{x:f.x,y:f.y,t:f.t-.03,arm:0,r:.65,dx:f.fx,dy:f.fy,endX:f.x+f.fx*length,endY:f.y+f.fy*length,ult});}
 // These attacks keep one fixed tell, one finite contact budget, and no extra AI actor.
 function planted(s,f,{ult=false,shard=false}={}){const arm=shard?(ult?.55:.25):(ult?.72:.55),length=shard?(ult?8:6.2):(ult?8:6.5);f.state='skill';f.t=arm+.22;f.total=f.t;f.blocking=false;f.reedCast=(f.reedCast||0)+1;if(ult)f.inv=.08;
@@ -141,6 +155,8 @@ function useSkill(s,f,i){
   else if(action.type==='status')Object.assign(f,action.values);
   else if(action.type==='effect')fx(s,action.kind,f.x,f.y,{ink:c.ink,...action.options});
   else if(action.type==='hazard')s.hazards.push(action.options);
+  else if(action.type==='bloomLance')bloomLance(s,f);
+  else if(action.type==='bloomRetreat')bloomRetreat(s,f);
  }
  if(f.char==='burst'){if(i===0)s.hazards.push({kind:'mine',owner:f.team,x:f.x,y:f.y,t:.9,r:2.1});else{f.state='leap';f.t=.55;f.tx=clamp(o.x,DUEL_ARENA.minX,DUEL_ARENA.maxX);f.ty=clamp(o.y,DUEL_ARENA.minY,DUEL_ARENA.maxY);s.hazards.push({kind:'tell',owner:f.team,x:f.tx,y:f.ty,t:.55,r:2.1});}}
  if(f.char==='split')for(const off of [-.32,0,.32]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.6,damage:10,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}
@@ -164,6 +180,7 @@ function useSkill(s,f,i){
 }
 function useUlt(s,f){
  const o=s.fighters[1-f.team],c=DUEL_CHARACTERS[f.char];if(f.meter<DUEL_RULES.meterMax||f.stun>0)return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
+ if(f.char==='blastlance'){f.inv=.08;bloomLance(s,f,true);}
  if(f.char==='pierce')for(const off of [-.35,0,.35]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x,y:f.y,dx:Math.cos(a),dy:Math.sin(a),speed:15,life:1.4,damage:16,pierce:3,bounces:0,hit:new Set(),law:'pierce',kind:'lance',unblockable:false,breaker:1.5});}
  if(f.char==='burst'){if(dist(f,o)<4.2)strike(s,f,o,40,{kind:'skill',breaker:2,stun:.8,knock:2});fx(s,'boom',f.x,f.y,{r:4.2,ink:c.ink,life:.6,max:.6});}
  if(f.char==='reflect'){if(dist(f,o)<8){o.state='jailed';o.t=1.6;o.stun=1.6;o.blocking=false;fx(s,'jail',o.x,o.y,{ink:c.ink,life:1.6,max:1.6});}}
@@ -262,8 +279,22 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
    if(target.shield>0){q.reflections=(q.reflections||0)+1;if(q.reflections>2){q.life=0;continue;}q.owner=target.team;q.dx*=-1;q.dy*=-1;q.hit.clear();fx(s,'parry',q.x,q.y,{ink:DUEL_CHARACTERS[target.char].ink});event(s,'reflect');continue;}
    q.hit.add(target.team);strike(s,s.fighters[q.owner],target,q.damage,{kind:'shot',stun:.3,knock:.8,breaker:q.breaker||1,dir:{x:q.dx,y:q.dy}});if(--q.pierce<0)q.life=0;}
  }
+ for(const q of s.shots)if(q.bloomTip&&q.life<=0&&!q.bloomSpent){
+  q.bloomSpent=true;const radius=Math.min(1.8,.85+Math.hypot(q.x-q.startX,q.y-q.startY)*.12),att=s.fighters[q.owner],target=s.fighters[1-q.owner];
+  fx(s,'boom',q.x,q.y,{r:radius,ink:DUEL_CHARACTERS[att.char].ink,life:.3,max:.3});event(s,'heavyHit');
+  if(dist(q,target)<radius)strike(s,att,target,q.tipDamage,{kind:'skill',stun:.18,knock:.6,dir:{x:q.dx,y:q.dy}});
+ }
  s.shots=s.shots.filter(q=>q.life>0);
  for(const h of s.hazards){h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+  if(h.kind==='bloomLanceTell'){
+   if(owner.stun>0||owner.state!=='skill'||owner.bloomCast!==h.cast){h.t=0;continue;}
+   h.arm=Math.max(0,h.arm-dt);
+   if(h.arm<=0&&!h.triggered){h.triggered=true;shoot(s,owner,{x:h.x+h.dx*.6,y:h.y+h.dy*.6,dx:h.dx,dy:h.dy,speed:14,life:.46,damage:h.damage,pierce:1,kind:'lance',law:'blastlance',bloomTip:true,tipDamage:h.tipDamage,startX:h.x,startY:h.y});event(s,'bloomLaunch');}
+  }
+  if(h.kind==='bloomEmber'){
+   h.arm=Math.max(0,h.arm-dt);if(h.arm<=0&&!h.triggered){h.triggered=true;fx(s,'boom',h.x,h.y,{r:h.r,ink:h.ink,life:.25,max:.25});
+    if(dist(h,o)<h.r)strike(s,owner,o,h.damage,{kind:'skill',stun:.15,knock:.4,dir:norm(o.x-h.x,o.y-h.y)});}
+  }
   if(h.follow){h.x=owner.x;h.y=owner.y;}
   if(h.kind==='heartWell'){h.arm=Math.max(0,h.arm-dt);if(h.arm<=0&&dist(h,o)<h.r){if(!h.triggered){h.triggered=true;strike(s,owner,o,h.damage,{kind:'skill',stun:.12,knock:0});}
     if(o.inv<=0){const v=norm(h.x-o.x,h.y-o.y),force=h.pull*(o.blocking?.25:1);o.x+=v.x*force*dt;o.y+=v.y*force*dt;clampArena(o);}}}
@@ -319,15 +350,15 @@ export function duelAi(s,team,dt){
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;
  // Read a placed threat after a real reaction interval; move toward its shortest exit, never teleport.
- const danger=s.hazards.find(h=>h.owner!==team&&!h.hitDone&&((!h.triggered||h.kind==='heartWell')&&['bramble','frostBloom','rushTell','cinderPatch','echoStrike','heartWell'].includes(h.kind)&&dist(f,h)<h.r+.8||['reedTell','shardMark'].includes(h.kind)&&!h.triggered&&lineContact({...h,r:h.r+.6},f)||h.kind==='pulseRing'&&dist(f,h)<h.maxR+.5&&dist(f,h)>h.r-.5||h.kind==='pebbleOrbit'&&h.hits<h.maxHits&&Math.abs(dist(f,h)-h.orbitR)<1||h.kind==='ring'&&f.inv<=0&&(h.tick||0)<.12&&dist(f,h)<h.r+.3));
- if(danger){ai.areaSeen=(ai.areaSeen||0)+dt;if(ai.areaSeen>cfg.react){const away=norm(f.x-danger.x,f.y-danger.y);input.x=away.x;input.y=away.y;if(['rushTell','reedTell','shardMark'].includes(danger.kind)){input.x=-danger.dy;input.y=danger.dx;}if(f.dodgeCd<=0&&(danger.arm<.2||danger.kind==='pulseRing'&&dist(f,danger)<danger.r+1.1||danger.kind==='ring'&&dist(f,danger)<danger.r+.1))input.dodge=true;return input;}}else ai.areaSeen=0;
+ const danger=s.hazards.find(h=>h.owner!==team&&!h.hitDone&&((!h.triggered||h.kind==='heartWell')&&['bramble','frostBloom','rushTell','cinderPatch','echoStrike','heartWell','bloomEmber'].includes(h.kind)&&dist(f,h)<h.r+.8||['reedTell','shardMark','bloomLanceTell'].includes(h.kind)&&!h.triggered&&lineContact({...h,r:h.r+.6},f)||h.kind==='pulseRing'&&dist(f,h)<h.maxR+.5&&dist(f,h)>h.r-.5||h.kind==='pebbleOrbit'&&h.hits<h.maxHits&&Math.abs(dist(f,h)-h.orbitR)<1||h.kind==='ring'&&f.inv<=0&&(h.tick||0)<.12&&dist(f,h)<h.r+.3));
+ if(danger){ai.areaSeen=(ai.areaSeen||0)+dt;if(ai.areaSeen>cfg.react){const away=norm(f.x-danger.x,f.y-danger.y);input.x=away.x;input.y=away.y;if(['rushTell','reedTell','shardMark','bloomLanceTell'].includes(danger.kind)){input.x=-danger.dy;input.y=danger.dx;}if(f.dodgeCd<=0&&(danger.arm<.2||danger.kind==='pulseRing'&&dist(f,danger)<danger.r+1.1||danger.kind==='ring'&&dist(f,danger)<danger.r+.1))input.dodge=true;return input;}}else ai.areaSeen=0;
  // 평타가 맞았으면 가끔 연계 강공격으로 잇는다.
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- const ultRange={pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange){input.ult=true;return input;}
+ const ultRange={blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange){input.ult=true;return input;}
  // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만" — 두 번째 스킬은 쓰지 않는다(사람과 같은 조작).
- if(f.cd[0]<=0&&(f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
+ if(f.cd[0]<=0&&(f.char==='blastlance'&&d>3&&d<6.5&&!threat||f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  const want=c.reach*.85;
  if(d>want+.3){input.x=v.x;input.y=v.y;}else if(d<want-.9&&f.char==='pierce'){input.x=-v.x;input.y=-v.y;}
  else{input.x=-v.y*Math.sin(s.time*1.3);input.y=v.x*Math.sin(s.time*1.3);if(rnd(s)<cfg.aggro*dt*5)input.attack=true;}

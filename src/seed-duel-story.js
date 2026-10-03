@@ -6,7 +6,8 @@ export const DUEL_STORY_CHAPTERS=Object.freeze([
  {name:'4장 · 나무 너머의 손님',intro:'아홉 빛이 돌아오자 나무 뒤의 문이 열렸다. 먼 정원의 수련자들은 같은 힘으로 전혀 다른 싸움을 보여 준다.'},
  {name:'5장 · 별이 머문 꽃밭',intro:'하늘에서 떨어진 별 조각이 꽃밭의 빛을 흔든다. 빨리 닿는 힘과 기다리는 힘, 진짜와 환영을 구별해 보자.'},
  {name:'6장 · 잊힌 정원의 온기',intro:'빛을 찾아온 손님들이 오래된 정원을 함께 열자고 한다. 갈대숲과 화로와 돌길에 남은 이야기를 만나자.'},
- {name:'7장 · 함께 울리는 빛',intro:'정원의 끝에서 세 수련자가 기다린다. 지나간 자리, 퍼지는 파동, 쌓이는 서리를 읽으면 모두의 빛이 하나로 이어진다.'}
+ {name:'7장 · 함께 울리는 빛',intro:'정원의 끝에서 세 수련자가 기다린다. 지나간 자리, 퍼지는 파동, 쌓이는 서리를 읽으면 모두의 빛이 하나로 이어진다.'},
+ {name:'8장 · 두 빛이 피는 길',intro:'정원의 심장이 길을 열자 두 법칙을 함께 키우는 씨앗이 찾아왔다. 같은 힘을 갖고도 어디에서 꽃을 피울지는 서로 다르다.'}
 ]);
 const encounters=[
  ['pierce','첫 인사, 잎의 창','쉬움','easy','창은 길지만 옆으로 피하면 빈틈이 보여. 내 창끝보다 네 발걸음을 믿어 봐.','창끝을 옆으로 회피한 뒤 가까이 들어가 공격하세요.','네 발걸음이 길을 열었구나. 첫 빛을 맡길게.'],
@@ -32,7 +33,8 @@ const encounters=[
  ['shard','모두의 빛을 담은 결정','어려움','hard','작은 서리도 차곡차곡 모이면 결정이 돼. 하지만 네 발걸음까지 가둘 생각은 없어.','정확한 결정 타격이 쌓이면 느려져요. 같은 직선을 반복해서 받지 말고 공격의 박자를 바꾸세요.','모두의 빛이 모였어. 이제 생명의 나무가 마지막 수호자를 깨울 거야.'],
  ['heart','정원의 심장','보스','hard','나는 이 정원의 심장. 너희가 모은 빛을 마지막으로 시험하겠다. 끌림을 벗어나고 고리의 틈을 찾아라. 힘을 펼친 뒤에는 나도 쉬어야 한다.','보랏빛 원이 켜지기 전에 벗어나세요. 도는 씨앗과 퍼지는 고리를 피한 뒤 보스가 쉬는 틈에 반격하세요. 체력이 절반이면 패턴이 빨라져요.','너는 빛을 혼자 독차지하지 않았구나. 이제 나도 너의 동료가 되겠다. 정원은 우리가 함께 지키자.']
 ];
-export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:Math.min(6,Math.floor(i/3)),enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
+encounters.push(['blastlance','멀리서 피는 꽃','어려움','hard','내 창은 닿는 순간이 아니라 끝에서 피어. 창끝만 쫓다 보면 꽃에 놀랄 거야. 옆으로 비켜서 내 빈틈을 찾아 봐!','조준 방향은 고정돼요. 준비 중 가까이 들어가 끊거나, 옆으로 빠져 창과 끝 폭발을 함께 피하세요. 세 번의 개화도 같은 방법으로 읽을 수 있어요.','꽃은 세게 피우는 것보다 자리를 잘 고르는 게 중요하구나. 다음 씨앗에게도 네 발걸음을 이야기해 줄게.']);
+export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:i<22?Math.min(6,Math.floor(i/3)):7,enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
 // Only an actual, finished best-of-three campaign victory can open the next encounter.
 export function completeStoryMatch(raw,stage,match,now=Date.now()){
  if(!DUEL_STORY_STAGES.includes(stage)||!storyUnlocked(raw,stage.number)||match?.practice||match?.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;

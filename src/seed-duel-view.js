@@ -14,7 +14,7 @@ import './seed-duel.css';
 // - 카메라는 두 씨앗을 따라가며 가까우면 당겨 보고 멀면 물러난다(경기장 밖은 보여 주지 않는다).
 // - 캐릭터마다 무기(창·불꽃 주먹·수정 칼·중력 구슬)를 들고 1·2·3타·강공격의 궤적과 몸동작이 다르다.
 const BASE=import.meta.env.BASE_URL;
-const SOUND={hit:['hit'],heavyHit:['burstHit',{pitch:.85}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
+const SOUND={hit:['hit'],heavyHit:['burstHit',{pitch:.85}],bloomLaunch:['shotPierce',{pitch:.85}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
 // 바닥을 구워 둘 세계 범위와 해상도(세계 1칸 = 40px).
 const WX0=-6,WY0=-6,WX1=41,WY1=27,BAKE=40;
 // 버튼 그림: 모험의 씨앗 동작 그림(adventure/seed-combat-v1, 4×2칸)과 이펙트 소재(vfx-atlas, 4×4칸).
@@ -24,9 +24,9 @@ const FIRST_GUESTS=['thorn','gale','bastion','comet','lotus','prism'];
 const LATEST_GUESTS=['reed','cinder','pebble','echo','pulse','shard'];
 const NEW_DUEL=[...FIRST_GUESTS,...LATEST_GUESTS,'heart'];
 const MOTION=DUEL_ORDER;
-const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='skill'?(f.t>.12?4:5):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
+const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='skill'?(f.char==='blastlance'?(f.t>f.total-.45?4:5):(f.t>.12?4:5)):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-export function mountSeedDuel({host=document.body,audio,storage=localStorage,owner='guest',practice=false,canSave=()=>true,onProgress=()=>{},onSaveAccount=null,onResult=()=>'',onRanking=()=>{},onClose=()=>{}}={}){
+export function mountSeedDuel({host=document.body,audio,storage=localStorage,owner='guest',practice=false,initialCharacter='pierce',canSave=()=>true,onProgress=()=>{},onSaveAccount=null,onResult=()=>'',onRanking=()=>{},onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-duel';root.setAttribute('aria-label','씨앗 대전');
  const pose=(act,label,key)=>`<button data-act="${act}" class="sd-${act}"><i class="sd-ico sd-pose" style="background-image:url('${BASE}assets/adventure/seed-combat-v1.webp');background-position:${POSE[act]%4*100/3}% ${Math.floor(POSE[act]/4)*100}%"></i><b class="sd-lbl">${label}</b><small>${key}</small></button>`;
  root.innerHTML=`<canvas aria-label="씨앗 대전"></canvas><header class="sd-top"><div class="sd-side sd-p0"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><div class="sd-center"><span class="sd-rounds"></span><strong class="sd-timer"></strong></div><div class="sd-side sd-p1"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><button class="sd-pause" aria-label="일시정지">Ⅱ</button></header><div class="sd-story-hud" hidden></div><div class="sd-message"></div><div class="sd-combo" aria-hidden="true"></div>
@@ -35,7 +35,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  host.append(root);document.body.classList.add('seed-duel-open');
  const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),assets={},keys=new Set(),held=new Set(),pressed=new Set(),listeners=[];
  const vfx=createCanvasVfx({onReady:()=>{floor=null;}}),pacer=createFramePacer();
- let s=null,raf=0,last=0,closed=false,width=1,height=1,scale=1,ox=0,oy=0,dpr=1,pick={player:'pierce',enemy:'random',difficulty:'normal'},uiAt=0,floor=null,clock=0;
+ let s=null,raf=0,last=0,closed=false,width=1,height=1,scale=1,ox=0,oy=0,dpr=1,pick={player:DUEL_ORDER.includes(initialCharacter)?initialCharacter:'pierce',enemy:'random',difficulty:'normal'},uiAt=0,floor=null,clock=0;
  let rosterFilter='all';
  let storyProgress=readDuelStory(storage,owner),storyStage=null,storySaved=false,saveNote='',resultTimer=0,paused=false;
  const cam={x:(DUEL_SPAWN[0].x+DUEL_SPAWN[1].x)/2,y:DUEL_SPAWN[0].y,k:0},trails=[[],[]],prevPos=[null,null],pops=[];
@@ -51,7 +51,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  function select(){
   menuRest();storyStage=null;refreshStory();const choices=availableDuelCharacters(storyProgress);if(!choices.includes(pick.player))pick.player='pierce';if(pick.enemy!=='random'&&!choices.includes(pick.enemy))pick.enemy='random';
   const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(c.law||id,'sd-law')} 기술 ${c.skills[0].name} · 필살 ${c.ult.name}</i></span></button>`;};
-  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-roster"><p class="sd-eyebrow">SEED · DUEL · ${choices.length}명의 씨앗</p><h1>씨앗 대전</h1><button class="sd-primary sd-story-open">이야기 모드 · 아홉 빛의 약속</button><button class="sd-primary sd-rank-open">씨앗 대전 랭킹 보기</button><small>혼자 떠나는 ${DUEL_STORY_CHAPTERS.length}장 · ${Object.keys(storyProgress.cleared).length}/${DUEL_STORY_STAGES.length} 대전 클리어</small><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><nav class="sd-filters" aria-label="캐릭터 묶음">${[['all',`전체 ${choices.length}`],['new','새 친구 6'],['guests','먼저 온 친구 6'],['original','기본 9']].map(([id,n])=>`<button class="sd-chip${rosterFilter===id?' on':''}" data-filter="${id}">${n}</button>`).join('')}</nav><div class="sd-roster-scroll"><div class="sd-cards">${choices.filter(id=>rosterFilter==='all'||(rosterFilter==='new'?LATEST_GUESTS.includes(id):rosterFilter==='guests'?FIRST_GUESTS.includes(id):DUEL_ORDER.slice(0,9).includes(id))).map(card).join('')}</div>
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-roster"><p class="sd-eyebrow">SEED · DUEL · ${choices.length}명의 씨앗</p><h1>씨앗 대전</h1><button class="sd-primary sd-story-open">이야기 모드 · 아홉 빛의 약속</button><button class="sd-primary sd-rank-open">씨앗 대전 랭킹 보기</button><small>혼자 떠나는 ${DUEL_STORY_CHAPTERS.length}장 · ${Object.keys(storyProgress.cleared).length}/${DUEL_STORY_STAGES.length} 대전 클리어</small><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><nav class="sd-filters" aria-label="캐릭터 묶음">${[['all',`전체 ${choices.length}`],['fusion',`융합 ${choices.filter(id=>DUEL_CHARACTERS[id].comboId).length}`],['new','새 친구 6'],['guests','먼저 온 친구 6'],['original','기본 9']].map(([id,n])=>`<button class="sd-chip${rosterFilter===id?' on':''}" data-filter="${id}">${n}</button>`).join('')}</nav><div class="sd-roster-scroll"><div class="sd-cards">${choices.filter(id=>rosterFilter==='all'||(rosterFilter==='fusion'?Boolean(DUEL_CHARACTERS[id].comboId):rosterFilter==='new'?LATEST_GUESTS.includes(id):rosterFilter==='guests'?FIRST_GUESTS.includes(id):DUEL_ORDER.slice(0,9).includes(id))).map(card).join('')}</div>
    <div class="sd-row"><span>상대</span>${['random',...choices].map(id=>`<button class="sd-chip${pick.enemy===id?' on':''}" data-enemy="${id}">${id==='random'?'무작위':DUEL_CHARACTERS[id].name}</button>`).join('')}</div>
    <div class="sd-row"><span>난이도</span>${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([id,n])=>`<button class="sd-chip${pick.difficulty===id?' on':''}" data-diff="${id}">${n}</button>`).join('')}</div>
    </div><footer class="sd-roster-footer"><button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-practice">콤보 연습 · 기술 익히기</button><button class="sd-back">돌아가기</button><small>자유 대전·연습은 보상 없이 즐겨요. 이야기 모드는 클리어한 상대를 기록해요. ${choices.includes('heart')?'정원의 심장 동료 해금!':'마지막 스테이지 보스를 이기면 정원의 심장이 동료로 합류해요.'}</small></footer></div>`;
@@ -220,7 +220,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   if(!s)return;
   ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
   for(const h of s.hazards){const ink=DUEL_CHARACTERS[s.fighters[h.owner].char].ink;
-   if(['reedTell','cinderPatch','pebbleOrbit','echoStrike','pulseRing','shardMark','heartWell'].includes(h.kind)){guestHazard(h,ink);continue;}
+   if(['bloomLanceTell','bloomEmber','reedTell','cinderPatch','pebbleOrbit','echoStrike','pulseRing','shardMark','heartWell'].includes(h.kind)){guestHazard(h,ink);continue;}
    if(['bramble','frostBloom','rushTell'].includes(h.kind)){newHazard(h,ink);continue;}
    if(h.kind==='ring'){ctx.save();ctx.strokeStyle=ink+'44';ctx.lineWidth=.08;ctx.beginPath();ctx.ellipse(h.x,h.y-.4,h.r,h.r*.62,0,0,Math.PI*2);ctx.stroke();ctx.restore();const n=h.r>2?5:3;for(let k=0;k<n;k++){const a=clock*5+k*Math.PI*2/n;vfx.fx(ctx,'orb',h.x+Math.cos(a)*h.r,h.y-.6+Math.sin(a)*h.r*.62,.75,{color:ink,alpha:.95});vfx.shot(ctx,'orbit',h.x+Math.cos(a)*h.r,h.y-.6+Math.sin(a)*h.r*.62,.9,{color:ink,alpha:.6,rotation:a});}continue;}
    if(h.kind==='blizzard'){vfx.field(ctx,{x:h.x,y:h.y,radius:h.r*.8,kind:'web'},1,clock*1000,ink);for(let k=0;k<10;k++){const a=clock*1.5+k*.63,r=h.r*(.3+.7*((k*.37+clock*.4)%1));vfx.fx(ctx,k%3?'flecks':'mist',h.x+Math.cos(a)*r,h.y-.5+Math.sin(a)*r*.62,k%3?.7:1.6,{color:ink,alpha:.55});}continue;}
@@ -234,7 +234,15 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   ctx.restore();
  }
  // Small fixed-cost silhouettes: no new textures or particle recursion.
- function newProjectile(q){if(!NEW_DUEL.includes(q.law))return false;const c=DUEL_CHARACTERS[q.law],a=Math.atan2(q.dy,q.dx),shape=q.law==='gale'?'crescent':q.law==='lotus'?'petal':'shard';ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(a);ctx.strokeStyle=c.ink;ctx.lineWidth=.08;ctx.beginPath();ctx.moveTo(-.65,0);ctx.lineTo(.35,0);ctx.stroke();ctx.restore();vfx.fx(ctx,shape,q.x,q.y-.7,q.law==='comet'?1.1:.8,{color:c.ink,alpha:1,rotation:a+Math.PI/4});return true;}
+ function newProjectile(q){
+  if(q.law==='blastlance'){
+   const a=Math.atan2(q.dy,q.dx);ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(a);
+   ctx.strokeStyle='#743c20';ctx.lineWidth=.15;ctx.beginPath();ctx.moveTo(-.8,0);ctx.lineTo(.5,0);ctx.stroke();
+   ctx.fillStyle='#efffd3';ctx.strokeStyle='#395734';ctx.lineWidth=.06;ctx.beginPath();ctx.moveTo(.95,0);ctx.lineTo(.15,-.19);ctx.lineTo(.35,0);ctx.lineTo(.15,.19);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
+   vfx.fx(ctx,'flame',q.x-q.dx*.3,q.y-.7-q.dy*.3,.65,{color:'#ffb17a',alpha:.8,rotation:a});return true;
+  }
+  if(!NEW_DUEL.includes(q.law))return false;const c=DUEL_CHARACTERS[q.law],a=Math.atan2(q.dy,q.dx),shape=q.law==='gale'?'crescent':q.law==='lotus'?'petal':'shard';ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(a);ctx.strokeStyle=c.ink;ctx.lineWidth=.08;ctx.beginPath();ctx.moveTo(-.65,0);ctx.lineTo(.35,0);ctx.stroke();ctx.restore();vfx.fx(ctx,shape,q.x,q.y-.7,q.law==='comet'?1.1:.8,{color:c.ink,alpha:1,rotation:a+Math.PI/4});return true;
+ }
  function newHazard(h,ink){
   ctx.save();ctx.lineWidth=.08;
   if(h.kind==='rushTell'){ctx.strokeStyle=ink;ctx.setLineDash([.3,.22]);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(h.endX,h.endY);ctx.stroke();ctx.setLineDash([]);ctx.fillStyle=ink;ctx.translate(h.endX,h.endY);ctx.rotate(Math.atan2(h.dy,h.dx));ctx.beginPath();ctx.moveTo(.32,0);ctx.lineTo(-.25,-.25);ctx.lineTo(-.25,.25);ctx.closePath();ctx.fill();ctx.restore();return;}
@@ -243,7 +251,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  }
  function guestHazard(h,ink){
   const arm=h.arm>0;ctx.save();ctx.strokeStyle=ink;ctx.lineWidth=.08;
-  if(h.kind==='reedTell'||h.kind==='shardMark'){
+  if(h.kind==='reedTell'||h.kind==='shardMark'||h.kind==='bloomLanceTell'){
    ctx.strokeStyle=ink+'22';ctx.lineWidth=2*(h.r+.4);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(h.endX,h.endY);ctx.stroke();ctx.strokeStyle=ink;ctx.lineWidth=.08;
    ctx.globalAlpha=arm?.6:1;ctx.setLineDash(arm?[.26,.2]:[]);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(h.endX,h.endY);ctx.stroke();ctx.setLineDash([]);
    if(!arm){vfx.beam(ctx,'trail',h.x,h.y-.55,h.endX,h.endY-.55,h.kind==='reedTell'?.75:.45,{color:ink,alpha:1});vfx.fx(ctx,'shard',h.endX,h.endY-.55,.85,{color:ink,alpha:1,rotation:Math.atan2(h.dy,h.dx)+Math.PI/4});}
@@ -333,7 +341,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  function effect(e){const t=1-e.life/e.max,ink=e.ink||'#fce6af',fade=1-t;
   if(e.type==='swing'){const side=e.step===1?-1:1,big=e.step===2;
    if(e.char==='comet'){const len=e.r*(big?1.2:1);vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,.5,{color:ink,alpha:fade});vfx.fx(ctx,'shard',e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,.85,{color:ink,alpha:fade,rotation:e.angle});return;}
-   if(e.char==='pierce'){const len=e.r*(big?1.25:1),tx=e.x+Math.cos(e.angle)*len,ty=e.y-.8+Math.sin(e.angle)*len*.78;vfx.beam(ctx,'trail',e.x+Math.cos(e.angle)*.4,e.y-.8,tx,ty,big?.9:.6,{color:ink,alpha:fade});vfx.fx(ctx,'star',tx,ty,(big?1.6:1)*(1-t*.5),{color:'#ffffff',alpha:fade});if(big)for(const o of [-.25,.25])vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle+o)*len*.8,e.y-.8+Math.sin(e.angle+o)*len*.6,.4,{color:ink,alpha:fade*.6});return;}
+   if(e.char==='pierce'||e.char==='blastlance'){const len=e.r*(big?1.25:1),tx=e.x+Math.cos(e.angle)*len,ty=e.y-.8+Math.sin(e.angle)*len*.78;vfx.beam(ctx,'trail',e.x+Math.cos(e.angle)*.4,e.y-.8,tx,ty,big?.9:.6,{color:ink,alpha:fade});vfx.fx(ctx,'star',tx,ty,(big?1.6:1)*(1-t*.5),{color:'#ffffff',alpha:fade});if(e.char==='blastlance')vfx.fx(ctx,'flame',tx,ty,.85,{color:ink,alpha:fade});if(big)for(const o of [-.25,.25])vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle+o)*len*.8,e.y-.8+Math.sin(e.angle+o)*len*.6,.4,{color:ink,alpha:fade*.6});return;}
    arcSlash(e,t,{r:e.r*(big?1.1:.95),width:big?.7:.45,side,spread:big?1.5:1.1,ink});
    if(e.char==='burst')for(let i=0;i<(big?5:3);i++){const a=e.angle+(i/(big?4:2)-.5)*1.6*side;vfx.fx(ctx,'flame',e.x+Math.cos(a)*e.r*(.6+t*.4),e.y-.9+Math.sin(a)*e.r*.5,.9*fade,{color:'#ffaa65',alpha:fade});}
    if(e.char==='reflect')for(let i=0;i<(big?5:3);i++){const a=e.angle+(i/(big?4:2)-.5)*1.4*side;vfx.fx(ctx,'shard',e.x+Math.cos(a)*e.r*(.5+t*.7),e.y-.85+Math.sin(a)*e.r*(.4+t*.5),.7*fade,{color:ink,alpha:fade,rotation:a});}
@@ -346,7 +354,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
    if(NEW_DUEL.includes(e.char))for(let i=0;i<3;i++){const a=e.angle+(i-1)*.5,shape={thorn:'petal',gale:'crescent',bastion:'shard',lotus:'petal',prism:'shard'}[e.char]||'star';vfx.fx(ctx,shape,e.x+Math.cos(a)*e.r*(.55+t*.35),e.y-.8+Math.sin(a)*e.r*.5,.65*fade,{color:ink,alpha:fade,rotation:a+t*2});}
    if(big)vfx.fx(ctx,'shock',e.x+Math.cos(e.angle)*e.r*.8,e.y-.6+Math.sin(e.angle)*e.r*.6,1+t*2.4,{color:ink,alpha:fade*.8});return;}
   if(e.type==='heavySwing'){const fx=e.x+Math.cos(e.angle)*e.r*.8,fy=e.y-.6+Math.sin(e.angle)*e.r*.6;
-   if(e.char==='pierce'){const len=e.r*1.6;vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,1.3,{color:ink,alpha:fade});vfx.beam(ctx,'lightning',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,.8,{color:'#ffffff',alpha:fade*.7});}
+   if(e.char==='pierce'||e.char==='blastlance'){const len=e.r*1.6;vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,1.3,{color:ink,alpha:fade});vfx.beam(ctx,'lightning',e.x,e.y-.8,e.x+Math.cos(e.angle)*len,e.y-.8+Math.sin(e.angle)*len*.78,.8,{color:'#ffffff',alpha:fade*.7});}
    else arcSlash(e,t,{r:e.r*1.15,width:1,side:1,spread:1.7,ink});
    vfx.fx(ctx,'shock',fx,fy,1.2+t*3.6,{color:ink,alpha:fade});vfx.fx(ctx,'flecks',fx,fy-.2,1.5+t*2.4,{color:'#ffffff',alpha:fade});
    if(e.char==='burst')vfx.fx(ctx,'flame',fx,fy-.4,2.4*fade+.6,{color:'#ffaa65',alpha:fade});

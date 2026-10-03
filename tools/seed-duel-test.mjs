@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import {createDuel,stepDuel,duelAi,DUEL_CHARACTERS,DUEL_ORDER,DUEL_RULES,availableDuelCharacters} from '../src/seed-duel-rules.js';
+import './duel-blastlance-test.mjs';
 
 const idle={};
 const fight=(p='pierce',e='burst')=>{const s=createDuel({player:p,enemy:e,seed:7});s.phase='fight';const [a,b]=s.fighters;a.x=10;a.y=8;b.x=11.6;b.y=8;a.fx=1;b.fx=-1;return s;};
@@ -65,7 +66,7 @@ const run=(s,sec,p={},e={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,p,e);};
 for(const id of DUEL_ORDER.slice(9)){const s=fixture(id);s.fighters[0].meter=100;run(s,.02,{ult:true});assert.equal(s.fighters[0].meter<100,true);assert.ok(s.effects.length>0);assert.ok(s.shots.length<=5);assert.ok(s.hazards.length<=3);run(s,6);assert.equal(s.shots.length,0,id+' shots expire');assert.equal(s.hazards.length,0,id+' zones expire');assert.equal(s.fighters[0].counterShield,0);}
 // Even deliberately reset cooldowns cannot flood the runtime with new persistent fields or fork shots.
 for(const id of ['thorn','lotus','prism']){const s=fixture(id,'pierce',12);s.fighters[1].inv=99;for(let i=0;i<300;i++){const f=s.fighters[0];f.state='idle';f.t=0;f.cd[0]=0;s.freeze=0;stepDuel(s,.001,{skill1:true},{});assert.ok(s.hazards.length<=3);assert.ok(s.shots.length<=64);assert.ok(s.effects.length<=120);}run(s,6);assert.equal(s.hazards.length,0);assert.equal(s.shots.length,0);}
-assert.equal(DUEL_ORDER.length,22);for(const id of DUEL_ORDER.slice(9)){assert.equal(DUEL_CHARACTERS[id].skills.length,2);assert.ok(DUEL_CHARACTERS[id].law);}
+assert.equal(DUEL_ORDER.length,23);for(const id of DUEL_ORDER.slice(9)){assert.equal(DUEL_CHARACTERS[id].skills.length,2);assert.ok(DUEL_CHARACTERS[id].law);}
 console.log('Six duel characters: trap arming/block/dodge, lateral movement, finite counter shield/grab, recursion guard, rush interrupt, cold detonation, fork limits and expiry passed.');
 }
 // Six more identities: fixed tells, actual orbit contact, previous-position strikes, ring crossing, bounded frost.
@@ -105,7 +106,7 @@ console.log('Six duel characters: trap arming/block/dodge, lateral movement, fin
 }
 // Boss flag strengthens only the campaign opponent; unlock requires an actual valid final-stage record.
 {
- assert.equal(availableDuelCharacters().length,21);for(const progress of [{},{cleared:{s21:{losses:0}}},{cleared:{s22:{losses:2}}},{cleared:{s22:{losses:'0'}}}])assert.equal(availableDuelCharacters(progress).includes('heart'),false);
+ assert.equal(availableDuelCharacters().length,DUEL_ORDER.length-1);for(const progress of [{},{cleared:{s21:{losses:0}}},{cleared:{s22:{losses:2}}},{cleared:{s22:{losses:'0'}}}])assert.equal(availableDuelCharacters(progress).includes('heart'),false);
  for(const losses of [0,1])assert.equal(availableDuelCharacters({cleared:{s22:{losses}}}).includes('heart'),true);
  const ordinary=createDuel({player:'heart',enemy:'heart'}),boss=createDuel({player:'heart',enemy:'heart',boss:true}),other=createDuel({player:'heart',enemy:'pierce',boss:true});assert.equal(ordinary.boss,false);assert.equal(ordinary.fighters[1].maxHp,190);assert.equal(boss.fighters[1].maxHp,330);assert.equal(boss.fighters[0].maxHp,190);assert.equal(other.boss,false);
  const fixture=()=>{const s=createDuel({player:'heart',enemy:'pierce'});s.phase='fight';const [a,b]=s.fighters;a.x=15;a.y=10;b.x=18;b.y=10;b.hp=b.maxHp=999;return s;};
@@ -144,6 +145,6 @@ if(!process.argv.includes('--mechanics')&&!process.argv.includes('--boss')&&!pro
 // 평타만 연타하면 보통 AI를 이기지 못한다(3타 뒤 끊김·막히면 튕김·맞으면 AI가 더 막고 반격).
 if(!process.argv.includes('--mechanics')&&!process.argv.includes('--boss')&&!process.argv.includes('--heart')){let win=0,n=0;for(const p of DUEL_ORDER)for(const e of DUEL_ORDER){if(p===e)continue;const s=createDuel({player:p,enemy:e,seed:1,difficulty:'normal'});let f=0;while(s.phase!=='over'&&f++<60*600){const me=s.fighters[0],o=s.fighters[1],dx=o.x-me.x,dy=o.y-me.y,d=Math.hypot(dx,dy);stepDuel(s,1/60,{x:d>1.4?dx/d:0,y:d>1.4?dy/d:0,aimX:dx,aimY:dy,attack:f%6===0});}n++;if(s.winner===0)win++;}
  assert.ok(win<=n*.3,`attack spam must not beat normal AI (${win}/${n})`);console.log('Attack spam vs normal AI',win,'of',n);}
-assert.equal(Object.keys(DUEL_CHARACTERS).length,22);assert.equal(DUEL_RULES.roundsToWin,2);
-assert.equal(new Set(DUEL_ORDER.map(id=>DUEL_CHARACTERS[id].law||id)).size,9,'22 fighters reuse exactly nine laws');
+assert.equal(Object.keys(DUEL_CHARACTERS).length,DUEL_ORDER.length);assert.equal(DUEL_RULES.roundsToWin,2);
+assert.equal(new Set(DUEL_ORDER.map(id=>DUEL_CHARACTERS[id].law||id)).size,9,'all fighters reuse exactly nine laws');
 console.log(process.argv.includes('--mechanics')||process.argv.includes('--boss')||process.argv.includes('--heart')?'Duel mechanics and finite-resource regressions passed.':'Duel mechanics, best-of-3 termination and attack-spam checks passed; seeded AI balance and pair outliers reported above.');
