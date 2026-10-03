@@ -448,7 +448,7 @@ async function startExpansionJourney(room=0){
  $('#toast').textContent='4막 로컬 시제품 · 이동·회피·기존 조합 사용 · 계정 보상/저장 없음';return true;
 }
 function spawnExpansionActor(spec,boss=false){
- const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,expansionActor:true,expansionBoss:boss,config:{name:boss?'횡풍의 수호자':'잎배 편대'}};
+ const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,immovable:boss,expansionActor:true,expansionBoss:boss,config:{name:boss?'횡풍의 수호자':'잎배 편대'}};
  g.position.set(spec.position.x,0,spec.position.z);
  if(!boss)e.expansionThreat=expansionApi.createExpansionThreat(spec);
  const art=ACT3_ART[boss?'act3warden':spec.type==='charger'?'sky-diver':spec.type==='lobber'?'sky-bomber':'sky-scout'];

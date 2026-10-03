@@ -77,7 +77,7 @@ export function segmentDistance(a,b,p){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const FORM_BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed']);
 const bossReach=(e,normal,boss)=>FORM_BOSSES.has(e.type)?boss:normal;
-const immovable=e=>FORM_BOSSES.has(e.type)||e.type==='turret';
+const immovable=e=>e.immovable===true||FORM_BOSSES.has(e.type)||e.type==='turret';
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().

@@ -135,3 +135,4 @@ art-refs/
 .calib/
 
 !tools/expansion-journey-test.mjs
+!tools/crystal-combat-bridge-test.mjs

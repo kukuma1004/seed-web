@@ -3,6 +3,7 @@ import {FINAL_BRANCH_PATTERNS} from './final-branch-patterns.js';
 
 const V=THREE.Vector3,Y=new V(0,1,0);
 const BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed']);
+const immovable=e=>e.immovable===true||BOSSES.has(e.type)||e.type==='turret';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const point=(p)=>new V(p.x,0,p.z);
 
@@ -29,7 +30,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
   fx.explosion?.(p,spec.law,Math.max(.6,r*.6),r>1.6);tell(p,r*.55);
   for(const e of targets(p,r)){
    if(harm(e,power(factor),p)&&slow&&!BOSSES.has(e.type))e.slow=Math.max(e.slow||0,1.1);
-   if(pull&&!BOSSES.has(e.type)&&e.type!=='turret'){
+   if(pull&&!immovable(e)){
     const v=point(p).sub(e.g.position),d=v.length();if(d>.45){e.g.position.addScaledVector(v.normalize(),Math.min(.7,d-.45));constrain?.(e.g.position,.65);}
    }
   }
@@ -51,7 +52,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
    const x=a.x+dx*t-e.g.position.x,z=a.z+dz*t-e.g.position.z;
    if(x*x+z*z>(width+(BOSSES.has(e.type)?.45:0))**2)continue;
    if(harm(e,power(factor),a)&&slow&&!BOSSES.has(e.type))e.slow=Math.max(e.slow||0,1.1);
-   if(pull&&!BOSSES.has(e.type)&&e.type!=='turret'){e.g.position.x+=x*.13;e.g.position.z+=z*.13;constrain?.(e.g.position,.65);}
+   if(pull&&!immovable(e)){e.g.position.x+=x*.13;e.g.position.z+=z*.13;constrain?.(e.g.position,.65);}
   }
  };
  const relay=(start,{jumps=2,delay=spec.tempo,radius=spec.radius,branch=false}={})=>{
