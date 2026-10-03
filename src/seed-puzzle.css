@@ -90,7 +90,7 @@
 #seed-puzzle.sp-wide .sp-toolbar button{flex:1 1 calc(50% - 6px);max-width:none}
 #seed-puzzle.sp-wide .sp-wallet{text-align:left}
 #seed-puzzle.sp-wide .sp-hud{bottom:auto;top:max(10px,env(safe-area-inset-top));align-content:start}
-@media(max-height:430px){#seed-puzzle .sp-toolbar button{min-height:36px;padding:3px 6px}.sp-toolbar b{display:none}.sp-toolbar i{font-size:17px}#seed-puzzle.sp-wide .sp-toolbar button{flex:1 1 calc(25% - 6px)}}
+@media(max-height:430px){#seed-puzzle .sp-toolbar button{min-height:36px;padding:3px 6px}.sp-toolbar b{display:none}.sp-toolbar i{font-size:17px}.sp-toolbar small{white-space:nowrap}#seed-puzzle.sp-wide .sp-toolbar button{flex:1 1 calc(50% - 6px)}}
 @media(max-width:600px){.sp-toolbar b{font-size:11px}#seed-puzzle .sp-toolbar button{padding:4px 6px}}
 .sp-ico-vine{background:linear-gradient(45deg,transparent 42%,#8fcf5a 44% 56%,transparent 58%),linear-gradient(-45deg,transparent 42%,#8fcf5a 44% 56%,transparent 58%),#1d3a14}
 .sp-power{display:inline-block;width:30px;height:30px;border-radius:50%;flex:none;vertical-align:middle;background-color:#fff6d8;background-repeat:no-repeat;border:2px solid #f6d27a;box-shadow:0 0 8px var(--ink,#f6d27a)}

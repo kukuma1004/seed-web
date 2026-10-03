@@ -6,7 +6,6 @@ import {createPuzzleGarden} from './seed-puzzle-garden.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS} from './forms.js';
 import {createCanvasVfx} from './canvas-vfx.js';
-import {lawArt} from './law-art.js';
 import {createFramePacer} from './frame-time.js';
 import './choice.css';
 import './seed-puzzle.css';
@@ -17,6 +16,10 @@ import './seed-puzzle.css';
 // 2026-09-28 로열 매치 참고: 특수 씨앗은 눌러서 바로 터뜨린다 · 연출 중에도 다음 수를 둘 수 있다(남은 연출을 건너뛰고 바로 둔다) · 연출을 빠르게.
 const BASE=import.meta.env.BASE_URL;
 const N=PUZZLE.size;
+const PIECE_ART='assets/puzzle/seed-pieces-v2.webp';
+const PIECE_TILE=Object.freeze({burst:0,split:1,chain:2,pierce:3,orbit:4,recall:5,frost:6,reflect:7,gravity:8});
+const POWER_TILE=Object.freeze({pierce:9,chain:10,burst:11,sun:12});
+const artStyle=t=>`background-image:url('${BASE}${PIECE_ART}');background-size:400% 400%;background-position:${(t%4)*100/3}% ${Math.floor(t/4)*100/3}%`;
 export const PUZZLE_LOOK=Object.freeze({
  burst:{color:'#ff5b4a',shape:'square'},split:{color:'#ff9ec4',shape:'flower'},chain:{color:'#ffd23f',shape:'triangle'},
  pierce:{color:'#b6f24a',shape:'diamond'},orbit:{color:'#4fd77a',shape:'circle'},recall:{color:'#3fd6c0',shape:'shield'},
@@ -69,6 +72,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const load=(k,f)=>{const im=new Image();im.onload=()=>{tiles.clear();backdrop=null;};im.src=BASE+f;images[k]=im;};
  const ready=k=>images[k]?.complete&&images[k].naturalWidth>0;
  load('stone','assets/garden-stone-v4.png');load('back','assets/garden-sanctuary-v2.webp');
+ load('pieces',PIECE_ART);
  let progress=readPuzzleProgress(storage,owner),def=null,s=null,closed=false,raf=0,last=0,clock=0,width=1,height=1,dpr=1,bx=0,by=0,cs=40,backdrop=null,stoneMax=1;
  // 화면 쪽 판: 칸마다 보이는 씨앗 id. 규칙의 판은 한 수에 끝까지 가 있고, 화면은 steps 를 따라 뒤따라간다.
  let vb=[],vmoss=[],vstone=[],vvine=[],visibleScore=0,visibleMoves=0;
@@ -111,7 +115,9 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
 
  // ── 씨앗 그림(크기마다 한 번 굽는다)
  const bake=(key,paint)=>{let c=tiles.get(key+cs);if(c)return c;const px=Math.max(8,Math.round(cs*dpr));c=document.createElement('canvas');c.width=c.height=px;paint(c.getContext('2d'),px);tiles.set(key+cs,c);return c;};
+ const paintPiece=(g,px,t)=>{if(!ready('pieces'))return false;const im=images.pieces,w=im.naturalWidth/4,h=im.naturalHeight/4;g.drawImage(im,(t%4)*w,Math.floor(t/4)*h,w,h,0,0,px,px);return true;};
  const tile=law=>bake(law,(g,px)=>{
+  if(paintPiece(g,px,PIECE_TILE[law]))return;
   const look=PUZZLE_LOOK[law],r=px*.44,x=px/2,y=px/2;
   g.save();shapePath(g,look.shape,x,y,r);g.clip();
   g.fillStyle=look.color;g.fillRect(0,0,px,px);
@@ -121,6 +127,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  });
  // 특수 씨앗 원판: 조용한 바탕 + 큰 동작 표시 하나.
  const powerTile=sp=>bake('p'+sp,(g,px)=>{
+  if(paintPiece(g,px,POWER_TILE[sp]))return;
   const look=POWER_LOOK[sp],x=px/2,r=px*.45;
   g.fillStyle=look.color;g.beginPath();g.arc(x,x,r,0,Math.PI*2);g.fill();
   g.lineWidth=px*.035;g.strokeStyle='#fff2c5';g.stroke();
@@ -360,7 +367,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function banner(big,small){const b=$('.sp-banner');b.innerHTML=`<b>${escape(big)}</b>${small?`<small>${escape(small)}</small>`:''}`;b.classList.remove('pop');void b.offsetWidth;b.classList.add('pop');clearTimeout(bannerTimer);bannerTimer=setTimeout(()=>b.classList.remove('pop'),1200);}
  let toastTimer=0;
  function toast(t){const el=$('.sp-toast');el.textContent=t;el.classList.add('on');clearTimeout(toastTimer);toastTimer=setTimeout(()=>el.classList.remove('on'),1900);}
- const goalIcon=p=>p.kind==='collect'?lawArt(p.law,'sp-goal-art'):`<span class="sp-goal-ico sp-ico-${p.kind}" aria-hidden="true"></span>`;
+ const goalIcon=p=>p.kind==='collect'?`<span class="sp-goal-ico" aria-hidden="true" style="${artStyle(PIECE_TILE[p.law])}"></span>`:`<span class="sp-goal-ico sp-ico-${p.kind}" aria-hidden="true"></span>`;
  const goalName=p=>p.kind==='score'?'점수':p.kind==='collect'?LAWS[p.law].name:{moss:'이끼',stone:'돌',vine:'덩굴'}[p.kind];
  const goalCount=p=>p.kind==='score'?`${Math.min(p.have,p.need).toLocaleString()}/${p.need.toLocaleString()}`:`${p.have}/${p.need}`;
  function hudUpdate(){
@@ -376,7 +383,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function show(kind,html){modal.hidden=false;modal.dataset.kind=kind;modal.innerHTML=`<div class="sp-paper sp-${kind}">${html}</div>`;modal.querySelector('button')?.focus({preventScroll:true});}
  // 한 번이라도 둔 판을 도중에 그만두면 연승이 끊긴다(로열 매치와 같다). 오늘의 단계는 상관없다.
  function quitRun(){progress=readPuzzleProgress(storage,owner);if(s&&s.phase==='play'&&s.log.length&&puzzleStreakCounts(progress,def)&&progress.streak>0){progress=breakPuzzleStreak(progress);writePuzzleProgress(storage,progress,owner);}}
- const powerBadge=id=>{const t=POWER_LOOK[id].tile;return `<span class="sp-power" aria-hidden="true" style="--ink:${POWER_LOOK[id].color};background-image:url('${BASE}${id==='sun'?'icons/seed-cute-v1-192.png':'assets/cute/seed-solo-v1.webp'}');${id==='sun'?'background-size:cover':`background-size:400% 300%;background-position:${(t%4)*100/3}% ${Math.floor(t/4)*50}%`}"></span>`;};
+ const powerBadge=id=>`<span class="sp-power" aria-hidden="true" style="--ink:${POWER_LOOK[id].color};${artStyle(POWER_TILE[id])}"></span>`;
  function menu(){
   quitRun();root.classList.remove('sp-playing');s=null;queue=[];cur=null;armed=null;clearTimeout(resultTimer);progress=readPuzzleProgress(storage,owner);
   const day=seoulDay(),daily=dailyPuzzleStage(day),dp=progress.daily.day===day?progress.daily:null,total=Object.values(progress.stages).reduce((a,p)=>a+p.stars,0);
@@ -403,7 +410,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   modal.querySelector(`[data-stage="${next?.id}"]`)?.scrollIntoView?.({block:'nearest'});
  }
  function goalLines(d){const g=d.goal,out=[];if(d.attack)out.push(`이동 ${d.moves}번 안에 최고 점수 · 별 ${d.stars.map(v=>v.toLocaleString()).join(' / ')}점`);
-  for(const c of g.collect||[])out.push(`${lawArt(c.law,'sp-goal-art')} ${LAWS[c.law].name} ${c.count}개 모으기`);
+  for(const c of g.collect||[])out.push(`${goalIcon({kind:'collect',law:c.law})} ${LAWS[c.law].name} ${c.count}개 모으기`);
   if(g.moss)out.push(`<span class="sp-goal-ico sp-ico-moss"></span> 이끼 ${d.moss.length}칸 모두 걷기`);if(g.stone)out.push(`<span class="sp-goal-ico sp-ico-stone"></span> 돌 ${d.stones.length}개 모두 깨기`);if(g.vine)out.push(`<span class="sp-goal-ico sp-ico-vine"></span> 덩굴 ${d.vines.length}개 모두 풀기`);
   if(!d.attack)out.push(`<span>이동 ${d.moves}번 · ★★ ${d.stars[0].toLocaleString()}점 · ★★★ ${d.stars[1].toLocaleString()}점<br><small>남은 이동은 햇살 타임 점수가 돼요</small></span>`);return out;}
  const LEVEL_TAG={hard:'어려운 단계',veryHard:'아주 어려운 단계'};
