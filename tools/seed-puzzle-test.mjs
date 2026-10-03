@@ -108,10 +108,19 @@ const made=rows=>{const s=board(rows);return firstClear(playPuzzleMove(s,at(4,2)
  const id=s.cells[at(5,0)].id;const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.vine[at(5,0)],0);assert.deepEqual(firstClear(res).vines,[at(5,0)]);assert.equal(s.cells[at(5,0)].id,id,'vined seed stays');}
 // 이끼는 그 칸이 터지면 걷힌다 → 목표를 채우면 바로 이기고, 남은 이동은 햇살 타임(특수 씨앗)으로 터진다.
 {const def={...S1,moss:[at(5,0),at(5,1)],goal:{moss:true},stars:[1e9,1e9]};const s=board(three(),{def,moss:[at(5,0),at(5,1)]});
- const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.phase,'won');assert.equal(s.leftAtWin,s.movesLeft);assert.equal(puzzleStars(s),1);
- const sun=res.steps.find(x=>x.type==='suntime');assert.equal(sun.cells.length,Math.min(15,s.movesLeft));assert.ok(sun.cells.every(i=>['pierce','burst'].includes(sun.board[i].sp)));
- assert.ok(s.bonus>=s.movesLeft*PUZZLE.moveBonus);assert.equal(res.steps.at(-1).type,'end');}
+ const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.phase,'won');assert.equal(s.movesLeft,0);assert.equal(puzzleStars(s),1);
+ const waves=res.steps.filter(x=>x.type==='suntime');assert.equal(waves.reduce((n,w)=>n+w.cells.length,0),s.leftAtWin);assert.ok(waves.every(w=>w.cells.length<=5&&w.cells.every(i=>['pierce','burst'].includes(w.board[i].sp))));
+ assert.ok(s.bonus>=s.leftAtWin*PUZZLE.moveBonus);assert.equal(res.steps.at(-1).type,'end');assert.equal(res.steps.at(-1).score,s.score);}
+// A special earned on the very last move still fires, with zero conversion moves.
+{const def={...S1,goal:{moss:true},stars:[1e9,2e9]},s=board(three(),{def,moss:[at(5,0),at(5,1)]});s.movesLeft=1;
+ const gem=s.cells[at(0,8)];s.cells[at(0,8)]={...gem,law:null,sp:'burst'};
+ const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.phase,'won');assert.equal(s.leftAtWin,0);
+ const bonus=res.steps.filter(x=>x.type==='clear'&&x.label==='햇살 타임');assert.ok(bonus.some(x=>x.cleared.some(c=>c.id===gem.id&&c.sp==='burst')));assert.ok(s.bonus>0);assert.equal(s.cells.some(c=>c?.sp),false);
+ assert.equal(res.steps.filter(x=>x.type==='clear').reduce((n,x)=>n+x.gained,0),s.score);}
 // 별은 점수(햇살 타임 포함): 깨면 ★, 기준 점수로 ★★·★★★, 이어하기(+5)로 깨면 ★ 하나. 이동을 많이 남길수록 점수가 커진다.
+{let rows=put(blank,5,'aaba',0);rows=put(rows,4,'a',2);const def={...S1,goal:{collect:[{law:'burst',count:1}]},stars:[1e9,2e9]},s=board(rows,{def});s.movesLeft=1;
+ const res=playPuzzleMove(s,at(4,2),at(5,2)),made=firstClear(res).created;assert.ok(made.length);for(const c of made)assert.ok(res.steps.some(st=>st.type==='clear'&&st.label==='햇살 타임'&&st.cleared.some(x=>x.id===c.cell.id)),'special created by winning move also detonates');}
+{const s=board(three(),{def:{...S1,attack:true}});s.movesLeft=1;s.cells[0]={...s.cells[0],law:null,sp:'burst'};const res=playPuzzleMove(s,at(4,2),at(5,2));assert.equal(s.phase,'won');assert.ok(res.steps.some(st=>st.type==='clear'&&st.label==='햇살 타임'));assert.equal(s.cells.some(c=>c?.sp),false);}
 {const won=(left,stars)=>{const def={...S1,moss:[at(5,0),at(5,1)],goal:{moss:true},stars};const s=board(three(),{def,moss:[at(5,0),at(5,1)]});s.movesLeft=left+1;playPuzzleMove(s,at(4,2),at(5,2));return s;};
  const few=won(1,[1e9,2e9]),many=won(12,[1e9,2e9]);assert.ok(many.score>few.score,'more moves left, more score');
  assert.equal(puzzleStars(few),1);assert.equal(puzzleStars(won(12,[many.score-1,1e9])),2);assert.equal(puzzleStars(won(12,[10,20])),3);

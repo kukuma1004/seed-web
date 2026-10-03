@@ -2,6 +2,7 @@
 // 씨앗 대전 1차: 1:1(AI), 캐릭터 4명. 공격은 막기에, 막기는 강공격·잡기에, 강공격은 공격(끊기)·반격 막기에 진다.
 // 그림·렌더러와 무관한 규칙. 계정·저장에 쓰지 않는다(보상 없는 시험 모드).
 // 2026-09-28 사용자: "맵은 조금만 더 넓게 · 확대는 조금 더" — 경기장을 넓히고(카메라가 두 씨앗을 따라간다), 기둥 네 개.
+import {duelSkillActions} from './seed-duel-actions.js';
 export const DUEL_ARENA=Object.freeze({minX:1.5,maxX:33.5,minY:2,maxY:19.5});
 export const DUEL_PILLARS=Object.freeze([{x:10.5,y:6.2,r:.85},{x:24.5,y:6.2,r:.85},{x:10.5,y:15.4,r:.85},{x:24.5,y:15.4,r:.85}]);
 export const DUEL_SPAWN=Object.freeze([{x:11.5,y:10.8},{x:23.5,y:10.8}]);
@@ -133,7 +134,8 @@ function lineContact(h,o){const vx=o.x-h.x,vy=o.y-h.y,along=vx*h.dx+vy*h.dy,leng
 function useSkill(s,f,i){
  const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team];if(f.cd[i]>0||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
  f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
- if(f.char==='pierce'){if(i===0){f.state='dash';f.t=.3;f.dx=f.fx;f.dy=f.fy;f.hitDone=false;}else shoot(s,f,{damage:16,pierce:1,speed:14,kind:'lance'});}
+ const actions=duelSkillActions(f,i);
+ if(actions)for(const action of actions){if(action.type==='motion')Object.assign(f,{state:action.state,t:action.seconds,dx:action.dx,dy:action.dy,hitDone:action.hitDone});else if(action.type==='shot')shoot(s,f,action.options);}
  if(f.char==='burst'){if(i===0)s.hazards.push({kind:'mine',owner:f.team,x:f.x,y:f.y,t:.9,r:2.1});else{f.state='leap';f.t=.55;f.tx=clamp(o.x,DUEL_ARENA.minX,DUEL_ARENA.maxX);f.ty=clamp(o.y,DUEL_ARENA.minY,DUEL_ARENA.maxY);s.hazards.push({kind:'tell',owner:f.team,x:f.tx,y:f.ty,t:.55,r:2.1});}}
  if(f.char==='reflect'){if(i===0){f.shield=1.1;f.state='idle';f.t=0;fx(s,'shield',f.x,f.y,{ink:c.ink,life:1.1,max:1.1});}else shoot(s,f,{damage:12,bounces:2,speed:10,kind:'crystal'});}
  if(f.char==='split')for(const off of [-.32,0,.32]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.6,damage:10,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}

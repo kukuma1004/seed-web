@@ -6,14 +6,14 @@ import {createPuzzleGarden} from './seed-puzzle-garden.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS} from './forms.js';
 import {createCanvasVfx} from './canvas-vfx.js';
-import {lawArt,LAW_TILES,LAW_ATLAS} from './law-art.js';
+import {lawArt} from './law-art.js';
 import {createFramePacer} from './frame-time.js';
 import './choice.css';
 import './seed-puzzle.css';
 
 // 씨앗 맞추기 화면. 규칙은 seed-puzzle-rules.js 가 정하고, 여기서는 그 결과(steps)를 차례로 그린다.
-// 보통 씨앗: 법칙 문양(seed-law-atlas-v4) + 법칙마다 다른 테두리 모양·색(그림 색이 겹치는 법칙이 있어서).
-// 특수 씨앗: 금빛 원판 위의 SEED 단독 진화 캐릭터(cute/seed-solo-v1: 관통=창 씨앗, 연쇄=연쇄 씨앗, 폭발=불꽃 씨앗)와 햇살=씨드.
+// 보통 씨앗: 불투명한 색과 실루엣. 내부 법칙 그림/유리 테두리는 쓰지 않는다.
+// 특수 씨앗: 한 가지 큰 동작 표시를 가진 원판.
 // 2026-09-28 로열 매치 참고: 특수 씨앗은 눌러서 바로 터뜨린다 · 연출 중에도 다음 수를 둘 수 있다(남은 연출을 건너뛰고 바로 둔다) · 연출을 빠르게.
 const BASE=import.meta.env.BASE_URL;
 const N=PUZZLE.size;
@@ -68,10 +68,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const vfx=createCanvasVfx(),pacer=createFramePacer(),images={};
  const load=(k,f)=>{const im=new Image();im.onload=()=>{tiles.clear();backdrop=null;};im.src=BASE+f;images[k]=im;};
  const ready=k=>images[k]?.complete&&images[k].naturalWidth>0;
- load('atlas','assets/'+LAW_ATLAS);load('solo','assets/cute/seed-solo-v1.webp');load('floor','assets/cute/quiet-stone-v1.webp');load('stone','assets/garden-stone-v4.png');load('seed','icons/seed-cute-v1-192.png');load('back','assets/garden-sanctuary-v2.webp');
+ load('stone','assets/garden-stone-v4.png');load('back','assets/garden-sanctuary-v2.webp');
  let progress=readPuzzleProgress(storage,owner),def=null,s=null,closed=false,raf=0,last=0,clock=0,width=1,height=1,dpr=1,bx=0,by=0,cs=40,backdrop=null,stoneMax=1;
  // 화면 쪽 판: 칸마다 보이는 씨앗 id. 규칙의 판은 한 수에 끝까지 가 있고, 화면은 steps 를 따라 뒤따라간다.
- let vb=[],vmoss=[],vstone=[],vvine=[];
+ let vb=[],vmoss=[],vstone=[],vvine=[],visibleScore=0,visibleMoves=0;
  const sprites=new Map(),effects=[],floaters=[],tiles=new Map();
  const STAGE_PAGE=50;let stagePage=null;
  let queue=[],cur=null,curT=0,selected=-1,cursor=-1,drag=null,idleAt=0,hint=null,shake=0,announced=new Set(),resultTimer=0,keyboard=false,armed=null,picks=new Set();
@@ -114,24 +114,20 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const tile=law=>bake(law,(g,px)=>{
   const look=PUZZLE_LOOK[law],r=px*.44,x=px/2,y=px/2;
   g.save();shapePath(g,look.shape,x,y,r);g.clip();
-  const grad=g.createRadialGradient(x-r*.3,y-r*.35,r*.1,x,y,r*1.2);grad.addColorStop(0,look.color);grad.addColorStop(1,'#0b1418');g.fillStyle=grad;g.fillRect(0,0,px,px);
-  if(ready('atlas')&&LAW_TILES[law]!==undefined){const im=images.atlas,tw=im.naturalWidth/4,th=im.naturalHeight/3,t=LAW_TILES[law],k=.62;
-   g.globalAlpha=.92;g.drawImage(im,(t%4)*tw+tw*(1-k)/2,Math.floor(t/4)*th+th*(1-k)/2,tw*k,th*k,x-r*.78,y-r*.78,r*1.56,r*1.56);g.globalAlpha=1;}
-  const edge=g.createRadialGradient(x,y,r*.55,x,y,r*1.05);edge.addColorStop(0,'#0000');edge.addColorStop(1,'#000a');g.fillStyle=edge;g.fillRect(0,0,px,px);
+  g.fillStyle=look.color;g.fillRect(0,0,px,px);
+  const shade=g.createLinearGradient(0,0,0,px);shade.addColorStop(0,'#ffffff24');shade.addColorStop(.45,'#ffffff00');shade.addColorStop(1,'#00000035');g.fillStyle=shade;g.fillRect(0,0,px,px);
   g.restore();
-  shapePath(g,look.shape,x,y,r);g.lineWidth=Math.max(2,px*.07);g.strokeStyle=look.color;g.stroke();
-  shapePath(g,look.shape,x,y,r*.9);g.lineWidth=Math.max(1,px*.018);g.strokeStyle='#ffffff66';g.stroke();
-  g.fillStyle='#ffffff2e';g.beginPath();g.ellipse(x-r*.28,y-r*.42,r*.34,r*.16,-.5,0,Math.PI*2);g.fill();
+  shapePath(g,look.shape,x,y,r);g.lineWidth=Math.max(1.5,px*.025);g.strokeStyle='#172d32';g.stroke();
  });
- // 특수 씨앗 원판: 금테 + 빛깔 바탕 + SEED 캐릭터.
+ // 특수 씨앗 원판: 조용한 바탕 + 큰 동작 표시 하나.
  const powerTile=sp=>bake('p'+sp,(g,px)=>{
   const look=POWER_LOOK[sp],x=px/2,r=px*.45;
-  const grad=g.createRadialGradient(x,x*.85,r*.1,x,x,r);grad.addColorStop(0,'#fffbe8');grad.addColorStop(.55,look.color);grad.addColorStop(1,'#3a2a10');g.fillStyle=grad;g.beginPath();g.arc(x,x,r,0,Math.PI*2);g.fill();
-  g.save();g.beginPath();g.arc(x,x,r*.9,0,Math.PI*2);g.clip();
-  if(sp==='sun'&&ready('seed'))g.drawImage(images.seed,x-r*.95,x-r*.95,r*1.9,r*1.9);
-  else if(ready('solo')&&look.tile>=0){const im=images.solo,tw=im.naturalWidth/4,th=im.naturalHeight/3,t=look.tile;g.drawImage(im,(t%4)*tw,Math.floor(t/4)*th,tw,th,x-r*1.05,x-r*.98,r*2.1,r*2.1);}
-  g.restore();
-  g.lineWidth=px*.07;g.strokeStyle='#f6d27a';g.beginPath();g.arc(x,x,r*.97,0,Math.PI*2);g.stroke();g.lineWidth=px*.02;g.strokeStyle='#fff7d6';g.beginPath();g.arc(x,x,r*.86,0,Math.PI*2);g.stroke();
+  g.fillStyle=look.color;g.beginPath();g.arc(x,x,r,0,Math.PI*2);g.fill();
+  g.lineWidth=px*.035;g.strokeStyle='#fff2c5';g.stroke();
+  g.fillStyle='#17323b';g.strokeStyle='#17323b';g.lineWidth=px*.09;g.lineCap='round';
+  if(sp==='pierce'){g.beginPath();g.moveTo(x-r*.58,x);g.lineTo(x+r*.58,x);g.moveTo(x+r*.22,x-r*.3);g.lineTo(x+r*.58,x);g.lineTo(x+r*.22,x+r*.3);g.stroke();}
+  else if(sp==='chain'){g.beginPath();g.moveTo(x+r*.14,x-r*.64);g.lineTo(x-r*.38,x+r*.08);g.lineTo(x+r*.02,x+r*.08);g.lineTo(x-r*.14,x+r*.64);g.lineTo(x+r*.38,x-r*.08);g.lineTo(x-r*.02,x-r*.08);g.closePath();g.fill();}
+  else{shapePath(g,sp==='sun'?'flower':'diamond',x,x,r*.54);g.fill();}
  });
  const mossTile=()=>bake('moss',(g,px)=>{
   g.fillStyle='#2f6b2fcc';g.beginPath();g.roundRect(px*.04,px*.04,px*.92,px*.92,px*.18);g.fill();
@@ -148,6 +144,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  // ── 단계 시작
  function start(d,boosters=[]){
   def=d;s=createPuzzle(d,d.daily?d.seed:(Date.now()^Math.floor(Math.random()*1e9))>>>0,boosters);
+  visibleScore=s.score;visibleMoves=s.movesLeft;
   sprites.clear();effects.length=floaters.length=0;queue=[];cur=null;selected=cursor=-1;drag=null;hint=null;announced=new Set();shake=0;armed=null;
   vb=s.cells.map(c=>c?.id??null);vmoss=[...s.moss];vstone=[...s.stone];vvine=[...s.vine];stoneMax=Math.max(1,...d.stones.map(x=>x.hp));
   // 시작할 때 씨앗이 위에서 쏟아진다(아래 줄부터 먼저 닿게 조금씩 엇갈려).
@@ -171,7 +168,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  // ── 입력
  const canAct=()=>s&&s.phase==='play'&&modal.hidden;
  const busy=()=>Boolean(cur||queue.length);
- function run(res){if(!res.ok){if(res.reason)toast(res.reason);audio?.play('shotArc',{pitch:.6});}queue.push(...res.steps);selected=-1;hint=null;idleAt=clock;}
+ function run(res){if(!res.ok){if(res.reason)toast(res.reason);audio?.play('shotArc',{pitch:.6});}visibleMoves=s.phase==='won'?s.leftAtWin:s.movesLeft;queue.push(...res.steps);selected=-1;hint=null;idleAt=clock;hudUpdate();}
  function tryMove(a,b){if(!canAct()||a<0||b<0)return;snap();run(playPuzzleMove(s,a,b));}
  function tryTap(i){if(!canAct())return;snap();if(!canTap(s,i))return;run(tapPuzzle(s,i));}
  function tryTool(tool,i){if(!canAct())return;snap();if(!pay(PUZZLE_SHOP.tools[tool],PUZZLE_TOOLS[tool].name))return;armed=null;toolbarUpdate();run(usePuzzleTool(s,tool,i));audio?.play('pickup');}
@@ -202,7 +199,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  $('.sp-pause').onclick=()=>pause();
 
  // ── steps 재생(로열 매치처럼 빠르게)
- const DUR={swap:.12,bad:.28,clear:.22,shuffle:.45,bonus:.7,suntime:.55,end:.2,out:.25};
+ const DUR={swap:.12,bad:.28,clear:.22,shuffle:.45,bonus:.7,suntime:.7,'bonus-score':.7,end:.2,out:.25};
  function begin(st){
   curT=0;
   if(st.type==='swap'){const A=spriteAt(st.a),B=spriteAt(st.b);if(!A||!B)return;tween(A,st.b%N,Math.floor(st.b/N),st.ok?DUR.swap:.13);tween(B,st.a%N,Math.floor(st.a/N),st.ok?DUR.swap:.13);
@@ -216,9 +213,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    for(let i=0;i<N*N;i++){const c=st.cells[i];if(!c)continue;let sp=sprites.get(c.id);if(!sp){sp=addSprite(c,i%N,Math.floor(i/N));sp.pop=1;}tween(sp,i%N,Math.floor(i/N),DUR.shuffle*.8);}
    banner('섞는 중…','');}
   else if(st.type==='bonus'){if(st.moves)banner('햇살 타임!',`남은 이동 ${st.moves}번이 특수 씨앗이 돼요`);audio?.play('pickup');}
-  // 햇살 타임: 남은 이동만큼 보통 씨앗이 관통·폭발 씨앗으로 바뀐 뒤 한꺼번에 터진다.
-  else if(st.type==='suntime'){for(const i of st.cells){const c=st.board[i];const sp=c&&sprites.get(c.id);if(sp){Object.assign(sp,{law:c.law,sp:c.sp,dir:c.dir});sp.pop=1;}burstAt(i,SUN,'burst');}audio?.play('evolve');}
-  else if(st.type==='end'||st.type==='out')hudUpdate();
+  // 햇살 타임: 작은 변환 파동마다 남은 이동과 실제 누적 점수를 표시한다.
+  else if(st.type==='suntime'){visibleMoves=st.remaining;for(const i of st.cells){const c=st.board[i];const sp=c&&sprites.get(c.id);if(sp){Object.assign(sp,{law:c.law,sp:c.sp,dir:c.dir});sp.pop=1;}burstAt(i,SUN,'hit');}audio?.play('evolve');hudUpdate();}
+  else if(st.type==='bonus-score'){visibleScore=st.score;visibleMoves=0;if(st.gained)banner('이동 보너스',`+${st.gained.toLocaleString()}점`);hudUpdate();}
+  else if(st.type==='end'||st.type==='out'){visibleScore=s.score;visibleMoves=s.movesLeft;hudUpdate();}
  }
  function stepDone(st,t){
   if(st.type==='swap')return t>=(st.ok?DUR.swap:DUR.bad);
@@ -230,11 +228,13 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   if(st.type==='out'){clearTimeout(resultTimer);resultTimer=setTimeout(()=>{if(!closed)offerMoves(st);},350);}
  }
  function afterMove(){
+  visibleScore=s.score;visibleMoves=s.movesLeft;
   hudUpdate();
   for(const id of s.combos)if(!announced.has(id)){announced.add(id);if(!practice)onDiscover(id);toast(`도감 · ${ALL_FORMS[id]?.name||'조합'} 발견`);}
  }
  function tween(sp,x,y,d){sp.tw={x0:sp.x,y0:sp.y,x1:x,y1:y,t:0,d};sp.tx=x;sp.ty=y;}
  function clear(st){
+  visibleScore=st.score;
   let sx=0,sy=0;
   for(const c of st.cleared){const sp=sprites.get(c.id);if(sp&&!sp.dying)sp.dying=.001;if(vb[c.i]===c.id)vb[c.i]=null;sx+=cx(c.i);sy+=cy(c.i);
    if(st.cleared.length<40||c.sp)burstAt(c.i,c.sp?POWER_LOOK[c.sp].color:PUZZLE_LOOK[c.law]?.color||SUN,c.sp?'burst':'hit');}
@@ -297,8 +297,8 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    // 판 바닥: 조용한 돌 길 + 칸 무늬. 구멍 칸은 비워 둔다.
    const size=cs*N,hole=s?.hole||[];g.save();g.beginPath();g.roundRect(bx-8,by-8,size+16,size+16,18);g.fillStyle='#0b1a1dcc';g.fill();g.lineWidth=2;g.strokeStyle='#d9bd7466';g.stroke();g.clip();
    g.beginPath();for(let i=0;i<N*N;i++)if(!hole[i])g.rect(bx+(i%N)*cs,by+Math.floor(i/N)*cs,cs,cs);g.save();g.clip();
-   if(ready('floor')){g.globalAlpha=.55;g.drawImage(images.floor,bx,by,size,size);g.globalAlpha=1;}
-   for(let r=0;r<N;r++)for(let c=0;c<N;c++){g.fillStyle=(r+c)%2?'#ffffff08':'#00000030';g.fillRect(bx+c*cs,by+r*cs,cs,cs);}
+   g.fillStyle='#203538';g.fillRect(bx,by,size,size);
+   for(let r=0;r<N;r++)for(let c=0;c<N;c++){g.fillStyle=(r+c)%2?'#ffffff03':'#00000010';g.fillRect(bx+c*cs,by+r*cs,cs,cs);}
    g.restore();
    for(let i=0;i<N*N;i++)if(hole[i]){g.fillStyle='#02070acc';g.fillRect(bx+(i%N)*cs,by+Math.floor(i/N)*cs,cs,cs);}
    g.restore();}
@@ -365,10 +365,10 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const goalCount=p=>p.kind==='score'?`${Math.min(p.have,p.need).toLocaleString()}/${p.need.toLocaleString()}`:`${p.have}/${p.need}`;
  function hudUpdate(){
   if(!s)return;$('.sp-no').textContent=def.daily?`오늘의 단계 · ${dayLabel(def.daily)}`:`단계 ${def.n}`;$('.sp-name').textContent=def.name;
-  $('.sp-moves strong').textContent=s.movesLeft;$('.sp-moves').classList.toggle('low',s.movesLeft<=5);$('.sp-score strong').textContent=s.score.toLocaleString();
+  $('.sp-moves strong').textContent=visibleMoves;$('.sp-moves').classList.toggle('low',s.phase==='play'&&visibleMoves<=5);$('.sp-score strong').textContent=visibleScore.toLocaleString();
   // 점수 막대(별 표시는 ★★·★★★ 점수. 오늘의 단계는 ★·★★·★★★ 점수). 남은 이동은 깬 뒤 햇살 타임 점수가 된다.
-  const bar=$('.sp-bar'),top=def.stars.at(-1)*1.08;bar.querySelectorAll('em').forEach(e=>e.remove());bar.querySelector('i').style.width=`${clamp(s.score/top*100,0,100)}%`;
-  def.stars.forEach((v,k)=>{const em=document.createElement('em');em.style.left=`${v/top*100}%`;em.className=s.score>=v?'on':'';em.textContent=def.attack?'★':k?'★★★':'★★';em.title=`${def.attack?`${k+1}번째 별`:k?'★★★':'★★'} ${v.toLocaleString()}점`;bar.append(em);});
+  const bar=$('.sp-bar'),top=def.stars.at(-1)*1.08;bar.querySelectorAll('em').forEach(e=>e.remove());bar.querySelector('i').style.width=`${clamp(visibleScore/top*100,0,100)}%`;
+  def.stars.forEach((v,k)=>{const em=document.createElement('em');em.style.left=`${v/top*100}%`;em.className=visibleScore>=v?'on':'';em.textContent=def.attack?'★':k?'★★★':'★★';em.title=`${def.attack?`${k+1}번째 별`:k?'★★★':'★★'} ${v.toLocaleString()}점`;bar.append(em);});
   $('.sp-goals').innerHTML=def.attack?`<li class="sp-attack">이동 ${def.moves}번 안에 최고 점수</li>`:puzzleGoalState(s).map(p=>`<li class="${p.have>=p.need?'done':''}">${goalIcon(p)}<span>${goalName(p)}</span><b>${goalCount(p)}</b></li>`).join('');
  }
 

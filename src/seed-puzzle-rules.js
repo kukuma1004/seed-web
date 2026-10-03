@@ -280,12 +280,12 @@ function detonate(s,start,effects){
   if(cell?.sp&&!cell.spent&&!s.vine[i]){cell.spent=true;const fx=powerCells(s,cell.sp,i,{dir:cell.dir,avoid:hit});effects.push(fx);for(const j of fx.cells)if(!hit.has(j))queue.push(j);}}
  return hit;
 }
-function clearStep(s,{forced=[],effects=[],moved=[],combo,label=null}){
+function clearStep(s,{forced=[],effects=[],moved=[],combo,label=null,allowCreate=true}){
  const groups=findMatches(s),start=new Set(forced);
  for(const g of groups)for(const i of g.cells)start.add(i);
  if(!start.size)return null;
  const creations=[];
- for(const g of groups){const kind=creationOf(g);if(!kind)continue;const i=pivotOf(g,moved);const run=g.shapes.find(x=>x.kind!=='sq'&&x.cells.includes(i))||g.shapes.find(x=>x.kind!=='sq');
+ for(const g of groups){const kind=allowCreate&&creationOf(g);if(!kind)continue;const i=pivotOf(g,moved);const run=g.shapes.find(x=>x.kind!=='sq'&&x.cells.includes(i))||g.shapes.find(x=>x.kind!=='sq');
   creations.push({i,kind,dir:run?.kind==='h'?'v':'h',law:g.law});}
  const matched=new Set(groups.flatMap(g=>[...g.cells]));
  const hit=detonate(s,start,effects);
@@ -308,7 +308,7 @@ function clearStep(s,{forced=[],effects=[],moved=[],combo,label=null}){
  const gained=cleared.length*PUZZLE.cellScore*combo+created.reduce((n,c)=>n+PUZZLE.createScore[c.cell.sp],0)+(stoneOut.length+vines.length)*20;
  s.score+=gained;s.maxCombo=Math.max(s.maxCombo,combo);
  for(const e of effects)if(e.form&&!s.combos.includes(e.form))s.combos.push(e.form);
- return {type:'clear',combo,cleared,created,stones:stoneOut,vines,moss,effects,gained,label};
+ return {type:'clear',combo,cleared,created,stones:stoneOut,vines,moss,effects,gained,score:s.score,label};
 }
 // 빈칸 채우기: 구멍·돌·묶인 씨앗에서 끊기는 열 조각마다 아래로 모으고, 조각 맨 위에서 새 씨앗이 돋는다.
 function fallStep(s){
@@ -327,10 +327,10 @@ function fallStep(s){
  }
  return {type:'fall',moves,spawns,cells:s.cells.map(copyCell),stone:[...s.stone],vine:[...s.vine]};
 }
-function cascade(s,steps,{forced=[],effects=[],moved=[],label=null}={}){
+function cascade(s,steps,{forced=[],effects=[],moved=[],label=null,allowCreate=true}={}){
  let combo=1;
  for(let n=0;n<PUZZLE.maxSteps;n++){
-  const step=clearStep(s,{forced,effects,moved,combo,label:n===0?label:null});forced=[];effects=[];if(!step)break;
+  const step=clearStep(s,{forced,effects,moved,combo,label:n===0?label:null,allowCreate});forced=[];effects=[];if(!step)break;
   steps.push(step);steps.push(fallStep(s));moved=[];combo++;
  }
 }
@@ -428,19 +428,28 @@ export function continuePuzzle(s){
  const steps=[];if(!findHint(s)){shuffle(s);steps.push({type:'shuffle',cells:s.cells.map(copyCell)});}return {ok:true,steps};
 }
 export function giveUpPuzzle(s){if(s.phase!=='out')return {ok:false,steps:[]};s.phase='lost';return {ok:true,steps:[{type:'end',phase:'lost',stars:0,score:s.score}]};}
-// 햇살 타임: 깬 순간 남은 이동만큼(최대 15) 보통 씨앗이 관통·폭발 씨앗이 되어 한꺼번에 터진다(로열 매치의 남은 이동 로켓).
+// 햇살 타임: 남은 이동을 5개씩 바꾸고, 마지막 특수 씨앗까지 정산한다.
 function sunTime(s,steps){
- const n=Math.min(15,s.movesLeft),spots=[];if(!n)return;
- for(let i=0;i<ALL;i++)if(s.cells[i]&&!s.cells[i].sp&&!s.vine[i]&&open(s,i))spots.push(i);
- const picked=[];for(let k=0;k<n&&spots.length;k++){const j=Math.floor(random(s)*spots.length);picked.push(spots.splice(j,1)[0]);}
- for(const [k,i] of picked.entries())s.cells[i]={...s.cells[i],law:null,sp:k%3===2?'burst':'pierce',dir:k%2?'v':'h'};
- steps.push({type:'suntime',cells:picked,board:s.cells.map(copyCell)});
- const before=s.score;cascade(s,steps,{forced:picked,label:'햇살 타임'});
- s.bonus=s.movesLeft*PUZZLE.moveBonus+(s.score-before);s.score+=s.movesLeft*PUZZLE.moveBonus;
+ const left=s.movesLeft,before=s.score;let remaining=left,converted=0;
+ // Small waves make each conversion readable. Existing final-move specials
+ // detonate even when no moves remain. Bonus refills cannot create an endless
+ // new-special loop: only the player's earned specials and conversions fire.
+ for(let wave=0;wave<ALL;wave++){
+  const spots=[];for(let i=0;i<ALL;i++)if(s.cells[i]&&!s.cells[i].sp&&!s.vine[i]&&open(s,i))spots.push(i);
+  const picked=[];for(let k=0;k<Math.min(5,remaining)&&spots.length;k++){const j=Math.floor(random(s)*spots.length);picked.push(spots.splice(j,1)[0]);}
+  for(const i of picked){s.cells[i]={...s.cells[i],law:null,sp:converted%3===2?'burst':'pierce',dir:converted%2?'v':'h'};converted++;}
+  remaining-=picked.length;
+  if(picked.length)steps.push({type:'suntime',cells:picked,board:s.cells.map(copyCell),remaining});
+  const specials=[];for(let i=0;i<ALL;i++)if(s.cells[i]?.sp&&!s.vine[i]&&open(s,i))specials.push(i);
+  if(specials.length)cascade(s,steps,{forced:specials,label:'햇살 타임',allowCreate:false});
+  if(remaining<=0||(!picked.length&&!specials.length))break;
+ }
+ const gained=left*PUZZLE.moveBonus;s.score+=gained;s.movesLeft=0;s.bonus=s.score-before;
+ steps.push({type:'bonus-score',gained,score:s.score,remaining:0});
 }
 function settle(s,steps){
  if(puzzleGoalMet(s)){s.phase='won';s.leftAtWin=s.movesLeft;steps.push({type:'bonus',moves:s.movesLeft,gained:s.movesLeft*PUZZLE.moveBonus});sunTime(s,steps);}
- else if(s.movesLeft<=0)s.phase=s.def.attack?'won':s.continues<PUZZLE.maxContinues?'out':'lost';
+ else if(s.movesLeft<=0){s.phase=s.def.attack?'won':s.continues<PUZZLE.maxContinues?'out':'lost';if(s.phase==='won'){s.leftAtWin=0;steps.push({type:'bonus',moves:0,gained:0});sunTime(s,steps);}}
  else if(!findHint(s)){shuffle(s);steps.push({type:'shuffle',cells:s.cells.map(copyCell)});}
  if(s.phase==='out')steps.push({type:'out',continues:s.continues,price:puzzleContinuePrice(s),left:puzzleGoalLeft(s)});
  else if(s.phase!=='play')steps.push({type:'end',phase:s.phase,stars:puzzleStars(s),score:s.score});
