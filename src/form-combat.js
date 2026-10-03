@@ -81,7 +81,7 @@ const immovable=e=>e.immovable===true||FORM_BOSSES.has(e.type)||e.type==='turret
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
-// Optional traceTerrain(shot,from,to,dir,meta) owns final-layer wall damage and
+// Optional traceTerrain(shot,from,to,dir,meta) owns opted-in attack wall damage and
 // clips/reflects to/dir. Return null outside terrain modes; keep enemy hits apart.
 // renderless skips GPU resources; maxBolts bounds the parent's projectile pool
 // (24 by default when renderless). Final-branch shots/fields retain their own
@@ -1183,6 +1183,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
  }
 
+ function traceNative(b,previous,damage,kind=b.kind){
+  return traceTerrain?.(b,previous,b.ob.position,b.dir,{kind,damage,remainingBounces:0,ricochet:false})||null;
+ }
+ function bloomComet(b,point,target=null){
+  if(target)support(target,b.damage,{kind:'comethalo',phase:'comet',direction:b.dir.clone()});
+  fx.explosion(point,'burst',b.blastRadius,true);sound('burstHit');
+  for(const e of near(point,b.blastRadius+.8))if(!e.dead&&flat(e.g.position,point)<b.blastRadius+bossReach(e,0,.5))support(e,b.blast,{kind:'comethalo',phase:'corolla',indirect:true,direction:e.g.position.clone().sub(point).setY(0).normalize()});
+  b.life=0;
+ }
  function update(dt){
   markClock+=dt;
   for(let i=lancePictures.length-1;i>=0;i--){const p=lancePictures[i];p.age+=dt;p.life=Math.max(0,p.duration-p.age);if(!p.life){lancePictures.splice(i,1);continue;}p.ob.position.lerpVectors(p.from,p.to,Math.min(1,p.age/p.duration));}
@@ -1238,20 +1247,19 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    if(b.kind==='comethalo'){
     b.ob.position.addScaledVector(b.dir,dt*b.speed);
     if(b.ob.userData.cometSprite)facePaintedOrbit(b.ob,b.dir);else{b.ob.rotation.y+=dt*12;b.ob.rotation.z+=dt*7;}
+    const terrain=traceNative(b,previous,b.damage);
+    if(terrain?.hits.length){bloomComet(b,b.ob.position.clone().setY(0));continue;}
     if(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position)){b.life=0;continue;}
     const target=near(b.ob.position,1.8).find(e=>!e.dead&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.68,1.16));
     if(target){
-     const point=target.g.position.clone().setY(0);support(target,b.damage,{kind:'comethalo',phase:'comet',direction:b.dir.clone()});
-     fx.explosion(point,'burst',b.blastRadius,true);sound('burstHit');
-     for(const e of near(point,b.blastRadius+.8))if(!e.dead&&flat(e.g.position,point)<b.blastRadius+bossReach(e,0,.5))support(e,b.blast,{kind:'comethalo',phase:'corolla',indirect:true,direction:e.g.position.clone().sub(point).setY(0).normalize()});
-     b.life=0;
+     bloomComet(b,target.g.position.clone().setY(0),target);
     }
     fx.trail(previous,b.ob.position,'burst',false);continue;
    }
    if(b.kind==='returningpetals'){
     b.age+=dt;b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*9;b.ob.rotation.z+=dt*5;
-    const hitWall=boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position),arrived=flat(b.ob.position,b.to)<.4||b.age>=S.range/S.speed;
-    if(hitWall)b.ob.position.copy(previous);
+    const terrain=traceNative(b,previous,0),hitWall=terrain?.blocked||boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position),arrived=flat(b.ob.position,b.to)<.4||b.age>=S.range/S.speed;
+    if(hitWall&&!terrain?.blocked)b.ob.position.copy(previous);
     if(hitWall||arrived){
      const origin=b.ob.position.clone(),claimed=new Set();fx.explosion(origin,'split',1.05,true);fx.split(origin,b.dir,Math.min(5,S.petals));sound('split');
      for(const e of near(origin,1.35))if(!e.dead&&flat(e.g.position,origin)<1.05+bossReach(e,0,.45))support(e,S.damage,{kind:'returningpetals',phase:'bloom',indirect:true,direction:e.g.position.clone().sub(origin).setY(0).normalize()});
@@ -1267,8 +1275,9 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     const toSeed=player.position.clone().sub(b.ob.position).setY(0),distance=toSeed.length();if(distance<.55){b.life=0;continue;}
     const desired=toSeed.normalize(),side=new V(-desired.z,0,desired.x).multiplyScalar(b.lane*Math.min(1,distance/4));desired.add(side).normalize();
     b.dir.lerp(desired,Math.min(1,dt*S.steer)).normalize();b.ob.position.addScaledVector(b.dir,dt*S.speed*1.08);b.ob.rotation.y+=dt*12;b.ob.rotation.z+=dt*7;
-    if(boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position)){b.life=0;continue;}
-    const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.passed.has(e)&&(!b.claimed.has(e)||immovable(e))&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.62,1.12));
+    const terrain=traceNative(b,previous,S.petalDamage,'returningpetals');
+    if(terrain?.blocked||boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position)){b.life=0;continue;}
+    const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!(e.terrain&&b.crystalHits?.has(e.id))&&!b.passed.has(e)&&(!b.claimed.has(e)||immovable(e))&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.62,1.12));
     for(const e of targets){if(b.hits>=S.hitsPerLeg)break;b.passed.add(e);if(!immovable(e))b.claimed.add(e);b.hits++;if(!support(e,S.petalDamage,{kind:'returningpetals',phase:'return',indirect:true,direction:b.dir.clone()})){b.life=0;break;}}
     fx.trail(previous,b.ob.position,'recall',true);continue;
    }
@@ -1279,16 +1288,16 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     if(b.life<=0)continue;
     const direction=b.dir.clone().setY(0).normalize();
     b.ob.position.addScaledVector(b.dir,dt*(b.kind==='collapse'?7.2:b.returning?12:10));b.ob.rotation.y+=dt*9;
-    const wall=boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position);
+    const terrain=traceNative(b,previous,b.kind==='collapse'?0:S.damage),wall=terrain?.blocked||boundary(previous,b.ob.position,b.dir)||blocked(previous,b.ob.position);
     if(b.kind==='collapse'){
      const contact=enemies().some(e=>!e.dead&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.7,1.1));
-     if(wall||contact||b.age>=.65){if(wall)b.ob.position.copy(previous);plant(b.ob.position);b.life=0;}
+     if(wall||contact||b.age>=.65){if(wall&&!terrain?.blocked)b.ob.position.copy(previous);plant(b.ob.position);b.life=0;}
     }else{
-     if(wall){b.ob.position.copy(previous);if(!b.returning){b.returning=true;b.hitSet.clear();}else b.life=0;}
+     if(wall){if(!terrain?.blocked)b.ob.position.copy(previous);if(!b.returning){b.returning=true;b.hitSet.clear();}else b.life=0;}
      // Resolve in travel order so an intercepting shield cannot be processed
      // after an enemy behind it merely because of spawn-array order.
      if(b.life>0){
-      const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.72,1.25));
+      const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!(e.terrain&&b.crystalHits?.has(e.id))&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.72,1.25));
       targets.sort((x,y)=>x.g.position.clone().sub(previous).dot(direction)-y.g.position.clone().sub(previous).dot(direction));
       for(const e of targets){
        if(e.dead)continue;

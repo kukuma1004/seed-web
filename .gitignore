@@ -138,3 +138,4 @@ art-refs/
 !tools/crystal-combat-bridge-test.mjs
 !tools/expansion-main-host-test.mjs
 !tools/final-branch-terrain-test.mjs
+!tools/native-terrain-test.mjs
