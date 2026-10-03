@@ -135,13 +135,16 @@ function useSkill(s,f,i){
  const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team];if(f.cd[i]>0||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
  f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
  const actions=duelSkillActions(f,i);
- if(actions)for(const action of actions){if(action.type==='motion')Object.assign(f,{state:action.state,t:action.seconds,dx:action.dx,dy:action.dy,hitDone:action.hitDone});else if(action.type==='shot')shoot(s,f,action.options);}
+ if(actions)for(const action of actions){
+  if(action.type==='motion')Object.assign(f,{state:action.state,t:action.seconds,dx:action.dx,dy:action.dy,hitDone:action.hitDone});
+  else if(action.type==='shot')shoot(s,f,action.options);
+  else if(action.type==='status')Object.assign(f,action.values);
+  else if(action.type==='effect')fx(s,action.kind,f.x,f.y,{ink:c.ink,...action.options});
+  else if(action.type==='hazard')s.hazards.push(action.options);
+ }
  if(f.char==='burst'){if(i===0)s.hazards.push({kind:'mine',owner:f.team,x:f.x,y:f.y,t:.9,r:2.1});else{f.state='leap';f.t=.55;f.tx=clamp(o.x,DUEL_ARENA.minX,DUEL_ARENA.maxX);f.ty=clamp(o.y,DUEL_ARENA.minY,DUEL_ARENA.maxY);s.hazards.push({kind:'tell',owner:f.team,x:f.tx,y:f.ty,t:.55,r:2.1});}}
- if(f.char==='reflect'){if(i===0){f.shield=1.1;f.state='idle';f.t=0;fx(s,'shield',f.x,f.y,{ink:c.ink,life:1.1,max:1.1});}else shoot(s,f,{damage:12,bounces:2,speed:10,kind:'crystal'});}
  if(f.char==='split')for(const off of [-.32,0,.32]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.6,damage:10,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}
  if(f.char==='chain'){const v=norm(o.x-f.x,o.y-f.y);if(dist(f,o)<5.8&&v.x*f.fx+v.y*f.fy>.3&&o.inv<=0){strike(s,f,o,10,{kind:'skill',stun:.35,knock:.3});fx(s,'bolt',o.x,o.y,{ink:c.ink,fromX:f.x,fromY:f.y,life:.3,max:.3});}else fx(s,'bolt',f.x+f.fx*5,f.y+f.fy*5,{ink:c.ink,fromX:f.x,fromY:f.y,life:.3,max:.3});}
- if(f.char==='recall')s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:f.fx,dy:f.fy,speed:11,life:1.6,damage:15,pierce:1,bounces:0,hit:new Set(),law:'recall',kind:'blade',turn:.55,age:0});
- if(f.char==='orbit')s.hazards.push({kind:'ring',owner:f.team,x:f.x,y:f.y,t:2.2,r:1.6,tick:0,follow:true,damage:3});
  if(f.char==='frost'){const v=norm(o.x-f.x,o.y-f.y);fx(s,'breath',f.x,f.y,{ink:c.ink,angle:Math.atan2(f.fy,f.fx),r:3.6,life:.4,max:.4});if(dist(f,o)<3.9&&v.x*f.fx+v.y*f.fy>.5){strike(s,f,o,9,{kind:'skill',stun:.25,knock:.4});o.slow=Math.max(o.slow,1.1);}}
  if(f.char==='gravity'){if(i===0){const v=norm(o.x-f.x,o.y-f.y);if(dist(f,o)<5.5&&v.x*f.fx+v.y*f.fy>.35&&o.inv<=0){o.x=f.x+f.fx*1.1;o.y=f.y+f.fy*1.1;strike(s,f,o,8,{kind:'grab',unblockable:true,stun:.6,knock:.2});fx(s,'pull',o.x,o.y,{ink:c.ink});}else fx(s,'miss',f.x+f.fx*2,f.y+f.fy*2,{});}else s.hazards.push({kind:'well',owner:f.team,x:f.x+f.fx*1.5,y:f.y+f.fy*1.5,t:2.6,r:2.6});}
  if(f.char==='thorn'){if(i===0)area(s,f,'bramble',{damage:12,t:3.5});else fork(s,f,2,9,'lance');}
