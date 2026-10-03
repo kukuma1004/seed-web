@@ -1186,6 +1186,14 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  function traceNative(b,previous,damage,kind=b.kind){
   return traceTerrain?.(b,previous,b.ob.position,b.dir,{kind,damage,remainingBounces:0,ricochet:false})||null;
  }
+ function traceRicochet(b,previous,damage,remainingBounces){
+  const terrain=traceTerrain?.(b,previous,b.ob.position,b.dir,{kind:b.kind,damage,remainingBounces,ricochet:true})||null;
+  // Rebounds start a new contact leg; the same wall may be hit again only
+  // after travelling back to it. The native branch still owns its finite cap.
+  if(terrain?.reflected)b.crystalHits?.clear();
+  return terrain;
+ }
+ function tracedTarget(terrain,e){return e.terrain&&terrain?.hits.some(h=>h.id===e.id);}
  function bloomComet(b,point,target=null){
   if(target)support(target,b.damage,{kind:'comethalo',phase:'comet',direction:b.dir.clone()});
   fx.explosion(point,'burst',b.blastRadius,true);sound('burstHit');
@@ -1325,16 +1333,19 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     }
     if(b.kind==='gravitymirror'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*9;b.ob.rotation.z+=dt*5;
-     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     const terrain=traceRicochet(b,previous,S.damage,S.bounces-b.bounces);
+     const wall=terrain?.blocked||reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){gravityPulse(b.ob.position);b.passed.clear();if(++b.bounces>=S.bounces){gravityDetonate(b.ob.position);b.life=0;continue;}fx.reflect(b.ob.position,b.dir);sound('reflect');}
-     const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+     const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!tracedTarget(terrain,x)&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
      if(e){b.passed.add(e);if(!support(e,S.damage,{kind:'gravitymirror',direction}))b.life=0;}
      fx.trail(previous,b.ob.position,'gravity',b.bounces>0);continue;
     }
     if(b.kind==='prism'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*12;
-     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
+     const falloff=statId==='infiniteprism'?PRISM_CHILD_FALLOFF.infinite:PRISM_CHILD_FALLOFF.base;
+     const terrain=traceRicochet(b,previous,S.damage*Math.pow(falloff,b.gen),1);
+     const wall=terrain?.blocked||reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
      const cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){
@@ -1347,9 +1358,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
      b.life=0;continue;
     }
     const direction=b.dir.clone();
-    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!tracedTarget(terrain,x)&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
     if(e){
-     const falloff=statId==='infiniteprism'?PRISM_CHILD_FALLOFF.infinite:PRISM_CHILD_FALLOFF.base;
      const landed=support(e,S.damage*Math.pow(falloff,b.gen),{kind:'prism',direction});
      // The first shard passes through one enemy so it can still reach a wall and multiply.
      if(landed&&b.gen===0&&b.passed.size===0)b.passed.add(e);else b.life=0;
@@ -1410,14 +1420,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
    if(b.kind==='mirrormaze'){
     b.ob.position.addScaledVector(b.dir,dt*b.speed);b.ob.rotation.y+=dt*10;
-     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
+     const terrain=traceRicochet(b,previous,S.damage*(1+S.gain*b.bounces),S.bounces-b.bounces);
+     const wall=terrain?.blocked||reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir);
     const cover=!wall&&blocked(previous,b.ob.position);
     if(cover){b.ob.position.copy(previous);b.dir.negate();}
     if(wall||cover){
      if(b.bounces>=S.bounces){b.life=0;continue;}
      b.bounces++;b.speed=Math.min(24,b.speed*1.08);b.passed.clear();fx.reflect(b.ob.position,b.dir);
     }
-    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
+    const e=near(b.ob.position,1.8).find(x=>!x.dead&&!tracedTarget(terrain,x)&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.7,1.2));
     if(e){b.passed.add(e);if(!support(e,S.damage*(1+S.gain*b.bounces),{kind:'mirrormaze',direction:b.dir.clone()}))b.life=0;}
     fx.trail(previous,b.ob.position,'reflect',b.bounces>0);
     continue;

@@ -17,7 +17,7 @@
     "admin:grant-founders": "node tools/grant-founding-testers.mjs",
     "test:survival": "node tools/survival-rules-test.mjs && node tools/survival-art-test.mjs && node tools/survival-integration-test.mjs && node tools/survival-benchmark-test.mjs && node tools/survival-save-test.mjs && node tools/survival-sync-test.mjs && node tools/survival-ranking-test.mjs && node tools/survival-record-sync-test.mjs",
     "test:defense": "node tools/defense-entry-test.mjs && node tools/mode-boss-titles-test.mjs && node tools/defense-ranking-test.mjs && node tools/seed-defense-test.mjs && node tools/form-combat-renderless-test.mjs && node tools/seed-defense-combat-test.mjs && node tools/seed-defense-art-test.mjs",
-    "test:expansion": "node tools/act-expansion-test.mjs && node tools/act-expansion-runtime-test.mjs && node tools/expansion-journey-test.mjs && node tools/crystal-combat-bridge-test.mjs && node tools/expansion-main-host-test.mjs && node tools/final-branch-terrain-test.mjs && node tools/native-terrain-test.mjs"
+    "test:expansion": "node tools/act-expansion-test.mjs && node tools/act-expansion-runtime-test.mjs && node tools/expansion-journey-test.mjs && node tools/crystal-combat-bridge-test.mjs && node tools/expansion-main-host-test.mjs && node tools/final-branch-terrain-test.mjs && node tools/native-terrain-test.mjs && node tools/native-ricochet-terrain-test.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.2",

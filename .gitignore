@@ -139,3 +139,4 @@ art-refs/
 !tools/expansion-main-host-test.mjs
 !tools/final-branch-terrain-test.mjs
 !tools/native-terrain-test.mjs
+!tools/native-ricochet-terrain-test.mjs
