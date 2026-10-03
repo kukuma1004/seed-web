@@ -4,6 +4,12 @@ import {createDuel,stepDuel,duelAi,DUEL_CHARACTERS,DUEL_ORDER,DUEL_RULES,availab
 const idle={};
 const fight=(p='pierce',e='burst')=>{const s=createDuel({player:p,enemy:e,seed:7});s.phase='fight';const [a,b]=s.fighters;a.x=10;a.y=8;b.x=11.6;b.y=8;a.fx=1;b.fx=-1;return s;};
 const run=(s,sec,pin={},ein={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,typeof pin==='function'?pin(t):pin,typeof ein==='function'?ein(t):ein);};
+// Orbit is an active visible danger too: react after the normal delay and exit
+// the ring instead of standing inside it until the entire health bar is gone.
+{const s=fight('orbit','shard'),[a,b]=s.fighters;s.hazards.push({kind:'ring',owner:0,x:a.x,y:a.y,r:2.8,t:3.5});let intent;
+ for(let i=0;i<14;i++)intent=duelAi(s,1,1/60);
+ assert.ok(intent.x>0,'AI moves away from the orbit owner after reacting');assert.equal(intent.dodge,true,'AI can dodge out of the active ring');}
+{const s=fight('orbit','shard');s.hazards.push({kind:'ring',owner:0,x:10,y:8,r:2.8,t:3.5,tick:.4});duelAi(s,1,1/60);assert.equal(s.ai[1].areaSeen,0,'ring recovery does not force continuous retreat');}
 // 공격은 맞는다.
 {const s=fight();const b=s.fighters[1],hp=b.hp;run(s,.01,{attack:true},idle);run(s,.4,idle,idle);assert.ok(b.hp<hp,'light attack lands');}
 // 정면 막기: 조금만 깎이고 막기 게이지가 준다.

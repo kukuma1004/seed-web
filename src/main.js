@@ -387,7 +387,7 @@ function completeRun(){
  showEnd(null,{cleared:true,newTitle,bonus});
 }
 function finalBossName(){return isAct3(region)?TEMPEST_CARRIER.name:isAct2(region)?ALWAYS_BEGINNER.name:AUSTIN.name;}
-const appShell=setupMobileApp();
+const appShell=setupMobileApp({offlineIdle:()=>mode==='ready'||mode==='ranking'});
 const nativeUpdate=createNativeUpdateGate({enabled:appShell.nativeApp&&window.Capacitor?.getPlatform?.()==='android'});
 const audio=createGameAudio();audio.installUnlock(document);
 const touch=createTouchControls(()=>mode==='playing'&&!paused);
@@ -2169,7 +2169,9 @@ let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],f
 const framePacer=createFramePacer();
 function startAnimation(){if(mode!=='defense'&&mode!=='adventure'&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
 function stopAnimation(){if(animationHandle)cancelAnimationFrame(animationHandle);animationHandle=0;}
-function animate(now){animationHandle=0;if(document.hidden)return;startAnimation();if(!framePacer(now,mode==='playing'&&!paused?60:30))return;let raw=(now-last)/1000;last=now;
+function animate(now){animationHandle=0;if(document.hidden)return;startAnimation();const coveredMenu=menuArtCovers();if(!framePacer(now,coveredMenu?10:mode==='playing'&&!paused?60:30))return;let raw=(now-last)/1000;last=now;
+ // The static menu painting fully covers the scene: only music needs a tick.
+ if(coveredMenu){realLast=Date.now();audio.tick(Math.min(.1,Math.max(0,raw)));return;}
  {const realNow=Date.now();const realDelta=(realNow-realLast)/1000;realLast=realNow;if(mode==='playing'&&!paused&&!survivalSession?.benchmark&&realDelta>0&&realDelta<2){elapsed+=realDelta;paceReal+=realDelta;paceGame+=Math.min(2,Math.max(0,raw));webTelemetry.playTick(realDelta);}}if(perfEnabled)try{perf.frame(raw*1000,mode==='playing'&&!paused,perfSnapshot);perf.beginFrame();if(perf.due())perf.sampleState(perfSnapshot());}catch{}frames.push(raw*1000);if(frames.length>180)frames.shift();const visualDt=Math.min(.1,Math.max(0,raw)),timeScale=cameraFeel.stepEffects(visualDt),dt=survivalSession?.benchmark?(()=>{for(let i=0;i<4;i++)stepSurvivalBenchmark(1/60);return 4/60;})():advanceFrame(raw*timeScale,now*.001,(step,time)=>update(step,time));if(survivalSession&&!survivalSession.lab&&!survivalSession.finished&&survivalSession.time>=survivalAutosaveAt){survivalAutosaveAt=survivalSession.time+15;saveSurvival();}audio.tick(visualDt);perfT=performance.now();if(!paused)vfx.update(visualDt);perfMark(PS.particles);frameCounter++;
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  perfT=performance.now();if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*visualDt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}

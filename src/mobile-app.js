@@ -10,7 +10,8 @@ export function launchContext({nativeApp=false,media=globalThis.matchMedia?.bind
  const fullscreenApi=Boolean(doc?.documentElement?.requestFullscreen);
  return {mode:nativeApp?'native':installed?'pwa':'browser',installed:nativeApp||installed,fullscreenApi};
 }
-export function setupMobileApp(){
+export const offlineDownloadAllowed=({idle=false,hidden=false,saveData=false}={})=>Boolean(idle&&!hidden&&!saveData);
+export function setupMobileApp({offlineIdle=()=>false}={}){
  // The native Android activity enters sensor-landscape immediately and remains resizable.
  const nativeApp=Boolean(window.Capacitor?.isNativePlatform?.());
  if(nativeApp)document.body.classList.add('native-app');
@@ -52,6 +53,19 @@ export function setupMobileApp(){
  markFullscreen();
  if(!nativeApp&&import.meta.env.PROD&&'serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register(import.meta.env.BASE_URL+'sw.js',{updateViaCache:'none'}).then(registration=>{
   registration.update().catch(()=>{});
+  let sent;
+  const sendPolicy=(force=false)=>{
+   const allowed=offlineDownloadAllowed({idle:offlineIdle(),hidden:document.hidden,saveData:navigator.connection?.saveData});
+   if(force||sent!==allowed){sent=allowed;(navigator.serviceWorker.controller||registration.active)?.postMessage({type:'SEED_OFFLINE_POLICY',allowed});}
+  };
+  navigator.serviceWorker.addEventListener('controllerchange',()=>sendPolicy(true));
+  document.addEventListener('visibilitychange',()=>sendPolicy(true));
+  navigator.connection?.addEventListener?.('change',()=>sendPolicy(true));
+  window.addEventListener('online',()=>sendPolicy(true));
+  const watch=new MutationObserver(()=>sendPolicy());
+  watch.observe(document.body,{attributes:true,attributeFilter:['class']});
+  const overlay=document.getElementById('overlay');if(overlay)watch.observe(overlay,{attributes:true,attributeFilter:['hidden','class'],childList:true});
+  sendPolicy(true);setInterval(()=>sendPolicy(offlineIdle()&&!document.hidden),30_000);
   setInterval(()=>{if(!document.hidden)registration.update().catch(()=>{});},60_000);
  }).catch(()=>{}));
  return {fullscreen,enterFullscreen,nativeApp,launch};

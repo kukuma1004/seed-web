@@ -29,6 +29,9 @@ function offlineManifest(){
 // Relative build URLs work both on GitHub project Pages and on the local server.
 export default defineConfig({
  base:'./',
+ // Some workspace-linked Capacitor plugins resolve the parent node_modules.
+ // Keep one runtime instance instead of bundling both physical copies.
+ resolve:{dedupe:['three','@capacitor/core']},
  define:{__SEED_BUILD__:JSON.stringify(process.env.SEED_BUILD||buildId)},
  plugins:[offlineManifest()],
  build:{rollupOptions:{input:{index:resolve(import.meta.dirname,'index.html'),comboLab:resolve(import.meta.dirname,'combo-lab.html')}}}

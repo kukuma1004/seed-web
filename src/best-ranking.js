@@ -1,11 +1,11 @@
 // Shared UID-bound best-record queue; optimistic concurrency protects other devices.
-export function createBestRanking({storage,authProvider,config,fetchImpl=(...a)=>fetch(...a),path:rankPath,pendingPrefix,valid,places,limit=1000}={}){
+export function createBestRanking({storage,authProvider,config,fetchImpl=(...a)=>fetch(...a),path:rankPath,pendingPrefix,valid,places,limit=1000,timeout=10000}={}){
  let serial=Promise.resolve();
  const key=uid=>pendingPrefix+encodeURIComponent(uid);
  const pending=uid=>{try{const e=JSON.parse(storage?.getItem(key(uid)));return e?.uid===uid&&valid(e)?e:null;}catch{return null;}};
- async function auth(uid){const s=await authProvider();if(!s?.uid||!s.idToken||(uid&&s.uid!==uid))throw new Error('account-changed');return s;}
+ async function auth(uid){let timer;try{const s=await Promise.race([Promise.resolve().then(()=>authProvider()),new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error('account-timeout')),timeout);})]);if(!s?.uid||!s.idToken||(uid&&s.uid!==uid))throw new Error('account-changed');return s;}finally{clearTimeout(timer);}}
  async function request(s,path='',query='',options={}){
-  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),10000);
+  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),timeout);
   try{const r=await fetchImpl(`${config.databaseURL}/${rankPath}${path}.json?${query}auth=${encodeURIComponent(s.idToken)}`,{cache:'no-store',...options,signal:controller.signal});
    const body=await r.json();if(!r.ok){const e=new Error('account-ranking-'+r.status);e.status=r.status;throw e;}return {body,etag:r.headers.get('ETag')};
   }finally{clearTimeout(timer);}
@@ -14,9 +14,11 @@ export function createBestRanking({storage,authProvider,config,fetchImpl=(...a)=
   for(let attempt=0;attempt<3;attempt++){
    const s=await auth(entry.uid),path='/'+encodeURIComponent(s.uid);
    const current=await request(s,path,'',{headers:{'X-Firebase-ETag':'true'}});
+   // A login switch during GET must not upload or acknowledge the old account.
+   const latest=await auth(entry.uid);
    if(valid(current.body)&&current.body.score>=entry.score)return;
    if(!current.etag)throw new Error('missing-etag');
-   try{await request(s,path,'',{method:'PUT',headers:{'Content-Type':'application/json','if-match':current.etag},body:JSON.stringify(entry)});return;}
+   try{await request(latest,path,'',{method:'PUT',headers:{'Content-Type':'application/json','if-match':current.etag},body:JSON.stringify(entry)});return;}
    catch(e){if(e.status!==412)throw e;}
   }
   throw new Error('account-ranking-conflict');
@@ -37,6 +39,7 @@ export function createBestRanking({storage,authProvider,config,fetchImpl=(...a)=
  async function board(){
   const s=await auth();
   const [best,own]=await Promise.all([request(s,'',`orderBy=%22score%22&limitToLast=${limit}&`),request(s,'/'+encodeURIComponent(s.uid))]);
+  await auth(s.uid);
   const raw=best.body||{},rows=places(Object.entries(raw).filter(([uid,e])=>e?.uid===uid&&valid(e)).map(([,e])=>e));
   const complete=Object.keys(raw).length<limit;
   const mine=valid(own.body)&&own.body.uid===s.uid?{...own.body,rank:0}:null;
