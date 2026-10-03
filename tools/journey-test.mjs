@@ -1,11 +1,18 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {ROOMS,EXIT,rewardOptions,learnedLaws,canUseExit} from '../src/journey.js';
+import {ROOMS,EXIT,rewardOptions,learnedLaws,canUseExit,GARDEN_ROUTE_ROOMS,roomFor,STAR_ROOM} from '../src/journey.js';
 import {createWarden,tickWarden,FAN_SPACING,FAN_SHIFT} from '../src/warden.js';
 import {segmentHitsCover} from '../src/collision.js';
 import {FINAL_BOSS_CAP,FINAL_BOSS_EVERY,MAX_RUN_CYCLE,bossCapReached} from '../src/journey.js';
 assert.equal(ROOMS.length,5);assert.equal(new Set(ROOMS.map(r=>JSON.stringify(r.covers))).size,5);
 for(const room of ROOMS)for(const [type,x,z] of [...room.enemies,['player',0,5],['exit',EXIT.x,EXIT.z]])assert.equal(segmentHitsCover({x,z},{x,z},room.covers,type==='warden'?1:.65),false,`${room.name}: ${type} inside cover`);
+for(const room of GARDEN_ROUTE_ROOMS){
+ const spawns=[...room.enemies,['player',0,5],['exit',EXIT.x,EXIT.z],['elite',room.elite?.x??0,room.elite?.z??-5],['shield',room.shield.x,room.shield.z]];
+ for(const [type,x,z] of spawns)assert.equal(segmentHitsCover({x,z},{x,z},room.covers,type==='elite'?1:.65),false,`${room.name}: ${type} clear`);
+ // Both new layouts retain a player-width central path to the exit.
+ assert.equal(segmentHitsCover({x:0,z:5},{x:EXIT.x,z:EXIT.z},room.covers,.65),false,`${room.name}: exit reachable`);
+}
+assert.equal(roomFor(0,0),ROOMS[0]);assert.equal(roomFor(0,1),GARDEN_ROUTE_ROOMS[0]);assert.equal(roomFor(3,1),GARDEN_ROUTE_ROOMS[1]);assert.equal(roomFor(2,1),STAR_ROOM);assert.equal(roomFor(4,1),ROOMS[4]);assert.equal(roomFor(0,1),roomFor(0,1),'saved stage/cycle resolves deterministically');
 assert.equal(rewardOptions(0,[]).length,3);assert.equal(new Set(rewardOptions(2,['reflect','split'])).size,3);assert.ok(rewardOptions(3,['reflect','split','chain']).every(id=>['reflect','split','chain'].includes(id)));
 assert.deepEqual(learnedLaws(66,100,['split','reflect','chain']),['split']);assert.deepEqual(learnedLaws(34,100,['split','reflect','chain']),['split','reflect']);
 assert.equal(canUseExit({open:true,mode:'playing',paused:false,x:0,z:-6}),true);

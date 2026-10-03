@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import * as THREE from 'three';
 import {STAR_STAGES,starStage,isStarRoom} from '../src/room-rotation.js';
 import {arenaFor,insideArena,constrainToArena,reflectArenaBoundary,safeArenaSpawn,buildArenaBoundary,distanceToArenaEdge} from '../src/arena.js';
-import {ROOMS,STAR_ROOM,roomFor,canUseExit} from '../src/journey.js';
+import {ROOMS,STAR_ROOM,GARDEN_ROUTE_ROOMS,roomFor,canUseExit} from '../src/journey.js';
 import {trapsFor,STAR_TRAPS,insideTrap,TRAP_SIZE} from '../src/traps.js';
 import {turretSpots,STAR_TURRETS} from '../src/turret.js';
 import {segmentHitsCover} from '../src/collision.js';
@@ -16,7 +16,8 @@ for(let cycle=0;cycle<8;cycle++){
  for(const stage of ROOMS.keys()){
   const star=isStarRoom(stage,cycle);
   assert.equal(arenaFor(stage,cycle).id==='star',star);
-  assert.equal(roomFor(stage,cycle),star?STAR_ROOM:ROOMS[stage]);
+  const route=cycle%2===1&&(stage===0||stage===3)?GARDEN_ROUTE_ROOMS[stage===0?0:1]:ROOMS[stage];
+  assert.equal(roomFor(stage,cycle),star?STAR_ROOM:route);
  }
 }
 for(const stage of [0,3,4])for(let cycle=0;cycle<4;cycle++)assert.equal(isStarRoom(stage,cycle),false);
