@@ -25,7 +25,7 @@ export function simulate({lap=2,seed=17,moving=false,seconds=90,hpFactor=1}={}){
  const grid=createSpatialIndex(2.5),levels=new Map([['frost',39]]),LS=lawStats(levels);
  session.buildLevel=buildLevel(levels,new Map(reportForms));
  const vfx=new Proxy({},{get:()=>()=>{}});let kills=0,damage=0,contact=0,hp=100,invuln=0,peak=0,nearFrames=0,frames=0,minDistance=100,bolts=0,firstHit=null,deathAt=null;
- const ctx=vm.createContext({THREE,SURVIVAL,survivalSession:session,survivalSpawn,survivalEnemySpec:(kind,s)=>{const stats=survivalEnemySpec(kind,s);return {...stats,hp:stats.hp*hpFactor};},
+ const ctx=vm.createContext({THREE,SURVIVAL,survivalSession:session,expansionTerrain:null,survivalSpawn,survivalEnemySpec:(kind,s)=>{const stats=survivalEnemySpec(kind,s);return {...stats,hp:stats.hp*hpFactor};},
   enemies:[],player,arena:SURVIVAL.arena,enemyIndex:grid,separationEnemies:[],survivalRushes:0,survivalCue:new THREE.Vector3(),tickSurvivalRush,constrainToArena,vfx,
   hitPlayer(amount){if(invuln>0)return;contact++;firstHit??=ctx.elapsed;hp-=amount;if(hp<=0)deathAt??=ctx.elapsed;invuln=.65;},
   FORMS,TWIN_FORMS,createTwinInteractionEngine,elapsed:0,levels,chosen:new Set(['frost']),LS,bankedUpgrades:0,damageScale,

@@ -40,7 +40,12 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  const p=point(player||s.origin),definition=EXPANSION_ACTS[s.act],room=definition.rooms[s.room];s.time+=step;
  if(s.act==='crosswind')s.distance=clamp(Math.max(s.distance,p.x-s.origin.x)+(Number.isFinite(travel)?Math.max(0,travel):0),0,room.length);
  out.camera.x=s.act==='crosswind'?s.origin.x+s.distance+2:s.origin.x;out.camera.z=s.origin.z;
- out.progress=s.act==='crosswind'?s.distance/room.length:Math.min(1,s.time/32);out.finish=s.act==='crosswind'&&s.distance>=room.length;
+ // The canyon is crossed from z+7 to z-7. Pressure stops after a deliberate
+ // crossing AND its encounter window; standing still cannot clear a room.
+ if(s.act==='crystalGorge')s.distance=clamp(Math.max(s.distance,s.origin.z+7-p.z),0,14);
+ const pressureTime=22+s.room*2;
+ out.progress=s.act==='crosswind'?s.distance/room.length:Math.min(s.distance/14,s.time/pressureTime,1);
+ out.finish=s.finishAnnounced||(s.act==='crosswind'?s.distance>=room.length:s.time>=pressureTime&&p.z<=s.origin.z-7);
  if(out.finish&&!s.finishAnnounced){s.finishAnnounced=true;out.events.push({type:'course-end',bossId:definition.bossId,room:s.room});}
  if(out.finish)return out;
  s.spawnClock-=step;if(s.spawnClock>0)return out;
@@ -63,7 +68,7 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
 export function checkpointExpansionCourse(s){return {version:EXPANSION_RUNTIME_VERSION,act:s.act,room:s.room,seed:s.seed,origin:{...s.origin},time:s.time,distance:s.distance,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,finishAnnounced:s.finishAnnounced,walls:s.walls.map(w=>({id:w.id,hp:w.hp}))};}
 export function restoreExpansionCourse(saved,fallback={act:'crosswind',room:0}){
  const valid=saved?.version===EXPANSION_RUNTIME_VERSION&&acts.includes(saved.act),s=createExpansionCourse(valid?saved.act:actId(fallback.act),valid?saved:fallback);if(!valid)return s;
- s.time=clamp(finite(saved.time),0,1e6);s.distance=clamp(finite(saved.distance),0,EXPANSION_ACTS[s.act].rooms[s.room].length||200);
+ s.time=clamp(finite(saved.time),0,1e6);s.distance=clamp(finite(saved.distance),0,s.act==='crystalGorge'?14:EXPANSION_ACTS[s.act].rooms[s.room].length);
  s.spawnClock=clamp(finite(saved.spawnClock,.9),0,3);s.spawnIndex=clamp(Math.floor(finite(saved.spawnIndex)),0,1e7);s.finishAnnounced=Boolean(saved.finishAnnounced);
  if(s.act==='crystalGorge'){s.walls=createExpansionCrystalWalls(s.room,saved.walls);for(const w of s.walls){w.x+=s.origin.x;w.z+=s.origin.z;}}return s;
 }
@@ -84,10 +89,10 @@ function intersectWall(from,to,w,radius=0){
  return {wall:w,t:clamp(enter,0,1),normal};
 }
 export function solidCrystalCover(walls){return walls.filter(w=>!w.broken).map(w=>({id:w.id,x:w.x,z:w.z,w:w.w,d:w.d,h:1.8}));}
-export function sweepCrystalTerrain(walls,from,to,{damage=0,law, laws=[],radius=.1,bounces=0,maxBounces=3}={}){
+export function sweepCrystalTerrain(walls,from,to,{damage=0,law, laws=[],radius=.1,bounces=0,maxBounces=3,skipDamageIds=null}={}){
  const start=point(from),end=point(to),dir=direction(start,end),contacts=[];for(const wall of walls.slice(0,EXPANSION_RUNTIME_LIMITS.walls)){const contact=intersectWall(start,end,wall,radius);if(contact)contacts.push(contact);}contacts.sort((a,b)=>a.t-b.t);
  const active=new Set([law,...laws]),hitLaw=active.has('burst')?'burst':law,result={point:end,dir,hits:[],blocked:false,reflected:false};
- for(const contact of contacts){const response=hitCrystalWall(contact.wall,damage,hitLaw);result.hits.push({id:contact.wall.id,...response});if(response.broken||active.has('pierce'))continue;
+ for(const contact of contacts){const response=hitCrystalWall(contact.wall,skipDamageIds?.has(contact.wall.id)?0:damage,hitLaw);result.hits.push({id:contact.wall.id,...response});if(contact.wall.broken||active.has('pierce'))continue;
   const fraction=Math.max(0,contact.t-1e-4);result.point={x:start.x+(end.x-start.x)*fraction,z:start.z+(end.z-start.z)*fraction};
   result.blocked=true;if(active.has('reflect')&&bounces<Math.max(0,maxBounces)){const dot=dir.x*contact.normal.x+dir.z*contact.normal.z;result.dir={x:dir.x-2*dot*contact.normal.x,z:dir.z-2*dot*contact.normal.z};result.reflected=true;}break;
  }

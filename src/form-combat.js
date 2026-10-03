@@ -75,7 +75,7 @@ export function orbitPose(id,index,count,angle,time,S){
 // frequent mobile garbage-collection pauses once split forms filled the room.
 export function segmentDistance(a,b,p){const dx=b.x-a.x,dz=b.z-a.z,length=dx*dx+dz*dz,t=length?THREE.MathUtils.clamp(((p.x-a.x)*dx+(p.z-a.z)*dz)/length,0,1):0,ox=a.x+dx*t-p.x,oz=a.z+dz*t-p.z;return Math.hypot(ox,oz);}
 const flat=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
-const FORM_BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed']);
+const FORM_BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed','expansion-boss']);
 const bossReach=(e,normal,boss)=>FORM_BOSSES.has(e.type)?boss:normal;
 const immovable=e=>e.immovable===true||FORM_BOSSES.has(e.type)||e.type==='turret';
 

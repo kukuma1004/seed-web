@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import * as THREE from 'three';
-import {createCrystalCombatBridge} from '../src/crystal-combat-bridge.js';
+import {createCrystalCombatBridge,traceCrystalProjectile} from '../src/crystal-combat-bridge.js';
 import {createExpansionCrystalWalls,checkpointExpansionCourse,restoreExpansionCourse,createExpansionCourse} from '../src/act-expansion-runtime.js';
 import {createFormCombat} from '../src/form-combat.js';
 import {DISCOVERY_FORMS,TWIN_FORMS} from '../src/forms.js';
@@ -26,6 +26,22 @@ const course=createExpansionCourse('crystalGorge',{room:1,seed:13}),savedBridge=
 const restored=restoreExpansionCourse(copy(checkpointExpansionCourse(course))),restoredBridge=createCrystalCombatBridge(restored.walls,{position:vec});
 assert.deepEqual(restoredBridge.targets.map(t=>[t.id,t.hp,t.dead]),savedBridge.targets.map(t=>[t.id,t.hp,t.dead]),'existing course checkpoint preserves terrain; no separate account key');
 assert.throws(()=>createCrystalCombatBridge([...walls,walls[0]]));assert.throws(()=>createCrystalCombatBridge(Array(21).fill(walls[0])));
+
+// The real basic projectile adapter must damage each wall once per leg even
+// when a slow piercing projectile overlaps that wall across several frames.
+const boltWalls=createExpansionCrystalWalls(0),boltTerrain=createCrystalCombatBridge(boltWalls,{position:vec});
+const bolt={dir:vec(1),bounces:0},next=vec(-3.6,-5);
+for(let x=-3.8;x<4;x+=.1){next.set(x+.1,0,-5);const contact=traceCrystalProjectile(boltTerrain,bolt,vec(x,-5),next,{damage:10,laws:['pierce']});assert(!contact.blocked);}
+assert.equal(boltWalls[0].hp,110);assert.equal(boltWalls[1].hp,110);assert.equal(bolt.crystalHits.size,2);
+bolt.crystalHits.clear();next.set(0,0,-5);
+traceCrystalProjectile(boltTerrain,bolt,vec(-6,-5),next,{damage:10,laws:['pierce']});assert.equal(boltWalls[0].hp,100,'return leg may contact the same wall again');
+const reflected={dir:vec(1),bounces:2};next.set(0,0,-5);
+const exhausted=traceCrystalProjectile(boltTerrain,reflected,vec(-6,-5),next,{damage:5,laws:['reflect'],maxBounces:2});
+assert(exhausted.blocked&&!exhausted.reflected);assert.equal(reflected.dir.x,1);assert(next.x<-3.6);
+const bounceShot={dir:vec(1),bounces:0};next.set(0,0,-5);
+assert(traceCrystalProjectile(boltTerrain,bounceShot,vec(-6,-5),next,{damage:5,laws:['reflect'],maxBounces:2}).reflected);assert.equal(bounceShot.dir.x,-1);
+boltTerrain.damage(boltTerrain.targets[0],1000);next.set(0,0,-5);
+assert(!traceCrystalProjectile(boltTerrain,{dir:vec(1)},vec(-6,-5),next,{damage:5}).blocked,'destroying cover immediately opens the swept route');
 
 // Exercise the actual published attack engine, not a second terrain-only damage
 // implementation. A defensive form may leave route opening to the basic attack.

@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import {FINAL_BRANCH_PATTERNS} from './final-branch-patterns.js';
 
 const V=THREE.Vector3,Y=new V(0,1,0);
-const BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed']);
+const BOSSES=new Set(['warden','austin','act2warden','alwaysbeginner','act3warden','tempestcarrier','mirrorseed','expansion-boss']);
 const immovable=e=>e.immovable===true||BOSSES.has(e.type)||e.type==='turret';
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
 const point=(p)=>new V(p.x,0,p.z);

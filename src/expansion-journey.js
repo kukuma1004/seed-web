@@ -1,5 +1,7 @@
 import {EXPANSION_ACTS} from './act-expansion.js';
 import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,createExpansionBoss,stepExpansionBoss,checkpointExpansionBoss,restoreExpansionCourse,restoreExpansionBoss,EXPANSION_RUNTIME_LIMITS} from './act-expansion-runtime.js';
+export {createCrystalCombatBridge,traceCrystalProjectile} from './crystal-combat-bridge.js';
+export {EXPANSION_ACTS};
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const point=p=>({x:p.x,z:p.z});
@@ -71,4 +73,7 @@ export function expansionContactHits(contact,p,radius=.4){
 // The sprite communicates the committed attack, not a freshly tracked target.
 export function expansionFacing(model,position,player){
  return ['windup','charge','tell','attack'].includes(model.phase||model.state)?model.aim:direction(position,player);
+}
+export function expansionBossDamageMultiplier(act,state,coreOpen){
+ return act==='crystalGorge'?(coreOpen?1.3:1):state==='recover'?1.35:1;
 }

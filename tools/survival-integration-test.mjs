@@ -107,7 +107,7 @@ finishContext.finishSurvival();assert.equal(JSON.parse(stored).wins,1);assert.eq
 console.log('Survival results: boss remaining HP, verified wins, idempotence, practice retry and local record isolation passed.');
 
 // Late collision callbacks in the death frame cannot change the shown outcome.
-const ended=vm.createContext({survivalSession:{finished:true,won:false}});
+const ended=vm.createContext({survivalSession:{finished:true,won:false},expansionTerrain:null});
 vm.runInContext(between('function damageEnemy(', 'function enemyDown('),ended);
 const survivor={hp:1,dead:false};ended.damageEnemy(survivor,100);
 assert.deepEqual(survivor,{hp:1,dead:false});

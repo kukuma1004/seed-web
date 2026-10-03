@@ -44,3 +44,14 @@ export function createCrystalCombatBridge(walls,{position=(x,z)=>({x,y:0,z})}={}
  }
  return {targets,owns:target=>byTarget.has(target),sync,damage,query,sweep,area,apply,constrain:(p,r,previous)=>constrainCrystalActor(p,r,walls,previous)};
 }
+
+// A piercing bolt crossing the same AABB over several frames deals one contact
+// per leg. Consume this result instead of a second enemy-style wall hit.
+export function traceCrystalProjectile(terrain,shot,previous,next,{damage,laws=[],maxBounces=3}={}){
+ shot.crystalHits??=new Set();
+ const result=terrain.sweep(previous,next,{damage,laws,bounces:shot.bounces||0,maxBounces,skipDamageIds:shot.crystalHits});
+ for(const hit of result.hits)if(hit.damage>0)shot.crystalHits.add(hit.id);
+ next.x=result.point.x;next.z=result.point.z;
+ if(result.reflected){shot.dir.x=result.dir.x;shot.dir.z=result.dir.z;}
+ return result;
+}

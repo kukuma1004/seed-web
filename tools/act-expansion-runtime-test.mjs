@@ -27,6 +27,21 @@ const endpoint=createExpansionCourse('crosswind');let endEvents=0;
 for(let i=0;i<1500;i++)endEvents+=stepExpansionCourse(endpoint,.1,{travel:.1}).events.filter(e=>e.type==='course-end').length;
 assert.equal(endpoint.distance,96);assert.equal(endEvents,1);assert.equal(stepExpansionCourse(endpoint,.05).spawns.length,0);
 
+// Canyon completion requires time under pressure AND physically crossing the
+// exit. Advancing its timer alone must never silently clear a stationary run.
+const canyon=createExpansionCourse('crystalGorge',{room:4,origin:{x:17,z:11}});
+for(let i=0;i<400;i++)assert(!stepExpansionCourse(canyon,.1,{player:{x:17,z:18}}).finish);
+assert.equal(canyon.distance,0);
+const crossed=stepExpansionCourse(canyon,.1,{player:{x:17,z:4}});
+assert(crossed.finish);assert.equal(crossed.events.filter(e=>e.type==='course-end').length,1);
+const retreat=stepExpansionCourse(canyon,.1,{player:{x:17,z:18}});
+assert(retreat.finish);assert.equal(retreat.events.length,0);assert.equal(retreat.spawns.length,0);
+const rush=createExpansionCourse('crystalGorge');
+for(let i=0;i<210;i++)assert(!stepExpansionCourse(rush,.1,{player:{x:0,z:-8}}).finish);
+let rushEnd=false;for(let i=0;i<20;i++)rushEnd ||= stepExpansionCourse(rush,.1,{player:{x:0,z:-8}}).finish;
+assert(rushEnd);assert.equal(rush.distance,14);
+assert.equal(restoreExpansionCourse({...checkpointExpansionCourse(rush),distance:1e9}).distance,14);
+
 // Mid-room clock/random/spawn progression and exact broken routes survive JSON.
 for(const act of ['crosswind','crystalGorge']){
  const original=createExpansionCourse(act,{room:3,seed:124});
