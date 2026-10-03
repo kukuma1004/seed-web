@@ -31,7 +31,7 @@ const context=vm.createContext({
  obstacles:[],constrainToArena,orbitHits:new Map(),o:{position:vec(-3,-5)},
  expansionNearby:(p,r,out)=>context.expansionTerrain.query(p,r,out),nearbyEnemies:[],
 });
-for(const name of ['damageExpansionCrystal','applyLawHit','formHit','damageEnemy','overdriveBlast','traceExpansionShot','collide'])vm.runInContext(hostFunction(name),context);
+for(const name of ['damageExpansionCrystal','applyLawHit','formHit','damageEnemy','overdriveBlast','traceExpansionShot','traceExpansionFormShot','collide'])vm.runInContext(hostFunction(name),context);
 const target=context.expansionTerrain.targets[0];
 context.formHit(target,10,{kind:'test'});assert.equal(walls[0].hp,90,'scaled native form + explosion affinity applied once');
 context.chosen.add('burst');context.applyLawHit(target,10);assert.equal(walls[0].hp,75);
@@ -66,4 +66,12 @@ const rear=vec(-11);context.expansionTerrain=null;context.collide(rear,.65,rear.
 context.player.position.set(-1,0,0);context.collide(context.player.position);assert.equal(context.player.position.x,0);
 context.expansionTerrain=createCrystalCombatBridge(createExpansionCrystalWalls(0),{position:vec});context.expansionJourney.act='crystalGorge';
 context.player.position.set(0,0,-5);context.collide(context.player.position,.4,vec(-6,-5));assert(context.player.position.x<-3.9);
+context.FORMS.native={requires:['reflect','pierce']};
+const native={dir:vec(1),bounces:3,returning:false},nativeNext=vec(0,-5);
+const meta={kind:'native',finalLaw:'pierce',damage:5,remainingBounces:3,ricochet:true};
+const contact=context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native.dir,meta);
+assert(contact.reflected);assert.equal(native.dir.x,-1);assert.equal(context.expansionTerrain.targets[0].hp,110,'native raw damage uses the real host scale once');
+nativeNext.set(0,0,-5);context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native.dir,{...meta,remainingBounces:0});assert.equal(context.expansionTerrain.targets[0].hp,110);
+native.returning=true;nativeNext.set(0,0,-5);context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native.dir,{...meta,remainingBounces:0});assert.equal(context.expansionTerrain.targets[0].hp,100,'native return leg resets its wall contacts');
+context.expansionTerrain=null;assert.equal(context.traceExpansionFormShot(native,vec(),vec(),native.dir,meta),null,'leaving the preview restores ordinary native collision');
 console.log('Actual main host: terrain has no kill/charge/account effects, orbit immobility, inherited piercing, single core multiplier, rear entry and dash collision passed; renderless only.');

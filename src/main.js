@@ -458,6 +458,16 @@ function reflectExpansionCrystals(a,b,d){
  if(!expansionTerrain)return false;const contact=expansionTerrain.sweep(a,b,{law:'reflect',damage:0,radius:0});if(!contact.reflected)return false;
  b.x=contact.point.x;b.z=contact.point.z;d.x=contact.dir.x;d.z=contact.dir.z;return true;
 }
+function traceExpansionFormShot(shot,previous,next,dir,meta){
+ if(!expansionTerrain)return null;
+ if(shot.crystalReturning!==Boolean(shot.returning)){shot.crystalHits?.clear();shot.crystalReturning=Boolean(shot.returning);}
+ const consumed=FORMS[meta.kind].requires,family=[...consumed,meta.finalLaw];
+ const laws=meta.ricochet?family.filter(id=>id!=='pierce'):family;
+ const damage=meta.damage*damageScale(levels,bankedUpgrades)*relicFormScale(relics,consumed)*runPowerScale(runBonuses)*gardenPower();
+ const result=expansionApi.traceCrystalProjectile(expansionTerrain,shot,previous,next,{damage,laws,bounces:0,maxBounces:meta.remainingBounces});
+ if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}
+ if(result.hits.some(h=>h.damage>0))expansionTerrainDirty=true;return result;
+}
 async function startExpansionJourney(room=0,act='crosswind'){
  if(!localInspection)return false;
  const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
@@ -776,7 +786,7 @@ function formHit(e,amount,meta){
  if(supports('gravity')){if(wells.length>=6)wells.shift();wells.push({pos:e.g.position.clone(),life:1.2,pulse:0});}
  return true;
 }
-function formOptions(){return {player,camera,comboTexture:projectileSprites.comboTexture,enemies:expansionCombatTargets,nearby:expansionNearby,hit:formHit,blocked:(a,b)=>segmentHitsCover(a,b,obstacles,.1),reflector:(a,b,d)=>reflectExpansionCrystals(a,b,d)||(mirrorPanelsActive&&reflectMirrorPanels(a,b,d)),boundary:(a,b,d)=>reflectArenaBoundary(a,b,d,arena),constrain:collide,vfx,sound:id=>audio.play(id),enemyShots:()=>enemyShots,theme:combatTheme};}
+function formOptions(){return {player,camera,comboTexture:projectileSprites.comboTexture,enemies:expansionCombatTargets,nearby:expansionNearby,hit:formHit,blocked:(a,b)=>segmentHitsCover(a,b,obstacles,.1),reflector:(a,b,d)=>reflectExpansionCrystals(a,b,d)||(mirrorPanelsActive&&reflectMirrorPanels(a,b,d)),boundary:(a,b,d)=>reflectArenaBoundary(a,b,d,arena),traceTerrain:expansionTerrain?traceExpansionFormShot:null,constrain:collide,vfx,sound:id=>audio.play(id),enemyShots:()=>enemyShots,theme:combatTheme};}
 function clearEscorts(){for(const p of pendingEscorts)release(p.marker);pendingEscorts.length=0;}
 function updateEscorts(dt){
  if(isAct2(region))return;

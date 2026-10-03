@@ -81,10 +81,12 @@ const immovable=e=>e.immovable===true||FORM_BOSSES.has(e.type)||e.type==='turret
 
 // One selected weapon owns its shape and cadence. Laws add bounded support on hit.
 // Options: player, enemies(), nearby(pos,r,out), hit(e,damage,meta), blocked(a,b), boundary(a,b,dir), constrain(pos,r), vfx, sound(id), enemyShots().
+// Optional traceTerrain(shot,from,to,dir,meta) owns final-layer wall damage and
+// clips/reflects to/dir. Return null outside terrain modes; keep enemy hits apart.
 // renderless skips GPU resources; maxBolts bounds the parent's projectile pool
 // (24 by default when renderless). Final-branch shots/fields retain their own
 // authored 20/8 limits. motionSpeed() optionally supplies rooted comet windup.
-export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null,comboTexture=null,renderless=false,maxBolts=renderless?24:Infinity,motionSpeed=null}){
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,traceTerrain=null,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null,comboTexture=null,renderless=false,maxBolts=renderless?24:Infinity,motionSpeed=null}){
  const boltLimit=Number.isFinite(maxBolts)?Math.max(1,Math.min(128,Math.floor(maxBolts))):renderless?24:Infinity;
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
@@ -191,7 +193,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // 3묶음 상태: 창날 고리의 빠진 창·발사 시계 · 강착 원반 부스러기 · 서리 되감기 표식 · 차가운 소용돌이 · 서리꽃 겹침.
  let spearGone=[],spearClock=0,debris=0,rimeMarks=new WeakMap(),coldWells=[],petalStacks=new WeakMap();
  const nearbyList=[],previousPosition=new V(),lastPlayerPosition=new V();const near=(pos,radius)=>nearby?nearby(pos,radius,nearbyList):enemies();
- const finalLayer=createFinalBranchCombat({player,enemies,nearby,deal:(e,damage,metadata)=>support(e,damage,metadata),boundary,reflector,blocked,constrain,fx,sound});
+ const finalLayer=createFinalBranchCombat({player,enemies,nearby,deal:(e,damage,metadata)=>support(e,damage,metadata),boundary,reflector,blocked,traceTerrain,constrain,fx,sound});
  const refresh=()=>{S=active?formStats(statId,level,{surge:surgeTime>0,twin}):formStats(null);};
  const awakened=()=>Boolean(active&&(AWAKEN_FORMS[statId]||twin));
  const sourceForm=()=>SECOND_FORMS[statId]||AWAKEN_FORMS[statId]||TWIN_FORMS[ownerId]||SECOND_FORMS[active]||GENERATED_FORMS[active]||ALL_FORMS[active]||(active==='riftseed'?{id:'riftseed',requires:['portal']}:{id:active||'seed',requires:S.laws||[]});

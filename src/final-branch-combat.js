@@ -10,7 +10,7 @@ const point=(p)=>new V(p.x,0,p.z);
 // Lightweight authored layer over a first fusion. No per-projectile mesh or
 // material allocation: the parent owns the visible shot, this layer draws its
 // distinct path and contact effects through the existing pooled VFX system.
-export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundary,reflector,blocked,constrain,fx,sound=()=>{}}){
+export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundary,reflector,blocked,traceTerrain=null,constrain,fx,sound=()=>{}}){
  let spec=null,clock=0,ready=0,beat=0,lastImpactSound=-Infinity,shots=[],events=[],fields=[],marks=new WeakMap(),level=1,baseDamage=1,passive=false,baseId=null;
  const IMPACT_SOUND={reflect:'reflect',split:'split',chain:'chain',orbit:'hit',pierce:'pierceHit',burst:'burstHit',recall:'hit',gravity:'gravityHit',frost:'frostHit'};
  const nearbyEnemies=(p,r)=>nearby?nearby(p,r,[]):enemies();
@@ -45,10 +45,15 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
  };
  const fan=(pos,dir,count=3,mode='fan')=>{for(let i=0;i<count;i++)shot(pos,point(dir).applyAxisAngle(Y,(i-(count-1)/2)*.28),{mode,life:1.15,speed:12,powerScale:1/count*1.6});};
  const line=(a,b,width=.65,factor=1,slow=false,pull=false)=>{
+  let terrainLeg=null,terrainContact=null;
+  if(traceTerrain){b=point(b);terrainLeg={dir:point(b).sub(a).normalize()};terrainContact=traceTerrain(terrainLeg,a,b,terrainLeg.dir,{kind:baseId,finalLaw:spec.law,damage:power(factor),remainingBounces:0,ricochet:false});}
   fx.lance?.(a,b,spec.law);fx.trail?.(a,b,spec.law,true);
   const dx=b.x-a.x,dz=b.z-a.z,len=dx*dx+dz*dz;
   for(const e of nearbyEnemies(a,13)){
-   if(e.dead)continue;const t=len?Math.max(0,Math.min(1,((e.g.position.x-a.x)*dx+(e.g.position.z-a.z)*dz)/len)):0;
+   if(e.dead||e.terrain&&terrainLeg?.crystalHits?.has(e.id))continue;
+   const along=(e.g.position.x-a.x)*dx+(e.g.position.z-a.z)*dz;
+   if(terrainContact?.blocked&&along>len)continue;
+   const t=len?Math.max(0,Math.min(1,along/len)):0;
    const x=a.x+dx*t-e.g.position.x,z=a.z+dz*t-e.g.position.z;
    if(x*x+z*z>(width+(BOSSES.has(e.type)?.45:0))**2)continue;
    if(harm(e,power(factor),a)&&slow&&!BOSSES.has(e.type))e.slow=Math.max(e.slow||0,1.1);
@@ -179,11 +184,12 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
    if(s.mode==='drilling-head'||s.mode==='converging-shards')s.dir.applyAxisAngle(Y,Math.sin(s.age*9)*s.arc*dt);
    if(s.mode==='inward-return'&&s.returning)s.dir.applyAxisAngle(Y,s.arc*dt*3);
    s.pos.addScaledVector(s.dir,dt*s.speed);
-   const reflected=reflector?.(old,s.pos,s.dir)||boundary?.(old,s.pos,s.dir);
-   const cover=!reflected&&blocked?.(old,s.pos);
-   if(cover)s.dir.negate();
+   const terrain=traceTerrain?.(s,old,s.pos,s.dir,{kind:baseId,finalLaw:spec.law,damage:power(s.powerScale),remainingBounces:s.bounces,ricochet:spec.motion==='ricochet'});
+   const reflected=terrain?.reflected||(!terrain&&reflector?.(old,s.pos,s.dir))||(!terrain?.blocked&&boundary?.(old,s.pos,s.dir));
+   const cover=terrain?.blocked&&!terrain.reflected||!reflected&&blocked?.(old,s.pos);
+   if(cover&&!terrain?.blocked)s.dir.negate();
    const wall=reflected||cover;
-   if(wall){if(s.bounces>0){s.bounces--;s.pos.copy(old);fx.reflect?.(s.pos,s.dir);if(s.mode==='each-bounce'||s.mode==='gravity-footprints'||s.mode==='frost-stamps')blast(s.pos,spec.radius*.65,.5,{slow:spec.law==='frost',pull:spec.law==='gravity'});}else{s.life=0;if(s.mode==='finish')blast(old,spec.radius,1.2);}}
+   if(wall){if(s.bounces>0&&(!terrain?.blocked||terrain.reflected)){s.bounces--;if(!terrain?.blocked)s.pos.copy(old);fx.reflect?.(s.pos,s.dir);if(s.mode==='each-bounce'||s.mode==='gravity-footprints'||s.mode==='frost-stamps')blast(s.pos,spec.radius*.65,.5,{slow:spec.law==='frost',pull:spec.law==='gravity'});}else{s.life=0;if(s.mode==='finish')blast(old,spec.radius,1.2);}}
    s.trailClock-=dt;
    if(s.trailClock<=0){
     if(s.mode==='post-bounce-lance'){
@@ -192,7 +198,7 @@ export function createFinalBranchCombat({player,enemies,nearby=null,deal,boundar
     }else fx.trail?.(old,s.pos,spec.law,s.returning||s.bounces>0);
     s.trailClock=s.mode==='post-bounce-lance'?.12:.08;
    }
-   for(const e of nearbyEnemies(s.pos,1.8))if(!e.dead&&!s.hitSet.has(e)&&distance(s.pos,e.g.position)<(BOSSES.has(e.type)?1.1:.65)){
+   for(const e of nearbyEnemies(s.pos,1.8))if(!(terrain?.blocked&&s.life<=0)&&!e.dead&&!(e.terrain&&s.crystalHits?.has(e.id))&&!s.hitSet.has(e)&&distance(s.pos,e.g.position)<(BOSSES.has(e.type)?1.1:.65)){
     s.hitSet.add(e);harm(e,power(s.powerScale),old);
     if(s.mode==='bounce-relay')relay(e,{jumps:1,delay:.12});
     if(s.mode==='two-beats'&&s.returning)blast(e.g.position,spec.radius*.8,.6);
