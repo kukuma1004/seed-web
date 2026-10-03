@@ -16,7 +16,7 @@ import './seed-puzzle.css';
 // 2026-09-28 로열 매치 참고: 특수 씨앗은 눌러서 바로 터뜨린다 · 연출 중에도 다음 수를 둘 수 있다(남은 연출을 건너뛰고 바로 둔다) · 연출을 빠르게.
 const BASE=import.meta.env.BASE_URL;
 const N=PUZZLE.size;
-const PIECE_ART='assets/puzzle/seed-pieces-v2.webp';
+const PIECE_ART='assets/puzzle/seed-pieces-v3.webp';
 const PIECE_TILE=Object.freeze({burst:0,split:1,chain:2,pierce:3,orbit:4,recall:5,frost:6,reflect:7,gravity:8});
 const POWER_TILE=Object.freeze({pierce:9,chain:10,burst:11,sun:12});
 const artStyle=t=>`background-image:url('${BASE}${PIECE_ART}');background-size:400% 400%;background-position:${(t%4)*100/3}% ${Math.floor(t/4)*100/3}%`;
