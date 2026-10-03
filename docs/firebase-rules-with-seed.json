@@ -389,7 +389,7 @@
           },
           "cleared": {
             "$stage": {
-              ".validate": "$stage.matches(/^s([1-9]|1[0-9]|2[0-3])$/) && newData.hasChildren(['losses','at']) && (newData.child('losses').val() == 0 || newData.child('losses').val() == 1) && newData.child('at').isNumber() && newData.child('at').val() >= 0 && newData.child('at').val() <= now + 300000",
+              ".validate": "$stage.matches(/^s([1-9]|1[0-9]|2[0-4])$/) && newData.hasChildren(['losses','at']) && (newData.child('losses').val() == 0 || newData.child('losses').val() == 1) && newData.child('at').isNumber() && newData.child('at').val() >= 0 && newData.child('at').val() <= now + 300000",
               "losses": {
                 ".validate": "newData.val() == 0 || newData.val() == 1"
               },
@@ -763,7 +763,7 @@
             ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3000000 && newData.val() % 1 == 0"
           },
           "storyStage": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 23 && newData.val() % 1 == 0"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 24 && newData.val() % 1 == 0"
           },
           "wins": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 == 0"

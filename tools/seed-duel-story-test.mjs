@@ -37,7 +37,7 @@ for(const stage of DUEL_STORY_STAGES){const m=createDuel({player:'pierce',enemy:
 // retain the latest character choice; replay never erases completed chapters.
 const a={hero:'frost',updatedAt:300,cleared:{s1:{losses:1,at:100},s2:{losses:0,at:200}}},b={hero:'recall',updatedAt:400,cleared:{s1:{losses:0,at:150},s3:{losses:1,at:400}}};
 const merged=mergeDuelStory(a,b);assert.equal(merged.hero,'recall');assert.equal(merged.cleared.s1.losses,0);assert.equal(nextStoryStage(merged),4);assert.deepEqual(mergeDuelStory(merged,merged),merged);
-assert.equal(Object.keys(normalizeDuelStory({cleared:{s1:{losses:9},s24:{losses:0},s2:{losses:0}}}).cleared).length,1);
+assert.equal(Object.keys(normalizeDuelStory({cleared:{s1:{losses:9},s25:{losses:0},s2:{losses:0}}}).cleared).length,1);
 assert.equal(normalizeDuelStory({hero:'blastlance',cleared:{s22:{losses:0},s23:{losses:1}}}).hero,'blastlance');
 const pc=memory(),phone=memory();for(const d of [pc,phone])d.setItem('seed-cloud-owner-v1','same-uid');
 assert.ok(writeDuelStory(pc,a,'same-uid',300));const snap=collectCloudSnapshot(pc);applyCloudSnapshot(phone,snap);assert.deepEqual(readDuelStory(phone,'same-uid').cleared,a.cleared);
@@ -85,4 +85,4 @@ await other.start();assert.equal(readDuelStory(other.storage,'other').cleared.s1
  const cloud=createCloudSync({storage:store,account,fetchImpl:async url=>{await gate;return {ok:true,status:200,json:async()=>url.includes('/save.json')?{garden:{duelStory:p}}:null};},debounceMs:60000});
  const start=cloud.start();await new Promise(resolve=>setImmediate(resolve));uid='next';release();const result=await start;assert.equal(result.reason,'account-changed');assert.equal(store.getItem('seed-garden-v1'),null);assert.equal(store.getItem('seed-cloud-owner-v1'),null);cloud.signOutCleanup();
 }
-console.log('Duel story: 8 chapters / 23 encounters, engine victories, account union, legacy-app backup, UID races, conflicts, PC -> phone -> PC and idempotent saves passed.');
+console.log('Duel story: 8 chapters / 24 encounters, engine victories, account union, legacy-app backup, UID races, conflicts, simulated PC -> phone -> PC and idempotent saves passed.');

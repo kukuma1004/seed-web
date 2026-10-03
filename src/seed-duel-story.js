@@ -34,6 +34,7 @@ const encounters=[
  ['heart','정원의 심장','보스','hard','나는 이 정원의 심장. 너희가 모은 빛을 마지막으로 시험하겠다. 끌림을 벗어나고 고리의 틈을 찾아라. 힘을 펼친 뒤에는 나도 쉬어야 한다.','보랏빛 원이 켜지기 전에 벗어나세요. 도는 씨앗과 퍼지는 고리를 피한 뒤 보스가 쉬는 틈에 반격하세요. 체력이 절반이면 패턴이 빨라져요.','너는 빛을 혼자 독차지하지 않았구나. 이제 나도 너의 동료가 되겠다. 정원은 우리가 함께 지키자.']
 ];
 encounters.push(['blastlance','멀리서 피는 꽃','어려움','hard','내 창은 닿는 순간이 아니라 끝에서 피어. 창끝만 쫓다 보면 꽃에 놀랄 거야. 옆으로 비켜서 내 빈틈을 찾아 봐!','조준 방향은 고정돼요. 준비 중 가까이 들어가 끊거나, 옆으로 빠져 창과 끝 폭발을 함께 피하세요. 세 번의 개화도 같은 방법으로 읽을 수 있어요.','꽃은 세게 피우는 것보다 자리를 잘 고르는 게 중요하구나. 다음 씨앗에게도 네 발걸음을 이야기해 줄게.']);
+encounters.push(['frostnet','겨울이 잇는 매듭','어려움','hard','두 매듭 사이에 겨울을 걸어 둘게. 실이 팽팽해지기 전에 내 손을 멈춰도 좋고, 끝을 돌아와도 좋아. 너를 영원히 가둘 생각은 없어.','점선은 곧 켜질 냉기 실이에요. 준비 중 공격해 끊거나 양끝을 돌아가세요. 한 줄은 한 번만 맞아요. 세 줄 궁극기는 차례로 켜지고 자리를 따라오지 않아요.','얼리는 힘도 길을 남겨야 친구를 만날 수 있네. 네가 찾아낸 그 빈틈을 다음 매듭에 기억해 둘게.']);
 export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:i<22?Math.min(6,Math.floor(i/3)):7,enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
 // Only an actual, finished best-of-three campaign victory can open the next encounter.
 export function completeStoryMatch(raw,stage,match,now=Date.now()){
