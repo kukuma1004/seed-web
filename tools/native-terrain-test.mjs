@@ -13,8 +13,9 @@ function fixture(id){
   hit(e,damage,meta){hits.push({terrain:e.terrain,damage,phase:meta.phase,kind:meta.kind});if(e.terrain)return terrain.damage(e,damage,{law:ALL_FORMS[meta.kind].requires.includes('burst')?'burst':null});foe.hp-=damage;return true;},
   traceTerrain(shot,from,to,dir,meta){
    if(shot.terrainReturning!==Boolean(shot.returning)){shot.crystalHits?.clear();shot.terrainReturning=Boolean(shot.returning);}
-   const result=traceCrystalProjectile(terrain,shot,from,to,{damage:meta.damage,laws:ALL_FORMS[meta.kind].requires,bounces:0,maxBounces:meta.remainingBounces});
-   for(const h of result.hits)contacts.push({...h,kind:meta.kind,position:to.clone()});return result;
+   const laws=meta.passCover?[...ALL_FORMS[meta.kind].requires,'pierce']:ALL_FORMS[meta.kind].requires;
+   const result=traceCrystalProjectile(terrain,shot,from,to,{damage:meta.damage,laws,bounces:0,maxBounces:meta.remainingBounces});
+   for(const h of result.hits)contacts.push({...h,kind:meta.kind,position:to.clone(),passCover:meta.passCover});return result;
   },
   blocked:()=>false,boundary:()=>false,constrain:()=>{},vfx,renderless:true,motionSpeed:()=>1.3});
  combat.set(id,5);return {scene,combat,wall,terrain,foe,player,contacts,hits,explosions};
@@ -48,5 +49,21 @@ assert(comet.contacts.some(h=>h.damage>0&&h.kind==='comethalo'),'charged authore
 assert(comet.hits.some(h=>h.terrain&&h.phase==='corolla'),'the comet keeps its separate impact bloom');
 assert(!comet.hits.some(h=>h.terrain&&h.phase==='comet'),'impact damage is not duplicated via the proxy');
 assert(comet.explosions.length>0);assert(comet.combat.state().bolts<=24);comet.combat.dispose();
-for(const f of [blade,petals,collapse,comet])assert.equal(f.scene.children.length,0);
-console.log('Native terrain: piercing outward/return legs, carrier bloom/home petals, delayed planted gravity, charged comet impact+corolla, no duplicate contact and disposal passed; renderless only.');
+const rewind=fixture('rewind'),flare=fixture('returnflare');
+for(const f of [rewind,flare]){
+ f.combat.fire(vec(),vec(1),vec(6));let outboundStopped=false,returnCrossed=false;
+ for(let i=0;i<40;i++){
+  f.combat.update(.025);const bodies=f.combat.projectileBodies([]);
+  if(bodies.some(b=>b.returning)){outboundStopped=true;assert(bodies.filter(b=>b.returning).every(b=>b.ob.position.x<2.31));break;}
+ }
+ assert(outboundStopped,'outbound carriers turn at the physical wall face');assert.equal(f.foe.hp,1e6,'outbound attack cannot reach the covered foe');
+ if(f===flare){assert(f.contacts.every(h=>h.damage===0),'outbound carrier has no invented impact damage');assert(f.explosions.some(p=>Math.abs(p.x-2.3)<.02));}
+ f.player.position.x=6;
+ for(let i=0;i<70;i++){f.combat.update(.025);returnCrossed ||= f.combat.projectileBodies([]).some(b=>b.returning&&b.ob.position.x>3.7);}
+ assert(returnCrossed,'authored return-over-cover behavior still reaches a moved seed');
+ assert(f.contacts.some(h=>h.passCover&&h.damage>0),'return leg traces damage across the wall without blocking');
+ assert(!f.hits.some(h=>h.terrain&&!h.phase),'traced return contacts never count as ordinary proxy hits');
+ assert(f.combat.state().bolts<=24);f.combat.dispose();
+}
+for(const f of [blade,petals,collapse,comet,rewind,flare])assert.equal(f.scene.children.length,0);
+console.log('Native terrain: piercing outward/return legs, carrier bloom/home petals, delayed planted gravity, charged comet impact+corolla, rewind/flare outbound stop and return-over-cover to moved seed, no duplicate contact and disposal passed; renderless only.');

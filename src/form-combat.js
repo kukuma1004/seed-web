@@ -1183,8 +1183,8 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   }
  }
 
- function traceNative(b,previous,damage,kind=b.kind){
-  return traceTerrain?.(b,previous,b.ob.position,b.dir,{kind,damage,remainingBounces:0,ricochet:false})||null;
+ function traceNative(b,previous,damage,kind=b.kind,passCover=false){
+  return traceTerrain?.(b,previous,b.ob.position,b.dir,{kind,damage,remainingBounces:0,ricochet:false,passCover})||null;
  }
  function traceRicochet(b,previous,damage,remainingBounces){
   const terrain=traceTerrain?.(b,previous,b.ob.position,b.dir,{kind:b.kind,damage,remainingBounces,ricochet:true})||null;
@@ -1194,6 +1194,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   return terrain;
  }
  function tracedTarget(terrain,e){return e.terrain&&terrain?.hits.some(h=>h.id===e.id);}
+ function shatterFrost(b,e,direction){
+  fx.explosion(e.g.position,'frost',1.25,true);sound('frostHit');
+  support(e,S.shatter*(1+.12*(b.bounces-S.shatterBounces)),{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction});
+  for(const other of near(e.g.position,1.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<1.35+bossReach(other,0,.35)){
+   support(other,S.shatter*.35,{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});
+   if(!other.terrain)other.slow=Math.max(other.slow||0,S.slow*.7);
+  }
+  b.life=0;
+ }
  function bloomComet(b,point,target=null){
   if(target)support(target,b.damage,{kind:'comethalo',phase:'comet',direction:b.dir.clone()});
   fx.explosion(point,'burst',b.blastRadius,true);sound('burstHit');
@@ -1320,14 +1329,20 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
    }
     if(b.kind==='frostkaleidoscope'){
      b.ob.position.addScaledVector(b.dir,dt*S.speed);b.ob.rotation.y+=dt*11;b.ob.rotation.z-=dt*4;
-     const wall=reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
+     const terrain=traceRicochet(b,previous,S.damage*(1+S.gain*b.bounces),S.bounces-b.bounces);
+     const wall=terrain?.blocked||reflector(previous,b.ob.position,b.dir)||boundary(previous,b.ob.position,b.dir),cover=!wall&&blocked(previous,b.ob.position);
      if(cover){b.ob.position.copy(previous);b.dir.negate();}
      if(wall||cover){if(b.bounces>=S.bounces){b.life=0;continue;}b.bounces++;b.passed.clear();fx.reflect(b.ob.position,b.dir);fx.pulse(b.ob.position,'frost',.45+.08*b.bounces,.18);sound('reflect');}
-     const direction=b.dir.clone(),e=near(b.ob.position,1.8).find(x=>!x.dead&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
+     const direction=b.dir.clone();
+     if(b.bounces>=S.shatterBounces){
+      const crystalHit=terrain?.hits.find(h=>h.damage>0),crystal=crystalHit&&enemies().find(x=>x.terrain&&x.id===crystalHit.id);
+      if(crystal){shatterFrost(b,crystal,direction);continue;}
+     }
+     const e=near(b.ob.position,1.8).find(x=>!x.dead&&!tracedTarget(terrain,x)&&!b.passed.has(x)&&segmentDistance(previous,b.ob.position,x.g.position)<bossReach(x,.68,1.15));
      if(e){
       b.passed.add(e);const charged=b.bounces>=S.shatterBounces,landed=support(e,S.damage*(1+S.gain*b.bounces),{kind:'frostkaleidoscope',direction});
-      if(!landed){b.life=0;continue;}e.slow=Math.max(e.slow||0,S.slow);
-      if(charged){fx.explosion(e.g.position,'frost',1.25,true);sound('frostHit');support(e,S.shatter*(1+.12*(b.bounces-S.shatterBounces)),{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction});for(const other of near(e.g.position,1.7))if(other!==e&&!other.dead&&flat(other.g.position,e.g.position)<1.35+bossReach(other,0,.35)){support(other,S.shatter*.35,{kind:'frostkaleidoscope',indirect:true,phase:'shatter',direction:other.g.position.clone().sub(e.g.position).setY(0).normalize()});other.slow=Math.max(other.slow||0,S.slow*.7);}b.life=0;}
+      if(!landed){b.life=0;continue;}if(!e.terrain)e.slow=Math.max(e.slow||0,S.slow);
+      if(charged)shatterFrost(b,e,direction);
      }
      fx.trail(previous,b.ob.position,'frost',b.bounces>0);continue;
     }
@@ -1593,9 +1608,10 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
     }
     b.ob.position.addScaledVector(b.dir,dt*(b.returning?12:10));b.ob.rotation.z+=dt*10;
     // Going out it stops at walls; coming back it flies over them so it always finds the seed.
-    if(!b.returning&&(boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position))){b.ob.position.copy(previous);b.returning=true;b.hitSet.clear();}
+    const terrain=traceNative(b,previous,S.damage,b.kind,b.returning);
+    if(!b.returning&&(terrain?.blocked||boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position))){if(!terrain?.blocked)b.ob.position.copy(previous);b.returning=true;b.hitSet.clear();}
     const direction=b.dir.clone();
-    const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.7,1.2));
+    const targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!tracedTarget(terrain,e)&&!b.hitSet.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.7,1.2));
     targets.sort((x,y)=>x.g.position.clone().sub(previous).dot(direction)-y.g.position.clone().sub(previous).dot(direction));
     for(const e of targets){
      if(b.hitSet.size>=S.hitsPerLeg)break;
@@ -1611,14 +1627,15 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
      b.dir.copy(player.position).sub(b.ob.position).setY(0).normalize();
      if(flat(b.ob.position,player.position)<.62){returnFlareBurst(b.ob.position,S.homeDamage,S.homeRadius,'home');b.life=0;continue;}
      b.ob.position.addScaledVector(b.dir,dt*S.speed);
-     const direction=b.dir.clone(),targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!b.returnHits.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
+     const terrain=traceNative(b,previous,S.returnDamage,b.kind,true);
+     const direction=b.dir.clone(),targets=near(b.ob.position,1.8).filter(e=>!e.dead&&!tracedTarget(terrain,e)&&!b.returnHits.has(e)&&segmentDistance(previous,b.ob.position,e.g.position)<bossReach(e,.68,1.15));
      targets.sort((a,b)=>a.g.position.clone().sub(previous).dot(direction)-b.g.position.clone().sub(previous).dot(direction));
      for(const e of targets){b.returnHits.add(e);if(!support(e,S.returnDamage,{kind:'returnflare',phase:'return',direction:direction.clone()})){b.life=0;break;}}
      fx.trail(previous,b.ob.position,'recall',true);continue;
     }
     b.ob.position.addScaledVector(b.dir,dt*S.speed);
-    const hitWall=boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position),arrived=flat(b.ob.position,b.to)<.4||b.age>=S.range/S.speed;
-    if(hitWall)b.ob.position.copy(previous);
+    const terrain=traceNative(b,previous,0),hitWall=terrain?.blocked||boundary(previous,b.ob.position,b.dir.clone())||blocked(previous,b.ob.position),arrived=flat(b.ob.position,b.to)<.4||b.age>=S.range/S.speed;
+    if(hitWall&&!terrain?.blocked)b.ob.position.copy(previous);
     if(hitWall||arrived){returnFlareBurst(b.ob.position,S.damage,S.radius,'outbound');b.returning=true;b.returnHits.clear();fx.pulse(b.ob.position,'recall',.6,.22);}
     fx.trail(previous,b.ob.position,'burst',false);continue;
    }

@@ -73,5 +73,10 @@ const contact=context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native
 assert(contact.reflected);assert.equal(native.dir.x,-1);assert.equal(context.expansionTerrain.targets[0].hp,110,'native raw damage uses the real host scale once');
 nativeNext.set(0,0,-5);context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native.dir,{...meta,remainingBounces:0});assert.equal(context.expansionTerrain.targets[0].hp,110);
 native.returning=true;nativeNext.set(0,0,-5);context.traceExpansionFormShot(native,vec(-6,-5),nativeNext,native.dir,{...meta,remainingBounces:0});assert.equal(context.expansionTerrain.targets[0].hp,100,'native return leg resets its wall contacts');
+context.FORMS.returnOverCover={requires:['recall']};
+const overCover={dir:vec(1),returning:true},overCoverNext=vec(0,-5);
+const returnContact=context.traceExpansionFormShot(overCover,vec(-6,-5),overCoverNext,overCover.dir,{kind:'returnOverCover',damage:5,remainingBounces:0,passCover:true});
+assert.equal(returnContact.blocked,false);assert.equal(overCoverNext.x,0);assert.equal(context.expansionTerrain.targets[0].hp,90,'authored cover traversal keeps real host scaling once');
+assert.equal(context.FORMS.returnOverCover.requires.length,1,'traversal does not add a held or recipe law');
 context.expansionTerrain=null;assert.equal(context.traceExpansionFormShot(native,vec(),vec(),native.dir,meta),null,'leaving the preview restores ordinary native collision');
 console.log('Actual main host: terrain has no kill/charge/account effects, orbit immobility, inherited piercing, single core multiplier, rear entry and dash collision passed; renderless only.');

@@ -4,7 +4,7 @@ import {ALL_FORMS,formStats} from '../src/forms.js';
 import {createFormCombat,PRISM_CHILD_FALLOFF} from '../src/form-combat.js';
 import {createCrystalCombatBridge,traceCrystalProjectile} from '../src/crystal-combat-bridge.js';
 const vec=(x=0,z=0)=>new THREE.Vector3(x,0,z);
-function fixture(id){
+function fixture(id,force=false){
  const scene=new THREE.Scene(),player={position:vec()},walls=[-3,3].map((x,i)=>({id:`wall-${i}`,x,z:0,w:1.2,d:40,hp:1e7,maxHp:1e7,broken:false}));
  const terrain=createCrystalCombatBridge(walls,{position:vec}),foe={type:'hound',dead:false,hp:1e7,g:{position:vec(6),rotation:{y:0}}};
  const contacts=[],proxyHits=[],reflections=[],explosions=[],pulsePositions=[];
@@ -18,7 +18,7 @@ function fixture(id){
   },
   reflector(a,b){assert.equal(terrain.sweep(a,b,{damage:0}).hits.length,0,'traced cover cannot also run through legacy reflector');return false;},
   blocked:()=>false,boundary:()=>false,constrain:()=>{},vfx,renderless:true});
- combat.set(id,5);combat.fire(vec(),vec(1),vec(6));return {scene,combat,walls,foe,terrain,contacts,proxyHits,reflections,explosions,pulsePositions,stats:formStats(id,5)};
+ combat.set(id,5);combat.fire(vec(),vec(1),vec(6),force);return {scene,combat,walls,foe,terrain,contacts,proxyHits,reflections,explosions,pulsePositions,stats:formStats(id,5)};
 }
 
 const gravity=fixture('gravitymirror');
@@ -46,5 +46,14 @@ assert(maxGen>0&&maxGen<=prism.stats.generations);assert(peak>1&&peak<=24);
 assert(prism.contacts.some(h=>h.gen>0),'wall-born child shards use the same physical terrain path');
 for(const h of prism.contacts)assert(Math.abs(h.damageRequested-prism.stats.damage*Math.pow(PRISM_CHILD_FALLOFF.base,h.gen))<1e-8,'generation damage falloff is preserved');
 assert.equal(prism.proxyHits.length,0);assert.equal(prism.foe.hp,1e7);assert.equal(prism.combat.state().bolts,0);
-for(const f of [gravity,mirror,prism]){assert(f.terrain.targets.every(t=>Math.abs(t.g.position.x)===3));f.combat.dispose();assert.equal(f.scene.children.length,0);}
-console.log(JSON.stringify({families:3,gravityContacts:gravity.contacts.length,mirrorContacts:mirror.contacts.length,prismContacts:prism.contacts.length,peakPrism:peak,maxGeneration:maxGen,checks:'finite rebound/detonation, accelerated mirror, bounded split generations/falloff, no double reflector/proxy, no behind-cover damage and disposal; renderless only'}));
+const frost=fixture('frostkaleidoscope'),chargedFrost=fixture('frostkaleidoscope',true);
+for(const f of [frost,chargedFrost]){
+ for(let i=0;i<120;i++)f.combat.update(.025);
+ assert.equal(f.explosions.length,1);assert.equal(f.combat.state().bolts,0);assert.equal(f.foe.hp,1e7);
+ assert.equal(f.proxyHits.length,1,'only the separate charged shatter hits the wall proxy');
+ assert.equal(f.proxyHits[0].phase,'shatter');assert(f.terrain.targets.every(t=>!t.slow));
+}
+assert.equal(frost.contacts.length,frost.stats.shatterBounces,'crystal rebounds charge the existing shatter payoff');
+assert.equal(chargedFrost.contacts.length,1,'an already charged opening retains its first-contact payoff');
+for(const f of [gravity,mirror,prism,frost,chargedFrost]){assert(f.terrain.targets.every(t=>Math.abs(t.g.position.x)===3));f.combat.dispose();assert.equal(f.scene.children.length,0);}
+console.log(JSON.stringify({families:4,gravityContacts:gravity.contacts.length,mirrorContacts:mirror.contacts.length,prismContacts:prism.contacts.length,peakPrism:peak,maxGeneration:maxGen,frostContacts:frost.contacts.length,chargedFrostContacts:chargedFrost.contacts.length,checks:'finite rebound/detonation, accelerated mirror, bounded split generations/falloff, charged frost shatter, no double reflector/proxy, no behind-cover damage and disposal; renderless only'}));

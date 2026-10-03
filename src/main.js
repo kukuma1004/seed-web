@@ -462,7 +462,10 @@ function traceExpansionFormShot(shot,previous,next,dir,meta){
  if(!expansionTerrain)return null;
  if(shot.crystalReturning!==Boolean(shot.returning)){shot.crystalHits?.clear();shot.crystalReturning=Boolean(shot.returning);}
  const consumed=FORMS[meta.kind].requires,family=[...consumed,meta.finalLaw];
- const laws=meta.ricochet?family.filter(id=>id!=='pierce'):family;
+ const nativeLaws=meta.ricochet?family.filter(id=>id!=='pierce'):family;
+ // Some authored return legs fly over cover to reach the moving seed. This
+ // changes only terrain traversal, not the held laws or enemy hit budget.
+ const laws=meta.passCover?[...nativeLaws,'pierce']:nativeLaws;
  const damage=meta.damage*damageScale(levels,bankedUpgrades)*relicFormScale(relics,consumed)*runPowerScale(runBonuses)*gardenPower();
  const result=expansionApi.traceCrystalProjectile(expansionTerrain,shot,previous,next,{damage,laws,bounces:0,maxBounces:meta.remainingBounces});
  if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}
