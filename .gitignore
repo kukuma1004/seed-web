@@ -199,3 +199,8 @@ art-refs/
 !tools/expansion-public-campaign-test.mjs
 
 !tools/expansion-public-ui-test.mjs
+
+!tools/boss-victory-admin-migration.mjs
+!tools/boss-victory-migration-rules.mjs
+!tools/boss-victory-migration-test.mjs
+!tools/boss-victory-migration-emulator-test.mjs

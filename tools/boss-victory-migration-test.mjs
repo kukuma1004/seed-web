@@ -1,0 +1,54 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createBossMigrationSeal,validBossMigrationSeal,sealBossMigrationUser,initializeBossLedgerFromSeal,withBossMigrationProtocol} from '../src/boss-victory-migration.js';
+import {createBossMigrationRules,assertBossMigrationRules} from './boss-victory-migration-rules.mjs';
+import {migrateBossVictoryUser} from './boss-victory-admin-migration.mjs';
+import {bossVictoryCloudKey} from '../src/boss-victory-events.js';
+const copy=v=>JSON.parse(JSON.stringify(v)),uid='migration-test',epoch='migration-02';
+const save={version:1,revision:2,updatedAt:123,account:{version:1,austinWins:8,alwaysWins:0,johanWins:2,crosswindWins:0,crystalWins:0,bossRuns:{'journey:legacy':{austin:3,at:20}}},discoveries:{version:1,bosses:['austin','austinveteran']},checkpoints:{act1:{version:1,runId:'old-run',privateOriginal:'retain'}},garden:{legacyUnknown:'preserve'},unrecognized:'keep-original'};
+const original=copy(save),seal=createBossMigrationSeal(uid,epoch,save,1000);
+assert(validBossMigrationSeal(seal));assert.deepEqual(save,original);assert.deepEqual(seal.archive.save,save);
+assert.equal(seal.baseline.austinWins,8,'veteran entitlement is preserved, never inferred as count ten');
+assert.deepEqual(seal.legacyEntitlements.bosses,['austin','austinveteran']);
+assert.deepEqual(legacy(seal),{austinWins:8,alwaysWins:0,johanWins:2,crosswindWins:0,crystalWins:0});
+function legacy(s){return s.baseline;}
+const empty=createBossMigrationSeal(uid,epoch,{version:1,account:{version:1},discoveries:{version:1}},1000);delete empty.legacyEntitlements.bosses;
+assert(validBossMigrationSeal(empty),'RTDB may omit an empty title array');
+for(const bad of [{...seal,extra:1},{...seal,epoch:'bad'},{...seal,baseline:{...seal.baseline,austinWins:9}},{...seal,legacyEntitlements:{version:1,bosses:['austin']}}])assert(!validBossMigrationSeal(bad));
+for(const n of [-1,1.5,100001,'8',null])assert.throws(()=>createBossMigrationSeal(uid,epoch,{...save,account:{...save.account,austinWins:n}},1000));
+const user={save,duelStory:{keep:true},unknownSibling:{keep:2}},sealed=sealBossMigrationUser(user,uid,epoch,1000);
+assert.deepEqual(sealed.duelStory,user.duelStory);assert.deepEqual(sealed.unknownSibling,user.unknownSibling);assert.deepEqual(sealed.save,save);
+assert.deepEqual(sealBossMigrationUser(sealed,uid,epoch,2000),sealed);assert.throws(()=>sealBossMigrationUser(sealed,uid,'different-epoch',2000));
+const metadata=initializeBossLedgerFromSeal(null,seal),event={mode:'journey',runId:'new-run',boss:'austin',ordinal:1};
+const ledger={...metadata,events:{[bossVictoryCloudKey(event)]:{epoch,...event}}};
+assert.deepEqual(initializeBossLedgerFromSeal(ledger,seal),ledger);assert.throws(()=>initializeBossLedgerFromSeal({...ledger,baseline:{...seal.baseline,austinWins:99}},seal));
+const protocol=withBossMigrationProtocol({...save,account:{...save.account,austinWins:999,bestScores:{act1:1234}}},seal,uid);
+assert.equal(protocol.account.austinWins,8);assert.equal(protocol.account.bestScores.act1,1234);assert.deepEqual(protocol.bossProtocol,{version:2,ownerUid:uid,epoch});
+assert.throws(()=>withBossMigrationProtocol(save,seal,'wrong'));assert.throws(()=>withBossMigrationProtocol({...save,bossProtocol:{version:2,ownerUid:uid,epoch:'wrong-epoch'}},seal,uid));
+
+const base=JSON.parse(readFileSync('docs/firebase-rules-with-seed.json','utf8')),rules=createBossMigrationRules(base);
+assert(assertBossMigrationRules(rules));assert.deepEqual(createBossMigrationRules(rules),rules);assert.throws(()=>assertBossMigrationRules(base));
+for(const key of Object.keys(base.rules).filter(k=>k!=='seedUsers'))assert.deepEqual(rules.rules[key],base.rules[key],'unrelated rules preserved: '+key);
+assert.throws(()=>createBossMigrationRules({...base,rules:{...base.rules,'.write':true}}));
+const ancestor=copy(base);ancestor.rules.seedUsers.$uid['.write']='auth != null';assert.throws(()=>createBossMigrationRules(ancestor));
+const descendant=copy(base);descendant.rules.seedUsers.$uid.save.checkpoints['.write']='auth != null && auth.uid == $uid';assert.throws(()=>createBossMigrationRules(descendant),/unsafe-descendant-write/);
+const writes=[];let revision=1,ready=true,failLedger=false,firstConflict=false;
+const rows=new Map([['seedUsers/'+uid,copy(user)]]),admin={rules:async()=>rules,read:async path=>({value:path==='seedBossMigrationReady'?{version:2,clientReady:ready}:copy(rows.get(path)??null),etag:String(revision)}),compareAndSet:async(path,value,etag)=>{
+ if(failLedger&&path.startsWith('seedBossVictories/'))throw Error('offline');
+ if(firstConflict){firstConflict=false;rows.get('seedUsers/'+uid).save.account.austinWins=9;revision++;return false;}
+ if(etag!==String(revision))return false;writes.push(path);rows.set(path,copy(value));revision++;return true;
+}};
+assert.equal((await migrateBossVictoryUser({admin,ownerUid:uid,epoch,now:1000})).kind,'dry-run');assert.equal(writes.length,0);
+ready=false;await assert.rejects(()=>migrateBossVictoryUser({admin,ownerUid:uid,epoch,apply:true}),/client-not-ready/);assert.equal(writes.length,0);ready=true;
+firstConflict=true;failLedger=true;await assert.rejects(()=>migrateBossVictoryUser({admin,ownerUid:uid,epoch,now:1000,apply:true}),/offline/);
+const afterCrash=rows.get('seedUsers/'+uid);assert(validBossMigrationSeal(afterCrash.bossMigration));assert.equal(afterCrash.bossMigration.baseline.austinWins,9);assert.deepEqual(afterCrash.duelStory,user.duelStory);
+failLedger=false;const resumed=await migrateBossVictoryUser({admin,ownerUid:uid,epoch,now:9999,apply:true});assert.equal(resumed.kind,'sealed');assert.equal(resumed.baseline.austinWins,9);
+const final=copy(rows.get('seedUsers/'+uid));assert.deepEqual(final,afterCrash,'resume keeps the original seal and archive');
+rows.get('seedBossVictories/'+uid).events=ledger.events;
+assert.equal((await migrateBossVictoryUser({admin,ownerUid:uid,epoch,apply:true})).kind,'sealed');assert.deepEqual(rows.get('seedBossVictories/'+uid).events,ledger.events);
+const writesBefore=writes.length;await assert.rejects(()=>migrateBossVictoryUser({admin,ownerUid:uid,epoch:'new-epoch',apply:true}),/migration-conflict/);assert.equal(writes.length,writesBefore);
+rows.set('seedUsers/'+uid,copy(user));rows.set('seedBossVictories/'+uid,copy(metadata));
+firstConflict=true;await assert.rejects(()=>migrateBossVictoryUser({admin,ownerUid:uid,epoch,apply:true}),/migration-conflict/);
+assert.equal(rows.get('seedUsers/'+uid).bossMigration,undefined,'new baseline from CAS retry cannot freeze a UID with conflicting preexisting ledger');
+assert.equal(writes.length,writesBefore);
+console.log('Dormant migration contract passed: exact server counts/legacy title archive, full-rule guard preservation, dry-run/readiness, old-write CAS race, crash after seal, immutable retry and preserved events. Production is not migrated.');
