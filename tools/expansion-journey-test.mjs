@@ -64,6 +64,6 @@ const geometry=art.geometry,material=art.material,camera=new THREE.PerspectiveCa
 const liveWalls=crystalSession.course.walls;view.syncCrystals(liveWalls,camera);assert.equal(art.count,liveWalls.length);assert.equal(shadow.count,art.count);
 liveWalls[0].broken=true;view.syncCrystals(liveWalls,camera);assert.equal(art.count,liveWalls.length-1);
 liveWalls[0].broken=false;view.syncCrystals(liveWalls,camera);assert.equal(art.count,liveWalls.length);assert.equal(art.geometry,geometry);assert.equal(art.material,material);
-view.setCourse('crosswind');assert.equal(floor.count,80);assert(floor.boundingSphere.radius>80,'reusing the floor recomputes culling bounds for the horizontal course');assert.equal(art.count,0);
+view.setCourse('crosswind');assert.equal(floor.count,84);assert(floor.boundingSphere.radius>80,'reusing the floor recomputes culling bounds for the horizontal course');assert.equal(art.count,0);
 view.dispose();assert.equal(scene.children.length,0);assert.equal(textureDisposed,false,'shared floor texture survives leaving preview');assert.equal(crystalTextureDisposed,false,'shared cutout survives leaving preview');texture.dispose();crystalTexture.dispose();
 console.log('Expansion journey: five horizontal courses -> boss, locked shot/entry, charge swept contact, caps, resume replay and malformed checkpoints passed. Browser play is separate.');

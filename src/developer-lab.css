@@ -42,3 +42,7 @@ body:has(.lab-workbench) #app-actions{display:none}
 
 /* 모드별 이용 현황 제목(2026-09-28) */
 .usage-mode-title{margin:14px 0 6px;font-size:14px;color:#e8d9aa;letter-spacing:1px}
+.developer-expansion>p{font-size:11px!important;line-height:1.4!important;margin:5px 0!important;color:#bbcec3}
+.developer-expansion>button{width:100%;margin:3px 0}
+.developer-expansion [role=status]:empty{display:none}
+#seed-inspection:not([hidden]){position:fixed;bottom:8px;left:8px;z-index:50;max-width:50vw;max-height:20dvh;overflow:auto;white-space:pre-wrap;margin:0;padding:6px 8px;background:#061415e6;color:#d6f5bd;border:1px solid #78936f;font:11px/1.4 monospace;pointer-events:none}

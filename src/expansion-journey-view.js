@@ -8,9 +8,11 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
+ // The shared room texture repeats at .34. Compensate through this geometry's
+ // UVs instead of mutating the texture used by every existing game mode.
+ const floorUvs=floorGeometry.getAttribute('uv');for(let i=0;i<floorUvs.count;i++)floorUvs.setXY(i,floorUvs.getX(i)*4,floorUvs.getY(i)*2);
  const floorMaterial=new THREE.MeshStandardMaterial({map:groundTexture,color:0x87a88e,roughness:1});
- const floor=new THREE.InstancedMesh(floorGeometry,floorMaterial,80),m=new THREE.Matrix4();
- for(let x=0;x<20;x++)for(let z=0;z<4;z++){m.makeTranslation(x*8-8,.015,z*4-6);floor.setMatrixAt(x*4+z,m);}floor.instanceMatrix.needsUpdate=true;root.add(floor);
+ const floor=new THREE.InstancedMesh(floorGeometry,floorMaterial,84),m=new THREE.Matrix4();root.add(floor);
  const laneGeometry=new THREE.PlaneGeometry(.16,1.1).rotateX(-Math.PI/2),laneMaterial=new THREE.MeshBasicMaterial({color:0xd7e8a5,transparent:true,opacity:.32,depthWrite:false});
  const lanes=new THREE.InstancedMesh(laneGeometry,laneMaterial,40);for(let i=0;i<40;i++){m.makeTranslation(i*3, .025,i%2?6.3:-6.3);lanes.setMatrixAt(i,m);}lanes.instanceMatrix.needsUpdate=true;root.add(lanes);
  // Crop the square cutout so its visible width matches the collision footprint.
@@ -38,17 +40,21 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  }
  function syncFloor(){
   plateMaterial.map=plates.get(course)||null;plateMaterial.needsUpdate=true;
-  plate.visible=!terrainOnly&&Boolean(plateMaterial.map);floor.visible=!terrainOnly&&!plate.visible;lanes.visible=!terrainOnly&&!plate.visible&&course==='crosswind';
+  plate.visible=!terrainOnly&&Boolean(plateMaterial.map);
+  // The panorama spans the whole journey. Its painted paving cannot supply
+  // local floor detail at that scale: keep world-sized stones on the corridor.
+  floor.visible=!terrainOnly&&(course==='crosswind'||!plate.visible);
+  lanes.visible=!terrainOnly&&!plate.visible&&course==='crosswind';
  }
  function setPlate(act,texture){if(disposed)return;plates.set(act,texture);if(course===act)syncFloor();}
  function setCourse(act){
   course=act;
-  const canyon=act==='crystalGorge';floor.count=canyon?12:80;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
+  const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Never repeat the full illustration. The crosswind stone band (image
   // V=.29..63) spans +/-7.5 world units; the movable corridor stays on stone.
   const environment=EXPANSION_ENVIRONMENTS[act]||EXPANSION_ENVIRONMENTS.crosswind;
   plate.scale.set(environment.width,environment.depth,1);plate.position.set(environment.x,.02,environment.z);
-  for(let i=0;i<floor.count;i++){m.makeTranslation(canyon?(Math.floor(i/4)-1)*8:Math.floor(i/4)*8-8,.015,(i%4)*4-6);floor.setMatrixAt(i,m);}floor.instanceMatrix.needsUpdate=true;floor.computeBoundingSphere();
+  for(let i=0;i<floor.count;i++){m.makeTranslation(canyon?(Math.floor(i/4)-1)*8:Math.floor(i/4)*8-16,.035,(i%4)*4-6);floor.setMatrixAt(i,m);}floor.instanceMatrix.needsUpdate=true;floor.computeBoundingSphere();
   if(!canyon){for(const batch of coverStages)batch.count=0;shadows.count=0;}
   syncFloor();
  }
@@ -61,7 +67,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   }
   for(let i=0;i<3;i++){const batch=coverStages[i];batch.count=coverCounts[i];batch.instanceMatrix.needsUpdate=true;if(batch.instanceColor)batch.instanceColor.needsUpdate=true;}shadows.count=count;shadows.instanceMatrix.needsUpdate=true;
  }
- const lineGeometry=new THREE.PlaneGeometry(1,1),lineMaterial=new THREE.MeshBasicMaterial({color:0xffc36e,transparent:true,opacity:.7,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const lineGeometry=new THREE.PlaneGeometry(1,1),lineMaterial=new THREE.MeshBasicMaterial({color:0xff9351,transparent:true,opacity:.38,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
  const tells=Array.from({length:28},()=>{const o=new THREE.Mesh(lineGeometry,lineMaterial);o.visible=false;root.add(o);return o;});let tellCount=0;
  function tell(t){if(tellCount>=tells.length)return;const o=tells[tellCount++],p=t.position;o.visible=true;o.position.set(p.x,.05,p.z);const d=t.dir||t.direction,length=t.length||6;
   if(d){o.scale.set(t.width||.16,length,1);o.rotation.set(-Math.PI/2,0,Math.atan2(d.x,d.z));o.position.x+=d.x*length/2;o.position.z+=d.z*length/2;}

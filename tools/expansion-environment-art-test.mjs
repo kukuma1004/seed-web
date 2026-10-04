@@ -32,7 +32,12 @@ const scene=new THREE.Scene(),sharedFloor=new THREE.Texture(),plate4=new THREE.T
 const view=createExpansionJourneyView(scene,sharedFloor);view.setActive(true);const plate=view.root.getObjectByName('expansion-environment-plate');
 const floor=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===8),planeGeometry=plate.geometry,material=plate.material;
 assert.equal(plate.visible,false);assert.equal(floor.visible,true);
-view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,false);assert.equal(material.map,plate4);
+view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,true,'long panorama keeps world-sized road detail');assert.equal(material.map,plate4);
+const roadMatrix=new THREE.Matrix4();floor.getMatrixAt(0,roadMatrix);assert(roadMatrix.elements[13]>plate.position.y,'road detail must be above the opaque panorama');
+assert(roadMatrix.elements[12]-4<=-20,'initial camera cannot reveal the rear road seam');
+floor.getMatrixAt(floor.count-1,roadMatrix);assert(roadMatrix.elements[12]+4>=148,'road detail spans the late course');
+assert.equal(floor.geometry.getAttribute('uv').getX(1),4);assert.equal(floor.geometry.getAttribute('uv').getY(0),2);
+assert.equal(sharedFloor.repeat.x,1,'local road UVs leave all shared texture settings untouched');
 view.root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(plate);assert(box.min.x<=-11&&box.max.x>=140,'finite scenery covers actual course and rear entries');
 const definition=EXPANSION_ENVIRONMENTS.crosswind;
 const bandMin=definition.z+(.29-.5)*definition.depth,bandMax=definition.z+(.63-.5)*definition.depth;
