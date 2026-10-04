@@ -96,8 +96,20 @@ export function batch08Ai(s,f,o,input,dt){
   // and fight during both cooldowns instead of orbiting idle wells forever.
   if(f.cd[0]<=0&&!wells.length&&open){if(d<3.4){input.x=-v.x-v.y*.35;input.y=-v.y+v.x*.35;}else if(d>4.8){input.x=v.x;input.y=v.y;}else return false;return true;}
  }else if(f.char==='mirrorhall'){
-  const incoming=s.shots.filter(q=>q.owner!==f.team&&q.life>0&&!q.hallReturned&&dist(q,f)<5&&(f.x-q.x)*q.dx+(f.y-q.y)*q.dy>0),hall=activeHall(s,f);
-  ai.hallSeen=incoming.length?(ai.hallSeen||0)+dt:0;
+  // An uncharged fold still has a purpose after a visible guard break; do not
+  // replace ordinary jabs with its slow windup after every short recovery.
+  if(f.cd[1]<=0&&d<2.5&&o.stun>.55&&o.inv<=0){input.skill2=true;return true;}
+  // Opening takes .32s after the ordinary reaction delay. Read a visible
+  // projectile earlier than the old five-unit boundary, but only if its
+  // current direction/lifetime can reach this finite mirror ring. Parallel
+  // misses and returning mirrors are not threats. No future aim is read.
+  const lane=q=>{const x=f.x-q.x,y=f.y-q.y,along=x*q.dx+y*q.dy;
+   return along>0&&along<=9&&Math.abs(x*q.dy-y*q.dx)<1.65&&(!Number.isFinite(q.speed)||along<=q.speed*q.life+.4);};
+  const incoming=s.shots.filter(q=>q.owner!==f.team&&q.life>0&&!q.hallReturned&&q.kind!=='hallReturn'&&lane(q)),hall=activeHall(s,f);
+  // These authored lines visibly announce actual projectiles; hitscan beams,
+  // area circles and generic skill states are deliberately excluded.
+  const tell=s.hazards.find(h=>h.owner!==f.team&&h.t>0&&h.arm>0&&!h.triggered&&['bladeSend','thunderSend','fullSend','rewindSend','crunchSend','mirrorTell'].includes(h.kind)&&Number.isFinite(h.endX)&&segment(h,{x:h.endX,y:h.endY},f)<1.65);
+  ai.hallSeen=incoming.length||tell?(ai.hallSeen||0)+dt:0;
   // Do not spend a defensive ultimate on an empty melee exchange. Observe a
   // real incoming lane before opening, then move the finite panel into it.
   if(ai.hallSeen>=react&&!hall&&d>2.4&&!body){if(f.meter>=100)input.ult=true;else if(f.cd[0]<=0)input.skill1=true;else return false;return true;}
