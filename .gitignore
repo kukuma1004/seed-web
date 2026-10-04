@@ -175,6 +175,7 @@ art-refs/
 !tools/duel-solo-06-ai.mjs
 !tools/expansion-account-contract-test.mjs
 !tools/expansion-boss-titles-test.mjs
+!tools/expansion-garden-reward-test.mjs
 !tools/duel-solo-07-test.mjs
 !tools/duel-solo-07-art-test.mjs
 !tools/duel-solo-07-ai.mjs

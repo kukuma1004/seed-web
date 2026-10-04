@@ -91,7 +91,7 @@ assert.match(source,/critChance=piercing\?totalCritChance\(\):0/,'the pre-existi
 function host(s=memory()){
  const tree=[],nodes=new Map(),ctx=vm.createContext({runStorage:s,recordModeBossVictory,MODE_BOSSES,readDiscoveries,recordDiscovery,developerRun:false,localInspection:false,survivalSession:null,expansionJourney:null,canSaveExpansion:()=>false,
   profile:readDiscoveries(s),seedTitle:titleView(),discoveredCount:p=>p.forms.length,codexNews,setTimeout:()=>{},$:id=>{if(!nodes.has(id))nodes.set(id,{textContent:''});return nodes.get(id);},
-  treeReward:e=>tree.push(e),treeWater:()=>{},cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map()});
+  awardExpansionBossTree:(_m,_r,_b,_o,e)=>{tree.push(e);return true;},treeReward:e=>tree.push(e),treeWater:()=>{},cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map()});
  vm.runInContext(functionSlice('awardModeBoss','syncLaws'),ctx);
  return {ctx,tree,s};
 }

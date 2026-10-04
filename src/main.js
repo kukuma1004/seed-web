@@ -90,7 +90,8 @@ import {createDefenseRanking,defenseRankEntry,parseDefenseTowers} from './defens
 import {createRankingRetry} from './ranking-retry.js';
 import {createAdventureRanking,createDuelRanking,createPuzzleRanking,adventureRankEntry,duelRankEntry,puzzleRankEntry} from './mode-ranking.js';
 import {survivalRecordStorage,readSurvivalAccountRecord,createSurvivalRecordSync} from './survival-record-sync.js';
-import {readGarden,writeGarden,normalizeGarden,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY,dominantLaw} from './garden.js';
+import {GARDEN_KEY,readGarden,writeGarden,normalizeGarden,autoPlantSeeds,gardenEffects,harvestFromRun,addHarvest,growPlants,harvestLine,activeSlots,centerInfo,SEEDS,grantBossMastery,masteryLine,MASTERY_STEP,MASTERY,dominantLaw} from './garden.js';
+import {expansionBossTreeReward} from './expansion-garden-reward.js';
 import {rollTreeReward,waterTree,TREE_SEEDS,TREE_RARITY} from './tree-of-life.js';
 // 보스 방에 들어올 때까지 받은 피해(그 뒤로 더 맞지 않고 이기면 '노히트' — 전설 씨앗 조건).
 let bossFightDamage0=0;
@@ -825,6 +826,15 @@ function finishRoomAnalysis(training=false,show=false){
  return report;
 }
 function buildRoomBoundary(){if(!shouldBuildArenaBoundary(region))return;const stadiumRoom=isAct2(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:mats,stadiumRoom);}
+function awardExpansionBossTree(mode,runId,boss,ordinal,event){
+ let current;try{const bytes=runStorage.getItem(GARDEN_KEY),old=bytes===null?null:JSON.parse(bytes);if(bytes!==null&&(!old||typeof old!=='object'||Array.isArray(old)||old.version!==undefined&&(!Number.isInteger(old.version)||old.version<1||old.version>6)))return false;current=autoPlantSeeds(normalizeGarden(old));}catch{return false;}
+ const reward=expansionBossTreeReward(current.tree,{mode,runId,boss,ordinal,event});if(!reward.ok)return false;
+ if(!reward.applied)return true;
+ const next={...current,tree:reward.tree};
+ // Chance, water and the complete receipt share one verified local write.
+ if(!writeGarden(runStorage,next)||JSON.stringify(readGarden(runStorage).tree)!==JSON.stringify(reward.tree)){$('#toast').textContent='나무 보상 저장을 다시 확인해야 해요. 격파 기록은 남아 있어요.';return false;}
+ garden=next;return true;
+}
 function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  practice=Boolean(practice||localInspection||developerRun);
  const result=recordModeBossVictory(runStorage,{mode,runId,boss,ordinal,practice});
@@ -833,10 +843,11 @@ function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  // Read current discoveries to preserve data merged from another device.
  profile=readDiscoveries(runStorage);let saved=true;
  for(const id of result.awards){const reward=remember('bosses',id,true);saved=reward.saved&&saved;}
- if(saved&&result.counted){
-  const act=MODE_BOSSES[boss].act;
-  treeReward({type:'boss',boss,act,final:true,wins:result.wins,law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null});
-  treeWater(1);void cloud.flush().catch(()=>{});
+ if(saved){
+  const act=MODE_BOSSES[boss].act,event={type:'boss',boss,act,final:true,wins:result.wins,law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null};
+  if(act>=4){if(!awardExpansionBossTree(mode,runId,boss,ordinal,event))return false;}
+  else if(result.counted){treeReward(event);treeWater(1);}
+  void cloud.flush().catch(()=>{});
  }
  return saved;
 }
