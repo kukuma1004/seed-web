@@ -2164,7 +2164,7 @@ async function showSeedDuel(){
  mode='duel';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  const back=()=>{duelScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
  try{const {mountSeedDuel}=await import('./seed-duel-view.js');const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun),sameOwner=()=>owner===(account.user()?.uid||'guest');
-  duelScreen=mountSeedDuel({audio,storage:runStorage,owner,practice,initialCharacter:localInspection?new URLSearchParams(location.search).get('duelCharacter')||'pierce':'pierce',canSave:sameOwner,
+  duelScreen=mountSeedDuel({audio,storage:runStorage,owner,practice,inspection:Boolean(localInspection&&new URLSearchParams(location.search).get('duelCandidates')==='08'),initialCharacter:localInspection?new URLSearchParams(location.search).get('duelCharacter')||'pierce':'pierce',canSave:sameOwner,
    onProgress:p=>{if(!sameOwner())return;garden=readGarden(runStorage);garden.duelStory=p;writeGarden(runStorage,garden);},
    onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const r=await cloud.flush();return r.ok&&!cloud.isDirty();}:null,
    onResult:(state,meta)=>submitExtraModeRanking('duel',duelRankEntry(state,{uid:owner,name:playerName,storyStage:meta?.storyStage||0}),practice),

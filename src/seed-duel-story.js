@@ -1,4 +1,5 @@
 import {DUEL_BATCH07_STORY} from './seed-duel-batch07.js';
+import {DUEL_BATCH08_STORY} from './seed-duel-batch08.js';
 import {DUEL_BATCH06_STORY} from './seed-duel-batch06.js';
 import {DUEL_BATCH05_STORY} from './seed-duel-batch05.js';
 import {DUEL_BATCH04_STORY} from './seed-duel-batch04.js';
@@ -44,9 +45,17 @@ encounters.push(['gravitymirror','벽에서 돌아오는 마음','어려움','ha
 encounters.push(['chainburst','세 불씨의 꽃길','어려움','hard','마지막 타격은 작은 불꽃 표식을 남겨. 연결을 시작하면 불씨의 자리가 정해져. 불씨 셋이 차례로 이야기하지만, 네 뒤를 끝없이 쫓아가지는 않아. 박자를 바꿔 걸어 봐!','3타나 강공격은 상대에게 표식을 붙여요. 기술을 누르면 점선의 위치가 고정돼요. 점선을 건너거나 끝 폭발 밖으로 움직이세요. 연결과 폭발은 각각 한 번만 맞아요.','큰 불길보다 서로 이어진 작은 불씨가 길을 밝혔네. 너와 만든 길에는 다음 씨앗도 걸어올 수 있겠다.']);
 encounters.push(...DUEL_BATCH03_STORY,...DUEL_BATCH04_STORY,...DUEL_BATCH05_STORY,...DUEL_BATCH06_STORY,...DUEL_BATCH07_STORY);
 export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:i<22?Math.min(6,Math.floor(i/3)):7,enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
+// Separate, memory-only review campaign. Never normalize into s37/s38 or submit
+// it to the existing 36-stage account/ranking contract.
+export const DUEL_INSPECTION_STORY_STAGES=DUEL_BATCH08_STORY;
+export const inspectionStoryUnlocked=(cleared,stage)=>DUEL_INSPECTION_STORY_STAGES.includes(stage)&&(!stage.unlockAfter||cleared.includes(stage.unlockAfter));
+export function completeInspectionStoryMatch(cleared,stage,match){
+ if(!inspectionStoryUnlocked(cleared,stage)||!match?.inspection||match.practice||match.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy)return null;
+ return [...new Set([...cleared,stage.id])];
+}
 // Only an actual, finished best-of-three campaign victory can open the next encounter.
 export function completeStoryMatch(raw,stage,match,now=Date.now()){
- if(!DUEL_STORY_STAGES.includes(stage)||!storyUnlocked(raw,stage.number)||match?.practice||match?.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;
+ if(!DUEL_STORY_STAGES.includes(stage)||!storyUnlocked(raw,stage.number)||match?.inspection||match?.practice||match?.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;
  const out=normalizeDuelStory(raw);out.hero=match.fighters[0].char;out.updatedAt=Math.max(now,out.updatedAt+1);
  const prev=out.cleared[stage.id];out.cleared[stage.id]={losses:Math.min(prev?.losses??2,match.wins[1]),at:now};return normalizeDuelStory(out);
 }

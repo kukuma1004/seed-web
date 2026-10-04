@@ -1,0 +1,296 @@
+[
+  {
+    "id": "bigcrunch",
+    "path": "assets/duel/bigcrunch-motion-v2.webp",
+    "width": 1774,
+    "height": 887,
+    "bytes": 311224,
+    "sha256": "7c463ce5d0b148f0ee68285d6021a5abf785162d7857a176afc65e18a7baab2b",
+    "poses": [
+      {
+        "index": 0,
+        "sourceBox": [
+          0,
+          0,
+          444,
+          444
+        ],
+        "visibleBounds": [
+          43,
+          148,
+          407,
+          404
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "63015ecf1a718853f2898565dd7f19a6f2fce2808e78e3179c50c753642e5664"
+      },
+      {
+        "index": 1,
+        "sourceBox": [
+          444,
+          0,
+          887,
+          444
+        ],
+        "visibleBounds": [
+          15,
+          152,
+          442,
+          403
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "e0c0eb5e1e30a2ebd476dad7e626617b6ecbec7c3a421125ab5a331b18035779"
+      },
+      {
+        "index": 2,
+        "sourceBox": [
+          887,
+          0,
+          1330,
+          444
+        ],
+        "visibleBounds": [
+          39,
+          177,
+          428,
+          421
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "db9fb3790ca16109906465e09b48c91dc44db71c3d34443f5dc2c9f7f7ce1c35"
+      },
+      {
+        "index": 3,
+        "sourceBox": [
+          1330,
+          0,
+          1774,
+          444
+        ],
+        "visibleBounds": [
+          22,
+          163,
+          427,
+          403
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "5d3b9c816dd6d5417a22ff351383391fb9225238c748c4233a68f22a5293978d"
+      },
+      {
+        "index": 4,
+        "sourceBox": [
+          0,
+          444,
+          444,
+          887
+        ],
+        "visibleBounds": [
+          52,
+          14,
+          349,
+          367
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "7780a6e6137dab88d8dd2264eda31734679cf483583e65655d25247fdc6c562e"
+      },
+      {
+        "index": 5,
+        "sourceBox": [
+          444,
+          444,
+          887,
+          887
+        ],
+        "visibleBounds": [
+          29,
+          119,
+          418,
+          376
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "cdc5fd08e0789943dbc0e3306b96faba1d9b1fb2856fa544a501f8fbc7a4ef27"
+      },
+      {
+        "index": 6,
+        "sourceBox": [
+          887,
+          444,
+          1330,
+          887
+        ],
+        "visibleBounds": [
+          55,
+          129,
+          380,
+          366
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "455eb1662346112fb5b82c143dda45dddd52af0e7e68370dc5735abcfdcc55e8"
+      },
+      {
+        "index": 7,
+        "sourceBox": [
+          1330,
+          444,
+          1774,
+          887
+        ],
+        "visibleBounds": [
+          25,
+          149,
+          426,
+          372
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "1ed4e30103a5edff7d518f5cd3c821857ed7b0da3311e603a5f6c5d76c1b44a7"
+      }
+    ],
+    "verification": "Generated layout repair removes baked attack VFX; native and browser review required"
+  },
+  {
+    "id": "mirrorhall",
+    "path": "assets/duel/mirrorhall-motion-v2.webp",
+    "width": 1774,
+    "height": 887,
+    "bytes": 413494,
+    "sha256": "c433d3f92076ec481be35a00c55c3f347cd36e972f4db930f33b59396a0b4d67",
+    "poses": [
+      {
+        "index": 0,
+        "sourceBox": [
+          0,
+          0,
+          444,
+          444
+        ],
+        "visibleBounds": [
+          58,
+          92,
+          397,
+          406
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "5ddebf0920d9b58dc4c58b1552bca2380bbc3f461ab703f86b90fd6b4d33a4c1"
+      },
+      {
+        "index": 1,
+        "sourceBox": [
+          444,
+          0,
+          887,
+          444
+        ],
+        "visibleBounds": [
+          42,
+          103,
+          409,
+          407
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "9407676de2d0cde4b8efab061778950db0d5df90a8bd001d2469af70c21602e1"
+      },
+      {
+        "index": 2,
+        "sourceBox": [
+          887,
+          0,
+          1330,
+          444
+        ],
+        "visibleBounds": [
+          62,
+          109,
+          383,
+          406
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "34778341a2eaf0c2c05dcff1952862c59cf2cde083d238567d38c036e92e8ed2"
+      },
+      {
+        "index": 3,
+        "sourceBox": [
+          1330,
+          0,
+          1774,
+          444
+        ],
+        "visibleBounds": [
+          41,
+          103,
+          395,
+          410
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "d94ee069d8085d39566a034cda455ac19db198ddc19a3e2d89ee5fb6df7bd72f"
+      },
+      {
+        "index": 4,
+        "sourceBox": [
+          0,
+          444,
+          444,
+          887
+        ],
+        "visibleBounds": [
+          57,
+          6,
+          401,
+          390
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "2ad1cb217b4edf9f928c2305fa56ef632b421d7974ffe90451b87349534fee02"
+      },
+      {
+        "index": 5,
+        "sourceBox": [
+          444,
+          444,
+          887,
+          887
+        ],
+        "visibleBounds": [
+          37,
+          62,
+          392,
+          403
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "e5fcc45ebd0ca636a6580e72865ff8d38ce0b8676f6855ed43b96c77175e951f"
+      },
+      {
+        "index": 6,
+        "sourceBox": [
+          887,
+          444,
+          1330,
+          887
+        ],
+        "visibleBounds": [
+          63,
+          87,
+          402,
+          390
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "704b9124aa7d9b91291fa0c4b04716fa1f8e994f1ccb6a37362b546c1a8ae5c6"
+      },
+      {
+        "index": 7,
+        "sourceBox": [
+          1330,
+          444,
+          1774,
+          887
+        ],
+        "visibleBounds": [
+          46,
+          102,
+          411,
+          389
+        ],
+        "edgeAlpha128Count": 0,
+        "rgbaSha256": "35c935972dc8bf0d04f3a18dd550458aaabf517591ab1c2411cbf461ca7bfe79"
+      }
+    ],
+    "verification": "Generated layout repair removes baked attack VFX; native and browser review required"
+  }
+]
