@@ -906,7 +906,7 @@ function showSurvivalSetup(refresh=true){
  if(localInspection){$('#survival-pierce').onclick=()=>startSurvival('pierce');$('#survival-frost').onclick=()=>startSurvival('frost');$('#survival-stress').onclick=()=>startSurvival('stress');$('#survival-boss').onclick=()=>startSurvival('boss');$('#survival-duel').onclick=()=>startSurvival('duel');for(const id of ['act2','act3','loop','base','route','stress2','stress3'])$('#survival-'+id).onclick=()=>startSurvival(id);for(const id of Object.keys(SURVIVAL_BENCHES))$('#'+id).onclick=()=>startSurvival(id);}
 }
 function startSurvival(lab=null,saved=null){
- if(!localInspection&&!requireName())return;
+ if(!localInspection&&!requireName()){$('#toast').textContent='시작하려면 별명을 먼저 정해주세요 · 타이틀 화면에서 입력할 수 있어요';return;}
  document.body.classList.remove('survival-result');
  $('#overlay').classList.remove('survival-overlay');
  if(gameplayPaused()||maintenanceOn){showIntro();return;}
