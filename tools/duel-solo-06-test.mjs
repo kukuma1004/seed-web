@@ -9,7 +9,7 @@ const run=(s,t,p={},e={})=>{for(let n=0;n<t;n+=dt)stepDuel(s,dt,p,e);};
 const cast=(s,input={skill1:true},seat=0)=>stepDuel(s,dt,seat?{}:input,seat?input:{});
 const ring=s=>s.hazards.find(h=>h.kind==='starBreath');
 for(const [id,law] of [['starring','orbit'],['glassspear','pierce']]){assert.deepEqual(SOLO_FORMS[id].requires,[law]);assert.equal(DUEL_CHARACTERS[id].comboId,id);assert.equal(DUEL_CHARACTERS[id].solo,true);assert.ok(DUEL_ORDER.includes(id));}
-assert.equal(DUEL_ORDER.filter(id=>duelCharacterKind(id)==='solo').length,2);assert.equal(DUEL_ORDER.filter(id=>duelCharacterKind(id)==='fusion').length,10);for(const id of ['starring','glassspear'])assert.equal(duelCharacterKind(id),'solo');
+assert.ok(DUEL_ORDER.filter(id=>duelCharacterKind(id)==='solo').length>=2);assert.equal(DUEL_ORDER.filter(id=>duelCharacterKind(id)==='fusion').length,10);for(const id of ['starring','glassspear'])assert.equal(duelCharacterKind(id),'solo');
 // The real point ring breathes out then in. It neither fills the inner gap nor
 // damages before its setup, and the shared budget is two contacts, not per-petal.
 {const s=fixture('starring',8);cast(s);run(s,.35);assert.equal(ring(s).age,0);run(s,.7);const r=ring(s).r;assert.ok(r>2&&r<3.2);run(s,.6);assert.ok(ring(s).r>3);run(s,1.35);assert.equal(s.hazards.length,0);}

@@ -1,3 +1,4 @@
+import {DUEL_BATCH07,DUEL_BATCH07_KINDS,DUEL_BATCH07_SHOTS,batch07Melee,batch07Action,batch07Tick,batch07Ai,batch07DangerAi} from './seed-duel-batch07.js';
 import {DUEL_BATCH06,DUEL_BATCH06_KINDS,batch06Melee,batch06Action,batch06Tick,batch06Ai,batch06DangerAi,batch06InterceptShot} from './seed-duel-batch06.js';
 import {DUEL_BATCH05,batch05Melee,batch05Action,batch05Tick,batch05Ai,batch05DangerAi,batch05InterceptShot} from './seed-duel-batch05.js';
 // 2026-09-28 사용자: "서바이벌 프로젝트… 막기가 있어서 완전 컨트롤 싸움처럼 느껴졌고 캐릭마다 특징이 다양했다"
@@ -16,6 +17,7 @@ export const DUEL_CHARACTERS=Object.freeze({
  ...DUEL_BATCH03,
  ...DUEL_BATCH04,
  ...DUEL_BATCH05,
+ ...DUEL_BATCH07,
  ...DUEL_BATCH06,
  gravitymirror:Object.freeze({id:'gravitymirror',comboId:'gravitymirror',law:'gravity',name:'중력 거울 씨앗',role:'벽의 거울핵 · 회수 참격',hp:176,speed:4.15,reach:1.8,arc:1.15,comboReach:[1.55,1.9,2.2],comboArc:[1.25,.8,.62],damage:[9,10,14],cadence:.36,heavy:{damage:23,reach:2.15},parry:1.2,tile:7,ink:'#d5b1ff',
   skills:[skill('접힌 거울핵',5.6,'한 번 튕긴 자리에 당김 · 핵이 있으면 기술을 다시 눌러 접어요'),skill('거울 접기',5.8,'놓인 거울핵을 회수하며 좁은 길을 베어요 · 최대 한 번만')],ult:skill('거울의 골짜기',0,'두 거울핵을 차례로 날려요 · 두 준비 동작 모두 끊을 수 있어요'),
@@ -84,7 +86,7 @@ export const DUEL_CHARACTERS=Object.freeze({
  ,heart:Object.freeze({id:'heart',law:'gravity',name:'정원의 심장',role:'예고 중력장 · 유한 공전',hp:190,speed:4,reach:1.85,arc:1,damage:[10,10,15],cadence:.38,heavy:{damage:23,reach:2.1},parry:1,tile:7,ink:'#e5d18f',
   skills:[skill('심장의 자리',6.2,'상대 자리를 예고한 뒤 약하게 끌어요 · 피해는 한 번'),skill('정원의 공전',6.8,'돌 하나가 몸을 돌아 두 번까지 닿아요')],ult:skill('정원의 맥박',0,'예고 중력장과 돌 하나를 함께 펼쳐요'),blurb:'정원의 마지막 시험을 이기면 함께할 수 있어요. 예고한 자리는 따라오지 않아요.'})
 });
-export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear']);
+export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind']);
 export function duelCharacterKind(id){const c=DUEL_CHARACTERS[id];return c?.solo?'solo':c?.comboId?'fusion':DUEL_ORDER.slice(0,9).includes(id)?'base':'guest';}
 export function availableDuelCharacters(progress){return DUEL_ORDER.filter(id=>id!=='heart'||[0,1].includes(progress?.cleared?.s22?.losses));}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -92,7 +94,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function rnd(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 
-function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0,bladeCast:0,bladeCatch:0,wardCold:0,wardColdTime:0,collapseCharge:0,collapseChargeTime:0,collapseCast:0,thunderCharge:0,thunderChargeTime:0,thunderCast:0,bloomCast:0,bloomPetal:0,bloomPetalTime:0,bloomChillCd:0,crownCast:0,crownCharge:0,crownChargeTime:0,starCast:0,starBeat:0,starBeatTime:0,glassCast:0,glassFacet:0,glassFacetTime:0};}
+function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0,bladeCast:0,bladeCatch:0,wardCold:0,wardColdTime:0,collapseCharge:0,collapseChargeTime:0,collapseCast:0,thunderCharge:0,thunderChargeTime:0,thunderCast:0,bloomCast:0,bloomPetal:0,bloomPetalTime:0,bloomChillCd:0,crownCast:0,crownCharge:0,crownChargeTime:0,starCast:0,starBeat:0,starBeatTime:0,glassCast:0,glassFacet:0,glassFacetTime:0,fullCast:0,fullReady:0,fullReadyTime:0,rewindCast:0,rewindBeat:0,rewindBeatTime:0};}
 // practice: 콤보 연습(쓰러지지 않고 체력이 다시 차며, 시간이 흐르지 않는다).
 export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false,boss=false}={}){
  const s={seed:seed>>>0,practice:Boolean(practice),boss:Boolean(boss&&enemy==='heart'),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
@@ -220,7 +222,8 @@ function useSkill(s,f,i){
  const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team],fold=i===0&&(batch03Repress(s,f)||f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0));if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
  if(!fold)f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
  if(DUEL_BATCH03[f.char])batch03Action(s,f,i,batch03Context);
- if(DUEL_BATCH06[f.char])batch06Action(s,f,i,batch04Context);
+ if(DUEL_BATCH07[f.char])batch07Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH06[f.char])batch06Action(s,f,i,batch04Context);
  else if(DUEL_BATCH05[f.char])batch05Action(s,f,i,batch04Context);
  else if(DUEL_BATCH04[f.char])batch04Action(s,f,i,batch04Context);
  const actions=duelSkillActions(f,i);
@@ -262,7 +265,8 @@ function useSkill(s,f,i){
 function useUlt(s,f){
  const o=s.fighters[1-f.team],c=DUEL_CHARACTERS[f.char];if(f.meter<DUEL_RULES.meterMax||f.stun>0||f.char==='returnblade'&&s.shots.some(q=>q.kind==='returnSpear'&&q.owner===f.team&&q.life>0))return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
  if(DUEL_BATCH03[f.char])batch03Action(s,f,0,batch03Context,true);
- if(DUEL_BATCH06[f.char])batch06Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH07[f.char])batch07Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH06[f.char])batch06Action(s,f,0,batch04Context,true);
  else if(DUEL_BATCH05[f.char])batch05Action(s,f,0,batch04Context,true);
  else if(DUEL_BATCH04[f.char])batch04Action(s,f,0,batch04Context,true);
  if(f.char==='blastlance'){f.inv=.08;bloomLance(s,f,true);}
@@ -317,8 +321,8 @@ function act(s,f,input,dt){
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
- if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=(c.comboReach?.[step]??c.reach*(step===2?1.12:1))*batch03Reach(s,f),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});batch03Melee(s,f,{step,hit,guarded});batch04Melee(s,f,{step,hit,guarded});batch05Melee(s,f,{step,hit,guarded});batch06Melee(s,f,{step,hit,guarded});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
- if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach*batch03Reach(s,f,true),life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach*batch03Reach(s,f,true),c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});batch03Melee(s,f,{heavy:true,hit,guarded});batch04Melee(s,f,{heavy:true,hit,guarded});batch05Melee(s,f,{heavy:true,hit,guarded});batch06Melee(s,f,{heavy:true,hit,guarded});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
+ if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=(c.comboReach?.[step]??c.reach*(step===2?1.12:1))*batch03Reach(s,f),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});batch03Melee(s,f,{step,hit,guarded});batch04Melee(s,f,{step,hit,guarded});batch05Melee(s,f,{step,hit,guarded});batch06Melee(s,f,{step,hit,guarded});batch07Melee(s,f,{step,hit,guarded});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
+ if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach*batch03Reach(s,f,true),life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach*batch03Reach(s,f,true),c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});batch03Melee(s,f,{heavy:true,hit,guarded});batch04Melee(s,f,{heavy:true,hit,guarded});batch05Melee(s,f,{heavy:true,hit,guarded});batch06Melee(s,f,{heavy:true,hit,guarded});batch07Melee(s,f,{heavy:true,hit,guarded});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
  if(f.state==='dash'&&f.t>0){const speed=f.char==='comet'&&f.hitGap>0?1.8:13;f.x+=f.dx*speed*dt;f.y+=f.dy*speed*dt;if(f.char==='comet'){f.hitGap=Math.max(0,(f.hitGap||0)-dt);if((f.dashHits||0)<(f.hitLimit||2)&&f.hitGap<=0&&dist(f,o)<1.1){f.dashHits=(f.dashHits||0)+1;f.hitGap=.15;strike(s,f,o,f.dashDamage||11,{kind:'skill',stun:.12,knock:.22,dir:{x:f.dx,y:f.dy}});}}else if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,f.char==='bastion'?15:20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
  if(f.state==='dodge'&&f.t>0){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
@@ -365,7 +369,8 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  batch04Tick(s,dt,batch04Context);
  batch05Tick(s,dt,batch04Context);
  batch06Tick(s,dt,batch04Context);
- for(const q of s.shots){if(q.life<=0||['returnSpear','collapseSeed','thunderSpear'].includes(q.kind))continue;q.life-=dt;
+ batch07Tick(s,dt,batch04Context);
+ for(const q of s.shots){if(q.life<=0||DUEL_BATCH07_SHOTS.includes(q.kind)||['returnSpear','collapseSeed','thunderSpear'].includes(q.kind))continue;q.life-=dt;
   // 귀환 칼날: 잠깐 날아간 뒤 던진 씨앗에게 돌아온다(돌아오는 길에 한 번 더 벨 수 있다). 받으면 사라진다.
   if(q.kind==='blade'){q.age+=dt;if(q.age>=q.turn){const home=s.fighters[q.owner],v=norm(home.x-q.x,home.y-q.y);if(!q.back){q.back=true;q.hit.clear();q.pierce=1;}q.dx=v.x;q.dy=v.y;q.speed=12;if(Math.hypot(home.x-q.x,home.y-q.y)<.6)q.life=0;}}
   const shotX=q.x,shotY=q.y;q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
@@ -386,7 +391,7 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
   if(dist(q,target)<radius)strike(s,att,target,q.tipDamage,{kind:'skill',stun:.18,knock:.6,dir:{x:q.dx,y:q.dy}});
  }
  s.shots=s.shots.filter(q=>q.life>0);
- for(const h of s.hazards){if(DUEL_BATCH06_KINDS.includes(h.kind)||['bladeSend','frostWard','wardPunish','wardFan','collapseSend','collapseBurst','thunderSend','thunderRod','thunderArc','bloomPlant','bloomBud','bloomFan','crownOrbit','crownLink','crownDrop'].includes(h.kind))continue;h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+ for(const h of s.hazards){if(DUEL_BATCH07_KINDS.includes(h.kind)||DUEL_BATCH06_KINDS.includes(h.kind)||['bladeSend','frostWard','wardPunish','wardFan','collapseSend','collapseBurst','thunderSend','thunderRod','thunderArc','bloomPlant','bloomBud','bloomFan','crownOrbit','crownLink','crownDrop'].includes(h.kind))continue;h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
   if(h.kind==='emberMark'&&h.t>0){h.x=o.x;h.y=o.y;}
   if(h.kind==='mirrorTell'){
    if(owner.stun>0||owner.state!=='skill'||owner.mirrorCast!==h.cast){h.t=0;continue;}
@@ -470,6 +475,7 @@ export function duelAi(s,team,dt){
  // 방금 맞았으면(1.5초) 더 빨리·자주 막는다. 막아서 상대가 튕기면 바로 반격.
  if(f.hp<(ai.hp??f.hp))ai.hurtAt=s.time;ai.hp=f.hp;const wary=s.time-(ai.hurtAt??-9)<1.5,react=wary?cfg.react*.55:cfg.react,block=wary?Math.min(.95,cfg.block+.3):cfg.block;
  // These two solo adapters observe a spent swing before the shared forced jab.
+ if(f.stun<=0&&DUEL_BATCH07[f.char]&&batch07Ai(s,f,o,input,dt))return input;
  if(f.stun<=0&&DUEL_BATCH06[f.char]&&batch06Ai(s,f,o,input,dt))return input;
  if(o.state==='attack'&&o.cancelAt<0&&d<c.reach+.6&&f.stun<=0){ai.guarding=false;input.attack=true;return input;}
  if(threat&&d<(DUEL_CHARACTERS[o.char].reach+2.2)){ai.seen=(ai.seen||0)+dt;
@@ -478,7 +484,7 @@ export function duelAi(s,team,dt){
  else ai.seen=0;
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;
- if(batch06DangerAi(s,f,input,dt)||batch04DangerAi(s,f,input,dt)||batch05DangerAi(s,f,input,dt))return input;
+ if(batch07DangerAi(s,f,input,dt)||batch06DangerAi(s,f,input,dt)||batch04DangerAi(s,f,input,dt)||batch05DangerAi(s,f,input,dt))return input;
  if(DUEL_BATCH03[f.char]&&batch03Ai(s,f,o,input,dt))return input;
  if(DUEL_BATCH04[f.char]&&batch04Ai(s,f,o,input,dt))return input;
  if(DUEL_BATCH05[f.char]&&batch05Ai(s,f,o,input,dt))return input;
@@ -504,7 +510,7 @@ export function duelAi(s,team,dt){
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear'].includes(f.char)){input.ult=true;return input;}
+ const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind'].includes(f.char)){input.ult=true;return input;}
  // 기술2는 방어+회피 또는 방어 중 기존 +로 접근한다. 위 조건은 같은 시전·쿨다운을 사용한다.
  if(f.cd[0]<=0&&(f.char==='frostnet'&&d>1.5&&d<4.8&&!threat||f.char==='blastlance'&&d>3&&d<6.5&&!threat||f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  // Weavers set lanes from midrange, then close for melee in recovery. Staying

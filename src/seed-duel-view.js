@@ -1,3 +1,4 @@
+import {DUEL_BATCH07_AUDIO,DUEL_BATCH07_KINDS} from './seed-duel-batch07.js';
 import {DUEL_BATCH06_AUDIO} from './seed-duel-batch06.js';
 import {createDuelChordInput,DUEL_INPUT_KEYS} from './seed-duel-input.js';
 import {batch03Repress} from './seed-duel-batch03.js';
@@ -17,7 +18,7 @@ import './seed-duel.css';
 // - 카메라는 두 씨앗을 따라가며 가까우면 당겨 보고 멀면 물러난다(경기장 밖은 보여 주지 않는다).
 // - 캐릭터마다 무기(창·불꽃 주먹·수정 칼·중력 구슬)를 들고 1·2·3타·강공격의 궤적과 몸동작이 다르다.
 const BASE=import.meta.env.BASE_URL;
-const SOUND={...DUEL_BATCH06_AUDIO,bloomLand:['shotFrost',{pitch:.9}],bloomFold:['shotFrost',{pitch:1.2}],bloomChill:['reflect',{pitch:.9}],bloomShatter:['burstHit',{pitch:1.25}],crownLink:['chain',{pitch:1.1}],crownBlock:['reflect',{pitch:1.2}],crownDrop:['shotPierce',{pitch:.9}],collapseLaunch:['shotGravity',{pitch:.7}],collapseStop:['bossWarning',{pitch:1.15}],collapseBurst:['burstHit',{pitch:.8}],thunderLaunch:['shotPierce',{pitch:1.2}],thunderGround:['chain',{pitch:.8}],thunderArc:['chain',{pitch:1.3}],bladeSend:['shotPierce',{pitch:1.1}],bladeRecall:['shot',{pitch:.8}],bladeCatch:['reflect',{pitch:1.3}],wardBlock:['shotFrost',{pitch:.75}],hit:['hit'],heavyHit:['burstHit',{pitch:.85}],bloomLaunch:['shotPierce',{pitch:.85}],frostWeave:['shotFrost',{pitch:1.15}],mirrorLaunch:['shotGravity',{pitch:.85}],mirrorBounce:['reflect',{pitch:.8}],mirrorFold:['shotPierce',{pitch:.75}],emberRelay:['chain',{pitch:1.05}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
+const SOUND={...DUEL_BATCH07_AUDIO,...DUEL_BATCH06_AUDIO,bloomLand:['shotFrost',{pitch:.9}],bloomFold:['shotFrost',{pitch:1.2}],bloomChill:['reflect',{pitch:.9}],bloomShatter:['burstHit',{pitch:1.25}],crownLink:['chain',{pitch:1.1}],crownBlock:['reflect',{pitch:1.2}],crownDrop:['shotPierce',{pitch:.9}],collapseLaunch:['shotGravity',{pitch:.7}],collapseStop:['bossWarning',{pitch:1.15}],collapseBurst:['burstHit',{pitch:.8}],thunderLaunch:['shotPierce',{pitch:1.2}],thunderGround:['chain',{pitch:.8}],thunderArc:['chain',{pitch:1.3}],bladeSend:['shotPierce',{pitch:1.1}],bladeRecall:['shot',{pitch:.8}],bladeCatch:['reflect',{pitch:1.3}],wardBlock:['shotFrost',{pitch:.75}],hit:['hit'],heavyHit:['burstHit',{pitch:.85}],bloomLaunch:['shotPierce',{pitch:.85}],frostWeave:['shotFrost',{pitch:1.15}],mirrorLaunch:['shotGravity',{pitch:.85}],mirrorBounce:['reflect',{pitch:.8}],mirrorFold:['shotPierce',{pitch:.75}],emberRelay:['chain',{pitch:1.05}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
 // 바닥을 구워 둘 세계 범위와 해상도(세계 1칸 = 40px).
 const WX0=-6,WY0=-6,WX1=41,WY1=27,BAKE=40;
 // 버튼 그림: 모험의 씨앗 동작 그림(adventure/seed-combat-v1, 4×2칸)과 이펙트 소재(vfx-atlas, 4×4칸).
@@ -30,7 +31,7 @@ const MOTION=DUEL_ORDER;
 // Native 1774×887 frostnet sheet has deliberate safety margins; trim source rectangles
 // at draw time so different row baselines do not make the weaver jump or shrink.
 const FROST_POSES=[[102,125,292,268],[52,149,361,245],[62,119,319,278],[29,145,337,250],[102,59,287,293],[53,83,360,264],[75,77,290,271],[32,78,307,275]];
-const FUSION_POSES={...{"starring":[[95,78,321,362],[50,96,412,344],[86,90,339,350],[33,93,445,347],[96,60,319,380],[67,124,377,316],[75,123,362,317],[70,132,372,308]],"glassspear":[[133,92,246,348],[62,172,388,268],[67,164,378,276],[64,185,384,255],[115,114,282,326],[32,173,448,267],[107,137,298,303],[81,182,349,258]]},...{"frostbloom":[[78,132,355,308],[38,143,436,297],[94,103,324,337],[49,150,413,290],[100,83,311,357],[59,152,393,288],[92,163,328,277],[77,119,358,321]],"stormcrown":[[101,108,309,332],[52,136,408,304],[57,123,397,317],[37,131,437,309],[95,85,321,355],[82,133,347,307],[91,124,329,316],[77,153,358,287]]},...{"collapse":[[120,128,272,312],[56,136,399,304],[106,136,299,304],[46,157,420,283],[85,146,341,294],[82,134,348,306],[108,125,295,315],[83,139,345,301]],"thunderlance":[[136,86,240,354],[50,235,411,205],[60,122,391,318],[46,230,419,210],[104,148,304,292],[34,221,444,219],[116,165,280,275],[100,138,311,302]]},...{"returnblade":[[123,103,266,337],[68,212,376,228],[38,231,436,209],[61,235,389,205],[111,141,289,299],[76,172,360,268],[109,205,294,235],[109,210,294,230]],"frostguard":[[99,175,314,265],[74,189,364,251],[90,112,331,328],[83,166,346,274],[82,199,347,241],[88,98,336,342],[98,187,316,253],[92,166,328,274]]},gravitymirror:[[104,167,304,273],[62,175,387,265],[96,180,319,260],[60,174,392,266],[116,119,279,321],[66,171,380,269],[116,188,279,252],[83,161,345,279]],chainburst:[[93,167,325,273],[64,184,383,256],[79,142,353,298],[76,180,359,260],[86,114,339,326],[53,162,406,278],[85,187,341,253],[80,121,351,319]]};
+const FUSION_POSES={...{"fullbloom":[[117,82,277,358],[54,102,404,338],[85,113,342,327],[53,118,406,322],[100,83,312,357],[65,137,382,303],[104,124,304,316],[74,144,364,296]],"rewind":[[88,137,335,303],[53,156,405,284],[87,136,337,304],[57,129,397,311],[114,97,284,343],[45,149,422,291],[109,126,293,314],[80,81,351,359]]},...{"starring":[[95,78,321,362],[50,96,412,344],[86,90,339,350],[33,93,445,347],[96,60,319,380],[67,124,377,316],[75,123,362,317],[70,132,372,308]],"glassspear":[[133,92,246,348],[62,172,388,268],[67,164,378,276],[64,185,384,255],[115,114,282,326],[32,173,448,267],[107,137,298,303],[81,182,349,258]]},...{"frostbloom":[[78,132,355,308],[38,143,436,297],[94,103,324,337],[49,150,413,290],[100,83,311,357],[59,152,393,288],[92,163,328,277],[77,119,358,321]],"stormcrown":[[101,108,309,332],[52,136,408,304],[57,123,397,317],[37,131,437,309],[95,85,321,355],[82,133,347,307],[91,124,329,316],[77,153,358,287]]},...{"collapse":[[120,128,272,312],[56,136,399,304],[106,136,299,304],[46,157,420,283],[85,146,341,294],[82,134,348,306],[108,125,295,315],[83,139,345,301]],"thunderlance":[[136,86,240,354],[50,235,411,205],[60,122,391,318],[46,230,419,210],[104,148,304,292],[34,221,444,219],[116,165,280,275],[100,138,311,302]]},...{"returnblade":[[123,103,266,337],[68,212,376,228],[38,231,436,209],[61,235,389,205],[111,141,289,299],[76,172,360,268],[109,205,294,235],[109,210,294,230]],"frostguard":[[99,175,314,265],[74,189,364,251],[90,112,331,328],[83,166,346,274],[82,199,347,241],[88,98,336,342],[98,187,316,253],[92,166,328,274]]},gravitymirror:[[104,167,304,273],[62,175,387,265],[96,180,319,260],[60,174,392,266],[116,119,279,321],[66,171,380,269],[116,188,279,252],[83,161,345,279]],chainburst:[[93,167,325,273],[64,184,383,256],[79,142,353,298],[76,180,359,260],[86,114,339,326],[53,162,406,278],[85,187,341,253],[80,121,351,319]]};
 const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='skill'?(f.char==='blastlance'?(f.t>f.total-.45?4:5):f.char==='frostnet'?(f.t>f.total-.55?4:5):(f.t>.12?4:5)):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function mountSeedDuel({host=document.body,audio,storage=localStorage,owner='guest',practice=false,initialCharacter='pierce',canSave=()=>true,onProgress=()=>{},onSaveAccount=null,onResult=()=>'',onRanking=()=>{},onClose=()=>{}}={}){
@@ -222,6 +223,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   if(!s)return;
   ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
   for(const h of s.hazards){const ink=DUEL_CHARACTERS[s.fighters[h.owner].char].ink;
+   if(DUEL_BATCH07_KINDS.includes(h.kind)){batch07Hazard(h,ink);continue;}
    if(['starBreath','starFold','glassLine','glassWithdraw'].includes(h.kind)){batch06Hazard(h,ink);continue;}
    if(['bloomPlant','bloomBud','bloomFan','crownOrbit','crownLink','crownDrop'].includes(h.kind)){batch05Hazard(h,ink);continue;}
    if(['collapseSend','collapseBurst','thunderSend','thunderRod','thunderArc'].includes(h.kind)){batch04Hazard(h,ink);continue;}
@@ -263,6 +265,12 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
    const a=Math.atan2(h.dy,h.dx),r=h.r+.35;ctx.fillStyle='#b8e7fa18';ctx.strokeStyle=ink;ctx.lineWidth=.055;ctx.setLineDash(h.arm>0?[.2,.15]:[]);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.arc(h.x,h.y,r,a-Math.PI/3,a+Math.PI/3);ctx.closePath();ctx.fill();ctx.stroke();
   }
   ctx.restore();
+ }
+ function batch07Hazard(h,ink){
+  const team=h.owner===0?ink:'#ff9c8b',edge=h.owner===0?'#273d31':'#873c36';ctx.save();ctx.strokeStyle=edge;ctx.lineWidth=.085;ctx.setLineDash(h.arm>0?[.18,.13]:[]);
+  if(h.kind==='fullBed'){ctx.strokeStyle=team;ctx.beginPath();ctx.arc(h.x,h.y,.44,0,Math.PI*2);ctx.stroke();vfx.fx(ctx,'petal',h.x,h.y-.2,.46,{color:team,alpha:h.ready?1:.5,rotation:0});}
+  else if(h.kind==='fullFork'){for(const a of h.rays){ctx.lineWidth=1;ctx.strokeStyle=edge;ctx.beginPath();ctx.moveTo(h.x+Math.cos(a)*h.skipR,h.y+Math.sin(a)*h.skipR);ctx.lineTo(h.x+Math.cos(a)*3.5,h.y+Math.sin(a)*3.5);ctx.stroke();ctx.lineWidth=.045;ctx.strokeStyle=team;ctx.stroke();}ctx.setLineDash([]);ctx.lineWidth=.05;ctx.beginPath();ctx.arc(h.x,h.y,h.skipR,0,Math.PI*2);ctx.stroke();}
+  else {ctx.lineCap='round';ctx.lineWidth=2*(h.r+.35);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(h.endX,h.endY);ctx.stroke();ctx.strokeStyle=team;ctx.lineWidth=.045;ctx.stroke();}ctx.restore();
  }
  function batch06Hazard(h,ink){
   const team=h.owner===0?ink:'#ff9c8b',edge=h.owner===0?'#203e36':'#873c36';ctx.save();ctx.strokeStyle=edge;ctx.lineWidth=.08;
@@ -309,6 +317,14 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   ctx.restore();
  }
  function newProjectile(q){
+  if(['fullCore','fullPetal','rewindLeaf'].includes(q.kind)){
+   const ink=q.owner===0?(q.kind==='rewindLeaf'?'#d4bc69':'#f4a6c4'):'#ff9c8b',edge=q.owner===0?'#253d32':'#873c36';ctx.save();
+   if(q.kind==='rewindLeaf'&&q.pause>0){const home=s.fighters[q.owner],end=q.mode==='back'?home:{x:q.x+q.outX*5,y:q.y+q.outY*5};ctx.setLineDash([.18,.13]);ctx.strokeStyle=edge;ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(q.x,q.y);ctx.lineTo(end.x,end.y);ctx.stroke();ctx.strokeStyle=ink;ctx.lineWidth=.05;ctx.stroke();ctx.setLineDash([]);}
+   ctx.translate(q.x,q.y-.45);ctx.rotate(q.kind==='rewindLeaf'?clock*8:Math.atan2(q.dy,q.dx));ctx.fillStyle=ink;ctx.strokeStyle=edge;ctx.lineWidth=.07;
+   if(q.kind==='rewindLeaf'){ctx.beginPath();ctx.moveTo(-.36,-.19);ctx.quadraticCurveTo(.48,-.3,.4,.25);ctx.quadraticCurveTo(.1,-.1,-.36,-.19);ctx.closePath();}
+   else{ctx.beginPath();ctx.ellipse(0,0,q.kind==='fullCore'?.28:.18,q.kind==='fullCore'?.19:.12,0,0,Math.PI*2);}ctx.fill();ctx.stroke();ctx.restore();return true;
+  }
+
   if(q.kind==='collapseSeed'){ctx.save();ctx.fillStyle='#d7a0fa12';ctx.strokeStyle='#31213ecc';ctx.lineWidth=.075;ctx.beginPath();ctx.arc(q.x,q.y,q.r,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#d7a0fa88';ctx.lineWidth=.035;ctx.stroke();ctx.translate(q.x,q.y-.6);ctx.rotate(clock*.9);ctx.fillStyle='#36213e';ctx.strokeStyle='#ffc98c';ctx.lineWidth=.065;ctx.beginPath();ctx.arc(0,0,.27,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.beginPath();ctx.moveTo(-.17,-.08);ctx.lineTo(.05,.02);ctx.lineTo(-.05,.19);ctx.stroke();ctx.restore();return true;}
   if(q.kind==='thunderSpear'){ctx.save();ctx.translate(q.x,q.y-.65);ctx.rotate(Math.atan2(q.dy,q.dx));ctx.strokeStyle=q.owner===0?'#284633':'#873c30';ctx.lineWidth=.1;ctx.beginPath();ctx.moveTo(-.55,0);ctx.lineTo(.6,0);ctx.moveTo(.3,-.17);ctx.lineTo(.6,0);ctx.lineTo(.3,.17);ctx.stroke();ctx.strokeStyle='#ffe9aa';ctx.lineWidth=.055;ctx.stroke();ctx.restore();return true;}
 
@@ -386,6 +402,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   ctx.strokeStyle=f.team===0?'#8fd3ff':'#ff8a7a';ctx.lineWidth=.07;ctx.beginPath();ctx.ellipse(f.x,f.y+.05,.8,.33,0,0,Math.PI*2);ctx.stroke();
   {const tf=MOTION.includes(f.char)&&assets['motion-'+f.char]?.naturalWidth>0?motionFrame(f):-1;for(const [i,g] of trails[f.team].entries())body(f,g.x,g.y,{alpha:g.life*1.6*(i/trails[f.team].length),sx:1.05,flash:.5,frame:tf});}
   // Three compact cold pips expose earned counter readiness, not a permanent shield.
+  if(f.char==='fullbloom'||f.char==='rewind'){ctx.fillStyle=(f.char==='fullbloom'?f.fullReady:f.rewindBeat)?DUEL_CHARACTERS[f.char].ink:'#21373c';ctx.beginPath();ctx.arc(f.x,f.y-2.15,.065,0,Math.PI*2);ctx.fill();}
   if(f.char==='starring'){ctx.fillStyle=f.starBeat?'#c7edbd':'#21373c';ctx.beginPath();ctx.arc(f.x,f.y-2.15,.065,0,Math.PI*2);ctx.fill();}
   if(f.char==='glassspear')for(let k=0;k<2;k++){ctx.fillStyle=k<(f.glassFacet||0)?'#d5eeff':'#21373c';ctx.beginPath();ctx.arc(f.x+(k-.5)*.16,f.y-2.15,.06,0,Math.PI*2);ctx.fill();}
   if(f.char==='frostbloom'){ctx.fillStyle=f.bloomPetal?'#f6c6df':'#21373c';ctx.beginPath();ctx.arc(f.x,f.y-2.15,.065,0,Math.PI*2);ctx.fill();}
@@ -436,6 +453,8 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  }
  function effect(e){const t=1-e.life/e.max,ink=e.ink||'#fce6af',fade=1-t;
   if(e.type==='swing'){const side=e.step===1?-1:1,big=e.step===2;
+   if(e.char==='fullbloom'){arcSlash(e,t,{r:e.r,width:.17,side,spread:e.step===1?1.65:1.35,ink:'#f4a6c4'});return;}
+   if(e.char==='rewind'){arcSlash(e,t,{r:e.r,width:.12,side,spread:e.step===2?.7:1.2,ink:'#d4bc69'});return;}
    if(e.char==='starring'){arcSlash(e,t,{r:e.r,width:.16,side,spread:e.step===2?1.5:1.1,ink:'#c7edbd'});return;}
    if(e.char==='glassspear'){vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*e.r,e.y-.8+Math.sin(e.angle)*e.r*.78,.16,{color:ink,alpha:fade});return;}
    if(e.char==='frostbloom'){arcSlash(e,t,{r:e.r,width:.2,side,spread:e.step===1?1.2:.8,ink:'#c7eaf8'});if(big)vfx.fx(ctx,'petal',e.x+Math.cos(e.angle)*e.r*.6,e.y-.8+Math.sin(e.angle)*e.r*.5,.3,{color:'#f5c9df',alpha:fade});return;}
@@ -461,6 +480,8 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
    if(NEW_DUEL.includes(e.char))for(let i=0;i<3;i++){const a=e.angle+(i-1)*.5,shape={thorn:'petal',gale:'crescent',bastion:'shard',lotus:'petal',prism:'shard'}[e.char]||'star';vfx.fx(ctx,shape,e.x+Math.cos(a)*e.r*(.55+t*.35),e.y-.8+Math.sin(a)*e.r*.5,.65*fade,{color:ink,alpha:fade,rotation:a+t*2});}
    if(big)vfx.fx(ctx,'shock',e.x+Math.cos(e.angle)*e.r*.8,e.y-.6+Math.sin(e.angle)*e.r*.6,1+t*2.4,{color:ink,alpha:fade*.8});return;}
   if(e.type==='heavySwing'){const fx=e.x+Math.cos(e.angle)*e.r*.8,fy=e.y-.6+Math.sin(e.angle)*e.r*.6;
+   if(e.char==='fullbloom'){vfx.fx(ctx,'petal',fx,fy,.65,{color:'#f4a6c4',alpha:fade,rotation:e.angle});return;}
+   if(e.char==='rewind'){arcSlash(e,t,{r:e.r,width:.2,side,spread:1.1,ink:'#d4bc69'});return;}
    if(e.char==='starring'){vfx.fx(ctx,'ring',fx,fy,.8,{color:'#c7edbd',alpha:fade});return;}
    if(e.char==='glassspear'){vfx.beam(ctx,'trail',e.x,e.y-.8,fx,fy,.28,{color:'#d5eeff',alpha:fade});vfx.fx(ctx,'shard',fx,fy,.4,{color:ink,alpha:fade,rotation:e.angle});return;}
    if(e.char==='frostbloom'){vfx.fx(ctx,'petal',fx,fy,.7,{color:'#f5c9df',alpha:fade});vfx.fx(ctx,'shard',fx,fy,.6,{color:ink,alpha:fade});return;}

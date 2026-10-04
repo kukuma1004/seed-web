@@ -302,6 +302,40 @@
         }
       }
     },
+    "seedExpansionRelease": {
+      ".read": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous'",
+      ".write": false,
+      "$act": {
+        ".validate": "($act == 'crosswind' || $act == 'crystalGorge') && newData.isBoolean()"
+      }
+    },
+    "seedExpansionSaves": {
+      "$uid": {
+        "$act": {
+          ".read": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && ($act == 'crosswind' || $act == 'crystalGorge') && root.child('seedExpansionRelease').child($act).val() == true",
+          ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && ($act == 'crosswind' || $act == 'crystalGorge') && root.child('seedExpansionRelease').child($act).val() == true && newData.exists()",
+          ".validate": "newData.hasChildren(['version', 'ownerUid', 'act', 'revision', 'checkpoint'])",
+          "version": {
+            ".validate": "newData.val() == 1"
+          },
+          "ownerUid": {
+            ".validate": "newData.val() == $uid"
+          },
+          "act": {
+            ".validate": "newData.val() == $act"
+          },
+          "revision": {
+            ".validate": "newData.isNumber() && newData.val() <= 1000000000 && ((!data.exists() && newData.val() == 1) || (data.exists() && newData.val() == data.val() + 1))"
+          },
+          "checkpoint": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
+    },
     "seedUsers": {
       "$uid": {
         ".read": "auth != null && auth.uid == $uid",
@@ -389,7 +423,7 @@
           },
           "cleared": {
             "$stage": {
-              ".validate": "$stage.matches(/^s(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34)$/) && newData.hasChildren(['losses','at']) && (newData.child('losses').val() == 0 || newData.child('losses').val() == 1) && newData.child('at').isNumber() && newData.child('at').val() >= 0 && newData.child('at').val() <= now + 300000",
+              ".validate": "$stage.matches(/^s(1|2|3|4|5|6|7|8|9|10|11|12|13|14|15|16|17|18|19|20|21|22|23|24|25|26|27|28|29|30|31|32|33|34|35|36)$/) && newData.hasChildren(['losses','at']) && (newData.child('losses').val() == 0 || newData.child('losses').val() == 1) && newData.child('at').isNumber() && newData.child('at').val() >= 0 && newData.child('at').val() <= now + 300000",
               "losses": {
                 ".validate": "newData.val() == 0 || newData.val() == 1"
               },
@@ -760,10 +794,10 @@
             ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 16"
           },
           "score": {
-            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3423300 && newData.val() % 1 == 0"
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 3623300 && newData.val() % 1 == 0"
           },
           "storyStage": {
-            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 34 && newData.val() % 1 == 0"
+            ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 36 && newData.val() % 1 == 0"
           },
           "wins": {
             ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 2 && newData.val() % 1 == 0"
