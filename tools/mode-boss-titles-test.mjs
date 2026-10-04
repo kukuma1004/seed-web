@@ -6,6 +6,23 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {settleSurvivalTitles} from '../src/survival-save.js';
 const data=new Map(),store={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
+// Public expansion campaigns use a saved UUID, not an inspector entry id or a
+// newly generated id on every restore. The same-run third clear is exact.
+{
+ const rows=new Map(),storage={getItem:k=>rows.get(k)||null,setItem:(k,v)=>rows.set(k,v)};
+ for(const boss of ['crosswindKeeper','crystalGardener'])for(let ordinal=1;ordinal<=3;ordinal++){
+  const event={mode:'journey',runId:'campaign-uuid',boss,ordinal};
+  const earned=recordModeBossVictory(storage,event);assert(earned.saved&&earned.counted);assert.equal(earned.wins,ordinal);
+  assert.equal(earned.awards.includes(boss==='crosswindKeeper'?'crosswindclear':'crystalclear'),ordinal===3);
+  assert.equal(recordModeBossVictory(storage,event).counted,false);
+ }
+ const local=readAccountProfile(storage),merged=mergeBossRuns(local.bossRuns,local.bossRuns);
+ assert.equal(merged['journey:campaign-uuid'].crosswindKeeper,3);assert.equal(merged['journey:campaign-uuid'].crystalGardener,3);
+ const before=JSON.stringify([...rows]);
+ for(const runId of ['campaign.bad','../other','x'.repeat(91)])assert.equal(recordModeBossVictory(storage,{mode:'journey',runId,boss:'crosswindKeeper',ordinal:4}).saved,false);
+ assert.equal(recordModeBossVictory(storage,{mode:'journey',runId:'practice-uuid',boss:'crosswindKeeper',ordinal:1,practice:true}).saved,false);
+ assert.equal(JSON.stringify([...rows]),before);
+}
 writeAccountProfile(store,{austinWins:8});
 const event={mode:'defense',runId:'same-run',boss:'austin',ordinal:1};
 let r=recordModeBossVictory(store,event);assert.deepEqual(r.awards,['austin']);assert.equal(r.wins,9);
@@ -29,7 +46,7 @@ for(const boss of ['austin','alwaysbeginner','tempestcarrier']){
  assert.equal(recordModeBossVictory(store,attempt).counted,false);
  assert.equal(readAccountProfile(store)[boss==='austin'?'austinWins':boss==='alwaysbeginner'?'alwaysWins':'johanWins'],countBefore+1);
 }
-for(const id of ['journey:r','adventure:','adventure:a/b','adventure:'+ 'x'.repeat(91)])assert.equal(Object.keys(normalizeBossRuns({[id]:{at:1,austin:1}})).length,0);
+for(const id of ['unknown:r','journey:','journey:a/b','journey:'+ 'x'.repeat(91),'adventure:','adventure:a/b','adventure:'+ 'x'.repeat(91)])assert.equal(Object.keys(normalizeBossRuns({[id]:{at:1,austin:1}})).length,0);
 assert.equal(Object.keys(normalizeBossRuns(Object.fromEntries(Array.from({length:100},(_,i)=>['defense:r'+i,{at:i,austin:1}])))).length,64);
 const broken={getItem:()=>null,setItem:()=>{throw Error('quota');}};assert(!recordModeBossVictory(broken,event).saved);
 // Execute the real survival retry bridge: a failed write remains in its

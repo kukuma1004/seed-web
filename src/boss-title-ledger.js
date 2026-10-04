@@ -1,4 +1,4 @@
-export const validBossRunId=id=>typeof id==='string'&&/^(defense|survival|adventure):[\w-]{1,90}$/.test(id);
+export const validBossRunId=id=>typeof id==='string'&&/^(defense|survival|adventure|journey):[\w-]{1,90}$/.test(id);
 export function normalizeBossRuns(value){
  if(!value||typeof value!=='object'||Array.isArray(value))return {};
  return Object.fromEntries(Object.entries(value).filter(([id,r])=>validBossRunId(id)&&r&&typeof r==='object')
