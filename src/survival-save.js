@@ -5,6 +5,7 @@ export const survivalRecordId=s=>s?JSON.stringify(s):'none';
 export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.version===1&&s.ended===true&&typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0);}
 const forbidden=new Set(['__proto__','prototype','constructor']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e12;
+import {validSurvivalExpansionCheckpoint} from './survival-expansion-save.js';
 export function captureCombatFields(actor){
  const out={};
  for(const [key,value] of Object.entries(actor)){
@@ -29,7 +30,9 @@ export function validSurvivalSave(s){
  if(s?.version!==1||s.ended||typeof s.id!=='string'||!Number.isInteger(s.revision)||s.revision<1)return false;
  const t=s.session,p=s.progress;
  if(!t||t.lab||t.benchmark||t.finished||!p||!finite(p.hp)||p.hp<=0)return false;
- if(!Number.isInteger(t.act)||t.act<0||t.act>2||!Number.isInteger(t.lap)||t.lap<0)return false;
+ if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3)return false;
+ if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
+ if(t.act>=3&&!validSurvivalExpansionCheckpoint(s.expansion,t.act,t.lap))return false;
  if(!finite(t.time)||t.time<0||!finite(t.legStartedAt)||t.legStartedAt>t.time||!finite(t.rngState))return false;
  if(!Array.isArray(s.enemies)||s.enemies.length>301||!Array.isArray(s.hostiles)||s.hostiles.length>192)return false;
  if(!s.player?.position?.every(finite)||s.player.position.length!==3)return false;

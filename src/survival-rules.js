@@ -17,20 +17,23 @@ export const SURVIVAL_SLIDE=Object.freeze({speed:18,cooldown:1.8});
 const bounded=(value,limit,fallback=0)=>Number.isFinite(value)?Math.max(0,Math.min(limit,value)):fallback;
 const count=(value,limit=1000000)=>Math.floor(bounded(value,limit));
 
-export function createSurvivalSession(seed=1){
+export const survivalActCount=session=>session?.actCount===5?5:3;
+export function createSurvivalSession(seed=1,{actCount=3}={}){
  const initial=Number.isFinite(seed)?seed>>>0:1;
- return {seed:initial,rngState:initial,time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
+ return {seed:initial,rngState:initial,...(actCount===5?{actCount:5}:{}),time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
 }
 
 export const SURVIVAL_ACTS=Object.freeze([
  Object.freeze({name:'잠든 정원',boss:'정시파이터 오스틴',type:'austin',music:'garden'}),
  Object.freeze({name:'별빛 야구장',boss:'항상초심',type:'alwaysbeginner',music:'stadium'}),
- Object.freeze({name:'폭풍 항로',boss:'폭풍비행사 요한',type:'tempestcarrier',music:'skyway'})
+ Object.freeze({name:'폭풍 항로',boss:'폭풍비행사 요한',type:'tempestcarrier',music:'skyway'}),
+ Object.freeze({name:'횡풍의 항로',boss:'횡풍의 수호자',type:'crosswindKeeper',music:'skyway',expansion:'crosswind',released:false}),
+ Object.freeze({name:'무너지는 수정 협곡',boss:'수정의 정원사',type:'crystalGardener',music:'garden',expansion:'crystalGorge',released:false})
 ]);
-export const survivalAct=session=>SURVIVAL_ACTS[Math.min(2,count(session?.act,2))];
+export const survivalAct=session=>SURVIVAL_ACTS[count(session?.act,survivalActCount(session)-1)];
 export const survivalActTime=session=>Math.max(0,(session?.time||0)-(session?.legStartedAt||0));
 export function survivalScaling(session){
- const act=count(session?.act,2),lap=count(session?.lap,1000);
+ const act=count(session?.act,survivalActCount(session)-1),lap=count(session?.lap,1000);
  // First 30 levels are unscaled. Health follows held levels, never measured DPS
  // or kills. Boss growth is gentler; speed/damage retain circuit-only bounds.
  const excess=Math.max(0,count(session?.buildLevel)-30);
@@ -41,7 +44,7 @@ export function survivalScaling(session){
 // inventory, score and choice progress. The world is cleared at this boundary.
 export function advanceSurvivalAct(session){
  if(!session?.won||session.finished)return false;
- session.act=(count(session.act,2)+1)%3;
+ session.act=(count(session.act,survivalActCount(session)-1)+1)%survivalActCount(session);
  if(session.act===0){session.lap=count(session.lap)+1;session.lapStartedAt=session.time;}
  session.legStartedAt=session.time;session.bossSpawned=false;session.won=false;
  session.transitionTime=0;session.spawnTimer=2;session.supplyInterval=SURVIVAL.supplyInterval;session.nextSupply=session.time+SURVIVAL.supplyInterval;
@@ -84,7 +87,7 @@ const PHASES=Object.freeze([
 
 export function survivalPressure(seconds){
  const session=typeof seconds==='object'?seconds:null;
- const time=bounded(session?survivalActTime(session):seconds,86400),act=count(session?.act,2),lap=count(session?.lap,1000);
+ const time=bounded(session?survivalActTime(session):seconds,86400),act=count(session?.act,survivalActCount(session)-1),lap=count(session?.lap,1000);
  const phase=Math.min(7,Math.max(lap?Math.min(7,5+lap):act,Math.floor(time/(SURVIVAL.duration/PHASES.length))));
  // Completed builds enter the next circuit intact: ordinary enemies must not
  // return to tutorial durability/composition every time the act timer resets.
@@ -92,8 +95,9 @@ export function survivalPressure(seconds){
  if(time>=SURVIVAL.duration)return {cap:SURVIVAL.maxBossAdds,spawnInterval:SURVIVAL.bossSpawnInterval,hpScale:Math.max(3.45,1+strength*.35),speedScale:1.49,label:survivalAct(session).boss,formation:'boss',formationLabel:'최종 결전',relief:false};
  const rules=PHASES[phase],beat=time%60,relief=beat>=60-SURVIVAL.reliefDuration;
  const opening=time<8&&!lap;
- const formation=relief?'relief':opening?'column':beat<25?'pincer':'surround';
- const formationLabel=relief?'숨 고르기':formation==='column'?'한쪽에서 접근':formation==='pincer'?'양쪽 압박':'사방 포위';
+ const expansion=act===3?'crosswind':act===4?'crystal':null;
+ const formation=relief?'relief':expansion|| (opening?'column':beat<25?'pincer':'surround');
+ const formationLabel=relief?'숨 고르기':formation==='crosswind'?'횡풍 편대 · 앞뒤 돌파':formation==='crystal'?'수정 틈새 · 길을 열어 생존':formation==='column'?'한쪽에서 접근':formation==='pincer'?'양쪽 압박':'사방 포위';
  return {cap:relief?Math.floor(rules.cap*.7):rules.cap,spawnInterval:opening?1:relief?.65:rules.spawnInterval,hpScale:1+strength*.35,speedScale:1+Math.min(5,strength)*.07,label:relief?'숨 고르기':rules.label,formation,formationLabel,relief};
 }
 
@@ -119,7 +123,7 @@ export function survivalSpawn(session,player,arena=SURVIVAL.arena){
  const pressure=survivalPressure(session),index=count(session.spawnIndex),packet=Math.floor(index/SURVIVAL.spawnBatch);
  const turn=(Math.floor(survivalActTime(session)/60)+(session.seed>>>0)%4)%4;
  const sides=pressure.formation==='column'||pressure.relief?1:pressure.formation==='pincer'?2:4;
- const preferred=(turn+(sides===1?0:sides===2?(packet%2)*2:packet%4))%4;
+ const preferred=pressure.formation==='crosswind'?(packet%4===3?2:0):pressure.formation==='crystal'?(packet%2?1:3):(turn+(sides===1?0:sides===2?(packet%2)*2:packet%4))%4;
  for(let attempt=0;attempt<16;attempt++){
   const side=(preferred+Math.floor(attempt/4))%4;
   const angle=side*Math.PI/2,forward=SURVIVAL.arrivalDistance+random(session)*3;
@@ -134,7 +138,7 @@ export function survivalSpawn(session,player,arena=SURVIVAL.arena){
  }
  session.spawnIndex=index+1;
  const time=bounded(survivalActTime(session),86400),roll=random(session);
- const lap=count(session.lap,1000),act=count(session.act,2);
+ const lap=count(session.lap,1000),act=count(session.act,survivalActCount(session)-1);
  const bruteChance=lap?Math.min(.25,.14+lap*.03+act*.01+Math.floor(time/60)*.015):time>=45?Math.min(.12,.05+Math.floor(time/60)*.01):0;
  const runnerChance=lap?Math.min(.26,.18+lap*.02+act*.01+Math.floor(time/60)*.01):time>=15?Math.min(.15,.08+Math.floor(time/60)*.01):0;
  const kind=roll<bruteChance?'brute':roll<bruteChance+runnerChance?'runner':'swarm';
@@ -170,7 +174,7 @@ export function settleSurvivalKill(session,{boss=false}={}){
  session.kills=count(session.kills+1);
  if(boss){
   session.won=true;session.transitionTime=0;session.bossesDefeated=count(session.bossesDefeated)+1;
-  if(session.act===2){session.completedLaps=count(session.completedLaps)+1;const duration=session.time-(session.lapStartedAt||0);session.fastestLap=Math.min(session.fastestLap||duration,duration);}
+  if(session.act===survivalActCount(session)-1){session.completedLaps=count(session.completedLaps)+1;const duration=session.time-(session.lapStartedAt||0);session.fastestLap=Math.min(session.fastestLap||duration,duration);}
  }
  return session;
 }
@@ -182,10 +186,11 @@ export function survivalOutcome(session,{left=false,boss=null}={}){
  const reached=session?.bossSpawned===true,bossName=survivalAct(session).boss;
  const remaining=boss&&Number.isFinite(boss.hp)&&Number.isFinite(boss.maxHp)&&boss.maxHp>0
   ?Math.max(1,Math.min(100,Math.ceil(boss.hp/boss.maxHp*100))):null;
+ const five=survivalActCount(session)===5;
  return {won,status:won?'cleared':left?'left':reached?'boss-defeat':'defeat',
-  title:won?'세 전장을 넘어선 씨앗':left?'다음 씨앗을 기약하며':reached?`${bossName} 앞에서 멈춘 씨앗`:'씨앗은 다시 자랍니다',
+  title:won?(five?'다섯 전장을 넘어선 씨앗':'세 전장을 넘어선 씨앗'):left?'다음 씨앗을 기약하며':reached?`${bossName} 앞에서 멈춘 씨앗`:'씨앗은 다시 자랍니다',
   value:won?`${session.completedLaps}순환`:reached?(remaining===null?'도달':`${remaining}%`):`${Math.min(99,Math.floor(time/SURVIVAL.duration*100))}%`,
-  label:won?'세 막 완주':reached?(remaining===null?`${bossName} 미격파`:`${bossName} 남은 체력`):'보스까지 생존 진행',
+  label:won?(five?'다섯 막 완주':'세 막 완주'):reached?(remaining===null?`${bossName} 미격파`:`${bossName} 남은 체력`):'보스까지 생존 진행',
   bossSeconds:reached?Math.max(0,time-SURVIVAL.duration):0};
 }
 
@@ -204,6 +209,9 @@ export function readSurvivalRecord(storage){
 // A device-local personal best, independent of accounts, rankings and saves.
 // bestTime is longest survival time, including the final boss battle.
 export function recordSurvivalResult(storage,result={}){
+ // Developer-only five-act outcomes do not rewrite the live three-act personal
+ // record. Their progress lives in the separate expansion checkpoint instead.
+ if(result?.actCount===5)return readSurvivalRecord(storage);
  const previous=readSurvivalRecord(storage),source=result&&typeof result==='object'?result:{};
  const loops=count(source.completedLaps),clearTime=loops&&source.fastestLap>=SURVIVAL.duration*3?bounded(source.fastestLap,86400):0;
  const record=normalizeRecord({bestKills:Math.max(previous.bestKills,count(source.kills)),bestTime:Math.max(previous.bestTime,bounded(source.time,86400)),wins:previous.wins+loops,bestBosses:Math.max(previous.bestBosses,count(source.bossesDefeated)),runs:previous.runs+1,fastestClear:clearTime?Math.min(previous.fastestClear||clearTime,clearTime):previous.fastestClear});

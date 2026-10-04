@@ -28,7 +28,7 @@ function paintBeds(g){
 export function paintDefenseGround(g,assets,path,state){
  if(assets.floor?.naturalWidth){g.save();g.filter='brightness(1.19) saturate(1.62) contrast(1.13)';g.drawImage(assets.floor,-8,4,118,54);g.restore();}
  else{g.fillStyle='#283c32';g.fillRect(-8,4,118,54);}
- const act=defenseWaveInfo(Math.max(1,state.wave)).act;if(act){g.fillStyle=act===1?'#7c48232b':'#28577c30';g.fillRect(-8,4,118,54);}
+ const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act){g.fillStyle=act===1?'#7c48232b':act===3?'#78955920':act===4?'#344b8428':'#28577c30';g.fillRect(-8,4,118,54);}
  // Directional canopy light is baked once with the ground, never per frame.
  const sunlight=g.createRadialGradient(12,15,1,22,22,69);
  sunlight.addColorStop(0,'#f6dc682e');sunlight.addColorStop(.45,'#c5cb480c');sunlight.addColorStop(1,'#062e3100');

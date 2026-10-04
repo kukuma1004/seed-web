@@ -1,10 +1,14 @@
-import {SURVIVAL} from './survival-rules.js';
+import {SURVIVAL,survivalActCount} from './survival-rules.js';
 import {createBestRanking} from './best-ranking.js';
 import {FIREBASE} from './online-ranking.js';
 import {cleanName} from './score.js';
 import {isBadName} from './name-filter.js';
 
 export const SURVIVAL_RANK_PATH='seedSurvivalRanking/v1';
+export function survivalExpansionRankProgress(session){
+ const acts=survivalActCount(session);return {act:Math.max(0,Math.min(acts-1,session?.act||0)),lap:Math.max(0,session?.lap||0),
+  bosses:Math.max(0,session?.bossesDefeated||0),completedLaps:Math.max(0,session?.completedLaps||0),legacyCompletedLaps:Math.max(0,session?.legacyCompletedLaps||0),eligible:acts===3};
+}
 const PENDING='seed-survival-rank-pending-v1:';
 const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
 export function validSurvivalRank(e){

@@ -8,12 +8,15 @@ import {LAWS} from './laws.js';
 // 2026-09-28 합체 방식으로 바꾸며 랭킹 초기화(사용자) → v2.
 export const DEFENSE_RANK_PATH='seedDefenseRanking/v2';
 const integer=(v,min,max)=>Number.isInteger(v)&&v>=min&&v<=max;
+// The game unlocks up to16 seeds;16 longest current final IDs need543 bytes.
+// Keep the wire format and score unchanged, including historical8-tower rows.
+export const DEFENSE_RANK_LIMITS=Object.freeze({towers:16,towerText:560});
 // Completed waves dominate core health, which dominates kills. Equal results tie.
 export const defenseRankScore=e=>e.cleared*100000+e.hp*1000+Math.min(999,e.kills);
 export function parseDefenseTowers(text){
- if(typeof text!=='string'||text.length>400)return null;
+ if(typeof text!=='string'||text.length>DEFENSE_RANK_LIMITS.towerText)return null;
  const rows=text.split(',').map(s=>s.split(':'));
- if(rows.length<1||rows.length>8||rows.some(([id,lv,...extra])=>extra.length||!(id==='seed'||Object.hasOwn(LAWS,id)||Object.hasOwn(ALL_FORMS,id))||! /^[1-5]$/.test(lv||'')))return null;
+ if(rows.length<1||rows.length>DEFENSE_RANK_LIMITS.towers||rows.some(([id,lv,...extra])=>extra.length||!(id==='seed'||Object.hasOwn(LAWS,id)||Object.hasOwn(ALL_FORMS,id))||! /^[1-5]$/.test(lv||'')))return null;
  return rows.map(([id,lv])=>[id,Number(lv)]);
 }
 export function validDefenseRank(e){
@@ -23,9 +26,18 @@ export function validDefenseRank(e){
   &&parseDefenseTowers(e.towers));
 }
 export function defenseRankEntry(state,{uid,name}){
+ // Local expansion checkpoints are intentionally excluded from production
+ // rankings until 4/5 art, save rules and device QA are promoted together.
+ if(state?.actCount===5)return null;
  if(!['won','lost'].includes(state.phase))return null;
  const entry={uid,name:cleanName(name),cleared:state.phase==='won'?12:Math.max(0,state.wave-1),hp:state.phase==='won'?Math.max(1,Math.floor(state.coreHp)):0,kills:state.kills,time:Math.max(1,Math.ceil(state.time)),towers:state.towers.map(t=>`${t.formId||t.laws[0]||'seed'}:${t.level}`).join(',')};
  entry.score=defenseRankScore(entry);return validDefenseRank(entry)?entry:null;
+}
+export function defenseExpansionRankProgress(state){
+ const wave=Math.max(0,Math.floor(state?.wave||0)),migrated=Math.max(0,Math.floor(state?.migratedWaves||0));
+ const cleared=Math.max(0,wave-(state?.phase==='wave'||state?.phase==='lost'?1:0)-migrated);
+ return {cleared,act:wave?Math.floor((wave-1)/12)%5:0,lap:wave?Math.floor((wave-1)/60):0,
+  bosses:Object.values(state?.bossWins||{}).reduce((n,v)=>n+Math.max(0,Math.floor(v||0)),0),eligible:false};
 }
 export const defensePlaces=rows=>rows.sort((a,b)=>b.score-a.score||a.uid.localeCompare(b.uid)).map((e,i,all)=>({...e,rank:all.findIndex(v=>v.score===e.score)+1}));
 export function createDefenseRanking(options={}){

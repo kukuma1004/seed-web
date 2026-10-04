@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
+import {execFileSync} from 'node:child_process';
+import {ALL_FORMS} from '../src/forms.js';
 import {defenseRankEntry,validDefenseRank,defensePlaces,parseDefenseTowers,createDefenseRanking} from '../src/defense-ranking.js';
 const state={phase:'won',wave:12,coreHp:18,kills:340,time:303.4,towers:[{formId:'prism',laws:[],level:5},{laws:['chain'],level:2}]};
 const entry=defenseRankEntry(state,{uid:'a',name:'씨앗'});
@@ -7,7 +9,7 @@ assert.equal(entry.score,1218340);assert.equal(entry.time,304);assert.equal(entr
 assert.equal(defenseRankEntry({...state,phase:'draft'},{uid:'a',name:'씨앗'}),null);
 const lost=defenseRankEntry({...state,phase:'lost',wave:8,coreHp:-1,kills:100},{uid:'b',name:'씨앗'});
 assert.equal(lost.cleared,7);assert.equal(lost.hp,0);
-for(const bad of [{score:1},{hp:21},{kills:1000000001},{towers:'prism:6'},{towers:'bad:1'},{towers:Array(9).fill('chain:1').join(',')},{time:0}])assert(!validDefenseRank({...entry,...bad}));
+for(const bad of [{score:1},{hp:21},{kills:1000000001},{towers:'prism:6'},{towers:'bad:1'},{towers:Array(17).fill('chain:1').join(',')},{time:0}])assert(!validDefenseRank({...entry,...bad}));
 assert.deepEqual(parseDefenseTowers('chain:2,chain:5,seed:1'),[['chain',2],['chain',5],['seed',1]],'separate towers remain visible');
 assert.deepEqual(defensePlaces([{...entry,uid:'b'},entry,lost]).map(e=>e.rank),[1,1,3]);
 const endless=defenseRankEntry({...state,phase:'lost',wave:74,kills:9000},{uid:'a',name:'씨앗'});assert.equal(endless.cleared,73);assert.equal(endless.kills,9000);assert.equal(endless.score,7300999);assert(validDefenseRank(endless));
@@ -26,6 +28,23 @@ uid='a';await ranking.flush();assert.equal(remote.score,entry.score);assert.equa
 await ranking.submit({...entry,hp:17,score:1217340});assert.equal(remote.hp,18);
 race=true;await ranking.submit({...entry,hp:19,score:1219340});assert.equal(remote.hp,20,'another device better result is retained');
 assert.equal((await ranking.board()).mine.rank,1);
-const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url))).rules.seedDefenseRanking.v1;
+const currentRules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url)));
+const rules=currentRules.rules.seedDefenseRanking.v2;
+const baseline=JSON.parse(execFileSync('git',['show','HEAD:docs/firebase-rules-with-seed.json'],{encoding:'utf8'}));
+const before=baseline.rules.seedDefenseRanking.v2.$uid.towers['.validate'];
+// Prove the defense ranking namespace is unchanged except the one v2 towers
+// predicate. No auth relaxation, score reset or mutation of archived v1 rules.
+const onlyTowerChange=structuredClone(currentRules);onlyTowerChange.rules.seedDefenseRanking.v2.$uid.towers['.validate']=before;
+assert.deepEqual(onlyTowerChange.rules.seedDefenseRanking,baseline.rules.seedDefenseRanking);
+const rule=rules.$uid.towers['.validate'],match=rule.match(/matches\(\/(.*)\/\)/),maxLength=Number(rule.match(/length <= (\d+)/)[1]);
+assert(match);const towerRegex=new RegExp(match[1]),allowedByLocalRule=text=>typeof text==='string'&&text.length<=maxLength&&towerRegex.test(text);
+const longest=Object.keys(ALL_FORMS).sort((a,b)=>b.length-a.length)[0];
+const lateState={...state,phase:'lost',wave:74,kills:9000,towers:Array.from({length:16},()=>({formId:longest,laws:[],level:5}))};
+const lateEntry=defenseRankEntry(lateState,{uid:'a',name:'씨앗'});assert(lateEntry);assert.equal(lateEntry.cleared,73);assert.equal(lateEntry.score,7300999);assert.equal(parseDefenseTowers(lateEntry.towers).length,16);assert.equal(lateEntry.towers.length,543);assert(allowedByLocalRule(lateEntry.towers));
+for(const id of Object.keys(ALL_FORMS))assert(allowedByLocalRule(`${id}:5`),`actual form ${id} passes active v2 rule`);
+for(const text of ['chain:0','chain:6','chain:1,',Array(17).fill('chain:1').join(','),'chain:1:'+ 'x'.repeat(560)])assert(!allowedByLocalRule(text));
+assert(allowedByLocalRule(entry.towers),'old snapshots stay readable');
+assert.equal(defenseRankEntry({...lateState,towers:[...lateState.towers,{laws:['chain'],level:1}]},{uid:'a',name:'씨앗'}),null,'over-cap17 rejected');
+await ranking.submit(lateEntry);assert.equal(remote.towers,lateEntry.towers);assert.equal(parseDefenseTowers((await ranking.board()).mine.towers).length,16,'all16 survive submit/readback');
 assert.deepEqual(rules['.indexOn'],['score']);assert(rules.$uid['.write'].includes('auth.uid == $uid'));assert.equal(rules.$uid.$other['.validate'],false);
-console.log('Defense ranking: wave/HP/kill order, terminal-only results, eight tower snapshots, identity, offline retry, concurrency and rules passed.');
+console.log('Defense ranking: wave/HP/kill order, terminal-only results, 16-tower late results, hyphenated finals, longest snapshot, identity, offline retry, concurrency and isolated v2 rule expression passed. Live rule publication not exercised.');

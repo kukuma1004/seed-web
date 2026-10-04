@@ -140,3 +140,11 @@ art-refs/
 !tools/final-branch-terrain-test.mjs
 !tools/native-terrain-test.mjs
 !tools/native-ricochet-terrain-test.mjs
+!tools/expansion-run-save-test.mjs
+!tools/five-act-modes-test.mjs
+!tools/five-act-host-test.mjs
+!tools/duel-gravitymirror-chainburst-test.mjs
+!tools/duel-fusion-02-test.mjs
+!tools/duel-fusion-02-art-test.mjs
+!tools/duel-fusion-02-ai.mjs
+!tools/duel-fusion-02-trace.mjs

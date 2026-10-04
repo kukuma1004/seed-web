@@ -146,7 +146,7 @@ function telegraph(s,boss,out,walls){
 }
 function emit(s,out,position,dir,spec,active){if(active+out.bolts.length>=EXPANSION_RUNTIME_LIMITS.projectiles||out.bolts.length>=EXPANSION_RUNTIME_LIMITS.boltsPerStep)return false;out.bolts.push({position:point(position),dir:{...dir},spec:{boss:true,pierce:false,life:4.2,speed:6.2,damage:16,...spec},pattern:expansionBossMove(s).id});return true;}
 function attack(s,step,boss,p,walls,out,active){
- s.shotClock-=step;const move=expansionBossMove(s),speedScale=1+s.phase*.08;
+ s.shotClock=Math.max(0,s.shotClock-step);const move=expansionBossMove(s),speedScale=1+s.phase*.08;
  if(s.id==='crosswindKeeper'){
   if(s.pattern===0&&s.shotClock<=0&&s.shotIndex<6){const i=s.shotIndex++;s.shotClock=.17;emit(s,out,{x:s.anchor.x,z:s.anchor.z+(i-2.5)*.6},s.aim,{speed:(6.2+i*.12)*speedScale},active);}
   else if(s.pattern===1&&s.shotClock<=0&&s.shotIndex<3){s.shotIndex++;s.shotClock=.31;for(const z of [-3.8,3.8]){const origin={x:s.target.x-8,z:s.target.z+z};emit(s,out,origin,direction(origin,s.target),{speed:5.6*speedScale,life:3.6},active);}}
@@ -189,4 +189,4 @@ export function applyCrystalTerrainActions(walls,actions){let count=0;for(const 
 export function checkpointExpansionBoss(s){const {out,...saved}=s;return JSON.parse(JSON.stringify(saved));}
 export function restoreExpansionBoss(saved,id){const s=createExpansionBoss(id,{seed:saved?.seed,phase:saved?.phase});if(saved?.version!==EXPANSION_RUNTIME_VERSION||saved.id!==id)return s;
  s.state=['recover','tell','attack'].includes(saved.state)?saved.state:'recover';s.timer=clamp(finite(saved.timer,1.2),0,2);s.elapsed=clamp(finite(saved.elapsed),0,5);s.pattern=clamp(Math.floor(finite(saved.pattern,-1)),-1,2);s.sequence=clamp(Math.floor(finite(saved.sequence)),0,1e7);s.shotIndex=clamp(Math.floor(finite(saved.shotIndex)),0,6);s.shotClock=clamp(finite(saved.shotClock),0,.5);
- const aim=point(saved.aim);s.aim=Math.abs(Math.hypot(aim.x,aim.z)-1)<1e-7?aim:direction({x:0,z:0},aim);s.anchor=point(saved.anchor);s.target=point(saved.target);s.safeLane=finite(saved.safeLane)<0?-3.4:3.4;s.regrow=(Array.isArray(saved.regrow)?saved.regrow:[]).filter(id=>typeof id==='string'&&id.startsWith('crystal-')).slice(0,3);return s;}
+ const aim=point(saved.aim);s.aim=Math.abs(Math.hypot(aim.x,aim.z)-1)<1e-7?aim:direction({x:0,z:0},aim);s.anchor=point(saved.anchor);s.target=point(saved.target);s.safeLane=saved.safeLane===0?0:finite(saved.safeLane)<0?-3.4:3.4;s.regrow=(Array.isArray(saved.regrow)?saved.regrow:[]).filter(id=>typeof id==='string'&&id.startsWith('crystal-')).slice(0,3);return s;}

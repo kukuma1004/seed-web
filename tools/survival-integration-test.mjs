@@ -17,7 +17,7 @@ const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:''});return d
 let bossSpawns=0,hits=0;
 const session=createSurvivalSession(4123);session.nextSupply=60;
 const ctx=vm.createContext({THREE,SURVIVAL,buildLevel,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
- levels:new Map(),heldForms:new Map(),enemies:[],player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
+ levels:new Map(),heldForms:new Map(),enemies:[],expansionTerrain:null,player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
  spawnSurvivalBoss(){bossSpawns++;},enemyIndex:createSpatialIndex(2.5),separationEnemies:[],hitPlayer(a){hits+=a;}});
 vm.runInContext(between('function spawnSurvivalEnemy(', 'function spawnSurvivalBoss(')+between('function updateSurvival(', 'function finishSurvival('),ctx);
 for(let i=0;i<400;i++)ctx.spawnSurvivalEnemy();assert.equal(ctx.enemies.length,300,'runtime actor cap');

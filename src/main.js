@@ -35,6 +35,7 @@ import {BOSS_PETS,createBossPet,readBossPet,unlockedBossPets,writeBossPet} from 
 import {createSpatialIndex} from './spatial-index.js';
 import {createShield,tickShield,blocksShield} from './shield.js';
 import {readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,REGION_NAMES,restoredScore,restoredWardens,restoredAustins} from './run-save.js';
+import {createExpansionEntry,createExpansionSaveStore,expansionExitCheckpoint} from './expansion-run-save.js';
 import {createSeedBody} from './seed-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
 import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_VETERAN_TITLE,ALWAYS_CLEAR_TITLE,ALWAYS_VETERAN_TITLE,JOHAN_TITLE,JOHAN_CLEAR_TITLE,JOHAN_VETERAN_TITLE,CLEAR_ALL_STATS} from './titles.js';
@@ -47,7 +48,9 @@ import {RELAY,createRelayRig,isRelayPart,relayName,relayPotionDrop,relayRoom,sto
 import {ACT3_REGION,ACT3_NAME,ACT3_PRESSURE,act3RoomPressure,isAct3,act3Unlocked,act3Available,playableAct3Region,act3Storage,act3CrowdType,act3ReinforcementSpawn,act3SupplyDrop} from './act3.js';
 import {ACT3_GEOMETRIES,ACT3_MATERIALS,ACT3_ART,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,TEMPEST_CARRIER,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,act3BossHint,act3BossPatternName} from './act3-enemies.js';
 import {createSkyway} from './skyway.js';
-let expansionApi=null;
+import * as expansionRuntime from './expansion-journey.js';
+import {createSurvivalExpansion} from './survival-expansion.js';
+let expansionApi=expansionRuntime,survivalExpansion=null;
 import {createContactShadows} from './contact-shadows.js';
 import {MIRROR_ATTACK_CADENCE,MIRROR_BREAK,MIRROR_GUARD,mirrorDamageAllowed,MIRROR_TRIAL_PROTOTYPE,clearMirrorCheckpoint,mirrorAttackCooldown,mirrorFloorRules,readMirrorCheckpoint,refundMirrorAttackCooldown,readMirrorRecord,recordMirrorResult,writeMirrorCheckpoint} from './mirror-trial.js';
 import {MIRROR_ARENA,MIRROR_BURST,MIRROR_VIEW,buildMirrorObstacleArt,createMirrorFighter,createMirrorPanels,mirrorFloorObstacles,mirrorProjectileSpeed,reflectMirrorPanels,tickMirrorFighter} from './mirror-fighter.js';
@@ -438,13 +441,36 @@ const worldLights=scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalL
 const stadium=createStadium(scene,{lights:worldLights,hide:hiddenGarden,mobile:mobileDevice});
 const skyway=createSkyway(scene,{lights:worldLights,hide:[...hiddenGarden,...moteMeshes],mobile:mobileDevice});
 const mirrorPanels=createMirrorPanels(scene);let mirrorPanelsActive=false;
-let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false;
+let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false,expansionEntry=null,expansionSaveOwner=null;
+const expansionOwner=()=>account.user()?.uid||'guest';
+const expansionStore=act=>createExpansionSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner());
+function captureExpansionEntry(){
+ if(!expansionJourney||!localInspection||expansionSaveOwner!==expansionOwner())return false;
+ const run={version:1,cycle,region:'garden',stage:expansionJourney.room,mode:'entry',hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),banked:bankedUpgrades,choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),inventory:{...inventory},runBonuses:{...runBonuses},relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:activeGauge.cooldown,mutations:mutationsToSave(mutations),rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,turretPotionDry};
+ const value=createExpansionEntry(expansionJourney,run,player.position.toArray(),expansionEntry||{});if(!value)return false;
+ const result=expansionStore(expansionJourney.act).write(value,{fresh:!expansionEntry});if(result.ok)expansionEntry=result.value;return result.ok;
+}
+function saveExpansionLeave(){
+ if(!expansionEntry||hp<=0||expansionSaveOwner!==expansionOwner())return false;
+ const value=expansionExitCheckpoint(expansionEntry,{hp,inventory,rerollUsed});if(!value)return false;
+ const result=expansionStore(expansionJourney.act).write(value);if(result.ok)expansionEntry=result.value;return result.ok;
+}
+function finishExpansionEntry(){
+ if(!expansionEntry)return true;
+ if(expansionSaveOwner!==expansionOwner()||!expansionStore(expansionJourney.act).finish(expansionEntry))return false;
+ expansionEntry=null;return true;
+}
 const expansionTargets=[],expansionNear=[];
 function expansionCombatTargets(){
  if(!expansionTerrain)return enemies;expansionTargets.length=0;expansionTargets.push(...enemies);for(const e of expansionTerrain.targets)if(!e.dead)expansionTargets.push(e);return expansionTargets;
 }
 function expansionNearby(pos,radius,out){enemyIndex.queryInto(pos,radius,out);if(expansionTerrain){expansionTerrain.query(pos,radius,expansionNear);out.push(...expansionNear);}return out;}
-function syncExpansionCrystals(){if(expansionTerrain){expansionTerrain.sync();expansionJourneyView.syncCrystals(expansionJourney.course.walls,camera);expansionTerrainDirty=false;}}
+function syncExpansionCrystals(){if(expansionTerrain){expansionTerrain.sync();expansionJourneyView?.syncCrystals(expansionJourney?.course.walls||survivalExpansion?.terrain||[],camera);expansionTerrainDirty=false;}}
+async function prepareExpansionAssets(){
+ const view=await import('./expansion-journey-view.js');
+ if(!expansionCrystalTexture){expansionCrystalTexture=texloader.load(import.meta.env.BASE_URL+'assets/'+(mobileDevice?'mobile/':'')+'mirror-crystal-v1.webp');expansionCrystalTexture.colorSpace=THREE.SRGBColorSpace;}
+ expansionJourneyView??=view.createExpansionJourneyView(scene,stone,expansionCrystalTexture);
+}
 function damageExpansionCrystal(e,amount,law){
  if(!expansionTerrain?.owns(e))return false;const hit=expansionTerrain.damage(e,amount,{law});if(hit){expansionTerrainDirty=true;if(e.dead)vfx.burst(e.g.position,'frost',4,.55);}return hit;
 }
@@ -471,16 +497,19 @@ function traceExpansionFormShot(shot,previous,next,dir,meta){
  if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}
  if(result.hits.some(h=>h.damage>0))expansionTerrainDirty=true;return result;
 }
-async function startExpansionJourney(room=0,act='crosswind'){
+async function startExpansionJourney(room=0,act='crosswind',{resume=false}={}){
  if(!localInspection)return false;
  const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
  if(!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
+ expansionSaveOwner=expansionOwner();const saved=resume?expansionStore(act).read():null;
+ if(resume&&!saved){$('#toast').textContent='이어할 로컬 저장이 없거나 다른 버전의 기록이에요.';return false;}
  if(!expansionCrystalTexture){expansionCrystalTexture=texloader.load(import.meta.env.BASE_URL+'assets/'+(mobileDevice?'mobile/':'')+'mirror-crystal-v1.webp');expansionCrystalTexture.colorSpace=THREE.SRGBColorSpace;}
  expansionJourneyView??=view.createExpansionJourneyView(scene,stone,expansionCrystalTexture);
- expansionJourney=null;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=true;labSafe=false;startRegion='garden';restart();
+ expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=true;labSafe=false;startRegion='garden';restart(saved?.run);
  for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
- expansionJourney=expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
- $('#toast').textContent=(act==='crosswind'?'4막':'5막')+' 로컬 시제품 · 이동·회피·기존 조합 사용 · 계정 보상/저장 없음';return true;
+ expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
+ if(saved)player.position.fromArray(saved.position);
+ $('#toast').textContent=(act==='crosswind'?'4막':'5막')+' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외';return true;
 }
 function spawnExpansionActor(spec,boss=false){
  const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,immovable:boss,radius:boss ? .8 : .65,expansionActor:true,expansionBoss:boss,config:{name:boss?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName:expansionJourney.act==='crosswind'?'잎배 편대':'수정 정찰대'}};
@@ -520,10 +549,12 @@ function waveExpansionJourney(){
  combatAnalysis.begin(elapsed,{stage:stage+1,cycle:1,region:s.act});$('#encounter').textContent=definition.number+'막 로컬 · '+(s.phase==='boss'?definition.bossName:definition.name+' · '+(stage+1)+' / 5');
  $('#boss-hud strong').textContent=definition.bossName;$('#boss-hud').hidden=s.phase!=='boss';$('#stages').hidden=false;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));
+ if(!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
 }
 function exitExpansionJourney(){
  if(!exitOpen)return;touch.reset();keys.clear();exitOpen=false;
  if(expansionJourney.phase==='boss'){
+  if(!finishExpansionEntry()){$('#toast').textContent='기록을 종료하지 못했어요. 계정과 저장 공간을 확인하세요.';exitOpen=true;return;}
   expansionJourney.phase='finished';mode='ready';$('#overlay').hidden=false;
   const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name;
   $('#overlay').innerHTML='<div class="menu-panel"><h2>'+name+' 시제품 완료</h2><p>5개 방과 보스를 돌파했어요. 실험 기록은 계정·칭호·랭킹에 반영하지 않습니다.</p><button id="expansion-retry">다시 출발</button><button id="expansion-back">돌아가기</button></div>';
@@ -547,13 +578,13 @@ const act3Ctx={get player(){return player.position;},collide:(p,r)=>collide(p,r)
 function spawnAct3WardenAt(x,z){const e=createAct3Warden(scene),art=ACT3_ART.act3warden;e.g.position.set(x,0,z);attachActorArt(e,camera,release,{file:art.file,size:art.size,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});enemies.push(e);return e;}
 function drawRoom(){
  if(!expansionJourney)expansionTerrain=null;
- expansionJourneyView?.setActive(Boolean(expansionJourney));
+ expansionJourneyView?.setActive(Boolean(expansionJourney||survivalSession?.actCount===5&&survivalSession.act>=3));
  if(expansionJourney){
   for(const group of [arenaGroup,roomCover,trapGroup])for(const child of [...group.children])release(child);
   obstacles.length=0;traps=[];clockFloor=null;stadium.setActive(false);skyway.setActive(false);mirrorPanels.setActive(false);mirrorPanelsActive=false;survivalArt?.setActive(false);
   for(const object of hiddenGarden)object.visible=false;player.scale.setScalar(1.25);
   const s=expansionJourney,distance=s.course.distance,canyon=s.act==='crystalGorge',length=s.phase==='boss'?distance+14:140;
-  expansionJourneyView.setCourse(s.act);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
+  expansionJourneyView.setCourse(s.act);expansionJourneyView.setTerrainOnly(false);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
   arena=canyon?{shape:'rect',halfWidth:8,halfDepth:10,start:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:{x:0,z:-7,radius:2}}:{shape:'rect',halfWidth:length,halfDepth:7,start:{x:s.phase==='boss'?distance-4:0,z:0},exit:{x:distance,z:0,radius:2}};
   gate.position.set(arena.exit.x,0,arena.exit.z);syncExpansionCrystals();return;
  }
@@ -564,7 +595,13 @@ function drawRoom(){
   for(const object of hiddenGarden)object.visible=false;
   if(!survivalArt)survivalArt=createSurvivalArt(scene,camera,{baseUrl:import.meta.env.BASE_URL,mobile:mobileDevice,capacity:SURVIVAL.maxEnemies,groundTexture:stone,arena});
   survivalArt.setReadability(!survivalComparisonEnabled||survivalReadability);player.scale.setScalar(!survivalComparisonEnabled||survivalReadability?1.55:1.25);
-  survivalArt.setAct(survivalSession.act);survivalArt.setActive(true);$('#stages').hidden=true;return;
+  survivalArt.setAct(survivalSession.act);survivalArt.setActive(true);
+  if(survivalSession.actCount===5&&survivalSession.act>=3){
+   if(!survivalExpansion||survivalExpansion.act!==survivalSession.act||survivalExpansion.lap!==survivalSession.lap){survivalExpansion=createSurvivalExpansion(survivalSession);survivalExpansion.lap=survivalSession.lap;}
+   expansionJourneyView?.setCourse(survivalSession.act===3?'crosswind':'crystalGorge');expansionJourneyView?.setTerrainOnly(true);
+   expansionTerrain=survivalExpansion.terrain.length?expansionApi.createCrystalCombatBridge(survivalExpansion.terrain,{position:(x,z)=>new V(x,0,z)}):null;syncExpansionCrystals();
+  }else survivalExpansion=null;
+  $('#stages').hidden=true;return;
  }
  survivalArt?.setActive(false);player.scale.setScalar(1.25);$('#stages').hidden=false;
  shadowClock=SHADOW_REFRESH;const mirrorRoom=Boolean(mirrorSession),clockRoom=!mirrorRoom&&inAustinRoom()&&!isAct2(region)&&!isAct3(region),bossRoom=mirrorRoom||inAustinRoom();arena=mirrorRoom?MIRROR_ARENA:clockRoom?AUSTIN_ARENA:arenaFor(stage,cycle,region);
@@ -844,6 +881,7 @@ const pauseBuild=createPauseBuild($('#save-exit'),()=>togglePause(),{get:()=>rel
 // the unfinished attempt; saving its rewards as well would respawn the same
 // enemies while preserving their kills, score, choice gauge and drops.
 function saveLeaveState(){
+ if(expansionJourney)return saveExpansionLeave();
  if(mode==='defense'||mode==='adventure')return false;
  if(survivalSession)return saveSurvival();
  if(developerRun)return false;
@@ -856,10 +894,11 @@ function saveLeaveState(){
 // 저장하는 판: 방 입구 저장으로 나간다. 저장하지 않는 판(거울의 탑·실험실·연습장): 저장 없이 바로 나간다.
 // 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
 let exitWithoutSaveArmed=false,saveExitBusy=false,cloudSaveFailed=false;
-function saveExitLabel(){return survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
+function saveExitLabel(){return expansionJourney?'로컬 저장하고 나가기 · 방 입구부터 이어하기':survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
 function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
 $('#save-exit').onclick=async()=>{
  if(saveExitBusy)return;
+ if(expansionJourney){if(!saveExpansionLeave()){pauseBuild.setSaveStatus('로컬 저장을 확인하지 못했어요. 계정이 바뀌었거나 다른 탭의 기록이 더 최신일 수 있어요.');return;}leavePausedRun();return;}
  if(survivalSession){
   if(survivalSession.lab){finishSurvival(false,true);return;}
   if(!saveSurvival()){pauseBuild.setSaveStatus(survivalSaveMessage);return;}
@@ -894,7 +933,7 @@ function saveSurvival(){
  if(!survivalSession||survivalSession.lab||survivalSession.finished||hp<=0||!survivalSaveToken)return false;
  if(survivalSaveToken.owner!==survivalOwner()){survivalSaveMessage='로그인 계정이 바뀌었어요. 원래 계정으로 돌아온 뒤 저장해 주세요.';return false;}
  settleSurvivalTitle();
- const snapshot={...survivalSaveToken,session:captureCombatFields(survivalSession),analysis:combatAnalysis.snapshot(),
+ const snapshot={...survivalSaveToken,session:captureCombatFields(survivalSession),analysis:combatAnalysis.snapshot(),...(survivalSession.actCount===5?{expansion:survivalExpansion?.checkpoint()||null}:{}),
   progress:{hp,kills,score,choicesTaken,choiceKills,bankedUpgrades,elapsed,runDashes,runDamageTaken,levels:Object.fromEntries(levels),forms:Object.fromEntries(heldForms),inventory:{...inventory},mutations:mutationsToSave(mutations),runBonuses:{...runBonuses},rerollUsed,hasteTime,shellTime,potionCD,selectedItem,dashState:{...dashState},dashLock,activeValue:activeGauge.value,activeCooldown:activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown,shootCD,playerSlow,invuln},
   player:{position:player.position.toArray(),baseSlideTime,baseSlideCooldown,baseSlideLock,baseSlideTarget:baseSlideTarget.toArray(),baseSlideDir:baseSlideDir.toArray(),lastMove:lastMove.toArray()},
   pending:survivalPendingChoice?{offered:[...survivalPendingChoice],bonus:runBonusOffer||[]}:null,evolution:!survivalPendingChoice&&['evolving','forms','awaken','solo'].includes(mode),
@@ -913,14 +952,14 @@ function resumeSurvival(){
 function restoreSurvivalWorld(saved){
  const p=saved.progress,vector=(x,y,z)=>new V(x,y,z);
  for(const e of enemies)releaseEnemy(e);enemies=[];
- survivalSession={...saved.session};survivalPendingChoice=saved.pending?.offered||null;
+ survivalSession={...saved.session};survivalExpansion=survivalSession.actCount===5&&survivalSession.act>=3?createSurvivalExpansion(survivalSession,saved.expansion):null;if(survivalExpansion)survivalExpansion.lap=survivalSession.lap;survivalPendingChoice=saved.pending?.offered||null;
  hp=p.hp;kills=p.kills;score=p.score;choicesTaken=p.choicesTaken;choiceKills=p.choiceKills;bankedUpgrades=p.bankedUpgrades;elapsed=p.elapsed;runDashes=p.runDashes||0;runDamageTaken=p.runDamageTaken||0;
  levels.clear();for(const [id,lv] of Object.entries(p.levels))levels.set(id,lv);heldForms.clear();for(const [id,lv] of Object.entries(p.forms))heldForms.set(id,lv);
  inventory=normalizeInventory(p.inventory);runBonuses=normalizeRunBonuses(p.runBonuses);rerollUsed=p.rerollUsed===true;mutations.clear();for(const [law,kind] of mutationsFromSave(p.mutations))mutations.set(law,kind);
  syncLaws();syncForms(true);growth.select(effectiveLaws(),mutated);drawRoom();
  for(const entry of saved.enemies){const e=entry.fields.survivalBoss?spawnSurvivalBoss():spawnSurvivalEnemy({x:entry.position[0],z:entry.position[2],kind:entry.fields.survivalKind});if(!e)continue;restoreCombatFields(e,entry.fields,vector);e.g.position.fromArray(entry.position);e.g.rotation.y=entry.rotation||0;}
  // Construction must not consume the saved spawn RNG or change the boss flag.
- survivalSession={...saved.session};
+ Object.assign(survivalSession,saved.session);
  for(const entry of saved.hostiles){const q=restoreCombatFields({ob:new THREE.Object3D()},entry.fields,vector);q.ob.position.fromArray(entry.position);enemyShots.push(q);}
  player.position.fromArray(saved.player.position);playerMotion.reset();baseSlideTime=saved.player.baseSlideTime||0;baseSlideCooldown=saved.player.baseSlideCooldown||0;baseSlideLock=saved.player.baseSlideLock??-1;baseSlideTarget.fromArray(saved.player.baseSlideTarget);baseSlideDir.fromArray(saved.player.baseSlideDir);lastMove.fromArray(saved.player.lastMove);
  hasteTime=p.hasteTime||0;shellTime=p.shellTime||0;potionCD=p.potionCD||0;selectedItem=p.selectedItem;dashState={...createDashState(p.dashState?.id),...p.dashState};dashLock=p.dashLock||0;activeGauge=createActiveGauge(p.activeValue||0,p.activeCooldown||0);shootCD=p.shootCD||0;playerSlow=p.playerSlow||0;invuln=p.invuln||0;itemBarKey='';
@@ -1032,23 +1071,25 @@ function showSurvivalSetup(refresh=true){
  if(localInspection){$('#survival-pierce').onclick=()=>startSurvival('pierce');$('#survival-frost').onclick=()=>startSurvival('frost');$('#survival-stress').onclick=()=>startSurvival('stress');$('#survival-boss').onclick=()=>startSurvival('boss');$('#survival-duel').onclick=()=>startSurvival('duel');for(const id of ['act2','act3','loop','base','route','stress2','stress3'])$('#survival-'+id).onclick=()=>startSurvival(id);for(const id of Object.keys(SURVIVAL_BENCHES))$('#'+id).onclick=()=>startSurvival(id);}
 }
 function startSurvival(lab=null,saved=null){
+ const fiveActs=localInspection&&(['act4','act5','five'].includes(lab)||saved?.session?.actCount===5);
+ if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets().then(()=>startSurvival(lab,saved));
  if(!localInspection&&!requireName())return;
  document.body.classList.remove('survival-result');
  $('#overlay').classList.remove('survival-overlay');
  if(gameplayPaused()||maintenanceOn){showIntro();return;}
- mirrorSession=null;trainingSession=null;developerRun=false;labSafe=false;baseSlideTime=baseSlideCooldown=0;baseSlideLock=-1;startRegion='garden';
+ expansionJourney=null;expansionEntry=null;survivalExpansion=null;mirrorSession=null;trainingSession=null;developerRun=false;labSafe=false;baseSlideTime=baseSlideCooldown=0;baseSlideLock=-1;startRegion='garden';
  survivalSaveMessage='';survivalPendingChoice=null;survivalSaveToken=saved?{id:saved.id,revision:saved.revision,writeId:saved.writeId,owner:survivalOwner()}:{id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,revision:0,owner:survivalOwner()};survivalAutosaveAt=15;
- survivalSession=createSurvivalSession(localInspection&&SURVIVAL_BENCHES[lab]?413:Date.now());survivalSession.nextSupply=SURVIVAL.supplyInterval;survivalSession.lab=localInspection&&lab||null;survivalSession.benchmark=localInspection?createSurvivalBenchmark(lab):null;
+ survivalSession=createSurvivalSession(localInspection&&SURVIVAL_BENCHES[lab]?413:Date.now(),{actCount:fiveActs?5:3});survivalSession.nextSupply=SURVIVAL.supplyInterval;survivalSession.lab=localInspection&&lab||null;survivalSession.benchmark=localInspection?createSurvivalBenchmark(lab):null;
  document.body.classList.add('survival-mode');restart();
  if(mode!=='playing'){survivalSession=null;return;}
  if(saved){restoreSurvivalWorld(saved);return;}
  if(survivalSession.benchmark){choicesTaken=1;takeSurvivalBenchmarkPick();$('#toast').textContent='가속 자동 비교 · '+survivalSession.benchmark.label+' · 기록 제외';return;}
  if(survivalSession.lab){
-  labSafe=lab!=='duel'&&lab!=='base';survivalSession.act=(lab==='act2'||lab==='base'||lab==='stress2')?1:lab==='act3'||lab==='loop'||lab==='stress3'?2:0;drawRoom();survivalSession.time=(['boss','duel','act2','act3','loop','route'].includes(lab))?SURVIVAL.duration-.1:lab?.startsWith('stress')?SURVIVAL.duration-30:SURVIVAL.duration*.5;survivalSession.nextSupply=SURVIVAL.duration+60;
+  labSafe=!['duel','base','act4','act5','five'].includes(lab);survivalSession.act=(lab==='act2'||lab==='base'||lab==='stress2')?1:lab==='act3'||lab==='loop'||lab==='stress3'?2:lab==='act4'?3:lab==='act5'?4:0;drawRoom();survivalSession.time=(['boss','duel','act2','act3','act4','act5','loop','route'].includes(lab))?SURVIVAL.duration-.1:lab?.startsWith('stress')?SURVIVAL.duration-30:lab==='five'?0:SURVIVAL.duration*.5;survivalSession.nextSupply=SURVIVAL.duration+60;
   for(const e of enemies)releaseEnemy(e);enemies=[];
   for(const id of (lab==='pierce'||lab==='frost'?[]:['split','chain','burst'])){if(LAWS[id]){levels.set(id,3);chosen.add(id);}}
   bankedUpgrades=12;for(const id of (lab==='pierce'?['thunderlance']:lab==='frost'?['frostnet']:['prism','thunderlance','gravitymirror']))heldForms.set(id,lab==='pierce'||lab==='frost'?2:4);syncLaws();syncForms(true);growth.select(effectiveLaws(),mutated);activeGauge.value=100;
-  for(let i=0;i<(['boss','duel','act2','act3','loop','route'].includes(lab)?16:lab?.startsWith('stress')?SURVIVAL.maxEnemies:72);i++){const a=i*2.399963,r=(['stress','stress2','stress3','boss','duel','act2','act3','loop','route'].includes(lab)?3:5)+(i%17)*.5;spawnSurvivalEnemy({x:Math.cos(a)*r,z:Math.sin(a)*r,kind:i%7===0?'brute':i%3===0?'runner':'swarm'});}
+  for(let i=0;i<(['boss','duel','act2','act3','act4','act5','loop','route'].includes(lab)?16:lab==='five'?0:lab?.startsWith('stress')?SURVIVAL.maxEnemies:72);i++){const a=i*2.399963,r=(['stress','stress2','stress3','boss','duel','act2','act3','act4','act5','loop','route'].includes(lab)?3:5)+(i%17)*.5;spawnSurvivalEnemy({x:Math.cos(a)*r,z:Math.sin(a)*r,kind:i%7===0?'brute':i%3===0?'runner':'swarm'});}
   if(lab==='base'){player.position.set(SURVIVAL_BASES[0].x,0,SURVIVAL_BASES[0].z);survivalSession.time=45;}
   $('#toast').textContent=(lab==='pierce'?'관통·연쇄 시연':lab==='frost'?'빙결·연쇄 시연':lab==='duel'?'보스전 연습':'로컬 부하 검증')+(labSafe?' · 피해 면역':' · 실제 피해 적용')+' · 기록 제외';return;
  }
@@ -1073,17 +1114,20 @@ function spawnSurvivalEnemy(spot=null){
  if(!survivalSession||enemies.reduce((n,e)=>n+(!e.dead&&Boolean(e.survivalKind)),0)>=SURVIVAL.maxEnemies)return;
  const next=spot||survivalSpawn(survivalSession,player.position,arena);if(!next)return;
  const spec=survivalEnemySpec(next.kind,survivalSession),g=new THREE.Object3D();g.position.set(next.x,0,next.z);
+ if(expansionTerrain)expansionTerrain.constrain(g.position,spec.radius);
  const health=spec.hp*(survivalSession.lab?.startsWith('stress')?200:1);
  const e={g,type:'swarm',survivalKind:next.kind,hp:health,maxHp:health,speed:spec.speed,damage:spec.damage,radius:spec.radius,survivalScore:spec.score,timer:.6,hit:0,slow:0,frostLock:0,dead:false,phase:next.x*.71+next.z*.29};
  enemies.push(e);return e;
 }
 function spawnSurvivalBoss(){
  const act=survivalAct(survivalSession),scale=survivalScaling(survivalSession);
- const e=act.type==='alwaysbeginner'?createAlwaysBeginner(scene):act.type==='tempestcarrier'?createTempestCarrier(scene):createAustin(scene);
+ const e=act.expansion?{g:new THREE.Group(),type:act.type,hp:act.expansion==='crosswind'?3200:4200,maxHp:0,hit:0,slow:0,state:'recover',phase:0,immovable:true,radius:.8,expansionBoss:true,config:{name:act.boss}}:act.type==='alwaysbeginner'?createAlwaysBeginner(scene):act.type==='tempestcarrier'?createTempestCarrier(scene):createAustin(scene);
+ if(act.expansion)scene.add(e.g);
  const spot=survivalSpawn(survivalSession,player.position,arena)||{x:0,z:-12};
  e.g.position.set(spot.x,0,spot.z);e.survivalBoss=true;e.survivalScale=scale;
  e.hp*=scale.bossHp;e.maxHp=e.hp;if(Number.isFinite(e.damageAllowance))e.damageAllowance*=scale.bossHp;
- if(act.type==='alwaysbeginner')attachActorArt(e,camera,release,{...ALWAYS_BEGINNER_ART,directional:true,occlusion:qualityLevel>0});
+ if(act.expansion){const art=ACT3_ART.act3warden;attachActorArt(e,camera,release,{file:art.file,size:3.2,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
+ else if(act.type==='alwaysbeginner')attachActorArt(e,camera,release,{...ALWAYS_BEGINNER_ART,directional:true,occlusion:qualityLevel>0});
  else if(act.type==='tempestcarrier'){const art=ACT3_ART.tempestcarrier;attachActorArt(e,camera,release,{file:art.file,size:art.size,atlasFrame:actor=>art.frames[actor.phaseIndex||0],topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
  else if(AUSTIN_ART)attachActorArt(e,camera,release,{file:AUSTIN_ART,size:4.3,directional:true,baseline:.02,occlusion:qualityLevel>0});
  if(survivalSession.lab==='loop'||survivalSession.lab==='route')e.hp=1;attachBossActionRig(e);enemies.push(e);$('#boss-hud').classList.toggle('austin-hud',act.type==='austin');$('#boss-hud').hidden=false;
@@ -1094,6 +1138,15 @@ function spawnSurvivalBoss(){
 // instanced contact-only population; no act-specific ranged minion army leaks in.
 function tickSurvivalBoss(e,dt,time){
  const scale=e.survivalScale||survivalScaling(survivalSession),tempo=dt*scale.tempo*(e.slow>0?Math.max(.8,LS.frostFactor):1);
+ if(e.expansionBoss&&survivalExpansion){
+  const before=(e.expansionPrevious??=new V()).copy(e.g.position),out=survivalExpansion.stepBoss(tempo,{position:e.g.position,player:player.position,activeProjectiles:enemyShots.length,hpRatio:e.hp/e.maxHp,enemies});
+  e.g.position.x+=out.move.x;e.g.position.z+=out.move.z;collide(e.g.position,.8,before);e.state=out.state;
+  const act=survivalSession.act===3?'crosswind':'crystalGorge';e.takenScale=expansionApi.expansionBossDamageMultiplier(act,e.state,out.coreOpen);
+  for(const t of out.telegraphs)expansionJourneyView?.tell(t);
+  for(const contact of out.contacts){contact.to.x=e.g.position.x;contact.to.z=e.g.position.z;if(e.lastExpansionContact!==contact.hitId&&expansionApi.expansionContactHits(contact,player.position)){e.lastExpansionContact=contact.hitId;hitPlayer(contact.damage*scale.damage);}}
+  for(const q of out.bolts){if(enemyShots.length>=48)break;skywayBolt(new V(q.position.x,0,q.position.z),new V(q.dir.x,0,q.dir.z),{...q.spec,speed:q.spec.speed*scale.projectile,damage:q.spec.damage*scale.damage});}
+  if(out.terrain.length)syncExpansionCrystals();e.hit=Math.max(0,e.hit-dt);return;
+ }
  const hooks={player:player.position,arenaMode:true,arena,collide,clearBolts:()=>{for(const p of enemyShots)release(p.ob);enemyShots=[];},
   bolt:(pos,dir,spec)=>{if(enemyShots.length>=192)return;const fire=e.type==='austin'?austinBolt:e.type==='alwaysbeginner'?stadiumBolt:skywayBolt;fire(pos,dir,{...spec,speed:spec.speed*scale.projectile,damage:spec.damage*scale.damage});},
   hit:a=>{if(invuln>0||shellTime>0)return false;hitPlayer(a*scale.damage);return true;},burst,pulse:(p,c,r,l)=>vfx.pulse(p,c,r,l),
@@ -1130,6 +1183,7 @@ const survivalCue=new THREE.Vector3();
 function moveSurvivalEnemy(e,edt,dt,time){
  e.hit=Math.max(0,e.hit-dt);e.timer-=dt;
  const pos=e.g.position,dx=player.position.x-pos.x,dz=player.position.z-pos.z,distance=Math.hypot(dx,dz);
+ const previous=expansionTerrain?(e.survivalPrevious??=new THREE.Vector3()).copy(pos):null;
  // Bodies stop at touching distance, rather than all targeting the seed centre.
  if(tickSurvivalRush(e,edt,player.position,survivalRushes)){
   survivalRushes++;
@@ -1150,7 +1204,7 @@ function moveSurvivalEnemy(e,edt,dt,time){
  }
  const displacement=Math.hypot(px,pz),cap=edt*e.speed*2.8;
  if(displacement>cap&&displacement>0){px*=cap/displacement;pz*=cap/displacement;}
- pos.x+=px;pos.z+=pz;constrainToArena(pos,e.radius,arena);
+ pos.x+=px;pos.z+=pz;constrainToArena(pos,e.radius,arena);if(expansionTerrain)expansionTerrain.constrain(pos,e.radius,previous);
  // Check the resolved position: crowd pressure must not grant remote hits.
  if(Math.hypot(player.position.x-pos.x,player.position.z-pos.z)<e.radius+.42&&e.timer<=0){hitPlayer(e.damage);e.timer=.9;}
 }
@@ -1408,6 +1462,7 @@ function hitPlayer(amount){if(labSafe||invuln>0||shellTime>0||mode!=='playing')r
   const revive=tryRevive(inventory);
   if(revive){hp=revive.hp;invuln=Math.max(invuln,revive.guard);for(const p of enemyShots)release(p.ob);enemyShots=[];itemBarKey='';cameraShake=.32;vfx.pulse(player.position,'seed',2.8,.8);vfx.burst(player.position,'seed',44,2.2);$('#toast').textContent=`${ITEMS.sprout.name}이 돋았다 · 생명력 ${revive.hp}으로 다시 일어났습니다`;return;}
   const deathReport=finishRoomAnalysis(false,false);
+  if(expansionJourney&&!finishExpansionEntry())$('#toast').textContent='기록 종료에 실패했어요. 이전 계정의 저장은 덮어쓰지 않았습니다.';
   if(!developerRun)clearCheckpoint(actStore());mode='dead';showEnd(deathReport);
  }
 }
@@ -1433,7 +1488,7 @@ function cardChoice(mid=false,fixedOffer=null){
   ?'지금 합칠 수 있어요: '+readyFusions.slice(0,3).map(id=>FORMS[id].name).join(' · ')
    :Object.values(FIRST_FORMS).filter(f=>f.requires.filter(id=>levels.has(id)).length===1).slice(0,4).map(f=>`${f.name}까지 ${LAWS[f.requires.find(id=>!levels.has(id))].name}`).join(' · ');
  $('#overlay').insertAdjacentHTML('beforeend',`<div class="form-progress">${heldForms.size?'보유 진화: '+[...heldForms].map(([f,l])=>FORMS[f].name+' Lv.'+l).join(', ')+' · ':''}${goals||'법칙 두 개를 맞추면 1차 융합 · 발견 '+profile.forms.filter(id=>DISCOVERY_FORMS[id]).length+'/'+Object.keys(DISCOVERY_FORMS).length}${orbitCore(heldForms,FORMS)?' · 공전 진화는 한 종류만 보유 가능':''}</div><div class="form-actions">${rerollUnlocked(profile)&&!rerollUsed?'<button class="primary" id="reroll-laws">선택지 새로고침 · 이번 여정 1회</button>':''}${eligibleForms(chosen).filter(canTakeEvolution).length?'<button class="primary" id="change-form">합칠 수 있는 진화 보기</button>':''}${secondFusionOptions(heldForms).length?'<button class="primary" id="change-second">재융합 보기</button>':''}${soloReady(levels).filter(canTakeEvolution).length?'<button class="primary" id="change-solo">단독 진화 보기</button>':''}${awakenOptions(heldForms).filter(awakenable).length?'<button class="primary" id="change-awaken">각성 진화 보기</button>':''}</div>`);
- if($('#reroll-laws'))$('#reroll-laws').onclick=()=>{if(mode!=='cards'||rerollUsed)return;rerollUsed=true;const checkpoint=survivalSession?null:readCheckpoint(actStore());if(checkpoint)writeCheckpoint(actStore(),{...checkpoint,rerollUsed:true});cardChoice(mid);};
+ if($('#reroll-laws'))$('#reroll-laws').onclick=()=>{if(mode!=='cards'||rerollUsed)return;rerollUsed=true;const checkpoint=survivalSession||developerRun||expansionJourney?null:readCheckpoint(actStore());if(checkpoint)writeCheckpoint(actStore(),{...checkpoint,rerollUsed:true});cardChoice(mid);};
  if($('#change-form'))$('#change-form').onclick=()=>offerForm(true,()=>cardChoice(mid,offered));
  if($('#change-second'))$('#change-second').onclick=()=>offerSecondFusion(()=>cardChoice(mid,offered),true);
  if($('#change-solo'))$('#change-solo').onclick=()=>offerSolo(()=>cardChoice(mid,offered),true);
@@ -1957,7 +2012,7 @@ async function showGardenHub(start=null){
   if(localInspection)window.seedGardenHub=gardenHubScreen;
  }catch(error){console.error('정원 열기 실패',error);resume();showIntro();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
-async function showSeedDefense(){
+async function showSeedDefense({actCount=3}={}){
  const serial=++defenseLoadSerial;
  mode='defense-loading';touch.reset();keys.clear();stopAnimation();
  const overlay=$('#overlay');overlay.hidden=false;
@@ -1971,7 +2026,7 @@ async function showSeedDefense(){
   clearTimeout(slow);if(serial!==defenseLoadSerial)return;
   mode='defense';overlay.hidden=true;
   const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
-  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,onBossDefeated:event=>awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,actCount:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
    const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
    if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
@@ -2252,7 +2307,7 @@ perfMark(PS.shooting);enemyIndex.rebuild(enemies);
 perfMark(PS.collision);for(const [id,combat] of formCombats){const cd=(formCooldowns.get(id)||0)-dt;if(autoTarget&&cd<=0&&!roomCleared&&!FORMS[formAttacks.get(id)||id]?.passive){formCooldowns.set(id,runCadenceInterval(combat.fire(player.position,aimdir,autoTarget.g.position)/gardenCooldown(),runBonuses)/(titleState.attackCadence||1));audio.play(combat.audioEvent());}else formCooldowns.set(id,Math.max(-1,cd));}
 if(!roomCleared)for(const combat of formCombats.values())combat.update(dt);perfMark(PS.forms);updateActive(dt);perfMark(PS.active);updateEscorts(dt);updateAct2WardenSupport();
 if(survivalSession)updateSurvival(dt);
-if(expansionJourney)updateExpansionCourse(dt);
+if(expansionJourney)updateExpansionCourse(dt);else if(survivalExpansion){expansionJourneyView?.beginFrame();syncExpansionCrystals();}
 perfMark(PS.enemyAI);crowdTimer-=dt;if(!expansionJourney&&!survivalSession&&crowdTimer<=0&&!roomCleared){spawnCrowd(2);crowdTimer=crowdInterval(cycle)*(isAct3(region)?act3RoomPressure(stage).crowdInterval:isAct2(region)?ACT2_PRESSURE.crowdInterval:1);}
 perfMark(PS.spawn);enemyIndex.rebuild(enemies);
 perfMark(PS.collision);if(!roomCleared){trapClock+=dt;for(const t of traps){tickTrap(t,trapClock,{player:player.position,enemies,hurtPlayer:a=>{if(invuln>0)return false;hitPlayer(a);return true;},hurtEnemy:(e,a)=>damageEnemy(e,a,false)});const info=trapPhase(trapClock+t.offset);t.visual.update(info.phase,info.progress);}}else for(const t of traps)t.visual.update('idle',0);
@@ -2289,7 +2344,7 @@ function animate(now){animationHandle=0;if(document.hidden)return;startAnimation
  // Ambient motes move slowly: 30 Hz looks identical and low quality can omit both batches entirely.
  perfT=performance.now();if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*visualDt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
  const skyCamera=isAct3(region)&&!mirrorSession;
- const cameraPose=cameraFeel.follow(visualDt,{playerX:player.position.x,playerZ:player.position.z,moveX:cameraMoveX,moveZ:cameraMoveZ,followX:expansionJourney?1:survivalSession?1:skyCamera ? 0.045 : mirrorSession?Math.max(viewLayout.followX,MIRROR_VIEW.followX):viewLayout.followX,followZ:expansionJourney?.25:survivalSession?1:skyCamera ? 0.02 : mirrorSession?Math.max(viewLayout.followZ,MIRROR_VIEW.followZ):viewLayout.followZ,leadScale:skyCamera?0:1,baseZoom:viewLayout.zoom*(survivalSession?1.12:skyCamera?ACT3_VIEW_ZOOM:mirrorSession?MIRROR_VIEW.zoom:1),biasZ:skyCamera?ACT3_VIEW_BIAS:0});look.set(cameraPose.x,0,cameraPose.z);if(Math.abs(camera.zoom-cameraPose.zoom)>.0005){camera.zoom=cameraPose.zoom;camera.updateProjectionMatrix();}camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-visualDt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);camera.updateMatrixWorld();if(!paused)survivalVisualTime+=visualDt;survivalArt?.update(enemies,survivalComparisonEnabled?survivalVisualTime:now*.001);survivalComparison?.refresh();stadium.update(now*.001);skyway.tick(visualDt,mode==='playing'&&!paused);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);bossPet.update(visualDt,player.position,{visible:player.visible&&mode==='playing'&&!paused});perfMark(PS.scene);presentFrame(now*.001);perfMark(PS.hud);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='training-setup'||mode==='training-result'||mode==='notes'||mode==='maintenance'||mode==='gift'||mode==='developer-usage')&&gardenScene;
+ const cameraPose=cameraFeel.follow(visualDt,{playerX:player.position.x,playerZ:player.position.z,moveX:cameraMoveX,moveZ:cameraMoveZ,followX:expansionJourney?1:survivalSession?1:skyCamera ? 0.045 : mirrorSession?Math.max(viewLayout.followX,MIRROR_VIEW.followX):viewLayout.followX,followZ:expansionJourney?.25:survivalSession?1:skyCamera ? 0.02 : mirrorSession?Math.max(viewLayout.followZ,MIRROR_VIEW.followZ):viewLayout.followZ,leadScale:skyCamera?0:1,baseZoom:viewLayout.zoom*(survivalSession?1.12:skyCamera?ACT3_VIEW_ZOOM:mirrorSession?MIRROR_VIEW.zoom:1),biasX:survivalExpansion?.act===3?3:0,biasZ:skyCamera?ACT3_VIEW_BIAS:0});look.set(cameraPose.x,0,cameraPose.z);if(Math.abs(camera.zoom-cameraPose.zoom)>.0005){camera.zoom=cameraPose.zoom;camera.updateProjectionMatrix();}camera.position.set(look.x,22,15.5+look.z);cameraShake=Math.max(0,cameraShake-visualDt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);camera.updateMatrixWorld();if(!paused)survivalVisualTime+=visualDt;survivalArt?.update(enemies,survivalComparisonEnabled?survivalVisualTime:now*.001);survivalComparison?.refresh();stadium.update(now*.001);skyway.tick(visualDt,mode==='playing'&&!paused);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);bossPet.update(visualDt,player.position,{visible:player.visible&&mode==='playing'&&!paused});perfMark(PS.scene);presentFrame(now*.001);perfMark(PS.hud);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='training-setup'||mode==='training-result'||mode==='notes'||mode==='maintenance'||mode==='gift'||mode==='developer-usage')&&gardenScene;
  if(showGardenScene)gardenScene.update(visualDt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
  if(!showGardenScene){const laws=chosen.values(),first=laws.next().value||'seed';auraList.length=0;projectileBodyList.length=0;for(const p of shots){auraList.push(p);projectileBodyList.push(p);}for(const c of formCombats.values()){c.auraBolts?.(auraList);c.projectileBodies?.(projectileBodyList);}projectileSprites.sync(projectileBodyList,enemyShots);shotAuras.sync(auraList,camera,{theme:combatTheme,first,second:laws.next().value,bodyArt:'spriteHidden'});}perfMark(PS.scene);if(!menuArtCovers())composer.render();perfMark(PS.render);if(inspection&&frameCounter%30===0)inspection.textContent=JSON.stringify(window.seedDebug.getState());}
@@ -2505,13 +2560,13 @@ screen.orientation?.addEventListener?.('change',()=>{requestAnimationFrame(settl
  });
 function runLocalStartupLab(){
  if(!localInspection)return;const params=new URLSearchParams(location.search);
- let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('adventureLab'))void showSeedAdventure();else if(params.has('duelLab'))void showSeedDuel();else if(params.has('defenseLab'))void showSeedDefense();else if(params.has('survivalLab'))showSurvivalSetup();else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act5Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act5Lab'))||0,'crystalGorge');else if(params.has('act4Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act4Lab'))||0);else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
+ let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('adventureLab'))void showSeedAdventure();else if(params.has('duelLab'))void showSeedDuel();else if(params.has('defenseLab'))void showSeedDefense({actCount:params.get('defenseLab')==='five'?5:3});else if(params.has('survivalLab')){const lab=params.get('survivalLab');if(['act4','act5','five'].includes(lab))void startSurvival(lab);else showSurvivalSetup();}else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act5Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act5Lab'))||0,'crystalGorge',{resume:params.get('act5Lab')==='resume'});else if(params.has('act4Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act4Lab'))||0,'crosswind',{resume:params.get('act4Lab')==='resume'});else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
 }
 if(survivalComparisonEnabled)survivalComparison=mountSurvivalComparison({getActive:()=>Boolean(survivalSession)&&mode==='playing',getVariant:()=>survivalReadability?'quiet':'classic',setVariant:value=>{survivalReadability=value==='quiet';survivalArt?.setReadability(survivalReadability);player.scale.setScalar(survivalReadability?1.55:1.25);},getPaused:()=>paused,setPaused:value=>{paused=value;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;audio.setPaused(paused);document.getElementById('pause').textContent=paused?'▶':'Ⅱ';}});
 applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();const startupCloud=localInspection?Promise.resolve({changed:false}):account.ready().then(()=>{backfillPersonalBests();return cloud.start();}),startupSeason=localInspection?Promise.resolve(DEFAULT_SEASON_STATUS):loadSeasonStatus({enabled:!import.meta.env.DEV});Promise.all([startupCloud,startupSeason]).then(async([result,status])=>{startupCloudReady=true;seasonStatus=status;await refreshAccessMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();void backfillBossVeterans();void webTelemetry.visit();if(result&&result.ok===false&&result.reason!=='signed-out')$('#toast').textContent='클라우드 저장을 불러오지 못했어요 · 이 기기 저장으로 열었어요(연결되면 합쳐져요)';runLocalStartupLab();scheduleShaderWarm();}).catch(async()=>{startupCloudReady=true;seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAccessMode();showEntry();void webTelemetry.visit();runLocalStartupLab();scheduleShaderWarm();});startAnimation();
 // Read-only live diagnostics for performance and real-input validation.
 if(import.meta.env.DEV||localInspection)window.seedDebug={getState:()=>({survival:survivalSession?{time:survivalSession.time,actTime:survivalActTime(survivalSession),act:survivalSession.act,lap:survivalSession.lap,bossesDefeated:survivalSession.bossesDefeated,completedLaps:survivalSession.completedLaps,bossSpawned:survivalSession.bossSpawned,won:survivalSession.won,art:survivalArt?.state(),cap:survivalPressure(survivalSession).cap,lab:survivalSession.lab,benchmark:survivalSession.benchmark||false}:null,pace:{game:+paceGame.toFixed(1),real:+paceReal.toFixed(1),trusted:paceTrusted(paceGame,paceReal)},mutations:mutationsToSave(mutations),runes:runes.length,gardenFx,theme:{id:combatTheme,...THEMES[combatTheme]},quality:{level:qualityLevel,name:QUALITY_NAMES[qualityLevel],bloom:bloomPass.enabled,pixelRatio:renderer.getPixelRatio(),shadows:sun.castShadow,lanternLights:lanternLights.filter(l=>l.visible).length,governor:'off'},items:{hasteTime,shellTime,selectedItem},runBonuses:{...runBonuses},active:{value:activeGauge.value,cooldown:activeGauge.cooldown,state:activeState(heldForms).state,forms:activeState(heldForms).forms,plan:activeGauge.plan&&{state:activeGauge.plan.state,forms:activeGauge.plan.forms,time:activeGauge.plan.time,tags:activeGauge.plan.tags,archetype:activeGauge.plan.archetype},visual:activeVfx.state()},relics:normalizeRelics(relics),relicStats:{...LS},score,mirror:mirrorSession?{floor:mirrorSession.floor,cracks:mirrorSession.cracks,perfectDodges:mirrorSession.perfectDodges}:null,wardensDefeated,austinsDefeated,austinRoom,austinTitle:seedTitle.isUnlocked(),inventory:{...inventory},fallen:fallen.length,levels:Object.fromEntries(levels),choicesTaken,choiceKills,nextChoice:choiceGoal(),dashLock,dash:dashMeter(dashState),forms:Object.fromEntries(heldForms),orbitCore:orbitCore(heldForms,FORMS),traps:traps.length,turrets:enemies.filter(e=>e.type==='turret').map(e=>e.laws),pulls:pulls.length,formCombat:Object.fromEntries([...formCombats].map(([id,c])=>[id,c.state()])),discoveries:profile,guideTarget,rerollUsed,arena,escortWaves,pendingEscorts:pendingEscorts.length,cycle,region,stadium:stadium.state(),skyway:skyway.state(),baseSlide:{time:baseSlideTime,cooldown:baseSlideCooldown,lock:baseSlideLock,dx:baseSlideDir.x,dz:baseSlideDir.z,targetX:baseSlideTarget.x,targetZ:baseSlideTarget.z,lockedBase:baseSlideLock},saveAvailable:Boolean(readCheckpoint(actStore())),autoAttack,crowdLeft,midReward,roomKills:kills-roomStartKills,audio:audio.state(),vfx:vfx.state(),shotAuras:shotAuras.state(),projectileSprites:projectileSprites.state(),mode,paused,hp,stage:stage+1,room:roomFor(stage,cycle,region).name,arenaShape:arena.id||arena.shape,exit:{open:exitOpen,x:(arena.exit||EXIT).x,z:(arena.exit||EXIT).z,near:canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT})},mutated:[...mutated],kills,playerVisible:player.visible,touch:touch.state(),motion:{...player.userData.motion},evolution:growth.state(),artFrame:player.userData.artFrame,evolutionArt:player.userData.evolutionArt,secondaryEvolutionArt:player.userData.secondaryEvolutionArt,contactShadows:contactShadows.mesh.count,rules:[...chosen],invulnerable:invuln>0,player:{x:player.position.x,z:player.position.z},enemies:enemies.map(e=>({type:e.type,escort:Boolean(e.escort),elite:Boolean(e.elite),inScene:Boolean(e.g.parent)&&e.g.visible,phase:e.phase,hour:e.hour,bellWarn:e.bellWarn,alarms:e.alarms?.length,hp:e.hp,maxHp:e.maxHp,learned:e.learned,attacks:e.attacks,pattern:e.pattern,state:e.state,actionArt:e.actionArtState,motion:{...e.g.userData.motion},facing:e.g.rotation.y,x:e.g.position.x,z:e.g.position.z})),projectiles:shots.length,enemyProjectiles:enemyShots.length,bossShots:enemyShots.filter(q=>q.boss&&q.life>0).map(q=>({x:q.ob.position.x,z:q.ob.position.z,pierce:q.pierce})),elapsed,fps:frames.length/(frames.reduce((a,b)=>a+b,0)/1000),frameMsP95:[...frames].sort((a,b)=>a-b)[Math.floor(frames.length*.95)],drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,coverBounds:obstacles.map(o=>({...o}))}),// Local QA only (localhost + ?inspect or the dev server): shorten long boss fights and hand out a potion to test the flows.
-qa:{startExpansionJourney,expansionState:()=>expansionJourney?expansionApi.checkpointExpansionJourney(expansionJourney):null,startBench:(cycleValue=20,room=2,act=1)=>{mirrorSession=null;developerRun=true;const where=act===3?ACT3_REGION:act===2?ACT2_REGION:'garden';startRegion=where;labSafe=true;restart({version:1,region:where,stage:room,mode:'entry',cycle:cycleValue,hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{}});crowdLeft=100000;choicesTaken=500;return {cycle,stage,region};},benchSpawn:n=>{crowdLeft=Math.max(crowdLeft,n);spawnCrowd(n);return enemies.length;},perfReport:()=>perfFinish('bench'),perfLive:()=>perf.state(),// 이펙트 비교용(로컬 점검 전용): 씨앗 둘레에 법칙별 적중·폭발 효과를 한꺼번에 띄운다.
+qa:{startExpansionJourney,resumeExpansionJourney:act=>startExpansionJourney(0,act,{resume:true}),expansionSave:act=>createExpansionSaveStore(rawStorage,act,expansionOwner()).read(),expansionState:()=>expansionJourney?expansionApi.checkpointExpansionJourney(expansionJourney):null,startBench:(cycleValue=20,room=2,act=1)=>{mirrorSession=null;developerRun=true;const where=act===3?ACT3_REGION:act===2?ACT2_REGION:'garden';startRegion=where;labSafe=true;restart({version:1,region:where,stage:room,mode:'entry',cycle:cycleValue,hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{}});crowdLeft=100000;choicesTaken=500;return {cycle,stage,region};},benchSpawn:n=>{crowdLeft=Math.max(crowdLeft,n);spawnCrowd(n);return enemies.length;},perfReport:()=>perfFinish('bench'),perfLive:()=>perf.state(),// 이펙트 비교용(로컬 점검 전용): 씨앗 둘레에 법칙별 적중·폭발 효과를 한꺼번에 띄운다.
 vfxShowcase:(freeze=.1)=>{vfx.clear();const ids=['reflect','split','chain','orbit','pierce','burst','recall','gravity','frost'],p=player.position;ids.forEach((id,i)=>{const a=i/ids.length*Math.PI*2,at=new V(p.x+Math.cos(a)*3.2,0,p.z+Math.sin(a)*3.2);if(id==='burst')vfx.explosion(at,'burst',1.4,true);else vfx.impact(at,id,true);});vfx.flame(p,'burst',14,1);vfx.update(freeze);paused=true;return vfx.state();},lanceShowcase:()=>{vfx.clear();const p=player.position;vfx.lance(new V(p.x-5,0,p.z-1.5),new V(p.x-1,0,p.z-4),'refractlance');vfx.lance(new V(p.x-1,0,p.z-4),new V(p.x+2,0,p.z-4),'refractlance',true);vfx.lance(new V(p.x-3,0,p.z+1),new V(p.x+4,0,p.z+2),'spearring');vfx.update(.05);paused=true;return vfx.state();},vfxResume:()=>{paused=false;},vfxFreeze:()=>{paused=true;return {shots:shots.length,auras:shotAuras.state()};},
 // 탄환 소재 비교용(로컬 점검 전용): 법칙 10종 탄을 씨앗 앞에 두 줄로 세우고 멈춘다. 짝수 칸은 critical이면 치명타 탄.
 shotShowcase:(critical=false)=>{for(const p of shots)release(p.ob);shots=[];vfx.clear();const ids=['seed','reflect','split','chain','orbit','pierce','burst','recall','gravity','frost'],c=player.position,dir=new V(1,0,-.45).normalize();ids.forEach((id,i)=>{const crit=critical&&i%2===0,k=projectileVisualScale(false,crit),at=new V(c.x-4.4+(i%5)*2.2,.67,c.z-2.4+Math.floor(i/5)*2.6),ob=new THREE.Object3D();ob.position.copy(at);ob.rotation.y=Math.atan2(dir.x,dir.z);applyProjectileTheme(ob,id,combatTheme,.3,k);vfx.trail(at.clone().addScaledVector(dir,-.9),at,crit?'amber':id,false);shots.push({ob,dir:dir.clone(),life:2,bounces:0,fragment:false,tint:id,critical:crit,visualScale:k,age:.3,returning:false,hitSet:new Set(),hits:0,trailTime:0,trailPos:at.clone(),auraLook:shotAuraLook(id,{critical:crit,trailLaw:id,theme:combatTheme})});});vfx.update(.04);paused=true;return shots.length;},previewColor:({sat=COLOR_SATURATION,tone='aces'}={})=>{outputPass.material.uniforms.seedSaturation.value=sat;renderer.toneMapping=tone==='neutral'?THREE.NeutralToneMapping:tone==='agx'?THREE.AgXToneMapping:THREE.ACESFilmicToneMapping;return {sat,tone};},programs:()=>renderer.info.programs.map(p=>({name:p.name,key:p.cacheKey,used:p.usedTimes})),programOwners:()=>{const out={};scene.traverse(o=>{for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){const key=renderer.properties.get(m).currentProgram?.cacheKey;if(!key)continue;const who=`${o.type}:${o.name||o.parent?.name||o.geometry?.name||o.geometry?.type||''}:${m.type}:${m.name||''}`;(out[key]||(out[key]=new Set())).add(who);}});return Object.fromEntries(Object.entries(out).map(([k,v])=>[k,[...v].slice(0,6)]));},// 일반 판 시작(로컬 점검 전용): 개발자 실험이 아닌 진짜 판으로 저장·이어하기 흐름을 재현한다.

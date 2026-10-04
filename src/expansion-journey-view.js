@@ -35,6 +35,6 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   if(d){o.scale.set(t.width||.16,length,1);o.rotation.set(-Math.PI/2,0,Math.atan2(d.x,d.z));o.position.x+=d.x*length/2;o.position.z+=d.z*length/2;}
   else{o.rotation.set(-Math.PI/2,0,0);o.scale.set(1.3,1.3,1);}
  }
- return {root,setActive:v=>{root.visible=v;},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
+ return {root,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{floor.visible=!v;lanes.visible=!v&&floor.count===80;},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
   dispose:()=>{root.removeFromParent();for(const o of [floor,lanes,crystals,shadows])o.dispose();for(const o of [floorGeometry,laneGeometry,lineGeometry,crystalGeometry,shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial])o.dispose();}};
 }

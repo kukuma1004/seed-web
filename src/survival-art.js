@@ -174,8 +174,8 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  function applyActorArt(){
   for(let k=0;k<3;k++)for(let direction=0;direction<4;direction++){
    const b=bodies[k*4+direction];
-   b.material.map=texture(ACT_FILES[act][k],readability?CUTE_FOLDER:'mobile/');b.material.needsUpdate=true;
-   b.geometry=act===2?frames[k===2?2:k]:frames[direction];
+   b.material.map=texture(ACT_FILES[act===3?2:act===4?0:act][k],readability?CUTE_FOLDER:'mobile/');b.material.needsUpdate=true;
+   b.geometry=act===2||act===3?frames[k===2?2:k]:frames[direction];
   }
  }
  // Retune the existing floor buffers only when the comparison changes. Smaller
@@ -202,21 +202,24 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   applyActorArt();
  }
  function setAct(value=0){
-  if(disposed)return;const next=Math.max(0,Math.min(2,Math.floor(Number(value)||0)));
+  if(disposed)return;const next=Math.max(0,Math.min(4,Math.floor(Number(value)||0)));
   if(next===act)return;act=next;clear();for(const d of defeats)d.active=false;flecks.count=0;
   const uv=floorGeometry.attributes.uv,c=floorGeometry.attributes.color,pos=floorGeometry.attributes.position;
   if(act===0){applyGardenFloor();}
   else if(act===1){
    floor.material.map=texture('stadium-clay-hd-v1.webp','');floor.material.map.wrapS=floor.material.map.wrapT=THREE.MirroredRepeatWrapping;floor.material.map.repeat.set(4,4);
    for(let i=0;i<uv.count;i++){uv.setXY(i,(pos.getX(i)+halfWidth)/(2*halfWidth),(pos.getZ(i)+halfDepth)/(2*halfDepth));c.setXYZ(i,.5,.55,.46);}
+  }else if(act===4){
+   floor.material.map=quietMap;uv.array.set(originalUV);c.array.set(originalColors);
+   for(let i=0;i<c.count;i++)c.setXYZ(i,originalColors[i*3]*.8,originalColors[i*3+1]*.88,originalColors[i*3+2]*1.05);
   }else{
    floor.material.map=texture('act3-storm-route-v1.webp');
    for(let i=0;i<uv.count;i++){uv.setXY(i,(pos.getX(i)+halfWidth)/(2*halfWidth),1-(pos.getZ(i)+halfDepth)/(2*halfDepth));c.setXYZ(i,.48,.54,.59);}
   }
   uv.needsUpdate=true;c.needsUpdate=true;floor.material.needsUpdate=true;
-  earth.material.color.setHex(act===2?0x0b1d2b:act===1?0x20271d:0x172d25);
+  earth.material.color.setHex(act===2||act===3?0x0b1d2b:act===1?0x20271d:0x172d25);
   leaves.visible=act===0;moss.visible=false;undergrowth.visible=false;
-  rocks.visible=act!==2;edging.visible=act!==2;diamond.visible=bases.visible=act===1;
+  rocks.visible=act!==2&&act!==3;edging.visible=act!==2&&act!==3;diamond.visible=bases.visible=act===1;
   applyActorArt();
  }
  function update(enemies=[],time=0){

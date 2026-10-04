@@ -9,6 +9,12 @@ export const DUEL_SPAWN=Object.freeze([{x:11.5,y:10.8},{x:23.5,y:10.8}]);
 export const DUEL_RULES=Object.freeze({roundsToWin:2,roundSeconds:75,guardMax:100,guardRegen:14,blockDamage:.2,parryWindow:.16,guardBreakStun:1.05,dodgeCd:1,meterMax:100});
 const skill=(name,cooldown,desc)=>Object.freeze({name,cooldown,desc});
 export const DUEL_CHARACTERS=Object.freeze({
+ gravitymirror:Object.freeze({id:'gravitymirror',comboId:'gravitymirror',law:'gravity',name:'중력 거울 씨앗',role:'벽의 거울핵 · 회수 참격',hp:176,speed:4.15,reach:1.8,arc:1.15,comboReach:[1.55,1.9,2.2],comboArc:[1.25,.8,.62],damage:[9,10,14],cadence:.36,heavy:{damage:23,reach:2.15},parry:1.2,tile:7,ink:'#d5b1ff',
+  skills:[skill('접힌 거울핵',5.6,'한 번 튕긴 자리에 당김 · 핵이 있으면 기술을 다시 눌러 접어요'),skill('거울 접기',5.8,'놓인 거울핵을 회수하며 좁은 길을 베어요 · 최대 한 번만')],ult:skill('거울의 골짜기',0,'두 거울핵을 차례로 날려요 · 두 준비 동작 모두 끊을 수 있어요'),
+  blurb:'벽 가까이에서 강해요. 당김은 이동을 늦출 뿐, 막기와 회피를 빼앗지 않아요.'}),
+ chainburst:Object.freeze({id:'chainburst',comboId:'chainburst',law:'chain',name:'연쇄 폭발 씨앗',role:'불꽃 표식 · 잠근 세 점',hp:170,speed:4.35,reach:1.8,arc:1,comboReach:[1.5,1.75,2.05],comboArc:[1.25,.85,.65],damage:[9,10,14],cadence:.35,heavy:{damage:23,reach:2.1},parry:1,tile:2,ink:'#ffc17d',
+  skills:[skill('표식 건너뛰기',5.5,'3타의 표식이 있으면 빠르게 연결해요 · 점선이 생긴 뒤에는 따라가지 않아요'),skill('흩어진 불씨',5.4,'양옆 고정 불씨가 늦게 터져요 · 무적 없이 옆으로 물러나요')],ult:skill('화약 꽃길',0,'고정한 세 점을 순서대로 연결하고 터뜨려요 · 끝까지 피할 길이 있어요'),
+  blurb:'3타나 강공격으로 불꽃 표식을 붙여요. 기술을 누르면 위치가 고정돼요. 연결과 폭발은 한 번씩만.'}),
  frostnet:Object.freeze({id:'frostnet',comboId:'frostnet',law:'frost',name:'서리 그물 씨앗',role:'두 매듭 · 길을 묶는 냉기',hp:172,speed:4.15,reach:1.75,arc:1.05,damage:[9,10,14],cadence:.37,heavy:{damage:22,reach:2},parry:1.15,tile:8,ink:'#b6eaff',
   skills:[skill('서리 두 매듭',6.2,'두 매듭 사이에 냉기 선을 놓아요 · 선 끝으로 돌아가면 피할 수 있어요'),skill('매듭 거두기',6.6,'놓은 선을 한 번 줄여요 · 이미 맞힌 선은 다시 피해를 주지 않아요')],ult:skill('서리 뜰',0,'삼각형의 세 변을 차례로 엮어요 · 준비 중 끊거나 꼭짓점으로 빠져나오세요'),
   blurb:'선 하나는 한 번만 맞아요. 서로 다른 선을 두 번 받으면 잠깐 느려져요. 매듭 설치 중에는 빈틈이 있어요.'}),
@@ -70,14 +76,14 @@ export const DUEL_CHARACTERS=Object.freeze({
  ,heart:Object.freeze({id:'heart',law:'gravity',name:'정원의 심장',role:'예고 중력장 · 유한 공전',hp:190,speed:4,reach:1.85,arc:1,damage:[10,10,15],cadence:.38,heavy:{damage:23,reach:2.1},parry:1,tile:7,ink:'#e5d18f',
   skills:[skill('심장의 자리',6.2,'상대 자리를 예고한 뒤 약하게 끌어요 · 피해는 한 번'),skill('정원의 공전',6.8,'돌 하나가 몸을 돌아 두 번까지 닿아요')],ult:skill('정원의 맥박',0,'예고 중력장과 돌 하나를 함께 펼쳐요'),blurb:'정원의 마지막 시험을 이기면 함께할 수 있어요. 예고한 자리는 따라오지 않아요.'})
 });
-export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet']);
+export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst']);
 export function availableDuelCharacters(progress){return DUEL_ORDER.filter(id=>id!=='heart'||[0,1].includes(progress?.cleared?.s22?.losses));}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function rnd(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 
-function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0};}
+function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0};}
 // practice: 콤보 연습(쓰러지지 않고 체력이 다시 차며, 시간이 흐르지 않는다).
 export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false,boss=false}={}){
  const s={seed:seed>>>0,practice:Boolean(practice),boss:Boolean(boss&&enemy==='heart'),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
@@ -162,9 +168,46 @@ function heartPattern(s,f,kind){if(f.stun>0||s.time<f.bossNextAt||s.hazards.some
  return true;
 }
 function lineContact(h,o){const vx=o.x-h.x,vy=o.y-h.y,along=vx*h.dx+vy*h.dy,length=Math.hypot(h.endX-h.x,h.endY-h.y);return along>=0&&along<=length&&Math.abs(vx*h.dy-vy*h.dx)<h.r+.4;}
+// A mirror has exactly one terrain bounce. Its fixed anchor only exerts finite,
+// continuous pull: no teleport, damage ticks, stun, or recursive reflections.
+function mirrorCast(s,f,ult=false){
+ f.mirrorCast=(f.mirrorCast||0)+1;f.state='skill';f.total=f.t=ult?1.12:.75;f.blocking=false;
+ for(const [k,off] of (ult?[-.2,.2]:[0]).entries()){
+  const a=Math.atan2(f.fy,f.fx)+off,dx=Math.cos(a),dy=Math.sin(a),arm=.45+k*.3;
+  area(s,f,'mirrorTell',{x:f.x-f.fy*k*.6,y:f.y+f.fx*k*.6,dx,dy,endX:f.x+dx*7,endY:f.y+dy*7,r:.22,arm,t:arm+.08,cast:f.mirrorCast,damage:ult?12:16,triggered:false});
+ }
+}
+function mirrorFold(s,f){
+ const cores=s.hazards.filter(h=>h.owner===f.team&&h.kind==='mirrorAnchor');
+ // Shared budget prevents overlapping folds from multiplying the same hit.
+ const budget={spent:false};for(const h of cores){h.t=0;const v=norm(f.x-h.x,f.y-h.y);area(s,f,'mirrorFold',{x:h.x,y:h.y,endX:f.x,endY:f.y,dx:v.x,dy:v.y,r:.3,arm:.32,t:.46,damage:14,budget,triggered:false});}
+ f.state='skill';f.total=f.t=.52;f.blocking=false;
+ if(!cores.length)fx(s,'miss',f.x+f.fx,f.y+f.fy,{ink:DUEL_CHARACTERS[f.char].ink});
+}
+function emberMark(s,f,o){
+ for(const h of s.hazards)if(h.owner===f.team&&h.kind==='emberMark')h.t=0;
+ area(s,f,'emberMark',{x:o.x,y:o.y,r:.3,arm:0,t:3.2,triggered:true,target:o.team});
+ // An earned finisher opens a follow-up window once every three seconds.
+ // Previously marks expired before the five-second skill cooldown ended,
+ // leaving the character's defining combo unavailable in ordinary play.
+ if(s.time>=(f.relayRefundUntil||0)){f.cd[0]=Math.min(f.cd[0],.6);f.relayRefundUntil=s.time+3;}
+}
+function emberRelay(s,f,ult=false){
+ const mark=s.hazards.find(h=>h.owner===f.team&&h.kind==='emberMark'&&h.t>0&&dist(f,h)<8);
+ const cx=mark?.x??f.x+f.fx*3.5,cy=mark?.y??f.y+f.fy*3.5;
+ if(mark)mark.t=0;
+ const points=ult?[[cx-f.fy*1.6,cy+f.fx*1.6],[cx+f.fx*1.6,cy+f.fy*1.6],[cx+f.fy*1.6,cy-f.fx*1.6]]:[[cx,cy],[cx-f.fx*.6-f.fy*1.3,cy-f.fy*.6+f.fx*1.3],[cx-f.fx*.6+f.fy*1.3,cy-f.fy*.6-f.fx*1.3]];
+ f.relayCast=(f.relayCast||0)+1;f.state='skill';f.total=f.t=ult?1.22:1.05;f.blocking=false;
+ const budget={beam:false,bursts:new Set()};let p=[f.x,f.y];
+ for(let k=0;k<3;k++){const q=points[k],v=norm(q[0]-p[0],q[1]-p[1]),arm=(mark&&!ult?.3:.5)+k*.2;area(s,f,'emberRelay',{x:p[0],y:p[1],endX:q[0],endY:q[1],dx:v.x,dy:v.y,r:.18,arm,t:arm+.14,cast:f.relayCast,damage:ult?10:8,burstDamage:ult?10:8,burstR:ult?1.05:.85,budget,node:k,triggered:false});p=q;}
+}
+function emberScatter(s,f){
+ for(const off of [-1.2,1.2])area(s,f,'bloomEmber',{x:f.x-f.fy*off,y:f.y+f.fx*off,r:.8,arm:.65,t:.82,damage:8});
+ f.state='dash';f.total=f.t=.14;f.dx=-f.fy;f.dy=f.fx;f.hitDone=true;
+}
 function useSkill(s,f,i){
- const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team];if(f.cd[i]>0||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
- f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
+ const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team],fold=i===0&&f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0);if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
+ if(!fold)f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
  const actions=duelSkillActions(f,i);
  if(actions)for(const action of actions){
   if(action.type==='motion')Object.assign(f,{state:action.state,t:action.seconds,dx:action.dx,dy:action.dy,hitDone:action.hitDone});
@@ -176,6 +219,10 @@ function useSkill(s,f,i){
   else if(action.type==='bloomRetreat')bloomRetreat(s,f);
   else if(action.type==='frostWeave')frostWeave(s,f);
   else if(action.type==='frostTug')frostTug(s,f);
+  else if(action.type==='mirrorCast'){if(fold)mirrorFold(s,f);else mirrorCast(s,f);}
+  else if(action.type==='mirrorFold')mirrorFold(s,f);
+  else if(action.type==='emberRelay')emberRelay(s,f);
+  else if(action.type==='emberScatter')emberScatter(s,f);
  }
  if(f.char==='burst'){if(i===0)s.hazards.push({kind:'mine',owner:f.team,x:f.x,y:f.y,t:.9,r:2.1});else{f.state='leap';f.t=.55;f.tx=clamp(o.x,DUEL_ARENA.minX,DUEL_ARENA.maxX);f.ty=clamp(o.y,DUEL_ARENA.minY,DUEL_ARENA.maxY);s.hazards.push({kind:'tell',owner:f.team,x:f.tx,y:f.ty,t:.55,r:2.1});}}
  if(f.char==='split')for(const off of [-.32,0,.32]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x+f.fx*.5,y:f.y+f.fy*.5,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.6,damage:10,pierce:0,bounces:0,hit:new Set(),law:'split',kind:'petal'});}
@@ -201,6 +248,8 @@ function useUlt(s,f){
  const o=s.fighters[1-f.team],c=DUEL_CHARACTERS[f.char];if(f.meter<DUEL_RULES.meterMax||f.stun>0)return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
  if(f.char==='blastlance'){f.inv=.08;bloomLance(s,f,true);}
  if(f.char==='frostnet'){f.inv=.08;frostWeave(s,f,true);}
+ if(f.char==='gravitymirror'){f.inv=.08;mirrorCast(s,f,true);}
+ if(f.char==='chainburst'){f.inv=.08;emberRelay(s,f,true);}
  if(f.char==='pierce')for(const off of [-.35,0,.35]){const a=Math.atan2(f.fy,f.fx)+off;s.shots.push({owner:f.team,x:f.x,y:f.y,dx:Math.cos(a),dy:Math.sin(a),speed:15,life:1.4,damage:16,pierce:3,bounces:0,hit:new Set(),law:'pierce',kind:'lance',unblockable:false,breaker:1.5});}
  if(f.char==='burst'){if(dist(f,o)<4.2)strike(s,f,o,40,{kind:'skill',breaker:2,stun:.8,knock:2});fx(s,'boom',f.x,f.y,{r:4.2,ink:c.ink,life:.6,max:.6});}
  if(f.char==='reflect'){if(dist(f,o)<8){o.state='jailed';o.t=1.6;o.stun=1.6;o.blocking=false;fx(s,'jail',o.x,o.y,{ink:c.ink,life:1.6,max:1.6});}}
@@ -249,13 +298,16 @@ function act(s,f,input,dt){
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
- if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step;fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:c.reach*(step===2?1.12:1),life:.26,max:.26,team:f.team});melee(s,f,c.reach*(step===2?1.12:1),c.arc*(step===2?1.25:1),c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});}
- if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach,life:.34,max:.34,team:f.team});melee(s,f,c.heavy.reach,c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});}
+ if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=c.comboReach?.[step]??c.reach*(step===2?1.12:1),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
+ if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach,life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach,c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
  if(f.state==='dash'&&f.t>0){const speed=f.char==='comet'&&f.hitGap>0?1.8:13;f.x+=f.dx*speed*dt;f.y+=f.dy*speed*dt;if(f.char==='comet'){f.hitGap=Math.max(0,(f.hitGap||0)-dt);if((f.dashHits||0)<(f.hitLimit||2)&&f.hitGap<=0&&dist(f,o)<1.1){f.dashHits=(f.dashHits||0)+1;f.hitGap=.15;strike(s,f,o,f.dashDamage||11,{kind:'skill',stun:.12,knock:.22,dir:{x:f.dx,y:f.dy}});}}else if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,f.char==='bastion'?15:20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
  if(f.state==='dodge'&&f.t>0){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
  // 휘두르는 동안에도 조금은 움직일 수 있다(발이 묶인 답답함 줄이기).
  if(busy&&(f.state==='attack'||f.state==='heavy')&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=(input.x/m)*c.speed*.28*dt;f.y+=(input.y/m)*c.speed*.28*dt;}}
+ // The first placement stays stationary. After release the caster may reposition
+ // at a reduced pace; existing fixed warning coordinates never track that move.
+ if(busy&&f.state==='skill'&&['gravitymirror','chainburst'].includes(f.char)&&f.t<f.total-.5&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=(input.x/m)*c.speed*.6*dt;f.y+=(input.y/m)*c.speed*.6*dt;}}
  if(busy){clampArena(f);return;}
  const was=cancel?f.state:'';if(cancel){f.state='idle';f.t=0;}
  // 새 행동.
@@ -294,7 +346,12 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
   // 귀환 칼날: 잠깐 날아간 뒤 던진 씨앗에게 돌아온다(돌아오는 길에 한 번 더 벨 수 있다). 받으면 사라진다.
   if(q.kind==='blade'){q.age+=dt;if(q.age>=q.turn){const home=s.fighters[q.owner],v=norm(home.x-q.x,home.y-q.y);if(!q.back){q.back=true;q.hit.clear();q.pierce=1;}q.dx=v.x;q.dy=v.y;q.speed=12;if(Math.hypot(home.x-q.x,home.y-q.y)<.6)q.life=0;}}
   q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
-  if(q.kind!=='blade'&&(q.x<A.minX-.5||q.x>A.maxX+.5||q.y<A.minY-.5||q.y>A.maxY+.5||DUEL_PILLARS.some(p=>Math.hypot(q.x-p.x,q.y-p.y)<p.r))){if(q.bounces>0){q.bounces--;if(q.x<A.minX||q.x>A.maxX)q.dx*=-1;else q.dy*=-1;q.x=clamp(q.x,A.minX,A.maxX);q.y=clamp(q.y,A.minY,A.maxY);}else q.life=0;}
+  if(q.kind==='mirrorCore'){
+   let normal=null;
+   if(q.x<A.minX||q.x>A.maxX){normal={x:q.x<A.minX?1:-1,y:0};q.x=clamp(q.x,A.minX,A.maxX);}else if(q.y<A.minY||q.y>A.maxY){normal={x:0,y:q.y<A.minY?1:-1};q.y=clamp(q.y,A.minY,A.maxY);}
+   else for(const p of DUEL_PILLARS)if(dist(q,p)<p.r+.13){normal=norm(q.x-p.x,q.y-p.y);q.x=p.x+normal.x*(p.r+.14);q.y=p.y+normal.y*(p.r+.14);break;}
+   if(normal){if(q.bounces>0){q.bounces--;const dot=q.dx*normal.x+q.dy*normal.y;if(dot<0){q.dx-=2*dot*normal.x;q.dy-=2*dot*normal.y;}area(s,s.fighters[q.owner],'mirrorAnchor',{x:q.x,y:q.y,r:1.65,arm:0,t:1.2,pull:1.4,triggered:true});event(s,'mirrorBounce');}else q.life=0;}
+  }else if(q.kind!=='blade'&&(q.x<A.minX-.5||q.x>A.maxX+.5||q.y<A.minY-.5||q.y>A.maxY+.5||DUEL_PILLARS.some(p=>Math.hypot(q.x-p.x,q.y-p.y)<p.r))){if(q.bounces>0){q.bounces--;if(q.x<A.minX||q.x>A.maxX)q.dx*=-1;else q.dy*=-1;q.x=clamp(q.x,A.minX,A.maxX);q.y=clamp(q.y,A.minY,A.maxY);}else q.life=0;}
   const target=s.fighters[1-q.owner];if(q.life>0&&!q.hit.has(target.team)&&Math.hypot(q.x-target.x,q.y-target.y)<.6){
    if(target.shield>0){q.reflections=(q.reflections||0)+1;if(q.reflections>2){q.life=0;continue;}q.owner=target.team;q.dx*=-1;q.dy*=-1;q.hit.clear();fx(s,'parry',q.x,q.y,{ink:DUEL_CHARACTERS[target.char].ink});event(s,'reflect');continue;}
    q.hit.add(target.team);strike(s,s.fighters[q.owner],target,q.damage,{kind:'shot',stun:.3,knock:.8,breaker:q.breaker||1,dir:{x:q.dx,y:q.dy}});if(--q.pierce<0)q.life=0;}
@@ -306,6 +363,21 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  }
  s.shots=s.shots.filter(q=>q.life>0);
  for(const h of s.hazards){h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+  if(h.kind==='emberMark'&&h.t>0){h.x=o.x;h.y=o.y;}
+  if(h.kind==='mirrorTell'){
+   if(owner.stun>0||owner.state!=='skill'||owner.mirrorCast!==h.cast){h.t=0;continue;}
+   h.arm=Math.max(0,h.arm-dt);if(h.arm<=0&&!h.triggered){h.triggered=true;shoot(s,owner,{x:h.x+h.dx*.6,y:h.y+h.dy*.6,dx:h.dx,dy:h.dy,kind:'mirrorCore',law:'gravity',bounces:1,damage:h.damage,speed:10,life:.95});event(s,'mirrorLaunch');}
+  }
+  if(h.kind==='mirrorAnchor'&&dist(h,o)<h.r&&o.inv<=0){const v=norm(h.x-o.x,h.y-o.y),force=h.pull*(o.blocking?.25:1);o.x+=v.x*force*dt;o.y+=v.y*force*dt;clampArena(o);}
+  if(h.kind==='mirrorFold'){
+   h.arm=Math.max(0,h.arm-dt);if(h.arm<=0&&!h.triggered){h.triggered=true;event(s,'mirrorFold');if(!h.budget.spent&&lineContact(h,o)&&o.inv<=0){h.budget.spent=true;strike(s,owner,o,h.damage,{kind:'skill',stun:.18,knock:.6,dir:{x:h.dx,y:h.dy}});}}
+  }
+  if(h.kind==='emberRelay'){
+   if(owner.stun>0||owner.state!=='skill'||owner.relayCast!==h.cast){h.t=0;continue;}
+   h.arm=Math.max(0,h.arm-dt);if(h.arm<=0&&!h.triggered){h.triggered=true;event(s,'emberRelay');fx(s,'bolt',h.endX,h.endY,{ink:h.ink,fromX:h.x,fromY:h.y,life:.2,max:.2});fx(s,'boom',h.endX,h.endY,{ink:h.ink,r:h.burstR,life:.24,max:.24});
+    if(o.inv<=0){if(!h.budget.beam&&lineContact(h,o)){h.budget.beam=true;strike(s,owner,o,h.damage,{kind:'skill',stun:.1,knock:.2,dir:{x:h.dx,y:h.dy}});}if(!h.budget.bursts.has(o.team)&&Math.hypot(o.x-h.endX,o.y-h.endY)<h.burstR){h.budget.bursts.add(o.team);strike(s,owner,o,h.burstDamage,{kind:'skill',stun:.12,knock:.35,dir:norm(o.x-h.endX,o.y-h.endY)});}}
+   }
+  }
   if(h.kind==='frostThread'){
    if(!h.triggered&&(owner.stun>0||owner.state!=='skill'||owner.frostCast!==h.cast)){h.t=0;continue;}
    h.arm=Math.max(0,h.arm-dt);if(!h.triggered&&h.arm<=0){h.triggered=true;event(s,'frostWeave');}
@@ -367,6 +439,10 @@ export function duelAi(s,team,dt){
   }
   return input;}
  const threat=(o.state==='attack'&&o.t>.08)||(o.state==='heavy'&&o.t>.15)||(o.state==='dash')||s.shots.some(q=>q.owner!==team&&Math.hypot(q.x-f.x,q.y-f.y)<3.5);
+ // The short relay fighter closes after a visible missed swing rather than
+ // casting empty fields forever at midrange. This uses the same dodge action
+ // and cooldown as the player; it never reads a future attack or gains invulnerability.
+ if(f.char==='chainburst'&&o.state==='attack'&&o.hitDone&&d>c.reach+.25&&d<3.8){ai.punishSeen=(ai.punishSeen||0)+dt;if(ai.punishSeen>cfg.react*.7&&f.dodgeCd<=0&&f.stun<=0){input.x=v.x+v.y*.5;input.y=v.y-v.x*.5;input.dodge=true;ai.guarding=false;return input;}}else ai.punishSeen=0;
  // 방금 맞았으면(1.5초) 더 빨리·자주 막는다. 막아서 상대가 튕기면 바로 반격.
  if(f.hp<(ai.hp??f.hp))ai.hurtAt=s.time;ai.hp=f.hp;const wary=s.time-(ai.hurtAt??-9)<1.5,react=wary?cfg.react*.55:cfg.react,block=wary?Math.min(.95,cfg.block+.3):cfg.block;
  if(o.state==='attack'&&o.cancelAt<0&&d<c.reach+.6&&f.stun<=0){ai.guarding=false;input.attack=true;return input;}
@@ -376,6 +452,17 @@ export function duelAi(s,team,dt){
  else ai.seen=0;
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;
+ if(f.state==='skill'&&['gravitymirror','chainburst'].includes(f.char)){input.x=d<3.8?-v.x:-v.y;input.y=d<3.8?-v.y:v.x;return input;}
+ if(f.char==='gravitymirror'){
+  const h=s.hazards.find(h=>h.owner===team&&h.kind==='mirrorAnchor'&&h.t>0);
+  if(h){const n=norm(f.x-h.x,f.y-h.y);if(lineContact({...h,endX:f.x,endY:f.y,dx:n.x,dy:n.y,r:.45},o)&&rnd(s)<dt*5){input.skill1=true;return input;}}
+ }
+ // New fusion readers keep the same reaction delay and player movement limits.
+ const authoredDanger=s.hazards.find(h=>h.owner!==team&&h.t>0&&(h.kind==='mirrorAnchor'&&dist(f,h)<h.r+.35||h.kind==='mirrorFold'&&!h.triggered&&lineContact({...h,r:h.r+.3},f)||h.kind==='emberRelay'&&!h.triggered&&(lineContact({...h,r:h.r+.3},f)||Math.hypot(f.x-h.endX,f.y-h.endY)<h.burstR+.4)));
+ if(authoredDanger){ai.fusionSeen=(ai.fusionSeen||0)+dt;if(ai.fusionSeen>cfg.react){const h=authoredDanger,v=h.kind==='mirrorAnchor'?norm(f.x-h.x,f.y-h.y):{x:-h.dy,y:h.dx};input.x=v.x;input.y=v.y;if(f.dodgeCd<=0&&h.arm<.2)input.dodge=true;return input;}}else ai.fusionSeen=0;
+ if(f.char==='gravitymirror'&&f.cd[0]<=0&&d>2.5&&d<6.5&&!threat&&rnd(s)<dt*2.5){const p=DUEL_PILLARS.find(p=>dist(p,o)<3.2);if(p){const v=norm(p.x-f.x,p.y-f.y);input.aimX=v.x;input.aimY=v.y;}input.skill1=true;return input;}
+ if(f.char==='chainburst'&&f.cd[0]<=0&&d<6&&!threat){const mark=s.hazards.some(h=>h.owner===team&&h.kind==='emberMark'&&h.t>0);if((mark&&d>1.8||!mark&&d>4.2)&&rnd(s)<dt*3.5){input.skill1=true;return input;}}
+ if(f.meter>=100&&['gravitymirror','chainburst'].includes(f.char)&&d>3.2&&d<6.5&&!threat){input.ult=true;return input;}
  // Read a placed threat after a real reaction interval; move toward its shortest exit, never teleport.
  const danger=s.hazards.find(h=>h.owner!==team&&!h.hitDone&&((!h.triggered||h.kind==='heartWell')&&['bramble','frostBloom','rushTell','cinderPatch','echoStrike','heartWell','bloomEmber'].includes(h.kind)&&dist(f,h)<h.r+.8||['reedTell','shardMark','bloomLanceTell'].includes(h.kind)&&!h.triggered&&lineContact({...h,r:h.r+.6},f)||h.kind==='frostThread'&&!h.hitDone&&lineContact({...h,r:h.r+.25},f)||h.kind==='pulseRing'&&dist(f,h)<h.maxR+.5&&dist(f,h)>h.r-.5||h.kind==='pebbleOrbit'&&h.hits<h.maxHits&&Math.abs(dist(f,h)-h.orbitR)<1||h.kind==='ring'&&f.inv<=0&&(h.tick||0)<.12&&dist(f,h)<h.r+.3));
  if(danger){ai.areaSeen=(ai.areaSeen||0)+dt;if(ai.areaSeen>cfg.react){const away=norm(f.x-danger.x,f.y-danger.y);input.x=away.x;input.y=away.y;if(['rushTell','reedTell','shardMark','bloomLanceTell','frostThread'].includes(danger.kind)){input.x=-danger.dy;input.y=danger.dx;}if(f.dodgeCd<=0&&(danger.arm<.2||danger.kind==='pulseRing'&&dist(f,danger)<danger.r+1.1||danger.kind==='ring'&&dist(f,danger)<danger.r+.1))input.dodge=true;return input;}}else ai.areaSeen=0;
@@ -383,13 +470,19 @@ export function duelAi(s,team,dt){
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange){input.ult=true;return input;}
+ const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['gravitymirror','chainburst'].includes(f.char)){input.ult=true;return input;}
  // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만" — 두 번째 스킬은 쓰지 않는다(사람과 같은 조작).
  if(f.cd[0]<=0&&(f.char==='frostnet'&&d>1.5&&d<4.8&&!threat||f.char==='blastlance'&&d>3&&d<6.5&&!threat||f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  // Weavers set lanes from midrange, then close for melee in recovery. Staying
  // at ordinary melee spacing cancels their own windup against every rushdown.
  if(f.char==='frostnet'&&f.cd[0]<.65){
   if(d<2.6){input.x=-v.x;input.y=-v.y;}else if(d>3.6){input.x=v.x;input.y=v.y;}else{input.x=-v.y*.45;input.y=v.x*.45;}
+  return input;
+ }
+ if(f.char==='gravitymirror'&&f.cd[0]<.6){
+  // Place interruptible attacks from outside ordinary melee, then enter to
+  // punish during cooldown. Point-blank spell spam is not a fighting style.
+  if(d<3.2){input.x=-v.x;input.y=-v.y;}else if(d>4.6){input.x=v.x;input.y=v.y;}else{input.x=-v.y*.5;input.y=v.x*.5;}
   return input;
  }
  const want=c.reach*.85;
