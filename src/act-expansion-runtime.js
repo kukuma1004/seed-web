@@ -5,6 +5,10 @@ import {EXPANSION_ACTS,crosswindFormation,createCrystalWalls,restoreCrystalWalls
 // The caller owns damage, Three.js objects, disposal, rewards and room completion.
 // Outputs are reused until the next step: consume/copy them before stepping again.
 export const EXPANSION_RUNTIME_VERSION=1;
+export const EXPANSION_COURSE_PACKETS=Object.freeze([18,20,22,24,26]);
+// Later rooms have a second actor on every fourth accepted packet. Include
+// exactly one true boss; broken scenery and missed packets are never kills.
+export const EXPANSION_CIRCUIT_KILLS=1+EXPANSION_COURSE_PACKETS.reduce((n,v,i)=>n+v+(i>=2?Math.floor(v/4):0),0);
 export const EXPANSION_RUNTIME_LIMITS=Object.freeze({enemies:24,projectiles:48,walls:20,spawnsPerStep:2,boltsPerStep:8,terrainPerStep:3,maxStep:.1});
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const finite=(n,fallback=0)=>Number.isFinite(n)?n:fallback;
@@ -48,6 +52,10 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  out.finish=s.finishAnnounced||(s.act==='crosswind'?s.distance>=room.length:s.time>=pressureTime&&p.z<=s.origin.z-7);
  if(out.finish&&!s.finishAnnounced){s.finishAnnounced=true;out.events.push({type:'course-end',bossId:definition.bossId,room:s.room});}
  if(out.finish)return out;
+ // Delaying the exit must not generate an unlimited scoring farm. This is an
+ // accepted-packet budget, so crowded/projectile-capped frames spend nothing.
+ // Exhaustion does not complete the course: the player still crosses it.
+ if(s.spawnIndex>=EXPANSION_COURSE_PACKETS[s.room])return out;
  s.spawnClock-=step;if(s.spawnClock>0)return out;
  // Re-arm even when saturated; capacity reopening cannot release queued waves.
  s.spawnClock=Math.max(.82,1.7-s.room*.14)+random(s)*.25;

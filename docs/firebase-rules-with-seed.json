@@ -214,7 +214,7 @@
           ],
           "$runId": {
             ".write": "auth != null && auth.token.firebase.sign_in_provider != 'anonymous' && ((!data.exists() && newData.child('uid').val() == auth.uid) || (data.exists() && !newData.exists() && data.child('uid').val() == auth.uid))",
-            ".validate": "newData.hasChildren(['uid', 'name', 'score', 'cycle', 'stage', 'kills', 'time', 'at']) && newData.child('kills').val() <= (newData.child('cycle').val() + 1) * 180 && newData.child('score').val() <= (newData.child('act').val() == 3 ? ((newData.child('kills').val() + 12) * 120 + 6000) : ((newData.child('kills').val() + 12) * 50)) * (1 + newData.child('cycle').val() / 2) && newData.child('time').val() >= newData.child('cycle').val() * 15 && newData.child('time').val() >= newData.child('kills').val() / 6 && newData.child('score').val() >= newData.child('kills').val() * 8 && newData.child('cycle').val() <= 49",
+            ".validate": "((newData.child('act').val() != 4 && newData.child('act').val() != 5) && (newData.hasChildren(['uid', 'name', 'score', 'cycle', 'stage', 'kills', 'time', 'at']) && newData.child('kills').val() <= (newData.child('cycle').val() + 1) * 180 && newData.child('score').val() <= (newData.child('act').val() == 3 ? ((newData.child('kills').val() + 12) * 120 + 6000) : ((newData.child('kills').val() + 12) * 50)) * (1 + newData.child('cycle').val() / 2) && newData.child('time').val() >= newData.child('cycle').val() * 15 && newData.child('time').val() >= newData.child('kills').val() / 6 && newData.child('score').val() >= newData.child('kills').val() * 8 && newData.child('cycle').val() <= 49)) || (newData.hasChildren(['uid', 'name', 'score', 'cycle', 'stage', 'kills', 'time', 'at']) && (newData.child('act').val() == 4 || newData.child('act').val() == 5) && (root.child('seedExpansionRelease').child('crosswind').val() == true && root.child('seedExpansionRelease').child('crystalGorge').val() == true) && newData.child('cycle').val() <= 2 && newData.child('kills').val() <= (newData.child('cycle').val() + 1) * 128 && newData.child('score').val() >= newData.child('kills').val() * 8 && newData.child('score').val() <= (newData.child('kills').val() + 12) * 50 + 6000 * (newData.child('cycle').val() + 1) && newData.child('time').val() >= newData.child('cycle').val() * 15 && newData.child('time').val() >= newData.child('kills').val() / 6 && (newData.child('done').val() != true || (newData.child('cycle').val() == 2 && newData.child('stage').val() == 4)) && newData.child('cycle').val() % 1 == 0 && newData.child('kills').val() % 1 == 0 && newData.child('time').val() % 1 == 0 && newData.child('score').val() % 1 == 0 && newData.child('stage').val() % 1 == 0)",
             "uid": {
               ".validate": "newData.isString() && newData.val() == auth.uid"
             },
@@ -237,7 +237,7 @@
               ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 10000000"
             },
             "act": {
-              ".validate": "newData.isNumber() && (newData.val() == 1 || newData.val() == 2 || newData.val() == 3)"
+              ".validate": "newData.isNumber() && (newData.val() == 1 || newData.val() == 2 || newData.val() == 3 || ((newData.val() == 4 || newData.val() == 5) && (root.child('seedExpansionRelease').child('crosswind').val() == true && root.child('seedExpansionRelease').child('crystalGorge').val() == true)))"
             },
             "at": {
               ".validate": "newData.isNumber() && newData.val() <= now"

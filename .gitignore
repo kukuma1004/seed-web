@@ -189,3 +189,5 @@ art-refs/
 !tools/survival-five-record-test.mjs
 
 !tools/expansion-public-host-test.mjs
+!tools/expansion-online-ranking-test.mjs
+!tools/expansion-course-budget-test.mjs
