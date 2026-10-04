@@ -460,7 +460,7 @@ function saveExpansionLeave(){
  const result=expansionStore(expansionJourney.act).write(value);if(result.ok)expansionEntry=result.value;return result.ok;
 }
 function finishExpansionEntry(){
- if(!expansionEntry)return true;
+ if(!expansionEntry){void releaseExpansionSaveLease();return true;}
  if(expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease()||!expansionStore(expansionJourney.act).finish(expansionEntry))return false;
  expansionEntry=null;void releaseExpansionSaveLease();return true;
 }

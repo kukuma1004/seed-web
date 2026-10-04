@@ -84,6 +84,16 @@ export function batch03Ai(s,f,o,input,dt){const d=dist(f,o),v=norm(o.x-f.x,o.y-f
   const ai=s.ai[f.team],close=d>1.05&&d<1.8&&o.state!=='attack'&&o.state!=='heavy';
   ai.wardSeen=incoming?(ai.wardSeen||0)+dt:0;ai.wardCloseSeen=close?(ai.wardCloseSeen||0)+dt:0;
   const react={easy:.32,normal:.2,hard:.12}[s.difficulty]??.2,opportunity=incoming&&ai.wardSeen>=react||close&&ai.wardCloseSeen>=react;
+  // This short fan is a gap punish, not a replacement for guard/dodge while
+  // a heavy is still coming. Observe a visible idle/recovery window at its
+  // actual range and keep space during the normal reaction interval.
+  const fanGap=d>2.2&&d<2.85&&(o.state==='idle'||o.state==='recover'||['attack','heavy'].includes(o.state)&&o.hitDone);
+  ai.wardFanSeen=fanGap?(ai.wardFanSeen||0)+dt:0;
+  if(f.cd[1]<=0&&fanGap&&f.state==='idle'){
+   if(ai.wardFanSeen>=react)input.skill2=true;
+   else if(d<2.45){input.x=-v.x;input.y=-v.y;}
+   return true;
+  }
   if(!active&&opportunity&&(f.cd[0]<=0||f.meter>=100)){
    if(incoming){
     // Predict only visible fixed projectile velocity, with the real startup.

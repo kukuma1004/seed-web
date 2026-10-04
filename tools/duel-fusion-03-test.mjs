@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createDuel,stepDuel,DUEL_CHARACTERS,DUEL_ORDER} from '../src/seed-duel-rules.js';
+import {createDuel,stepDuel,duelAi,DUEL_CHARACTERS,DUEL_ORDER} from '../src/seed-duel-rules.js';
 import {batch03Reach,batch03Ai} from '../src/seed-duel-batch03.js';
 import {ALL_FORMS} from '../src/forms.js';
 import {DUEL_STORY_STAGES,completeStoryMatch} from '../src/seed-duel-story.js';
@@ -44,6 +44,13 @@ for(const id of ['returnblade','frostguard']){const s=fixture(id);for(let i=0;i<
 // waste the limited defense; valid forward shots and close recovery can use it.
 for(const miss of [true,false]){const s=fixture('frostguard'),f=s.fighters[0],o=s.fighters[1];s.shots.push({owner:1,x:10,y:miss?17:10,dx:1,dy:0,speed:8,life:3});let cast=false;for(let i=0;i<25;i++){const input={};batch03Ai(s,f,o,input,dt);cast ||= Boolean(input.skill1);}assert.equal(cast,!miss);}
 {const s=fixture('frostguard',15,10,16.5,10),f=s.fighters[0],o=s.fighters[1];f.meter=100;o.state='recover';let issued=false;for(let i=0;i<25;i++){const input={};batch03Ai(s,f,o,input,dt);if(input.ult){stepDuel(s,dt,input,{});issued=true;break;}}assert(issued);assert(f.meter<100);assert.equal(s.hazards.filter(h=>h.kind==='frostWard').length,2);}
+// Both production AI seats can punish a visible gap with the actual second
+// technique after normal observation, not only request it into an active heavy.
+for(const team of [0,1]){const s=createDuel({player:team===0?'frostguard':'pierce',enemy:team===1?'frostguard':'pierce',seed:9});s.phase='fight';const f=s.fighters[team],o=s.fighters[1-team];Object.assign(f,{x:15,y:10,fx:1,fy:0});Object.assign(o,{x:17.6,y:10,fx:-1,fy:0,hp:1000,maxHp:1000});let issued=false;
+ for(let n=0;n<35;n++){const input=duelAi(s,team,dt);if(n<10)assert.equal(Boolean(input.skill2),false);stepDuel(s,dt,team===0?input:{},team===1?input:{});if(input.skill2){issued=true;break;}}
+ assert(issued);assert(f.cd[1]>0);assert(s.hazards.some(h=>h.kind==='wardFan'&&h.arm>0));run(s,.55);assert(o.hp<1000);assert(f.cd[1]>5);}
+for(const distance of [1.5,3.4]){const s=fixture('frostguard',15,10,15+distance,10),f=s.fighters[0];for(let n=0;n<30;n++){const input={};batch03Ai(s,f,s.fighters[1],input,dt);assert.equal(Boolean(input.skill2),false,'fan does not gain extra range');}}
+{const s=fixture('frostguard',15,10,17.6,10),f=s.fighters[0];f.cd[1]=2;for(let n=0;n<30;n++){const input={};batch03Ai(s,f,s.fighters[1],input,dt);assert.equal(Boolean(input.skill2),false,'fan remains cooldown-bound');}}
 const legacy={hero:'chainburst',updatedAt:20,cleared:Object.fromEntries(Array.from({length:26},(_,i)=>[`s${i+1}`,{losses:0,at:10}]))};assert.equal(nextStoryStage(legacy),27);let p=legacy;
 for(const id of ['returnblade','frostguard']){const stage=DUEL_STORY_STAGES.find(v=>v.enemy===id),m=createDuel({player:id,enemy:id});Object.assign(m,{phase:'over',winner:0,wins:[2,1]});p=completeStoryMatch(p,stage,m,40+stage.number);assert.ok(p);}
 assert.equal(Object.keys(mergeDuelStory(legacy,p).cleared).length,28);assert.equal(normalizeDuelStory(p).hero,'frostguard');
