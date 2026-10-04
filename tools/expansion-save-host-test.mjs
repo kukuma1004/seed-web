@@ -1,3 +1,4 @@
+import * as inspectionPreview from '../src/expansion-boss-inspection.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -7,11 +8,11 @@ import {createExpansionEntry,createExpansionSaveStore,expansionExitCheckpoint} f
 import {acquireExpansionSaveLease} from '../src/expansion-save-lease.js';
 const source=fs.readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const start=source.indexOf('async function startExpansionJourney('),end=source.indexOf('\nfunction spawnExpansionActor(',start);
-const launcher=source.slice(start,end).replace("import('./expansion-journey.js')",'Promise.resolve(__rules)').replace("import('./expansion-journey-view.js')",'Promise.resolve(__view)').replaceAll('import.meta.env.BASE_URL',"'/'");
+const launcher=source.slice(start,end).replace("import('./expansion-journey.js')",'Promise.resolve(__rules)').replace("import('./expansion-journey-view.js')",'Promise.resolve(__view)').replace("import('./expansion-boss-inspection.js')",'Promise.resolve(__preview)').replaceAll('import.meta.env.BASE_URL',"'/'");
 const run={version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:3,elapsed:15,rules:[],mutated:[],forms:{returnblade:5},inventory:{potion:3,tonic:2,wind:1,shell:1,sprout:1},score:300,choicesTaken:2,choiceKills:3};
 function fixture({locks=null,prepare=()=>Promise.resolve()}={}){
  const data=new Map(),dom={textContent:''},storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};let owner='owner-A';
- const c=vm.createContext({__rules:rules,__view:{},localInspection:true,expansionLaunch:0,expansionApi:rules,expansionOwner:()=>owner,expansionSaveLease:null,rawStorage:storage,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,
+ const c=vm.createContext({__preview:inspectionPreview,__rules:rules,__view:{},localInspection:true,expansionLaunch:0,expansionApi:rules,expansionOwner:()=>owner,expansionSaveLease:null,rawStorage:storage,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,
   acquireExpansionSaveLease:(act,id)=>acquireExpansionSaveLease(act,id,{locks}),expansionCrystalTexture:{},expansionJourneyView:{},scene:{},stone:{},prepareExpansionEnvironment:prepare,prepareExpansionCover:()=>Promise.resolve(),
   expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionPendingBossCheckpoint:null,mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:null,
   restart:r=>{c.restarts++;c.restored=r;},restarts:0,enemies:[],fallen:[],player:{position:new THREE.Vector3()},releaseEnemy(){},wave(){},$:()=>dom,stage:0,mode:'ready',paused:false,hp:65,inventory:run.inventory,rerollUsed:false,
@@ -46,3 +47,8 @@ function manager(){const held=new Set();return {request(key,options,callback){co
 {const locks=manager(),f=fixture({locks}),bytes=JSON.stringify([...f.data]);assert(await f.c.startExpansionJourney());assert.equal(f.c.expansionEntry,null);assert(f.c.finishExpansionEntry());assert.equal(f.c.expansionSaveLease,null);assert.equal(JSON.stringify([...f.data]),bytes);await new Promise(r=>setImmediate(r));const next=await acquireExpansionSaveLease('crosswind','owner-A',{locks});assert(next.active());await next.release();}
 for(const part of ['restart','wave']){const locks=manager(),f=fixture({locks}),bytes=JSON.stringify([...f.data]);f.c[part]=()=>{throw new Error('failed '+part);};assert.equal(await f.c.startExpansionJourney(0,'crosswind',{resume:true}),false);assert.equal(f.c.expansionSaveLease,null);assert.equal(f.c.expansionJourney,null);assert.equal(JSON.stringify([...f.data]),bytes);const next=await acquireExpansionSaveLease('crosswind','owner-A',{locks});assert(next.active());await next.release();}
 console.log('Actual expansion launcher/exit/finish: fail-closed launch, read after exclusive grant, newer attrition, UID guard, released-writer rejection and finish release passed. Node VM/Web Locks mock; no browser/device claim.');
+
+// A scripted boss scene must preserve an existing accepted room-entry save.
+{const f=fixture({locks:manager()}),bytes=JSON.stringify([...f.data]);assert(await f.c.startExpansionJourney(0,'crosswind',{bossPreview:true}));assert.equal(f.c.expansionJourney.phase,'boss');assert.equal(f.c.expansionJourney.inspectionPreview,true);assert.equal(f.c.expansionEntry,null);assert.equal(f.c.canSaveExpansion(),false);assert.equal(f.c.saveExpansionLeave(),false);assert.equal(JSON.stringify([...f.data]),bytes);assert(f.c.finishExpansionEntry());assert.equal(JSON.stringify([...f.data]),bytes);}
+for(const options of [{bossPreview:true,resume:true},{bossPreview:true,publicRun:true}]){const f=fixture({locks:manager()}),bytes=JSON.stringify([...f.data]);assert.equal(await f.c.startExpansionJourney(0,'crosswind',options),false);assert.equal(f.c.restarts,0);assert.equal(JSON.stringify([...f.data]),bytes);}
+console.log('Actual local boss launcher preserves existing room save and excludes account/resume/finish writes.');

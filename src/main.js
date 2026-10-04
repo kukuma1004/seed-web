@@ -455,7 +455,7 @@ const expansionPublicFacts=()=>({currentOwner:expansionOwner(),inspection:localI
 const expansionStore=act=>expansionChannel==='public'?createExpansionAccountSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner(),{context:expansionPublicFacts,lease:expansionSaveLease}):createExpansionSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner());
 function releaseExpansionSaveLease(){const lease=expansionSaveLease;expansionSaveLease=null;return lease?.release()||Promise.resolve();}
 function ownsExpansionSaveLease(){const store=expansionJourney?expansionStore(expansionJourney.act):null;return Boolean(store&&expansionSaveLease?.active()&&expansionSaveLease.key===(store.lockKey||store.key));}
-function canSaveExpansion(){return Boolean(expansionJourney&&expansionSaveOwner===expansionOwner()&&ownsExpansionSaveLease()&&(expansionChannel==='public'?expansionAccountEligible(expansionJourney.act,expansionSaveOwner,expansionPublicFacts()):localInspection));}
+function canSaveExpansion(){return Boolean(expansionJourney&&!expansionJourney.inspectionPreview&&expansionSaveOwner===expansionOwner()&&ownsExpansionSaveLease()&&(expansionChannel==='public'?expansionAccountEligible(expansionJourney.act,expansionSaveOwner,expansionPublicFacts()):localInspection));}
 function syncPublicExpansion(){return expansionChannel==='public'&&expansionPublicSync?expansionPublicSync.flush():Promise.resolve({kind:'ineligible'});}
 function expansionRunSnapshot(){
  return {version:1,cycle,region:'garden',stage:expansionJourney.room,mode:'entry',hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),banked:bankedUpgrades,choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),inventory:{...inventory},runBonuses:{...runBonuses},relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:activeGauge.cooldown,mutations:mutationsToSave(mutations),rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,turretPotionDry};
@@ -562,10 +562,11 @@ function traceExpansionFormShot(shot,previous,next,dir,meta){
  if(result.hits.some(h=>h.damage>0))expansionTerrainDirty=true;return result;
 }
 async function startPublicExpansionJourney(act,{resume=false}={}){return startExpansionJourney(0,act,{resume,publicRun:true});}
-async function startExpansionJourney(room=0,act='crosswind',{resume=false,publicRun=false}={}){
+async function startExpansionJourney(room=0,act='crosswind',{resume=false,publicRun=false,bossPreview=false}={}){
+ if(bossPreview&&(publicRun||resume||!localInspection))return false;
  if(publicRun?localInspection||!account.user()?.uid||account.user()?.isAnonymous||gameplayPaused()||maintenanceOn:!localInspection)return false;
  const launch=++expansionLaunch;
- const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
+ const [rules,view,inspectionPreview]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js'),bossPreview?import('./expansion-boss-inspection.js'):Promise.resolve(null)]);expansionApi=rules;
  if(launch!==expansionLaunch||!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
  const owner=expansionOwner(),facts=()=>({currentOwner:expansionOwner(),inspection:localInspection,practice:!publicRun||launch!==expansionLaunch,acts:rules.EXPANSION_ACTS});
  if(publicRun&&!expansionAccountEligible(act,owner,facts()))return false;
@@ -600,11 +601,11 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   expansionSaveLease=lease;expansionSaveOwner=owner;expansionChannel=publicRun?'public':'inspection';expansionPublicSync=publicSync;expansionPublicEntry=publicRun&&saved?record:null;expansionFreshExpected=publicRun&&!saved?record:null;expansionPendingBossCheckpoint=null;
   expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=!publicRun;labSafe=false;startRegion='garden';restart(saved?.run,{expansion:true});
   for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
-  expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
+  expansionJourney=bossPreview?inspectionPreview.createJourneyBossInspection(act):saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
   if(publicRun&&!expansionEntry)throw Error('checkpoint');
   if(saved)player.position.fromArray(saved.position);
   if(publicRun)void webTelemetry.playStart(rules.EXPANSION_ACTS[act].number);
-  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(publicRun?' · 방 입구 저장 · 계정 동기화 상태는 일시정지에서 확인':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
+  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(bossPreview?' 로컬 보스 시연 · 구간 생략 · 저장/보상/랭킹 제외':publicRun?' · 방 입구 저장 · 계정 동기화 상태는 일시정지에서 확인':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
  }catch{
   if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionPendingBossCheckpoint=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}
   if(!reused||expansionSaveLease!==lease)await lease.release();return false;
@@ -652,7 +653,7 @@ function waveExpansionJourney(){
  combatAnalysis.begin(elapsed,{stage:stage+1,cycle:1,region:s.act});$('#encounter').textContent=definition.number+(expansionChannel==='public'?'막 · ':'막 로컬 · ')+(s.phase==='boss'?definition.bossName:definition.name+' · '+(stage+1)+' / 5');
  $('#boss-hud strong').textContent=definition.bossName;$('#boss-hud').hidden=s.phase!=='boss';$('#stages').hidden=false;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));
- if(!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
+ if(!s.inspectionPreview&&!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
 }
 function showExpansionResult(won,ended=true){
  const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name,isPublic=expansionChannel==='public',serial=++rankSerial;
@@ -1037,10 +1038,11 @@ function saveLeaveState(){
 // 저장하는 판: 방 입구 저장으로 나간다. 저장하지 않는 판(거울의 탑·실험실·연습장): 저장 없이 바로 나간다.
 // 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
 let exitWithoutSaveArmed=false,saveExitBusy=false,cloudSaveFailed=false;
-function saveExitLabel(){if(expansionPendingBossCheckpoint)return '보스 격파 저장 다시 확인';return expansionJourney?(expansionChannel==='public'?'저장하고 나가기 · 계정 동기화 확인':'로컬 저장하고 나가기 · 방 입구부터 이어하기'):survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
+function saveExitLabel(){if(expansionJourney?.inspectionPreview)return '보스 시연 끝내기 · 기록 제외';if(expansionPendingBossCheckpoint)return '보스 격파 저장 다시 확인';return expansionJourney?(expansionChannel==='public'?'저장하고 나가기 · 계정 동기화 확인':'로컬 저장하고 나가기 · 방 입구부터 이어하기'):survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
 function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
 $('#save-exit').onclick=async()=>{
  if(saveExitBusy)return;
+ if(expansionJourney?.inspectionPreview){leavePausedRun();return;}
  if(expansionJourney){if(!saveExpansionLeave()){pauseBuild.setSaveStatus('저장을 확인하지 못했어요. 계정이 바뀌었거나 다른 탭의 기록이 더 최신일 수 있어요.');return;}if(expansionChannel==='public'){saveExitBusy=true;$('#save-exit').disabled=true;try{const result=await syncPublicExpansion();if(result.kind!=='synced'){pauseBuild.setSaveStatus('기기에 저장했지만 계정 동기화가 완료되지 않았어요. 다시 확인하거나 이 기기에서 이어하세요.');return;}}finally{saveExitBusy=false;$('#save-exit').disabled=false;}}leavePausedRun();return;}
  if(survivalSession){
   if(survivalSession.lab){finishSurvival(false,true);return;}
@@ -2219,7 +2221,7 @@ async function showGardenHub(start=null){
   if(localInspection)window.seedGardenHub=gardenHubScreen;
  }catch(error){console.error('정원 열기 실패',error);resume();showIntro();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
-async function showSeedDefense({actCount=3}={}){
+async function showSeedDefense({actCount=3,bossPreview=null}={}){
  const serial=++defenseLoadSerial;
  mode='defense-loading';touch.reset();keys.clear();stopAnimation();
  const overlay=$('#overlay');overlay.hidden=false;
@@ -2233,7 +2235,7 @@ async function showSeedDefense({actCount=3}={}){
   clearTimeout(slow);if(serial!==defenseLoadSerial)return;
   mode='defense';overlay.hidden=true;
   const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
-  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),practice:()=>testRun||developerRun||localInspection,actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,bossPreview:localInspection?bossPreview:null,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),practice:()=>testRun||developerRun||localInspection,actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
    const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
    if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
@@ -2566,7 +2568,8 @@ function renderBossHud(boss,group=[boss]){
  const hud=$('#boss-hud'),hpTotal=group.reduce((n,e)=>n+Math.max(0,e.hp),0),maxTotal=group.reduce((n,e)=>n+e.maxHp,0),pct=Math.max(0,hpTotal/maxTotal*100);setHidden(hud,false);setWidth(hud.querySelector('i'),pct.toFixed(1)+'%');
  if(boss.expansionBoss){
   delete hud.dataset.phase;setText(hud.querySelector('strong'),boss.config.name+' · '+Math.ceil(pct)+'%');setHidden(hud.querySelector('.boss-move'),false);
-  setText(hud.querySelector('.boss-move'),boss.state==='tell'?'방향 고정 · 공격 준비':boss.state==='attack'?(expansionJourney?.act==='crystalGorge'?'수정 공격':'횡풍 공격'):'회복 중 · 반격 기회');setText(hud.querySelector('small'),expansionJourney?.act==='crystalGorge'?'열린 꽃심 피해 +30% · 다시 자라는 수정에서 비켜서세요':'준비 때 옆으로 피하세요 · 돌진이 끝난 뒤 반격');
+  const crystal=boss.expansionMotion?.id==='crystalGardener'||boss.type==='crystalGardener'||expansionJourney?.act==='crystalGorge';
+  setText(hud.querySelector('.boss-move'),boss.state==='tell'?'방향 고정 · 공격 준비':boss.state==='attack'?(crystal?'수정 공격':'횡풍 공격'):'회복 중 · 반격 기회');setText(hud.querySelector('small'),crystal?'열린 꽃심 피해 +30% · 다시 자라는 수정에서 비켜서세요':'준비 때 옆으로 피하세요 · 돌진이 끝난 뒤 반격');
  }else if(boss.type==='mirrorseed'){
   delete hud.dataset.phase;setText(hud.querySelector('strong'),`거울의 탑 ${mirrorSession?.floor||1}층 · 비친 씨앗 · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),boss.moveName||'같은 선택을 비추는 중');setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),boss.broken>0?'거울이 깨졌습니다 · 지금 공격을 집중하세요':`회피로 탄환을 스치세요 · 균열 ${mirrorSession?.cracks||0}/${MIRROR_BREAK.crackGoal}`);
  }else if(boss.type==='austin'){
@@ -2774,7 +2777,7 @@ screen.orientation?.addEventListener?.('change',()=>{requestAnimationFrame(settl
  });
 function runLocalStartupLab(){
  if(!localInspection)return;const params=new URLSearchParams(location.search);
- let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('adventureLab'))void showSeedAdventure();else if(params.has('duelLab'))void showSeedDuel();else if(params.has('defenseLab'))void showSeedDefense({actCount:params.get('defenseLab')==='five'?5:3});else if(params.has('survivalLab')){const lab=params.get('survivalLab');if(['act4','act5','five'].includes(lab))void startSurvival(lab);else showSurvivalSetup();}else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act5Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act5Lab'))||0,'crystalGorge',{resume:params.get('act5Lab')==='resume'});else if(params.has('act4Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act4Lab'))||0,'crosswind',{resume:params.get('act4Lab')==='resume'});else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
+ let attempts=0;const launch=()=>{if(!window.seedDebug?.qa&&attempts++<20){setTimeout(launch,50);return;}if(params.has('adventureLab'))void showSeedAdventure();else if(params.has('duelLab'))void showSeedDuel();else if(params.has('defenseLab'))void showSeedDefense({actCount:['five','act4','act5'].includes(params.get('defenseLab'))?5:3,bossPreview:params.get('defenseLab')==='act4'?'crosswind':params.get('defenseLab')==='act5'?'crystalGorge':null});else if(params.has('survivalLab')){const lab=params.get('survivalLab');if(['act4','act5','five'].includes(lab))void startSurvival(lab);else showSurvivalSetup();}else if(params.has('mirrorLab'))window.seedDebug?.qa.startMirrorTower(Number(params.get('mirrorLab'))||1);else if(params.has('act5Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act5Lab'))||0,'crystalGorge',{resume:params.get('act5Lab')==='resume',bossPreview:params.get('act5Lab')==='boss'});else if(params.has('act4Lab'))window.seedDebug?.qa.startExpansionJourney(Number(params.get('act4Lab'))||0,'crosswind',{resume:params.get('act4Lab')==='resume',bossPreview:params.get('act4Lab')==='boss'});else if(params.has('act3Lab')){const value=params.get('act3Lab');if(value==='boss')window.seedDebug?.qa.startAct3Boss();else window.seedDebug?.qa.startAct3Stage(Number(value)||0);}else if(params.has('roomLab'))window.seedDebug?.qa.startAct2Stage(Number(params.get('roomLab'))||0);else if(params.has('lanceLab')){window.seedDebug?.qa.startRun();setTimeout(()=>window.seedDebug?.qa.lanceShowcase(),180);}};setTimeout(launch,50);
 }
 if(survivalComparisonEnabled)survivalComparison=mountSurvivalComparison({getActive:()=>Boolean(survivalSession)&&mode==='playing',getVariant:()=>survivalReadability?'quiet':'classic',setVariant:value=>{survivalReadability=value==='quiet';survivalArt?.setReadability(survivalReadability);player.scale.setScalar(survivalReadability?1.55:1.25);},getPaused:()=>paused,setPaused:value=>{paused=value;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;audio.setPaused(paused);document.getElementById('pause').textContent=paused?'▶':'Ⅱ';}});
 applyQuality(qualityLevel,{save:false});applyCombatTheme(combatTheme,{save:false});mountQualityButton();mountThemeButton();mountSoundButton();const startupCloud=localInspection?Promise.resolve({changed:false}):account.ready().then(()=>{backfillPersonalBests();return cloud.start();}),startupSeason=localInspection?Promise.resolve(DEFAULT_SEASON_STATUS):loadSeasonStatus({enabled:!import.meta.env.DEV});Promise.all([startupCloud,startupSeason]).then(async([result,status])=>{startupCloudReady=true;seasonStatus=status;await refreshAccessMode();const honored=await claimFirstGardenPioneer(runStorage,[account.user()?.uid,legacyRankingUid(rawStorage)]);if(honored&&account.user())await cloud.syncNow();if(result?.changed||honored){location.reload();return;}showEntry();void backfillBossVeterans();void webTelemetry.visit();if(result&&result.ok===false&&result.reason!=='signed-out')$('#toast').textContent='클라우드 저장을 불러오지 못했어요 · 이 기기 저장으로 열었어요(연결되면 합쳐져요)';runLocalStartupLab();scheduleShaderWarm();}).catch(async()=>{startupCloudReady=true;seasonStatus=DEFAULT_SEASON_STATUS;await account.ready().catch(()=>null);await refreshAccessMode();showEntry();void webTelemetry.visit();runLocalStartupLab();scheduleShaderWarm();});startAnimation();

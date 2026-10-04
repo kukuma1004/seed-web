@@ -1,3 +1,4 @@
+import {createDefenseBossInspection} from './expansion-boss-inspection.js';
 import {createFramePacer} from './frame-time.js';
 import {EXPANSION_BOSS_ART,EXPANSION_ENEMY_ART,paintExpansionBoss,paintExpansionEnemy} from './expansion-actor-art.js';
 import {defensePlacement,defenseCellAt,DEFENSE_CELLS,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,defenseSeedCap,defenseTierOf,DEFENSE_TIER_NAMES,mergeDefense,defenseMergeResult,rerollDefense,removeDefense,defenseRemoveRefund,defenseNextSteps,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,defensePath,checkpointDefense,restoreDefense,defenseTowerName,evolveDefense,getDefenseEvolutionOptions,DEFENSE_FORMS,DEFENSE_CATALOG,DEFENSE_CATALOG_COUNTS} from './seed-defense-rules.js';
@@ -33,7 +34,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 // 2026-09-28 사용자: 습격 사이에 '시작'을 누르지 않아도 다음 습격이 저절로 시작되게.
 // 씨앗 정보·배치 창, 도감, 대화창이 열려 있는 동안은 기다린다(정비할 시간은 남긴다).
 const DEFENSE_AUTO_START=3,DEFENSE_AUTO_INSPECT=6; // 씨앗 정보 창을 보고 있으면 조금 더 기다린다.
-export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,actCount=3,practice=false,currentOwner=()=>'',titleStats=()=>null,onClose=()=>{},onRanking=()=>{},onResult=async()=>'',onBossDefeated=()=>true}={}){
+export function mountSeedDefense({host=document.body,storage=localStorage,owner='guest',audio,actCount=3,bossPreview=null,practice=false,currentOwner=()=>'',titleStats=()=>null,onClose=()=>{},onRanking=()=>{},onResult=async()=>'',onBossDefeated=()=>true}={}){
  const key=defensePreparationKey(owner,actCount),root=document.createElement('section');
  root.id='seed-defense';root.setAttribute('aria-label','씨앗 수호전');
  root.innerHTML=`<header class="td-top"><div><small>SEED · 씨앗 타워디펜스</small><h1>씨앗 수호전</h1></div><div class="td-meters" aria-live="off"><span id="td-heart"></span><span id="td-sun"></span><span id="td-wave"></span></div><button id="td-auto-skill" aria-label="궁극기 자동 사용 전환">스킬 자동</button><button id="td-speed" aria-label="진행 속도 변경">기본</button><button id="td-book">조합 162</button><button id="td-pause" aria-label="일시정지">Ⅱ</button></header><div class="td-board"><canvas aria-label="정원 방어 전장"></canvas><div class="td-hint" role="status"></div><div class="td-pads"></div><div class="td-plant-prompt" hidden><button id="td-plant-here"></button><button class="td-placement-close" aria-label="심기 취소">×</button></div><button class="td-quick-start">다음 습격 시작</button><div class="td-dialog" hidden></div><pre id="seed-defense-inspection" hidden></pre></div><aside class="td-panel"><button class="td-panel-close" aria-label="씨앗 정보 닫기">×</button><div class="td-scroll"></div><footer><button id="td-start"></button><button id="td-leave">저장하고 돌아가기</button><small id="td-save-note"></small></footer></aside>`;
@@ -61,6 +62,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  function autoUltimates(){if(!autoSkill||paused||state.phase!=='wave')return;for(const t of state.towers){if(!t.formId||(t.ultimateCharge||0)<DEFENSE_COMBAT.ultimateSeconds)continue;const r=defenseTowerStats(t).range;if(!state.enemies.some(e=>e.hp>0&&(e.x-t.x)**2+(e.y-t.y)**2<=r*r))continue;if(combat.surge(t.id)){sound('evolve');hint(`${name(t)} · ${SIGNATURES[t.formId]?.name||'궁극기'}`);}}}
  $('#td-speed').onclick=()=>{speed=speed===DEFENSE.defaultSpeed?DEFENSE.fastSpeed:DEFENSE.defaultSpeed;const fast=speed===DEFENSE.fastSpeed;setLabel('#td-speed',fast?'1.5배':'기본');$('#td-speed').classList.toggle('td-fast',fast);hint(fast?'전투 속도 1.5배 · 씨앗과 적이 함께 빨라져요':'기본 속도로 돌아왔어요');};
  const saved=read();if(saved){state=binding.attach(saved);selected=state.selectedPad;}
+ const scriptedPreview=['127.0.0.1','localhost'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect')&&isolated()?createDefenseBossInspection(bossPreview,{enabled:actCount===5}):null;
+ if(scriptedPreview){state=binding.attach(scriptedPreview);paused=true;saveNote='로컬 보스 시연 · 구간 생략 · 저장/보상/랭킹 제외';root.insertAdjacentHTML('beforeend','<small class="td-preview-note">'+saveNote+'</small>');$('#td-pause').textContent='▶';$('#td-pause').setAttribute('aria-label','계속하기');}
  let combat=createDefenseCombat(state,{sound}),visuals=[],bookOpen=false,bookKind='fusion',bookPage=0,bookWasPaused=false,moving=false,visualClock=0;
  const evolutionCues=[],bodyCache=new Map(),reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
  function celebrate(t,previous,kind){for(let i=evolutionCues.length-1;i>=0;i--)if(evolutionCues[i].id===t.id)evolutionCues.splice(i,1);if(evolutionCues.length>=4)evolutionCues.shift();evolutionCues.push({id:t.id,x:t.x,y:t.y,start:visualClock,previous,ink:color(t.laws[0]),title:kind+' · '+name(t)});root.classList.add('td-evolved');hint(kind+' · '+name(t)+' — 새로운 공격이 깨어났어요');}
@@ -69,7 +72,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  function clearSave(){if(isolated()||!canWriteDefensePreparation(storage,key,{actCount}))return;try{storage.removeItem(key);}catch{}}
  function sound(id){audio?.play(id);}
  function resize(){const r=$('.td-board').getBoundingClientRect();width=Math.max(1,r.width);height=Math.max(1,r.height);const dpr=Math.min(1.5,window.devicePixelRatio||1);canvas.width=back.width=Math.round(width*dpr);canvas.height=back.height=Math.round(height*dpr);ctx.setTransform(dpr,0,0,dpr,0,0);bg.setTransform(dpr,0,0,dpr,0,0);// 2026-09-28 사용자: 조금 더 확대. 정원(가로 0~100)과 심을 수 있는 땅(세로 5~55)의 가운데를 맞춘다.
-  scale=Math.min(width/110,height/47);ox=width/2-53*scale;oy=height/2-31*scale;dirty=true;placeButtons();}
+  const expanded=state.actCount===5&&defenseWaveInfo(Math.max(1,state.wave),state).act>=3,topInset=expanded&&width/height>=1.5?64:0;scale=Math.min(width/110,(height-topInset)/(expanded?58:47));ox=width/2-53*scale;oy=topInset+(height-topInset)/2-31*scale;if(expanded)oy=Math.max(oy,54+(12.8*.76-10)*scale);dirty=true;placeButtons();}
  function placeButtons(){for(const b of $('.td-pads').children){const p=state.pads[Number(b.dataset.pad)];b.style.left=(ox+p.x*scale)+'px';b.style.top=(oy+p.y*scale)+'px';}positionPlantPrompt();}
  function positionPlantPrompt(){const p=state.pads[selected],prompt=$('.td-plant-prompt');if(!p||prompt.hidden)return;const w=prompt.offsetWidth,h=prompt.offsetHeight,x=ox+p.x*scale,y=oy+p.y*scale;prompt.style.left=Math.max(8,Math.min(width-w-8,x-w/2))+'px';prompt.style.top=Math.max(58,Math.min(height-h-8,y+32+h<height?y+32:y-h-32))+'px';}
  function closeSelection(){root.classList.remove('td-inspecting','td-placing');$('.td-plant-prompt').hidden=true;}
@@ -175,8 +178,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   bg.restore();dirty=false;
  }
  function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
- let expansionVisualWave=-1;
- function updateExpansionVisuals(){if(expansionVisualWave===state.wave)return;expansionVisualWave=state.wave;if(state.actCount!==5)return;const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));const field=act===3?'crosswind':act===4?'crystalGorge':null;if(field&&!assets[field])load(field,actorArtFile(EXPANSION_ENEMY_ART[field].file,{reducedTextures:true}));}
+ let expansionVisualWave=-1,expansionVisualTitle='';
+ function updateExpansionVisuals(){if(expansionVisualWave===state.wave)return;expansionVisualWave=state.wave;if(state.actCount!==5)return;const info=defenseWaveInfo(Math.max(1,state.wave),state),act=info.act;expansionVisualTitle=info.title;resize();if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));const field=act===3?'crosswind':act===4?'crystalGorge':null;if(field&&!assets[field])load(field,actorArtFile(EXPANSION_ENEMY_ART[field].file,{reducedTextures:true}));}
  function draw(now){
   updateExpansionVisuals();
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
@@ -207,11 +210,12 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   }
   for(const e of state.enemies){
    const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
-   const boss=e.kind==='boss',sz=boss?8.8:e.kind==='shield'||e.kind==='resilient'?6.1:4.7;
+   const boss=e.kind==='boss',expansionBoss=boss&&Boolean(EXPANSION_BOSS_ART[e.bossId]),sz=boss?(expansionBoss?12.8:8.8):e.kind==='shield'||e.kind==='resilient'?6.1:4.7;
    ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();const sky=e.act===2,heavy=e.kind==='shield'||e.kind==='resilient';
    const atlas=boss?(e.bossId==='crosswindKeeper'?'tempestcarrier':e.bossId==='crystalGardener'?'boss':e.bossId||(sky?'tempestcarrier':e.act===1?'stadiumWarden':'boss')):sky?'flight':e.kind==='fast'?'runner':e.act===1?(heavy?'catcher':'batter'):heavy?'shield':'hound';
    const cell=sky?(boss?(e.bossId?1+Number(e.hp<e.maxHp*.66)+Number(e.hp<e.maxHp*.33):0):e.kind==='fast'?1:heavy?2:0):face;
    const painted=boss?EXPANSION_BOSS_ART[e.bossId]&&paintExpansionBoss(ctx,e,assets[e.bossId],sz):e.act>=3&&paintExpansionEnemy(ctx,e,assets[e.act===3?'crosswind':'crystalGorge'],sz);if(!painted)sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
+   if(expansionBoss){ctx.font='bold 1.1px system-ui';ctx.textAlign='center';ctx.lineWidth=.35;ctx.strokeStyle='#071b19';ctx.strokeText(expansionVisualTitle,e.x,e.y-sz*.76);ctx.fillStyle='#f5dfab';ctx.fillText(expansionVisualTitle,e.x,e.y-sz*.76);}
    if(boss&&e.expansionState==='tell'){ctx.strokeStyle='#ed9b88';ctx.lineWidth=.28;ctx.beginPath();ctx.ellipse(e.x,e.y+1,4.2,1.7,0,0,Math.PI*2);ctx.stroke();}
    if(boss&&e.coreOpen){ctx.fillStyle='#c4f2c8';ctx.beginPath();ctx.arc(e.x,e.y-3.2,.65,0,Math.PI*2);ctx.fill();}
    if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}
@@ -238,6 +242,6 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const observer=new ResizeObserver(resize);observer.observe($('.td-board'));
  listen(document,'visibilitychange',()=>{if(document.hidden){paused=true;cancelAnimationFrame(frame);frame=0;save();audio?.setPaused(true);$('#td-pause').textContent='▶';$('#td-pause').setAttribute('aria-label','계속하기');hint('전투를 멈췄어요 · ▶를 눌러 계속하세요');}else{last=performance.now();if(!frame)frame=requestAnimationFrame(loop);uiKey='';updateUI();}});
  listen(window,'pagehide',save);listen(window,'keydown',e=>{if(e.code==='Escape'||e.code==='KeyP'){e.preventDefault();$('#td-pause').click();}if(e.code==='Space'){e.preventDefault();$('#td-start').click();}});
- audio?.setScene('garden');audio?.setPaused(false);resize();showAuto();updateUI();hint(saved?'이 기기에 저장된 준비 상태를 불러왔어요':'① 점선 안의 땅을 눌러 씨앗 심기(무작위 법칙) → ② 씨앗을 끌어 다른 씨앗에 놓으면 합체 → 습격은 저절로 시작돼요');Promise.all(loads).then(()=>{if(!ended)dirty=true;});frame=requestAnimationFrame(loop);
+ audio?.setScene('garden');audio?.setPaused(false);resize();showAuto();updateUI();hint(scriptedPreview?'▶를 눌러 보스 패턴 시연 시작 · 실제 완주 기록 아님':saved?'이 기기에 저장된 준비 상태를 불러왔어요':'① 점선 안의 땅을 눌러 씨앗 심기(무작위 법칙) → ② 씨앗을 끌어 다른 씨앗에 놓으면 합체 → 습격은 저절로 시작돼요');Promise.all(loads).then(()=>{if(!ended)dirty=true;});frame=requestAnimationFrame(loop);
  return {close};
 }
