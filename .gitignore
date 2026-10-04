@@ -163,3 +163,4 @@ art-refs/
 !tools/duel-fusion-04-ai.mjs
 !tools/expansion-save-lease-test.mjs
 !tools/expansion-save-host-test.mjs
+!tools/duel-catalog-coverage.mjs
