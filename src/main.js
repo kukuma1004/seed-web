@@ -37,6 +37,8 @@ import {createShield,tickShield,blocksShield} from './shield.js';
 import {readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,REGION_NAMES,restoredScore,restoredWardens,restoredAustins} from './run-save.js';
 import {createExpansionEntry,createExpansionSaveStore,expansionExitCheckpoint} from './expansion-run-save.js';
 import {acquireExpansionSaveLease} from './expansion-save-lease.js';
+import {createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountExitCheckpoint} from './expansion-account-save.js';
+import {createExpansionAccountSync} from './expansion-account-sync.js';
 import {createSeedBody} from './seed-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
 import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_VETERAN_TITLE,ALWAYS_CLEAR_TITLE,ALWAYS_VETERAN_TITLE,JOHAN_TITLE,JOHAN_CLEAR_TITLE,JOHAN_VETERAN_TITLE,CLEAR_ALL_STATS} from './titles.js';
@@ -61,7 +63,7 @@ import {projectileVisualScale,applyProjectileTheme} from './projectile-art.js';
 import {activeCombatEvolutions,orbitCore,isOrbitEvolution,canAcquireEvolution,orbitShieldRole} from './evolution-family.js';
 import {lawArt} from './law-art.js';
 import * as THREE from 'three';
-import {SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,SURVIVAL_ACTS,survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,createSurvivalSession,survivalPressure,tickSurvivalRush,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,settleSurvivalKill,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from './survival-rules.js';
+import {SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,SURVIVAL_ACTS,survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,createSurvivalSession,survivalPressure,tickSurvivalRush,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,settleSurvivalKill,survivalBossOrdinal,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from './survival-rules.js';
 import {createSurvivalSaveStore,captureCombatFields,restoreCombatFields,captureSurvivalSession,queueSurvivalTitle,settleSurvivalTitles,survivalTitleEvents,SURVIVAL_TITLE_LIMIT} from './survival-save.js';
 import {createSurvivalSync,survivalSyncLabel} from './survival-sync.js';
 import {createSurvivalArt} from './survival-art.js';
@@ -444,26 +446,38 @@ const worldLights=scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalL
 const stadium=createStadium(scene,{lights:worldLights,hide:hiddenGarden,mobile:mobileDevice});
 const skyway=createSkyway(scene,{lights:worldLights,hide:[...hiddenGarden,...moteMeshes],mobile:mobileDevice});
 const mirrorPanels=createMirrorPanels(scene);let mirrorPanelsActive=false;
-let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false,expansionEntry=null,expansionSaveOwner=null,expansionEnvironmentArt=null,expansionLaunch=0,expansionSaveLease=null;
+let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false,expansionEntry=null,expansionSaveOwner=null,expansionEnvironmentArt=null,expansionLaunch=0,expansionSaveLease=null,expansionChannel='inspection',expansionPublicEntry=null,expansionPublicSync=null,expansionFreshExpected=null;
 const expansionOwner=()=>account.user()?.uid||'guest';
-const expansionStore=act=>createExpansionSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner());
+const expansionPublicFacts=()=>({currentOwner:expansionOwner(),inspection:localInspection,practice:developerRun,acts:expansionApi.EXPANSION_ACTS});
+const expansionStore=act=>expansionChannel==='public'?createExpansionAccountSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner(),{context:expansionPublicFacts,lease:expansionSaveLease}):createExpansionSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner());
 function releaseExpansionSaveLease(){const lease=expansionSaveLease;expansionSaveLease=null;return lease?.release()||Promise.resolve();}
-function ownsExpansionSaveLease(){return Boolean(expansionJourney&&expansionSaveLease?.active()&&expansionSaveLease.key===expansionStore(expansionJourney.act).key);}
+function ownsExpansionSaveLease(){const store=expansionJourney?expansionStore(expansionJourney.act):null;return Boolean(store&&expansionSaveLease?.active()&&expansionSaveLease.key===(store.lockKey||store.key));}
+function canSaveExpansion(){return Boolean(expansionJourney&&expansionSaveOwner===expansionOwner()&&ownsExpansionSaveLease()&&(expansionChannel==='public'?expansionAccountEligible(expansionJourney.act,expansionSaveOwner,expansionPublicFacts()):localInspection));}
+function syncPublicExpansion(){return expansionChannel==='public'&&expansionPublicSync?expansionPublicSync.flush():Promise.resolve({kind:'ineligible'});}
 function captureExpansionEntry(){
- if(!expansionJourney||!localInspection||expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease())return false;
+ if(!canSaveExpansion())return false;
  const run={version:1,cycle,region:'garden',stage:expansionJourney.room,mode:'entry',hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),banked:bankedUpgrades,choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),inventory:{...inventory},runBonuses:{...runBonuses},relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:activeGauge.cooldown,mutations:mutationsToSave(mutations),rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,turretPotionDry};
  const value=createExpansionEntry(expansionJourney,run,player.position.toArray(),expansionEntry||{});if(!value)return false;
- const result=expansionStore(expansionJourney.act).write(value,{fresh:!expansionEntry});if(result.ok)expansionEntry=result.value;return result.ok;
+ const publicValue=expansionChannel==='public'?(expansionPublicEntry?{...expansionPublicEntry,entry:value}:createExpansionAccountEntry(expansionJourney,run,player.position.toArray(),{owner:expansionSaveOwner,...expansionPublicFacts(),id:value.id})):null;
+ const result=expansionStore(expansionJourney.act).write(expansionChannel==='public'?publicValue:value,{fresh:!expansionEntry,expected:expansionFreshExpected});
+ if(result.ok){expansionEntry=expansionChannel==='public'?result.value.entry:result.value;expansionPublicEntry=expansionChannel==='public'?result.value:null;expansionFreshExpected=null;if(expansionChannel==='public')void syncPublicExpansion();}return result.ok;
 }
 function saveExpansionLeave(){
- if(!expansionEntry||hp<=0||expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease())return false;
- const value=expansionExitCheckpoint(expansionEntry,{hp,inventory,rerollUsed});if(!value)return false;
- const result=expansionStore(expansionJourney.act).write(value);if(result.ok)expansionEntry=result.value;return result.ok;
+ if(!expansionEntry||hp<=0||!canSaveExpansion())return false;
+ const losses={hp,inventory,rerollUsed},value=expansionChannel==='public'?expansionAccountExitCheckpoint(expansionPublicEntry,losses):expansionExitCheckpoint(expansionEntry,losses);if(!value)return false;
+ const result=expansionStore(expansionJourney.act).write(value);if(result.ok){expansionEntry=expansionChannel==='public'?result.value.entry:result.value;if(expansionChannel==='public')expansionPublicEntry=result.value;}return result.ok;
 }
 function finishExpansionEntry(){
  if(!expansionEntry){void releaseExpansionSaveLease();return true;}
- if(expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease()||!expansionStore(expansionJourney.act).finish(expansionEntry))return false;
- expansionEntry=null;void releaseExpansionSaveLease();return true;
+ if(!canSaveExpansion())return false;
+ const result=expansionStore(expansionJourney.act).finish(expansionChannel==='public'?expansionPublicEntry:expansionEntry);if(expansionChannel==='public'?!result.ok:!result)return false;
+ expansionEntry=null;
+ if(expansionChannel==='public'){
+  expansionPublicEntry=result.value;const lease=expansionSaveLease;expansionSaveLease=null;
+  // Keep the borrowed lease alive until the terminal record's upload settles.
+  // Failure leaves the local tombstone available for a later eligible retry.
+  void syncPublicExpansion().finally(()=>lease.release());
+ }else void releaseExpansionSaveLease();return true;
 }
 const expansionTargets=[],expansionNear=[];
 function expansionCombatTargets(){
@@ -516,42 +530,51 @@ function traceExpansionFormShot(shot,previous,next,dir,meta){
  if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}
  if(result.hits.some(h=>h.damage>0))expansionTerrainDirty=true;return result;
 }
-async function startExpansionJourney(room=0,act='crosswind',{resume=false}={}){
- if(!localInspection)return false;
+async function startPublicExpansionJourney(act,{resume=false}={}){return startExpansionJourney(0,act,{resume,publicRun:true});}
+async function startExpansionJourney(room=0,act='crosswind',{resume=false,publicRun=false}={}){
+ if(publicRun?localInspection||!account.user()?.uid||account.user()?.isAnonymous||gameplayPaused()||maintenanceOn:!localInspection)return false;
  const launch=++expansionLaunch;
  const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
- if(launch!==expansionLaunch)return false;
- if(!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
- const owner=expansionOwner(),store=createExpansionSaveStore(rawStorage,act,owner);let saved=resume?store.read():null;
- if(resume&&!saved){$('#toast').textContent='이어할 로컬 저장이 없거나 다른 버전의 기록이에요.';return false;}
+ if(launch!==expansionLaunch||!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
+ const owner=expansionOwner(),facts=()=>({currentOwner:expansionOwner(),inspection:localInspection,practice:!publicRun||launch!==expansionLaunch,acts:rules.EXPANSION_ACTS});
+ if(publicRun&&!expansionAccountEligible(act,owner,facts()))return false;
+ const storeFor=lease=>publicRun?createExpansionAccountSaveStore(rawStorage,act,owner,{context:facts,lease}):createExpansionSaveStore(rawStorage,act,owner);
+ let store=storeFor(null),saved=resume?store.read():null;
+ if(!publicRun&&resume&&!saved){$('#toast').textContent='이어할 로컬 저장이 없거나 다른 버전의 기록이에요.';return false;}
  if(!expansionCrystalTexture){expansionCrystalTexture=texloader.load(import.meta.env.BASE_URL+'assets/'+(mobileDevice?'mobile/':'')+'mirror-crystal-v1.webp');expansionCrystalTexture.colorSpace=THREE.SRGBColorSpace;}
  expansionJourneyView??=view.createExpansionJourneyView(scene,stone,expansionCrystalTexture);
- await prepareExpansionEnvironment(act);
- if(act==='crystalGorge')await prepareExpansionCover();
+ await prepareExpansionEnvironment(act);if(act==='crystalGorge')await prepareExpansionCover();
  if(launch!==expansionLaunch||owner!==expansionOwner())return false;
- const previousLease=expansionSaveLease,reused=previousLease?.active()&&previousLease.key===store.key;
+ const previousLease=expansionSaveLease,lockKey=store.lockKey||store.key,reused=previousLease?.active()&&previousLease.key===lockKey;
  const lease=reused?previousLease:await acquireExpansionSaveLease(act,owner);
  if(launch!==expansionLaunch||owner!==expansionOwner()){if(!reused&&lease.ok)await lease.release();return false;}
- if(!lease.ok||!lease.active()){$('#toast').textContent=lease.reason==='busy'?'같은 막을 다른 탭에서 진행 중이에요. 그곳에서 저장하고 나간 뒤 이어하세요.':'이 환경에서는 안전한 로컬 저장을 시작하지 못했어요. 기존 여정은 계속 이용할 수 있어요.';return false;}
- // Read again inside the exclusive lease: loading scenery may have allowed
- // another tab to save, finish or replace this run in the meantime.
- saved=resume?store.read():null;
- if(resume&&!saved){if(!reused)await lease.release();$('#toast').textContent='준비 중 로컬 기록이 바뀌었어요. 다시 확인해 주세요.';return false;}
- if(previousLease&&previousLease!==lease)await previousLease.release();
- if(launch!==expansionLaunch||owner!==expansionOwner()||!lease.active()){if(!reused)await lease.release();return false;}
- expansionSaveLease=lease;
+ if(!lease.ok||!lease.active()){$('#toast').textContent=lease.reason==='busy'?'같은 막을 다른 탭에서 진행 중이에요. 그곳에서 저장하고 나간 뒤 이어하세요.':'이 환경에서는 안전한 저장을 시작하지 못했어요. 기존 여정은 계속 이용할 수 있어요.';return false;}
+ let publicSync=null,publicSyncKind=null;
  try{
- expansionSaveOwner=owner;
- expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=true;labSafe=false;startRegion='garden';restart(saved?.run);
- for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
- expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
- if(saved)player.position.fromArray(saved.position);
- $('#toast').textContent=(act==='crosswind'?'4막':'5막')+' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외';return true;
+  store=storeFor(lease);
+  if(publicRun){
+   publicSync=createExpansionAccountSync({storage:rawStorage,account,act,databaseURL:FIREBASE_APP.databaseURL,context:facts,acts:rules.EXPANSION_ACTS,activeLease:()=>lease,isActive:()=>false});
+   const result=await publicSync.sync({allowPull:true});publicSyncKind=result.kind;
+   if(!['synced','empty','offline'].includes(result.kind)){$('#toast').textContent='계정 기록을 안전하게 확인하지 못했어요. 기존 저장은 보존했습니다.';if(!reused)await lease.release();return false;}
+  }
+  // Read under the exclusive lease, after both scenery and remote validation.
+  const record=store.read();saved=publicRun?(record&&!record.entry.ended?record.entry:null):(resume?record:null);
+  if(resume&&!saved||publicRun&&!resume&&(record&&!record.entry.ended||publicSyncKind==='offline')){if(!reused)await lease.release();$('#toast').textContent='이어할 기록을 먼저 확인해 주세요. 기존 기록은 남겨 두었습니다.';return false;}
+  if(previousLease&&previousLease!==lease)await previousLease.release();
+  if(launch!==expansionLaunch||owner!==expansionOwner()||!lease.active()||publicRun&&(!expansionAccountEligible(act,owner,facts())||gameplayPaused()||maintenanceOn)){if(!reused)await lease.release();return false;}
+  expansionSaveLease=lease;expansionSaveOwner=owner;expansionChannel=publicRun?'public':'inspection';expansionPublicSync=publicSync;expansionPublicEntry=publicRun&&saved?record:null;expansionFreshExpected=publicRun&&!saved?record:null;
+  expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=!publicRun;labSafe=false;startRegion='garden';restart(saved?.run,{expansion:true});
+  for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
+  expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
+  if(publicRun&&!expansionEntry)throw Error('checkpoint');
+  if(saved)player.position.fromArray(saved.position);
+  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(publicRun?' · 방 입구 저장 · 계정 동기화 상태 별도 확인 · 이용 통계/보상/랭킹 연결 준비 중':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
  }catch{
-  if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='로컬 시제품을 시작하지 못했어요. 저장 기록은 남겨 두었습니다.';}
-  await lease.release();return false;
+  if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}
+  if(!reused||expansionSaveLease!==lease)await lease.release();return false;
  }
 }
+
 function spawnExpansionActor(spec,boss=false){
  const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,immovable:boss,radius:boss ? .8 : .65,expansionActor:true,expansionBoss:boss,config:{name:boss?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName:expansionJourney.act==='crosswind'?'잎배 편대':'수정 정찰대'}};
  g.position.set(spec.position.x,0,spec.position.z);
@@ -588,22 +611,26 @@ function tickExpansionActor(e,dt){
 function waveExpansionJourney(){
  const s=expansionJourney,definition=expansionApi.EXPANSION_ACTS[s.act];stage=s.room;crowdLeft=s.phase==='course'?1:0;
  if(s.phase==='boss')spawnExpansionActor({position:{x:s.act==='crosswind'?s.course.distance+7:5,z:0}},true);
- combatAnalysis.begin(elapsed,{stage:stage+1,cycle:1,region:s.act});$('#encounter').textContent=definition.number+'막 로컬 · '+(s.phase==='boss'?definition.bossName:definition.name+' · '+(stage+1)+' / 5');
+ combatAnalysis.begin(elapsed,{stage:stage+1,cycle:1,region:s.act});$('#encounter').textContent=definition.number+(expansionChannel==='public'?'막 · ':'막 로컬 · ')+(s.phase==='boss'?definition.bossName:definition.name+' · '+(stage+1)+' / 5');
  $('#boss-hud strong').textContent=definition.bossName;$('#boss-hud').hidden=s.phase!=='boss';$('#stages').hidden=false;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));
  if(!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
+}
+function showExpansionResult(won,ended=true){
+ mode='ready';paused=false;touch.reset();keys.clear();pauseBuild.hide();perfFinish(won?'cleared':'ended');activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;$('#save-exit').hidden=true;$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
+ const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name,isPublic=expansionChannel==='public';$('#overlay').hidden=false;
+ $('#overlay').innerHTML='<div class="menu-panel"><h2>'+name+(won?' 전투 종료':' 도전 종료')+'</h2><p>'+(ended?'방 입구 기록을 종료했어요.':'기록 종료를 확인하지 못했어요. 기존 기록은 보존했습니다.')+(isPublic?' 이용 통계·보상·랭킹 연결은 아직 준비 중입니다.':' 실험 기록은 계정·칭호·랭킹에 반영하지 않습니다.')+'</p><button id="expansion-retry">다시 출발</button><button id="expansion-back">돌아가기</button></div>';
+ $('#expansion-retry').onclick=()=>isPublic?startPublicExpansionJourney(act):startExpansionJourney(0,act);$('#expansion-back').onclick=showIntro;
 }
 function exitExpansionJourney(){
  if(!exitOpen)return;touch.reset();keys.clear();exitOpen=false;
  if(expansionJourney.phase==='boss'){
   if(!finishExpansionEntry()){$('#toast').textContent='기록을 종료하지 못했어요. 계정과 저장 공간을 확인하세요.';exitOpen=true;return;}
-  expansionJourney.phase='finished';mode='ready';$('#overlay').hidden=false;
-  const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name;
-  $('#overlay').innerHTML='<div class="menu-panel"><h2>'+name+' 시제품 완료</h2><p>5개 방과 보스를 돌파했어요. 실험 기록은 계정·칭호·랭킹에 반영하지 않습니다.</p><button id="expansion-retry">다시 출발</button><button id="expansion-back">돌아가기</button></div>';
-  $('#expansion-retry').onclick=()=>startExpansionJourney(0,act);$('#expansion-back').onclick=showIntro;return;
+  expansionJourney.phase='finished';showExpansionResult(true);return;
  }
  expansionApi.advanceExpansionJourney(expansionJourney);stage=expansionJourney.room;wave();
 }
+
 for(const material of new Set([stadium.coverMaterial,...Object.values(stadium.boundaryMaterials)]))sharedDynamicMaterials.add(material);
 for(const material of new Set([...skyway.materials,skyway.coverMaterial,...Object.values(skyway.boundaryMaterials)]))sharedDynamicMaterials.add(material);
 for(const geometry of skyway.geometries)sharedGeometries.add(geometry);
@@ -734,7 +761,7 @@ function combatAnalysisSummary(report){
 }
 function finishRoomAnalysis(training=false,show=false){
  const report=combatAnalysis.finish(elapsed);if(!report)return null;lastRoomAnalysis=report;if(show)renderRoomAnalysis(report,{training});else $('#room-analysis').hidden=true;
- if(!developerRun&&!training&&!survivalSession){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(discoveredCount(profile));}
+ if(!expansionJourney&&!developerRun&&!training&&!survivalSession){profile=writeDiscoveries(runStorage,recordPersonalBests(profile,report));seedTitle.setDiscovered(discoveredCount(profile));}
  return report;
 }
 function buildRoomBoundary(){if(!shouldBuildArenaBoundary(region))return;const stadiumRoom=isAct2(region);buildArenaBoundary(arenaGroup,arena,stadiumRoom?stadium.boundaryMaterials:mats,stadiumRoom);}
@@ -753,7 +780,7 @@ function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  }
  return saved;
 }
-function remember(kind,id,sharedBoss=false){if(developerRun||survivalSession&&!(sharedBoss&&kind==='bosses'))return {profile,saved:true};const before=discoveredCount(profile);const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='austinveteran')seedTitle.setAustinVeteranUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);if(kind==='bosses'&&id==='alwaysveteran')seedTitle.setAlwaysVeteranUnlocked(true);if(kind==='bosses'&&id==='tempestcarrier')seedTitle.setJohanUnlocked(true);if(kind==='bosses'&&id==='johanclear')seedTitle.setJohanClearUnlocked(true);if(kind==='bosses'&&id==='johanveteran')seedTitle.setJohanVeteranUnlocked(true);if(kind==='bosses'&&id==='crosswindKeeper')seedTitle.setCrosswindUnlocked(true);if(kind==='bosses'&&id==='crosswindclear')seedTitle.setCrosswindClearUnlocked(true);if(kind==='bosses'&&id==='crosswindveteran')seedTitle.setCrosswindVeteranUnlocked(true);if(kind==='bosses'&&id==='crystalGardener')seedTitle.setCrystalUnlocked(true);if(kind==='bosses'&&id==='crystalclear')seedTitle.setCrystalClearUnlocked(true);if(kind==='bosses'&&id==='crystalveteran')seedTitle.setCrystalVeteranUnlocked(true);seedTitle.setDiscovered(discoveredCount(profile));const news=codexNews(before,discoveredCount(profile));if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
+function remember(kind,id,sharedBoss=false){if(expansionJourney&&!canSaveExpansion()||developerRun||survivalSession&&!(sharedBoss&&kind==='bosses'))return {profile,saved:true};const before=discoveredCount(profile);const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='austinveteran')seedTitle.setAustinVeteranUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);if(kind==='bosses'&&id==='alwaysveteran')seedTitle.setAlwaysVeteranUnlocked(true);if(kind==='bosses'&&id==='tempestcarrier')seedTitle.setJohanUnlocked(true);if(kind==='bosses'&&id==='johanclear')seedTitle.setJohanClearUnlocked(true);if(kind==='bosses'&&id==='johanveteran')seedTitle.setJohanVeteranUnlocked(true);if(kind==='bosses'&&id==='crosswindKeeper')seedTitle.setCrosswindUnlocked(true);if(kind==='bosses'&&id==='crosswindclear')seedTitle.setCrosswindClearUnlocked(true);if(kind==='bosses'&&id==='crosswindveteran')seedTitle.setCrosswindVeteranUnlocked(true);if(kind==='bosses'&&id==='crystalGardener')seedTitle.setCrystalUnlocked(true);if(kind==='bosses'&&id==='crystalclear')seedTitle.setCrystalClearUnlocked(true);if(kind==='bosses'&&id==='crystalveteran')seedTitle.setCrystalVeteranUnlocked(true);seedTitle.setDiscovered(discoveredCount(profile));const news=codexNews(before,discoveredCount(profile));if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}
  // 관통을 조합·진화에 넣어도 기본 탄의 관통 수·치명타는 남는다(9/22). 슬롯 법칙(chosen)에는 넣지 않는다 —
  // 넣었더니 슬롯 줄에 '관통 Lv.0'이 자리를 차지하고, 없는 관통으로 조합이 열리고, 저장에도 섞였다.
@@ -907,6 +934,7 @@ function spawnWardenAt(x,z,variant,{support=false,delay=0}={}){
 
 function saveBoundary(nextStage=stage,saveMode='entry',over={}){
  if(survivalSession)return true;
+ if(expansionJourney)return saveExpansionLeave();
  if(developerRun)return true;
  saveOK=writeCheckpoint(actStore(),{version:1,cycle,region,stage:nextStage,mode:saveMode,hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),banked:bankedUpgrades,choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),guideTarget,rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,inventory:{...inventory},runBonuses:{...runBonuses},turretPotionDry,relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:Number((activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown).toFixed(2)),...over});
  return saveOK;
@@ -938,11 +966,11 @@ function saveLeaveState(){
 // 저장하는 판: 방 입구 저장으로 나간다. 저장하지 않는 판(거울의 탑·실험실·연습장): 저장 없이 바로 나간다.
 // 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
 let exitWithoutSaveArmed=false,saveExitBusy=false,cloudSaveFailed=false;
-function saveExitLabel(){return expansionJourney?'로컬 저장하고 나가기 · 방 입구부터 이어하기':survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
+function saveExitLabel(){return expansionJourney?(expansionChannel==='public'?'저장하고 나가기 · 계정 동기화 확인':'로컬 저장하고 나가기 · 방 입구부터 이어하기'):survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
 function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
 $('#save-exit').onclick=async()=>{
  if(saveExitBusy)return;
- if(expansionJourney){if(!saveExpansionLeave()){pauseBuild.setSaveStatus('로컬 저장을 확인하지 못했어요. 계정이 바뀌었거나 다른 탭의 기록이 더 최신일 수 있어요.');return;}leavePausedRun();return;}
+ if(expansionJourney){if(!saveExpansionLeave()){pauseBuild.setSaveStatus('저장을 확인하지 못했어요. 계정이 바뀌었거나 다른 탭의 기록이 더 최신일 수 있어요.');return;}if(expansionChannel==='public'){saveExitBusy=true;$('#save-exit').disabled=true;try{const result=await syncPublicExpansion();if(result.kind!=='synced'){pauseBuild.setSaveStatus('기기에 저장했지만 계정 동기화가 완료되지 않았어요. 다시 확인하거나 이 기기에서 이어하세요.');return;}}finally{saveExitBusy=false;$('#save-exit').disabled=false;}}leavePausedRun();return;}
  if(survivalSession){
   if(survivalSession.lab){finishSurvival(false,true);return;}
   if(!saveSurvival()){pauseBuild.setSaveStatus(survivalSaveMessage);return;}
@@ -967,6 +995,12 @@ const survivalStore=()=>createSurvivalSaveStore(rawStorage,survivalOwner());
 const survivalCloud=createSurvivalSync({storage:rawStorage,account,databaseURL:FIREBASE_APP.databaseURL,isActive:()=>Boolean(survivalSession&&!survivalSession.finished&&mode!=='ready'),onState:state=>{const el=$('#survival-cloud-status');if(el)el.textContent=survivalSyncLabel(state);}});
 const survivalBestCloud=createSurvivalRecordSync({storage:rawStorage,account,databaseURL:FIREBASE_APP.databaseURL});
 const survivalPersonalRecord=()=>readSurvivalAccountRecord(rawStorage,survivalOwner());
+function survivalClearRecordLabel(record,five=false){
+ const wins=five?record.fiveWins||0:record.wins,fastest=five?record.fastestFiveClear:record.fastestClear;
+ return (five?'다섯':'세')+' 막 완주 '+wins+'회'+(fastest?' · 최단 '+(five?'다섯':'세')+' 막 완주 '+survivalClock(fastest):'');
+}
+function survivalLocalClearHistory(record){return '이 기기 '+survivalClearRecordLabel(record)+(Object.hasOwn(record,'fiveWins')?' · 이 기기 '+survivalClearRecordLabel(record,true):'');}
+
 const packSurvivalActor=e=>({fields:captureCombatFields(e),position:e.g.position.toArray(),rotation:e.g.rotation.y});
 function settleSurvivalTitle(){
  if(!survivalSession)return true;
@@ -1130,12 +1164,12 @@ function showSurvivalSetup(refresh=true){
  $('#overlay').classList.add('survival-overlay');
  mode='ready';paused=false;touch.reset();keys.clear();retryStoredSurvivalTitles();const record=survivalPersonalRecord(),saved=survivalStore().read();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">SEED · 별도 도전</p><h2>밀려오는 숲</h2><p class="survival-lead">작은 씨앗 하나로, 끝없는 무리를 뚫으세요.</p><div class="survival-facts"><span><b>3분</b>각 막 생존 후 보스</span><span><b>자동 공격</b>이동과 회피에 집중</span><span><b>조합 성장</b>처치하면 법칙 선택</span></div><p>1막 오스틴 → 2막 항상초심 → 3막 요한. 조합을 유지하고 이어 싸워요. 2막은 베이스를 밟으면 다음 베이스까지 미끄러져요(무적 없음). 3막을 깨면 더 강한 다음 순환으로 넘어갑니다. 일반 몹은 몸으로 밀려오고 보스만 고유 공격을 사용해요. 한쪽 접근 → 양쪽 압박 → 사방 포위 뒤, 매분 마지막 6초는 작은 무리만 접근해요. 빠른 적이 몸을 낮추면 옆으로 피하세요.</p><p class="survival-note">회복 물약 2개로 출발 · 각 막 60·120초에 1개 보급(최대 5개) · 막 이동 시 체력 25 회복 + 물약 1개<br>별도 시험 모드예요. 여정 저장·조합 도감·창고는 별도예요. 보스 첫 격파·누적 10회·한 판 같은 보스 3회 완주 칭호는 여정과 함께 집계해요.<br>일시정지에서 저장하고 나가기 · 이 기기·브라우저에서 이어하기 가능<br>Google 계정 저장 완료 후 같은 계정으로 다른 기기에서 이어할 수 있어요.<br>기록을 합치지는 않아요 · 날아가던 내 탄과 순간 효과는 재개 시 정리됩니다.</p><p class="survival-record">최고 ${record.bestKills.toLocaleString()} 처치 · 최장 ${survivalClock(record.bestTime)} · 세 막 완주 ${record.wins}회 · 최고 ${record.bestBosses}보스${record.fastestClear?` · 최단 완주 ${survivalClock(record.fastestClear)}`:''}</p><p class="survival-note" role="status">${saved?`저장된 도전 · ${saved.session.lap+1}순환 ${saved.session.act+1}막 · ${survivalClock(saved.session.time)} · ${saved.progress.kills}처치`:survivalSaveMessage}</p><p id="survival-cloud-status" class="survival-note" role="status"></p><button id="survival-cloud-retry" class="survival-sync-button">계정 저장 다시 확인</button><div id="survival-cloud-conflict"></div><div class="survival-actions">${saved?'<button id="resume-survival" class="primary">이어하기</button>':''}<button id="start-survival" class="primary">${saved?'새로 시작':'생존전 시작'}</button><button id="survival-back">돌아가기</button></div>${localInspection?'<details class="survival-lab"><summary>로컬 검증 · 기록 제외</summary><button id="survival-pierce">관통·연쇄 무리 시연</button><button id="survival-frost">빙결·연쇄 무리 시연</button><button id="survival-stress">후반 300마리 · 조합 부하</button><button id="survival-boss">최종 보스 전환</button><button id="survival-duel">1막 보스전 연습 · 피해 적용</button><button id="survival-stress2">2막 300마리 부하</button><button id="survival-stress3">3막 300마리 부하</button><button id="survival-base">2막 베이스 이동 검증 · 피해 적용</button><button id="survival-route">세 막 연결 검증 · 보스 체력 1</button><button id="survival-act2">2막 물량·항상초심 연습</button><button id="survival-act3">3막 물량·요한 연습</button><button id="survival-loop">3막 격파 → 다음 순환 검증</button><p>가속 자동 비교 · 처음부터 성장 · 실제 피해 · 지정 선택 · 기록 제외</p><button id="compare-still">정지 생존 비교 · 이동·회피 없음</button><button id="compare-area">광역형 3분 비교</button><button id="compare-frost">빙결형 3분 비교</button><button id="compare-orbit">공전형 3분 비교</button></details>':''}</div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">SEED · 별도 도전</p><h2>밀려오는 숲</h2><p class="survival-lead">작은 씨앗 하나로, 끝없는 무리를 뚫으세요.</p><div class="survival-facts"><span><b>3분</b>각 막 생존 후 보스</span><span><b>자동 공격</b>이동과 회피에 집중</span><span><b>조합 성장</b>처치하면 법칙 선택</span></div><p>1막 오스틴 → 2막 항상초심 → 3막 요한. 조합을 유지하고 이어 싸워요. 2막은 베이스를 밟으면 다음 베이스까지 미끄러져요(무적 없음). 3막을 깨면 더 강한 다음 순환으로 넘어갑니다. 일반 몹은 몸으로 밀려오고 보스만 고유 공격을 사용해요. 한쪽 접근 → 양쪽 압박 → 사방 포위 뒤, 매분 마지막 6초는 작은 무리만 접근해요. 빠른 적이 몸을 낮추면 옆으로 피하세요.</p><p class="survival-note">회복 물약 2개로 출발 · 각 막 60·120초에 1개 보급(최대 5개) · 막 이동 시 체력 25 회복 + 물약 1개<br>별도 시험 모드예요. 여정 저장·조합 도감·창고는 별도예요. 보스 첫 격파·누적 10회·한 판 같은 보스 3회 완주 칭호는 여정과 함께 집계해요.<br>일시정지에서 저장하고 나가기 · 이 기기·브라우저에서 이어하기 가능<br>Google 계정 저장 완료 후 같은 계정으로 다른 기기에서 이어할 수 있어요.<br>기록을 합치지는 않아요 · 날아가던 내 탄과 순간 효과는 재개 시 정리됩니다.</p><p class="survival-record">최고 ${record.bestKills.toLocaleString()} 처치 · 최장 ${survivalClock(record.bestTime)} · ${survivalLocalClearHistory(record)} · 최고 ${record.bestBosses}보스</p><p class="survival-note" role="status">${saved?`저장된 도전 · ${saved.session.lap+1}순환 ${saved.session.act+1}막 · ${survivalClock(saved.session.time)} · ${saved.progress.kills}처치`:survivalSaveMessage}</p><p id="survival-cloud-status" class="survival-note" role="status"></p><button id="survival-cloud-retry" class="survival-sync-button">계정 저장 다시 확인</button><div id="survival-cloud-conflict"></div><div class="survival-actions">${saved?'<button id="resume-survival" class="primary">이어하기</button>':''}<button id="start-survival" class="primary">${saved?'새로 시작':'생존전 시작'}</button><button id="survival-back">돌아가기</button></div>${localInspection?'<details class="survival-lab"><summary>로컬 검증 · 기록 제외</summary><button id="survival-pierce">관통·연쇄 무리 시연</button><button id="survival-frost">빙결·연쇄 무리 시연</button><button id="survival-stress">후반 300마리 · 조합 부하</button><button id="survival-boss">최종 보스 전환</button><button id="survival-duel">1막 보스전 연습 · 피해 적용</button><button id="survival-stress2">2막 300마리 부하</button><button id="survival-stress3">3막 300마리 부하</button><button id="survival-base">2막 베이스 이동 검증 · 피해 적용</button><button id="survival-route">세 막 연결 검증 · 보스 체력 1</button><button id="survival-act2">2막 물량·항상초심 연습</button><button id="survival-act3">3막 물량·요한 연습</button><button id="survival-loop">3막 격파 → 다음 순환 검증</button><p>가속 자동 비교 · 처음부터 성장 · 실제 피해 · 지정 선택 · 기록 제외</p><button id="compare-still">정지 생존 비교 · 이동·회피 없음</button><button id="compare-area">광역형 3분 비교</button><button id="compare-frost">빙결형 3분 비교</button><button id="compare-orbit">공전형 3분 비교</button></details>':''}</div>`;
  $('#start-survival').onclick=()=>{if(!saved){startSurvival();return;}$('#overlay').innerHTML='<div class="menu-panel survival-panel"><h2>새로 시작할까요?</h2><p>기존 생존전 이어하기가 새 도전으로 바뀝니다.</p><div class="survival-actions"><button id="survival-new-confirm">새 도전 시작</button><button id="survival-new-cancel">취소</button></div></div>';$('#survival-new-confirm').onclick=()=>startSurvival();$('#survival-new-cancel').onclick=showSurvivalSetup;};if($('#resume-survival'))$('#resume-survival').onclick=resumeSurvival;$('#survival-back').onclick=()=>{$('#overlay').classList.remove('survival-overlay');showDungeon();};
  $('#survival-cloud-status').textContent=survivalSyncLabel(survivalCloud.state());$('#survival-cloud-retry').onclick=()=>refreshSurvivalAccount();if(refresh!==false)void refreshSurvivalAccount();
  $('.survival-record').insertAdjacentHTML('afterend','<button id="survival-open-ranking" class="survival-sync-button">물량생존전 랭킹 보기</button>');$('#survival-open-ranking').onclick=()=>showSurvivalRanking();
- const recordLabel=$('.survival-record');recordLabel.textContent=`${account.user()&&!account.user().isAnonymous?'계정':'이 기기'} 최고 ${record.bestKills.toLocaleString()}처치 · 최장 ${survivalClock(record.bestTime)} · 최고 ${record.bestBosses}보스${record.fastestClear?' · 최단 완주 '+survivalClock(record.fastestClear):''}`;
- if(!localInspection)void survivalBestCloud.sync().then(result=>{if(!recordLabel.isConnected)return;const best=survivalPersonalRecord();recordLabel.textContent=`${result.kind==='synced'?'계정 최고기록':'이 기기에 보관된 최고기록'} · ${best.bestKills.toLocaleString()}처치 · ${survivalClock(best.bestTime)} · ${best.bestBosses}보스${best.fastestClear?' · 최단 완주 '+survivalClock(best.fastestClear):''}${result.kind==='offline'?' · 계정 연결 재확인 필요':''}`;});
+ const recordLabel=$('.survival-record');recordLabel.textContent=`${account.user()&&!account.user().isAnonymous?'계정':'이 기기'} 최고 ${record.bestKills.toLocaleString()}처치 · 최장 ${survivalClock(record.bestTime)} · 최고 ${record.bestBosses}보스 · ${survivalLocalClearHistory(record)}`;
+ if(!localInspection)void survivalBestCloud.sync().then(result=>{if(!recordLabel.isConnected)return;const best=survivalPersonalRecord();recordLabel.textContent=`${result.kind==='synced'?'계정 최고기록':'이 기기에 보관된 최고기록'} · ${best.bestKills.toLocaleString()}처치 · ${survivalClock(best.bestTime)} · ${best.bestBosses}보스 · ${survivalLocalClearHistory(best)}${result.kind==='offline'?' · 계정 연결 재확인 필요':''}`;});
  if(localInspection){$('#survival-pierce').onclick=()=>startSurvival('pierce');$('#survival-frost').onclick=()=>startSurvival('frost');$('#survival-stress').onclick=()=>startSurvival('stress');$('#survival-boss').onclick=()=>startSurvival('boss');$('#survival-duel').onclick=()=>startSurvival('duel');for(const id of ['act2','act3','loop','base','route','stress2','stress3'])$('#survival-'+id).onclick=()=>startSurvival(id);for(const id of Object.keys(SURVIVAL_BENCHES))$('#'+id).onclick=()=>startSurvival(id);}
 }
 function startSurvival(lab=null,saved=null){
@@ -1297,7 +1331,7 @@ function finishSurvival(won=false,left=false){
  perfFinish(won?'cleared':left?'left':'ended');mode='dead';paused=false;labSafe=false;touch.reset();keys.clear();pauseBuild.hide();$('#save-exit').hidden=true;
  cancelActive(activeGauge);activeVfx.clear();$('#active-cinematic').hidden=true;$('#evolution').hidden=true;$('#toast').textContent='';audio.setPaused(false);audio.setScene('garden');
  $('#overlay').classList.remove('garden-mode','ranking-overlay','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">물량생존전 · ${session.lab?'로컬 검증 · 기록 제외':'밀려오는 숲'}</p><h2>${outcome.title}</h2>${session.benchmark?`<p class="survival-result-note">${session.benchmark.label} · 가속 자동 비교 · 지정 선택 · 사람의 완주 기록이 아닙니다</p>`:session.lab?'<p class="survival-result-note">연습 결과 · 실제 3분 생존 기록이 아닙니다</p>':''}<div class="survival-facts"><span><b>${survivalClock(session.lab?elapsed:session.time)}</b>${session.lab?'연습 전투 시간':'버틴 시간'}</span><span><b>${session.kills.toLocaleString()}</b>처치</span><span><b>${outcome.value}</b>${outcome.label}</span></div>${session.bossSpawned?`<p class="survival-note">${session.lab&&!session.benchmark?'3분 지점부터 연습':'3분 생존 돌파'} · 보스전 ${survivalClock(outcome.bossSeconds)}${session.won?' · 격파 성공':' · 도전 종료'}</p>`:''}<p class="survival-note">${session.lap+1}순환 · ${session.act+1}막 ${survivalAct(session).name} · 누적 보스 ${session.bossesDefeated}회 격파</p>${combatAnalysisSummary(report)}<p class="survival-record">${session.lab?'연습 결과는 최고기록에 포함되지 않아요.<br>':''}이 기기 최고 ${record.bestKills.toLocaleString()} 처치 · 세 막 완주 ${record.wins}회 · 최고 ${record.bestBosses}보스${record.fastestClear?` · 최단 완주 ${survivalClock(record.fastestClear)}`:''}</p><div class="survival-actions"><button id="survival-retry" class="primary">${session.lab?'같은 연습 다시':'다시 도전'}</button><button id="survival-setup">도전 준비</button><button id="survival-home">메인으로</button></div></div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">물량생존전 · ${session.lab?'로컬 검증 · 기록 제외':'밀려오는 숲'}</p><h2>${outcome.title}</h2>${session.benchmark?`<p class="survival-result-note">${session.benchmark.label} · 가속 자동 비교 · 지정 선택 · 사람의 완주 기록이 아닙니다</p>`:session.lab?'<p class="survival-result-note">연습 결과 · 실제 3분 생존 기록이 아닙니다</p>':''}<div class="survival-facts"><span><b>${survivalClock(session.lab?elapsed:session.time)}</b>${session.lab?'연습 전투 시간':'버틴 시간'}</span><span><b>${session.kills.toLocaleString()}</b>처치</span><span><b>${outcome.value}</b>${outcome.label}</span></div>${session.bossSpawned?`<p class="survival-note">${session.lab&&!session.benchmark?'3분 지점부터 연습':'3분 생존 돌파'} · 보스전 ${survivalClock(outcome.bossSeconds)}${session.won?' · 격파 성공':' · 도전 종료'}</p>`:''}<p class="survival-note">${session.lap+1}순환 · ${session.act+1}막 ${survivalAct(session).name} · 누적 보스 ${session.bossesDefeated}회 격파</p>${combatAnalysisSummary(report)}<p class="survival-record">${session.lab?'연습 결과는 최고기록에 포함되지 않아요.<br>':''}이 기기 최고 ${record.bestKills.toLocaleString()} 처치 · 이 기기 ${survivalClearRecordLabel(record,session.actCount===5)} · 최고 ${record.bestBosses}보스</p><div class="survival-actions"><button id="survival-retry" class="primary">${session.lab?'같은 연습 다시':'다시 도전'}</button><button id="survival-setup">도전 준비</button><button id="survival-home">메인으로</button></div></div>`;
  $('#survival-retry').onclick=()=>startSurvival(session.lab);$('#survival-setup').onclick=()=>{showIntro();showSurvivalSetup();};$('#survival-home').onclick=showIntro;
  $('.survival-record').insertAdjacentHTML('afterend','<p id="survival-submit-status" class="survival-note" role="status"></p><button id="survival-result-ranking" class="survival-sync-button">물량생존전 랭킹 보기</button>');$('#survival-result-ranking').onclick=()=>showSurvivalRanking(()=>{showIntro();showSurvivalSetup();});
  const decision=rankingDecision({isTestRun:Boolean(session.lab||session.benchmark||developerRun),localInspection,score,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user(),paceTrusted:paceTrusted(paceGame,paceReal)});
@@ -1429,7 +1463,7 @@ function enemyDown(e){perf.event(PE.enemyDeath);
  if(e.expansionActor){score+=20;releaseEnemy(e);return;}
  if(survivalSession){
   score+=e.survivalScore||500;settleSurvivalKill(survivalSession,{boss:Boolean(e.survivalBoss)});
-  if(e.survivalBoss){if(!localInspection&&!survivalSession.lab&&!survivalSession.benchmark&&!developerRun&&!queueSurvivalTitle(survivalSession,e.type,survivalSession.lap+1))throw Error('survival-title-queue-full');settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}
+  if(e.survivalBoss){if(!localInspection&&!survivalSession.lab&&!survivalSession.benchmark&&!developerRun&&!queueSurvivalTitle(survivalSession,e.type,survivalBossOrdinal(survivalSession,e.type)))throw Error('survival-title-queue-full');settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}
   else{survivalArt?.defeat(e,player.position);releaseEnemy(e);}
   return;
  }
@@ -1542,7 +1576,7 @@ function hitPlayer(amount){if(labSafe||invuln>0||shellTime>0||mode!=='playing')r
   const revive=tryRevive(inventory);
   if(revive){hp=revive.hp;invuln=Math.max(invuln,revive.guard);for(const p of enemyShots)release(p.ob);enemyShots=[];itemBarKey='';cameraShake=.32;vfx.pulse(player.position,'seed',2.8,.8);vfx.burst(player.position,'seed',44,2.2);$('#toast').textContent=`${ITEMS.sprout.name}이 돋았다 · 생명력 ${revive.hp}으로 다시 일어났습니다`;return;}
   const deathReport=finishRoomAnalysis(false,false);
-  if(expansionJourney&&!finishExpansionEntry())$('#toast').textContent='기록 종료에 실패했어요. 이전 계정의 저장은 덮어쓰지 않았습니다.';
+  if(expansionJourney){const ended=finishExpansionEntry();showExpansionResult(false,ended);return;}
   if(!developerRun)clearCheckpoint(actStore());mode='dead';showEnd(deathReport);
  }
 }
@@ -1757,7 +1791,7 @@ function showAccount(error=''){
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{const saved=await cloud.syncNow();if(!saved.ok){showAccount('이 기기의 기록을 아직 저장하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');return;}await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
 let pendingCloudReload=false,foregroundCloudSync=null,lastForegroundCloudSync=0,startupCloudReady=false;
-function showIntro(){++expansionLaunch;void releaseExpansionSaveLease();expansionTerrain=null;if(expansionJourney){for(const e of enemies)releaseEnemy(e);enemies=[];for(const q of [...shots,...enemyShots])release(q.ob);shots=[];enemyShots=[];}expansionJourney=null;expansionJourneyView?.setActive(false);document.body.classList.remove('survival-result');$('#overlay').classList.remove('survival-overlay');perfFinish('left');if(survivalSession){for(const e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;enemies=[];for(const q of [...shots,...enemyShots,...effects])release(q.ob);shots=[];enemyShots=[];effects=[];clearForms();}trainingSession=null;mirrorSession=null;survivalSession=null;survivalArt?.setActive(false);document.body.classList.remove('survival-mode');mirrorReadyRing.visible=false;combatAnalysis.cancel();$('#room-analysis').hidden=true;developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');audio.setPaused(false);region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
+function showIntro(){++expansionLaunch;void releaseExpansionSaveLease();expansionChannel='inspection';expansionPublicEntry=null;expansionPublicSync=null;expansionFreshExpected=null;expansionTerrain=null;if(expansionJourney){for(const e of enemies)releaseEnemy(e);enemies=[];for(const q of [...shots,...enemyShots])release(q.ob);shots=[];enemyShots=[];}expansionJourney=null;expansionJourneyView?.setActive(false);document.body.classList.remove('survival-result');$('#overlay').classList.remove('survival-overlay');perfFinish('left');if(survivalSession){for(const e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;enemies=[];for(const q of [...shots,...enemyShots,...effects])release(q.ob);shots=[];enemyShots=[];effects=[];clearForms();}trainingSession=null;mirrorSession=null;survivalSession=null;survivalArt?.setActive(false);document.body.classList.remove('survival-mode');mirrorReadyRing.visible=false;combatAnalysis.cancel();$('#room-analysis').hidden=true;developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');audio.setPaused(false);region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  void nativeUpdate.check();
  if(pendingCloudReload){location.reload();return;}
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
@@ -2332,7 +2366,7 @@ function showMaintenance(){
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel maintenance-panel"><p class="eyebrow">SEED</p><h2>${escapeHtml(MAINTENANCE.title)}</h2>${MAINTENANCE.lines.map(line=>`<p class="maintenance-line">${escapeHtml(line)}</p>`).join('')}</div>`;
 }
-function restart(saved=null){if(expansionJourney)void releaseExpansionSaveLease();expansionJourney=null;expansionTerrain=null;expansionJourneyView?.setActive(false);if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,playable=r=>playableAct3Region(playableRegion(r),globalThis.location,developerRun),regionBlocked=candidate&&playable(candidate.region)!==candidate.region,restore=regionBlocked?null:candidate;region=playable(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();perfBegin();if(!restore&&!developerRun&&!survivalSession)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();bankedUpgrades=0;syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=maxPlayerHp();playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;if(!developerRun&&!survivalSession)void webTelemetry.playStart(isAct3(region)?3:isAct2(region)?2:1);$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro','menu-screen','developer-mode','garden-mode','ranking-overlay');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore&&!developerRun&&!survivalSession)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);dashRelicReady=false;relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
+function restart(saved=null,{expansion=false}={}){if(!expansion){++expansionLaunch;void releaseExpansionSaveLease();expansionChannel='inspection';expansionPublicEntry=null;expansionPublicSync=null;expansionFreshExpected=null;}expansionJourney=null;expansionTerrain=null;expansionJourneyView?.setActive(false);if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,playable=r=>playableAct3Region(playableRegion(r),globalThis.location,developerRun),regionBlocked=candidate&&playable(candidate.region)!==candidate.region,restore=regionBlocked?null:candidate;region=playable(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();perfBegin();if(!expansion&&!restore&&!developerRun&&!survivalSession)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();bankedUpgrades=0;syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=maxPlayerHp();playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;if(!expansion&&!developerRun&&!survivalSession)void webTelemetry.playStart(isAct3(region)?3:isAct2(region)?2:1);$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro','menu-screen','developer-mode','garden-mode','ranking-overlay');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!expansion&&!restore&&!developerRun&&!survivalSession)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);dashRelicReady=false;relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
  if(survivalSession){inventory=emptyInventory();addItem(inventory,'tonic',2);relics=emptyRelics();dashRewardPending=false;}
  if(mirrorSession){inventory=emptyInventory();runBonuses=emptyRunBonuses();relics=emptyRelics();hp=100;dashRewardPending=false;}
  if(restore){stage=restore.stage;hp=Math.min(maxPlayerHp(),restore.hp);kills=restore.kills;elapsed=restore.elapsed;runDashes=restore.playDashes||0;runDamageTaken=restore.playDamage||0;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);bankedUpgrades=restore.banked||0;syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}
@@ -2343,8 +2377,8 @@ function restart(saved=null){if(expansionJourney)void releaseExpansionSaveLease(
  activeGauge=createActiveGauge(restore?.activeGauge||0,restore?.activeCooldown||0);activeReadyAnnounced=false;audio.setPaused(false);finaleEchoes.length=0;promptedSolo.clear();promptedAwaken.clear();promptedSecond.clear();
  if(restore?.form&&!heldForms.size&&canFuse(levels,restore.form))bankAndFuse(restore.form);
  syncLaws();syncForms(true);growth.select(effectiveLaws(),mutated);
- if(restore?.mode==='crossroads')nextJourney();else{austinRoom=restore?.mode==='austin';wave();}
- if(!restore){
+ if(!expansion){if(restore?.mode==='crossroads')nextJourney();else{austinRoom=restore?.mode==='austin';wave();}}
+ if(!expansion&&!restore){
   itemBarKey='';
   const departure=itemCounts(inventory);
   $('#toast').textContent=mirrorSession?'':departure
@@ -2356,6 +2390,7 @@ function togglePause(){if(saveExitBusy||mode!=='playing'&&mode!=='evolving')retu
 window.addEventListener('keydown',e=>{if(mode==='defense'||mode==='adventure')return;if(e.target?.closest?.('input,textarea'))return;if(mode==='ready'&&['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,summary,a,select'))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
 function refreshCloudOnReturn(){
+ if(expansionChannel==='public'&&canSaveExpansion())void syncPublicExpansion();
  if(mode==='ready'&&$('#survival-cloud-status'))void refreshSurvivalAccount();
  if(!startupCloudReady||localInspection||!account.user()||mode!=='ready'||foregroundCloudSync||Date.now()-lastForegroundCloudSync<5000)return;
  lastForegroundCloudSync=Date.now();foregroundCloudSync=cloud.syncNow().then(result=>{
@@ -2370,6 +2405,7 @@ if(!account.native&&!import.meta.env.DEV){
  window.addEventListener('online',()=>enforceCurrentWebAccess().catch(()=>{}));
 }
 function update(dt,time){
+if(expansionJourney&&mode!=='ready'&&expansionChannel==='public'&&!canSaveExpansion()){showIntro();$('#toast').textContent='계정 또는 이용 상태가 바뀌어 여정을 멈췄어요. 원래 계정의 방 입구 기록은 보존했습니다.';return;}
 if(mode==='evolving'){
   if(paused)return;
   evolutionTime=Math.min(evolutionDuration,evolutionTime+dt);

@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createSurvivalSaveStore,captureSurvivalSession,queueSurvivalTitle,settleSurvivalTitles,survivalTitleEvents,SURVIVAL_TITLE_LIMIT,validSurvivalRecord,validSurvivalSave} from '../src/survival-save.js';
-import {createSurvivalSession,survivalAct,settleSurvivalKill,advanceSurvivalAct} from '../src/survival-rules.js';
+import {createSurvivalSession,survivalAct,settleSurvivalKill,survivalBossOrdinal,advanceSurvivalAct} from '../src/survival-rules.js';
 import {createSurvivalExpansion,migrateSurvivalToFiveActs} from '../src/survival-expansion.js';
 import {survivalExpansionRankProgress} from '../src/survival-ranking.js';
 import {createDefense,checkpointDefense,restoreDefense,migrateDefenseToFiveActs,startDefenseWave,stepDefense,defenseHurt,defenseSeedCap,plantDefense} from '../src/seed-defense-rules.js';
@@ -23,7 +23,7 @@ function host(storage,session=createSurvivalSession(17)){
   settleSurvivalTitles,queueSurvivalTitle,survivalTitleEvents,captureSurvivalSession,SURVIVAL_TITLE_LIMIT,createSurvivalSaveStore,
   rawStorage:storage,survivalOwner:()=>owner.uid,survivalStore:()=>createSurvivalSaveStore(storage,owner.uid),survivalCloud:{changed(){}},survivalPendingEnd:null,survivalSaveMessage:'',
   awardModeBoss:(mode,runId,boss,ordinal,practice)=>practice||recordModeBossVictory(storage,{mode,runId,boss,ordinal,practice}).saved,
-  settleSurvivalKill,survivalAct,score:0,fallen:[],enemyShots:[],invuln:0,audio:{play(){}},perf:{event(){}},PE:{enemyDeath:0},$:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},release(){},releaseEnemy(){throw Error('unexpected ordinary actor');}
+  settleSurvivalKill,survivalBossOrdinal,survivalAct,score:0,fallen:[],enemyShots:[],invuln:0,audio:{play(){}},perf:{event(){}},PE:{enemyDeath:0},$:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},release(){},releaseEnemy(){throw Error('unexpected ordinary actor');}
  });
  vm.runInContext(main.slice(main.indexOf('function settleSurvivalTitle(){'),main.indexOf('function saveSurvival(){')),ctx);
  vm.runInContext(main.slice(main.indexOf('function enemyDown(e){'),main.indexOf('function updateFallen(')),ctx);

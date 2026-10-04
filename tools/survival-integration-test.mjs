@@ -63,8 +63,8 @@ ctx.enemyIndex.rebuild(crowd);const neighbours=[];ctx.enemyIndex.queryInto({x:0,
 for(let i=0;i<1000;i++)ctx.enemyIndex.rebuild(i%2?crowd:[]);ctx.enemyIndex.rebuild(crowd);assert.equal(ctx.enemyIndex.queryInto({x:0,z:0},1,[]).length,120,'bucket reuse never retains stale actors');
 
 // Boundaries that must remain explicit while the existing journey is reused.
-assert.match(main,/if\(!restore&&!developerRun&&!survivalSession\)clearCheckpoint/);
-assert.match(main,/if\(!restore&&!developerRun&&!survivalSession\)for\(const \[id,n\] of Object.entries\(claimCarry/);
+assert.match(main,/if\(!expansion&&!restore&&!developerRun&&!survivalSession\)clearCheckpoint/);
+assert.match(main,/if\(!expansion&&!restore&&!developerRun&&!survivalSession\)for\(const \[id,n\] of Object.entries\(claimCarry/);
 assert.match(between('function saveBoundary(', '// After a warden'),/if\(survivalSession\)return true/);
 assert.match(between('function saveLeaveState(', '// 일시정지'),/if\(survivalSession\)return saveSurvival\(\)/);
 assert.match(between('function hitPlayer(', 'let cameraShake='),/if\(survivalSession\)\{finishSurvival\(false\);return;\}/);
@@ -93,7 +93,7 @@ const finishContext=vm.createContext({survivalSaveToken:null,survivalPendingEnd:
  perfFinish(){},touch:{reset(){}},keys:new Set(),pauseBuild:{hide(){}},cancelActive(){},activeGauge:{},activeVfx:{clear(){}},
  audio:{setPaused(){},setScene(){}},startSurvival:lab=>{retryLab=lab;},showIntro:()=>homeVisits++,showSurvivalSetup:()=>setupVisits++
 });
-vm.runInContext(between('function finishSurvival(', 'function wave('),finishContext);
+vm.runInContext(between('function survivalClearRecordLabel(', 'const packSurvivalActor=')+between('function finishSurvival(', 'function wave('),finishContext);
 finishContext.finishSurvival(true); // untrusted/stale callback cannot grant a clear
 assert.equal(JSON.parse(stored).wins,0);
 assert.match(node('#overlay').innerHTML,/25%/);

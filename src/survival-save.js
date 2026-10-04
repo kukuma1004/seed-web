@@ -72,6 +72,7 @@ export function validSurvivalSave(s){
  const t=s.session,p=s.progress;
  if(!t||t.lab||t.benchmark||t.finished||!p||!finite(p.hp)||p.hp<=0||survivalTitleEvents(t)===null)return false;
  if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3)return false;
+ for(const key of ['crosswindBossWins','crystalBossWins'])if(t[key]!==undefined&&(!Number.isInteger(t[key])||t[key]<0||t[key]>1000000||t[key]>(t.bossesDefeated||0)))return false;
  if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
  if(t.act>=3&&!validSurvivalExpansionCheckpoint(s.expansion,t.act,t.lap))return false;
  if(!finite(t.time)||t.time<0||!finite(t.legStartedAt)||t.legStartedAt>t.time||!finite(t.rngState))return false;

@@ -186,3 +186,6 @@ art-refs/
 !tools/defense-save-route-test.mjs
 !tools/duel-solo-07-timing-test.mjs
 !tools/duel-solo-07-trace.mjs
+!tools/survival-five-record-test.mjs
+
+!tools/expansion-public-host-test.mjs

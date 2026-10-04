@@ -37,5 +37,6 @@ export function migrateSurvivalToFiveActs(snapshot){
  const next=structuredClone(snapshot),s=next.session;if(survivalActCount(s)===5)return next;
  s.actCount=5;s.legacyCompletedLaps=s.completedLaps||0;s.legacyFastestLap=s.fastestLap||0;
  s.completedLaps=0;s.fastestLap=0;
+ s.crosswindBossWins=0;s.crystalBossWins=0;
  next.expansion=null;return next;
 }
