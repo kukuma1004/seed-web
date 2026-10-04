@@ -602,6 +602,7 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
   if(publicRun&&!expansionEntry)throw Error('checkpoint');
   if(saved)player.position.fromArray(saved.position);
+  if(publicRun)void webTelemetry.playStart(rules.EXPANSION_ACTS[act].number);
   $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(publicRun?' · 방 입구 저장 · 계정 동기화 상태는 일시정지에서 확인':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
  }catch{
   if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionPendingBossCheckpoint=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}

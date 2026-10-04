@@ -82,3 +82,18 @@ assert.match(rules.$day.modeSessions.$platform.$uid.$eventId.mode['.validate'],/
 assert.match(rules.$day.modeSessions.$platform.$uid.$eventId.mode['.validate'],/puzzle/);
 assert.equal(rules.$day.modeSessions.$platform.$uid.$eventId.$other['.validate'],false);
 console.log('Web telemetry counting, privacy and platform gating passed.');
+
+// Released expansion journeys keep exact act4/5 identity, while closed or
+// partially opened gates make no anonymous telemetry writes or auth requests.
+const {EXPANSION_ACTS:expansionActs}=await import('../src/act-expansion.js');
+const openActs=Object.fromEntries(Object.entries(expansionActs).map(([k,v])=>[k,{...v,released:true}]));
+for(const platform of ['web','android'])for(const act of [4,5]){
+ for(const acts of [expansionActs,{...openActs,crosswind:expansionActs.crosswind},openActs]){
+  const rows=[];let authCount=0;
+  const t=createWebTelemetry({enabled:true,platform,databaseURL:'https://example.invalid',acts,now:()=>Date.parse('2026-10-04T12:00:00Z'),eventId:()=> 'expansion-session-01',session:async()=>{authCount++;return {uid:'install',token:async()=> 'mock'};},fetchImpl:async(url,options)=>{rows.push({url,body:JSON.parse(options.body)});return {ok:true};}});
+  const expected=acts===openActs;assert.equal(await t.playStart(act),expected);for(let second=0;second<42;second++)t.playTick(1);await t.endPlay('cleared');
+  if(expected){assert.equal(authCount,1);const last=rows.at(-1);assert.equal(last.body.act,act);assert.equal(last.body.activeSeconds,42);assert.equal(last.body.outcome,'cleared');assert.match(last.url,new RegExp('/sessions/'+(platform==='android'?'android':'web')+'/'));const summary=summarizeUsageDay('20261004',{sessions:{[platform]:{install:{one:last.body}}}});assert.equal(summary.activeSeconds,42);assert.equal(summary.cleared,1);}
+  else {assert.equal(rows.length,0);assert.equal(authCount,0);}
+ }
+}
+console.log('Expansion telemetry actual sender: both gates, exact act4/5, web/Android active-time/outcome and existing dashboard totals passed. Server rule candidate only; no real analytics writes.');

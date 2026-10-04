@@ -1,3 +1,4 @@
+import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
 // Anonymous web/Android usage counts. This Firebase Auth app is separate from
 // the player's account: its random UID identifies a browser or app install.
 export const WEB_TELEMETRY_ROOT='seedWebTelemetry/v1/days';
@@ -30,7 +31,7 @@ export async function anonymousTelemetrySession(firebaseApp){
  return {uid:user.uid,token:()=>user.getIdToken()};
 }
 
-export function createWebTelemetry({enabled=false,platform='web',databaseURL,session,fetchImpl=globalThis.fetch,now=Date.now,eventId=()=>crypto.randomUUID()}={}){
+export function createWebTelemetry({enabled=false,platform='web',databaseURL,session,fetchImpl=globalThis.fetch,now=Date.now,eventId=()=>crypto.randomUUID(),acts=EXPANSION_ACTS}={}){
  let sessionPromise=null;
  const visited=new Set();
  const eventCounts=new Map();
@@ -85,10 +86,10 @@ export function createWebTelemetry({enabled=false,platform='web',databaseURL,ses
   return current.pending;
  }
  function startPlay(act=1){
-  if(!enabled)return Promise.resolve(false);
+  if(!enabled||([4,5].includes(act)&&!expansionCircuitReleased(acts)))return Promise.resolve(false);
   endPlay();
   const startedAt=now();
-  play={id:eventId(),day:seoulDay(startedAt),startedAt,seconds:0,queuedSeconds:0,act:[1,2,3].includes(act)?act:1,outcome:'active',queuedOutcome:'active',pending:Promise.resolve(false)};
+  play={id:eventId(),day:seoulDay(startedAt),startedAt,seconds:0,queuedSeconds:0,act:[1,2,3,4,5].includes(act)?act:1,outcome:'active',queuedOutcome:'active',pending:Promise.resolve(false)};
   return event(app?'appStarts':'starts');
  }
  function playTick(seconds){

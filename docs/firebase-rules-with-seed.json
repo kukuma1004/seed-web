@@ -505,7 +505,7 @@
                       ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 86400"
                     },
                     "act": {
-                      ".validate": "newData.val() == 1 || newData.val() == 2 || newData.val() == 3"
+                      ".validate": "newData.val() == 1 || newData.val() == 2 || newData.val() == 3 || ((newData.val() == 4 || newData.val() == 5) && root.child('seedExpansionRelease').child('crosswind').val() == true && root.child('seedExpansionRelease').child('crystalGorge').val() == true)"
                     },
                     "outcome": {
                       ".validate": "newData.val() == 'active' || newData.val() == 'cleared' || newData.val() == 'ended' || newData.val() == 'left' || newData.val() == 'closed' || newData.val() == 'restart'"
