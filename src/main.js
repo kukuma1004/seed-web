@@ -50,7 +50,8 @@ import {ACT3_REGION,ACT3_NAME,ACT3_PRESSURE,act3RoomPressure,isAct3,act3Unlocked
 import {ACT3_GEOMETRIES,ACT3_MATERIALS,ACT3_ART,isAct3Minion,createAct3Minion,tickAct3Minion,createAct3Warden,tickAct3Warden,TEMPEST_CARRIER,createTempestCarrier,tickTempestCarrier,damageTempestCarrier,act3BossHint,act3BossPatternName} from './act3-enemies.js';
 import {createSkyway} from './skyway.js';
 import * as expansionRuntime from './expansion-journey.js';
-import {createSurvivalExpansion} from './survival-expansion.js';
+import {createSurvivalExpansion,migrateSurvivalToFiveActs} from './survival-expansion.js';
+import {publicCircuitActCount} from './act-expansion.js';
 import {expansionActorArt,expansionEnemyArt} from './expansion-actor-art.js';
 let expansionApi=expansionRuntime,survivalExpansion=null;
 import {createContactShadows} from './contact-shadows.js';
@@ -1139,8 +1140,10 @@ function showSurvivalSetup(refresh=true){
 }
 function startSurvival(lab=null,saved=null){
  ++expansionLaunch;void releaseExpansionSaveLease();
- const fiveActs=localInspection&&(['act4','act5','five'].includes(lab)||saved?.session?.actCount===5);
- if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>startSurvival(lab,saved));
+ const publicFive=publicCircuitActCount()===5,fiveActs=publicFive||localInspection&&(['act4','act5','five'].includes(lab)||saved?.session?.actCount===5);
+ if(!localInspection&&!publicFive&&saved?.session?.actCount===5){$('#toast').textContent='이 기록의 추가 막이 아직 공개되지 않았어요. 저장은 그대로 남겨 두었습니다.';return;}
+ if(fiveActs&&!expansionJourneyView){const owner=survivalOwner();return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>{if(owner!==survivalOwner()){$('#toast').textContent='준비 중 계정이 바뀌었어요. 원래 계정의 저장은 그대로 남아 있습니다.';return;}return startSurvival(lab,saved);});}
+ if(publicFive&&saved&&saved.session?.actCount!==5){saved=migrateSurvivalToFiveActs(saved);if(!saved){$('#toast').textContent='저장된 진행을 확인하지 못했어요. 이전 기록을 보존했습니다.';return;}}
  if(!localInspection&&!requireName())return;
  if(!saved&&!retryStoredSurvivalTitles()){survivalSaveMessage=survivalSaveMessage||'미지급 보스 보상을 보관하고 있어요. 계정과 저장 공간을 확인한 뒤 다시 시작해 주세요.';$('#toast').textContent=survivalSaveMessage;return;}
  document.body.classList.remove('survival-result');
@@ -2019,7 +2022,7 @@ async function showSeedAdventure(){
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
   // 2026-09-28 사용자: "펫은 모험에선 못 가져가나?" — 계정에서 고른 보스 동행이 모험에도 따라온다(본편처럼 꾸밈만).
   const petId=readBossPet(runStorage,profile).id,pet=petId?BOSS_PETS[petId]:null;
-  adventureScreen=mountSeedAdventure({audio,storage:runStorage,owner,practice,pet:pet?{id:pet.id,name:pet.name,file:pet.file}:null,
+  adventureScreen=mountSeedAdventure({audio,storage:runStorage,owner,practice:()=>practice||developerRun||localInspection,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),pet:pet?{id:pet.id,name:pet.name,file:pet.file}:null,
    onCredit:jp=>{if(owner!==(account.user()?.uid||'guest'))return '계정이 바뀌어 적립하지 않았어요';earnCoins(runStorage,jp);return `햇살 ${jp} JP 적립`;},
    onDiscover:id=>{profile=readDiscoveries(runStorage);remember('forms',id);},
    onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest')),
@@ -2104,7 +2107,7 @@ async function showSeedDefense({actCount=3}={}){
   clearTimeout(slow);if(serial!==defenseLoadSerial)return;
   mode='defense';overlay.hidden=true;
   const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
-  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,actCount:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),practice:()=>testRun||developerRun||localInspection,actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
    const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
    if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';

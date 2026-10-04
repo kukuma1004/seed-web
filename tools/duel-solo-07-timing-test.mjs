@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {createDuel,stepDuel,DUEL_CHARACTERS} from '../src/seed-duel-rules.js';
+import {batch07Ai} from '../src/seed-duel-batch07.js';
+const dt=1/60;
+function scene(id,d){const s=createDuel({player:id,enemy:'pierce'});s.phase='fight';Object.assign(s.fighters[0],{x:15,y:10,fx:1,fy:0});Object.assign(s.fighters[1],{x:15+d,y:10,fx:-1,fy:0,hp:1000,maxHp:1000});return s;}
+const run=(s,t)=>{for(let n=0;n<t;n+=dt){s.freeze=0;stepDuel(s,dt,{},{});}};
+const q=(s,options={})=>{const leaf={kind:'rewindLeaf',owner:0,x:22,y:10,dx:-1,dy:0,speed:12,life:5,mode:'back',pause:0,age:0,trips:2,damage:10,hit:new Set(),budget:{hits:0,max:3},outX:1,outY:0,...options};s.shots.push(leaf);return leaf;};
+for(const [id,hp,damage] of [['fullbloom',172,[9,10,13]],['rewind',174,[9,10,13]]]){assert.equal(DUEL_CHARACTERS[id].hp,hp);assert.deepEqual(DUEL_CHARACTERS[id].damage,damage);assert.equal(DUEL_CHARACTERS[id].heavy.damage,23);}
+// Visible spent swing creates an approach through the SAME ordinary dodge.
+for(const id of ['fullbloom','rewind']){const s=scene(id,3),f=s.fighters[0],o=s.fighters[1];Object.assign(o,{state:'attack',hitDone:true,t:.25,total:.38});s.ai[0].b07Recovery=.3;const i={};assert.equal(batch07Ai(s,f,o,i,dt),true);assert.equal(i.dodge,true);assert.ok(i.x>0);stepDuel(s,dt,i,{});assert.ok(f.dodgeCd>0);assert.equal(f.state,'dodge');assert.ok(f.inv<=.2);assert.equal(f.cd[0],0);}
+// Prepared geometry is aimed at the actual stationary bed after repositioning.
+{const s=scene('fullbloom',5.8),f=s.fighters[0],o=s.fighters[1];stepDuel(s,dt,{skill2:true},{});run(s,.7);const bed=s.hazards.find(h=>h.kind==='fullBed');f.y=9.6;const i={};assert.equal(batch07Ai(s,f,o,i,dt),true);assert.equal(i.skill1,true);assert.ok(i.aimY>0);const cross=(bed.x-f.x)*i.aimY-(bed.y-f.y)*i.aimX;assert.ok(Math.abs(cross)<1e-8);stepDuel(s,dt,i,{});run(s,.9);assert.ok(!s.hazards.some(h=>h.kind==='fullBed'));assert.ok(s.shots.some(q=>q.kind==='fullPetal')||s.hazards.some(h=>h.kind==='fullFork'));assert.equal(o.hp,1000,'the bed trades direct root damage for a fan setup');}
+// In an actual return phase, reposition to put the observed foe on the line
+// between the moving leaf and current owner, never acquire a homing enemy.
+{const s=scene('rewind',3),f=s.fighters[0],leaf=q(s,{x:20,y:12});const i={};assert.equal(batch07Ai(s,f,s.fighters[1],i,dt),true);assert.ok(i.x>0&&i.y<0);stepDuel(s,dt,i,{});assert.ok(f.y<10);assert.equal(leaf.outX,1);assert.equal(leaf.outY,0);assert.ok(leaf.dy<0);}
+// Pause is only for a visible invulnerable dodge on the imminent segment.
+{const s=scene('rewind',6),f=s.fighters[0],o=s.fighters[1],leaf=q(s);Object.assign(o,{state:'dodge',t:.2,inv:.15});const i={};assert.equal(batch07Ai(s,f,o,i,dt),true);assert.equal(i.skill2,true);stepDuel(s,dt,i,{});assert.ok(leaf.pause>.3);assert.equal(leaf.mode,'back');assert.ok(f.cd[1]>0);assert.equal(f.inv,0);}
+{const s=scene('rewind',1.7),f=s.fighters[0],o=s.fighters[1];f.rewindBeat=1;f.rewindBeatTime=4;let i={};batch07Ai(s,f,o,i,dt);assert.equal(i.skill2,undefined,'no weak idle brush spam');Object.assign(o,{state:'attack',hitDone:true,t:.25});i={};batch07Ai(s,f,o,i,dt);assert.equal(i.skill2,true,'earned brush may punish observed recovery');}
+// The second departure is a real pause, giving the body time to dodge using
+// the ordinary cooldown. It does not rotate the originally stored outward ray.
+{const s=scene('rewind',2.5),f=s.fighters[0],o=s.fighters[1],leaf=q(s,{x:15,y:10,mode:'out',speed:10,trips:1,pause:.24,dx:1});Object.assign(o,{state:'heavy',hitDone:false,t:.4,total:.58});s.ai[0].rewindBodySeen=.3;const i={};batch07Ai(s,f,o,i,dt);assert.equal(i.dodge,true);assert.ok(i.y>0);stepDuel(s,dt,i,{});assert.equal(f.state,'dodge');assert.ok(f.dodgeCd>0);assert.equal(leaf.outX,1);assert.equal(leaf.outY,0);}
+// Guard pressed at the very contact frame chips a travelling shot; it cannot
+// apply the shared melee parry's remote .85-second caster stagger.
+for(const kind of ['fullCore','fullPetal','rewindLeaf']){const s=scene(kind==='rewindLeaf'?'rewind':'fullbloom',5),f=s.fighters[0],o=s.fighters[1],shot=q(s,{kind,x:19.7,y:10,dx:1,dy:0,speed:12,mode:'out',life:1,budget:{hits:0,max:3,roots:0,maxRoots:1,petals:0,maxPetals:2},damage:10});stepDuel(s,dt,{}, {block:true});assert.ok(Math.abs(1000-o.hp-2)<1e-8);assert.equal(f.stun,0);assert.notEqual(f.state,'stagger');assert.ok(!s.hazards.some(h=>h.kind==='fullFork'));}
+// The real ordinary shield reflects at most twice, does not retaliate against
+// the distant owner as if the attack were melee, and shares its old hit budget.
+for(const kind of ['fullCore','fullPetal','rewindLeaf']){const s=scene(kind==='rewindLeaf'?'rewind':'fullbloom',5),f=s.fighters[0],o=s.fighters[1];o.shield=1;const hp=f.hp,shot=q(s,{kind,x:19.7,y:10,dx:1,dy:0,speed:12,mode:'out',life:1,budget:{hits:0,max:3,roots:0,maxRoots:1,petals:0,maxPetals:2},damage:10});stepDuel(s,dt,{},{});assert.equal(f.hp,hp);assert.equal(o.hp,1000);assert.equal(shot.owner,1);assert.equal(shot.dx,-1);assert.equal(shot.reflections,1);assert.equal(shot.budget.hits+shot.budget.roots+shot.budget.petals,0);if(kind==='rewindLeaf'){assert.equal(shot.outX,-1);assert.ok(shot.pause>0);}shot.owner=0;shot.x=19.7;shot.y=10;shot.dx=1;shot.dy=0;shot.pause=0;shot.reflections=2;shot.hit.clear();stepDuel(s,dt,{},{});assert.equal(shot.life,0);assert.equal(f.hp,hp);assert.equal(o.hp,1000);}
+console.log('Bundle07 observable recovery approach, actual bed aim, current-owner return-position strategy, visible invulnerable-dodge pause, restrained earned brush and second-departure body evasion passed; HP/damage unchanged.');

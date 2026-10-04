@@ -2,7 +2,8 @@ import {Group,Vector3} from 'three';
 import {createFormCombat} from './form-combat.js';
 import {DISCOVERY_FORMS,TWIN_FORMS} from './forms.js';
 import {createTwinInteractionEngine} from './twin-interactions.js';
-import {DEFENSE,defensePoint,defenseHurt,defenseEffect,defenseSlow,defenseTowerStats,defenseDamageMultiplier} from './seed-defense-rules.js';
+import {DEFENSE,defensePoint,defenseHurt,defenseEffect,defenseSlow,defenseTowerStats,defenseDamageMultiplier,defenseRandom} from './seed-defense-rules.js';
+import {titleCombatBonuses,titleFormCriticalEligible,titleCriticalMultiplier} from './title-combat-bonuses.js';
 import {hitCrystalWall} from './act-expansion.js';
 import {defenseTraceTerrain} from './seed-defense-expansion.js';
 
@@ -47,10 +48,10 @@ export function createDefenseCombat(state,{sound=()=>{}}={}){
   const entry={tower:t,form,player:{position:new V(t.x/K,0,t.y/K)},parts:[],timers:[],fxAt:{},marks:new WeakMap(),twins:createTwinInteractionEngine(),signature:t.formId+':'+t.level};
   const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(kind=>[kind,(...args)=>emit(entry,kind,args)]));
   const multiplier=()=>defenseDamageMultiplier(t);
-  function damage(w,amount,meta={}){if(w.dead||!Number.isFinite(amount)||amount<0)return false;const law=DISCOVERY_FORMS[meta.kind]?.requires||form.requires;if(w.terrain){hitCrystalWall(w.source,amount*multiplier(),law.includes('burst')?'burst':law[0]);return true;}defenseHurt(state,w.source,amount*multiplier(),law.includes('pierce')||meta.indirect===true);return true;}
+  function damage(w,amount,meta={}){if(w.dead||!Number.isFinite(amount)||amount<0)return false;const law=DISCOVERY_FORMS[meta.kind]?.requires||form.requires;if(w.terrain){hitCrystalWall(w.source,amount*multiplier()*titleCombatBonuses(state).power,law.includes('burst')?'burst':law[0]);return true;}const critical=titleCriticalMultiplier(state,titleFormCriticalEligible(form.id,meta),()=>defenseRandom(state));defenseHurt(state,w.source,amount*multiplier()*critical,law.includes('pierce')||meta.indirect===true);return true;}
   function hit(w,amount,meta){
    if(!damage(w,amount,meta))return false;
-   const twin=TWIN_FORMS[t.formId];if(twin&&!w.terrain){const last=entry.marks.get(w);if(last&&last.kind!==meta.kind&&state.time-last.time<=twin.synergy.window){entry.marks.delete(w);const bonus=amount*twin.synergy.bonus*multiplier();defenseHurt(state,w.source,bonus,true);if(entry.twins.apply({id:twin.id,target:w,enemies:list,player:entry.player.position,now:state.time,bonus,damage:(other,d)=>other.terrain?hitCrystalWall(other.source,d):defenseHurt(state,other.source,d,true),fx,isBoss:e=>e.type==='warden',collide:constrain}))resonances++;}else entry.marks.set(w,{kind:meta.kind,time:state.time});}
+   const twin=TWIN_FORMS[t.formId];if(twin&&!w.terrain){const last=entry.marks.get(w);if(last&&last.kind!==meta.kind&&state.time-last.time<=twin.synergy.window){entry.marks.delete(w);const bonus=amount*twin.synergy.bonus*multiplier();defenseHurt(state,w.source,bonus,true);if(entry.twins.apply({id:twin.id,target:w,enemies:list,player:entry.player.position,now:state.time,bonus,damage:(other,d)=>other.terrain?hitCrystalWall(other.source,d*titleCombatBonuses(state).power):defenseHurt(state,other.source,d,true),fx,isBoss:e=>e.type==='warden',collide:constrain}))resonances++;}else entry.marks.set(w,{kind:meta.kind,time:state.time});}
    return true;
   }
   const twin=TWIN_FORMS[t.formId],ids=twin?twin.parts:[t.formId];
@@ -60,7 +61,7 @@ export function createDefenseCombat(state,{sound=()=>{}}={}){
     if(!state.crystalWalls?.length)return null;
     if(shot.crystalReturning!==Boolean(shot.returning)){shot.crystalHits?.clear();shot.crystalReturning=Boolean(shot.returning);}shot.crystalHits??=new Set();
     let laws=[...(DISCOVERY_FORMS[meta.kind]?.requires||form.requires),meta.finalLaw];if(meta.ricochet)laws=laws.filter(l=>l!=='pierce');if(meta.passCover)laws.push('pierce');
-    const result=defenseTraceTerrain(state,terrainPoint(from),terrainPoint(to),{damage:meta.damage*multiplier(),laws,radius:.12,bounces:0,maxBounces:meta.remainingBounces,skipDamageIds:shot.crystalHits});
+    const result=defenseTraceTerrain(state,terrainPoint(from),terrainPoint(to),{damage:meta.damage*multiplier()*titleCombatBonuses(state).power,laws,radius:.12,bounces:0,maxBounces:meta.remainingBounces,skipDamageIds:shot.crystalHits});
     for(const h of result.hits)if(h.damage>0)shot.crystalHits.add(h.id);to.x=result.point.x/K;to.z=result.point.z/K;
     if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}return result;
    }:null;
@@ -89,8 +90,8 @@ export function createDefenseCombat(state,{sound=()=>{}}={}){
   for(const entry of instances.values()){
    const t=entry.tower,range=defenseTowerStats(t).range/K;let target=null;
    for(const e of list)if(!e.dead&&(e.g.position.x-entry.player.position.x)**2+(e.g.position.z-entry.player.position.z)**2<=range*range&&(!target||e.source.progress>target.source.progress))target=e;
-   if(target){direction.copy(target.g.position).sub(entry.player.position).setY(0).normalize();t.angle=Math.atan2(direction.z,direction.x);if(!target.terrain)t.ultimateCharge=clamp((t.ultimateCharge||0)+dt,0,DEFENSE_COMBAT.ultimateSeconds);}
-   for(let i=0;i<entry.parts.length;i++){entry.timers[i]=Math.max(0,entry.timers[i]-dt);if(target&&entry.timers[i]<=0){const cadence=entry.parts[i].fire(entry.player.position,direction,target.g.position);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence):.15;if(Number.isFinite(cadence))state.stats.shots++;}entry.parts[i].update(dt);}
+   if(target){direction.copy(target.g.position).sub(entry.player.position).setY(0).normalize();t.angle=Math.atan2(direction.z,direction.x);if(!target.terrain)t.ultimateCharge=clamp((t.ultimateCharge||0)+dt*titleCombatBonuses(state).cadence,0,DEFENSE_COMBAT.ultimateSeconds);}
+   for(let i=0;i<entry.parts.length;i++){entry.timers[i]=Math.max(0,entry.timers[i]-dt);if(target&&entry.timers[i]<=0){const cadence=entry.parts[i].fire(entry.player.position,direction,target.g.position);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence/titleCombatBonuses(state).cadence):.15;if(Number.isFinite(cadence))state.stats.shots++;}entry.parts[i].update(dt);}
   }
   applyControls();
  }

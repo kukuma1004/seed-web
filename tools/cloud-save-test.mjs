@@ -14,6 +14,8 @@ import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,merge
 import {createCloudSync} from '../src/cloud-sync.js';
 import {plantTreeSeed,clearTreePlot,craftTreeSeed} from '../src/tree-of-life.js';
 import {puzzleSaveKey,normalizePuzzleProgress,mergePuzzleProgress,readPuzzleProgress,writePuzzleProgress} from '../src/seed-puzzle-progress.js';
+import {createTitleCombatBinding,refreshAdventureTitleHp} from '../src/title-combat-bonuses.js';
+import {titleState} from '../src/titles.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
 
@@ -480,6 +482,23 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const ended=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone),{prefer:'local'});assert.equal(ended.adventure.cleared,true,'ended run stays ended');
  const forged=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify({...newer,level:99,savedAt:4000})});assert.equal(collectCloudSnapshot(forged).adventure,null,'forged save is not uploaded');
  assert.ok(SYNC_KEYS.includes(ADVENTURE_SAVE_KEY));
+}
+
+// Derived title HP travels with the existing account save without stacking on
+// each restored device or refilling damage. This uses the actual normalizers.
+{
+ const {createAdventure,startAdventure,chooseAdventure,adventureCheckpoint,restoreAdventure,ADVENTURE_SAVE_KEY}=await import('../src/seed-adventure-rules.js');
+ const info=titleState({alwaysBeginner:true,alwaysVeteran:true,austinClear:true});
+ const binding=createTitleCombatBinding({owner:'title-user',currentOwner:()=> 'title-user',titleStats:()=>info});
+ const run=createAdventure(11);startAdventure(run,'slash','burst');binding.attach(run);refreshAdventureTitleHp(run,{fresh:true});
+ run.region=null;run.enemies=[];run.phase='choice';run.choiceKind='grow';chooseAdventure(run,'grow');run.player.hp=64;
+ const checkpoint=adventureCheckpoint(run);assert(checkpoint?.titleHp);assert.equal(checkpoint.titleHp.health,64);
+ const pc=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify(checkpoint)}),phone=memory();
+ const uploaded=collectCloudSnapshot(pc);assert.deepEqual(uploaded.adventure.titleHp,checkpoint.titleHp);applyCloudSnapshot(phone,uploaded);
+ let resumed=restoreAdventure(phone.getItem(ADVENTURE_SAVE_KEY));assert(resumed);binding.attach(resumed);refreshAdventureTitleHp(resumed);assert.equal(resumed.player.hp,64);assert.equal(resumed.player.maxHp,run.player.maxHp);
+ phone.setItem(ADVENTURE_SAVE_KEY,JSON.stringify(adventureCheckpoint(resumed)));applyCloudSnapshot(pc,collectCloudSnapshot(phone));
+ resumed=restoreAdventure(pc.getItem(ADVENTURE_SAVE_KEY));binding.attach(resumed);refreshAdventureTitleHp(resumed);assert.equal(resumed.player.hp,64);assert.equal(resumed.player.maxHp,run.player.maxHp,'PC -> mocked phone -> PC does not compound title HP');
+ const malformed=memory({[ADVENTURE_SAVE_KEY]:JSON.stringify({...checkpoint,titleHp:{...checkpoint.titleHp,health:65}})});assert.equal(collectCloudSnapshot(malformed).adventure,null,'inconsistent derived HP cannot enter cloud saves');
 }
 
 // New boss records survive an older three-act payload in either merge direction.

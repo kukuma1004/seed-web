@@ -56,27 +56,53 @@ export function batch07Tick(s,dt,ctx){
   const budget=q.budget,cap=q.kind==='fullCore'?budget.roots<budget.maxRoots:q.kind==='fullPetal'?budget.petals<budget.maxPetals:budget.hits<budget.max;
   const safe=q.kind==='fullPetal'&&q.skipTeam===o.team&&Math.hypot(o.x-q.seedX,o.y-q.seedY)<q.skipR;
   if(cap&&!safe&&!q.hit.has(o.team)&&o.inv<=0&&segment(start,q,o)<.5){q.hit.add(o.team);
-   if(o.parry>0){q.life=0;ctx.event(s,'reflect');continue;}const block=guarded(f,o);const hit=ctx.strike(s,f,o,q.damage,{kind:'skill',stun:.1,knock:.12});
+   // Match the shared ordinary-projectile shield path: bounded reflection,
+   // never the remote melee retaliation used by skill/close-combat strikes.
+   if(o.shield>0){q.reflections=(q.reflections||0)+1;if(q.reflections>2){q.life=0;continue;}q.owner=o.team;q.dx*=-1;q.dy*=-1;q.hit.clear();
+    if(q.kind==='rewindLeaf'){q.outX=q.dx;q.outY=q.dy;q.mode='out';q.age=0;q.speed=10;q.pause=.24;q.tell=true;}
+    ctx.fx(s,'parry',q.x,q.y,{life:.2,max:.2});ctx.event(s,'reflect');continue;
+   }
+   const block=guarded(f,o);const hit=ctx.strike(s,f,o,q.damage,{kind:'shot',stun:.1,knock:.12,dir:{x:q.dx,y:q.dy}});
    if(q.kind==='rewindLeaf')budget.hits++;else if(q.kind==='fullCore')budget.roots++;else budget.petals++;
    if(q.kind!=='rewindLeaf'){q.life=0;if(hit&&!block)fork(s,f,q,o.x,o.y,q.kind==='fullCore'?1:q.gen+1,ctx);}
   }
   if(q.kind==='rewindLeaf'){
    if(q.mode==='out'){q.age+=moveDt;if(q.age>=.5)turn(s,f,q,'back',ctx);}
-   else if(dist(q,f)<.5||segment(start,q,f)<.38){q.x=f.x;q.y=f.y;q.trips--;f.rewindBeat=1;f.rewindBeatTime=4;ctx.event(s,'rewindCatch');if(q.trips>0){q.speed=10;turn(s,f,q,'out',ctx);}else q.life=0;}
+   else if(dist(q,f)<.5||segment(start,q,f)<.38){q.x=f.x;q.y=f.y;q.trips--;if(f.char==='rewind'){f.rewindBeat=1;f.rewindBeatTime=4;}ctx.event(s,'rewindCatch');if(q.trips>0){q.speed=10;turn(s,f,q,'out',ctx);}else q.life=0;}
   }
  }
 }
 export function batch07Ai(s,f,o,input,dt){const ai=s.ai[f.team],d=dist(f,o),safe=!['attack','heavy'].includes(o.state);
+ const v=norm(o.x-f.x,o.y-f.y),react={easy:.32,normal:.2,hard:.12}[s.difficulty]??.2;
+ // A missed strike is a visible recovery window. Close the real first-hit gap
+ // with the player's ordinary dodge, instead of repeatedly jabbing beyond it.
+ const spent=['attack','heavy'].includes(o.state)&&o.hitDone&&o.t>.03;
+ ai.b07Recovery=spent?(ai.b07Recovery||0)+dt:0;
+ if(ai.b07Recovery>=react*.65&&d>2.15&&d<3.6&&f.dodgeCd<=0&&!leaf(s,f)){
+  input.x=v.x-v.y*.35;input.y=v.y+v.x*.35;input.dodge=true;return true;
+ }
  if(f.char==='fullbloom'){
-  const bed=s.hazards.find(h=>h.owner===f.team&&h.kind==='fullBed'&&h.t>0),v=norm(o.x-f.x,o.y-f.y);
+  const bed=s.hazards.find(h=>h.owner===f.team&&h.kind==='fullBed'&&h.t>0);
   // Plant BEFORE launching: planting on cooldown used to expire before the
   // next core could arrive. The AI observes the same fixed flowerbed as a player.
-  if(safe&&o.blocking&&d>4&&d<5.5&&f.cd[1]<=0&&f.cd[0]<=0&&!bed){input.skill2=true;return true;}
-  if(safe&&d>2.6&&d<5.5&&f.cd[0]<=0){if(f.meter>=100)input.ult=true;else input.skill1=true;return true;}
+  if((safe&&o.blocking||spent)&&d>4&&d<5.5&&f.cd[1]<=0&&f.cd[0]<=0&&!bed){input.skill2=true;return true;}
+  // Walk across a prepared bed's old approach lane to invite a chase. When a
+  // foe is visibly outside its central gap, aim THROUGH the stationary bed.
+  if(bed?.ready&&safe&&f.cd[0]<=0&&dist(bed,o)>1.15&&dist(bed,o)<3.2&&d>3.2){
+   const aim=norm(bed.x-f.x,bed.y-f.y);input.aimX=aim.x;input.aimY=aim.y;input.skill1=true;return true;
+  }
+  if((safe||spent)&&d>2.8&&d<5.5&&f.cd[0]<=0){if(f.meter>=100)input.ult=true;else input.skill1=true;return true;}
+  if(bed?.ready&&safe&&d>2.8&&d<4.5&&f.cd[0]>.3){input.x=-v.y*.65;input.y=v.x*.65;return true;}
  }else if(f.char==='rewind'){
   const q=leaf(s,f);if(safe&&!q&&d>2.8&&d<5.3){if(f.meter>=100)input.ult=true;else if(f.cd[0]<=0)input.skill1=true;else return false;return true;}
-  if(q&&q.mode==='back'&&!q.pause&&dist(q,o)<1.7&&o.state==='dodge'&&f.cd[1]<=0){input.skill2=true;return true;}
-  if(!q&&f.rewindBeat&&d<2.2&&f.cd[1]<=0&&safe){input.skill2=true;return true;}
+  ai.rewindBodySeen=q?.mode==='out'&&q.trips===1&&q.pause>0&&['attack','heavy'].includes(o.state)?(ai.rewindBodySeen||0)+dt:0;
+  if(ai.rewindBodySeen>=react*.65&&d>1.2&&d<3.2&&f.dodgeCd<=0){input.x=-v.y;input.y=v.x;input.dodge=true;return true;}
+  if(q&&q.mode==='back'&&!q.pause&&o.state==='dodge'&&o.inv>.07&&f.cd[1]<=0&&segment(q,{x:q.x+q.dx*1.8,y:q.y+q.dy*1.8},o)<.55){input.skill2=true;return true;}
+  if(!q&&f.rewindBeat&&d<2.2&&f.cd[1]<=0&&spent){input.skill2=true;return true;}
+  if(q&&q.mode==='back'&&safe&&d>2.6&&segment(q,f,o)>.4){
+   const path=norm(o.x-q.x,o.y-q.y),target={x:o.x+path.x*2.3,y:o.y+path.y*2.3},move=norm(target.x-f.x,target.y-f.y);
+   if(dist(f,target)>.5){input.x=move.x;input.y=move.y;return true;}
+  }
   ai.rewindSeen=(ai.rewindSeen||0)+dt;
  }return false;
 }

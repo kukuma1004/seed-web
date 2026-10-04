@@ -54,6 +54,7 @@ function adventureBridge(runId,bossesDefeated){
   onBossDefeated:e=>{attempts.push(e);return recordModeBossVictory(adventureStore,{...e,mode:'adventure'}).saved;},
   setTimeout:(fn,delay)=>{assert.equal(delay,2000);timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)
  });
+ b.isolated=()=>b.practice;
  vm.runInContext(bridge,b);
  return {b,timers,attempts,retry(){assert.equal(timers.size,1);const [id,fn]=timers.entries().next().value;timers.delete(id);fn();}};
 }
@@ -72,15 +73,15 @@ assert.equal(readAccountProfile(adventureStore).alwaysWins,1);assert.equal(two.b
 two.retry();assert.equal(two.b.settledBosses.size,2);assert.equal(readAccountProfile(adventureStore).austinWins,3);
 assert.equal(readAccountProfile(adventureStore).alwaysWins,1,'retrying one failed act does not duplicate the other');
 const training=adventureBridge('practice',3);training.b.practice=true;training.b.syncBossAccount();
-assert.equal(training.attempts.length,0);assert.equal(training.b.settledBosses.size,3);
+assert.equal(training.attempts.length,0);assert.equal(training.b.settledBosses.size,0,'practice cannot consume pending receipts');
 const hidden=adventureBridge('hidden-retry',1);failNext=true;hidden.b.syncBossAccount();hidden.b.document.hidden=true;hidden.retry();
 assert.equal(hidden.attempts.length,1);assert.equal(hidden.timers.size,0);
 hidden.b.document.hidden=false;hidden.b.syncBossAccount();assert.equal(hidden.b.settledBosses.size,1,'foreground resumes a suspended retry');
 const closing=adventureBridge('close-retry',1);failNext=true;closing.b.syncBossAccount();closing.b.resetBossAccount();
 assert.equal(closing.timers.size,0);assert.equal(closing.b.bossRetryTimer,0);assert.equal(closing.b.settledBosses.size,0);
 closing.b.closed=true;closing.b.syncBossAccount();assert.equal(closing.attempts.length,1);
-assert(view.includes("resetBossAccount();lastForm=null;combat?.dispose();s=createAdventure"));
-assert(view.includes('resetBossAccount();combat?.dispose();s=run;lastForm=s.formId;'));
+assert(view.includes("resetBossAccount();lastForm=null;combat?.dispose();s=binding.attach(createAdventure"));
+assert(view.includes('resetBossAccount();combat?.dispose();s=binding.attach(run);refreshAdventureTitleHp(s);lastForm=s.formId;'));
 assert(view.includes("listen(window,'pageshow',()=>{syncBossAccount();"));
 const modal=view.slice(view.indexOf('function syncModal(){'),view.indexOf("if(key==='setup')"));
 assert(modal.indexOf('syncAccount();')>=0&&modal.indexOf('syncAccount();')<modal.indexOf("if(key===modalKey)"));

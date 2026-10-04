@@ -25,6 +25,11 @@ export const EXPANSION_ACTS=Object.freeze({
   budget:Object.freeze({enemies:24,projectiles:48,breakableWalls:20})})
 });
 
+// The three connected modes promote the same route together. One unfinished
+// act must not turn a saved three-act circuit into a partly released circuit.
+export function expansionCircuitReleased(acts=EXPANSION_ACTS){return acts?.crosswind?.released===true&&acts?.crystalGorge?.released===true;}
+export function publicCircuitActCount(acts=EXPANSION_ACTS){return expansionCircuitReleased(acts)?5:3;}
+
 // Counter-spawns never surround the player immediately. The lead lane is read
 // first; rear threats begin only after the player has learned forward pressure.
 export function crosswindFormation(index,room=0){

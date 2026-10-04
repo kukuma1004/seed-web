@@ -1,0 +1,22 @@
+import assert from 'node:assert/strict';
+import {titleState} from '../src/titles.js';
+import {createTitleCombatBinding,effectiveTitleCombatBonuses,titleCombatBonuses,titleFormCriticalEligible,titleCriticalMultiplier,NEUTRAL_TITLE_COMBAT,TITLE_CRIT_DAMAGE,refreshAdventureTitleHp,checkpointAdventureTitleHp,validAdventureTitleHp,restoreAdventureTitleHp} from '../src/title-combat-bonuses.js';
+const close=(a,b)=>assert(Math.abs(a-b)<1e-9,`${a} != ${b}`);
+const earned={austin:true,austinVeteran:true,alwaysBeginner:true,alwaysVeteran:true,johan:true,johanVeteran:true,crosswind:true,crosswindVeteran:true,crystal:true,crystalVeteran:true,austinClear:true,alwaysClear:true,johanClear:true,crosswindClear:true,crystalClear:true};
+const expected=effectiveTitleCombatBonuses(titleState(earned));close(expected.power,1.08);close(expected.cadence,1.1);close(expected.move,1.15);close(expected.critical,.08);assert.equal(expected.maxHpBonus,20);close(expected.clearStatBonus,.05);
+assert.deepEqual(effectiveTitleCombatBonuses({powerBonus:1,criticalBonus:1,titles:[]}),NEUTRAL_TITLE_COMBAT,'unearned scalar fields cannot invent title perks');
+assert.deepEqual(effectiveTitleCombatBonuses(titleState({discovered:153})),NEUTRAL_TITLE_COMBAT,'codex rates are outside the title-only adapter');
+let owner='a',practice=false,info=titleState(earned);const binding=createTitleCombatBinding({owner:'a',currentOwner:()=>owner,practice:()=>practice,titleStats:()=>info});
+const state=binding.attach({});assert.equal(titleCombatBonuses(state),binding.get());assert.equal(titleCombatBonuses(state),titleCombatBonuses(state),'cached immutable bonuses avoid per-hit allocations');
+owner='b';assert.equal(titleCombatBonuses(state),NEUTRAL_TITLE_COMBAT);owner='a';practice=true;assert.equal(titleCombatBonuses(state),NEUTRAL_TITLE_COMBAT);practice=false;
+info=titleState({crosswind:true});close(titleCombatBonuses(state).critical,.01);close(titleCombatBonuses(state).power,1);
+let rolls=0;assert.equal(titleCriticalMultiplier(state,false,()=>{rolls++;return 0;}),1);assert.equal(rolls,0);assert.equal(titleCriticalMultiplier(state,true,()=>0),TITLE_CRIT_DAMAGE);assert.equal(titleCriticalMultiplier(state,true,()=>.02),1);
+assert(titleFormCriticalEligible('thunderlance'));assert(!titleFormCriticalEligible('collapse'));assert(titleFormCriticalEligible('collapse',{comboLaws:['pierce']}));
+assert.deepEqual(JSON.parse(JSON.stringify(state)),{},'derived account bonuses cannot serialize into run saves');assert.equal(titleCombatBonuses(JSON.parse(JSON.stringify(state))),NEUTRAL_TITLE_COMBAT);
+assert.equal(createTitleCombatBinding({owner:'a'}).get(),NEUTRAL_TITLE_COMBAT,'missing current UID callback fails neutral');
+info=titleState(earned);const hero=binding.attach({player:{hp:100,maxHp:100}});refreshAdventureTitleHp(hero,{fresh:true});assert.equal(hero.player.maxHp,125);assert.equal(hero.player.hp,125);
+hero.player.hp=7;hero.player.maxHp+=10;refreshAdventureTitleHp(hero);assert.equal(hero.player.maxHp,135);assert.equal(hero.player.hp,7);
+for(let i=0;i<5;i++){const cp=checkpointAdventureTitleHp(hero);assert.equal(cp.maxHp,110);assert(validAdventureTitleHp(cp.titleHp,cp.maxHp,cp.hp));const next={player:{hp:cp.hp,maxHp:cp.maxHp}};restoreAdventureTitleHp(next,cp.titleHp);binding.attach(next);refreshAdventureTitleHp(next);assert.equal(next.player.maxHp,135);assert.equal(next.player.hp,7);Object.assign(hero.player,next.player);}
+const neutralCp=checkpointAdventureTitleHp(hero),otherHero={player:{hp:neutralCp.hp,maxHp:neutralCp.maxHp}};restoreAdventureTitleHp(otherHero,neutralCp.titleHp);owner='b';binding.attach(otherHero);refreshAdventureTitleHp(otherHero);assert.equal(otherHero.player.maxHp,110);assert.equal(otherHero.player.hp,7,'account mismatch removes derived HP and never heals');owner='a';
+assert(!validAdventureTitleHp({...neutralCp.titleHp,health:999},neutralCp.maxHp,neutralCp.hp));assert(!validAdventureTitleHp({...neutralCp.titleHp,bonus:30},neutralCp.maxHp,neutralCp.hp));
+console.log('Title-only combat binding: held-title recomputation, exact additive stacking, UID/practice neutrality, cached weak runtime state and limited form crit eligibility passed. Adapter-only checks; actual mode integration is covered by title-mode-combat-test.mjs.');

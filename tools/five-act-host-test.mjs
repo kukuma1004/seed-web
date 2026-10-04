@@ -45,6 +45,7 @@ for(const act of [3,4]){
  console.log(`Actual survival Act${act+1} host: ${spawned} boss projectiles, peak ${maximum}, three phases, valid replay and terrain collision passed (renderless).`);
 }
 const camera=createCameraFeel();let framed;for(let i=0;i<240;i++)framed=camera.follow(1/60,{playerX:5,followX:1,biasX:3});assert(Math.abs(framed.x-8)<.12);assert.equal(camera.follow(0,{biasX:Infinity}).zoom,1);
-assert(source.includes("actCount:localInspection&&actCount===5?5:3"),'unvalidated defense expansion stays local');
-assert(source.includes("if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets("));
-console.log('Five-act host options remain inspection-only; horizontal look-ahead is camera-only. No browser, GPU, account or device claim.');
+assert(source.includes("actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3"),'defense public expansion requires both actual release gates');
+assert(source.includes("if(fiveActs&&!expansionJourneyView){const owner=survivalOwner();return prepareExpansionAssets("));
+assert(source.includes('owner!==survivalOwner()'),'async scenery preparation must retain the save owner');
+console.log('Five-act host options require both release gates outside inspection; horizontal look-ahead is camera-only. No browser, GPU, account or device claim.');

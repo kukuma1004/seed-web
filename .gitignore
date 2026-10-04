@@ -180,3 +180,9 @@ art-refs/
 !tools/duel-solo-07-ai.mjs
 !tools/expansion-account-save-test.mjs
 !tools/expansion-account-sync-test.mjs
+!tools/expansion-ranking-promotion-test.mjs
+!tools/title-combat-bonuses-test.mjs
+!tools/title-mode-combat-test.mjs
+!tools/defense-save-route-test.mjs
+!tools/duel-solo-07-timing-test.mjs
+!tools/duel-solo-07-trace.mjs

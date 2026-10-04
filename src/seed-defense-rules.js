@@ -1,5 +1,6 @@
 import {DEFENSE_FORMS,FUSIONS,defenseFusionOf,defenseFormKind,defenseRankTotal,defenseFormStats,getDefenseEvolutionOptions,validDefenseForm} from './seed-defense-catalog.js';
 import {hitCrystalWall} from './act-expansion.js';
+import {titleCombatBonuses,titleCriticalMultiplier,TITLE_CRIT_DAMAGE} from './title-combat-bonuses.js';
 import {DEFENSE_CROSSWIND_PATH,createDefenseCrystalWalls,prepareDefenseTerrain,defenseTraceTerrain,tickDefenseExpansionBoss} from './seed-defense-expansion.js';
 export {FUSIONS,getDefenseEvolutionOptions};
 export {DEFENSE_CATALOG,DEFENSE_FORMS,DEFENSE_CATALOG_COUNTS,defenseDamageMultiplier} from './seed-defense-catalog.js';
@@ -162,19 +163,19 @@ export function startDefenseWave(s){if(s.phase!=='build'||!s.towers.length)retur
 function effect(s,kind,x,y,color,extra={}){if(s.effects.length>=DEFENSE.maxEffects)return;s.effects.push({kind,x,y,tx:x,ty:y,color,life:.35,maxLife:.35,...extra});}
 function compact(a,predicate){let write=0;for(let i=0;i<a.length;i++)if(predicate(a[i]))a[write++]=a[i];a.length=write;}
 function slow(s,e,strength=.5,duration=1.6){e.slow=Math.min(e.slow||1,e.kind==='boss'?Math.max(.72,strength):strength);e.slowTime=Math.max(e.slowTime||0,duration);s.stats.slows++;}
-function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;if(e.terrain){hitCrystalWall(e,damage,e.law);return;}const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1)*(e.coreOpen?1.3:1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;if(e.bossId&&Object.hasOwn(s.bossWins,e.bossId)){const ordinal=++s.bossWins[e.bossId];s.pendingBosses.push({boss:e.bossId,ordinal,wave:s.wave});}s.currency+=Math.round((e.kind==='boss'?28:e.kind==='shield'?5:3)*.6);effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
+function hurt(s,e,damage,ignoreShield=false){if(e.hp<=0||!Number.isFinite(damage)||damage<=0)return;damage*=titleCombatBonuses(s).power;if(e.terrain){hitCrystalWall(e,damage,e.law);return;}const d=damage*(e.kind==='shield' && !ignoreShield ? .58 : 1)*(e.coreOpen?1.3:1);s.stats.damage+=Math.min(e.hp,d);e.hp-=d;if(e.hp<=0){s.kills++;if(e.bossId&&Object.hasOwn(s.bossWins,e.bossId)){const ordinal=++s.bossWins[e.bossId];s.pendingBosses.push({boss:e.bossId,ordinal,wave:s.wave});}s.currency+=Math.round((e.kind==='boss'?28:e.kind==='shield'?5:3)*.6);effect(s,'death',e.x,e.y,'#e0e9a8',{life:.45,maxLife:.45,radius:e.kind==='boss'?7:2});}}
 function nearest(s,p,range,skip){let best=null,d=range*range;for(const e of s.enemies){if(e.hp<=0||skip?.includes(e.id))continue;const d2=dist2(e,p);if(d2<d){d=d2;best=e;}}return best;}
 function front(s,p,range,skip){let best=null;for(const e of s.enemies)if(e.hp>0&&dist2(p,e)<=range*range&&!skip?.includes(e.id)&&(!best||e.progress>best.progress))best=e;return best;}
 function chain(s,from,damage,count,icy=false,skip=[]){let prev=from;const hit=[...skip,from.id];if(icy)slow(s,from);for(let i=0;i<count;i++){const next=nearest(s,prev,12,hit);if(!next)break;effect(s,'chain',prev.x,prev.y,icy?'#8ce9ff':'#ffdd78',{tx:next.x,ty:next.y});hurt(s,next,damage,true);if(icy)slow(s,next);s.stats.chains++;hit.push(next.id);prev=next;}}
-function blast(s,p,damage,radius,id){effect(s,'burst',p.x,p.y,DEFENSE_LAWS[id]?.color||'#ff986b',{radius,life:.5,maxLife:.5});for(const e of s.enemies)if(e.hp>0&&dist2(e,p)<=radius*radius)hurt(s,e,damage);for(const w of s.crystalWalls||[])if(!w.broken&&(w.x-p.x)**2+(w.z-p.y)**2<=radius*radius)hitCrystalWall(w,damage,id);}
+function blast(s,p,damage,radius,id){effect(s,'burst',p.x,p.y,DEFENSE_LAWS[id]?.color||'#ff986b',{radius,life:.5,maxLife:.5});for(const e of s.enemies)if(e.hp>0&&dist2(e,p)<=radius*radius)hurt(s,e,damage);for(const w of s.crystalWalls||[])if(!w.broken&&(w.x-p.x)**2+(w.z-p.y)**2<=radius*radius)hitCrystalWall(w,damage*titleCombatBonuses(s).power,id);}
 function field(s,p,damage,kind){if(s.fields.length>=24)return;s.fields.push({x:p.x,y:p.y,kind,damage,life:kind==='collapse'?1.25:2.1,maxLife:kind==='collapse'?1.25:2.1,radius:kind==='collapse'?9:kind==='web'?7:6,tick:0});}
-function shoot(s,t,e,stats,extra={}){if(s.shots.length>=DEFENSE.maxShots)return;const angle=Math.atan2(e.y-t.y,e.x-t.x),speed=stats.id==='recall'?35:48;const q={id:s.nextId++,x:t.x,y:t.y,tx:e.x,ty:e.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:2.2,age:0,law:stats.id,damage:stats.damage,towerId:t.id,targetId:e.id,speed,hit:[],bounces:stats.id==='reflect'?2:0,returning:false,originX:t.x,originY:t.y,...extra};s.shots.push(q);s.stats.shots++;}
+function shoot(s,t,e,stats,extra={}){if(s.shots.length>=DEFENSE.maxShots)return;const angle=Math.atan2(e.y-t.y,e.x-t.x),speed=stats.id==='recall'?35:48;const q={id:s.nextId++,x:t.x,y:t.y,tx:e.x,ty:e.y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:2.2,age:0,law:stats.id,damage:stats.damage,critical:titleCriticalMultiplier(s,stats.id==='pierce',()=>random(s))>1,towerId:t.id,targetId:e.id,speed,hit:[],bounces:stats.id==='reflect'?2:0,returning:false,originX:t.x,originY:t.y,...extra};s.shots.push(q);s.stats.shots++;}
 function fire(s,t,stats){const target=front(s,t,stats.range);if(!target)return false;t.angle=Math.atan2(target.y-t.y,target.x-t.x);const id=stats.id;
- if(id==='orbit'){effect(s,'orbit',t.x,t.y,'#ffeaa0',{radius:stats.range,life:.55,maxLife:.55});for(const e of s.enemies)if(e.hp>0&&dist2(t,e)<=stats.range**2)hurt(s,e,stats.damage);for(const w of s.crystalWalls||[])if(!w.broken&&(w.x-t.x)**2+(w.z-t.y)**2<=stats.range**2)hitCrystalWall(w,stats.damage);return true;}
+ if(id==='orbit'){effect(s,'orbit',t.x,t.y,'#ffeaa0',{radius:stats.range,life:.55,maxLife:.55});for(const e of s.enemies)if(e.hp>0&&dist2(t,e)<=stats.range**2)hurt(s,e,stats.damage);for(const w of s.crystalWalls||[])if(!w.broken&&(w.x-t.x)**2+(w.z-t.y)**2<=stats.range**2)hitCrystalWall(w,stats.damage*titleCombatBonuses(s).power);return true;}
  if(id==='split'){const hit=[];for(let i=0;i<3;i++){const e=front(s,t,stats.range,hit);if(!e)break;hit.push(e.id);shoot(s,t,e,stats,{age:-i*.04});}return true;}
  shoot(s,t,target,stats);return true;
 }
-function impact(s,q,e){const id=q.law;hurt(s,e,q.damage,id==='pierce');effect(s,'hit',e.x,e.y,DEFENSE_LAWS[id]?.color||'#f8e4ac',{radius:2});
+function impact(s,q,e){const id=q.law;hurt(s,e,q.damage*(q.critical&&titleCombatBonuses(s).critical>0?TITLE_CRIT_DAMAGE:1),id==='pierce');effect(s,'hit',e.x,e.y,DEFENSE_LAWS[id]?.color||'#f8e4ac',{radius:2});
  if(id==='frost')slow(s,e);
  if(id==='burst')blast(s,e,q.damage*.6,6,'burst');
  if(id==='chain')chain(s,e,q.damage*.65,2,false,q.hit);
@@ -189,7 +190,7 @@ function moveShots(s,dt){const count=s.shots.length;for(let i=0;i<count;i++){con
  if(((!linear&&!q.terrainFlight&&!q.ballistic)||q.returning)&&target){const a=Math.atan2(target.y-q.y,target.x-q.x);q.vx=Math.cos(a)*q.speed;q.vy=Math.sin(a)*q.speed;q.tx=target.x;q.ty=target.y;}
  const ox=q.x,oy=q.y;q.x+=q.vx*dt;q.y+=q.vy*dt;
  if(q.law!=='hostile'&&s.crystalWalls?.length){
-  q.wallHits??=new Set();const result=defenseTraceTerrain(s,{x:ox,z:oy},{x:q.x,z:q.y},{damage:q.damage,law:q.law,radius:.12,bounces:2-(q.bounces||0),maxBounces:2,skipDamageIds:q.wallHits});
+  q.wallHits??=new Set();const result=defenseTraceTerrain(s,{x:ox,z:oy},{x:q.x,z:q.y},{damage:q.damage*titleCombatBonuses(s).power,law:q.law,radius:.12,bounces:2-(q.bounces||0),maxBounces:2,skipDamageIds:q.wallHits});
   for(const h of result.hits)q.wallHits.add(h.id);
   if(result.blocked){q.x=result.point.x;q.y=result.point.z;if(result.reflected&&q.bounces>0){q.bounces--;q.vx=result.dir.x*q.speed;q.vy=result.dir.z*q.speed;q.targetId=null;q.terrainFlight=true;q.wallHits.clear();}else if(q.law==='recall'&&!q.returning){q.returning=true;q.hit=[];q.wallHits.clear();}else q.life=0;}
   if(q.life<=0)continue;
@@ -224,7 +225,7 @@ function tick(s,dt,combat){s.time+=dt;for(const e of s.effects)e.life-=dt;compac
  }
  for(const f of s.fields){f.life-=dt;f.tick-=dt;for(const e of s.enemies){if(e.hp<=0||dist2(e,f)>f.radius**2)continue;if(f.kind==='web'){slow(s,e,.5,.3);if(f.tick<=0)hurt(s,e,f.damage*.12,true);}else{slow(s,e,.7,.25);const allowance=dt*(e.kind==='boss'?1.5:Math.min(5,e.speed*.3)),pull=Math.max(0,allowance-(e.pullThisTick||0));e.pullThisTick=(e.pullThisTick||0)+pull;e.progress=Math.max(0,e.progress-pull);Object.assign(e,defensePoint(e.progress,s));s.stats.pulls++;}}if(f.tick<=0)f.tick=.3;if(f.life<=0&&f.kind==='collapse')blast(s,f,f.damage*2.1,9,'gravity');}
  compact(s.fields,f=>f.life>0);
- for(const t of s.towers){t.shotTime=Math.max(0,t.shotTime-dt);t.mirrorTime=Math.max(0,t.mirrorTime-dt);if(!t.formId&&t.shotTime===0){const stats=defenseTowerStats(t);if(fire(s,t,stats))t.shotTime=stats.interval;}}
+ for(const t of s.towers){t.shotTime=Math.max(0,t.shotTime-dt);t.mirrorTime=Math.max(0,t.mirrorTime-dt);if(!t.formId&&t.shotTime===0){const stats=defenseTowerStats(t);if(fire(s,t,stats))t.shotTime=stats.interval/titleCombatBonuses(s).cadence;}}
  combat?.update(dt);
  moveShots(s,dt);compact(s.enemies,e=>e.hp>0);
  if(s.coreHp<=0){s.phase='lost';s.lastEvent='핵이 무너졌습니다. 위치와 법칙 조합을 바꿔 다시 도전하세요.';return;}
@@ -232,7 +233,7 @@ function tick(s,dt,combat){s.time+=dt;for(const e of s.effects)e.life-=dt;compac
 }
 export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0||s.phase==='lost'||s.phase==='won')return s;let remaining=Math.min(.1,dt);while(remaining>1e-8){const step=Math.min(1/60,remaining);tick(s,step,combat);remaining-=step;if(s.phase==='lost'||s.phase==='won')break;}return s;}
 
-export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow};
+export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow,random as defenseRandom};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
 export function checkpointDefense(s){if(!canBuild(s))return null;return {version:6,...(s.actCount===5?{actCount:5,crystalRoom:s.crystalRoom,crystalLap:s.crystalLap,migratedWaves:s.migratedWaves||0,crystalWalls:(s.crystalWalls||[]).map(w=>({id:w.id,hp:w.hp}))}:{}),runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,line:t.line||t.laws[0],tier:defenseTierOf(t),merit:t.merit||0,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}

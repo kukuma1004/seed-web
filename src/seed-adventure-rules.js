@@ -1,3 +1,4 @@
+import {titleCombatBonuses,titleCriticalMultiplier,TITLE_CRIT_DAMAGE,titleFormCriticalEligible,refreshAdventureTitleHp,checkpointAdventureTitleHp,validAdventureTitleHp,restoreAdventureTitleHp} from './title-combat-bonuses.js';
 import {LAWS} from './laws.js';
 import {DEFENSE_FORMS,defenseFusionOf,getDefenseEvolutionOptions,validDefenseForm} from './seed-defense-catalog.js';
 import {availableAttacks,composeAdventureAttack} from './seed-adventure-attacks.js';
@@ -72,7 +73,7 @@ export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomU
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
-function shot(s,x,y,dx,dy,extra={}){if(s.shots.length>=ADVENTURE.maxShots)return;s.shots.push({x,y,px:x,py:y,dx,dy,speed:12,life:1.15,age:0,damage:17+s.level*2,hit:new Set(),bounces:0,remaining:s.laws.includes('pierce')?3:1,...extra});}
+function shot(s,x,y,dx,dy,extra={}){if(s.shots.length>=ADVENTURE.maxShots)return;const critical=!extra.hostile&&titleCriticalMultiplier(s,s.formId?titleFormCriticalEligible(s.formId):s.laws.includes('pierce'),()=>random(s))>1;s.shots.push({critical,x,y,px:x,py:y,dx,dy,speed:12,life:1.15,age:0,damage:17+s.level*2,hit:new Set(),bounces:0,remaining:s.laws.includes('pierce')?3:1,...extra});}
 const rank=(s,id)=>s.ranks[id]||0;
 const power=s=>s.buffs.power>0?1.3:1;
 export function adventureForm(s){return s.formId?DEFENSE_FORMS[s.formId]:null;}
@@ -346,13 +347,13 @@ function collect(s,item){const p=s.player;
 function cut(s,c,seen=new Set()){
  fx(s,'slash',c.x,c.y,{angle:c.angle,radius:c.radius,returning:Boolean(c.returning),narrow:c.cos>.5,motion:c.motion||'',ring:c.cos<=-1,finisher:Boolean(c.meta?.finisher),life:c.meta?.finisher?.32:.25,max:c.meta?.finisher?.32:.25});
  const inArc=o=>{const a=Math.atan2(o.y-c.y,o.x-c.x)-c.angle;return Math.hypot(o.x-c.x,o.y-c.y)<c.radius+(o.r||.45)&&Math.cos(a)>c.cos;};
- for(const e of s.enemies){if(e.hp>0&&!seen.has(e.id)&&inArc(e)){seen.add(e.id);hit(s,e,c.damage,false,{...c.meta,angle:Math.atan2(e.y-c.y,e.x-c.x)});}}
+ for(const e of s.enemies){if(e.hp>0&&!seen.has(e.id)&&inArc(e)){seen.add(e.id);hit(s,e,c.damage,false,{...c.meta,critical:c.critical??c.meta?.critical,angle:Math.atan2(e.y-c.y,e.x-c.x)});}}
  for(const prop of s.props)if(prop.hp>0&&!seen.has(prop.id)&&inArc(prop)){seen.add(prop.id);hitProp(s,prop);}
 }
 // 본편 조합 엔진(seed-adventure-combat.js)이 주는 피해. 법칙 효과·밀치기 없이 피해만, 콤보 수에는 들어간다.
-export function adventureFormHit(s,e,damage){if(!e||e.hp<=0||!Number.isFinite(damage)||damage<=0)return false;hit(s,e,damage,true,null,true);return true;}
-function hit(s,e,damage,secondary=false,meta=null,formHit=false){
- if(e.hp<=0)return;if(e.dormant)wakePack(s,e);damage*=formHit?1:power(s);
+export function adventureFormHit(s,e,damage,{criticalEligible=false}={}){if(!e||e.hp<=0||!Number.isFinite(damage)||damage<=0)return false;hit(s,e,damage*titleCriticalMultiplier(s,criticalEligible,()=>random(s)),true,null,true);return true;}
+function hit(s,e,damage,secondary=false,meta=null,formHit=false,alreadyTitled=false){
+ if(e.hp<=0)return;if(e.dormant)wakePack(s,e);damage*=formHit?1:power(s);if(!alreadyTitled)damage*=titleCombatBonuses(s).power;if(!formHit&&meta?.critical&&titleCombatBonuses(s).critical>0)damage*=TITLE_CRIT_DAMAGE;
  // 방패 적: 정면에서 온 공격은 35%만(막타·뒤·옆은 그대로). 돌아서 치거나 막타로 깨라는 뜻.
  if(e.role==='tank'&&!meta?.finisher){const fx0=s.player.x-e.x,fy0=s.player.y-e.y,fl=Math.hypot(fx0,fy0)||1,face=e.facing||{x:fx0/fl,y:fy0/fl};if((fx0*face.x+fy0*face.y)/fl>.5){damage*=.35;if(!secondary)fx(s,'block',e.x,e.y,{life:.2,max:.2});}}e.hp-=damage;e.flash=.13;const heavy=Boolean(meta?.finisher);
  if(!formHit||damage>=8)fx(s,'number',e.x,e.y,{text:Math.round(damage),heavy,form:formHit,life:heavy?.8:.6,max:heavy?.8:.6});
@@ -371,9 +372,9 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false){
   // 두 법칙이 융합하면(형태가 생기면) 법칙 하나하나의 덧붙임 효과는 끄고, 그 조합의 공격(본편 엔진)과 휘두르기 모양만 남긴다.
   if(!s.formId){
   const k=id=>1+(rank(s,id)-1)*.3;
-  if(s.laws.includes('frost')){e.slow=1.8;e.frost++;if(e.frost>=5){e.frost=0;e.hp-=32*k('frost');fx(s,'frost',e.x,e.y,{radius:1.4});}}
-  if(s.laws.includes('burst')){fx(s,'burst',e.x,e.y,{radius:1.5});for(const n of s.enemies)if(n!==e&&n.hp>0&&dist(n,e)<1.5)hit(s,n,damage*.4*k('burst'),true);}
-  if(s.laws.includes('chain')){let prev=e;const seen=new Set([e.id]);for(let i=0;i<1+rank(s,'chain');i++){const n=s.enemies.filter(n=>n.hp>0&&!seen.has(n.id)&&dist(n,prev)<3.7).sort((a,b)=>dist(a,prev)-dist(b,prev))[0];if(!n)break;fx(s,'chain',prev.x,prev.y,{tx:n.x,ty:n.y});hit(s,n,damage*.5,true);seen.add(n.id);prev=n;}}
+  if(s.laws.includes('frost')){e.slow=1.8;e.frost++;if(e.frost>=5){e.frost=0;e.hp-=32*k('frost')*titleCombatBonuses(s).power;fx(s,'frost',e.x,e.y,{radius:1.4});}}
+  if(s.laws.includes('burst')){fx(s,'burst',e.x,e.y,{radius:1.5});for(const n of s.enemies)if(n!==e&&n.hp>0&&dist(n,e)<1.5)hit(s,n,damage*.4*k('burst'),true,null,false,true);}
+  if(s.laws.includes('chain')){let prev=e;const seen=new Set([e.id]);for(let i=0;i<1+rank(s,'chain');i++){const n=s.enemies.filter(n=>n.hp>0&&!seen.has(n.id)&&dist(n,prev)<3.7).sort((a,b)=>dist(a,prev)-dist(b,prev))[0];if(!n)break;fx(s,'chain',prev.x,prev.y,{tx:n.x,ty:n.y});hit(s,n,damage*.5,true,null,false,true);seen.add(n.id);prev=n;}}
   if(s.laws.includes('gravity')&&s.fields.length<6)s.fields.push({x:e.x,y:e.y,life:.65+rank(s,'gravity')*.15,r:2.5,collapse:rank(s,'gravity')>=3});
   }
  }
@@ -395,24 +396,24 @@ function hurt(s,n){const p=s.player;if(p.inv>0||s.phase!=='playing')return;if(s.
 export function attackAdventure(s){
  if(s.phase!=='playing'||s.player.attack>0)return false;
  const p=s.player,dashStrike=p.dashStrike>0,step=dashStrike?2:p.combo,c=ADVENTURE_COMBO[step],plan=composeAdventureAttack({weapon:s.weapon,laws:s.laws,form:null,level:s.level}),angle=Math.atan2(p.aimY,p.aimX),seen=new Set();
- const meta={knock:c.knock,stop:c.stop,stun:c.stun,finisher:Boolean(c.finisher),damage:c.damage*(dashStrike?1.15:1)};
+ const meta={critical:titleCriticalMultiplier(s,s.formId?titleFormCriticalEligible(s.formId):s.laws.includes('pierce'),()=>random(s))>1,knock:c.knock,stop:c.stop,stun:c.stun,finisher:Boolean(c.finisher),damage:c.damage*(dashStrike?1.15:1)};
  p.attack=plan.cooldown*c.cooldown;p.swing=step;p.comboTime=p.attack+COMBO_WINDOW;p.combo=c.finisher?0:step+1;p.dashStrike=0;
  if(p.dashing<=0){p.lx=Math.cos(angle)*c.lunge*12;p.ly=Math.sin(angle)*c.lunge*12;}
  event(s,dashStrike?'dashStrike':'combo'+(step+1));event(s,s.weapon==='throw'?'shot':'shotReturn');
- const mo=MOTIONS[s.laws[0]]||MOTIONS.none;meta.damage*=mo.damage;p.attack*=mo.cooldown;
+ const mo=MOTIONS[s.laws[0]]||MOTIONS.none;meta.damage*=mo.damage;p.attack*=mo.cooldown/titleCombatBonuses(s).cadence;
  if(mo.pull)for(const e of s.enemies){if(e.hp<=0||e.type==='boss'||e.dormant)continue;const d=dist(e,p),a=Math.atan2(e.y-p.y,e.x-p.x)-angle;if(d<3.8&&d>1&&Math.cos(a)>.2){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*Math.min(1.3,d-.9);e.y+=v.y*Math.min(1.3,d-.9);}}
  if(mo.lunge&&p.dashing<=0){p.lx*=mo.lunge;p.ly*=mo.lunge;}
  for(const cc of plan.cuts){const arc=mo.arc===null?cc.cos-c.arc:Math.min(cc.cos-c.arc,mo.arc);cut(s,{...cc,damage:cc.damage*meta.damage,radius:cc.radius*c.radius*mo.radius,cos:arc,x:p.x,y:p.y,angle:angle+cc.offset,meta,motion:mo.id},seen);}
  if(mo.fan&&plan.cuts.length)for(const off of [-.62,.62])cut(s,{...plan.cuts[0],damage:plan.cuts[0].damage*meta.damage*.55,radius:plan.cuts[0].radius*c.radius*.9,cos:.72,x:p.x,y:p.y,angle:angle+off,meta:{...meta,stop:0},motion:mo.id},seen);
  const returnHits=new Set();
- for(const cc of plan.returnCuts)if(s.pendingCuts.length<12)s.pendingCuts.push({...cc,damage:cc.damage*meta.damage,x:p.x,y:p.y,angle:angle+cc.offset,returning:true,seen:returnHits});
+ for(const cc of plan.returnCuts)if(s.pendingCuts.length<12)s.pendingCuts.push({...cc,damage:cc.damage*meta.damage,x:p.x,y:p.y,angle:angle+cc.offset,returning:true,critical:meta.critical,seen:returnHits});
  const shots=c.finisher&&plan.shots.length?[...plan.shots,...[-.2,.2].map(o=>({...plan.shots[0],offset:plan.shots[0].offset+o}))]:plan.shots;
  for(const b of shots)shot(s,p.x,p.y,Math.cos(angle+b.offset),Math.sin(angle+b.offset),{...b,damage:b.damage*meta.damage,remaining:b.remaining+(c.finisher?1:0),heavy:Boolean(c.finisher)});
  if(s.laws.includes('orbit')&&!s.formId){s.orbitUntil=s.time+plan.orbitDuration;s.orbitRadius=plan.orbitRadius;}
  lawMotion(s,step,angle,meta);
  return true;
 }
-export function dodgeAdventure(s,x=0,y=0){const p=s.player;if(s.phase!=='playing'||p.dash>0)return false;const d=direction(x||y?x:p.aimX,x||y?y:p.aimY);p.dx=d.x;p.dy=d.y;p.dashing=.2;p.inv=.28;p.dash=s.buffs.swift>0?.62:.9;p.dashStrike=DASH_STRIKE;p.attack=Math.min(p.attack,.05);p.lx=p.ly=0;fx(s,'dash',p.x,p.y,{life:.35,max:.35});event(s,'dash');return true;}
+export function dodgeAdventure(s,x=0,y=0){const p=s.player;if(s.phase!=='playing'||p.dash>0)return false;const d=direction(x||y?x:p.aimX,x||y?y:p.aimY);p.dx=d.x;p.dy=d.y;p.dashing=.2;p.inv=.28;p.dash=(s.buffs.swift>0?.62:.9)/titleCombatBonuses(s).cadence;p.dashStrike=DASH_STRIKE;p.attack=Math.min(p.attack,.05);p.lx=p.ly=0;fx(s,'dash',p.x,p.y,{life:.35,max:.35});event(s,'dash');return true;}
 // 법칙마다 휘두르는 방식(첫 법칙)과 막타 특수 효과(둘째 법칙, 없으면 첫 법칙).
 export const MOTIONS=Object.freeze({
  none:{id:'none',name:'잎 칼 베기',radius:1,arc:null,damage:1,cooldown:1},
@@ -471,7 +472,7 @@ function bossAct(s,e,p,dt){
  return false;
 }
 export function stepAdventure(s,dt,input={},combat=null){
- if(s.phase!=='playing'||!Number.isFinite(dt)||dt<=0)return;dt=clamp(dt,0,.05);const p=s.player,A=s.arena;
+ refreshAdventureTitleHp(s);if(s.phase!=='playing'||!Number.isFinite(dt)||dt<=0)return;dt=clamp(dt,0,.05);const p=s.player,A=s.arena;
  s.shake=Math.max(0,s.shake-dt*2.2);
  if(input.attack&&p.attack>0)p.buffer=BUFFER;
  // 타격 멈춤: 짧게 세상이 멈춘다. 입력은 기억해 두었다가 멈춤이 끝나면 이어진다.
@@ -481,7 +482,7 @@ export function stepAdventure(s,dt,input={},combat=null){
  if(p.comboTime<=0)p.combo=0;if(p.attack<=0)p.swing=-1;
  s.hitsTime=Math.max(0,s.hitsTime-dt);if(s.hitsTime<=0)s.hits=0;
  if(Number.isFinite(input.aimX)&&Math.hypot(input.aimX,input.aimY)>.05){const d=direction(input.aimX,input.aimY);p.aimX=d.x;p.aimY=d.y;}
- const d=direction(input.x||0,input.y||0),moving=Boolean(input.x||input.y),speed=(p.dashing>0?18:p.attack>.29?3.1:5.6)*(s.buffs.swift>0&&p.dashing<=0?1.3:1);p.moving=moving;
+ const d=direction(input.x||0,input.y||0),moving=Boolean(input.x||input.y),speed=(p.dashing>0?18:p.attack>.29?3.1:5.6)*(s.buffs.swift>0&&p.dashing<=0?1.3:1)*titleCombatBonuses(s).move;p.moving=moving;
  const lunge=Math.exp(-14*dt),px0=p.x,py0=p.y;p.x+=p.lx*dt;p.y+=p.ly*dt;p.lx*=lunge;p.ly*=lunge;
  p.x=clamp(p.x+(p.dashing>0?p.dx:moving?d.x:0)*speed*dt,A.minX,A.maxX);p.y=clamp(p.y+(p.dashing>0?p.dy:moving?d.y:0)*speed*dt,A.minY,A.maxY);
  blockCircle(s,p,.4);keepOnGround(s,p,.35);p.vx=(p.x-px0)/dt;p.vy=(p.y-py0)/dt;
@@ -521,7 +522,7 @@ export function stepAdventure(s,dt,input={},combat=null){
  b.x+=b.dx*b.speed*dt;b.y+=b.dy*b.speed*dt;const x0=A.minX-.1,x1=A.maxX+.1,y0=A.minY-.2,y1=A.maxY+.3;if(b.x<x0||b.x>x1||b.y<y0||b.y>y1){if(!b.hostile&&(s.laws.includes('reflect')||b.bounces<0)&&b.bounces<2){if(b.x<x0||b.x>x1)b.dx*=-1;else b.dy*=-1;b.bounces++;b.x=clamp(b.x,x0,x1);b.y=clamp(b.y,y0,y1);fx(s,'frost',b.x,b.y,{radius:.7});}else b.life=0;}
  if(insideObstacle(s,b.x,b.y)||s.region&&!adventureWalkable(s,b.x,b.y,-.8)){b.life=0;fx(s,'hit',b.x,b.y,{radius:.5,life:.2,max:.2});continue;}
  if(b.hostile){if(s.laws.includes('orbit')&&!b.boss&&dist(b,p)<1.6){b.life=0;fx(s,'frost',b.x,b.y,{radius:.5});}else if(dist(b,p)<.45){hurt(s,b.damage);b.life=0;}}
- else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.03:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
+ else{for(const e of s.enemies){if(e.hp<=0||b.spent||b.hit.has(e.id))continue;const vx=b.x-b.px,vy=b.y-b.py,len=vx*vx+vy*vy,t=clamp(((e.x-b.px)*vx+(e.y-b.py)*vy)/(len||1),0,1);if(Math.hypot(e.x-b.px-vx*t,e.y-b.py-vy*t)<e.r+.22){b.hit.add(e.id);hit(s,e,b.damage,false,{critical:b.critical,knock:b.heavy?1.4:.35,stun:b.heavy?.3:.06,stop:b.heavy?.03:0,finisher:b.heavy,angle:Math.atan2(b.dy,b.dx)});if(--b.remaining<=0){if(b.recall&&!b.returning)b.spent=true;else b.life=0;break;}}}
   if(b.life>0&&!b.spent)for(const prop of s.props)if(prop.hp>0&&!b.hit.has(prop.id)&&dist(prop,b)<.7){b.hit.add(prop.id);hitProp(s,prop);if(--b.remaining<=0){b.life=0;break;}}}}
  s.shots=s.shots.filter(b=>b.life>0);if(s.laws.includes('orbit')&&!s.formId&&s.time<s.orbitUntil){for(const e of s.enemies)if(e.hp>0&&dist(e,p)<s.orbitRadius){e.orbitTick=(e.orbitTick||0)-dt;if(e.orbitTick<=0){e.orbitTick=.5;hit(s,e,9*(1+(rank(s,'orbit')-1)*.3),true);}}}
  for(const prop of s.props)prop.flash=Math.max(0,prop.flash-dt);s.props=s.props.filter(prop=>prop.hp>0);
@@ -560,10 +561,10 @@ export const ADVENTURE_CLOUD_READY=true;
 export const adventureTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const ADVENTURE_JP=Object.freeze({perRoomMax:400,perRunMax:4000});
 export function adventureCheckpoint(s){
- if(s?.phase!=='doors'||!Array.isArray(s.doors)||!s.doors.length)return null;const p=s.player;
+ if(s?.phase!=='doors'||!Array.isArray(s.doors)||!s.doors.length)return null;
  return {version:ADVENTURE_SAVE_VERSION,runId:s.runId,seed:s.seed,room:s.room,doors:s.doors.map(d=>({room:d.room,reward:d.reward??null})),actFlags:{...s.actFlags},
   shapes:[...s.shapes],weapon:s.weapon,laws:[...s.laws],ranks:{...s.ranks},formId:s.formId,level:s.level,coins:s.coins,potions:s.potions,charge:Math.floor(s.charge),
-  hp:Math.round(p.hp*10)/10,maxHp:p.maxHp,kills:s.kills,time:Math.round(s.time*10)/10,bossesDefeated:s.bossesDefeated,earned:s.earned,credited:s.credited,savedAt:Date.now()};
+  ...checkpointAdventureTitleHp(s),kills:s.kills,time:Math.round(s.time*10)/10,bossesDefeated:s.bossesDefeated,earned:s.earned,credited:s.credited,savedAt:Date.now()};
 }
 const int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
 export function restoreAdventure(raw){
@@ -584,11 +585,12 @@ export function restoreAdventure(raw){
   if(r.formId===null&&r.laws.length===2)return null;
   if(!int(r.level,1,rooms*2+2)||!int(r.coins,0,20000)||!int(r.potions,0,ADVENTURE.maxPotions)||!int(r.charge,0,100)||!int(r.kills,0,5000)||!int(r.earned,0,1e6)||!int(r.credited,0,r.earned))return null;
   if(!Number.isFinite(r.time)||r.time<0||r.time>1e6||!Number.isFinite(r.maxHp)||r.maxHp<100||r.maxHp>100+r.level*10+rooms*25||!Number.isFinite(r.hp)||r.hp<=0||r.hp>r.maxHp)return null;
+  if(!validAdventureTitleHp(r.titleHp,r.maxHp,r.hp))return null;
   const bossRooms=ADVENTURE_ACTS.map((_,a)=>a*ROOMS_PER_ACT+ROOMS_PER_ACT-1).filter(i=>i<=r.room).length;if(r.bossesDefeated!==bossRooms)return null;
   const flags=r.actFlags&&typeof r.actFlags==='object'?r.actFlags:{};
   const s=createAdventure(r.seed);Object.assign(s,{runId:r.runId,seed:r.seed,room:r.room,phase:'doors',doors:r.doors.map(d=>({room:d.room,reward:d.reward})),actFlags:{act:int(flags.act,0,2)?flags.act:next.act,treasure:flags.treasure===true,shop:flags.shop===true,fountain:flags.fountain===true},
    shapes:[...r.shapes],weapon:r.weapon,laws:[...r.laws],ranks:{...r.ranks},formId:r.formId,level:r.level,coins:r.coins,potions:r.potions,charge:r.charge,kills:r.kills,time:r.time,bossesDefeated:r.bossesDefeated,earned:r.earned,credited:r.credited,message:'저장한 문 앞에서 이어가요'});
-  s.player.hp=r.hp;s.player.maxHp=r.maxHp;return s;
+  s.player.hp=r.hp;s.player.maxHp=r.maxHp;restoreAdventureTitleHp(s,r.titleHp);return s;
  }catch{return null;}
 }
 // 계정에 쌓을 햇살(JP): 이번 판에 새로 번 만큼, 방 하나·판 하나 상한 안에서만. 같은 저장을 다시 불러와도 두 번 쌓이지 않는다.

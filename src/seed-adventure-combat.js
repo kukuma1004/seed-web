@@ -1,3 +1,4 @@
+import {titleCombatBonuses,titleFormCriticalEligible} from './title-combat-bonuses.js';
 import {Group,Vector3} from 'three';
 import {createFormCombat} from './form-combat.js';
 import {DISCOVERY_FORMS,TWIN_FORMS,formStats} from './forms.js';
@@ -46,7 +47,7 @@ export function createAdventureCombat(s,{sound=()=>{}}={}){
   const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(kind=>[kind,(...args)=>emit(kind,args)]));
   const scale=()=>ADVENTURE_COMBAT.damage*(s.buffs?.power>0?1.3:1);
   function hit(w,amount,meta={}){
-   if(w.dead||!Number.isFinite(amount)||amount<0)return false;adventureFormHit(s,w.source,amount*scale());
+   if(w.dead||!Number.isFinite(amount)||amount<0)return false;adventureFormHit(s,w.source,amount*scale(),{criticalEligible:titleFormCriticalEligible(form.id,meta)});
    if(twin){const last=entry.marks.get(w);if(last&&last.kind!==meta.kind&&s.time-last.time<=twin.synergy.window){entry.marks.delete(w);const bonus=amount*twin.synergy.bonus*scale();adventureFormHit(s,w.source,bonus);if(entry.twins.apply({id:twin.id,target:w,enemies:list,player:player.position,now:s.time,bonus,damage:(other,d)=>adventureFormHit(s,other.source,d),fx,isBoss:e=>e.type==='warden',collide:constrain}))resonances++;}else entry.marks.set(w,{kind:meta.kind,time:s.time});}
    return true;
   }
@@ -68,7 +69,7 @@ export function createAdventureCombat(s,{sound=()=>{}}={}){
   sync();entry.player.position.set(s.player.x,0,s.player.y);
   const aim=aimTarget();
   for(let i=0;i<entry.parts.length;i++){entry.timers[i]=Math.max(0,entry.timers[i]-dt);
-   if(aim&&entry.timers[i]<=0){direction.set(aim.g.position.x-s.player.x,0,aim.g.position.z-s.player.y).normalize();target.copy(aim.g.position);const cadence=entry.parts[i].fire(entry.player.position,direction,target);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence):.15;}
+   if(aim&&entry.timers[i]<=0){direction.set(aim.g.position.x-s.player.x,0,aim.g.position.z-s.player.y).normalize();target.copy(aim.g.position);const cadence=entry.parts[i].fire(entry.player.position,direction,target);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence/titleCombatBonuses(s).cadence):.15;}
    entry.parts[i].update(dt);}
   writeBack();
  }
