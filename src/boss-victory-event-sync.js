@@ -1,4 +1,18 @@
-import {bossVictoryEventKey,validBossVictoryLedger,mergeBossVictoryLedgers,BOSS_VICTORY_EVENT_LIMIT} from './boss-victory-events.js';
+import {bossVictoryEventKey,bossVictoryCloudKey,validBossVictoryLedger,mergeBossVictoryLedgers,BOSS_VICTORY_EVENT_LIMIT} from './boss-victory-events.js';
+
+// Cloud entries carry their migration epoch. The server checks the readable
+// tuple key and permits only creation of one immutable event child.
+export function decodeBossVictoryCloud(value){
+ if(!value||typeof value!=='object'||Array.isArray(value))throw Error('migration');
+ const entries=value.events===undefined?[]:Object.entries(value.events||{});
+ if(value.events!==undefined&&(!value.events||typeof value.events!=='object'||Array.isArray(value.events))||entries.length>BOSS_VICTORY_EVENT_LIMIT)throw Error('migration');
+ const events={};for(const [key,record] of entries){
+  if(!record||typeof record!=='object'||Array.isArray(record)||record.epoch!==value.epoch)throw Error('migration');
+  const {epoch,...event}=record;
+  try{if(key!==bossVictoryCloudKey(event))throw Error('migration');events[bossVictoryEventKey(event)]=event;}catch{throw Error('migration');}
+ }
+ const ledger={...value,events};if(!validBossVictoryLedger(ledger))throw Error('migration');return ledger;
+}
 
 // This channel is intentionally dormant until an authoritative migration epoch
 // is established. A missing server ledger never licenses a client baseline.
@@ -35,32 +49,40 @@ export function createBossVictoryEventSync({storage,account,ownerUid,epoch,basel
  const queue=createBossVictoryEventQueue({storage,ownerUid,epoch,currentOwner:()=>account.user()?.uid,practice});let flight=null;
  const current=()=>{if(account.user()?.uid!==ownerUid||account.user()?.isAnonymous||practice()!==false)throw Error('account');};
  const recognized=value=>{
-  if(!validBossVictoryLedger(value)||value.ownerUid!==ownerUid||value.epoch!==epoch||Object.keys(value.baseline).some(k=>value.baseline[k]!==baseline?.[k]))throw Error('migration');return {...value,events:value.events||{}};
+  const ledger=decodeBossVictoryCloud(value);
+  if(ledger.ownerUid!==ownerUid||ledger.epoch!==epoch||Object.keys(ledger.baseline).some(k=>ledger.baseline[k]!==baseline?.[k]))throw Error('migration');return ledger;
  };
  async function perform(){
   const controller=new AbortController(),alarm=setTimeout(()=>controller.abort(),timeout);
   try{
    current();queue.pending();const token=await Promise.race([account.tokenSession(),new Promise((_,reject)=>{if(controller.signal.aborted)reject(Error('offline'));else controller.signal.addEventListener('abort',()=>reject(Error('offline')),{once:true});})]);
    current();if(token?.uid!==ownerUid||!token.idToken)throw Error('account');
-   const url=databaseURL.replace(/\/$/,'')+'/seedBossVictories/'+encodeURIComponent(ownerUid)+'.json?auth='+encodeURIComponent(token.idToken);
-   const read=async()=>{const response=await fetchImpl(url,{headers:{'X-Firebase-ETag':'true'},signal:controller.signal,cache:'no-store'});current();if(!response.ok)throw Error([401,403].includes(response.status)?'permission':'offline');const value=await response.json();current();if(value===null)throw Error('not-migrated');return {value:recognized(value),etag:response.headers?.get?.('ETag')};};
-   for(let attempt=0;attempt<3;attempt++){
-    const remote=await read(),events=queue.pending();
-    const incoming={...remote.value,events:Object.fromEntries(events.map(event=>[bossVictoryEventKey(event),event]))},next=mergeBossVictoryLedgers(remote.value,incoming),changed=Object.keys(next.events).length!==Object.keys(remote.value.events).length;
-    let confirmed=remote.value;
-    if(changed){
-     if(!remote.etag)throw Error('offline');current();
-     const response=await fetchImpl(url,{method:'PUT',headers:{'Content-Type':'application/json','if-match':remote.etag},body:JSON.stringify(next),signal:controller.signal,cache:'no-store'});current();
-     if(response.status===412)continue;if(!response.ok)throw Error([401,403].includes(response.status)?'permission':'offline');
-     // ACK only an observed server readback. A lost response or failed read
-     // retains the pending receipt; replay then deduplicates the same event.
-     confirmed=(await read()).value;
-     mergeBossVictoryLedgers(next,confirmed); // Reject conflicting migrations.
+   const base=databaseURL.replace(/\/$/,'')+'/seedBossVictories/'+encodeURIComponent(ownerUid),auth='.json?auth='+encodeURIComponent(token.idToken);
+   const request=async(path,options={})=>{current();const response=await fetchImpl(base+path+auth,{...options,signal:controller.signal,cache:'no-store'});current();if(!response.ok&&response.status!==412)throw Error([401,403].includes(response.status)?'permission':'offline');return response;};
+   const read=async()=>{const response=await request('');const value=await response.json();current();if(value===null)throw Error('not-migrated');return recognized(value);};
+   const remote=await read(),events=queue.pending().slice(0,32);
+   const incoming={...remote,events:Object.fromEntries(events.map(event=>[bossVictoryEventKey(event),event]))};mergeBossVictoryLedgers(remote,incoming); // Check capacity before any writes.
+   for(const event of events){
+    if(Object.hasOwn(remote.events,bossVictoryEventKey(event)))continue;
+    const path='/events/'+encodeURIComponent(bossVictoryCloudKey(event)),payload={epoch,...event};
+    let stored=false;
+    for(let attempt=0;attempt<3;attempt++){
+     const response=await request(path,{headers:{'X-Firebase-ETag':'true'}}),value=await response.json();current();
+     if(value!==null){
+      const checked=decodeBossVictoryCloud({...remote,events:{[bossVictoryCloudKey(event)]:value}});
+      if(!Object.hasOwn(checked.events,bossVictoryEventKey(event)))throw Error('migration');stored=true;break;
+     }
+     const etag=response.headers?.get?.('ETag');if(!etag)throw Error('offline');
+     const put=await request(path,{method:'PUT',headers:{'Content-Type':'application/json','if-match':etag},body:JSON.stringify(payload)});
+     if(put.status===412)continue;stored=true;break;
     }
-    for(const event of events)if(!queue.acknowledge(event,confirmed))throw Error('ack');
-    current();return {ok:true,kind:queue.pending().length?'pending':'synced',ledger:confirmed};
+    if(!stored)return {ok:false,kind:'conflict'};
    }
-   return {ok:false,kind:'conflict'};
+   // A PUT success alone never removes a receipt. Check immutable metadata and
+   // all delivered events again; a lost readback leaves the entire batch safe.
+   const confirmed=events.length?await read():remote;mergeBossVictoryLedgers(remote,confirmed);
+   for(const event of events)if(!queue.acknowledge(event,confirmed))throw Error('ack');
+   current();return {ok:true,kind:queue.pending().length?'pending':'synced',ledger:confirmed};
   }catch(error){return {ok:false,kind:['account','migration','not-migrated','permission','invalid','storage','ledger-full','queue-full','ack'].includes(error.message)?error.message:'offline'};}
   finally{clearTimeout(alarm);}
  }

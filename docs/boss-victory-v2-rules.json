@@ -1,0 +1,37 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "seedBossVictories": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous'",
+        ".validate": "newData.hasChildren(['version', 'ownerUid', 'epoch', 'baseline'])",
+        "version": { ".validate": "newData.val() == 2" },
+        "ownerUid": { ".validate": "newData.val() == $uid" },
+        "epoch": { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{6,96}$/)" },
+        "baseline": {
+          ".validate": "newData.hasChildren(['austinWins', 'alwaysWins', 'johanWins', 'crosswindWins', 'crystalWins'])",
+          "austinWins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0" },
+          "alwaysWins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0" },
+          "johanWins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0" },
+          "crosswindWins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0" },
+          "crystalWins": { ".validate": "newData.isNumber() && newData.val() >= 0 && newData.val() <= 100000 && newData.val() % 1 == 0" },
+          "$other": { ".validate": false }
+        },
+        "events": {
+          "$eventId": {
+            ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && !data.exists() && newData.exists() && root.child('seedBossVictories').child($uid).child('version').val() == 2 && root.child('seedBossVictories').child($uid).child('ownerUid').val() == $uid && root.child('seedBossVictories').child($uid).child('epoch').val() == newData.child('epoch').val() && ((newData.child('boss').val() != 'crosswindKeeper' && newData.child('boss').val() != 'crystalGardener') || (root.child('seedExpansionRelease').child('crosswind').val() == true && root.child('seedExpansionRelease').child('crystalGorge').val() == true))",
+            ".validate": "newData.hasChildren(['epoch', 'mode', 'runId', 'boss', 'ordinal']) && $eventId == newData.child('mode').val() + ':' + newData.child('runId').val() + ':' + newData.child('boss').val() + ':' + newData.child('ordinal').val()",
+            "epoch": { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{6,96}$/)" },
+            "mode": { ".validate": "newData.val() == 'journey' || newData.val() == 'survival' || newData.val() == 'defense' || newData.val() == 'adventure'" },
+            "runId": { ".validate": "newData.isString() && newData.val().matches(/^[A-Za-z0-9_-]{1,90}$/)" },
+            "boss": { ".validate": "newData.val() == 'austin' || newData.val() == 'alwaysbeginner' || newData.val() == 'tempestcarrier' || newData.val() == 'crosswindKeeper' || newData.val() == 'crystalGardener'" },
+            "ordinal": { ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 1000000 && newData.val() % 1 == 0" },
+            "$other": { ".validate": false }
+          }
+        },
+        "$other": { ".validate": false }
+      }
+    }
+  }
+}

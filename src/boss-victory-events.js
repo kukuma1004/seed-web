@@ -15,6 +15,12 @@ export function bossVictoryEventKey(event){
  // identity must remain identical when the same run resumes on another device.
  return [...`${event.mode}:${event.runId}:${event.boss}:${event.ordinal}`].map(c=>c.charCodeAt(0).toString(16).padStart(2,'0')).join('');
 }
+// Readable server identity can be checked by RTDB rules without a client hash.
+// Keep the existing local receipt key stable during the dormant migration work.
+export function bossVictoryCloudKey(event){
+ if(!validEvent(event))throw Error('invalid-event');
+ return `${event.mode}:${event.runId}:${event.boss}:${event.ordinal}`;
+}
 export function validBossVictoryLedger(value){
  // Firebase RTDB omits an empty object on readback. An unstarted epoch can
  // therefore have no events child; explicit null/unknown payloads still fail.
