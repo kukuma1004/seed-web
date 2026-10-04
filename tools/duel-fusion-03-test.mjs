@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {createDuel,stepDuel,DUEL_CHARACTERS,DUEL_ORDER} from '../src/seed-duel-rules.js';
-import {batch03Reach} from '../src/seed-duel-batch03.js';
+import {batch03Reach,batch03Ai} from '../src/seed-duel-batch03.js';
 import {ALL_FORMS} from '../src/forms.js';
 import {DUEL_STORY_STAGES,completeStoryMatch} from '../src/seed-duel-story.js';
 import {normalizeDuelStory,mergeDuelStory,nextStoryStage} from '../src/seed-duel-story-progress.js';
@@ -38,6 +38,12 @@ const shotAtWard=(s,h,extra={})=>{const a=h.angle+dt*2.8,q={owner:1,x:h.x+Math.c
 {const s=fixture('frostguard'),f=s.fighters[0];f.wardCold=3;f.wardColdTime=.1;run(s,.2);assert.equal(f.wardCold,0);f.meter=100;cast(s,{ult:true});assert.equal(f.inv,0);assert.equal(s.hazards.length,2);assert.ok(s.hazards.every(h=>h.charges===3));run(s,4.5);assert.equal(s.hazards.length,0);}
 for(const id of ['returnblade','frostguard']){const s=fixture(id);Object.assign(s.fighters[0],{bladeCast:10,bladeCatch:1,wardCold:3,wardColdTime:5});s.phase='roundEnd';s.ready=.01;stepDuel(s,.02,{},{});for(const key of ['bladeCast','bladeCatch','wardCold','wardColdTime'])assert.equal(s.fighters[0][key],0);}
 for(const id of ['returnblade','frostguard']){const s=fixture(id);for(let i=0;i<1800;i++){s.fighters[0].cd=[0,0];stepDuel(s,dt,{skill1:true},{});assert.ok(s.shots.length<=64&&s.hazards.length<=32&&s.effects.length<=120);assert.ok(s.fighters.every(f=>Number.isFinite(f.hp+f.x+f.y)));}run(s,5);assert.equal(s.shots.length,0);assert.equal(s.hazards.length,0);}
+// Real final arming frame: an actual melee hit cancels the unfinished ward.
+{const s=fixture('frostguard',15,10,16.5,10),f=s.fighters[0],o=s.fighters[1];cast(s);s.hazards[0].arm=.01;Object.assign(o,{state:'attack',step:0,t:.11,total:.36,hitAt:.095,hitDone:false});stepDuel(s,dt,{},{});assert(f.hp<f.maxHp&&f.stun>0);assert(!s.hazards.some(h=>h.kind==='frostWard'&&h.t>0));}
+// Fixed projectile velocity is visible to the bot. A seven-unit miss must not
+// waste the limited defense; valid forward shots and close recovery can use it.
+for(const miss of [true,false]){const s=fixture('frostguard'),f=s.fighters[0],o=s.fighters[1];s.shots.push({owner:1,x:10,y:miss?17:10,dx:1,dy:0,speed:8,life:3});let cast=false;for(let i=0;i<25;i++){const input={};batch03Ai(s,f,o,input,dt);cast ||= Boolean(input.skill1);}assert.equal(cast,!miss);}
+{const s=fixture('frostguard',15,10,16.5,10),f=s.fighters[0],o=s.fighters[1];f.meter=100;o.state='recover';let issued=false;for(let i=0;i<25;i++){const input={};batch03Ai(s,f,o,input,dt);if(input.ult){stepDuel(s,dt,input,{});issued=true;break;}}assert(issued);assert(f.meter<100);assert.equal(s.hazards.filter(h=>h.kind==='frostWard').length,2);}
 const legacy={hero:'chainburst',updatedAt:20,cleared:Object.fromEntries(Array.from({length:26},(_,i)=>[`s${i+1}`,{losses:0,at:10}]))};assert.equal(nextStoryStage(legacy),27);let p=legacy;
 for(const id of ['returnblade','frostguard']){const stage=DUEL_STORY_STAGES.find(v=>v.enemy===id),m=createDuel({player:id,enemy:id});Object.assign(m,{phase:'over',winner:0,wins:[2,1]});p=completeStoryMatch(p,stage,m,40+stage.number);assert.ok(p);}
 assert.equal(Object.keys(mergeDuelStory(legacy,p).cleared).length,28);assert.equal(normalizeDuelStory(p).hero,'frostguard');

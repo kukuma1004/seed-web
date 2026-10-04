@@ -23,3 +23,17 @@ export function paintExpansionBoss(ctx,enemy,image,size){
  ctx.drawImage(image,(frame%4)*cell,Math.floor(frame/4)*height,cell,height,enemy.x-size/2,enemy.y-size*(450/512),size,size);
  return true;
 }
+
+export const EXPANSION_ENEMY_ART=Object.freeze({
+ crosswind:Object.freeze({file:'expansion/enemy-crosswind-motion-v1.webp',size:1.95,baseline:62/512}),
+ crystalGorge:Object.freeze({file:'expansion/enemy-crystal-motion-v1.webp',size:1.95,baseline:62/512})
+});
+const roleColumns=Object.freeze({scout:0,lobber:1,charger:2,swarm:0,brute:1,runner:2});
+export const expansionEnemyFrame=(role,action=false)=>(roleColumns[role]??0)+(action?3:0);
+const threatFrame=actor=>{const model=actor.expansionThreat;return expansionEnemyFrame(model?.type,model?.phase==='charge'||model?.phase==='recover'&&model.timer>model.cooldown-.22);};
+export function expansionEnemyArt(act){const art=EXPANSION_ENEMY_ART[act];return art?{...art,atlasColumns:3,atlasRows:2,atlasFrame:threatFrame,occlusion:false,lighting:false}:null;}
+export function paintExpansionEnemy(ctx,enemy,image,size){
+ if(!image?.complete||!image.naturalWidth)return false;
+ const role=enemy.kind==='fast'?'charger':enemy.kind==='shield'||enemy.kind==='resilient'?'lobber':'scout',frame=expansionEnemyFrame(role),cell=image.width/3,height=image.height/2;
+ ctx.drawImage(image,(frame%3)*cell,Math.floor(frame/3)*height,cell,height,enemy.x-size/2,enemy.y-size*(450/512),size,size);return true;
+}

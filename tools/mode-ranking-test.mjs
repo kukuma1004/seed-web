@@ -19,6 +19,8 @@ const backupStagePattern=new RegExp(backupRules.match(/\$stage\.matches\(\/(.*?)
 for(let n=1;n<=DUEL_STORY_STAGE_COUNT;n++)assert(backupStagePattern.test('s'+n),'local backup rule accepts campaign stage '+n);
 for(const id of ['s0','s'+(DUEL_STORY_STAGE_COUNT+1),'s24evil'])assert(!backupStagePattern.test(id));
 assert.equal(Number(rules.duel.$uid.storyStage['.validate'].match(/<= (\d+)/)[1]),DUEL_STORY_STAGE_COUNT,'campaign score and server stage cap stay aligned');
+const top=duelRankEntry({...duelState,time:1},{uid:'u1',name:'씨앗',storyStage:DUEL_STORY_STAGE_COUNT});
+assert(top.score<=Number(rules.duel.$uid.score['.validate'].match(/<= (\d+)/)[1]),'a perfect latest-stage run fits the server score cap');
 
 
 // Display labels follow the combat catalog, including newly unlocked bosses.

@@ -22,6 +22,8 @@ export const CUTE_ACTOR_ART=Object.freeze({
 export const CUTE_ACTOR_BASELINE=16/256;
 const cuteActorFiles=new Set(Object.values(CUTE_ACTOR_ART));
 const reducedAtlases=Object.freeze({
+ 'expansion/enemy-crosswind-motion-v1.webp':'expansion/enemy-crosswind-motion-mobile-v1.webp',
+ 'expansion/enemy-crystal-motion-v1.webp':'expansion/enemy-crystal-motion-mobile-v1.webp',
  'expansion/boss-crosswind-motion-v1.webp':'expansion/boss-crosswind-motion-mobile-v1.webp',
  'expansion/boss-crystal-motion-v1.webp':'expansion/boss-crystal-motion-mobile-v1.webp',
  'enemy-hound-v4.png':'mobile/enemy-hound-v4.webp','enemy-caster-v4.png':'mobile/enemy-caster-v4.webp',
@@ -69,6 +71,7 @@ const directionGeometries=[ACTOR_ART_GEOMETRIES.front,ACTOR_ART_GEOMETRIES.right
 // Opt-in authored motion sheets. Keep directional geometry identities intact;
 // eight UV planes share one atlas image and are never allocated per frame.
 export const ACTOR_MOTION_GEOMETRIES=Object.freeze(Array.from({length:8},(_,i)=>frameGeometry(i%4,1-Math.floor(i/4),4,2)));
+export const ACTOR_THREAT_GEOMETRIES=Object.freeze(Array.from({length:6},(_,i)=>frameGeometry(i%3,1-Math.floor(i/3),3,2)));
 const directionalGrid=Object.freeze({columns:2,rows:2});
 const parentWorld=new THREE.Quaternion(),inverseParent=new THREE.Quaternion(),rollQuaternion=new THREE.Quaternion(),cameraUp=new THREE.Vector3(),localOffset=new THREE.Vector3();
 const localUp=new THREE.Vector3(0,1,0),localForward=new THREE.Vector3(0,0,1);
@@ -86,7 +89,7 @@ export function actorArtRotation(state,time,phase){
  return 0;
 }
 
-export function actorFrameGeometry(frame=0,grid=directionalGrid){const frames=grid.columns===4&&grid.rows===2?ACTOR_MOTION_GEOMETRIES:directionGeometries;return frames[((frame%frames.length)+frames.length)%frames.length];}
+export function actorFrameGeometry(frame=0,grid=directionalGrid){const frames=grid.columns===4&&grid.rows===2?ACTOR_MOTION_GEOMETRIES:grid.columns===3&&grid.rows===2?ACTOR_THREAT_GEOMETRIES:directionGeometries;return frames[((frame%frames.length)+frames.length)%frames.length];}
 
 function atlas(file){
  const selected=actorArtFile(file);
@@ -102,8 +105,10 @@ function billboard(mesh,camera,size,baseline){
   mesh.parent.getWorldQuaternion(parentWorld);inverseParent.copy(parentWorld).invert();
   mesh.quaternion.copy(inverseParent).multiply(camera.quaternion);
   rollQuaternion.setFromAxisAngle(localForward,mesh.userData.roll||0);mesh.quaternion.multiply(rollQuaternion);
-  cameraUp.copy(localUp).applyQuaternion(camera.quaternion).applyQuaternion(inverseParent);
-  localOffset.copy(cameraUp).multiplyScalar((.5-baseline)*size);mesh.position.copy(localOffset);
+  cameraUp.copy(localUp).applyQuaternion(mesh.quaternion);
+  // Use the final rolled plane and its current height, keeping the authored
+  // foot contact fixed through both impact squash and side-to-side reactions.
+  localOffset.copy(cameraUp).multiplyScalar((.5-baseline)*mesh.scale.y);mesh.position.copy(localOffset);
  };
 }
 

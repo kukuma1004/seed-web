@@ -21,11 +21,25 @@ export function prepareDefenseTerrain(s,info){
  const room=Math.min(4,Math.floor((info.localWave-1)/3));
  if(s.crystalRoom!==room||s.crystalLap!==info.lap){s.crystalRoom=room;s.crystalLap=info.lap;s.crystalWalls=createDefenseCrystalWalls(room,null,s.towers);}
 }
+// The canonical walls belong to the save/combat state. Reuse only the scaled
+// view passed to the boss rules; refresh every field before each simulation step.
+// Weak keys let a finished run release its scratch data without an extra hook.
+const bossScratch=new WeakMap();
+function bossContext(s,e,walls){
+ let c=bossScratch.get(s);
+ if(!c){c={position:{x:0,z:0},player:{x:104/5,z:48/5},walls:[],activeProjectiles:0,hpRatio:1};bossScratch.set(s,c);}
+ c.position.x=e.x/5;c.position.z=e.y/5;c.hpRatio=e.hp/e.maxHp;
+ c.walls.length=walls.length;
+ for(let i=0;i<walls.length;i++){
+  const w=walls[i],p=c.walls[i]??={};p.id=w.id;p.x=w.x/5;p.z=w.z/5;p.w=w.w/5;p.d=w.d/5;p.hp=w.hp;p.maxHp=w.maxHp;p.broken=w.broken;
+ }
+ c.activeProjectiles=0;for(const q of s.shots)if(q.law==='hostile')c.activeProjectiles++;
+ return c;
+}
 export function tickDefenseExpansionBoss(s,e,dt,emit){
  if(e.bossId!=='crosswindKeeper'&&e.bossId!=='crystalGardener')return false;
  e.expansionBoss??=createExpansionBoss(e.bossId,{seed:s.rng});
- const walls=s.crystalWalls||[],out=stepExpansionBoss(e.expansionBoss,dt,{position:{x:e.x/5,z:e.y/5},player:{x:104/5,z:48/5},
-  walls:walls.map(w=>({...w,x:w.x/5,z:w.z/5,w:w.w/5,d:w.d/5})),activeProjectiles:s.shots.filter(q=>q.law==='hostile').length,hpRatio:e.hp/e.maxHp});
+ const walls=s.crystalWalls||[],out=stepExpansionBoss(e.expansionBoss,dt,bossContext(s,e,walls));
  e.coreOpen=out.coreOpen;
  e.expansionState=out.state;e.expansionPattern=out.pattern;
  // Regrowth never appears under a planted seed; the path is already separate.

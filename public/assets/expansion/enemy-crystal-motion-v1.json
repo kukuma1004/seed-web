@@ -1,0 +1,265 @@
+{
+  "version": 1,
+  "act": "crystalGorge",
+  "image": "enemy-crystal-motion-v1.webp",
+  "mobileImage": "enemy-crystal-motion-mobile-v1.webp",
+  "size": [
+    1536,
+    1024
+  ],
+  "mobileSize": [
+    768,
+    512
+  ],
+  "grid": [
+    3,
+    2
+  ],
+  "baselinePixels": 450,
+  "baselineFromBottom": 0.12109375,
+  "globalScalePerRole": {
+    "scout": 1.0813397129186604,
+    "lobber": 0.9186991869918699,
+    "charger": 0.889763779527559
+  },
+  "frames": [
+    {
+      "name": "scout-ready",
+      "role": "scout",
+      "rect": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.0,
+        0.0,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        59,
+        145,
+        453,
+        451
+      ],
+      "sourceRect": [
+        79,
+        169,
+        375,
+        307
+      ],
+      "pasteOffset": [
+        57,
+        136
+      ],
+      "scale": 1.0813397129186604
+    },
+    {
+      "name": "lobber-ready",
+      "role": "lobber",
+      "rect": [
+        512,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.3333333333333333,
+        0.0,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        64,
+        72,
+        449,
+        451
+      ],
+      "sourceRect": [
+        556,
+        34,
+        436,
+        430
+      ],
+      "pasteOffset": [
+        62,
+        60
+      ],
+      "scale": 0.9186991869918699
+    },
+    {
+      "name": "charger-ready",
+      "role": "charger",
+      "rect": [
+        1024,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.6666666666666666,
+        0.0,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        57,
+        131,
+        455,
+        451
+      ],
+      "sourceRect": [
+        1064,
+        100,
+        453,
+        365
+      ],
+      "pasteOffset": [
+        54,
+        129
+      ],
+      "scale": 0.889763779527559
+    },
+    {
+      "name": "scout-action",
+      "role": "scout",
+      "rect": [
+        0,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.0,
+        0.5,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        33,
+        126,
+        479,
+        451
+      ],
+      "sourceRect": [
+        52,
+        617,
+        418,
+        329
+      ],
+      "pasteOffset": [
+        31,
+        107
+      ],
+      "scale": 1.0813397129186604
+    },
+    {
+      "name": "lobber-action",
+      "role": "lobber",
+      "rect": [
+        512,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.3333333333333333,
+        0.5,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        38,
+        72,
+        474,
+        451
+      ],
+      "sourceRect": [
+        526,
+        513,
+        492,
+        423
+      ],
+      "pasteOffset": [
+        37,
+        68
+      ],
+      "scale": 0.9186991869918699
+    },
+    {
+      "name": "charger-action",
+      "role": "charger",
+      "rect": [
+        1024,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.6666666666666666,
+        0.5,
+        0.3333333333333333,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        37,
+        160,
+        476,
+        451
+      ],
+      "sourceRect": [
+        1015,
+        585,
+        508,
+        355
+      ],
+      "pasteOffset": [
+        26,
+        147
+      ],
+      "scale": 0.889763779527559
+    }
+  ],
+  "runtimeFrames": {
+    "scout": {
+      "ready": 0,
+      "action": 3
+    },
+    "lobber": {
+      "ready": 1,
+      "action": 4
+    },
+    "charger": {
+      "ready": 2,
+      "action": 5
+    }
+  },
+  "packing": "Generated alpha cutouts, one scale per character pair, translation only; no painted pixels/recoloring",
+  "status": "Generated image reviewed and packing tested; actual runtime/device QA pending"
+}

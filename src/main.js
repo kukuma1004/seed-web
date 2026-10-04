@@ -29,13 +29,14 @@ import './forms.css';
 import './final-identity-art.css';
 import './combo-art.css';
 import './dash-evolution.css';
-import {ACTOR_ART_GEOMETRIES,ACTOR_MOTION_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt} from './actor-art.js';
+import {ACTOR_ART_GEOMETRIES,ACTOR_MOTION_GEOMETRIES,ACTOR_THREAT_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt} from './actor-art.js';
 import {attachBossActionRig} from './boss-action-rig.js';
 import {BOSS_PETS,createBossPet,readBossPet,unlockedBossPets,writeBossPet} from './boss-pets.js';
 import {createSpatialIndex} from './spatial-index.js';
 import {createShield,tickShield,blocksShield} from './shield.js';
 import {readCheckpoint,writeCheckpoint,clearCheckpoint,roomExitCheckpoint,difficulty,replaceLaw,REGION_NAMES,restoredScore,restoredWardens,restoredAustins} from './run-save.js';
 import {createExpansionEntry,createExpansionSaveStore,expansionExitCheckpoint} from './expansion-run-save.js';
+import {acquireExpansionSaveLease} from './expansion-save-lease.js';
 import {createSeedBody} from './seed-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
 import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_VETERAN_TITLE,ALWAYS_CLEAR_TITLE,ALWAYS_VETERAN_TITLE,JOHAN_TITLE,JOHAN_CLEAR_TITLE,JOHAN_VETERAN_TITLE,CLEAR_ALL_STATS} from './titles.js';
@@ -50,7 +51,7 @@ import {ACT3_GEOMETRIES,ACT3_MATERIALS,ACT3_ART,isAct3Minion,createAct3Minion,ti
 import {createSkyway} from './skyway.js';
 import * as expansionRuntime from './expansion-journey.js';
 import {createSurvivalExpansion} from './survival-expansion.js';
-import {expansionActorArt} from './expansion-actor-art.js';
+import {expansionActorArt,expansionEnemyArt} from './expansion-actor-art.js';
 let expansionApi=expansionRuntime,survivalExpansion=null;
 import {createContactShadows} from './contact-shadows.js';
 import {MIRROR_ATTACK_CADENCE,MIRROR_BREAK,MIRROR_GUARD,mirrorDamageAllowed,MIRROR_TRIAL_PROTOTYPE,clearMirrorCheckpoint,mirrorAttackCooldown,mirrorFloorRules,readMirrorCheckpoint,refundMirrorAttackCooldown,readMirrorRecord,recordMirrorResult,writeMirrorCheckpoint} from './mirror-trial.js';
@@ -245,7 +246,7 @@ const baseOrbitGeo=projectileCellGeometry(4);baseOrbitGeo.name='seed-law-orbit-p
 const sharedDynamicMaterials=new Set([...Object.values(mats),...Object.values(ACT3_MATERIALS)]);
 // Enemy bolts, tells and rings reuse these instead of creating and uploading new buffers for every shot and spawn.
 const enemyGeos={tellHound:new THREE.PlaneGeometry(.9,4.8),tellCaster:new THREE.RingGeometry(1.1,1.3,48)},ringGeos=new Map();
-const sharedGeometries=new Set([...Object.values(ACT2_GEOMETRIES),...Object.values(ACT3_GEOMETRIES),...Object.values(enemyGeos),baseOrbitGeo,...Object.values(ACTOR_ART_GEOMETRIES),...ACTOR_MOTION_GEOMETRIES]);
+const sharedGeometries=new Set([...Object.values(ACT2_GEOMETRIES),...Object.values(ACT3_GEOMETRIES),...Object.values(enemyGeos),baseOrbitGeo,...Object.values(ACTOR_ART_GEOMETRIES),...ACTOR_MOTION_GEOMETRIES,...ACTOR_THREAT_GEOMETRIES]);
 function release(object){disposeObject(object,sharedDynamicMaterials,sharedGeometries);}
 function releaseEnemy(e){release(e.g);if(e.world)release(e.world);}
 // All moving projectiles now share flat painterly atlas batches.
@@ -442,24 +443,26 @@ const worldLights=scene.children.filter(o=>o.isHemisphereLight||o.isDirectionalL
 const stadium=createStadium(scene,{lights:worldLights,hide:hiddenGarden,mobile:mobileDevice});
 const skyway=createSkyway(scene,{lights:worldLights,hide:[...hiddenGarden,...moteMeshes],mobile:mobileDevice});
 const mirrorPanels=createMirrorPanels(scene);let mirrorPanelsActive=false;
-let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false,expansionEntry=null,expansionSaveOwner=null,expansionEnvironmentArt=null,expansionLaunch=0;
+let expansionJourney=null,expansionJourneyView=null,expansionTerrain=null,expansionCrystalTexture=null,expansionTerrainDirty=false,expansionEntry=null,expansionSaveOwner=null,expansionEnvironmentArt=null,expansionLaunch=0,expansionSaveLease=null;
 const expansionOwner=()=>account.user()?.uid||'guest';
 const expansionStore=act=>createExpansionSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner());
+function releaseExpansionSaveLease(){const lease=expansionSaveLease;expansionSaveLease=null;return lease?.release()||Promise.resolve();}
+function ownsExpansionSaveLease(){return Boolean(expansionJourney&&expansionSaveLease?.active()&&expansionSaveLease.key===expansionStore(expansionJourney.act).key);}
 function captureExpansionEntry(){
- if(!expansionJourney||!localInspection||expansionSaveOwner!==expansionOwner())return false;
+ if(!expansionJourney||!localInspection||expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease())return false;
  const run={version:1,cycle,region:'garden',stage:expansionJourney.room,mode:'entry',hp,rules:[...chosen],mutated:[...mutated],levels:levelsToSave(levels),banked:bankedUpgrades,choicesTaken,choiceKills,kills,elapsed,playDashes:runDashes,playDamage:Math.round(runDamageTaken),forms:Object.fromEntries(heldForms),inventory:{...inventory},runBonuses:{...runBonuses},relics:normalizeRelics(relics),dashEvolution:dashState.id,activeGauge:Math.floor(activeGauge.value),activeCooldown:activeGauge.cooldown,mutations:mutationsToSave(mutations),rerollUsed,score,wardens:wardensDefeated,austins:austinsDefeated,turretPotionDry};
  const value=createExpansionEntry(expansionJourney,run,player.position.toArray(),expansionEntry||{});if(!value)return false;
  const result=expansionStore(expansionJourney.act).write(value,{fresh:!expansionEntry});if(result.ok)expansionEntry=result.value;return result.ok;
 }
 function saveExpansionLeave(){
- if(!expansionEntry||hp<=0||expansionSaveOwner!==expansionOwner())return false;
+ if(!expansionEntry||hp<=0||expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease())return false;
  const value=expansionExitCheckpoint(expansionEntry,{hp,inventory,rerollUsed});if(!value)return false;
  const result=expansionStore(expansionJourney.act).write(value);if(result.ok)expansionEntry=result.value;return result.ok;
 }
 function finishExpansionEntry(){
  if(!expansionEntry)return true;
- if(expansionSaveOwner!==expansionOwner()||!expansionStore(expansionJourney.act).finish(expansionEntry))return false;
- expansionEntry=null;return true;
+ if(expansionSaveOwner!==expansionOwner()||!ownsExpansionSaveLease()||!expansionStore(expansionJourney.act).finish(expansionEntry))return false;
+ expansionEntry=null;void releaseExpansionSaveLease();return true;
 }
 const expansionTargets=[],expansionNear=[];
 function expansionCombatTargets(){
@@ -518,26 +521,42 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false}={}){
  const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
  if(launch!==expansionLaunch)return false;
  if(!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
- const owner=expansionOwner(),saved=resume?createExpansionSaveStore(rawStorage,act,owner).read():null;
+ const owner=expansionOwner(),store=createExpansionSaveStore(rawStorage,act,owner);let saved=resume?store.read():null;
  if(resume&&!saved){$('#toast').textContent='이어할 로컬 저장이 없거나 다른 버전의 기록이에요.';return false;}
  if(!expansionCrystalTexture){expansionCrystalTexture=texloader.load(import.meta.env.BASE_URL+'assets/'+(mobileDevice?'mobile/':'')+'mirror-crystal-v1.webp');expansionCrystalTexture.colorSpace=THREE.SRGBColorSpace;}
  expansionJourneyView??=view.createExpansionJourneyView(scene,stone,expansionCrystalTexture);
  await prepareExpansionEnvironment(act);
  if(act==='crystalGorge')await prepareExpansionCover();
  if(launch!==expansionLaunch||owner!==expansionOwner())return false;
+ const previousLease=expansionSaveLease,reused=previousLease?.active()&&previousLease.key===store.key;
+ const lease=reused?previousLease:await acquireExpansionSaveLease(act,owner);
+ if(launch!==expansionLaunch||owner!==expansionOwner()){if(!reused&&lease.ok)await lease.release();return false;}
+ if(!lease.ok||!lease.active()){$('#toast').textContent=lease.reason==='busy'?'같은 막을 다른 탭에서 진행 중이에요. 그곳에서 저장하고 나간 뒤 이어하세요.':'이 환경에서는 안전한 로컬 저장을 시작하지 못했어요. 기존 여정은 계속 이용할 수 있어요.';return false;}
+ // Read again inside the exclusive lease: loading scenery may have allowed
+ // another tab to save, finish or replace this run in the meantime.
+ saved=resume?store.read():null;
+ if(resume&&!saved){if(!reused)await lease.release();$('#toast').textContent='준비 중 로컬 기록이 바뀌었어요. 다시 확인해 주세요.';return false;}
+ if(previousLease&&previousLease!==lease)await previousLease.release();
+ if(launch!==expansionLaunch||owner!==expansionOwner()||!lease.active()){if(!reused)await lease.release();return false;}
+ expansionSaveLease=lease;
+ try{
  expansionSaveOwner=owner;
  expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;trainingSession=null;developerRun=true;labSafe=false;startRegion='garden';restart(saved?.run);
  for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
  expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
  if(saved)player.position.fromArray(saved.position);
  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외';return true;
+ }catch{
+  if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='로컬 시제품을 시작하지 못했어요. 저장 기록은 남겨 두었습니다.';}
+  await lease.release();return false;
+ }
 }
 function spawnExpansionActor(spec,boss=false){
  const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,immovable:boss,radius:boss ? .8 : .65,expansionActor:true,expansionBoss:boss,config:{name:boss?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName:expansionJourney.act==='crosswind'?'잎배 편대':'수정 정찰대'}};
  g.position.set(spec.position.x,0,spec.position.z);
  if(!boss)e.expansionThreat=expansionApi.createExpansionThreat(spec);
  if(boss){e.expansionMotion=expansionJourney.boss;attachActorArt(e,camera,release,expansionActorArt(expansionJourney.bossId));}
- else{const art=ACT3_ART[spec.type==='charger'?'sky-diver':spec.type==='lobber'?'sky-bomber':'sky-scout'];attachActorArt(e,camera,release,{file:art.file,size:art.size,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
+ else attachActorArt(e,camera,release,expansionEnemyArt(expansionJourney.act));
  enemies.push(e);return e;
 }
 function expansionBolt(q){if(enemyShots.length>=48)return;skywayBolt(new V(q.position.x,0,q.position.z),new V(q.dir.x,0,q.dir.z),q.spec);}
@@ -1094,7 +1113,7 @@ function showSurvivalSetup(refresh=true){
  if(localInspection){$('#survival-pierce').onclick=()=>startSurvival('pierce');$('#survival-frost').onclick=()=>startSurvival('frost');$('#survival-stress').onclick=()=>startSurvival('stress');$('#survival-boss').onclick=()=>startSurvival('boss');$('#survival-duel').onclick=()=>startSurvival('duel');for(const id of ['act2','act3','loop','base','route','stress2','stress3'])$('#survival-'+id).onclick=()=>startSurvival(id);for(const id of Object.keys(SURVIVAL_BENCHES))$('#'+id).onclick=()=>startSurvival(id);}
 }
 function startSurvival(lab=null,saved=null){
- ++expansionLaunch;
+ ++expansionLaunch;void releaseExpansionSaveLease();
  const fiveActs=localInspection&&(['act4','act5','five'].includes(lab)||saved?.session?.actCount===5);
  if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>startSurvival(lab,saved));
  if(!localInspection&&!requireName())return;
@@ -1700,7 +1719,7 @@ function showAccount(error=''){
  if($('#account-signout'))$('#account-signout').onclick=async()=>{try{const saved=await cloud.syncNow();if(!saved.ok){showAccount('이 기기의 기록을 아직 저장하지 못했어요. 인터넷 연결을 확인한 뒤 다시 시도해 주세요.');return;}await account.signOut();cloud.signOutCleanup();location.reload();}catch(err){showAccount(authMessage(err));}};
 }
 let pendingCloudReload=false,foregroundCloudSync=null,lastForegroundCloudSync=0,startupCloudReady=false;
-function showIntro(){++expansionLaunch;expansionTerrain=null;if(expansionJourney){for(const e of enemies)releaseEnemy(e);enemies=[];for(const q of [...shots,...enemyShots])release(q.ob);shots=[];enemyShots=[];}expansionJourney=null;expansionJourneyView?.setActive(false);document.body.classList.remove('survival-result');$('#overlay').classList.remove('survival-overlay');perfFinish('left');if(survivalSession){for(const e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;enemies=[];for(const q of [...shots,...enemyShots,...effects])release(q.ob);shots=[];enemyShots=[];effects=[];clearForms();}trainingSession=null;mirrorSession=null;survivalSession=null;survivalArt?.setActive(false);document.body.classList.remove('survival-mode');mirrorReadyRing.visible=false;combatAnalysis.cancel();$('#room-analysis').hidden=true;developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');audio.setPaused(false);region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
+function showIntro(){++expansionLaunch;void releaseExpansionSaveLease();expansionTerrain=null;if(expansionJourney){for(const e of enemies)releaseEnemy(e);enemies=[];for(const q of [...shots,...enemyShots])release(q.ob);shots=[];enemyShots=[];}expansionJourney=null;expansionJourneyView?.setActive(false);document.body.classList.remove('survival-result');$('#overlay').classList.remove('survival-overlay');perfFinish('left');if(survivalSession){for(const e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;enemies=[];for(const q of [...shots,...enemyShots,...effects])release(q.ob);shots=[];enemyShots=[];effects=[];clearForms();}trainingSession=null;mirrorSession=null;survivalSession=null;survivalArt?.setActive(false);document.body.classList.remove('survival-mode');mirrorReadyRing.visible=false;combatAnalysis.cancel();$('#room-analysis').hidden=true;developerRun=false;labSafe=false;const labButton=$('#developer-lab-fab');if(labButton)labButton.hidden=true;if(gameplayPaused()){showSeasonPause();return;}audio.setScene('garden');audio.setPaused(false);region='garden';startRegion='garden';pauseBuild.hide();activeVfx.clear();cancelActive(activeGauge);activeReadyAnnounced=false;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';austinRoom=false;drawRoom();$('#evolution').hidden=true;player.visible=true;paused=false;keys.clear();touch.reset();$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
  void nativeUpdate.check();
  if(pendingCloudReload){location.reload();return;}
  mode='ready';refreshGardenEffects();ensureGardenScene();gardenSelection=null;if(gardenScene)gardenScene.select(-1);
@@ -2275,7 +2294,7 @@ function showMaintenance(){
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel maintenance-panel"><p class="eyebrow">SEED</p><h2>${escapeHtml(MAINTENANCE.title)}</h2>${MAINTENANCE.lines.map(line=>`<p class="maintenance-line">${escapeHtml(line)}</p>`).join('')}</div>`;
 }
-function restart(saved=null){expansionJourney=null;expansionTerrain=null;expansionJourneyView?.setActive(false);if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,playable=r=>playableAct3Region(playableRegion(r),globalThis.location,developerRun),regionBlocked=candidate&&playable(candidate.region)!==candidate.region,restore=regionBlocked?null:candidate;region=playable(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();perfBegin();if(!restore&&!developerRun&&!survivalSession)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();bankedUpgrades=0;syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=maxPlayerHp();playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;if(!developerRun&&!survivalSession)void webTelemetry.playStart(isAct3(region)?3:isAct2(region)?2:1);$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro','menu-screen','developer-mode','garden-mode','ranking-overlay');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore&&!developerRun&&!survivalSession)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);dashRelicReady=false;relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
+function restart(saved=null){if(expansionJourney)void releaseExpansionSaveLease();expansionJourney=null;expansionTerrain=null;expansionJourneyView?.setActive(false);if(gameplayPaused()){showSeasonPause();return;}if(maintenanceOn){showMaintenance();return;}const candidate=saved?.version===1?saved:null,playable=r=>playableAct3Region(playableRegion(r),globalThis.location,developerRun),regionBlocked=candidate&&playable(candidate.region)!==candidate.region,restore=regionBlocked?null:candidate;region=playable(restore?.region||startRegion);if(touch.enabled)appShell.enterFullscreen();perfBegin();if(!restore&&!developerRun&&!survivalSession)clearCheckpoint(actStore());heldForms.clear();rerollUsed=restore?.rerollUsed===true;if(restore)guideTarget=profile.forms.includes(restore.guideTarget)?restore.guideTarget:null;promptedForms.clear();clearEscorts();vfx.clear();wells.length=0;orbitGroup.visible=false;touch.reset();for(let e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;for(let p of [...shots,...enemyShots,...effects])release(p.ob);enemies=[];shots=[];enemyShots=[];effects=[];levels.clear();bankedUpgrades=0;syncLaws();choicesTaken=0;choiceKills=0;runBonusOffer=null;dashLock=0;pulls.length=0;orbitHits.clear();chosen.clear();mutated.clear();roomCleared=false;exitOpen=false;growth.reset();playerMotion.reset();player.visible=true;evolutionTime=0;$('#evolution').hidden=true;$('#active-cinematic').hidden=true;$('#active-cinematic').innerHTML='';updateFormLabel();document.querySelectorAll('#rules>div').forEach(n=>n.classList.remove('active'));hp=maxPlayerHp();playerSlow=0;dashState=createDashState();invuln=1;shootCD=0;keyboardDash=false;keys.clear();player.userData.dashTime=0;stage=0;kills=0;elapsed=0;runDashes=0;runDamageTaken=0;player.position.set(0,0,5);mode='playing';paused=false;if(!developerRun&&!survivalSession)void webTelemetry.playStart(isAct3(region)?3:isAct2(region)?2:1);$('#overlay').hidden=true;$('#pause').textContent='Ⅱ';$('#toast').textContent='';$('#overlay').classList.remove('intro','menu-screen','developer-mode','garden-mode','ranking-overlay');lastMove.set(0,0,1);cycle=restore?.cycle||0;score=restore?restoredScore(restore):0;paceGame=0;paceReal=0;wardensDefeated=restore?restoredWardens(restore):0;austinsDefeated=restore?restoredAustins(restore):0;inventory=restore?normalizeInventory(restore.inventory):startingInventory();runBonuses=normalizeRunBonuses(restore?.runBonuses);if(!restore&&!developerRun&&!survivalSession)for(const [id,n] of Object.entries(claimCarry(runStorage)))addItem(inventory,id,n);turretPotionDry=restore?.turretPotionDry||0;hasteTime=0;shellTime=0;selectedItem=null;itemBarKey='';relics=normalizeRelics(restore?.relics);dashRelicReady=false;relicRewardPending=false;dashState=createDashState(restore?.dashEvolution);dashRewardPending=Boolean(restore&&wardensDefeated>=1&&!dashState.id);austinRoom=false;potionCD=0;
  if(survivalSession){inventory=emptyInventory();addItem(inventory,'tonic',2);relics=emptyRelics();dashRewardPending=false;}
  if(mirrorSession){inventory=emptyInventory();runBonuses=emptyRunBonuses();relics=emptyRelics();hp=100;dashRewardPending=false;}
  if(restore){stage=restore.stage;hp=Math.min(maxPlayerHp(),restore.hp);kills=restore.kills;elapsed=restore.elapsed;runDashes=restore.playDashes||0;runDamageTaken=restore.playDamage||0;for(const [id,v] of levelsFromSave(restore))levels.set(id,v);bankedUpgrades=restore.banked||0;syncLaws();choicesTaken=restore.choicesTaken||0;choiceKills=restore.choiceKills||0;growth.select(effectiveLaws(),mutated);growth.update(0,0,false);updateFormLabel();}

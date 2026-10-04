@@ -1,5 +1,5 @@
 import {createFramePacer} from './frame-time.js';
-import {EXPANSION_BOSS_ART,paintExpansionBoss} from './expansion-actor-art.js';
+import {EXPANSION_BOSS_ART,EXPANSION_ENEMY_ART,paintExpansionBoss,paintExpansionEnemy} from './expansion-actor-art.js';
 import {defensePlacement,defenseCellAt,DEFENSE_CELLS,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,defenseSeedCap,defenseTierOf,DEFENSE_TIER_NAMES,mergeDefense,defenseMergeResult,rerollDefense,removeDefense,defenseRemoveRefund,defenseNextSteps,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,defensePath,checkpointDefense,restoreDefense,defenseTowerName,evolveDefense,getDefenseEvolutionOptions,DEFENSE_FORMS,DEFENSE_CATALOG,DEFENSE_CATALOG_COUNTS} from './seed-defense-rules.js';
 import './seed-defense.css';
 import {defenseBodyParts,defenseBedPath,paintDefenseGround,paintEvolutionCue,paintDefenseCrystal} from './seed-defense-art.js';
@@ -171,7 +171,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  }
  function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
  let expansionVisualWave=-1;
- function updateExpansionVisuals(){if(expansionVisualWave===state.wave)return;expansionVisualWave=state.wave;if(state.actCount!==5)return;const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));}
+ function updateExpansionVisuals(){if(expansionVisualWave===state.wave)return;expansionVisualWave=state.wave;if(state.actCount!==5)return;const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));const field=act===3?'crosswind':act===4?'crystalGorge':null;if(field&&!assets[field])load(field,actorArtFile(EXPANSION_ENEMY_ART[field].file,{reducedTextures:true}));}
  function draw(now){
   updateExpansionVisuals();
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
@@ -206,7 +206,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();const sky=e.act===2,heavy=e.kind==='shield'||e.kind==='resilient';
    const atlas=boss?(e.bossId==='crosswindKeeper'?'tempestcarrier':e.bossId==='crystalGardener'?'boss':e.bossId||(sky?'tempestcarrier':e.act===1?'stadiumWarden':'boss')):sky?'flight':e.kind==='fast'?'runner':e.act===1?(heavy?'catcher':'batter'):heavy?'shield':'hound';
    const cell=sky?(boss?(e.bossId?1+Number(e.hp<e.maxHp*.66)+Number(e.hp<e.maxHp*.33):0):e.kind==='fast'?1:heavy?2:0):face;
-   if(!boss||!EXPANSION_BOSS_ART[e.bossId]||!paintExpansionBoss(ctx,e,assets[e.bossId],sz))sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
+   const painted=boss?EXPANSION_BOSS_ART[e.bossId]&&paintExpansionBoss(ctx,e,assets[e.bossId],sz):e.act>=3&&paintExpansionEnemy(ctx,e,assets[e.act===3?'crosswind':'crystalGorge'],sz);if(!painted)sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
    if(boss&&e.expansionState==='tell'){ctx.strokeStyle='#ed9b88';ctx.lineWidth=.28;ctx.beginPath();ctx.ellipse(e.x,e.y+1,4.2,1.7,0,0,Math.PI*2);ctx.stroke();}
    if(boss&&e.coreOpen){ctx.fillStyle='#c4f2c8';ctx.beginPath();ctx.arc(e.x,e.y-3.2,.65,0,Math.PI*2);ctx.fill();}
    if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}

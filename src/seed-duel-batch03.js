@@ -42,11 +42,11 @@ export function batch03Action(s,f,index,ctx,ult=false){
 }
 export function batch03Tick(s,dt,ctx){
  for(const f of s.fighters){f.bladeCatch=Math.max(0,(f.bladeCatch||0)-dt);f.wardColdTime=Math.max(0,(f.wardColdTime||0)-dt);if(!f.wardColdTime)f.wardCold=0;}
- for(const h of s.hazards){if(!['bladeSend','frostWard','wardPunish','wardFan'].includes(h.kind))continue;h.t-=dt;h.arm=Math.max(0,h.arm-dt);const f=s.fighters[h.owner],o=s.fighters[1-h.owner];
+ for(const h of s.hazards){if(!['bladeSend','frostWard','wardPunish','wardFan'].includes(h.kind))continue;const arming=h.arm>0;h.t-=dt;h.arm=Math.max(0,h.arm-dt);const f=s.fighters[h.owner],o=s.fighters[1-h.owner];
   if(h.kind==='bladeSend'){if(f.stun>0||f.state!=='skill'||f.bladeCast!==h.cast){h.t=0;continue;}if(h.arm<=0&&!h.triggered){h.triggered=true;ctx.shoot(s,f,{kind:'returnSpear',law:'pierce',x:h.x+h.dx*.6,y:h.y+h.dy*.6,dx:h.dx,dy:h.dy,speed:14,life:2,age:0,damage:h.damage,pierce:8,budget:h.budget});ctx.event(s,'bladeSend');}}
   if(h.kind==='frostWard'){
    // Setup can be interrupted; once active it is a finite independent satellite.
-   if(h.arm>0&&(f.stun>0||f.state!=='skill')){h.t=0;continue;}h.x=f.x;h.y=f.y;if(h.arm>0||h.charges<=0)continue;
+   if(arming&&(f.stun>0||f.state!=='skill')){h.t=0;continue;}h.x=f.x;h.y=f.y;if(h.arm>0||h.charges<=0)continue;
    h.angle+=dt*2.8;h.rockX=h.x+Math.cos(h.angle)*h.r;h.rockY=h.y+Math.sin(h.angle)*h.r;
    if(!h.contact&&dist({x:h.rockX,y:h.rockY},o)<h.contactR+.4&&o.inv<=0){h.contact=true;const front=guarded(f,o);const hit=ctx.strike(s,f,o,6,{kind:'skill',stun:.1,knock:.2});if(hit&&!front)addCold(f);}
    for(const q of s.shots){if(q.owner===h.owner||q.life<=0||q.wardSpent||q.boss||s.boss&&q.owner===1)continue;
@@ -75,14 +75,23 @@ export function batch03Ai(s,f,o,input,dt){const d=dist(f,o),v=norm(o.x-f.x,o.y-f
   if(!q&&f.meter>=100&&d>4&&d<8){input.ult=true;return true;}
  }else if(f.char==='frostguard'){
   if((f.wardCold||0)>=3&&d<2.4&&o.state!=='attack'){input.skill1=true;return true;}
-  const incoming=s.shots.find(q=>q.owner!==f.team&&q.life>.3&&dist(q,f)<10&&(f.x-q.x)*q.dx+(f.y-q.y)*q.dy>0&&dist(q,f)/(q.speed||1)>.4);
-  const ai=s.ai[f.team];ai.wardSeen=incoming?(ai.wardSeen||0)+dt:0;const react={easy:.32,normal:.2,hard:.12}[s.difficulty]??.2;
-  if(incoming&&ai.wardSeen>=react&&f.cd[0]<=0){
-   // The AI aims the same cast as a player: lead only the visible, fixed shot
-   // velocity to put one finite orbit point on its path after the real startup.
-   const a=Math.atan2(incoming.y-f.y,incoming.x-f.x)-2.8*Math.max(0,(dist(incoming,f)-1.35)/(incoming.speed||1)-.3);
-   input.aimX=Math.cos(a);input.aimY=Math.sin(a);input.skill1=true;return true;}
-  if(f.meter>=100&&incoming&&ai.wardSeen>=react&&d>2){input.ult=true;return true;}
+  const active=s.hazards.some(h=>h.owner===f.team&&h.kind==='frostWard'&&h.t>0&&h.charges>0);
+  const incoming=s.shots.find(q=>{
+   if(q.owner===f.team||q.boss||s.boss&&q.owner===1||q.life<=.3||!(q.speed>0)||dist(q,f)>=10)return false;
+   const dx=f.x-q.x,dy=f.y-q.y,along=dx*q.dx+dy*q.dy,side=dx*q.dy-dy*q.dx,arrival=(along-1.35)/q.speed;
+   return Math.abs(side)<1.35+.32+.16&&arrival>.4&&arrival<q.life;
+  });
+  const ai=s.ai[f.team],close=d>1.05&&d<1.8&&o.state!=='attack'&&o.state!=='heavy';
+  ai.wardSeen=incoming?(ai.wardSeen||0)+dt:0;ai.wardCloseSeen=close?(ai.wardCloseSeen||0)+dt:0;
+  const react={easy:.32,normal:.2,hard:.12}[s.difficulty]??.2,opportunity=incoming&&ai.wardSeen>=react||close&&ai.wardCloseSeen>=react;
+  if(!active&&opportunity&&(f.cd[0]<=0||f.meter>=100)){
+   if(incoming){
+    // Predict only visible fixed projectile velocity, with the real startup.
+    const a=Math.atan2(incoming.y-f.y,incoming.x-f.x)-2.8*Math.max(0,(dist(incoming,f)-1.35)/(incoming.speed||1)-.3);
+    input.aimX=Math.cos(a);input.aimY=Math.sin(a);
+   }
+   if(f.meter>=100)input.ult=true;else input.skill1=true;return true;
+  }
   if(f.cd[1]<=0&&d>1.8&&d<2.5&&o.state==='heavy'&&(ai.seen||0)>=react){input.skill2=true;return true;}
  }
  return false;

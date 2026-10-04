@@ -43,7 +43,7 @@ export function createExpansionSaveStore(storage,act,owner='guest'){
     }
     if(before)storage.setItem(key+':previous',JSON.stringify(before));
     // Catch a competing writer during backup. localStorage is not transactional:
-    // this local prototype still needs cross-tab locking before public release.
+    // callers must also hold the exclusive run lease across these sync writes.
     if(storage.getItem(key)!==original)return {ok:false,reason:'conflict'};
     storage.setItem(key,json);return storage.getItem(key)===json?{ok:true,value:next}:{ok:false,reason:'storage'};
    }catch{return {ok:false,reason:'storage'};}

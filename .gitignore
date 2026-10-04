@@ -155,3 +155,11 @@ art-refs/
 !tools/duel-fusion-03-ai.mjs
 !tools/duel-input-test.mjs
 !tools/expansion-boss-art-test.mjs
+
+!tools/expansion-enemy-art-test.mjs
+
+!tools/duel-fusion-04-test.mjs
+!tools/duel-fusion-04-art-test.mjs
+!tools/duel-fusion-04-ai.mjs
+!tools/expansion-save-lease-test.mjs
+!tools/expansion-save-host-test.mjs

@@ -6,7 +6,7 @@ import * as rules from '../src/expansion-journey.js';
 import {createExpansionEnvironmentArt,EXPANSION_ENVIRONMENTS} from '../src/expansion-environment-art.js';
 import {createExpansionJourneyView} from '../src/expansion-journey-view.js';
 import {paintDefenseCrystal} from '../src/seed-defense-art.js';
-import {EXPANSION_BOSS_ART} from '../src/expansion-actor-art.js';
+import {EXPANSION_BOSS_ART,EXPANSION_ENEMY_ART} from '../src/expansion-actor-art.js';
 import {actorArtFile} from '../src/actor-art.js';
 import {defenseWaveInfo} from '../src/seed-defense-rules.js';
 
@@ -50,7 +50,7 @@ const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const start=main.indexOf('async function startExpansionJourney('),end=main.indexOf('function spawnExpansionActor(',start);
 assert(start>0&&end>start);const launcher=main.slice(start,end).replace("import('./expansion-journey.js')",'Promise.resolve(__rules)').replace("import('./expansion-journey-view.js')",'Promise.resolve(__view)').replaceAll('import.meta.env.BASE_URL',"'/seed-web/'");
 let owner='owner-A',restarts=0;const waits=[];
-const ctx=vm.createContext({__rules:rules,__view:{},localInspection:true,expansionLaunch:0,expansionApi:rules,expansionOwner:()=>owner,rawStorage:{},createExpansionSaveStore:(storage,act,uid)=>{ctx.lastReadOwner=uid;return {read:()=>null};},expansionStore:()=>{throw new Error('resume must not read previous active account');},expansionCrystalTexture:{},expansionJourneyView:{},scene:{},stone:{},
+const ctx=vm.createContext({__rules:rules,__view:{},localInspection:true,expansionLaunch:0,expansionSaveLease:null,acquireExpansionSaveLease:async(act,uid)=>({ok:true,key:uid+':'+act,active:()=>true,release:async()=>{}}),expansionApi:rules,expansionOwner:()=>owner,rawStorage:{},createExpansionSaveStore:(storage,act,uid)=>{ctx.lastReadOwner=uid;return {key:uid+':'+act,read:()=>null};},expansionStore:()=>{throw new Error('resume must not read previous active account');},expansionCrystalTexture:{},expansionJourneyView:{},scene:{},stone:{},
  prepareExpansionEnvironment:()=>new Promise(resolve=>waits.push(resolve)),prepareExpansionCover:()=>Promise.resolve(),expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:null,
  restart:()=>restarts++,enemies:[],fallen:[],player:{position:new THREE.Vector3()},releaseEnemy(){},wave(){},$:()=>({textContent:''}),stage:0,mode:'ready',paused:false});
 vm.runInContext(launcher,ctx);
@@ -75,7 +75,7 @@ const paintedWalls=[{x:2,z:5,w:3.8,d:3.8,hp:100,maxHp:100,broken:false},{x:2,z:5
 const stateBefore=JSON.stringify(paintedWalls);for(const w of paintedWalls)assert(paintDefenseCrystal(canvas,w,coverImage));assert.deepEqual(canvasCalls.map(c=>c[1]),[0,512,1024]);for(const c of canvasCalls){assert.equal(c[3],512);assert(Math.abs(c[6]+c[7]*.88)<1e-7);}
 assert.equal(JSON.stringify(paintedWalls),stateBefore);assert.equal(paintDefenseCrystal(canvas,paintedWalls[2],null),false);assert(paintDefenseCrystal(canvas,paintedWalls[0],null));assert.equal(canvasCalls.length,3,'fallback never draws a stale image');
 const defenseSource=fs.readFileSync(new URL('../src/seed-defense-view.js',import.meta.url),'utf8'),loaderStart=defenseSource.indexOf(' function updateExpansionVisuals(){'),loaderEnd=defenseSource.indexOf('\n function draw(',loaderStart);assert(loaderStart>0&&loaderEnd>loaderStart);
-const canvasLoads=[],canvasCtx=vm.createContext({expansionVisualWave:-1,state:{wave:1,actCount:3},assets:{},defenseWaveInfo,EXPANSION_BOSS_ART,actorArtFile,load:(id,file)=>{canvasLoads.push(file);canvasCtx.assets[id]={};}});vm.runInContext(defenseSource.slice(loaderStart,loaderEnd),canvasCtx);
+const canvasLoads=[],canvasCtx=vm.createContext({expansionVisualWave:-1,state:{wave:1,actCount:3},assets:{},defenseWaveInfo,EXPANSION_BOSS_ART,EXPANSION_ENEMY_ART,actorArtFile,load:(id,file)=>{canvasLoads.push(file);canvasCtx.assets[id]={};}});vm.runInContext(defenseSource.slice(loaderStart,loaderEnd),canvasCtx);
 for(const wave of [1,12,24,36,48,60]){canvasCtx.state.wave=wave;canvasCtx.updateExpansionVisuals();}assert.equal(canvasLoads.length,0,'existing three-act clients decode no expansion assets');
-canvasCtx.state={wave:49,actCount:5};for(let i=0;i<200;i++)canvasCtx.updateExpansionVisuals();assert.deepEqual(canvasLoads,['expansion/crystal-cover-v1.webp','expansion/boss-crystal-motion-mobile-v1.webp']);canvasCtx.state.wave=50;canvasCtx.updateExpansionVisuals();assert.equal(canvasLoads.length,2,'one cover and one boss sheet decoded across waves');canvasCtx.state.wave=37;canvasCtx.updateExpansionVisuals();assert.equal(canvasLoads.at(-1),'expansion/boss-crosswind-motion-mobile-v1.webp');
+canvasCtx.state={wave:49,actCount:5};for(let i=0;i<200;i++)canvasCtx.updateExpansionVisuals();assert.deepEqual(canvasLoads,['expansion/crystal-cover-v1.webp','expansion/boss-crystal-motion-mobile-v1.webp','expansion/enemy-crystal-motion-mobile-v1.webp']);canvasCtx.state.wave=50;canvasCtx.updateExpansionVisuals();assert.equal(canvasLoads.length,3,'one cover/boss/enemy sheet decoded across waves');canvasCtx.state.wave=37;canvasCtx.updateExpansionVisuals();assert.deepEqual(canvasLoads.slice(-2),['expansion/boss-crosswind-motion-mobile-v1.webp','expansion/enemy-crosswind-motion-mobile-v1.webp']);
 console.log('Expansion scenery: lazy active-size cache, failed/late load lifecycle, finite stone alignment, terrain-only isolation and shared texture ownership passed; no GPU or live screenshot claim.');
