@@ -1,0 +1,8 @@
+.menu-panel.defense-entry-panel{width:min(440px,48vw);justify-content:flex-start;box-sizing:border-box;gap:8px;padding-top:max(14px,env(safe-area-inset-top));padding-bottom:max(14px,env(safe-area-inset-bottom));overflow:hidden}
+.defense-entry-panel h2{font-size:clamp(22px,3vw,30px);line-height:1.2;flex-shrink:0}
+.defense-entry-panel .eyebrow{flex-shrink:0;letter-spacing:2px}
+#defense-load-status{margin:0;line-height:1.4;flex-shrink:0}
+#defense-account-choices{display:flex;flex-direction:column;gap:8px;overflow-y:auto;min-height:0;flex:0 1 auto}
+.defense-entry-panel button{min-height:44px;margin:0;padding:9px;font-size:15px;line-height:1.35;white-space:normal;flex-shrink:0}
+#defense-load-back{margin-top:auto;flex-shrink:0}
+@media(max-aspect-ratio:1/1){.menu-panel.defense-entry-panel{width:100vw}}

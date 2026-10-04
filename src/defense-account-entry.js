@@ -1,5 +1,6 @@
 import {acquireDefenseAccountLease} from './defense-account-save.js';
 import {createDefenseAccountSync,defenseAccountLabel} from './defense-account-sync.js';
+import './defense-account-entry.css';
 
 // Entry owns the slot until the view has flushed its final preparation. UI uses
 // only fixed labels; player-controlled checkpoint strings never become HTML.

@@ -2236,7 +2236,7 @@ async function showSeedDefense({actCount=3,bossPreview=null}={}){
  const serial=++defenseLoadSerial;let accountPreparation=null,defenseNext=showDungeon;
  mode='defense-loading';touch.reset();keys.clear();stopAnimation();
  const overlay=$('#overlay');overlay.hidden=false;
- overlay.innerHTML='<div class="menu-panel"><p class="eyebrow">SEED · 씨앗 수호전</p><h2>정원을 준비하고 있어요</h2><p id="defense-load-status" role="status">수호전 파일을 불러오는 중이에요…</p><div id="defense-account-choices"></div><button id="defense-load-reload" hidden>최신 화면으로 다시 열기</button><button id="defense-load-back">돌아가기</button></div>';
+ overlay.innerHTML='<div class="menu-panel defense-entry-panel"><p class="eyebrow">SEED · 씨앗 수호전</p><h2>정원을 준비하고 있어요</h2><p id="defense-load-status" role="status">수호전 파일을 불러오는 중이에요…</p><div id="defense-account-choices"></div><button id="defense-load-reload" hidden>최신 화면으로 다시 열기</button><button id="defense-load-back">돌아가기</button></div>';
  const back=()=>{if(serial!==defenseLoadSerial)return;++defenseLoadSerial;clearTimeout(slow);showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
  $('#defense-load-back').onclick=back;
  $('#defense-load-reload').onclick=()=>location.reload();
