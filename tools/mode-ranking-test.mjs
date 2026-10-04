@@ -21,6 +21,13 @@ for(const id of ['s0','s'+(DUEL_STORY_STAGE_COUNT+1),'s24evil'])assert(!backupSt
 assert.equal(Number(rules.duel.$uid.storyStage['.validate'].match(/<= (\d+)/)[1]),DUEL_STORY_STAGE_COUNT,'campaign score and server stage cap stay aligned');
 const top=duelRankEntry({...duelState,time:1},{uid:'u1',name:'씨앗',storyStage:DUEL_STORY_STAGE_COUNT});
 assert(top.score<=Number(rules.duel.$uid.score['.validate'].match(/<= (\d+)/)[1]),'a perfect latest-stage run fits the server score cap');
+const {DUEL_RANK_LIMITS}=await import('../src/duel-ranking-limits.js');
+const {DISCOVERY_FORMS}=await import('../src/forms.js');
+for(const field of ['character','opponent']){
+ assert.equal(Number(rules.duel.$uid[field]['.validate'].match(/<= (\d+)/)[1]),DUEL_RANK_LIMITS.character,'server and client stable ID limits agree');
+ for(const id of Object.keys(DISCOVERY_FORMS))assert(validDuelRank({...top,[field]:id}),'the wire format can preserve original recipe ID '+id);
+ assert(!validDuelRank({...top,[field]:'x'.repeat(DUEL_RANK_LIMITS.character+1)}),'overlong IDs remain rejected');
+}
 
 
 // Display labels follow the combat catalog, including newly unlocked bosses.

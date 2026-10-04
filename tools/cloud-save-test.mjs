@@ -102,14 +102,35 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const pad=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act1',12000),austinWins:10,alwaysWins:6,johanWins:3}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism'],bosses:[]})});
  const phone=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify({...recordBestScore(null,'act2',18000),austinWins:3,alwaysWins:10,johanWins:8}),[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['prism','mirrorguard'],bosses:['johanclear']})});
  const merged=mergeCloudSnapshots(collectCloudSnapshot(pad),collectCloudSnapshot(phone));
- assert.deepEqual(merged.account.bestScores,{act1:12000,act2:18000,act3:0});
+ assert.deepEqual(merged.account.bestScores,{act1:12000,act2:18000,act3:0,act4:0,act5:0});
  assert.equal(merged.account.austinWins,10,'a phone with fewer Austin wins cannot erase the cumulative title');
  assert.equal(merged.account.alwaysWins,10);assert.equal(merged.account.johanWins,8);
  assert.ok(merged.discoveries.bosses.includes('johanclear'));
  assert.ok(merged.discoveries.forms.includes('prism'));
  assert.ok(merged.discoveries.forms.includes('mirrorguard'));
  applyCloudSnapshot(pad,merged);
- assert.deepEqual(JSON.parse(pad.getItem(ACCOUNT_PROFILE_KEY)).bestScores,{act1:12000,act2:18000,act3:0});
+ assert.deepEqual(JSON.parse(pad.getItem(ACCOUNT_PROFILE_KEY)).bestScores,{act1:12000,act2:18000,act3:0,act4:0,act5:0});
+}
+
+// New-act scores must survive an older three-act payload being the newer save
+// for spending/settings. This tests the shared normalization/merge/application
+// path; expansion inspection runs still never call recordBestScore.
+{
+ const expanded=recordBestScore(recordBestScore(null,'act4',41000),'act5',51000);
+ expanded.bossRuns={'adventure:expanded-run':{at:300,austin:2}};
+ const newerLegacy={bestScores:{act1:15000,act2:25000,act3:35000},bossRuns:{'adventure:expanded-run':{at:400,austin:1}}};
+ for(const prefer of ['local','remote']){
+  const merged=mergeCloudSnapshots({account:expanded},{account:newerLegacy},{prefer});
+  assert.deepEqual(merged.account.bestScores,{act1:15000,act2:25000,act3:35000,act4:41000,act5:51000});
+  assert.equal(merged.account.bossRuns['adventure:expanded-run'].austin,2);
+  const receiver=memory();applyCloudSnapshot(receiver,merged);
+  const roundtrip=collectCloudSnapshot(receiver);
+  assert.deepEqual(roundtrip.account.bestScores,merged.account.bestScores);
+  assert.equal(roundtrip.account.bossRuns['adventure:expanded-run'].austin,2);
+ }
+ assert.equal(normalizeAccountProfile({bestScores:{act4:-1,act5:Infinity,act6:60000}}).bestScores.act4,0);
+ assert.equal(normalizeAccountProfile({bestScores:{act4:-1,act5:Infinity,act6:60000}}).bestScores.act5,0);
+ assert.equal(Object.hasOwn(recordBestScore(expanded,'act6',60000).bestScores,'act6'),false);
 }
 
 // An app left open on the phone receives progress made on the tablet when it

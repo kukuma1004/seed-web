@@ -7,6 +7,7 @@ import {FIREBASE} from './online-ranking.js';
 import {cleanName} from './score.js';
 import {isBadName} from './name-filter.js';
 import {DUEL_STORY_STAGE_COUNT} from './seed-duel-story-progress.js';
+import {DUEL_RANK_LIMITS} from './duel-ranking-limits.js';
 
 export const MODE_RANK_PATHS=Object.freeze({
  adventure:'seedModeRanking/adventure',
@@ -36,7 +37,7 @@ export function duelRankScore(e){
  return e.storyStage*100_000+e.wins*10_000+Math.max(0,e.wins-e.losses)*1_000+e.difficulty*100+clamp(1_000-e.time,0,1_000);
 }
 export function validDuelRank(e){
- return Boolean(nameOk(e)&&integer(e.storyStage,0,DUEL_STORY_STAGE_COUNT)&&integer(e.wins,0,2)&&integer(e.losses,0,2)&&e.wins+e.losses>=1&&integer(e.difficulty,1,3)&&integer(e.time,1,1_000)&&text(e.character,20)&&text(e.opponent,20)&&integer(e.score,1,DUEL_STORY_STAGE_COUNT*100_000+23_300)&&e.score===duelRankScore(e));
+ return Boolean(nameOk(e)&&integer(e.storyStage,0,DUEL_STORY_STAGE_COUNT)&&integer(e.wins,0,2)&&integer(e.losses,0,2)&&e.wins+e.losses>=1&&integer(e.difficulty,1,3)&&integer(e.time,1,1_000)&&text(e.character,DUEL_RANK_LIMITS.character)&&text(e.opponent,DUEL_RANK_LIMITS.character)&&integer(e.score,1,DUEL_RANK_LIMITS.score)&&e.score===duelRankScore(e));
 }
 export function duelRankEntry(state,{uid,name,storyStage=0}){
  if(!state||state.phase!=='over'||state.winner<0)return null;

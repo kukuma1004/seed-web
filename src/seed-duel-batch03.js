@@ -61,6 +61,7 @@ export function batch03Tick(s,dt,ctx){
   if(!q.back&&(q.age>=.57||ctx.wall?.(q))){q.back=true;q.hit.clear();ctx.event(s,'bladeRecall');}
   if(q.back){const v=norm(f.x-q.x,f.y-q.y);q.dx=v.x;q.dy=v.y;q.speed=13;}
   const start={x:q.x,y:q.y};q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;
+  if(ctx.interceptShot?.(s,q,start.x,start.y,dt))continue;
   if(q.back&&segment(start,q,f)<.5){q.life=0;f.bladeCatch=.7;ctx.event(s,'bladeCatch');continue;}
   const budget=q.back?q.budget.back:q.budget.out;
   if(!q.hit.has(o.team)&&!budget.has(o.team)&&segment(start,q,o)<.55&&o.inv<=0){

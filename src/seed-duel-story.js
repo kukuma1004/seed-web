@@ -1,3 +1,4 @@
+import {DUEL_BATCH05_STORY} from './seed-duel-batch05.js';
 import {DUEL_BATCH04_STORY} from './seed-duel-batch04.js';
 import {DUEL_BATCH03_STORY} from './seed-duel-batch03.js';
 import {normalizeDuelStory,storyUnlocked} from './seed-duel-story-progress.js';
@@ -39,7 +40,7 @@ encounters.push(['blastlance','멀리서 피는 꽃','어려움','hard','내 창
 encounters.push(['frostnet','겨울이 잇는 매듭','어려움','hard','두 매듭 사이에 겨울을 걸어 둘게. 실이 팽팽해지기 전에 내 손을 멈춰도 좋고, 끝을 돌아와도 좋아. 너를 영원히 가둘 생각은 없어.','점선은 곧 켜질 냉기 실이에요. 준비 중 공격해 끊거나 양끝을 돌아가세요. 한 줄은 한 번만 맞아요. 세 줄 궁극기는 차례로 켜지고 자리를 따라오지 않아요.','얼리는 힘도 길을 남겨야 친구를 만날 수 있네. 네가 찾아낸 그 빈틈을 다음 매듭에 기억해 둘게.']);
 encounters.push(['gravitymirror','벽에서 돌아오는 마음','어려움','hard','거울은 벽에 닿으면 작은 자리를 기억해. 그 자리에 끌려도 발걸음까지 빼앗지는 않을게. 중앙에서 싸울지, 내 거울을 먼저 접을지 골라 봐.','핵은 한 번만 튕겨요. 보랏빛 고리는 피해 없이 잠시 당겨요. 회수선이 켜지기 전에 옆으로 나오고, 준비 중 공격해서 끊으세요.','끌어오는 건 붙잡기 위해서만은 아니구나. 네가 스스로 돌아왔을 때 거울이 더 밝아졌어.']);
 encounters.push(['chainburst','세 불씨의 꽃길','어려움','hard','마지막 타격은 작은 불꽃 표식을 남겨. 연결을 시작하면 불씨의 자리가 정해져. 불씨 셋이 차례로 이야기하지만, 네 뒤를 끝없이 쫓아가지는 않아. 박자를 바꿔 걸어 봐!','3타나 강공격은 상대에게 표식을 붙여요. 기술을 누르면 점선의 위치가 고정돼요. 점선을 건너거나 끝 폭발 밖으로 움직이세요. 연결과 폭발은 각각 한 번만 맞아요.','큰 불길보다 서로 이어진 작은 불씨가 길을 밝혔네. 너와 만든 길에는 다음 씨앗도 걸어올 수 있겠다.']);
-encounters.push(...DUEL_BATCH03_STORY,...DUEL_BATCH04_STORY);
+encounters.push(...DUEL_BATCH03_STORY,...DUEL_BATCH04_STORY,...DUEL_BATCH05_STORY);
 export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:i<22?Math.min(6,Math.floor(i/3)):7,enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
 // Only an actual, finished best-of-three campaign victory can open the next encounter.
 export function completeStoryMatch(raw,stage,match,now=Date.now()){

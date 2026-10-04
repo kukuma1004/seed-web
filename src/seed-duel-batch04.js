@@ -53,6 +53,7 @@ export function batch04Tick(s,dt,ctx){
   if(h.kind==='thunderArc'&&h.arm<=0&&!h.triggered){h.triggered=true;ctx.fx(s,'bolt',h.endX,h.endY,{fromX:h.x,fromY:h.y,ink:'#ffe596',life:.2,max:.2});ctx.event(s,'thunderArc');if(h.budget.hits<h.budget.max&&!ctx.blocked(h,{x:h.endX,y:h.endY})&&segment(h,{x:h.endX,y:h.endY},o)<h.r+.35&&o.inv<=0){h.budget.hits++;ctx.strike(s,f,o,h.damage,{kind:'skill',stun:.08,knock:.15,dir:norm(o.x-h.x,o.y-h.y)});}}
  }
  for(const q of s.shots){if(!['collapseSeed','thunderSpear'].includes(q.kind)||q.life<=0)continue;const old={x:q.x,y:q.y};q.life-=dt;q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const f=s.fighters[q.owner],o=s.fighters[1-q.owner];
+  if(ctx.interceptShot?.(s,q,old.x,old.y,dt))continue;
   if(q.kind==='collapseSeed'){
    if(dist(q,o)<.55&&o.shield>0){q.reflections=(q.reflections||0)+1;if(q.reflections>2){q.life=0;q.collapseSpent=true;continue;}q.owner=o.team;q.dx*=-1;q.dy*=-1;ctx.event(s,'reflect');continue;}
    if(q.life<=0||ctx.wall(q)){ctx.clampArena(q);endSeed(s,q,ctx);continue;}

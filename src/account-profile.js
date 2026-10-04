@@ -11,7 +11,9 @@ export const BADGES=Object.freeze({
 
 const ids=(value,known=null,limit=100)=>[...new Set(Array.isArray(value)?value.filter(id=>typeof id==='string'&&id.length<=48&&(!known||known.has(id))):[])].slice(0,limit);
 const title=value=>typeof value==='string'&&value.length<=48?value:'';
-const BEST_ACTS=['act1','act2','act3'];
+// Reserve all approved journey acts in the existing account record. This does
+// not release acts 4/5 or grant scores from developer inspection runs.
+const BEST_ACTS=['act1','act2','act3','act4','act5'];
 export const normalizeBestScores=value=>Object.fromEntries(BEST_ACTS.map(act=>[act,Number.isSafeInteger(value?.[act])?Math.max(0,Math.min(1e12,value[act])):0]));
 export const mergeBestScores=(a,b)=>{const left=normalizeBestScores(a),right=normalizeBestScores(b);return Object.fromEntries(BEST_ACTS.map(act=>[act,Math.max(left[act],right[act])]));};
 export function recordBestScore(profile,act,score){

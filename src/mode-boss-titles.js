@@ -1,4 +1,4 @@
-import {normalizeBossRuns} from './boss-title-ledger.js';
+import {normalizeBossRuns,validBossRunId} from './boss-title-ledger.js';
 import {readAccountProfile,writeAccountProfile} from './account-profile.js';
 
 export const MODE_BOSSES=Object.freeze({
@@ -10,7 +10,7 @@ export const MODE_BOSSES=Object.freeze({
 // preparation screen must never farm account titles from the same boss.
 export function recordModeBossVictory(storage,{mode,runId,boss,ordinal,practice=false,now=Date.now()}={}){
  const spec=Object.hasOwn(MODE_BOSSES,boss)?MODE_BOSSES[boss]:null,id=mode+':'+runId;
- if(practice||!spec||!/^(defense|survival|adventure):[\w-]{1,90}$/.test(id)||!Number.isInteger(ordinal)||ordinal<1||ordinal>1000000)return {saved:false,awards:[],counted:false};
+ if(practice||!spec||!validBossRunId(id)||!Number.isInteger(ordinal)||ordinal<1||ordinal>1000000)return {saved:false,awards:[],counted:false};
  const account=readAccountProfile(storage),runs=normalizeBossRuns(account.bossRuns),row=runs[id]||{},counted=ordinal>(row[boss]||0);
  if(counted){account[spec.counter]=Math.min(100000,account[spec.counter]+1);runs[id]={...row,[boss]:ordinal,at:now};account.bossRuns=normalizeBossRuns(runs);if(!writeAccountProfile(storage,account))return {saved:false,awards:[],counted:false};}
  // Repair missing discovery flags even on a retry after a partial local write.

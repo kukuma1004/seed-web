@@ -164,3 +164,8 @@ art-refs/
 !tools/expansion-save-lease-test.mjs
 !tools/expansion-save-host-test.mjs
 !tools/duel-catalog-coverage.mjs
+!tools/duel-ranking-rules.mjs
+!tools/duel-motion-art-fixture.json
+!tools/duel-fusion-05-test.mjs
+!tools/duel-fusion-05-art-test.mjs
+!tools/duel-fusion-05-ai.mjs
