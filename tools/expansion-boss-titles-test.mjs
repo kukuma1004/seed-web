@@ -1,3 +1,4 @@
+import {createModeBossOutbox} from '../src/mode-boss-outbox.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -16,7 +17,7 @@ import {MASTERY,MASTERY_STEP} from '../src/garden.js';
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const titleSource=readFileSync(new URL('../src/seed-title.js',import.meta.url),'utf8');
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
-function memory(){const data=new Map();return {data,fail:'',getItem:k=>data.get(k)||null,setItem(k,v){if(this.fail===k)throw Error('quota');data.set(k,v);},removeItem:k=>data.delete(k)};}
+function memory(){const data=new Map();return {get length(){return data.size;},key:i=>[...data.keys()][i]??null,data,fail:'',getItem:k=>data.get(k)||null,setItem(k,v){if(this.fail===k)throw Error('quota');data.set(k,v);},removeItem:k=>data.delete(k)};}
 function functionSlice(name,next){const start=source.indexOf(`function ${name}(`),end=source.indexOf(`function ${next}(`,start);assert(start>=0&&end>start);return source.slice(start,end);}
 function titleView(options={}){
  const node={hidden:true,textContent:'',style:{},remove(){this.removed=true;}};
@@ -89,10 +90,10 @@ assert.match(source,/critChance=piercing\?totalCritChance\(\):0/,'the pre-existi
 
 // Run main's reward bridge with actual receipts, discoveries and setters.
 function host(s=memory()){
- const tree=[],nodes=new Map(),ctx=vm.createContext({runStorage:s,recordModeBossVictory,MODE_BOSSES,readDiscoveries,recordDiscovery,developerRun:false,localInspection:false,survivalSession:null,expansionJourney:null,canSaveExpansion:()=>false,
+ const tree=[],nodes=new Map(),ctx=vm.createContext({runStorage:s,rawStorage:s,createModeBossOutbox,account:{user:()=>({uid:'test-owner'})},recordModeBossVictory,MODE_BOSSES,readDiscoveries,recordDiscovery,developerRun:false,localInspection:false,survivalSession:null,expansionJourney:null,canSaveExpansion:()=>false,
   profile:readDiscoveries(s),seedTitle:titleView(),discoveredCount:p=>p.forms.length,codexNews,setTimeout:()=>{},$:id=>{if(!nodes.has(id))nodes.set(id,{textContent:''});return nodes.get(id);},
   awardExpansionBossTree:(_m,_r,_b,_o,e)=>{tree.push(e);return true;},treeReward:e=>tree.push(e),treeWater:()=>{},cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map()});
- vm.runInContext(functionSlice('awardModeBoss','syncLaws'),ctx);
+ vm.runInContext(functionSlice('modeBossOutbox','syncLaws'),ctx);
  return {ctx,tree,s};
 }
 const h=host();

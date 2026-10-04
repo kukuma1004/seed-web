@@ -1,3 +1,4 @@
+import {createModeBossOutbox} from '../src/mode-boss-outbox.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -14,10 +15,10 @@ import {collectCloudSnapshot,mergeCloudSnapshots,applyCloudSnapshot} from '../sr
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const bridge=source.slice(source.indexOf('function awardExpansionBossTree('),source.indexOf('function remember(',source.indexOf('function awardExpansionBossTree(')));
 assert(bridge.startsWith('function awardExpansionBossTree('));
-function memory(){const data=new Map();return {data,fail:'',drop:'',readFail:'',attempts:[],getItem(k){if(this.readFail===k)throw Error('unavailable');return data.get(k)??null;},setItem(k,v){this.attempts.push([k,String(v)]);if(this.fail===k)throw Error('quota');if(this.drop!==k)data.set(k,String(v));},removeItem:k=>data.delete(k)};}
+function memory(){const data=new Map();return {get length(){return data.size;},key:i=>[...data.keys()][i]??null,data,fail:'',drop:'',readFail:'',attempts:[],getItem(k){if(this.readFail===k)throw Error('unavailable');return data.get(k)??null;},setItem(k,v){this.attempts.push([k,String(v)]);if(this.fail===k)throw Error('quota');if(this.drop!==k)data.set(k,String(v));},removeItem:k=>data.delete(k)};}
 function host(storage=memory()){
  const toast={textContent:''};
- const ctx=vm.createContext({runStorage:storage,GARDEN_KEY,readGarden,writeGarden,normalizeGarden,autoPlantSeeds,expansionBossTreeReward,recordModeBossVictory,MODE_BOSSES,readDiscoveries,profile:readDiscoveries(storage),garden:readGarden(storage),localInspection:false,developerRun:false,$:()=>toast,cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map(),treeReward:()=>{throw Error('new bosses must use the durable path');},treeWater:()=>{throw Error('new bosses must use the durable path');}});
+ const ctx=vm.createContext({runStorage:storage,rawStorage:storage,createModeBossOutbox,account:{user:()=>({uid:'test-owner'})},GARDEN_KEY,readGarden,writeGarden,normalizeGarden,autoPlantSeeds,expansionBossTreeReward,recordModeBossVictory,MODE_BOSSES,readDiscoveries,profile:readDiscoveries(storage),garden:readGarden(storage),localInspection:false,developerRun:false,$:()=>toast,cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map(),treeReward:()=>{throw Error('new bosses must use the durable path');},treeWater:()=>{throw Error('new bosses must use the durable path');}});
  ctx.remember=(kind,id)=>{const result=recordDiscovery(storage,ctx.profile,kind,id);ctx.profile=result.profile;return result;};
  vm.runInContext(bridge,ctx);return {ctx,storage,toast};
 }

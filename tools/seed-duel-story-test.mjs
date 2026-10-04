@@ -1,13 +1,18 @@
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import {DUEL_STORY_STAGES,DUEL_STORY_CHAPTERS,completeStoryMatch} from '../src/seed-duel-story.js';
 import {normalizeDuelStory,mergeDuelStory,storyUnlocked,nextStoryStage,duelStorySaveKey,readDuelStory,writeDuelStory} from '../src/seed-duel-story-progress.js';
-import {createDuel,stepDuel,duelAi,DUEL_ORDER,availableDuelCharacters} from '../src/seed-duel-rules.js';
+import {createDuel,stepDuel,duelAi,DUEL_ORDER,availableDuelCharacters,availableDuelOpponents} from '../src/seed-duel-rules.js';
 import {collectCloudSnapshot,mergeCloudSnapshots,applyCloudSnapshot,isSyncKey} from '../src/cloud-save.js';
 import {createCloudSync} from '../src/cloud-sync.js';
 const memory=()=>{const data=new Map();return {getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
 assert.equal(DUEL_STORY_CHAPTERS.length,8);assert.deepEqual(DUEL_STORY_STAGES.map(v=>v.difficulty),['easy','easy','easy','normal','normal','normal',...Array(DUEL_STORY_STAGES.length-6).fill('hard')]);
 assert.deepEqual([...DUEL_STORY_STAGES.map(v=>v.enemy)].sort(),[...DUEL_ORDER].sort());
 for(const hero of DUEL_ORDER.slice(9))assert.equal(mergeDuelStory({hero,updatedAt:500,cleared:{s1:{losses:0,at:400}}},{hero:'pierce',updatedAt:100}).hero,hero);
+assert.deepEqual(availableDuelCharacters(),['pierce']);
+assert.ok(availableDuelOpponents().includes('burst'),'one starter still has a valid practice opponent');
+assert.equal(availableDuelOpponents().includes('heart'),false);
 const oldComplete={cleared:Object.fromEntries(Array.from({length:9},(_,i)=>[`s${i+1}`,{losses:0,at:100}]))};assert.equal(nextStoryStage(oldComplete),10);assert.equal(storyUnlocked(oldComplete,10),true);assert.equal(storyUnlocked(oldComplete,11),false);
 let p=normalizeDuelStory(null);assert.equal(nextStoryStage(p),1);assert.equal(storyUnlocked(p,2),false);
 // Completed engine matches, including a lost round, advance the story. Menus,
@@ -17,13 +22,16 @@ for(const stage of DUEL_STORY_STAGES){
  match.fighters[0].hp=0;match.roundTime=0;stepDuel(match,1/60,{},{});assert.equal(match.wins[1],1);
  let limit=0;while(match.phase!=='over'&&limit++<2000){if(match.phase==='fight'){match.fighters[0].hp=match.fighters[0].maxHp;match.fighters[1].hp=0;match.roundTime=0;}stepDuel(match,1/60,{},{});}
  assert.equal(match.phase,'over');assert.equal(match.winner,0);
+ if(stage.enemy!=='pierce')assert.equal(availableDuelCharacters(p).includes(stage.enemy),false);
  p=completeStoryMatch(p,stage,match,100+stage.number);assert.ok(p);assert.equal(p.cleared[stage.id].losses,1);
+ assert.ok(availableDuelCharacters(p).includes(stage.enemy),'actual story victory opens its hero');
  assert.equal(storyUnlocked(p,stage.number),true);
  assert.equal(completeStoryMatch(p,stage,{...match,winner:1}),null);
  assert.equal(completeStoryMatch(p,stage,{...match,practice:true}),null);
  assert.equal(completeStoryMatch(p,stage,{...match,phase:'fight'}),null);
  assert.equal(completeStoryMatch(p,stage,{...match,fighters:[match.fighters[0],{char:'not-an-opponent'}]}),null);
 }
+assert.deepEqual(availableDuelCharacters(p),[...DUEL_ORDER]);
 assert.equal(nextStoryStage(p),null);assert.equal(storyUnlocked({},9),false);
 assert.equal(availableDuelCharacters({}).includes('heart'),false);
 assert.equal(availableDuelCharacters({...p,cleared:{...p.cleared,s22:undefined}}).includes('heart'),false);
@@ -40,7 +48,7 @@ const merged=mergeDuelStory(a,b);assert.equal(merged.hero,'recall');assert.equal
 assert.equal(Object.keys(normalizeDuelStory({cleared:{s1:{losses:9},['s'+(DUEL_STORY_STAGES.length+1)]:{losses:0},s2:{losses:0}}}).cleared).length,1);
 assert.equal(normalizeDuelStory({hero:'blastlance',cleared:{s22:{losses:0},s23:{losses:1}}}).hero,'blastlance');
 const pc=memory(),phone=memory();for(const d of [pc,phone])d.setItem('seed-cloud-owner-v1','same-uid');
-assert.ok(writeDuelStory(pc,a,'same-uid',300));const snap=collectCloudSnapshot(pc);applyCloudSnapshot(phone,snap);assert.deepEqual(readDuelStory(phone,'same-uid').cleared,a.cleared);
+assert.ok(writeDuelStory(pc,a,'same-uid',300));const snap=collectCloudSnapshot(pc);applyCloudSnapshot(phone,snap);assert.deepEqual(readDuelStory(phone,'same-uid').cleared,a.cleared);assert.ok(availableDuelCharacters(readDuelStory(phone,'same-uid')).includes('burst'));assert.equal(availableDuelCharacters(readDuelStory(phone,'same-uid')).includes('frost'),false);
 assert.ok(writeDuelStory(phone,b,'same-uid',400));const combined=mergeCloudSnapshots(collectCloudSnapshot(pc),collectCloudSnapshot(phone));applyCloudSnapshot(pc,combined);assert.equal(nextStoryStage(readDuelStory(pc,'same-uid')),4);
 assert.equal(readDuelStory(pc,'other-uid').cleared.s1,undefined);assert.equal(readDuelStory(pc,'guest').cleared.s1,undefined);
 assert.ok(isSyncKey(duelStorySaveKey('same-uid')));assert.equal(isSyncKey('seed-duel-story-v1-invalid'),false);
@@ -86,3 +94,17 @@ await other.start();assert.equal(readDuelStory(other.storage,'other').cleared.s1
  const start=cloud.start();await new Promise(resolve=>setImmediate(resolve));uid='next';release();const result=await start;assert.equal(result.reason,'account-changed');assert.equal(store.getItem('seed-garden-v1'),null);assert.equal(store.getItem('seed-cloud-owner-v1'),null);cloud.signOutCleanup();
 }
 console.log(`Duel story: ${DUEL_STORY_CHAPTERS.length} chapters / ${DUEL_STORY_STAGES.length} encounters, engine victories, account union, legacy-app backup, UID races, conflicts, simulated PC -> phone -> PC and idempotent saves passed.`);
+
+// Execute the view's real victory handler: failed disk/owner checks must not
+// display an earned hero or advance the in-memory campaign.
+{
+ const source=readFileSync(new URL('../src/seed-duel-view.js',import.meta.url),'utf8');
+ const start=source.indexOf('function recordStoryWin(){'),end=source.indexOf('function storyResult(){',start);
+ const stage=DUEL_STORY_STAGES[1],before=normalizeDuelStory({cleared:{s1:{losses:0,at:1}}});
+ const match=createDuel({player:'pierce',enemy:'burst'});Object.assign(match,{phase:'over',winner:0,wins:[2,0]});
+ for(const [canSave,storage] of [[()=>false,memory()],[()=>true,{setItem(){throw Error('quota');},getItem:()=>null}],[()=>true,memory()]]){
+  const ctx=vm.createContext({storyStage:stage,storySaved:false,s:match,saveNote:'',inspection:false,practice:false,refreshStory(){},completeStoryMatch,storyProgress:before,canSave,writeDuelStory,storage,owner:'same',onProgress(){},onSaveAccount:null});
+  vm.runInContext(source.slice(start,end),ctx);ctx.recordStoryWin();
+  assert.equal(availableDuelCharacters(ctx.storyProgress).includes('burst'),Boolean(storage.getItem('seed-duel-story-v1:same')));
+ }
+}

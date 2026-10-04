@@ -137,6 +137,13 @@
 .sd-paper{width:min(1040px,96vw)}
 @media(min-width:860px){.sd-cards{grid-template-columns:repeat(3,1fr)}.sd-card .sd-portrait{flex-basis:70px;width:70px;height:70px}.sd-card em{font-size:11px}}
 #seed-duel .sd-card{padding:8px}
+#seed-duel .sd-card.locked{--ink:#acb3ad!important;background:#1d2629;border-color:#61706b;cursor:not-allowed;opacity:1}
+#seed-duel .sd-card.locked .sd-portrait,#seed-duel .sd-card.locked .sd-law{filter:grayscale(1);opacity:.65}
+#seed-duel .sd-card.locked b,#seed-duel .sd-card.locked em{color:#b7c2bc}
+#seed-duel .sd-unlock-note{font-size:11px;font-weight:500;line-height:1.45;color:#e6d3a0;white-space:normal}
+#seed-duel .sd-card.locked .sd-unlock-note{color:#d2d8d1}
+#seed-duel .sd-chip.locked{background:#20292b;border-color:#5d6d66;color:#abb5b0;opacity:1;cursor:not-allowed}
+#seed-duel .sd-locked-heroes summary{min-height:44px;display:list-item;align-content:center;cursor:pointer;color:#c8d0c4;font-size:12px;padding:5px 10px;box-sizing:border-box}
 @media(max-height:620px){.sd-card em{display:none}.sd-card .sd-portrait{flex-basis:54px;width:54px;height:54px}.sd-cards{gap:6px;margin:6px 0}}
 .sd-portrait.sd-portrait-motion{background-size:520% 260%;background-position:3.6% 12.5%}
 

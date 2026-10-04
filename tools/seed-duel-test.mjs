@@ -120,7 +120,7 @@ console.log('Six duel characters: trap arming/block/dodge, lateral movement, fin
 }
 // Boss flag strengthens only the campaign opponent; unlock requires an actual valid final-stage record.
 {
- assert.equal(availableDuelCharacters().length,DUEL_ORDER.length-1);for(const progress of [{},{cleared:{s21:{losses:0}}},{cleared:{s22:{losses:2}}},{cleared:{s22:{losses:'0'}}}])assert.equal(availableDuelCharacters(progress).includes('heart'),false);
+ assert.equal(availableDuelCharacters().length,1);for(const progress of [{},{cleared:{s21:{losses:0}}},{cleared:{s22:{losses:2}}},{cleared:{s22:{losses:'0'}}}])assert.equal(availableDuelCharacters(progress).includes('heart'),false);
  for(const losses of [0,1])assert.equal(availableDuelCharacters({cleared:{s22:{losses}}}).includes('heart'),true);
  const ordinary=createDuel({player:'heart',enemy:'heart'}),boss=createDuel({player:'heart',enemy:'heart',boss:true}),other=createDuel({player:'heart',enemy:'pierce',boss:true});assert.equal(ordinary.boss,false);assert.equal(ordinary.fighters[1].maxHp,190);assert.equal(boss.fighters[1].maxHp,330);assert.equal(boss.fighters[0].maxHp,190);assert.equal(other.boss,false);
  const fixture=()=>{const s=createDuel({player:'heart',enemy:'pierce'});s.phase='fight';const [a,b]=s.fighters;a.x=15;a.y=10;b.x=18;b.y=10;b.hp=b.maxHp=999;return s;};

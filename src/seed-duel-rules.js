@@ -1,3 +1,4 @@
+import {duelCharacterUnlock} from './seed-duel-unlocks.js';
 import {DUEL_BATCH08,DUEL_BATCH08_KINDS,DUEL_BATCH08_SHOTS,batch08Melee,batch08Action,batch08Tick,batch08Ai,batch08DangerAi,batch08InterceptShot} from './seed-duel-batch08.js';
 import {DUEL_BATCH07,DUEL_BATCH07_KINDS,DUEL_BATCH07_SHOTS,batch07Melee,batch07Action,batch07Tick,batch07Ai,batch07DangerAi} from './seed-duel-batch07.js';
 import {DUEL_BATCH06,DUEL_BATCH06_KINDS,batch06Melee,batch06Action,batch06Tick,batch06Ai,batch06DangerAi,batch06InterceptShot} from './seed-duel-batch06.js';
@@ -92,7 +93,9 @@ export function duelCharacterKind(id){const c=character(id);return c?.final?'fin
 export const DUEL_INSPECTION_CHARACTERS=Object.freeze({...DUEL_CHARACTERS,...DUEL_BATCH08});
 export const DUEL_INSPECTION_ORDER=Object.freeze([...DUEL_ORDER,...Object.keys(DUEL_BATCH08)]);
 const character=id=>DUEL_INSPECTION_CHARACTERS[id];
-export function availableDuelCharacters(progress,{inspection=false}={}){return (inspection?DUEL_INSPECTION_ORDER:DUEL_ORDER).filter(id=>id!=='heart'||[0,1].includes(progress?.cleared?.s22?.losses));}
+export function availableDuelCharacters(progress,{inspection=false}={}){return (inspection?DUEL_INSPECTION_ORDER:DUEL_ORDER).filter(id=>duelCharacterUnlock(progress,id,{inspection}).unlocked);}
+// Training opponents can remain locked as playable heroes. No free match unlocks them.
+export function availableDuelOpponents(progress,{inspection=false}={}){return (inspection?DUEL_INSPECTION_ORDER:DUEL_ORDER).filter(id=>id!=='heart'||duelCharacterUnlock(progress,id,{inspection}).unlocked);}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};

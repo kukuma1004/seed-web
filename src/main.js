@@ -1,3 +1,4 @@
+import {createModeBossOutbox} from './mode-boss-outbox.js';
 import {recordModeBossVictory,MODE_BOSSES} from './mode-boss-titles.js';
 import {emptyRelics,normalizeRelics,relicOffers,relicLawStats,relicFormScale,relicEffect,equipRelic,wardenRelicDrop,relicSplitAngle,RELICS} from './relics.js';
 import {showRelicChoice} from './relic-ui.js';
@@ -836,21 +837,31 @@ function awardExpansionBossTree(mode,runId,boss,ordinal,event){
  if(!writeGarden(runStorage,next)||JSON.stringify(readGarden(runStorage).tree)!==JSON.stringify(reward.tree)){$('#toast').textContent='나무 보상 저장을 다시 확인해야 해요. 격파 기록은 남아 있어요.';return false;}
  garden=next;return true;
 }
+function modeBossOutbox(){const owner=account.user()?.uid||'guest';return createModeBossOutbox(rawStorage,owner,{currentOwner:()=>account.user()?.uid||'guest',practice:()=>Boolean(localInspection||developerRun)});}
+function retryModeBossRewards(){
+ const owner=account.user()?.uid||'guest';
+ // Wait for the signed-in account snapshot before repairing local receipts.
+ try{if(localInspection||developerRun||owner!=='guest'&&rawStorage?.getItem('seed-cloud-owner-v1')!==owner)return;}catch{return;}
+ modeBossOutbox().retry(e=>awardModeBoss(e.mode,e.runId,e.boss,e.ordinal));
+}
 function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  practice=Boolean(practice||localInspection||developerRun);
- const result=recordModeBossVictory(runStorage,{mode,runId,boss,ordinal,practice});
  if(practice)return true;
+ const outbox=modeBossOutbox(),receipt={mode,runId,boss,ordinal};
+ if(!outbox.enqueue(receipt)){$('#toast').textContent='보스 격파 기록을 보관하지 못했어요 · 지급을 다시 시도해요';return false;}
+ const result=recordModeBossVictory(runStorage,{mode,runId,boss,ordinal,practice});
  if(!result.saved){$('#toast').textContent='보스 칭호 저장을 다시 시도하고 있어요';return false;}
  // Read current discoveries to preserve data merged from another device.
  profile=readDiscoveries(runStorage);let saved=true;
  for(const id of result.awards){const reward=remember('bosses',id,true);saved=reward.saved&&saved;}
+ const persisted=readDiscoveries(runStorage);saved=result.awards.every(id=>persisted.bosses.includes(id))&&saved;
  if(saved){
   const act=MODE_BOSSES[boss].act,event={type:'boss',boss,act,final:true,wins:result.wins,law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null};
   if(act>=4){if(!awardExpansionBossTree(mode,runId,boss,ordinal,event))return false;}
   else if(result.counted){treeReward(event);treeWater(1);}
   void cloud.flush().catch(()=>{});
  }
- return saved;
+ return saved&&outbox.ack(receipt);
 }
 function remember(kind,id,sharedBoss=false){if(expansionJourney&&!canSaveExpansion()||developerRun||survivalSession&&!(sharedBoss&&kind==='bosses'))return {profile,saved:true};const before=discoveredCount(profile);const result=recordDiscovery(runStorage,profile,kind,id);profile=result.profile;if(kind==='bosses'&&id==='austin')seedTitle.setUnlocked(true);if(kind==='bosses'&&id==='austinclear')seedTitle.setAustinClearUnlocked(true);if(kind==='bosses'&&id==='austinveteran')seedTitle.setAustinVeteranUnlocked(true);if(kind==='bosses'&&id==='alwaysclear')seedTitle.setAlwaysClearUnlocked(true);if(kind==='bosses'&&id==='alwaysbeginner')seedTitle.setAlwaysBeginnerUnlocked(true);if(kind==='bosses'&&id==='alwaysveteran')seedTitle.setAlwaysVeteranUnlocked(true);if(kind==='bosses'&&id==='tempestcarrier')seedTitle.setJohanUnlocked(true);if(kind==='bosses'&&id==='johanclear')seedTitle.setJohanClearUnlocked(true);if(kind==='bosses'&&id==='johanveteran')seedTitle.setJohanVeteranUnlocked(true);if(kind==='bosses'&&id==='crosswindKeeper')seedTitle.setCrosswindUnlocked(true);if(kind==='bosses'&&id==='crosswindclear')seedTitle.setCrosswindClearUnlocked(true);if(kind==='bosses'&&id==='crosswindveteran')seedTitle.setCrosswindVeteranUnlocked(true);if(kind==='bosses'&&id==='crystalGardener')seedTitle.setCrystalUnlocked(true);if(kind==='bosses'&&id==='crystalclear')seedTitle.setCrystalClearUnlocked(true);if(kind==='bosses'&&id==='crystalveteran')seedTitle.setCrystalVeteranUnlocked(true);seedTitle.setDiscovered(discoveredCount(profile));const news=codexNews(before,discoveredCount(profile));if(news)setTimeout(()=>{$('#toast').textContent=news;},1800);if(!result.saved)$('#toast').textContent='발견은 이번 접속에만 남습니다 · 브라우저 저장 불가';return result;}
 function syncLaws(){chosen.clear();mutated.clear();for(const [id,v] of levels){chosen.add(id);if(v>=2)mutated.add(id);}
@@ -2253,6 +2264,7 @@ async function showSeedDefense({actCount=3,bossPreview=null}={}){
  }
 }
 function showDungeon(){
+ retryModeBossRewards();
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-adventure-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>직접 베고 던지는 RPG · 시범 모험</small></span></button><button id="open-duel" class="dungeon-mode mode-duel"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-duel-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 대전</strong><small>막기·반격·강공격 수 싸움 · 시험 1:1</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>세 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-puzzle" class="dungeon-mode mode-puzzle"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-puzzle-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 맞추기</strong><small>같은 법칙 셋을 한 줄로 · 3개 맞추기 퍼즐</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
