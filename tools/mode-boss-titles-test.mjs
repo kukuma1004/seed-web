@@ -31,7 +31,7 @@ r=recordModeBossVictory(store,{...event,mode:'survival'});assert.equal(r.wins,10
 r=recordModeBossVictory(store,{...event,ordinal:2});assert(!r.awards.includes('austinclear'));
 r=recordModeBossVictory(store,{...event,ordinal:3});assert(r.awards.includes('austinclear'));
 for(const boss of ['alwaysbeginner','tempestcarrier']){for(let n=1;n<=10;n++)r=recordModeBossVictory(store,{...event,boss,ordinal:n});assert.equal(r.awards.length,3);assert.equal(r.wins,10);}
-const before=JSON.stringify(readAccountProfile(store));for(const extra of [{practice:true},{mode:'journey'},{ordinal:0},{runId:'__proto__:no'},{boss:'warden'}])assert(!recordModeBossVictory(store,{...event,...extra}).saved);assert.equal(JSON.stringify(readAccountProfile(store)),before);
+const before=JSON.stringify(readAccountProfile(store));for(const extra of [{practice:true},{mode:'unknown'},{ordinal:0},{runId:'__proto__:no'},{boss:'warden'}])assert(!recordModeBossVictory(store,{...event,...extra}).saved);assert.equal(JSON.stringify(readAccountProfile(store)),before);
 const merged=mergeBossRuns({'survival:run':{at:10,austin:3}},{'survival:run':{at:20,austin:1,alwaysbeginner:2}});assert.equal(merged['survival:run'].austin,3);assert.equal(merged['survival:run'].alwaysbeginner,2);
 // Adventure uses the same account receipt path. Reloading or merging an older
 // checkpoint must retain its high-water mark, not award the same boss again.

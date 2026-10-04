@@ -1,4 +1,6 @@
 import {MAX_RUN_CYCLE} from './journey.js';
+import {validJourneyRunId} from './journey-run-id.js';
+import {validJourneyBossReceipts} from './journey-boss-receipts.js';
 import {validRelics} from './relics.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS,isFormEligible} from './forms.js';
@@ -20,6 +22,8 @@ export const REGION_NAMES={garden:'깊은 정원',ruins:'붉은 회랑',stadium:
 const validLevels=s=>s?.levels===undefined||(s.levels&&typeof s.levels==='object'&&!Array.isArray(s.levels)&&Object.entries(s.levels).every(([id,v])=>Array.isArray(s.rules)&&s.rules.includes(id)&&Number.isInteger(v)&&v>=1&&v<=999));
 const validCount=v=>v===undefined||(Number.isInteger(v)&&v>=0&&v<100000);
 export function validCheckpoint(s){
+ if(s?.runId!==undefined&&!validJourneyRunId(s.runId))return false;
+ if(s?.pendingBossTitles!==undefined&&(!validJourneyRunId(s.runId)||!validJourneyBossReceipts(s.pendingBossTitles)||typeof s.bossReceiptOwner!=='string'||!s.bossReceiptOwner.length||s.bossReceiptOwner.length>128))return false;
  if(!validLevels(s)||!validCount(s?.choicesTaken)||!validCount(s?.choiceKills)||!validCount(s?.banked))return false;
  if(s?.forms!==undefined){
   if(!s.forms||typeof s.forms!=='object'||Array.isArray(s.forms))return false;
@@ -74,7 +78,7 @@ export function readCheckpoint(storage){try{const s=withoutHidden(JSON.parse(sto
 // savedAt(2026-09-22): 방 입구 저장마다 저장한 시각을 붙인다. 클라우드 병합이 두 기기 중 '더 최근에 저장한 판'을 고르게 하려는 것.
 // 예전에는 저장 전체를 한 기기 것으로 통째로 골라서, 올리지 못한 작은 변경이 남은 다른 기기의 옛 판이 최신 판을 덮었다
 // (사용자 신고: 저장하고 나갔는데 예전으로 돌아옴 · 저장하고 나가기가 안 됨).
-export function writeCheckpoint(storage,s,now=Date.now()){if(!validCheckpoint(s))return false;try{storage.setItem(SAVE_KEY,JSON.stringify({...s,savedAt:now}));return true;}catch{return false;}}
+export function writeCheckpoint(storage,s,now=Date.now()){if(!validCheckpoint(s))return false;try{const bytes=JSON.stringify({...s,savedAt:now});storage.setItem(SAVE_KEY,bytes);return storage.getItem(SAVE_KEY)===bytes;}catch{return false;}}
 // 판이 끝나면 저장을 지우는 대신 '지운 시각'만 남긴다(게임은 저장 없음으로 읽는다). 끝난 옛 판이 다른 기기에서 되살아나지 않게 한다.
 export const checkpointTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const isCheckpointTombstone=v=>Boolean(v&&v.cleared===true&&Number.isFinite(v.savedAt));

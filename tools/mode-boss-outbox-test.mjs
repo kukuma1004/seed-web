@@ -23,7 +23,6 @@ assert.equal([...data.keys()].filter(k=>k.startsWith(modeBossOutboxKey('A'))).le
 // All three linked modes use the same durable route for all five real bosses.
 for(const mode of ['defense','survival','journey'])for(const boss of ['austin','alwaysbeginner','tempestcarrier','crosswindKeeper','crystalGardener']){
  const event={mode,runId:'linked-five',boss,ordinal:1};
- if(mode==='journey'&&!['crosswindKeeper','crystalGardener'].includes(boss))continue;
  assert(box().enqueue(event));assert.equal(box().retry(()=>false),false);
  assert(createModeBossOutbox(storage,'A').retry(e=>recordModeBossVictory(storage,e).saved));
 }
@@ -32,14 +31,14 @@ const left=box(),right=box();assert(left.enqueue(a));assert(right.enqueue(b));as
 assert(right.retry(e=>(calls.push(e),true)));assert.deepEqual(calls,[b]);
 assert(box().enqueue(a));owner='B';assert.equal(box().retry(()=>{throw Error('wrong account');}),false);assert.equal(box().ack(a),false);assert.equal(box().enqueue(b),false);owner='A';
 practice=true;assert.equal(box().retry(()=>true),false);assert.equal(box().ack(a),false);practice=false;assert(box().ack(a));
-for(const e of [{...a,ordinal:0},{...a,mode:'journey',boss:'austin'},{...a,runId:'../../bad'},{...a,inspection:true}])assert.equal(box().enqueue(e),false);
+for(const e of [{...a,ordinal:0},{...a,mode:'unknown',boss:'austin'},{...a,runId:'../../bad'},{...a,inspection:true}])assert.equal(box().enqueue(e),false);
 const broken=modeBossOutboxKey('A')+':unrecognized';storage.setItem(broken,'{broken');const before=storage.getItem(broken);assert.equal(box().retry(()=>true),false);assert.equal(storage.getItem(broken),before);storage.removeItem(broken);
 assert(box().enqueue(a));assert.equal(box().retry(()=>{owner='B';return true;}),false);owner='A';assert(box().retry(()=>true),'UID switch before ack preserves the receipt');
 const denied=createModeBossOutbox({...storage,setItem(){throw Error('quota');}},'A');assert.equal(denied.enqueue(a),false);
 // Execute the actual main delivery bridge with a failure between profile and discovery.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function modeBossOutbox(){'),end=main.indexOf('function remember(',start);
 let discoveryOk=false,flushes=0;const toast={textContent:''};
-const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,readAccountProfile,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
+const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,readAccountProfile,currentJourneyOwner:null,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
 vm.runInContext(main.slice(start,end),ctx);
 assert.equal(ctx.awardModeBoss('defense','new-run','crosswindKeeper',1),false);
 assert.equal(readAccountProfile(storage).crosswindWins,5);storage.setItem('seed-cloud-owner-v1','A');ctx.remember=()=>({saved:true});ctx.retryModeBossRewards();assert.equal(flushes,0,'a skipped or silently dropped discovery cannot acknowledge the receipt');discoveryOk=true;ctx.retryModeBossRewards();

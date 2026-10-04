@@ -6,11 +6,12 @@ import {LAWS} from './laws.js';
 // cross-device counter merge or a server acknowledgment. One key per event
 // avoids a shared-array overwrite when two tabs earn different bosses.
 export const modeBossOutboxKey=owner=>'seed-mode-boss-outbox-v1:'+encodeURIComponent(owner);
-const valid=e=>e&&Object.keys(e).every(k=>['mode','runId','boss','ordinal'].includes(k))&&validBossRunId(e.mode+':'+e.runId)&&Object.hasOwn(MODE_BOSSES,e.boss)&&!(e.mode==='journey'&&MODE_BOSSES[e.boss].act<4)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000;
+const valid=e=>e&&Object.keys(e).every(k=>['mode','runId','boss','ordinal'].includes(k))&&validBossRunId(e.mode+':'+e.runId)&&Object.hasOwn(MODE_BOSSES,e.boss)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000;
 const identity=e=>`${e.mode}:${e.runId}:${e.boss}:${e.ordinal}`;
 const validTreeContext=v=>v&&typeof v==='object'&&!Array.isArray(v)&&Object.keys(v).length===2&&Object.keys(v).every(k=>['wins','law'].includes(k))&&Number.isSafeInteger(v.wins)&&v.wins>=0&&v.wins<=100000&&(v.law===null||Object.hasOwn(LAWS,v.law));
-export function createModeBossOutbox(storage,owner,{currentOwner=()=>owner,practice=()=>false}={}){
- const key=modeBossOutboxKey(owner);
+export function createModeBossOutbox(storage,owner,{currentOwner=()=>owner,practice=()=>false,channel='shared'}={}){
+ if(!['shared','journey'].includes(channel))throw Error('invalid-boss-channel');
+ const key=channel==='journey'?'seed-journey-boss-outbox-v1:'+encodeURIComponent(owner):modeBossOutboxKey(owner);
  const allowed=()=>{try{return typeof owner==='string'&&owner.length>0&&owner.length<=128&&currentOwner()===owner&&practice()===false;}catch{return false;}};
  const prefix=key+':';
  const eventKey=e=>prefix+encodeURIComponent(identity(e));

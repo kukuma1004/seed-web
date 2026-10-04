@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {journeyRunId} from '../src/journey-run-id.js';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
@@ -32,7 +33,7 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
  data.set('seed-run-checkpoint-v1','original act1 bytes');data.set('seed-account-profile-v1','original account bytes');data.set('carry','original carry');
  const $=sel=>{if(!nodes.has(sel))nodes.set(sel,{textContent:'',innerHTML:'',hidden:false,disabled:false,classList:{remove(){},add(){},toggle(){}}});return nodes.get(sel);};
  const fetchImpl=async(url,o)=>{if(fetchFail)throw Error('offline');assert.match(url,/seedExpansionSaves\/owner-A\/(crosswind|crystalGorge)\.json/);if(o.method==='PUT'){stats.puts++;if(o.headers['if-match']!==String(etag))return {ok:false,status:412};remote=JSON.parse(o.body);etag++;return {ok:true,status:200};}stats.gets++;const value=clone(remote),tag=String(etag);if(getHook){const hook=getHook;getHook=null;await hook();}return {ok:true,status:200,json:async()=>value,headers:{get:()=>tag}};};
- const c=vm.createContext({__rules:acts,__view:{},console,setTimeout,clearTimeout,Promise,localInspection:inspection,expansionLaunch:0,expansionApi:acts,expansionOwner:()=>owner,
+ const c=vm.createContext({protectJourneyBossReceipts:()=>true,account:{user:()=>({uid:'owner-A'})},journeyRunId,currentJourneyOwner:null,currentJourneyRunId:null,pendingJourneyBossTitles:[],__rules:acts,__view:{},console,setTimeout,clearTimeout,Promise,localInspection:inspection,expansionLaunch:0,expansionApi:acts,expansionOwner:()=>owner,
   expansionSaveLease:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionPendingBossCheckpoint:null,
   rawStorage:storage,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountExitCheckpoint,createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS,awardModeBoss:()=>true,
   createExpansionAccountSync:opts=>createExpansionAccountSync({...opts,fetchImpl}),account:{user:()=>({uid:owner,isAnonymous:anonymous}),tokenSession:async()=>({uid:owner,idToken:'token'})},FIREBASE_APP:{databaseURL:'https://example.invalid'},
@@ -57,7 +58,7 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
 }
 // Main's newly connected result text distinguishes local five-circuit wins
 // from legacy three-circuit speed and does not claim five-win cloud merging.
-{const c=vm.createContext({survivalClock:n=>String(n)});vm.runInContext(source.slice(source.indexOf('function survivalClearRecordLabel('),source.indexOf('const packSurvivalActor=')),c);const r={wins:7,fastestClear:600,fiveWins:1,fastestFiveClear:960};assert.equal(c.survivalClearRecordLabel(r,true),'다섯 막 완주 1회 · 최단 다섯 막 완주 960');assert.equal(c.survivalClearRecordLabel(r),'세 막 완주 7회 · 최단 세 막 완주 600');assert.equal(c.survivalClearRecordLabel({wins:7,fastestClear:600},true),'다섯 막 완주 0회');assert.match(c.survivalLocalClearHistory(r),/이 기기 다섯 막/);}
+{const c=vm.createContext({protectJourneyBossReceipts:()=>true,account:{user:()=>({uid:'owner-A'})},journeyRunId,currentJourneyOwner:null,currentJourneyRunId:null,pendingJourneyBossTitles:[],survivalClock:n=>String(n)});vm.runInContext(source.slice(source.indexOf('function survivalClearRecordLabel('),source.indexOf('const packSurvivalActor=')),c);const r={wins:7,fastestClear:600,fiveWins:1,fastestFiveClear:960};assert.equal(c.survivalClearRecordLabel(r,true),'다섯 막 완주 1회 · 최단 다섯 막 완주 960');assert.equal(c.survivalClearRecordLabel(r),'세 막 완주 7회 · 최단 세 막 완주 600');assert.equal(c.survivalClearRecordLabel({wins:7,fastestClear:600},true),'다섯 막 완주 0회');assert.match(c.survivalLocalClearHistory(r),/이 기기 다섯 막/);}
 const tick=()=>new Promise(r=>setImmediate(r));
 // The original ordinary journey still clears its own entry and consumes its
 // own carry exactly once; only the explicit expansion reset bypasses them.

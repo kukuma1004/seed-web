@@ -38,6 +38,7 @@ tools/*
 !tools/support-test.mjs
 !tools/themes-test.mjs
 !tools/run-save-test.mjs
+!tools/journey-boss-receipt-test.mjs
 !tools/forms-test.mjs
 !tools/arena-test.mjs
 !tools/form-combat-test.mjs
