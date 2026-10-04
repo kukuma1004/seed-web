@@ -143,6 +143,7 @@ art-refs/
 !tools/expansion-run-save-test.mjs
 !tools/five-act-modes-test.mjs
 !tools/five-act-host-test.mjs
+!tools/expansion-environment-art-test.mjs
 !tools/duel-gravitymirror-chainburst-test.mjs
 !tools/duel-fusion-02-test.mjs
 !tools/duel-fusion-02-art-test.mjs

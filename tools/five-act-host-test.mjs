@@ -17,7 +17,7 @@ const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:'',hidden:tru
 for(const act of [3,4]){
  const session=createSurvivalSession(413,{actCount:5});session.act=act;
  const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionApi,ACT3_ART,constrainToArena,
-  survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
+  survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
   camera:new THREE.PerspectiveCamera(),arena:SURVIVAL.arena,player:new THREE.Object3D(),enemies:[],enemyShots:[],obstacles:[],traps:[],clockFloor:null,shadowClock:0,SHADOW_REFRESH:1,
   arenaGroup:new THREE.Group(),roomCover:new THREE.Group(),trapGroup:new THREE.Group(),hiddenGarden:[],mirrorPanelsActive:false,
   stadium:{setActive(){}},skyway:{setActive(){}},mirrorPanels:{setActive(){}},survivalArt:{setReadability(){},setAct(){},setActive(){}},survivalComparisonEnabled:false,survivalReadability:true,
@@ -45,5 +45,5 @@ for(const act of [3,4]){
 }
 const camera=createCameraFeel();let framed;for(let i=0;i<240;i++)framed=camera.follow(1/60,{playerX:5,followX:1,biasX:3});assert(Math.abs(framed.x-8)<.12);assert.equal(camera.follow(0,{biasX:Infinity}).zoom,1);
 assert(source.includes("actCount:localInspection&&actCount===5?5:3"),'unvalidated defense expansion stays local');
-assert(source.includes("if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets()"));
+assert(source.includes("if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets("));
 console.log('Five-act host options remain inspection-only; horizontal look-ahead is camera-only. No browser, GPU, account or device claim.');

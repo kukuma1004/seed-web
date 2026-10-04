@@ -1,0 +1,102 @@
+{
+  "version": 1,
+  "image": "crystal-cover-v1.webp",
+  "size": [
+    1536,
+    512
+  ],
+  "grid": [
+    3,
+    1
+  ],
+  "frames": [
+    {
+      "name": "intact",
+      "rect": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.0,
+        0,
+        0.3333333333333333,
+        1
+      ],
+      "anchor": [
+        0.5,
+        0.88
+      ],
+      "alphaBoundsThreshold8": [
+        35,
+        76,
+        485,
+        451
+      ]
+    },
+    {
+      "name": "damaged",
+      "rect": [
+        512,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.3333333333333333,
+        0,
+        0.3333333333333333,
+        1
+      ],
+      "anchor": [
+        0.5,
+        0.88
+      ],
+      "alphaBoundsThreshold8": [
+        36,
+        76,
+        486,
+        451
+      ]
+    },
+    {
+      "name": "broken",
+      "rect": [
+        1024,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.6666666666666666,
+        0,
+        0.3333333333333333,
+        1
+      ],
+      "anchor": [
+        0.5,
+        0.88
+      ],
+      "alphaBoundsThreshold8": [
+        35,
+        212,
+        483,
+        451
+      ]
+    }
+  ],
+  "alphaThresholdForBounds": 8,
+  "worldFootprint": {
+    "min": 1.2,
+    "max": 1.6
+  },
+  "notes": [
+    "Baseline is bottom contact at normalized Y 0.88, top-origin image coordinates.",
+    "Use identical quad scale and anchor for all frames; do not recenter to content bounds.",
+    "UV rectangles have top-origin Y; adapt Y convention to renderer rather than flipping twice.",
+    "HP state thresholds are caller-owned. Broken visual does not restore physical collision.",
+    "Tiny alpha values below 8 can exist in transparent margins; source alpha is preserved.",
+    "Candidate reviewed as image only; actual runtime screenshots and mobile GPU QA pending."
+  ]
+}
