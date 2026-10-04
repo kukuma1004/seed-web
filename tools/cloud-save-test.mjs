@@ -482,4 +482,25 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  assert.ok(SYNC_KEYS.includes(ADVENTURE_SAVE_KEY));
 }
 
+// New boss records survive an older three-act payload in either merge direction.
+// This checks current-client preservation, not old-client direct writes or
+// independent simultaneous win-counter addition (which still uses max).
+{
+ const account={austinWins:11,crosswindWins:10,crystalWins:3,bossRuns:{'survival:five-act-run':{at:2000,austin:2,crosswindKeeper:2,crystalGardener:1}},bestScores:{act4:400,act5:500}};
+ const discoveries={version:1,forms:[],bosses:['crosswindKeeper','crosswindveteran','crystalGardener','crystalclear'],records:{}};
+ const pc=memory({[ACCOUNT_PROFILE_KEY]:JSON.stringify(account),[DISCOVERIES_KEY]:JSON.stringify(discoveries)});
+ const old=normalizeCloudSnapshot({account:{austinWins:12,bossRuns:{'survival:old-run':{at:3000,austin:1}}}});
+ for(const prefer of ['local','remote']){
+  const merged=mergeCloudSnapshots(collectCloudSnapshot(pc),old,{prefer});
+  assert.equal(merged.account.austinWins,12);assert.equal(merged.account.crosswindWins,10);assert.equal(merged.account.crystalWins,3);
+  assert.equal(merged.account.bossRuns['survival:five-act-run'].crosswindKeeper,2);assert.equal(merged.account.bossRuns['survival:five-act-run'].crystalGardener,1);
+  assert.deepEqual(merged.discoveries.bosses,[...discoveries.bosses]);
+  const phone=memory();applyCloudSnapshot(phone,merged);const back=collectCloudSnapshot(phone);
+  assert.deepEqual(back.account,merged.account);assert.deepEqual(back.discoveries.bosses,discoveries.bosses);
+ }
+ assert.equal(normalizeAccountProfile({crosswindWins:-1,crystalWins:'10'}).crosswindWins,0);
+ assert.equal(normalizeAccountProfile({crosswindWins:1e9,crystalWins:'10'}).crosswindWins,100000);
+ assert.equal(normalizeAccountProfile({crystalWins:'10'}).crystalWins,0);
+}
+
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');

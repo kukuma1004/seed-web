@@ -2,9 +2,11 @@ import {normalizeBossRuns,validBossRunId} from './boss-title-ledger.js';
 import {readAccountProfile,writeAccountProfile} from './account-profile.js';
 
 export const MODE_BOSSES=Object.freeze({
- austin:{counter:'austinWins',veteran:'austinveteran',clear:'austinclear'},
- alwaysbeginner:{counter:'alwaysWins',veteran:'alwaysveteran',clear:'alwaysclear'},
- tempestcarrier:{counter:'johanWins',veteran:'johanveteran',clear:'johanclear'}
+ austin:{act:1,counter:'austinWins',veteran:'austinveteran',clear:'austinclear'},
+ alwaysbeginner:{act:2,counter:'alwaysWins',veteran:'alwaysveteran',clear:'alwaysclear'},
+ tempestcarrier:{act:3,counter:'johanWins',veteran:'johanveteran',clear:'johanclear'},
+ crosswindKeeper:{act:4,counter:'crosswindWins',veteran:'crosswindveteran',clear:'crosswindclear'},
+ crystalGardener:{act:5,counter:'crystalWins',veteran:'crystalveteran',clear:'crystalclear'}
 });
 // Each saved run retains a per-boss high-water mark. Restoring an earlier
 // preparation screen must never farm account titles from the same boss.
