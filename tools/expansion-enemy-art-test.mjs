@@ -21,7 +21,7 @@ for(const size of [1.95,4.1,4.4])for(const impact of [0,.5,1])for(const roll of 
 }
 const main=fs.readFileSync('src/main.js','utf8'),start=main.indexOf('function spawnExpansionActor('),end=main.indexOf('\nfunction expansionBolt(',start);
 for(const act of ['crosswind','crystalGorge']){
- const attached=[],context=vm.createContext({THREE,scene:new THREE.Scene(),expansionJourney:journeyRules.createExpansionJourney(act),expansionApi:journeyRules,camera:{},release(){},expansionEnemyArt,enemies:[],attachActorArt:(e,c,r,art)=>attached.push({e,art})});
+ const attached=[],context=vm.createContext({THREE,expansionChannel:'inspection',scene:new THREE.Scene(),expansionJourney:journeyRules.createExpansionJourney(act),expansionApi:journeyRules,camera:{},release(){},expansionEnemyArt,enemies:[],attachActorArt:(e,c,r,art)=>attached.push({e,art})});
  vm.runInContext(main.slice(start,end),context);
  for(const type of ['scout','lobber','charger']){
   const e=context.spawnExpansionActor({type,hp:100,position:{x:5,z:1},cooldown:2,windup:.8,speed:1,shots:1,bulletSpeed:5,damage:9});assert.equal(e.hp,100);assert.equal(attached.at(-1).art.file,EXPANSION_ENEMY_ART[act].file);e.expansionThreat.phase='charge';assert.equal(attached.at(-1).art.atlasFrame(e),expansionEnemyFrame(type,true));

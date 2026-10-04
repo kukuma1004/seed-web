@@ -13,7 +13,7 @@ function fixture({locks=null,prepare=()=>Promise.resolve()}={}){
  const data=new Map(),dom={textContent:''},storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};let owner='owner-A';
  const c=vm.createContext({__rules:rules,__view:{},localInspection:true,expansionLaunch:0,expansionApi:rules,expansionOwner:()=>owner,expansionSaveLease:null,rawStorage:storage,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,
   acquireExpansionSaveLease:(act,id)=>acquireExpansionSaveLease(act,id,{locks}),expansionCrystalTexture:{},expansionJourneyView:{},scene:{},stone:{},prepareExpansionEnvironment:prepare,prepareExpansionCover:()=>Promise.resolve(),
-  expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:null,
+  expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionPendingBossCheckpoint:null,mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:null,
   restart:r=>{c.restarts++;c.restored=r;},restarts:0,enemies:[],fallen:[],player:{position:new THREE.Vector3()},releaseEnemy(){},wave(){},$:()=>dom,stage:0,mode:'ready',paused:false,hp:65,inventory:run.inventory,rerollUsed:false,
  });
  vm.runInContext(launcher,c);

@@ -129,6 +129,6 @@ writeAccountProfile(profileContext.runStorage,{crosswindWins:10,crystalWins:10})
 const shown=profileContext.permanentStatsProfile(titleState(earned));assert.match(shown,/칭호 공격력 3%/);assert.match(shown,/칭호 치명타 3%p/);assert.match(shown,/횡풍의 수호자 10\/10/);assert.match(shown,/수정의 정원사 10\/10/);
 assert.equal(EXPANSION_ACTS.crosswind.released,false);assert.equal(EXPANSION_ACTS.crystalGorge.released,false);
 assert.match(source,/실험 기록은 계정·칭호·랭킹에 반영하지 않습니다/);
-assert.match(source,/if\(e\.expansionActor\)\{score\+=20;releaseEnemy\(e\);return;\}/,'journey prototype bypass remains');
+assert.match(source,/e\.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory\(\)/,'public boss requires durable campaign credit; actual retry path is covered by public-campaign test');
 assert.match(source,/localInspection&&actCount===5\?true:awardModeBoss/,'five-act defense prototype remains practice');
 console.log('4/5 candidate titles: actual receipt/discovery/DOM/main bridge, additive buffs/cap, failure/FIFO/account separation and unreleased gates passed (VM/helper validation only)');

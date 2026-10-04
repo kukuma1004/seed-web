@@ -1,3 +1,4 @@
+import {createExpansionPublicCampaign,validExpansionPublicCampaign,validExpansionCampaignTransition,ackExpansionPublicTitle,expansionCampaignCanReplace} from './expansion-public-campaign.js';
 import {EXPANSION_ACTS} from './act-expansion.js';
 import {EXPANSION_SAVE_KEY,createExpansionEntry,validExpansionEntry,expansionExitCheckpoint} from './expansion-run-save.js';
 
@@ -21,10 +22,12 @@ const validEnd=e=>e?.version===1&&e.ended===true&&typeof e.id==='string'&&e.id.l
 export function validExpansionAccountSave(value,{owner,act}={}){
  try{
   if(!value||value.version!==1||value.channel!=='public-journey'||value.eligibility!=='released'||!ownerValid(value.ownerUid)||!actValid(value.act))return false;
-  if(Object.keys(value).some(k=>!['version','channel','eligibility','ownerUid','act','entry'].includes(k)))return false;
+  if(Object.keys(value).some(k=>!['version','channel','eligibility','ownerUid','act','entry','campaign'].includes(k)))return false;
   if(owner!==undefined&&value.ownerUid!==owner||act!==undefined&&value.act!==act)return false;
+  if(value.campaign!==undefined&&!validExpansionPublicCampaign(value.campaign,value.act))return false;
   const e=value.entry;
   if(!validEnd(e)&&(!validExpansionEntry(e)||e.ended!==undefined||e.journey.act!==value.act))return false;
+  if(value.campaign&&!e.ended&&(e.run.cycle!==value.campaign.lap||value.campaign.bossCleared&&e.journey.phase!=='boss'))return false;
   if(!Number.isSafeInteger(e.revision)||e.revision<0||e.savedAt!==undefined&&(!Number.isSafeInteger(e.savedAt)||e.savedAt<=0))return false;
   return JSON.stringify(value).length<=EXPANSION_ACCOUNT_SAVE_LIMIT;
  }catch{return false;}
@@ -32,7 +35,7 @@ export function validExpansionAccountSave(value,{owner,act}={}){
 export function createExpansionAccountEntry(journey,run,position,{owner,currentOwner,inspection=false,practice=false,acts=EXPANSION_ACTS,id}={}){
  if(!expansionAccountEligible(journey?.act,owner,{currentOwner,inspection,practice,acts}))return null;
  const entry=createExpansionEntry(journey,run,position,id===undefined?{}:{id});
- const value={version:1,channel:'public-journey',eligibility:'released',ownerUid:owner,act:journey.act,entry};
+ const value={version:1,channel:'public-journey',eligibility:'released',ownerUid:owner,act:journey.act,entry,campaign:createExpansionPublicCampaign(journey.act)};
  return validExpansionAccountSave(value)?value:null;
 }
 export function expansionAccountExitCheckpoint(value,losses){
@@ -51,16 +54,19 @@ export function createExpansionAccountSaveStore(storage,act,owner,{context=()=>(
  const raw=()=>{try{return storage.getItem(key);}catch{return null;}};
  const parse=bytes=>{try{return JSON.parse(bytes);}catch{return null;}};
  const recognized=value=>committed(value)&&validExpansionAccountSave(value,{owner,act});
- const mutate=(value,{fresh=false,expected=null}={})=>{
+ const mutate=(value,{fresh=false,expected=null,ack=false}={})=>{
   if(!eligible())return {ok:false,reason:'ineligible'};
   if(!locked())return {ok:false,reason:'lease'};
-  if(!validExpansionAccountSave(value,{owner,act})||value.entry.ended)return {ok:false,reason:'invalid'};
+  if(!validExpansionAccountSave(value,{owner,act})||value.entry.ended&&!ack)return {ok:false,reason:'invalid'};
   try{
    const original=storage.getItem(key),before=parse(original);
    if(original!==null&&!recognized(before))return {ok:false,reason:'unrecognized'};
    if(fresh){
+    if(before?.campaign?.pendingBossTitles.length)return {ok:false,reason:'pending'};
     if(value.entry.revision!==0||value.entry.savedAt!==undefined||before&&(!recognized(expected)||stamp(before)!==stamp(expected)||value.entry.id===before.entry.id))return {ok:false,reason:'conflict'};
-   }else if(!before||before.entry.ended||stamp(before)!==stamp(value))return {ok:false,reason:'conflict'};
+   }else if(!before||before.entry.ended&&!ack||stamp(before)!==stamp(value))return {ok:false,reason:'conflict'};
+   if(!fresh&&(before.campaign||value.campaign)&&!validExpansionCampaignTransition(before.campaign,value.campaign,act,{ack}))return {ok:false,reason:'campaign'};
+   if(ack&&(JSON.stringify(before.entry)!==JSON.stringify(value.entry)||!before.campaign?.pendingBossTitles.length))return {ok:false,reason:'invalid'};
    const time=now();if(!Number.isSafeInteger(time)||time<=0)return {ok:false,reason:'invalid'};
    const next={...copy(value),entry:{...copy(value.entry),revision:fresh?1:before.entry.revision+1,savedAt:time}};
    if(!validExpansionAccountSave(next,{owner,act}))return {ok:false,reason:'invalid'};
@@ -74,6 +80,7 @@ export function createExpansionAccountSaveStore(storage,act,owner,{context=()=>(
  const read=()=>{if(!eligible())return null;const value=parse(raw());return eligible()&&recognized(value)?copy(value):null;};
  return {key,lockKey,read,collect:read,
   write:mutate,
+  ackTitle(expected){const campaign=ackExpansionPublicTitle(expected?.campaign,act);return campaign?mutate({...copy(expected),campaign},{ack:true}):{ok:false,reason:'invalid'};},
   // Cloud pull installs an already committed public envelope. It retains its
   // revision and timestamp and cannot silently replace a different run.
   replace(expected,downloaded,{allowDifferentRun=false,allowEnded=false,allowFork=false}={}){
@@ -87,6 +94,7 @@ export function createExpansionAccountSaveStore(storage,act,owner,{context=()=>(
     const next=copy(downloaded),bytes=JSON.stringify(next);
     if(before){
      const sameRun=before.entry.id===next.entry.id,confirmedEnd=allowEnded===true&&next.entry.ended===true;
+     if((before.campaign?.pendingBossTitles.length&&!sameRun)||sameRun&&!expansionCampaignCanReplace(before.campaign,next.campaign,act))return {ok:false,reason:'conflict'};
      if(!sameRun&&allowDifferentRun!==true||sameRun&&(before.entry.ended&&!next.entry.ended||next.entry.revision<before.entry.revision&&!confirmedEnd||next.entry.revision===before.entry.revision&&bytes!==original&&!confirmedEnd&&allowFork!==true))return {ok:false,reason:'conflict'};
      // Unknown backup bytes are also preserved instead of replacing them with
      // a rolling public backup during later syncs.
@@ -133,6 +141,8 @@ export function mergeExpansionAccountSaves(local,remote,{owner,act}={}){
  if(!present(local)||!present(remote))return {ok:true,value:copy(local??remote??null)};
  if(local.ownerUid!==remote.ownerUid||local.act!==remote.act)return {ok:false,reason:'owner'};
  if(local.entry.id===remote.entry.id){
+  const winner=Boolean(local.entry.ended)!==Boolean(remote.entry.ended)?(local.entry.ended?local:remote):(local.entry.revision>=remote.entry.revision?local:remote),other=winner===local?remote:local;
+  if(!expansionCampaignCanReplace(other.campaign,winner.campaign,act||local.act))return {ok:false,reason:'conflict'};
   // Finishing a run is terminal even if an offline live branch accumulated
   // a larger local entry revision. Transport confirmation governs installation.
   if(Boolean(local.entry.ended)!==Boolean(remote.entry.ended))return {ok:true,value:copy(local.entry.ended?local:remote)};

@@ -191,3 +191,5 @@ art-refs/
 !tools/expansion-public-host-test.mjs
 !tools/expansion-online-ranking-test.mjs
 !tools/expansion-course-budget-test.mjs
+
+!tools/expansion-public-campaign-test.mjs

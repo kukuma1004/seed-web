@@ -31,7 +31,7 @@ assert.equal(ACTOR_MOTION_GEOMETRIES.length,8);
 // Execute the real journey spawn path, retaining the canonical model pointer.
 const main=fs.readFileSync('src/main.js','utf8'),start=main.indexOf('function spawnExpansionActor('),end=main.indexOf('\nfunction expansionBolt(',start);
 const attached=[],journey=createExpansionJourney('crosswind');journey.boss=createExpansionBoss(journey.bossId);
-const context=vm.createContext({THREE,scene:new THREE.Scene(),expansionJourney:journey,expansionApi:{EXPANSION_ACTS:{crosswind:{bossName:'captain'}}},camera:{},release(){},expansionActorArt,ACT3_ART:{},enemies:[],attachActorArt:(e,c,r,art)=>attached.push({e,art})});
+const context=vm.createContext({THREE,expansionChannel:'inspection',scene:new THREE.Scene(),expansionJourney:journey,expansionApi:{EXPANSION_ACTS:{crosswind:{bossName:'captain'}}},camera:{},release(){},expansionActorArt,ACT3_ART:{},enemies:[],attachActorArt:(e,c,r,art)=>attached.push({e,art})});
 vm.runInContext(main.slice(start,end),context);const actor=context.spawnExpansionActor({position:{x:5,z:0}},true);
 assert.equal(actor.expansionMotion,journey.boss);assert.equal(attached[0].art.file,EXPANSION_BOSS_ART.crosswindKeeper.file);journey.boss.pattern=1;journey.boss.state='attack';assert.equal(attached[0].art.atlasFrame(actor),4);
 console.log('Original eight-pose boss sheets: desktop/mobile sizes, source anchors, shared UV identity, canonical clock and real journey spawn/Canvas cropping passed. Browser/GPU/device QA pending.');
