@@ -62,7 +62,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  <aside class="sp-hud"><div class="sp-head"><button class="sp-pause" aria-label="일시정지">Ⅱ</button><div><small class="sp-no"></small><b class="sp-name"></b></div></div>
  <div class="sp-stats"><div class="sp-moves"><small>남은 이동</small><strong></strong></div><div class="sp-score"><small>점수</small><strong></strong></div></div>
  <div class="sp-bar" aria-hidden="true"><i></i></div><ul class="sp-goals" aria-label="목표"></ul><p class="sp-keys">끌어서 바꾸기 · 특수 씨앗은 눌러서 터뜨리기 · 방향키+Space 바꾸기 · Enter 터뜨리기 · H 힌트 · Esc 일시정지</p></aside>
- <nav class="sp-toolbar" aria-label="판 안 도구"><span class="sp-wallet"></span>${Object.values(PUZZLE_TOOLS).map(t=>`<button data-tool="${t.id}" title="${t.name} · ${t.text}"><i aria-hidden="true">${TOOL_ICON[t.id]}</i><b>${t.name}</b><small>${practice?'연습 무료':jpText(PUZZLE_SHOP.tools[t.id])}</small></button>`).join('')}</nav>
+ <nav class="sp-toolbar" aria-label="판 안 도구"><span class="sp-wallet"></span>${Object.values(PUZZLE_TOOLS).map(t=>`<button data-tool="${t.id}" aria-label="${t.name} ${practice?'연습 무료':jpText(PUZZLE_SHOP.tools[t.id])}" aria-pressed="false" title="${t.name} · ${t.text}"><i aria-hidden="true">${TOOL_ICON[t.id]}</i><b>${t.name}</b><small>${practice?'연습 무료':jpText(PUZZLE_SHOP.tools[t.id])}</small></button>`).join('')}</nav>
  <aside class="sp-garden-panel" aria-label="정원 가꾸기" hidden></aside>
  <div class="sp-banner" aria-hidden="true"></div><p class="sp-toast" role="status" aria-live="polite"></p><div class="sp-modal"></div>`;
  host.append(root);document.body.classList.add('seed-puzzle-open');
@@ -95,7 +95,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const livesNow=()=>puzzleLives(progress,Date.now());
  const livesLine=()=>{const l=livesNow();return `${'●'.repeat(l.lives)}${'○'.repeat(PUZZLE_LIVES.max-l.lives)} ${l.lives}/${PUZZLE_LIVES.max}${l.full?'':` · 다음 씨앗 ${clockText(l.nextIn)}`}`;};
  // 남은 시간 표시는 1초마다 다시 적는다(보이는 곳만).
- const ticker=setInterval(()=>{root.querySelectorAll('[data-lives]').forEach(el=>{el.textContent=livesLine();});const go=root.querySelector('[data-needs-life]');if(go&&livesNow().lives>0){go.removeAttribute('data-needs-life');go.disabled=false;}},1000);
+ const ticker=setInterval(()=>{if(closed||document.hidden)return;root.querySelectorAll('[data-lives]').forEach(el=>{el.textContent=livesLine();});const go=root.querySelector('[data-needs-life]');if(go&&livesNow().lives>0){go.removeAttribute('data-needs-life');go.disabled=false;}},1000);
 
  // ── 햇살 쓰기
  function pay(jp,what){if(practice)return true;if(wallet()<jp){toast(`햇살이 모자라요 · ${what} ${jpText(jp)}`);return false;}const ok=onSpend(jp)===true;if(!ok)toast('햇살을 쓰지 못했어요');walletUpdate();return ok;}
@@ -180,7 +180,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function tryTap(i){if(!canAct())return;snap();if(!canTap(s,i))return;run(tapPuzzle(s,i));}
  function tryTool(tool,i){if(!canAct())return;snap();if(!pay(PUZZLE_SHOP.tools[tool],PUZZLE_TOOLS[tool].name))return;armed=null;toolbarUpdate();run(usePuzzleTool(s,tool,i));audio?.play('pickup');}
  function arm(tool){if(!canAct())return;if(tool==='shuffle'){tryTool('shuffle',0);return;}armed=armed===tool?null:tool;selected=-1;toolbarUpdate();if(armed)toast(`${PUZZLE_TOOLS[armed].name} · 쓸 칸을 눌러요`);}
- function toolbarUpdate(){toolbar.querySelectorAll('[data-tool]').forEach(b=>b.classList.toggle('armed',b.dataset.tool===armed));root.classList.toggle('sp-armed',!!armed);}
+ function toolbarUpdate(){toolbar.querySelectorAll('[data-tool]').forEach(b=>{const active=b.dataset.tool===armed;b.classList.toggle('armed',active);b.setAttribute('aria-pressed',String(active));});root.classList.toggle('sp-armed',!!armed);}
  toolbar.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>arm(b.dataset.tool));
  const neighbor=(a,b)=>a>=0&&b>=0&&Math.abs(a%N-b%N)+Math.abs(Math.floor(a/N)-Math.floor(b/N))===1;
  listen(canvas,'pointerdown',e=>{if(!canAct())return;audio?.unlock?.();keyboard=false;const i=cellAt(e.offsetX,e.offsetY);if(i<0)return;e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
@@ -194,6 +194,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const KEYS={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};
  listen(window,'keydown',e=>{
   if(e.target?.closest?.('input,textarea'))return;
+  if(['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,select,[role="button"],[role="checkbox"]'))return;
   if(e.code==='Escape'&&gardenMode&&modal.hidden){e.preventDefault();leaveGarden();return;}
   if(e.code==='Escape'){e.preventDefault();if(armed){armed=null;toolbarUpdate();return;}const k=modal.hidden?null:modal.dataset.kind;if(k==='pause'){resume();return;}if(k==='menu'){close();return;}if(k==='out')return;if(k){menu();return;}pause();return;}
   if(!canAct())return;
@@ -360,7 +361,15 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   for(const f of floaters){ctx.globalAlpha=1-f.t;ctx.font=`bold ${Math.round(cs*.42*f.size)}px Georgia,'Malgun Gothic',serif`;ctx.lineWidth=4;ctx.strokeStyle='#1d1206';ctx.strokeText(f.text,f.x,f.y-f.t*cs*.8);ctx.fillStyle=f.color;ctx.fillText(f.text,f.x,f.y-f.t*cs*.8);}
   ctx.globalAlpha=1;ctx.restore();
  }
- function loop(now){raf=requestAnimationFrame(loop);if(closed||document.hidden||!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;update(dt);draw(now);}
+ function renderRate(){
+  if(gardenMode)return 24;
+  if(!s||!modal.hidden)return 12;
+  if(busy()||effects.length||floaters.length||shake||drag)return 60;
+  for(const sp of sprites.values())if(sp.tw||sp.dying||sp.pop>0||sp.y!==sp.ty)return 60;
+  return 24;
+ }
+ function loop(now){raf=0;if(closed||document.hidden)return;raf=requestAnimationFrame(loop);if(!pacer(now,renderRate()))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;update(dt);draw(now);}
+ listen(document,'visibilitychange',()=>{last=0;if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(!closed&&!raf)raf=requestAnimationFrame(loop);});
 
  // ── HUD
  let bannerTimer=0;
