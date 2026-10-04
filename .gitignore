@@ -193,3 +193,5 @@ art-refs/
 !tools/expansion-course-budget-test.mjs
 
 !tools/expansion-public-campaign-test.mjs
+
+!tools/expansion-public-ui-test.mjs

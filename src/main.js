@@ -54,7 +54,8 @@ import {ACT3_GEOMETRIES,ACT3_MATERIALS,ACT3_ART,isAct3Minion,createAct3Minion,ti
 import {createSkyway} from './skyway.js';
 import * as expansionRuntime from './expansion-journey.js';
 import {createSurvivalExpansion,migrateSurvivalToFiveActs} from './survival-expansion.js';
-import {publicCircuitActCount} from './act-expansion.js';
+import {EXPANSION_ACTS,expansionCircuitReleased,publicCircuitActCount} from './act-expansion.js';
+import {expansionJourneyResult,expansionRankView} from './expansion-journey-result.js';
 import {expansionActorArt,expansionEnemyArt} from './expansion-actor-art.js';
 let expansionApi=expansionRuntime,survivalExpansion=null;
 import {createContactShadows} from './contact-shadows.js';
@@ -601,7 +602,7 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   expansionJourney=saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413);stage=expansionJourney.room;mode='playing';paused=false;wave();
   if(publicRun&&!expansionEntry)throw Error('checkpoint');
   if(saved)player.position.fromArray(saved.position);
-  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(publicRun?' · 방 입구 저장 · 계정 동기화 상태 별도 확인 · 이용 통계/보상/랭킹 연결 준비 중':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
+  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(publicRun?' · 방 입구 저장 · 계정 동기화 상태는 일시정지에서 확인':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
  }catch{
   if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionPendingBossCheckpoint=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}
   if(!reused||expansionSaveLease!==lease)await lease.release();return false;
@@ -652,11 +653,22 @@ function waveExpansionJourney(){
  if(!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
 }
 function showExpansionResult(won,ended=true){
- mode='ready';paused=false;touch.reset();keys.clear();pauseBuild.hide();perfFinish(won?'cleared':'ended');activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;$('#save-exit').hidden=true;$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;
- const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name,isPublic=expansionChannel==='public';$('#overlay').hidden=false;
- $('#overlay').innerHTML='<div class="menu-panel"><h2>'+name+(won?' 전투 종료':' 도전 종료')+'</h2><p>'+(ended?'방 입구 기록을 종료했어요.':'기록 종료를 확인하지 못했어요. 기존 기록은 보존했습니다.')+(isPublic?' 이용 통계·보상·랭킹 연결은 아직 준비 중입니다.':' 실험 기록은 계정·칭호·랭킹에 반영하지 않습니다.')+'</p><button id="expansion-retry">다시 출발</button><button id="expansion-back">돌아가기</button></div>';
+ const act=expansionJourney.act,name=expansionApi.EXPANSION_ACTS[act].name,isPublic=expansionChannel==='public',serial=++rankSerial;
+ const entry=isPublic?expansionJourneyResult({act,owner:expansionSaveOwner,currentOwner:expansionOwner(),inspection:localInspection,practice:developerRun,ended,done:won,name:playerName,score,cycle,stage,kills,time:elapsed,build:buildRecord({levels,forms:heldForms,relic:relics.equipped,wardens:wardensDefeated,austins:austinsDefeated}),acts:expansionApi.EXPANSION_ACTS}):null;
+ mode='ready';paused=false;touch.reset();keys.clear();pauseBuild.hide();perfFinish(won?'cleared':'ended');activeVfx.clear();cancelActive(activeGauge);$('#item-bar').hidden=true;$('#active-skill').hidden=true;$('#item-status').hidden=true;$('#save-exit').hidden=true;$('#boss-hud').hidden=true;$('#exit-room').hidden=true;gate.visible=false;$('#overlay').hidden=false;
+ $('#overlay').innerHTML='<div class="menu-panel"><h2>'+name+(won?' 완주':' 도전 종료')+'</h2><p>'+(ended?'방 입구 기록을 종료했어요.':'기록 종료를 확인하지 못했어요. 기존 기록은 보존했습니다.')+(isPublic?'':' 실험 기록은 계정·칭호·랭킹에 반영하지 않습니다.')+'</p>'+(isPublic?'<div class="final-score"><strong>'+formatScore(score)+'</strong><span>'+(won?'3회 격파 · 완주 · ':'')+kills+' 처치 · '+formatTime(elapsed)+'</span></div><p id="expansion-rank-status">'+(entry?'랭킹 등록을 확인하고 있어요.':'이 판은 랭킹 등록 조건을 충족하지 못했어요. 저장 기록은 보존합니다.')+'</p>':'')+'<button id="expansion-retry">다시 출발</button>'+(isPublic?'<button id="expansion-ranking">랭킹 보기</button>':'')+'<button id="expansion-back">돌아가기</button></div>';
  $('#expansion-retry').onclick=()=>isPublic?startPublicExpansionJourney(act):startExpansionJourney(0,act);$('#expansion-back').onclick=showIntro;
+ if(isPublic)$('#expansion-ranking').onclick=()=>showRanking(expansionRankView(act));
+ if(!entry)return;
+ const before=readAccountProfile(runStorage),key='act'+entry.act,after=recordBestScore(before,key,entry.score);
+ if(after.bestScores[key]>before.bestScores[key]&&!writeAccountProfile(runStorage,after))setText($('#expansion-rank-status'),'기기 최고 기록을 저장하지 못했어요.');
+ const role=accountRole({admin:adminMode,tester:betaTesterMode}),decision=rankingDecision({isTestRun:developerRun,localInspection,score:entry.score,name:entry.name,native:account.native,admin:role.isAdmin,tester:role.isTester,user:account.user(),paceTrusted:paceTrusted(paceGame,paceReal)});
+ if(!decision.eligible){logRankingFailure(runStorage,{uid:entry.uid,score:entry.score,reason:decision.reason});setText($('#expansion-rank-status'),'이 판은 모두의 랭킹 등록 조건을 충족하지 못했어요.');return;}
+ online.flush().catch(()=>0).then(()=>{if(expansionOwner()!==entry.uid)throw Error('account changed');return online.submit(entry,500);}).then(r=>{
+  if(serial!==rankSerial)return;setText($('#expansion-rank-status'),r.rank?'모두의 랭킹 '+r.rank+'위에 올랐어요!':'랭킹에 기록했어요.');
+ }).catch(error=>{logRankingFailure(runStorage,{uid:entry.uid,score:entry.score,reason:classifySubmitError(error)});if(serial===rankSerial)setText($('#expansion-rank-status'),expansionOwner()!==entry.uid?'계정이 바뀌어 등록을 중단했어요.':'서버 등록을 확인하지 못했어요. 랭킹 화면에서 다시 확인하세요.');});
 }
+
 function advancePublicExpansionLap(){
  if(!canSaveExpansion()||!settleExpansionTitles())return false;
  const campaign=advanceExpansionPublicCampaign(expansionPublicEntry.campaign,expansionJourney.act);if(!campaign)return false;
@@ -1417,7 +1429,7 @@ function wave(continueSkyway=false){
  combatAnalysis.begin(elapsed,{stage:mirrorSession?mirrorSession.floor:stage+1,cycle:cycle+1,region:mirrorSession?'mirror':region});$('#encounter').textContent=mirrorSession?`거울의 탑 ${mirrorSession.floor}층 · 넓은 원형 전장 · 균열 0/${MIRROR_BREAK.crackGoal}`:`여정 ${cycle+1} · ${inAustinRoom()?(isAct3(region)?'폭풍 중심부 · '+TEMPEST_CARRIER.name:isAct2(region)?'야간 결승전 · '+ALWAYS_BEGINNER.name:'정시의 시계탑 · '+AUSTIN.name):REGION_NAMES[region]+' · '+roomFor(stage,cycle,region).name}`;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',mirrorSession?i<Math.min(5,Math.ceil(mirrorSession.floor/2)):i<=stage));$('#boss-hud').hidden=!mirrorSession&&stage!==4;
 }
-function openExit(){if(expansionJourney){if(expansionChannel==='public'&&expansionJourney.phase==='boss'&&!expansionPublicEntry?.campaign?.bossCleared){$('#toast').textContent='보스 격파 저장에 실패했어요. 일시정지에서 저장을 다시 확인하세요.';return;}exitOpen=true;arena.exit={x:player.position.x+1.3,z:player.position.z,radius:2};gate.position.set(arena.exit.x,0,arena.exit.z);gate.visible=true;$('#exit-room').hidden=false;$('#toast').textContent=expansionJourney.phase==='boss'?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName+' 격파 · 출구를 눌러 시제품 종료':'전장 돌파 · 출구를 눌러 다음 방으로 이동';return;}if(dashRewardPending&&offerDashEvolution(openExit))return;if(relicRewardPending){relicRewardPending=false;const offers=relicOffers(relics,rng,gardenFx.relicLaws);if(offers.length){mode='relics';touch.reset();keys.clear();keyboardDash=false;showRelicChoice($('#overlay'),relics,offers,()=>{syncLaws();mode='playing';$('#overlay').hidden=true;openExit();},relicFx);return;}}if(stage===4)saveAfterBoss();else saveBoundary(stage+1);exitOpen=true;gate.visible=!isAct3(region);if(isAct3(region)){skywayAdvance=.95;$('#toast').textContent='항로가 이어집니다 · 다음 편대 접근';return;}$('#toast').textContent=stage!==4?'방을 정리했다 · 빛나는 출구로 이동하세요':austinRoom?`${finalBossName()}을 이겼다${bossRewardLine?' · '+bossRewardLine:''} · 빛나는 출구로 다음 여정을 떠나세요`:finalBossAhead()?'다섯 번째 관문 돌파 · 출구 너머에서 최종 보스가 기다립니다':'문지기가 쓰러졌다 · 빛나는 출구로 다음 여정을 떠나세요';}
+function openExit(){if(expansionJourney){if(expansionChannel==='public'&&expansionJourney.phase==='boss'&&!expansionPublicEntry?.campaign?.bossCleared){$('#toast').textContent='보스 격파 저장에 실패했어요. 일시정지에서 저장을 다시 확인하세요.';return;}exitOpen=true;arena.exit={x:player.position.x+1.3,z:player.position.z,radius:2};gate.position.set(arena.exit.x,0,arena.exit.z);gate.visible=true;$('#exit-room').hidden=false;$('#toast').textContent=expansionJourney.phase==='boss'?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName+(expansionChannel==='public'?' 격파 · 출구로 다음 순환 또는 완주':' 격파 · 출구를 눌러 시제품 종료'):'전장 돌파 · 출구를 눌러 다음 방으로 이동';return;}if(dashRewardPending&&offerDashEvolution(openExit))return;if(relicRewardPending){relicRewardPending=false;const offers=relicOffers(relics,rng,gardenFx.relicLaws);if(offers.length){mode='relics';touch.reset();keys.clear();keyboardDash=false;showRelicChoice($('#overlay'),relics,offers,()=>{syncLaws();mode='playing';$('#overlay').hidden=true;openExit();},relicFx);return;}}if(stage===4)saveAfterBoss();else saveBoundary(stage+1);exitOpen=true;gate.visible=!isAct3(region);if(isAct3(region)){skywayAdvance=.95;$('#toast').textContent='항로가 이어집니다 · 다음 편대 접근';return;}$('#toast').textContent=stage!==4?'방을 정리했다 · 빛나는 출구로 이동하세요':austinRoom?`${finalBossName()}을 이겼다${bossRewardLine?' · '+bossRewardLine:''} · 빛나는 출구로 다음 여정을 떠나세요`:finalBossAhead()?'다섯 번째 관문 돌파 · 출구 너머에서 최종 보스가 기다립니다':'문지기가 쓰러졌다 · 빛나는 출구로 다음 여정을 떠나세요';}
 function useExit(forceSkyway=false){if(expansionJourney){exitExpansionJourney();return;}if(!(forceSkyway===true&&isAct3(region)&&exitOpen)&&!canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT}))return;touch.reset();keys.clear();keyboardDash=false;exitOpen=false;gate.visible=false;$('#exit-room').hidden=true;$('#toast').textContent='';if(stage===4){if(finalBossAhead())enterAustin();else nextJourney();}else{stage++;wave(isAct3(region));}}
 function enemyBolt(pos,kind,frost=false){
  const ob=new THREE.Object3D();ob.position.set(pos.x,.65,pos.z);return ob;
@@ -2220,6 +2232,7 @@ function showJourneys(){
  const saved2=act2Ready?readCheckpoint(actStorage(runStorage,2)):null;
  const act3Ready=act3Available()&&act3Unlocked(profile);
  const saved3=act3Ready?readCheckpoint(act3Storage(runStorage)):null;
+ const expansionReady=expansionCircuitReleased()&&!localInspection&&!account.user()?.isAnonymous&&Boolean(account.user()?.uid),expansionRows=expansionReady?Object.entries(EXPANSION_ACTS).map(([act,definition])=>({act,definition,record:createExpansionAccountSaveStore(rawStorage,act,expansionOwner(),{context:()=>({currentOwner:expansionOwner(),inspection:false,practice:false,acts:EXPANSION_ACTS})}).read()})):[];
  const mirrorReady=MIRROR_TRIAL_PROTOTYPE.released&&austinKnown(),mirrorRecord=readMirrorRecord(runStorage),mirrorCheckpoint=readMirrorCheckpoint(runStorage);
  // 2026-09-23 테스터 신고: 다른 기기에서 더 나중에 시작한 판이 이 기기의 더 긴 판을 덮었다(cloud-save.js replacedRuns).
  // 덮인 판을 맞바꿔 되살린다. 되살린 판은 지금 시각으로 저장되어 다른 기기에서도 이어진다.
@@ -2227,6 +2240,7 @@ function showJourneys(){
  const restoreRuns=[['act1','1막',true],['act2','2막',act2Ready],['act3','3막',act3Ready]].filter(([act,,ready])=>ready&&backups[act]).map(([act,label])=>{const b=backups[act].checkpoint,bosses=b.austins?` · 보스 ${b.austins}번 처치`:'';return {act,label,detail:`여정 ${b.cycle+1} · ${b.stage+1}번째 방${bosses} · ${Math.round(b.elapsed/60)}분 진행`};});
  const where=saved?`여정 ${saved.cycle+1} · ${saved.mode==='crossroads'?'다음 여정':saved.mode==='austin'?AUSTIN.name:(saved.stage+1)+'번째 방'}`:'',shop=readShop(runStorage);
  const art=(back,boss,sheet=false)=>`<span class="journey-picture" style="background-image:url('${import.meta.env.BASE_URL}assets/${back}')"><span class="journey-boss ${sheet?'sheet':''}" style="background-image:url('${import.meta.env.BASE_URL}assets/mobile/${boss}')"></span></span>`;
+ const expansionCardArt=act=>`<span class="journey-picture" style="background-image:url('${import.meta.env.BASE_URL}assets/expansion/${act==='crosswind'?'act4-crosswind-plate-mobile-v1.webp':'act5-crystal-gorge-plate-mobile-v1.webp'}')"><span class="journey-boss sheet" style="background-size:400% 200%;background-image:url('${import.meta.env.BASE_URL}assets/expansion/${act==='crosswind'?'boss-crosswind-motion-mobile-v1.webp':'boss-crystal-motion-mobile-v1.webp'}')"></span></span>`;
  const actCard=(id,number,title,description,picture,ready=true)=>`<button id="${id}" class="journey-card act-card-${number}" ${ready?'':'disabled'}>${picture}<span class="journey-act">${number}막</span><span class="journey-caption"><strong>${title}</strong><small>${description}</small></span></button>`;
  $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel journey-panel">
   <header class="dungeon-heading"><p class="eyebrow">SEED · JOURNEY</p><h2>어디로 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header>
@@ -2236,12 +2250,14 @@ function showJourneys(){
     ${actCard(saved?'continue-run':'start-game',1,'잠든 정원',saved?'이어하기 · '+escapeHtml(where):'새 씨앗으로 출발 · 오스틴',art('mobile/ground-garden-v5.webp','boss-austin-v1.webp',true))}
     ${actCard('start-act2',2,'야간 경기장',act2Ready?(saved2?`이어하기 · 여정 ${saved2.cycle+1}`:'베이스를 타고 돌파 · 항상초심'):'오스틴 격파 후 열려요',art('stadium-clay-hd-v1.webp','boss-always-beginner-v1.webp',true),act2Ready)}
     ${actCard('start-act3',3,'폭풍의 항로',act3Ready?(saved3?`이어하기 · 여정 ${saved3.cycle+1}`:'폭풍을 뚫는 비행 · 요한'):'항상초심 격파 후 열려요',art('mobile/act3-storm-route-v1.webp','boss-johan-core-v1.webp'),act3Ready)}
+    ${expansionRows.map(({act,definition,record})=>actCard('start-'+act,definition.number,definition.name,record&&!record.entry.ended?'이어하기 · '+(record.campaign?.lap+1||1)+'순환':'새 씨앗으로 출발 · '+definition.bossName,expansionCardArt(act))).join('')}
    </div>
    <details class="journey-extra"><summary>별도 도전 · 거울의 탑</summary>${mirrorReady?`<button id="start-mirror" class="menu-item mirror-button"><strong>거울의 탑 · 100층</strong><small>${mirrorRecord.bestFloor?`최고 ${mirrorRecord.bestFloor}층 · `:''}같은 조합을 쓰는 분신과 승부</small></button>${mirrorCheckpoint?`<button id="continue-mirror" class="menu-item mirror-button">거울의 탑 ${mirrorCheckpoint.floor}층 이어하기</button>`:''}`:'<p>오스틴을 쓰러뜨리면 열려요.</p>'}</details>
    ${saved||saved2||saved3||restoreRuns.length?`<details class="journey-extra"><summary>저장 관리 · 새로 시작</summary>${saved?'<button id="start-game" class="menu-item">1막 새로 시작</button>':''}${saved2?'<button id="new-act2" class="menu-item">2막 새로 시작</button>':''}${saved3?'<button id="new-act3" class="menu-item">3막 새로 시작</button>':''}${restoreRuns.map(r=>`<button id="restore-${r.act}" class="menu-item restore-run"><strong>${r.label} 이전 저장 되살리기</strong><small>${escapeHtml(r.detail)} · 현재 판과 맞바꿔요</small></button>`).join('')}</details>`:''}
   </div>
   <footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer>
  </div>`;
+ for(const {act,record} of expansionRows)$('#start-'+act).onclick=()=>{if(!requireName())return;void startPublicExpansionJourney(act,{resume:Boolean(record&&!record.entry.ended)});};
  const enter=(run,selectedRegion='garden')=>{if(!requireName())return;mirrorSession=null;startRegion=selectedRegion;$('#overlay').classList.remove('intro','menu-screen');if(run)restart(run);else startGame();};
  for(const r of restoreRuns)$(`#restore-${r.act}`).onclick=()=>{const store=restoreStores[r.act],current=readCheckpoint(store),backup=backups[r.act].checkpoint;if(!writeCheckpoint(store,backup)){$('#toast').textContent='판을 되살리지 못했어요';return;}setCheckpointBackup(runStorage,r.act,current);$('#toast').textContent=`${r.label} 판을 되살렸어요${current?' · 바꾼 판은 다시 맞바꿀 수 있어요':''}`;showJourneys();};
  if($('#continue-run'))$('#continue-run').onclick=()=>enter(saved);
@@ -2348,10 +2364,11 @@ function showNotes(){
 }
 function showRanking(view='online'){
  mode='ranking';$('#overlay').classList.remove('intro','menu-screen','garden-mode');$('#overlay').classList.add('ranking-overlay');const serial=++rankSerial;
- const remote=['online','austin','always','johan'].includes(view),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:view==='johan'?ACT.JOHAN:null;
+ if(['crosswind','crystal'].includes(view)&&!expansionCircuitReleased())view='online';
+ const remote=['online','austin','always','johan','crosswind','crystal'].includes(view),locked=gameplayPaused(),bossAct=view==='austin'?ACT.AUSTIN:view==='always'?ACT.ALWAYS_BEGINNER:view==='johan'?ACT.JOHAN:view==='crosswind'?ACT.CROSSWIND_KEEPER:view==='crystal'?ACT.CRYSTAL_GARDENER:null;
  const localBoard=readRanking(view==='act3'?act3Storage(runStorage):view==='act2'?actStorage(runStorage,2):runStorage),localMine=localBoard.find(e=>e.name===playerName)||null;
- const tabs=`<div class="rank-season"><strong>${SEASON.name}</strong><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">종합</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">항상초심</button><button class="primary" data-board="johan" aria-pressed="${view==='johan'}">요한</button></div></div>${locked?'':`<div class="rank-tabs secondary"><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}</div>`}`;
- const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='johan'?'폭풍비행사 요한 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
+ const tabs=`<div class="rank-season"><strong>${SEASON.name}</strong><div class="rank-tabs"><button class="primary" data-board="online" aria-pressed="${view==='online'}">종합</button><button class="primary" data-board="austin" aria-pressed="${view==='austin'}">오스틴</button><button class="primary" data-board="always" aria-pressed="${view==='always'}">항상초심</button><button class="primary" data-board="johan" aria-pressed="${view==='johan'}">요한</button>${expansionCircuitReleased()?`<button class="primary" data-board="crosswind" aria-pressed="${view==='crosswind'}">횡풍의 수호자</button><button class="primary" data-board="crystal" aria-pressed="${view==='crystal'}">수정의 정원사</button>`:''}</div></div>${locked?'':`<div class="rank-tabs secondary"><button class="primary" data-board="local" aria-pressed="${view==='local'}">1막 · 이 기기</button>${act2Available()&&act2Unlocked(profile)?`<button class="primary" data-board="act2" aria-pressed="${view==='act2'}">2막 · 이 기기</button>`:''}${act3Available()&&act3Unlocked(profile)?`<button class="primary" data-board="act3" aria-pressed="${view==='act3'}">3막 · 이 기기</button>`:''}</div>`}`;
+ const boardLabel=view==='austin'?'오스틴 최고 기록':view==='always'?'항상초심 최고 기록':view==='johan'?'폭풍비행사 요한 최고 기록':view==='crosswind'?'횡풍의 수호자 최고 기록':view==='crystal'?'수정의 정원사 최고 기록':view==='act3'?'폭풍비행사 요한 · 이 기기 최고 기록':'가장 높이 오른 씨앗들';
  $('#overlay').innerHTML=`<div class="ranking-panel"><p>${boardLabel}</p><h2>명예의 전당</h2>${tabs}<p id="rank-status" class="form-note">${remote?'불러오는 중…':'상위 10명 · 10위 밖이면 내 순위를 아래에 표시'}</p><div id="rank-board">${!remote?rankingBoard(localBoard,localMine):''}</div></div><button class="primary" id="close-ranking">돌아가기</button>`;
  $('#close-ranking').onclick=locked?showSeasonPause:showIntro;document.querySelectorAll('[data-board]').forEach(b=>b.onclick=()=>showRanking(b.dataset.board));
  if(!locked){$('.rank-season .rank-tabs').insertAdjacentHTML('beforeend','<button class="primary" id="hall-survival-ranking">물량생존전</button><button class="primary" id="hall-defense-ranking">씨앗 수호전</button>');$('#hall-survival-ranking').onclick=()=>showSurvivalRanking(()=>showRanking(view));$('#hall-defense-ranking').onclick=()=>showDefenseRanking(()=>showRanking(view));}
@@ -2359,7 +2376,7 @@ function showRanking(view='online'){
  if(!remote)return;
  const readBoard=()=>online.top(500,playerName,SEASON,bossAct);
  online.flush().catch(()=>0).then(readBoard).then(board=>{
-  if(serial!==rankSerial)return;setText($('#rank-status'),`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':bossAct===ACT.JOHAN?'요한 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
+  if(serial!==rankSerial)return;setText($('#rank-status'),`${bossAct===ACT.AUSTIN?'오스틴 · ':bossAct===ACT.ALWAYS_BEGINNER?'항상초심 · ':bossAct===ACT.JOHAN?'요한 · ':bossAct===ACT.CROSSWIND_KEEPER?'횡풍의 수호자 · ':bossAct===ACT.CRYSTAL_GARDENER?'수정의 정원사 · ':''}상위 10명 · 10위 밖이면 내 순위를 아래에 표시`);
   const mine=board.find(e=>e.uid===online.uid())||null,box=$('#rank-board');if(box){box.innerHTML=rankingBoard(board,mine,true,0,!mine);bindRankSafety();}
   online.personalRank(SEASON,bossAct).then(personal=>{
    if(serial!==rankSerial)return;

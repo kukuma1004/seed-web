@@ -15,6 +15,8 @@ import {emptyInventory,startingInventory,normalizeInventory,addItem} from '../sr
 import {normalizeRunBonuses} from '../src/run-bonuses.js';
 import {createActiveGauge} from '../src/actives.js';
 import {createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS} from '../src/expansion-public-campaign.js';
+import {expansionJourneyResult,expansionRankView} from '../src/expansion-journey-result.js';
+import {formatScore,formatTime} from '../src/score.js';
 const source=fs.readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const launched=source.slice(source.indexOf('async function startPublicExpansionJourney('),source.indexOf('\nfunction spawnExpansionActor(')).replace("import('./expansion-journey.js')",'Promise.resolve(__rules)').replace("import('./expansion-journey-view.js')",'Promise.resolve(__view)').replaceAll('import.meta.env.BASE_URL',"'/'");
 const helpers=source.slice(source.indexOf('const expansionPublicFacts='),source.indexOf('const expansionTargets='));
@@ -37,6 +39,7 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
   acquireExpansionSaveLease:(act,id)=>acquireExpansionSaveLease(act,id,{locks:manager}),expansionCrystalTexture:{},expansionJourneyView:{setActive(){}},scene:{},stone:{},prepareExpansionEnvironment:prepare,prepareExpansionCover:async()=>{},
   mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:'garden',region:'garden',maintenanceOn:false,gameplayPaused:()=>false,showSeasonPause(){},showMaintenance(){},showIntro(){c.mode='ready';},isAct2:r=>r==='stadium',isAct3:r=>r==='skyway',
   enemies:[],fallen:[],shots:[],enemyShots:[],effects:[],player:{position:new THREE.Vector3(),userData:{}},releaseEnemy(){},release(){},$,
+  rankSerial:0,expansionJourneyResult,expansionRankView,formatScore,formatTime,playerName:'테스터',buildRecord:()=>null,
   stage:0,mode:'ready',paused:false,hp:100,inventory:clone(run.inventory),rerollUsed:false,chosen:new Set(),mutated:new Set(),levels:new Map(),heldForms:new Map(),mutations:new Map(),cycle:0,
   bankedUpgrades:0,choicesTaken:0,choiceKills:0,kills:0,elapsed:0,runDashes:0,runDamageTaken:0,score:0,wardensDefeated:0,austinsDefeated:0,turretPotionDry:0,relics:normalizeRelics(),runBonuses:normalizeRunBonuses(),dashState:createDashState(),activeGauge:createActiveGauge(),
   normalizeRelics,levelsToSave,levelsFromSave,mutationsToSave,mutationsFromSave,normalizeInventory,startingInventory,addItem,normalizeRunBonuses,createDashState,createActiveGauge,
@@ -95,7 +98,7 @@ for(const cancel of ['owner','route','restart']){const f=fixture();await f.seed(
 for(const ended of [false,true]){const f=fixture();if(ended)await f.seed('crosswind',{ended:true});f.offline(true);const bytes=JSON.stringify([...f.data]);assert.equal(await f.c.startPublicExpansionJourney('crosswind'),false);assert.equal(JSON.stringify([...f.data]),bytes);}
 // Actual death route terminates the candidate store without deleting act1 or
 // invoking its score/ranking report. Finish UI stays visible after lease loss.
-{const f=fixture();assert(await f.c.startPublicExpansionJourney('crystalGorge'));await f.c.syncPublicExpansion();f.c.invuln=0;f.c.hitPlayer(1000);assert.equal(f.c.mode,'ready');assert.equal(f.stats.clear,0);assert(f.getStore('crystalGorge').read().entry.ended);assert.match(f.$('#overlay').innerHTML,/보상·랭킹 연결은 아직 준비 중/);await tick();await tick();assert.equal(f.manager.held.size,0);}
+{const f=fixture();assert(await f.c.startPublicExpansionJourney('crystalGorge'));await f.c.syncPublicExpansion();f.c.invuln=0;f.c.hitPlayer(1000);assert.equal(f.c.mode,'ready');assert.equal(f.stats.clear,0);assert(f.getStore('crystalGorge').read().entry.ended);assert.match(f.$('#overlay').innerHTML,/expansion-ranking/);assert.match(f.$('#overlay').innerHTML,/랭킹 등록 조건/);await tick();await tick();assert.equal(f.manager.held.size,0);}
 console.log('Public 4/5 main source launcher + real restart/save/finish with canonical store/sync passed: gated/UID/channel/lease/CAS/unknown/attrition/terminal/cancel and old account/carry preservation. Web Locks and Firebase ETags mocked; no live-account/device claim.');
 
 export {fixture,released,run,source};
