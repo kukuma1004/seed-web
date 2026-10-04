@@ -1,0 +1,324 @@
+{
+  "version": 1,
+  "bossId": "crystalGardener",
+  "image": "boss-crystal-motion-v1.webp",
+  "mobileImage": "boss-crystal-motion-mobile-v1.webp",
+  "size": [
+    2048,
+    1024
+  ],
+  "mobileSize": [
+    1024,
+    512
+  ],
+  "grid": [
+    4,
+    2
+  ],
+  "baselinePixels": 450,
+  "baselineFromBottom": 0.12109375,
+  "globalScale": 1.1863517060367454,
+  "frames": [
+    {
+      "name": "idle",
+      "rect": [
+        0,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.0,
+        0.0,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        128,
+        116,
+        384,
+        451
+      ],
+      "sourceRect": [
+        98,
+        124,
+        228,
+        289
+      ],
+      "pasteOffset": [
+        118,
+        114
+      ]
+    },
+    {
+      "name": "pattern1tell",
+      "rect": [
+        512,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.25,
+        0.0,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        72,
+        95,
+        440,
+        451
+      ],
+      "sourceRect": [
+        503,
+        98,
+        322,
+        319
+      ],
+      "pasteOffset": [
+        64,
+        84
+      ]
+    },
+    {
+      "name": "pattern1fire",
+      "rect": [
+        1024,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.5,
+        0.0,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        37,
+        138,
+        476,
+        451
+      ],
+      "sourceRect": [
+        942,
+        138,
+        381,
+        275
+      ],
+      "pasteOffset": [
+        32,
+        131
+      ]
+    },
+    {
+      "name": "pattern2tell",
+      "rect": [
+        1536,
+        0,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.75,
+        0.0,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        109,
+        166,
+        403,
+        451
+      ],
+      "sourceRect": [
+        1408,
+        168,
+        253,
+        253
+      ],
+      "pasteOffset": [
+        107,
+        162
+      ]
+    },
+    {
+      "name": "pattern2fire",
+      "rect": [
+        0,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.0,
+        0.5,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        90,
+        114,
+        422,
+        451
+      ],
+      "sourceRect": [
+        86,
+        499,
+        291,
+        295
+      ],
+      "pasteOffset": [
+        80,
+        103
+      ]
+    },
+    {
+      "name": "pattern3tell",
+      "rect": [
+        512,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.25,
+        0.5,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        124,
+        122,
+        389,
+        451
+      ],
+      "sourceRect": [
+        563,
+        505,
+        228,
+        289
+      ],
+      "pasteOffset": [
+        122,
+        112
+      ]
+    },
+    {
+      "name": "pattern3fire",
+      "rect": [
+        1024,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.5,
+        0.5,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        80,
+        108,
+        433,
+        451
+      ],
+      "sourceRect": [
+        952,
+        493,
+        314,
+        307
+      ],
+      "pasteOffset": [
+        72,
+        95
+      ]
+    },
+    {
+      "name": "recover-hit",
+      "rect": [
+        1536,
+        512,
+        512,
+        512
+      ],
+      "uvTopOrigin": [
+        0.75,
+        0.5,
+        0.25,
+        0.5
+      ],
+      "anchor": [
+        0.5,
+        0.87890625
+      ],
+      "alphaBoundsThreshold8": [
+        87,
+        138,
+        426,
+        451
+      ],
+      "sourceRect": [
+        1418,
+        529,
+        294,
+        281
+      ],
+      "pasteOffset": [
+        82,
+        136
+      ]
+    }
+  ],
+  "patterns": [
+    "prism-fan",
+    "crystal-regrowth",
+    "open-core"
+  ],
+  "runtimeFrames": {
+    "idle": 0,
+    "tell": [
+      1,
+      3,
+      5
+    ],
+    "attack": [
+      2,
+      4,
+      6
+    ],
+    "recover": 7
+  },
+  "packing": "Alpha component cutout, one global sheet scale, translation only; no painted pixels or recoloring",
+  "status": "Image reviewed and packed; runtime screenshot/device/release QA pending"
+}

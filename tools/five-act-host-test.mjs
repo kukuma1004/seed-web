@@ -8,6 +8,7 @@ import {validSurvivalExpansionCheckpoint} from '../src/survival-expansion-save.j
 import {SURVIVAL,survivalAct,survivalScaling,survivalSpawn,createSurvivalSession,survivalEnemySpec,tickSurvivalRush} from '../src/survival-rules.js';
 import {createSpatialIndex} from '../src/spatial-index.js';
 import {constrainToArena} from '../src/arena.js';
+import {expansionActorArt} from '../src/expansion-actor-art.js';
 import {ACT3_ART} from '../src/act3-enemies.js';
 import {createCameraFeel} from '../src/camera-feel.js';
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8').replaceAll('\r\n','\n');
@@ -16,7 +17,7 @@ const forbidden=()=>{throw new Error('New boss fell through to an old boss imple
 const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:'',hidden:true,classList:{toggle(){}}});return dom.get(id);};
 for(const act of [3,4]){
  const session=createSurvivalSession(413,{actCount:5});session.act=act;
- const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionApi,ACT3_ART,constrainToArena,
+ const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionActorArt,expansionApi,ACT3_ART,constrainToArena,
   survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
   camera:new THREE.PerspectiveCamera(),arena:SURVIVAL.arena,player:new THREE.Object3D(),enemies:[],enemyShots:[],obstacles:[],traps:[],clockFloor:null,shadowClock:0,SHADOW_REFRESH:1,
   arenaGroup:new THREE.Group(),roomCover:new THREE.Group(),trapGroup:new THREE.Group(),hiddenGarden:[],mirrorPanelsActive:false,

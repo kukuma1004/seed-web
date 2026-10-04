@@ -22,6 +22,8 @@ export const CUTE_ACTOR_ART=Object.freeze({
 export const CUTE_ACTOR_BASELINE=16/256;
 const cuteActorFiles=new Set(Object.values(CUTE_ACTOR_ART));
 const reducedAtlases=Object.freeze({
+ 'expansion/boss-crosswind-motion-v1.webp':'expansion/boss-crosswind-motion-mobile-v1.webp',
+ 'expansion/boss-crystal-motion-v1.webp':'expansion/boss-crystal-motion-mobile-v1.webp',
  'enemy-hound-v4.png':'mobile/enemy-hound-v4.webp','enemy-caster-v4.png':'mobile/enemy-caster-v4.webp',
  'enemy-shield-v4.png':'mobile/enemy-shield-v4.webp','enemy-turret-v4.png':'mobile/enemy-turret-v4.webp',
  'warden-memory-v4.png':'mobile/warden-memory-v4.webp','warden-seal-v4.png':'mobile/warden-seal-v4.webp','warden-hunter-v4.png':'mobile/warden-hunter-v4.webp',
@@ -64,6 +66,10 @@ export const ACTOR_ART_GEOMETRIES=Object.freeze({
  left:frameGeometry(1,0)
 });
 const directionGeometries=[ACTOR_ART_GEOMETRIES.front,ACTOR_ART_GEOMETRIES.right,ACTOR_ART_GEOMETRIES.back,ACTOR_ART_GEOMETRIES.left];
+// Opt-in authored motion sheets. Keep directional geometry identities intact;
+// eight UV planes share one atlas image and are never allocated per frame.
+export const ACTOR_MOTION_GEOMETRIES=Object.freeze(Array.from({length:8},(_,i)=>frameGeometry(i%4,1-Math.floor(i/4),4,2)));
+const directionalGrid=Object.freeze({columns:2,rows:2});
 const parentWorld=new THREE.Quaternion(),inverseParent=new THREE.Quaternion(),rollQuaternion=new THREE.Quaternion(),cameraUp=new THREE.Vector3(),localOffset=new THREE.Vector3();
 const localUp=new THREE.Vector3(0,1,0),localForward=new THREE.Vector3(0,0,1);
 
@@ -80,7 +86,7 @@ export function actorArtRotation(state,time,phase){
  return 0;
 }
 
-export function actorFrameGeometry(frame=0){return directionGeometries[((frame%4)+4)%4];}
+export function actorFrameGeometry(frame=0,grid=directionalGrid){const frames=grid.columns===4&&grid.rows===2?ACTOR_MOTION_GEOMETRIES:directionGeometries;return frames[((frame%frames.length)+frames.length)%frames.length];}
 
 function atlas(file){
  const selected=actorArtFile(file);
@@ -101,14 +107,15 @@ function billboard(mesh,camera,size,baseline){
  };
 }
 
-export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],atlasFrame=null,topDownFacing=false,baseline=.04,preserveBody=false,occlusion=true,lighting=true}){
+export function attachActorArt(e,camera,release,{file,size,directional=false,order=[0,1,2,3],atlasFrame=null,atlasColumns=2,atlasRows=2,topDownFacing=false,baseline=.04,preserveBody=false,occlusion=true,lighting=true}){
  // Legacy per-species baselines belonged to the old differently padded art.
  // Flight art retains its authored anchor because its whole body rolls.
  if(!topDownFacing&&cuteActorFiles.has(actorArtFile(file)))baseline=CUTE_ACTOR_BASELINE;
  const body=e.body||e.motion?.body||e.g;
  // Turret head/orbit materials remain live gameplay references until death.
  for(const child of [...body.children])if(preserveBody)child.visible=false;else release(child);
- const texture=atlas(file),firstFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,geometry=Number.isFinite(firstFrame)?actorFrameGeometry(firstFrame):directional?actorFrameGeometry(0):ACTOR_ART_GEOMETRIES.full;
+ const grid={columns:atlasColumns,rows:atlasRows};
+ const texture=atlas(file),firstFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,geometry=Number.isFinite(firstFrame)?actorFrameGeometry(firstFrame,grid):directional?actorFrameGeometry(0):ACTOR_ART_GEOMETRIES.full;
  const baseMaterial=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const mat=lighting?applySpriteLighting(baseMaterial,{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065}):baseMaterial;
  const sprite=new THREE.Mesh(geometry,mat);sprite.scale.set(size,size,1);billboard(sprite,camera,size,baseline);body.add(sprite);
@@ -116,7 +123,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
  const ghost=new THREE.Mesh(geometry,ghostMat);ghost.name='quality-occlusion-ghost';ghost.visible=occlusion;ghost.scale.set(size,size,1);ghost.renderOrder=2;billboard(ghost,camera,size,baseline);body.add(ghost);
  e.updateArt=(time)=>{
  const yaw=Math.atan2(camera.position.x-e.g.position.x,camera.position.z-e.g.position.z);
-  const frame=seedFrame(e.g.rotation.y,yaw),fixedFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,nextGeometry=Number.isFinite(fixedFrame)?actorFrameGeometry(fixedFrame):directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
+  const frame=seedFrame(e.g.rotation.y,yaw),fixedFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,nextGeometry=Number.isFinite(fixedFrame)?actorFrameGeometry(fixedFrame,grid):directional?actorFrameGeometry(order[frame]):ACTOR_ART_GEOMETRIES.full;
   sprite.geometry=ghost.geometry=nextGeometry;
   const impact=THREE.MathUtils.clamp((e.hit||0)/.14,0,1),reaction=(e.impactSide||1)*impact*.105;
   const facingRoll=topDownFacing?Math.atan2(Math.sin(e.g.rotation.y-yaw+Math.PI),Math.cos(e.g.rotation.y-yaw+Math.PI)):0;

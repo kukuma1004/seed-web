@@ -3,12 +3,14 @@
 // 그림·렌더러와 무관한 규칙. 계정·저장에 쓰지 않는다(보상 없는 시험 모드).
 // 2026-09-28 사용자: "맵은 조금만 더 넓게 · 확대는 조금 더" — 경기장을 넓히고(카메라가 두 씨앗을 따라간다), 기둥 네 개.
 import {duelSkillActions} from './seed-duel-actions.js';
+import {DUEL_BATCH03,batch03Repress,batch03Reach,batch03Melee,batch03Action,batch03Tick,batch03Ai} from './seed-duel-batch03.js';
 export const DUEL_ARENA=Object.freeze({minX:1.5,maxX:33.5,minY:2,maxY:19.5});
 export const DUEL_PILLARS=Object.freeze([{x:10.5,y:6.2,r:.85},{x:24.5,y:6.2,r:.85},{x:10.5,y:15.4,r:.85},{x:24.5,y:15.4,r:.85}]);
 export const DUEL_SPAWN=Object.freeze([{x:11.5,y:10.8},{x:23.5,y:10.8}]);
 export const DUEL_RULES=Object.freeze({roundsToWin:2,roundSeconds:75,guardMax:100,guardRegen:14,blockDamage:.2,parryWindow:.16,guardBreakStun:1.05,dodgeCd:1,meterMax:100});
 const skill=(name,cooldown,desc)=>Object.freeze({name,cooldown,desc});
 export const DUEL_CHARACTERS=Object.freeze({
+ ...DUEL_BATCH03,
  gravitymirror:Object.freeze({id:'gravitymirror',comboId:'gravitymirror',law:'gravity',name:'중력 거울 씨앗',role:'벽의 거울핵 · 회수 참격',hp:176,speed:4.15,reach:1.8,arc:1.15,comboReach:[1.55,1.9,2.2],comboArc:[1.25,.8,.62],damage:[9,10,14],cadence:.36,heavy:{damage:23,reach:2.15},parry:1.2,tile:7,ink:'#d5b1ff',
   skills:[skill('접힌 거울핵',5.6,'한 번 튕긴 자리에 당김 · 핵이 있으면 기술을 다시 눌러 접어요'),skill('거울 접기',5.8,'놓인 거울핵을 회수하며 좁은 길을 베어요 · 최대 한 번만')],ult:skill('거울의 골짜기',0,'두 거울핵을 차례로 날려요 · 두 준비 동작 모두 끊을 수 있어요'),
   blurb:'벽 가까이에서 강해요. 당김은 이동을 늦출 뿐, 막기와 회피를 빼앗지 않아요.'}),
@@ -76,14 +78,14 @@ export const DUEL_CHARACTERS=Object.freeze({
  ,heart:Object.freeze({id:'heart',law:'gravity',name:'정원의 심장',role:'예고 중력장 · 유한 공전',hp:190,speed:4,reach:1.85,arc:1,damage:[10,10,15],cadence:.38,heavy:{damage:23,reach:2.1},parry:1,tile:7,ink:'#e5d18f',
   skills:[skill('심장의 자리',6.2,'상대 자리를 예고한 뒤 약하게 끌어요 · 피해는 한 번'),skill('정원의 공전',6.8,'돌 하나가 몸을 돌아 두 번까지 닿아요')],ult:skill('정원의 맥박',0,'예고 중력장과 돌 하나를 함께 펼쳐요'),blurb:'정원의 마지막 시험을 이기면 함께할 수 있어요. 예고한 자리는 따라오지 않아요.'})
 });
-export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst']);
+export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst','returnblade','frostguard']);
 export function availableDuelCharacters(progress){return DUEL_ORDER.filter(id=>id!=='heart'||[0,1].includes(progress?.cleared?.s22?.losses));}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function rnd(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 
-function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0};}
+function fighter(team,char,x,y){const c=DUEL_CHARACTERS[char];return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0,bladeCast:0,bladeCatch:0,wardCold:0,wardColdTime:0};}
 // practice: 콤보 연습(쓰러지지 않고 체력이 다시 차며, 시간이 흐르지 않는다).
 export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false,boss=false}={}){
  const s={seed:seed>>>0,practice:Boolean(practice),boss:Boolean(boss&&enemy==='heart'),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
@@ -124,6 +126,7 @@ function melee(s,f,reach,arc,damage,opts={}){const o=s.fighters[1-f.team],v=norm
 function shoot(s,f,extra){if(s.shots.length>=64)return;s.shots.push({owner:f.team,x:f.x+f.fx*.6,y:f.y+f.fy*.6,dx:f.fx,dy:f.fy,speed:11,life:1.2,damage:12,pierce:0,bounces:0,hit:new Set(),law:f.char,...extra});}
 // Placed areas are capped per owner, so cooldown resets cannot make persistent particle or damage storms.
 function area(s,f,kind,extra={}){const own=s.hazards.filter(h=>h.owner===f.team&&h.kind===kind);if(own.length>=3){const old=own[0];s.hazards.splice(s.hazards.indexOf(old),1);}if(s.hazards.length>=32)s.hazards.shift();const h={kind,owner:f.team,x:f.x+f.fx*2.4,y:f.y+f.fy*2.4,r:1.65,t:3.2,arm:.45,ink:DUEL_CHARACTERS[f.char].ink,...extra};h.total=h.t;s.hazards.push(h);return h;}
+const batch03Context={strike,shoot,area,fx,event,wall:q=>q.x<DUEL_ARENA.minX||q.x>DUEL_ARENA.maxX||q.y<DUEL_ARENA.minY||q.y>DUEL_ARENA.maxY||DUEL_PILLARS.some(p=>dist(q,p)<p.r)};
 function fork(s,f,count,damage,kind='crystal'){for(let k=0;k<count;k++){const off=(k-(count-1)/2)*.28,a=Math.atan2(f.fy,f.fx)-off;shoot(s,f,{x:f.x-f.fy*off*2,y:f.y+f.fx*off*2,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.9,damage,kind,bounces:kind==='crystal'?1:0});}}
 function bloomLance(s,f,ult=false){
  f.bloomCast=(f.bloomCast||0)+1;f.state='skill';f.t=ult?1.35:.8;f.total=f.t;f.blocking=false;
@@ -206,8 +209,9 @@ function emberScatter(s,f){
  f.state='dash';f.total=f.t=.14;f.dx=-f.fy;f.dy=f.fx;f.hitDone=true;
 }
 function useSkill(s,f,i){
- const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team],fold=i===0&&f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0);if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
+ const c=DUEL_CHARACTERS[f.char],o=s.fighters[1-f.team],fold=i===0&&(batch03Repress(s,f)||f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0));if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
  if(!fold)f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
+ if(DUEL_BATCH03[f.char])batch03Action(s,f,i,batch03Context);
  const actions=duelSkillActions(f,i);
  if(actions)for(const action of actions){
   if(action.type==='motion')Object.assign(f,{state:action.state,t:action.seconds,dx:action.dx,dy:action.dy,hitDone:action.hitDone});
@@ -245,7 +249,8 @@ function useSkill(s,f,i){
  return true;
 }
 function useUlt(s,f){
- const o=s.fighters[1-f.team],c=DUEL_CHARACTERS[f.char];if(f.meter<DUEL_RULES.meterMax||f.stun>0)return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
+ const o=s.fighters[1-f.team],c=DUEL_CHARACTERS[f.char];if(f.meter<DUEL_RULES.meterMax||f.stun>0||f.char==='returnblade'&&s.shots.some(q=>q.kind==='returnSpear'&&q.owner===f.team&&q.life>0))return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
+ if(DUEL_BATCH03[f.char])batch03Action(s,f,0,batch03Context,true);
  if(f.char==='blastlance'){f.inv=.08;bloomLance(s,f,true);}
  if(f.char==='frostnet'){f.inv=.08;frostWeave(s,f,true);}
  if(f.char==='gravitymirror'){f.inv=.08;mirrorCast(s,f,true);}
@@ -298,8 +303,8 @@ function act(s,f,input,dt){
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
- if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=c.comboReach?.[step]??c.reach*(step===2?1.12:1),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
- if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach,life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach,c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
+ if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=(c.comboReach?.[step]??c.reach*(step===2?1.12:1))*batch03Reach(s,f),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});batch03Melee(s,f,{step,hit,guarded});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
+ if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach*batch03Reach(s,f,true),life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach*batch03Reach(s,f,true),c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});batch03Melee(s,f,{heavy:true,hit,guarded});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
  if(f.state==='dash'&&f.t>0){const speed=f.char==='comet'&&f.hitGap>0?1.8:13;f.x+=f.dx*speed*dt;f.y+=f.dy*speed*dt;if(f.char==='comet'){f.hitGap=Math.max(0,(f.hitGap||0)-dt);if((f.dashHits||0)<(f.hitLimit||2)&&f.hitGap<=0&&dist(f,o)<1.1){f.dashHits=(f.dashHits||0)+1;f.hitGap=.15;strike(s,f,o,f.dashDamage||11,{kind:'skill',stun:.12,knock:.22,dir:{x:f.dx,y:f.dy}});}}else if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,f.char==='bastion'?15:20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
  if(f.state==='dodge'&&f.t>0){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
@@ -342,7 +347,8 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  for(const f of s.fighters){f.netColdTime=Math.max(0,(f.netColdTime||0)-dt);if(!f.netColdTime)f.netCold=0;if(f.char==='cinder'||s.fighters[1-f.team].char==='echo'){f.trailClock=(f.trailClock||0)+dt;if(f.trailClock>=.22){f.trailClock=0;f.trail??=[];f.trail.push({x:f.x,y:f.y});if(f.trail.length>3)f.trail.shift();}}}
  // 서로 겹치지 않게.
  const d=dist(a,b);if(d<.9&&d>1e-6){const push=(.9-d)/2,v=norm(b.x-a.x,b.y-a.y);a.x-=v.x*push;a.y-=v.y*push;b.x+=v.x*push;b.y+=v.y*push;clampArena(a);clampArena(b);}
- for(const q of s.shots){q.life-=dt;
+ batch03Tick(s,dt,batch03Context);
+ for(const q of s.shots){if(q.kind==='returnSpear')continue;q.life-=dt;
   // 귀환 칼날: 잠깐 날아간 뒤 던진 씨앗에게 돌아온다(돌아오는 길에 한 번 더 벨 수 있다). 받으면 사라진다.
   if(q.kind==='blade'){q.age+=dt;if(q.age>=q.turn){const home=s.fighters[q.owner],v=norm(home.x-q.x,home.y-q.y);if(!q.back){q.back=true;q.hit.clear();q.pierce=1;}q.dx=v.x;q.dy=v.y;q.speed=12;if(Math.hypot(home.x-q.x,home.y-q.y)<.6)q.life=0;}}
   q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
@@ -362,7 +368,7 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
   if(dist(q,target)<radius)strike(s,att,target,q.tipDamage,{kind:'skill',stun:.18,knock:.6,dir:{x:q.dx,y:q.dy}});
  }
  s.shots=s.shots.filter(q=>q.life>0);
- for(const h of s.hazards){h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+ for(const h of s.hazards){if(['bladeSend','frostWard','wardPunish','wardFan'].includes(h.kind))continue;h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
   if(h.kind==='emberMark'&&h.t>0){h.x=o.x;h.y=o.y;}
   if(h.kind==='mirrorTell'){
    if(owner.stun>0||owner.state!=='skill'||owner.mirrorCast!==h.cast){h.t=0;continue;}
@@ -452,6 +458,10 @@ export function duelAi(s,team,dt){
  else ai.seen=0;
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;
+ if(DUEL_BATCH03[f.char]&&batch03Ai(s,f,o,input,dt))return input;
+ if(f.char==='chainburst'&&f.cd[1]<=0&&d<3.2&&o.state==='heavy'&&ai.seen>=react){input.skill2=true;return input;}
+ if(f.char==='blastlance'&&f.cd[1]<=0&&d<2.6&&threat&&ai.seen>=react){input.skill2=true;return input;}
+ if(f.char==='frostnet'&&f.cd[1]<=0&&s.hazards.some(h=>h.owner===team&&h.kind==='frostThread'&&h.triggered&&!h.hitDone&&lineContact({...h,r:.55},o))){input.skill2=true;return input;}
  if(f.state==='skill'&&['gravitymirror','chainburst'].includes(f.char)){input.x=d<3.8?-v.x:-v.y;input.y=d<3.8?-v.y:v.x;return input;}
  if(f.char==='gravitymirror'){
   const h=s.hazards.find(h=>h.owner===team&&h.kind==='mirrorAnchor'&&h.t>0);
@@ -461,7 +471,7 @@ export function duelAi(s,team,dt){
  const authoredDanger=s.hazards.find(h=>h.owner!==team&&h.t>0&&(h.kind==='mirrorAnchor'&&dist(f,h)<h.r+.35||h.kind==='mirrorFold'&&!h.triggered&&lineContact({...h,r:h.r+.3},f)||h.kind==='emberRelay'&&!h.triggered&&(lineContact({...h,r:h.r+.3},f)||Math.hypot(f.x-h.endX,f.y-h.endY)<h.burstR+.4)));
  if(authoredDanger){ai.fusionSeen=(ai.fusionSeen||0)+dt;if(ai.fusionSeen>cfg.react){const h=authoredDanger,v=h.kind==='mirrorAnchor'?norm(f.x-h.x,f.y-h.y):{x:-h.dy,y:h.dx};input.x=v.x;input.y=v.y;if(f.dodgeCd<=0&&h.arm<.2)input.dodge=true;return input;}}else ai.fusionSeen=0;
  if(f.char==='gravitymirror'&&f.cd[0]<=0&&d>2.5&&d<6.5&&!threat&&rnd(s)<dt*2.5){const p=DUEL_PILLARS.find(p=>dist(p,o)<3.2);if(p){const v=norm(p.x-f.x,p.y-f.y);input.aimX=v.x;input.aimY=v.y;}input.skill1=true;return input;}
- if(f.char==='chainburst'&&f.cd[0]<=0&&d<6&&!threat){const mark=s.hazards.some(h=>h.owner===team&&h.kind==='emberMark'&&h.t>0);if((mark&&d>1.8||!mark&&d>4.2)&&rnd(s)<dt*3.5){input.skill1=true;return input;}}
+ if(f.char==='chainburst'&&f.cd[0]<=0&&d<6&&!threat){const mark=s.hazards.some(h=>h.owner===team&&h.kind==='emberMark'&&h.t>0);if((mark&&d>1.8||!mark&&d>2.5&&d<4.15)&&rnd(s)<dt*3.5){input.skill1=true;return input;}}
  if(f.meter>=100&&['gravitymirror','chainburst'].includes(f.char)&&d>3.2&&d<6.5&&!threat){input.ult=true;return input;}
  // Read a placed threat after a real reaction interval; move toward its shortest exit, never teleport.
  const danger=s.hazards.find(h=>h.owner!==team&&!h.hitDone&&((!h.triggered||h.kind==='heartWell')&&['bramble','frostBloom','rushTell','cinderPatch','echoStrike','heartWell','bloomEmber'].includes(h.kind)&&dist(f,h)<h.r+.8||['reedTell','shardMark','bloomLanceTell'].includes(h.kind)&&!h.triggered&&lineContact({...h,r:h.r+.6},f)||h.kind==='frostThread'&&!h.hitDone&&lineContact({...h,r:h.r+.25},f)||h.kind==='pulseRing'&&dist(f,h)<h.maxR+.5&&dist(f,h)>h.r-.5||h.kind==='pebbleOrbit'&&h.hits<h.maxHits&&Math.abs(dist(f,h)-h.orbitR)<1||h.kind==='ring'&&f.inv<=0&&(h.tick||0)<.12&&dist(f,h)<h.r+.3));
@@ -470,8 +480,8 @@ export function duelAi(s,team,dt){
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['gravitymirror','chainburst'].includes(f.char)){input.ult=true;return input;}
- // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만" — 두 번째 스킬은 쓰지 않는다(사람과 같은 조작).
+ const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['gravitymirror','chainburst','returnblade','frostguard'].includes(f.char)){input.ult=true;return input;}
+ // 기술2는 방어+회피 또는 방어 중 기존 +로 접근한다. 위 조건은 같은 시전·쿨다운을 사용한다.
  if(f.cd[0]<=0&&(f.char==='frostnet'&&d>1.5&&d<4.8&&!threat||f.char==='blastlance'&&d>3&&d<6.5&&!threat||f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  // Weavers set lanes from midrange, then close for melee in recovery. Staying
  // at ordinary melee spacing cancels their own windup against every rushdown.

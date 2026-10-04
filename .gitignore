@@ -149,3 +149,9 @@ art-refs/
 !tools/duel-fusion-02-art-test.mjs
 !tools/duel-fusion-02-ai.mjs
 !tools/duel-fusion-02-trace.mjs
+
+!tools/duel-fusion-03-test.mjs
+!tools/duel-fusion-03-art-test.mjs
+!tools/duel-fusion-03-ai.mjs
+!tools/duel-input-test.mjs
+!tools/expansion-boss-art-test.mjs

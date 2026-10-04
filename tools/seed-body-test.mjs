@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {AWAKEN_BODY_TILES,BODY_SIZE,EVOLUTION_SIZE,FUSION_BODY_TILES,SEED_AWAKEN_BODY_ART,SEED_BODY_ART,SEED_FUSION_BODY_ART,SEED_SOLO_BODY_ART,THEME_CREST_ART,SOLO_BODY_TILES,dominantSoloForm,rankedEvolutionForms,seedFrame,stableSeedFrame} from '../src/seed-body.js';
-import {ACTOR_ART_GEOMETRIES,actorArtRotation,actorFrameGeometry,actorArtFile} from '../src/actor-art.js';
+import {ACTOR_ART_GEOMETRIES,ACTOR_MOTION_GEOMETRIES,actorArtRotation,actorFrameGeometry,actorArtFile} from '../src/actor-art.js';
 for(const yaw of [0,.63,-2.2]){
  assert.equal(seedFrame(yaw,yaw),0);
  assert.equal(seedFrame(yaw+Math.PI/2,yaw),1);
@@ -53,6 +53,12 @@ for(const phase of ['normal','overtime','deadline',undefined,0,.7])for(const sta
 assert.equal(actorArtRotation('stalk',2,.7),Math.sin(18+.7)*.025);
 console.log('Austin named phases and mob gait phases produce finite sprite poses.');
 assert.equal(new Set(Object.values(ACTOR_ART_GEOMETRIES)).size,5);
+assert.equal(new Set(ACTOR_MOTION_GEOMETRIES).size,8);const motionGrid={columns:4,rows:2};
+for(let i=0;i<8;i++){
+ const geometry=actorFrameGeometry(i,motionGrid),uv=geometry.getAttribute('uv'),column=i%4,row=1-Math.floor(i/4);
+ assert.equal(geometry,ACTOR_MOTION_GEOMETRIES[i]);assert.equal(actorFrameGeometry(i+8,motionGrid),geometry);
+ for(let n=0;n<uv.count;n++){assert(uv.getX(n)>=column/4&&uv.getX(n)<=(column+1)/4);assert(uv.getY(n)>=row/2&&uv.getY(n)<=(row+1)/2);}
+}
 for(let frame=0;frame<4;frame++)assert.equal(actorFrameGeometry(frame+4),actorFrameGeometry(frame));
 assert.equal(actorArtFile('enemy-act3-flight-atlas-v2.webp',{reducedTextures:true}),'cute/enemy-act3-flight-atlas-v2.webp');
 assert.equal(actorArtFile('boss-act3-johan-atlas-v2.webp',{reducedTextures:true}),'mobile/boss-act3-johan-atlas-v2.webp');

@@ -29,7 +29,7 @@ import './forms.css';
 import './final-identity-art.css';
 import './combo-art.css';
 import './dash-evolution.css';
-import {ACTOR_ART_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt} from './actor-art.js';
+import {ACTOR_ART_GEOMETRIES,ACTOR_MOTION_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt} from './actor-art.js';
 import {attachBossActionRig} from './boss-action-rig.js';
 import {BOSS_PETS,createBossPet,readBossPet,unlockedBossPets,writeBossPet} from './boss-pets.js';
 import {createSpatialIndex} from './spatial-index.js';
@@ -50,6 +50,7 @@ import {ACT3_GEOMETRIES,ACT3_MATERIALS,ACT3_ART,isAct3Minion,createAct3Minion,ti
 import {createSkyway} from './skyway.js';
 import * as expansionRuntime from './expansion-journey.js';
 import {createSurvivalExpansion} from './survival-expansion.js';
+import {expansionActorArt} from './expansion-actor-art.js';
 let expansionApi=expansionRuntime,survivalExpansion=null;
 import {createContactShadows} from './contact-shadows.js';
 import {MIRROR_ATTACK_CADENCE,MIRROR_BREAK,MIRROR_GUARD,mirrorDamageAllowed,MIRROR_TRIAL_PROTOTYPE,clearMirrorCheckpoint,mirrorAttackCooldown,mirrorFloorRules,readMirrorCheckpoint,refundMirrorAttackCooldown,readMirrorRecord,recordMirrorResult,writeMirrorCheckpoint} from './mirror-trial.js';
@@ -244,7 +245,7 @@ const baseOrbitGeo=projectileCellGeometry(4);baseOrbitGeo.name='seed-law-orbit-p
 const sharedDynamicMaterials=new Set([...Object.values(mats),...Object.values(ACT3_MATERIALS)]);
 // Enemy bolts, tells and rings reuse these instead of creating and uploading new buffers for every shot and spawn.
 const enemyGeos={tellHound:new THREE.PlaneGeometry(.9,4.8),tellCaster:new THREE.RingGeometry(1.1,1.3,48)},ringGeos=new Map();
-const sharedGeometries=new Set([...Object.values(ACT2_GEOMETRIES),...Object.values(ACT3_GEOMETRIES),...Object.values(enemyGeos),baseOrbitGeo,...Object.values(ACTOR_ART_GEOMETRIES)]);
+const sharedGeometries=new Set([...Object.values(ACT2_GEOMETRIES),...Object.values(ACT3_GEOMETRIES),...Object.values(enemyGeos),baseOrbitGeo,...Object.values(ACTOR_ART_GEOMETRIES),...ACTOR_MOTION_GEOMETRIES]);
 function release(object){disposeObject(object,sharedDynamicMaterials,sharedGeometries);}
 function releaseEnemy(e){release(e.g);if(e.world)release(e.world);}
 // All moving projectiles now share flat painterly atlas batches.
@@ -517,7 +518,7 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false}={}){
  const [rules,view]=await Promise.all([import('./expansion-journey.js'),import('./expansion-journey-view.js')]);expansionApi=rules;
  if(launch!==expansionLaunch)return false;
  if(!Object.hasOwn(rules.EXPANSION_ACTS,act))return false;
- const owner=expansionOwner(),saved=resume?expansionStore(act).read():null;
+ const owner=expansionOwner(),saved=resume?createExpansionSaveStore(rawStorage,act,owner).read():null;
  if(resume&&!saved){$('#toast').textContent='이어할 로컬 저장이 없거나 다른 버전의 기록이에요.';return false;}
  if(!expansionCrystalTexture){expansionCrystalTexture=texloader.load(import.meta.env.BASE_URL+'assets/'+(mobileDevice?'mobile/':'')+'mirror-crystal-v1.webp');expansionCrystalTexture.colorSpace=THREE.SRGBColorSpace;}
  expansionJourneyView??=view.createExpansionJourneyView(scene,stone,expansionCrystalTexture);
@@ -535,8 +536,9 @@ function spawnExpansionActor(spec,boss=false){
  const g=new THREE.Group();scene.add(g);const e={g,type:boss?'expansion-boss':'expansion-minion',hp:boss?2400:spec.hp,maxHp:boss?2400:spec.hp,hit:0,slow:0,state:'entry',phase:0,immovable:boss,radius:boss ? .8 : .65,expansionActor:true,expansionBoss:boss,config:{name:boss?expansionApi.EXPANSION_ACTS[expansionJourney.act].bossName:expansionJourney.act==='crosswind'?'잎배 편대':'수정 정찰대'}};
  g.position.set(spec.position.x,0,spec.position.z);
  if(!boss)e.expansionThreat=expansionApi.createExpansionThreat(spec);
- const art=ACT3_ART[boss?'act3warden':spec.type==='charger'?'sky-diver':spec.type==='lobber'?'sky-bomber':'sky-scout'];
- attachActorArt(e,camera,release,{file:art.file,size:boss?3.2:art.size,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});enemies.push(e);return e;
+ if(boss){e.expansionMotion=expansionJourney.boss;attachActorArt(e,camera,release,expansionActorArt(expansionJourney.bossId));}
+ else{const art=ACT3_ART[spec.type==='charger'?'sky-diver':spec.type==='lobber'?'sky-bomber':'sky-scout'];attachActorArt(e,camera,release,{file:art.file,size:art.size,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
+ enemies.push(e);return e;
 }
 function expansionBolt(q){if(enemyShots.length>=48)return;skywayBolt(new V(q.position.x,0,q.position.z),new V(q.dir.x,0,q.dir.z),q.spec);}
 function updateExpansionCourse(dt){
@@ -1148,7 +1150,7 @@ function spawnSurvivalBoss(){
  const spot=survivalSpawn(survivalSession,player.position,arena)||{x:0,z:-12};
  e.g.position.set(spot.x,0,spot.z);e.survivalBoss=true;e.survivalScale=scale;
  e.hp*=scale.bossHp;e.maxHp=e.hp;if(Number.isFinite(e.damageAllowance))e.damageAllowance*=scale.bossHp;
- if(act.expansion){const art=ACT3_ART.act3warden;attachActorArt(e,camera,release,{file:art.file,size:3.2,atlasFrame:art.frame,topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
+ if(act.expansion){e.expansionMotion=survivalExpansion?.boss;attachActorArt(e,camera,release,expansionActorArt(act.type));}
  else if(act.type==='alwaysbeginner')attachActorArt(e,camera,release,{...ALWAYS_BEGINNER_ART,directional:true,occlusion:qualityLevel>0});
  else if(act.type==='tempestcarrier'){const art=ACT3_ART.tempestcarrier;attachActorArt(e,camera,release,{file:art.file,size:art.size,atlasFrame:actor=>art.frames[actor.phaseIndex||0],topDownFacing:true,baseline:art.baseline,occlusion:false,lighting:false});}
  else if(AUSTIN_ART)attachActorArt(e,camera,release,{file:AUSTIN_ART,size:4.3,directional:true,baseline:.02,occlusion:qualityLevel>0});

@@ -1,7 +1,8 @@
 import {createFramePacer} from './frame-time.js';
+import {EXPANSION_BOSS_ART,paintExpansionBoss} from './expansion-actor-art.js';
 import {defensePlacement,defenseCellAt,DEFENSE_CELLS,placeDefensePad,DEFENSE,PATH,PADS,DEFENSE_LAWS,FUSIONS,createDefense,plantDefense,defenseSeedCap,defenseTierOf,DEFENSE_TIER_NAMES,mergeDefense,defenseMergeResult,rerollDefense,removeDefense,defenseRemoveRefund,defenseNextSteps,upgradeDefense,startDefenseWave,chooseDefenseLaw,stepDefense,getDefenseOffers,defenseTowerStats,defenseUpgradeCost,defenseWaveInfo,defensePoint,defensePath,checkpointDefense,restoreDefense,defenseTowerName,evolveDefense,getDefenseEvolutionOptions,DEFENSE_FORMS,DEFENSE_CATALOG,DEFENSE_CATALOG_COUNTS} from './seed-defense-rules.js';
 import './seed-defense.css';
-import {defenseBodyParts,defenseBedPath,paintDefenseGround,paintEvolutionCue} from './seed-defense-art.js';
+import {defenseBodyParts,defenseBedPath,paintDefenseGround,paintEvolutionCue,paintDefenseCrystal} from './seed-defense-art.js';
 import './forms.css';
 import './combo-art.css';
 import {formArt} from './form-art.js';
@@ -169,9 +170,12 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   bg.restore();dirty=false;
  }
  function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
+ let expansionVisualWave=-1;
+ function updateExpansionVisuals(){if(expansionVisualWave===state.wave)return;expansionVisualWave=state.wave;if(state.actCount!==5)return;const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));}
  function draw(now){
+  updateExpansionVisuals();
   if(dirty)ground();ctx.drawImage(back,0,0,back.width,back.height,0,0,width,height);ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
-  for(const w of state.crystalWalls||[]){if(w.broken)continue;ctx.save();ctx.translate(w.x,w.z);ctx.fillStyle='#192438';ctx.beginPath();ctx.ellipse(0,1.6,2.8,1.1,0,0,Math.PI*2);ctx.fill();ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(2,-1.6);ctx.lineTo(1.4,1.8);ctx.lineTo(-1.8,1.8);ctx.lineTo(-2,-1.6);ctx.closePath();ctx.fillStyle='#517eaa';ctx.fill();ctx.strokeStyle='#c4e4f5';ctx.lineWidth=.2;ctx.stroke();ctx.beginPath();ctx.moveTo(0,-5);ctx.lineTo(.4,1.7);ctx.lineTo(2,-1.6);ctx.stroke();if(w.hp<w.maxHp){ctx.fillStyle='#182736';ctx.fillRect(-2,2.6,4,.35);ctx.fillStyle='#a9def7';ctx.fillRect(-2,2.6,4*w.hp/w.maxHp,.35);}ctx.restore();}
+  for(const w of state.crystalWalls||[])paintDefenseCrystal(ctx,w,assets.crystalCover);
   // 화단 칸 자체는 바닥에 구워 두었다. 심을 칸을 고르거나 씨앗을 끄는 동안에만 빈 칸을 흰 점선으로 밝힌다.
   const placingNow=root.classList.contains('td-placing')||moving||drag?.moved,hover=drag?.moved&&!drag.target?defenseCellAt(drag.x,drag.y):null,chosenPad=state.pads[selected];
   if(placingNow||state.phase==='build'&&!state.towers.length){ctx.save();ctx.setLineDash([.9,.7]);ctx.lineWidth=.22;for(const c of DEFENSE_CELLS){const used=state.towers.some(t=>t.x===c.x&&t.y===c.y&&(!drag||t.id!==drag.id));if(used)continue;const on=c===hover||(!drag?.moved&&chosenPad&&chosenPad.x===c.x&&chosenPad.y===c.y&&!tower());defenseBedPath(ctx,c.x,c.y,.35);ctx.fillStyle=on?'#fff1b92e':'#ffffff0f';ctx.fill();ctx.strokeStyle=on?'#fff1b9e0':'#ffffff8c';ctx.stroke();}ctx.restore();}
@@ -202,7 +206,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();const sky=e.act===2,heavy=e.kind==='shield'||e.kind==='resilient';
    const atlas=boss?(e.bossId==='crosswindKeeper'?'tempestcarrier':e.bossId==='crystalGardener'?'boss':e.bossId||(sky?'tempestcarrier':e.act===1?'stadiumWarden':'boss')):sky?'flight':e.kind==='fast'?'runner':e.act===1?(heavy?'catcher':'batter'):heavy?'shield':'hound';
    const cell=sky?(boss?(e.bossId?1+Number(e.hp<e.maxHp*.66)+Number(e.hp<e.maxHp*.33):0):e.kind==='fast'?1:heavy?2:0):face;
-   sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
+   if(!boss||!EXPANSION_BOSS_ART[e.bossId]||!paintExpansionBoss(ctx,e,assets[e.bossId],sz))sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);
    if(boss&&e.expansionState==='tell'){ctx.strokeStyle='#ed9b88';ctx.lineWidth=.28;ctx.beginPath();ctx.ellipse(e.x,e.y+1,4.2,1.7,0,0,Math.PI*2);ctx.stroke();}
    if(boss&&e.coreOpen){ctx.fillStyle='#c4f2c8';ctx.beginPath();ctx.arc(e.x,e.y-3.2,.65,0,Math.PI*2);ctx.fill();}
    if(e.hp<e.maxHp||boss){ctx.fillStyle='#172323';ctx.fillRect(e.x-2,e.y-sz*.7,4,.38);ctx.fillStyle=boss?'#edb16f':'#db8176';ctx.fillRect(e.x-2,e.y-sz*.7,4*Math.max(0,e.hp/e.maxHp),.38);}

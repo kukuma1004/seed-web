@@ -1,3 +1,5 @@
+import {createDuelChordInput,DUEL_INPUT_KEYS} from './seed-duel-input.js';
+import {batch03Repress} from './seed-duel-batch03.js';
 import {createDuel,stepDuel,DUEL_CHARACTERS,DUEL_ORDER,DUEL_ARENA,DUEL_PILLARS,DUEL_SPAWN,DUEL_RULES,availableDuelCharacters} from './seed-duel-rules.js';
 import {DUEL_STORY_CHAPTERS,DUEL_STORY_STAGES,completeStoryMatch} from './seed-duel-story.js';
 import {readDuelStory,writeDuelStory,normalizeDuelStory,storyUnlocked,nextStoryStage} from './seed-duel-story-progress.js';
@@ -14,7 +16,7 @@ import './seed-duel.css';
 // - 카메라는 두 씨앗을 따라가며 가까우면 당겨 보고 멀면 물러난다(경기장 밖은 보여 주지 않는다).
 // - 캐릭터마다 무기(창·불꽃 주먹·수정 칼·중력 구슬)를 들고 1·2·3타·강공격의 궤적과 몸동작이 다르다.
 const BASE=import.meta.env.BASE_URL;
-const SOUND={hit:['hit'],heavyHit:['burstHit',{pitch:.85}],bloomLaunch:['shotPierce',{pitch:.85}],frostWeave:['shotFrost',{pitch:1.15}],mirrorLaunch:['shotGravity',{pitch:.85}],mirrorBounce:['reflect',{pitch:.8}],mirrorFold:['shotPierce',{pitch:.75}],emberRelay:['chain',{pitch:1.05}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
+const SOUND={bladeSend:['shotPierce',{pitch:1.1}],bladeRecall:['shot',{pitch:.8}],bladeCatch:['reflect',{pitch:1.3}],wardBlock:['shotFrost',{pitch:.75}],hit:['hit'],heavyHit:['burstHit',{pitch:.85}],bloomLaunch:['shotPierce',{pitch:.85}],frostWeave:['shotFrost',{pitch:1.15}],mirrorLaunch:['shotGravity',{pitch:.85}],mirrorBounce:['reflect',{pitch:.8}],mirrorFold:['shotPierce',{pitch:.75}],emberRelay:['chain',{pitch:1.05}],block:['reflect',{pitch:.8}],parry:['evolve'],guardBreak:['bossAttack'],dash:['dash'],skill:['shot'],ultimate:['ultimate'],start:['bossWarning'],win:['bossDefeat'],lose:['hurt'],charge:['shotGravity',{pitch:.7}],link:['burstHit',{pitch:1.25}],swing0:['shot'],swing1:['shot',{pitch:1.1}],swing2:['shotPierce'],reflect:['reflect']};
 // 바닥을 구워 둘 세계 범위와 해상도(세계 1칸 = 40px).
 const WX0=-6,WY0=-6,WX1=41,WY1=27,BAKE=40;
 // 버튼 그림: 모험의 씨앗 동작 그림(adventure/seed-combat-v1, 4×2칸)과 이펙트 소재(vfx-atlas, 4×4칸).
@@ -27,17 +29,17 @@ const MOTION=DUEL_ORDER;
 // Native 1774×887 frostnet sheet has deliberate safety margins; trim source rectangles
 // at draw time so different row baselines do not make the weaver jump or shrink.
 const FROST_POSES=[[102,125,292,268],[52,149,361,245],[62,119,319,278],[29,145,337,250],[102,59,287,293],[53,83,360,264],[75,77,290,271],[32,78,307,275]];
-const FUSION_POSES={gravitymirror:[[104,167,304,273],[62,175,387,265],[96,180,319,260],[60,174,392,266],[116,119,279,321],[66,171,380,269],[116,188,279,252],[83,161,345,279]],chainburst:[[93,167,325,273],[64,184,383,256],[79,142,353,298],[76,180,359,260],[86,114,339,326],[53,162,406,278],[85,187,341,253],[80,121,351,319]]};
+const FUSION_POSES={...{"returnblade":[[123,103,266,337],[68,212,376,228],[38,231,436,209],[61,235,389,205],[111,141,289,299],[76,172,360,268],[109,205,294,235],[109,210,294,230]],"frostguard":[[99,175,314,265],[74,189,364,251],[90,112,331,328],[83,166,346,274],[82,199,347,241],[88,98,336,342],[98,187,316,253],[92,166,328,274]]},gravitymirror:[[104,167,304,273],[62,175,387,265],[96,180,319,260],[60,174,392,266],[116,119,279,321],[66,171,380,269],[116,188,279,252],[83,161,345,279]],chainburst:[[93,167,325,273],[64,184,383,256],[79,142,353,298],[76,180,359,260],[86,114,339,326],[53,162,406,278],[85,187,341,253],[80,121,351,319]]};
 const motionFrame=f=>['hit','broken','stagger','jailed'].includes(f.state)?7:f.state==='attack'&&f.t>0?[1,2,3][f.step]??1:f.state==='heavy'&&f.t>0?(f.t>.12?4:5):f.state==='skill'?(f.char==='blastlance'?(f.t>f.total-.45?4:5):f.char==='frostnet'?(f.t>f.total-.55?4:5):(f.t>.12?4:5)):f.state==='dash'?3:f.state==='leap'?(f.t>.2?4:5):f.blocking?6:0;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 export function mountSeedDuel({host=document.body,audio,storage=localStorage,owner='guest',practice=false,initialCharacter='pierce',canSave=()=>true,onProgress=()=>{},onSaveAccount=null,onResult=()=>'',onRanking=()=>{},onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-duel';root.setAttribute('aria-label','씨앗 대전');
  const pose=(act,label,key)=>`<button data-act="${act}" class="sd-${act}"><i class="sd-ico sd-pose" style="background-image:url('${BASE}assets/adventure/seed-combat-v1.webp');background-position:${POSE[act]%4*100/3}% ${Math.floor(POSE[act]/4)*100}%"></i><b class="sd-lbl">${label}</b><small>${key}</small></button>`;
  root.innerHTML=`<canvas aria-label="씨앗 대전"></canvas><header class="sd-top"><div class="sd-side sd-p0"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><div class="sd-center"><span class="sd-rounds"></span><strong class="sd-timer"></strong></div><div class="sd-side sd-p1"><b></b><div class="sd-hp"><i></i></div><div class="sd-guard"><i></i></div><div class="sd-meter"><i></i></div></div><button class="sd-pause" aria-label="일시정지">Ⅱ</button></header><div class="sd-story-hud" hidden></div><div class="sd-message"></div><div class="sd-combo" aria-hidden="true"></div>
- <div class="sd-controls"><div class="sd-stick" role="button" aria-label="이동"><i></i></div><div class="sd-buttons"><button data-act="ult" class="sd-ult"><i class="sd-ico sd-fx" style="background-image:url('${BASE}assets/vfx-atlas-v1.webp')"></i><b class="sd-lbl">필살</b><small>O</small></button>${pose('block','방어','K')}${pose('dodge','회피','Space')}${pose('attack','공격','J')}<button class="sd-chord sd-chord-heavy" data-chord="heavy" aria-label="공격과 방어 같이 · 강공격"><b>+</b><span>강공격</span></button><button class="sd-chord sd-chord-skill" data-chord="skill1" aria-label="공격과 회피 같이 · 기술"><b>+</b><span class="sd-lbl">기술</span></button></div></div>
- <div class="sd-pc">WASD 이동 · J 공격 · K 방어(누르고 있기 · 맞기 직전 = 반격 막기) · Space 회피 · O 필살 · J+K 같이 = 강공격 · J+Space 같이 = 기술</div><div class="sd-drill" hidden></div><div class="sd-modal"></div>`;
+ <div class="sd-controls"><div class="sd-stick" role="button" aria-label="이동"><i></i></div><div class="sd-buttons"><button data-act="ult" class="sd-ult"><i class="sd-ico sd-fx" style="background-image:url('${BASE}assets/vfx-atlas-v1.webp')"></i><b class="sd-lbl">필살</b><small>O</small></button>${pose('block','방어','K')}${pose('dodge','회피','Space')}${pose('attack','공격','J')}<button class="sd-chord sd-chord-heavy" data-chord="heavy" aria-label="공격과 방어 같이 · 강공격"><b>+</b><span>강공격</span></button><button class="sd-chord sd-chord-skill" data-chord="skill1" aria-label="공격과 회피 같이 · 기술"><b>+</b><span class="sd-lbl">기술1</span></button></div></div>
+ <div class="sd-pc">WASD 이동 · J 공격 · K 방어(누르고 있기 · 맞기 직전 = 반격 막기) · Space 회피 · O 필살 · J+K 같이 = 강공격 · J+Space 같이 = 기술1 · K+Space 같이 = 기술2</div><div class="sd-drill" hidden></div><div class="sd-modal"></div>`;
  host.append(root);document.body.classList.add('seed-duel-open');
- const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),assets={},keys=new Set(),held=new Set(),pressed=new Set(),listeners=[];
+ const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),assets={},keys=new Set(),held=new Set(),listeners=[];
  const vfx=createCanvasVfx({onReady:()=>{floor=null;}}),pacer=createFramePacer();
  let s=null,raf=0,last=0,closed=false,width=1,height=1,scale=1,ox=0,oy=0,dpr=1,pick={player:DUEL_ORDER.includes(initialCharacter)?initialCharacter:'pierce',enemy:'random',difficulty:'normal'},uiAt=0,floor=null,clock=0;
  let rosterFilter='all';
@@ -55,7 +57,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  function select(){
   menuRest();storyStage=null;refreshStory();const choices=availableDuelCharacters(storyProgress);if(!choices.includes(pick.player))pick.player='pierce';if(pick.enemy!=='random'&&!choices.includes(pick.enemy))pick.enemy='random';
   const card=id=>{const c=DUEL_CHARACTERS[id];return `<button class="sd-card${pick.player===id?' on':''}" data-pick="${id}" style="--ink:${c.ink}">${portrait(id)}<span><b>${c.name}</b><small>${c.role}</small><em>${c.blurb}</em><i>${lawArt(c.law||id,'sd-law')} 기술 ${c.skills[0].name} · 필살 ${c.ult.name}</i></span></button>`;};
-  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-roster"><p class="sd-eyebrow">SEED · DUEL · ${choices.length}명의 씨앗</p><h1>씨앗 대전</h1><button class="sd-primary sd-story-open">이야기 모드 · 아홉 빛의 약속</button><button class="sd-primary sd-rank-open">씨앗 대전 랭킹 보기</button><small>혼자 떠나는 ${DUEL_STORY_CHAPTERS.length}장 · ${Object.keys(storyProgress.cleared).length}/${DUEL_STORY_STAGES.length} 대전 클리어</small><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 캐릭터 기술. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><nav class="sd-filters" aria-label="캐릭터 묶음">${[['all',`전체 ${choices.length}`],['fusion',`융합 ${choices.filter(id=>DUEL_CHARACTERS[id].comboId).length}`],['new','새 친구 6'],['guests','먼저 온 친구 6'],['original','기본 9']].map(([id,n])=>`<button class="sd-chip${rosterFilter===id?' on':''}" data-filter="${id}">${n}</button>`).join('')}</nav><div class="sd-roster-scroll"><div class="sd-cards">${choices.filter(id=>rosterFilter==='all'||(rosterFilter==='fusion'?Boolean(DUEL_CHARACTERS[id].comboId):rosterFilter==='new'?LATEST_GUESTS.includes(id):rosterFilter==='guests'?FIRST_GUESTS.includes(id):DUEL_ORDER.slice(0,9).includes(id))).map(card).join('')}</div>
+  $('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-roster"><p class="sd-eyebrow">SEED · DUEL · ${choices.length}명의 씨앗</p><h1>씨앗 대전</h1><button class="sd-primary sd-story-open">이야기 모드 · 아홉 빛의 약속</button><button class="sd-primary sd-rank-open">씨앗 대전 랭킹 보기</button><small>혼자 떠나는 ${DUEL_STORY_CHAPTERS.length}장 · ${Object.keys(storyProgress.cleared).length}/${DUEL_STORY_STAGES.length} 대전 클리어</small><p>버튼은 <b>공격·방어·회피·필살</b> 네 개. <b>공격+방어</b>를 같이 누르면 강공격(막기 부수기), <b>공격+회피</b>는 기술1, <b>방어+회피</b>는 기술2. 두 버튼 사이 +도 같은 기술이에요. 공격은 막기에, 막기는 강공격에 져요. 처음이면 <b>콤보 연습</b>부터!</p><nav class="sd-filters" aria-label="캐릭터 묶음">${[['all',`전체 ${choices.length}`],['fusion',`융합 ${choices.filter(id=>DUEL_CHARACTERS[id].comboId).length}`],['new','새 친구 6'],['guests','먼저 온 친구 6'],['original','기본 9']].map(([id,n])=>`<button class="sd-chip${rosterFilter===id?' on':''}" data-filter="${id}">${n}</button>`).join('')}</nav><div class="sd-roster-scroll"><div class="sd-cards">${choices.filter(id=>rosterFilter==='all'||(rosterFilter==='fusion'?Boolean(DUEL_CHARACTERS[id].comboId):rosterFilter==='new'?LATEST_GUESTS.includes(id):rosterFilter==='guests'?FIRST_GUESTS.includes(id):DUEL_ORDER.slice(0,9).includes(id))).map(card).join('')}</div>
    <div class="sd-row"><span>상대</span>${['random',...choices].map(id=>`<button class="sd-chip${pick.enemy===id?' on':''}" data-enemy="${id}">${id==='random'?'무작위':DUEL_CHARACTERS[id].name}</button>`).join('')}</div>
    <div class="sd-row"><span>난이도</span>${[['easy','쉬움'],['normal','보통'],['hard','어려움']].map(([id,n])=>`<button class="sd-chip${pick.difficulty===id?' on':''}" data-diff="${id}">${n}</button>`).join('')}</div>
    </div><footer class="sd-roster-footer"><button class="sd-primary sd-go">대전 시작 · 세 판 두 선승</button><button class="sd-practice">콤보 연습 · 기술 익히기</button><button class="sd-back">돌아가기</button><small>자유 대전·연습은 보상 없이 즐겨요. 이야기 모드는 클리어한 상대를 기록해요. ${choices.includes('heart')?'정원의 심장 동료 해금!':'마지막 스테이지 보스를 이기면 정원의 심장이 동료로 합류해요.'}</small></footer></div>`;
@@ -71,7 +73,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  function result(){resultTimer=0;if(closed)return;menuRest(false);if(storyStage){recordStoryWin();storyResult();return;}const win=s.winner===0;$('.sd-modal').hidden=false;$('.sd-modal').innerHTML=`<div class="sd-paper sd-small"><p class="sd-eyebrow">${win?'VICTORY':'DEFEAT'}</p><h1>${win?'대전 승리!':'대전 패배'}</h1>${portrait(s.fighters[win?0:1].char,'big')}<p>${s.wins[0]} : ${s.wins[1]}</p><p class="sd-save-note sd-rank-status" role="status">랭킹을 확인하는 중…</p><button class="sd-primary sd-rank-open">씨앗 대전 랭킹 보기</button><button class="sd-primary sd-again">다시 붙기</button><button class="sd-pickagain">캐릭터 다시 고르기</button><button class="sd-back">돌아가기</button></div>`;Promise.resolve(onResult(s,{storyStage:0})).then(note=>{const el=$('.sd-rank-status');if(el&&note)el.textContent=String(note);}).catch(()=>{});$('.sd-rank-open').onclick=onRanking;$('.sd-again').onclick=()=>start(false);$('.sd-pickagain').onclick=()=>{root.classList.remove('sd-playing');select();};$('.sd-back').onclick=close;}
 
  // ── 혼자 깨는 이야기: 같은 대전 규칙, 다른 상대·대화·진행 기록.
- function clearInput(){keys.clear();held.clear();pressed.clear();move.x=move.y=0;pend=null;suppressBlock=false;root.querySelectorAll('.down').forEach(b=>b.classList.remove('down'));$('.sd-stick i').style.transform='';}
+ function clearInput(){keys.clear();held.clear();chords.clear();move.x=move.y=0;root.querySelectorAll('.down').forEach(b=>b.classList.remove('down'));$('.sd-stick i').style.transform='';}
  function menuRest(reset=true){cancelAnimationFrame(raf);raf=0;clearTimeout(resultTimer);resultTimer=0;clearInput();paused=false;drill.on=false;$('.sd-drill').hidden=true;root.classList.remove('sd-practicing');if(reset){s=null;root.classList.remove('sd-playing');$('.sd-story-hud').hidden=true;$('.sd-message').textContent='';$('.sd-combo').textContent='';}camera(0);draw(0);}
  function refreshStory(){if(!practice)storyProgress=readDuelStory(storage,owner);}
  function storyMap(){
@@ -103,24 +105,18 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  }
  // ── 입력
  // 2026-09-28 사용자: "키가 너무 많다 · 공격·회피·방어·궁만 · 같이 누르면 다른 기술" — 같이 누르기(0.07초 안)를 알아챈다.
- // 공격 → (0.07초 안에) 방어 = 강공격, 방어를 누른 채 공격 = 강공격, 공격 ↔ 회피 같이 = 기술. 혼자면 0.07초 뒤 그대로 나간다.
+ // 공격+방어 = 강공격, 공격+회피 = 기술1, 방어+회피 = 기술2. 단독 입력은70ms 뒤 확정한다. 두 번째 기술은 막기/회피가 함께 새어 나가지 않는다.
  // 터치는 엄지 하나로 두 버튼을 동시에 누르기 어려워서, 두 버튼 사이의 '+' 자리가 같이 누르기다.
- const CHORD_MS=70;let pend=null,suppressBlock=false;
  const blockHeld=()=>held.has('block')||keys.has('KeyK');
- function fire(a){pressed.add(a);}
- function press(a){const now=performance.now(),recent=pend&&now-pend.t<=CHORD_MS;
-  if(a==='block'){if(recent&&pend.a==='attack'){pend=null;suppressBlock=true;fire('heavy');}return;}
-  if(a==='attack'){if(blockHeld()){suppressBlock=true;fire('heavy');return;}if(recent&&pend.a==='dodge'){pend=null;fire('skill1');return;}if(pend)fire(pend.a);pend={a,t:now};return;}
-  if(a==='dodge'){if(recent&&pend.a==='attack'){pend=null;fire('skill1');return;}if(pend)fire(pend.a);pend={a,t:now};return;}
-  fire(a);}
- function input(){if(pend&&performance.now()-pend.t>CHORD_MS){fire(pend.a);pend=null;}if(!blockHeld())suppressBlock=false;
-  const i={x:move.x+((keys.has('KeyD')||keys.has('ArrowRight'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft'))?1:0),y:move.y+((keys.has('KeyS')||keys.has('ArrowDown'))?1:0)-((keys.has('KeyW')||keys.has('ArrowUp'))?1:0),block:blockHeld()&&!suppressBlock};
-  if(Math.hypot(i.x,i.y)>.1){i.aimX=i.x;i.aimY=i.y;}for(const a of pressed)i[a]=true;pressed.clear();return i;}
- const KEY={KeyJ:'attack',KeyK:'block',Space:'dodge',KeyO:'ult',KeyL:'heavy',KeyU:'skill1'};
+ const chords=createDuelChordInput({blockHeld});
+ const fire=a=>chords.fire(a),press=a=>chords.press(a);
+ function input(){const i={...chords.read(),x:move.x+((keys.has('KeyD')||keys.has('ArrowRight'))?1:0)-((keys.has('KeyA')||keys.has('ArrowLeft'))?1:0),y:move.y+((keys.has('KeyS')||keys.has('ArrowDown'))?1:0)-((keys.has('KeyW')||keys.has('ArrowUp'))?1:0)};
+  if(Math.hypot(i.x,i.y)>.1){i.aimX=i.x;i.aimY=i.y;}return i;}
+ const KEY=DUEL_INPUT_KEYS;
  listen(window,'keydown',e=>{if(e.target?.closest?.('input,textarea'))return;if(e.code==='Escape'){e.preventDefault();if($('.sd-modal').hidden)pause();return;}if(!s||s.phase==='over'||!$('.sd-modal').hidden)return;if(KEY[e.code]||['KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();if(e.repeat)return;keys.add(e.code);if(KEY[e.code])press(KEY[e.code]);});
  listen(window,'keyup',e=>keys.delete(e.code));listen(window,'blur',clearInput);listen(document,'visibilitychange',()=>{last=0;clearInput();if(document.hidden){if($('.sd-modal').hidden)pause();cancelAnimationFrame(raf);raf=0;}});
  root.querySelectorAll('[data-act]').forEach(b=>{const a=b.dataset.act;listen(b,'pointerdown',e=>{e.preventDefault();if(a==='block')held.add('block');press(a);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>{if(a==='block')held.delete('block');b.classList.remove('down');});});
- root.querySelectorAll('[data-chord]').forEach(b=>{listen(b,'pointerdown',e=>{e.preventDefault();fire(b.dataset.chord);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>b.classList.remove('down'));});
+ root.querySelectorAll('[data-chord]').forEach(b=>{listen(b,'pointerdown',e=>{e.preventDefault();fire(b.dataset.chord==='skill1'&&blockHeld()?'skill2':b.dataset.chord);b.classList.add('down');});for(const n of ['pointerup','pointercancel','pointerleave'])listen(b,n,()=>b.classList.remove('down'));});
  const stick=$('.sd-stick');let stickId=null;
  listen(stick,'pointerdown',e=>{e.preventDefault();stickId=e.pointerId;stick.setPointerCapture(e.pointerId);moveStick(e);});listen(stick,'pointermove',e=>{if(e.pointerId===stickId)moveStick(e);});
  for(const n of ['pointerup','pointercancel','lostpointercapture'])listen(stick,n,()=>{stickId=null;move.x=move.y=0;stick.querySelector('i').style.transform='';});
@@ -137,6 +133,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   {name:'연계 강공격',keys:['공격','공격+방어'],tip:'평타가 맞는 순간 공격과 방어를 같이 누르면 준비가 짧은 강공격으로 이어져요. 평타 3타 뒤에도 돼요.',dummy:'idle',on:'linkHit'},
   {name:'막기 부수기',keys:['공격+방어','공격+방어'],tip:'상대가 막고 있으면 평타는 튕겨 나가요. 강공격(공격+방어)을 두세 번 맞히면 막기가 부서져요.',dummy:'block',on:'guardBreak'},
   {name:'기술 연계',keys:['공격','공격+회피'],tip:'평타가 맞은 뒤 공격과 회피를 같이 누르면 캐릭터 기술로 이어져요. 캐릭터마다 기술이 달라요(고르기 화면의 기술 이름).',dummy:'idle',on:'skillCombo'},
+  {name:'두 번째 기술',keys:['방어+회피'],tip:'방어와 회피를70ms 안에 함께 누르세요. 방어를 누른 채 기존 기술 +를 눌러도 같아요. 방어·기본 회피는 새어 나오지 않아요. 두 기술은 각자 기다리는 시간이 있어요.',dummy:'idle',check:p=>p.cd[1]>0},
   {name:'반격 막기',keys:['상대가 휘두르기 직전','방어'],tip:'상대 공격이 닿기 바로 전에 방어를 누르면 상대가 크게 흔들려요. 미리 누르고 있으면 그냥 막기예요.',dummy:'attack',on:'parry'},
   {name:'회피로 피하기',keys:['상대가 휘두를 때','회피'],tip:'회피하는 순간은 맞지 않아요. 방향키와 같이 누르면 그쪽으로 굴러요.',dummy:'attack',on:'dodgeAvoid'},
   {name:'필살기',keys:['필살'],tip:'공격을 맞히고 맞으면 노란 게이지가 차요. 가득 차면 필살! 연습에서는 늘 가득 차 있어요.',dummy:'idle',on:'ultimate'},
@@ -144,7 +141,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  ];
  const drill={on:false,idx:0,done:new Set(),linkAt:-9,skillAt:-9,dummyCd:1,dummyHit:false,advanceAt:0};
  function drillStart(){if(!s)return;const [p,e]=s.fighters,d=DRILLS[drill.idx];p.x=(DUEL_SPAWN[0].x+DUEL_SPAWN[1].x)/2-1;p.y=DUEL_SPAWN[0].y;e.x=p.x+1.9;e.y=p.y;s.message='';s.shots.length=0;s.hazards.length=0;p.fx=1;p.fy=0;p.cd=[0,0];p.state='idle';p.t=0;e.hp=e.maxHp;e.guard=DUEL_RULES.guardMax;e.state='idle';e.stun=0;p.chain=0;p.chainTime=0;drill.linkAt=drill.skillAt=-9;drill.dummyCd=1.2;drill.advanceAt=0;renderDrill();}
- function dummyInput(dt){const [p,e]=s.fighters,d=DRILLS[drill.idx],dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy)||1,i={aimX:dx,aimY:dy};if(d.on==='ultimate')p.meter=100;p.cd[0]=Math.min(p.cd[0],1);// 연습에서는 기술 대기 1초까지만
+ function dummyInput(dt){const [p,e]=s.fighters,d=DRILLS[drill.idx],dx=p.x-e.x,dy=p.y-e.y,dist=Math.hypot(dx,dy)||1,i={aimX:dx,aimY:dy};if(d.on==='ultimate')p.meter=100;p.cd[0]=Math.min(p.cd[0],1);p.cd[1]=Math.min(p.cd[1],1);// 연습에서는 기술 대기 1초까지만
 
   if(d.dummy==='block'){i.block=true;return i;}
   if(d.dummy==='attack'){drill.dummyCd-=dt;if(dist>2.2){i.x=dx/dist;i.y=dy/dist;}else if(drill.dummyCd<=0&&e.state!=='attack'){i.attack=true;drill.dummyCd=1.7;}return i;}
@@ -168,7 +165,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   if(storyStage?.boss){const b=s.fighters[1],beat=b.bossRecovery>0?'반격할 틈':({well:'중력 꽃 · 원에서 벗어나세요',orbit:'공전 씨앗 · 궤도를 확인하세요',ring:'퍼지는 고리 · 회피하세요'}[b.bossPattern]||'마지막 수호자의 시험');$('.sd-story-hud').textContent=`스테이지 보스 · 정원의 심장 · ${b.bossPhase||1}단계 · ${beat}`;}
   $('.sd-rounds').textContent=`${'●'.repeat(s.wins[0])}${'○'.repeat(2-s.wins[0])}  ${s.round}R  ${'○'.repeat(2-s.wins[1])}${'●'.repeat(s.wins[1])}`;$('.sd-timer').textContent=s.practice?'연습':Math.max(0,Math.ceil(s.roundTime));
   const msg=s.phase==='ready'?`${s.round}라운드 · 준비`:s.message;if($('.sd-message').textContent!==msg){$('.sd-message').textContent=msg;$('.sd-message').classList.remove('pop');void $('.sd-message').offsetWidth;$('.sd-message').classList.add('pop');}
-  const p=s.fighters[0],c=DUEL_CHARACTERS[p.char];{const b=$('.sd-chord-skill');b.querySelector('.sd-lbl').textContent=p.cd[0]>0?Math.ceil(p.cd[0])+'초':'기술';b.classList.toggle('cooldown',p.cd[0]>0);}$('.sd-ult').classList.toggle('ready',p.meter>=100);$('.sd-dodge').classList.toggle('cooldown',p.dodgeCd>0);
+  const p=s.fighters[0],c=DUEL_CHARACTERS[p.char];{const b=$('.sd-chord-skill'),repeat=batch03Repress(s,p)||p.char==='gravitymirror'&&s.hazards.some(h=>h.owner===p.team&&h.kind==='mirrorAnchor'&&h.t>0);b.querySelector('.sd-lbl').textContent=repeat?(p.char==='frostguard'?'반격':'회수'):p.cd[0]>0?Math.ceil(p.cd[0])+'초':'기술1';b.classList.toggle('cooldown',p.cd[0]>0&&!repeat);b.setAttribute('aria-label',c.skills[0].name+' · 공격과 회피 같이');if(blockHeld()){b.querySelector('.sd-lbl').textContent=p.cd[1]>0?Math.ceil(p.cd[1])+'초':'기술2';b.classList.toggle('cooldown',p.cd[1]>0);b.setAttribute('aria-label',c.skills[1].name+' · 방어와 회피 같이');}}$('.sd-ult').classList.toggle('ready',p.meter>=100);$('.sd-dodge').classList.toggle('cooldown',p.dodgeCd>0);
   const combo=$('.sd-combo'),n=p.chainTime>0?p.chain:0,text=n>=2?`${n} HIT`:'';if(combo.textContent!==text){combo.textContent=text;combo.classList.remove('pop');if(text){void combo.offsetWidth;combo.classList.add('pop');}}}
  // ── 카메라: 두 씨앗이 모두 보이게, 가까우면 당겨 본다. 경기장 밖(숲)은 조금만.
  function camera(dt){
@@ -224,6 +221,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   if(!s)return;
   ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);
   for(const h of s.hazards){const ink=DUEL_CHARACTERS[s.fighters[h.owner].char].ink;
+   if(['bladeSend','frostWard','wardPunish','wardFan'].includes(h.kind)){batch03Hazard(h,ink);continue;}
    if(['mirrorTell','mirrorAnchor','mirrorFold','emberMark','emberRelay'].includes(h.kind)){fusionHazard(h,ink);continue;}
    if(h.kind==='frostThread'){frostThread(h,ink);continue;}
    if(['bloomLanceTell','bloomEmber','reedTell','cinderPatch','pebbleOrbit','echoStrike','pulseRing','shardMark','heartWell'].includes(h.kind)){guestHazard(h,ink);continue;}
@@ -240,6 +238,20 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   ctx.restore();
  }
  // Small fixed-cost silhouettes: no new textures or particle recursion.
+ function batch03Hazard(h,ink){
+  ctx.save();ctx.strokeStyle='#153c48';ctx.lineWidth=.085;
+  if(h.kind==='frostWard'){
+   ctx.globalAlpha=h.arm>0?.5:1;ctx.strokeStyle=ink+'55';ctx.lineWidth=.035;ctx.beginPath();ctx.arc(h.x,h.y-.6,h.r,0,Math.PI*2);ctx.stroke();
+   const x=h.rockX??h.x+Math.cos(h.angle)*h.r,y=(h.rockY??h.y+Math.sin(h.angle)*h.r)-.6;
+   ctx.fillStyle='#d9f9ff';ctx.strokeStyle='#174c65';ctx.lineWidth=.06;ctx.beginPath();ctx.moveTo(x,y-.26);ctx.lineTo(x+.2,y);ctx.lineTo(x,y+.26);ctx.lineTo(x-.2,y);ctx.closePath();ctx.fill();ctx.stroke();
+   for(let k=0;k<h.charges;k++){ctx.fillStyle='#8be5ff';ctx.fillRect(x-.13+k*.11,y+.33,.065,.065);}
+  }else if(h.kind==='bladeSend'){
+   ctx.setLineDash([.22,.17]);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.lineTo(h.endX,h.endY);ctx.stroke();ctx.strokeStyle=ink;ctx.lineWidth=.045;ctx.stroke();
+  }else{
+   const a=Math.atan2(h.dy,h.dx),r=h.r+.35;ctx.fillStyle='#b8e7fa18';ctx.strokeStyle=ink;ctx.lineWidth=.055;ctx.setLineDash(h.arm>0?[.2,.15]:[]);ctx.beginPath();ctx.moveTo(h.x,h.y);ctx.arc(h.x,h.y,r,a-Math.PI/3,a+Math.PI/3);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+  ctx.restore();
+ }
  function frostThread(h,ink){
   const armed=h.arm<=0,spent=h.hitDone,dx=h.endX-h.x,dy=h.endY-h.y;
   ctx.save();ctx.globalAlpha=spent?.35:armed?1:.68;
@@ -253,6 +265,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   ctx.restore();
  }
  function newProjectile(q){
+  if(q.kind==='returnSpear'){ctx.save();ctx.translate(q.x,q.y-.65);ctx.rotate(Math.atan2(q.dy,q.dx));ctx.fillStyle=q.back?'#efffc1':'#c4e985';ctx.strokeStyle=q.owner===0?'#153a25':'#87352b';ctx.lineWidth=.07;ctx.beginPath();ctx.moveTo(-.52,0);ctx.lineTo(.12,-.2);ctx.lineTo(.55,0);ctx.lineTo(.12,.2);ctx.closePath();ctx.fill();ctx.stroke();ctx.strokeStyle=q.back?'#f4efca':'#2f6334';ctx.lineWidth=.035;ctx.beginPath();ctx.moveTo(-.4,0);ctx.lineTo(.42,0);ctx.stroke();ctx.restore();return true;}
   if(q.kind==='mirrorCore'){ctx.save();ctx.translate(q.x,q.y-.6);ctx.rotate(clock*2);ctx.fillStyle='#27143b';ctx.strokeStyle='#f1e2ff';ctx.lineWidth=.09;ctx.beginPath();ctx.ellipse(0,0,.31,.42,0,0,Math.PI*2);ctx.fill();ctx.stroke();ctx.strokeStyle='#bb7bff';ctx.lineWidth=.06;ctx.beginPath();ctx.ellipse(0,0,.19,.28,0,0,Math.PI*2);ctx.stroke();ctx.restore();return true;}
   if(q.law==='blastlance'){
    const a=Math.atan2(q.dy,q.dx);ctx.save();ctx.translate(q.x,q.y-.7);ctx.rotate(a);
@@ -305,7 +318,7 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  // ── 씨앗: 몸동작(웅크림·늘어남·기울기·구르기·들썩임)과 무기, 맞으면 하얗게 번쩍.
  function body(f,x,y,{sx=1,sy=1,rot=0,alpha=1,flash=0,frame=-1}={}){const c=DUEL_CHARACTERS[f.char],mo=frame>=0?assets['motion-'+f.char]:null,useMotion=mo?.naturalWidth>0,im=useMotion?mo:assets.solo,sz=(useMotion?2.75:2.5)*(s?.boss&&f.team===1?1.35:1),face=f.fx<0?-1:1;if(!im?.naturalWidth)return;const cw=im.naturalWidth/4,ch=useMotion?im.naturalHeight/2:im.naturalHeight/3;let src=useMotion?[frame%4*cw,Math.floor(frame/4)*ch,cw,ch]:[c.tile%4*cw,Math.floor(c.tile/4)*ch,cw,ch],dst=[-sz/2,-sz*.92,sz,sz];
   if(useMotion&&f.char==='frostnet'){const b=FROST_POSES[frame],k=im.naturalWidth/1774,w=b[2]*3.5/443.5,h=b[3]*3.5/443.5;src=[frame%4*cw+b[0]*k,Math.floor(frame/4)*ch+b[1]*k,b[2]*k,b[3]*k];dst=[-w/2,-h+.04,w,h];}
-  if(useMotion&&FUSION_POSES[f.char]){const b=FUSION_POSES[f.char][frame],k=im.naturalWidth/2048,w=b[2]*3.8/512,h=b[3]*3.8/512;src=[frame%4*cw+b[0]*k,Math.floor(frame/4)*ch+b[1]*k,b[2]*k,b[3]*k];dst=[-w/2,-h+.04,w,h];}
+  if(useMotion&&FUSION_POSES[f.char]){const b=FUSION_POSES[f.char][frame],k=im.naturalWidth/2048,w=b[2]*(f.char==='returnblade'?4.6:3.8)/512,h=b[3]*(f.char==='returnblade'?4.6:3.8)/512;src=[frame%4*cw+b[0]*k,Math.floor(frame/4)*ch+b[1]*k,b[2]*k,b[3]*k];dst=[-w/2,-h+.04,w,h];}
   ctx.save();ctx.globalAlpha=alpha;ctx.translate(x,y);ctx.rotate(rot);ctx.scale(face*sx,sy);ctx.drawImage(im,...src,...dst);if(flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=flash;ctx.drawImage(im,...src,...dst);}ctx.restore();}
  function fighterDraw(f){
   const c=DUEL_CHARACTERS[f.char],face=f.fx<0?-1:1,prev=prevPos[f.team],speed=prev?Math.hypot(f.x-prev.x,f.y-prev.y):0;prevPos[f.team]={x:f.x,y:f.y};
@@ -325,6 +338,9 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
   const shadow=1-Math.min(.5,lift*.2);ctx.fillStyle='#02090a70';ctx.beginPath();ctx.ellipse(f.x,f.y+.05,.72*shadow,.27*shadow,0,0,Math.PI*2);ctx.fill();
   ctx.strokeStyle=f.team===0?'#8fd3ff':'#ff8a7a';ctx.lineWidth=.07;ctx.beginPath();ctx.ellipse(f.x,f.y+.05,.8,.33,0,0,Math.PI*2);ctx.stroke();
   {const tf=MOTION.includes(f.char)&&assets['motion-'+f.char]?.naturalWidth>0?motionFrame(f):-1;for(const [i,g] of trails[f.team].entries())body(f,g.x,g.y,{alpha:g.life*1.6*(i/trails[f.team].length),sx:1.05,flash:.5,frame:tf});}
+  // Three compact cold pips expose earned counter readiness, not a permanent shield.
+  if(f.char==='frostguard')for(let k=0;k<3;k++){ctx.fillStyle=k<(f.wardCold||0)?'#b8efff':'#21373c';ctx.strokeStyle='#153c48';ctx.lineWidth=.025;ctx.beginPath();ctx.arc(f.x+(k-1)*.16,f.y-2.15,.055,0,Math.PI*2);ctx.fill();ctx.stroke();}
+  if(f.char==='returnblade'&&(f.bladeCatch||0)>0)vfx.fx(ctx,'ring',f.x,f.y-.35,.85,{color:'#e3efb8',alpha:.55});
   // 강공격 기 모으기.
   if(f.state==='heavy'&&f.t>.12){const k=1-(f.t-.12)/Math.max(.01,f.total-.12);vfx.fx(ctx,'orb',f.x+f.fx*.5,f.y-1,1+k*1.6,{color:c.ink,alpha:.55+k*.4});vfx.fx(ctx,'ring',f.x,f.y-.9,3.2-k*1.8,{color:c.ink,alpha:.35+k*.4,rotation:clock*4});}
   const x=f.x+f.fx*lx,y=f.y-lift,hasMotion=MOTION.includes(f.char)&&assets['motion-'+f.char]?.naturalWidth>0,frame=hasMotion?motionFrame(f):-1;
@@ -368,6 +384,8 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
  }
  function effect(e){const t=1-e.life/e.max,ink=e.ink||'#fce6af',fade=1-t;
   if(e.type==='swing'){const side=e.step===1?-1:1,big=e.step===2;
+   if(e.char==='returnblade'){if(e.step===1||big)vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*e.r,e.y-.8+Math.sin(e.angle)*e.r*.78,.18,{color:ink,alpha:fade});else arcSlash(e,t,{r:e.r,width:.2,side,spread:1.1,ink});return;}
+   if(e.char==='frostguard'){arcSlash(e,t,{r:e.r,width:.22,side,spread:big?1.5:.8,ink});if(big)vfx.fx(ctx,'shard',e.x+Math.cos(e.angle)*e.r*.7,e.y-.6+Math.sin(e.angle)*e.r*.6,.5,{color:ink,alpha:fade});return;}
    if(e.char==='gravitymirror'){if(big){vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(e.angle)*e.r,e.y-.8+Math.sin(e.angle)*e.r*.78,.32,{color:ink,alpha:fade});vfx.fx(ctx,'ring',e.x+Math.cos(e.angle)*e.r,e.y-.8+Math.sin(e.angle)*e.r*.78,.6,{color:ink,alpha:fade});}else arcSlash(e,t,{r:e.r,width:.25,side,spread:e.step===1?.65:1.1,ink});return;}
    if(e.char==='chainburst'){const tx=e.x+Math.cos(e.angle)*e.r,ty=e.y-.8+Math.sin(e.angle)*e.r*.78;vfx.beam(ctx,'trail',e.x,e.y-.8,tx,ty,.2,{color:'#fff0be',alpha:fade});for(let k=0;k<3;k++){const a=e.angle+(k-1)*.14;vfx.fx(ctx,'orb',e.x+Math.cos(a)*e.r*.8,e.y-.8+Math.sin(a)*e.r*.62,.25,{color:ink,alpha:fade});}if(big)vfx.fx(ctx,'flame',tx,ty,.45,{color:ink,alpha:fade});return;}
    if(e.char==='frostnet'){const tx=e.x+Math.cos(e.angle)*e.r,ty=e.y-.8+Math.sin(e.angle)*e.r*.78;vfx.beam(ctx,'trail',e.x,e.y-.8,tx,ty,.26,{color:'#eaffff',alpha:fade});vfx.fx(ctx,'shard',tx,ty,.55,{color:ink,alpha:fade,rotation:e.angle+Math.PI/4});return;}
@@ -385,6 +403,8 @@ export function mountSeedDuel({host=document.body,audio,storage=localStorage,own
    if(NEW_DUEL.includes(e.char))for(let i=0;i<3;i++){const a=e.angle+(i-1)*.5,shape={thorn:'petal',gale:'crescent',bastion:'shard',lotus:'petal',prism:'shard'}[e.char]||'star';vfx.fx(ctx,shape,e.x+Math.cos(a)*e.r*(.55+t*.35),e.y-.8+Math.sin(a)*e.r*.5,.65*fade,{color:ink,alpha:fade,rotation:a+t*2});}
    if(big)vfx.fx(ctx,'shock',e.x+Math.cos(e.angle)*e.r*.8,e.y-.6+Math.sin(e.angle)*e.r*.6,1+t*2.4,{color:ink,alpha:fade*.8});return;}
   if(e.type==='heavySwing'){const fx=e.x+Math.cos(e.angle)*e.r*.8,fy=e.y-.6+Math.sin(e.angle)*e.r*.6;
+   if(e.char==='returnblade'){vfx.beam(ctx,'trail',e.x,e.y-.8,fx,fy,.38,{color:ink,alpha:fade});vfx.fx(ctx,'crescent',fx,fy,.8,{color:ink,alpha:fade,rotation:e.angle});return;}
+   if(e.char==='frostguard'){vfx.fx(ctx,'shard',fx,fy,.85,{color:ink,alpha:fade,rotation:e.angle});return;}
    if(e.char==='gravitymirror'){vfx.fx(ctx,'ring',fx,fy,.8+t*.3,{color:ink,alpha:fade});vfx.beam(ctx,'trail',e.x,e.y-.8,fx,fy,.55,{color:'#f1e2ff',alpha:fade});return;}
    if(e.char==='chainburst'){vfx.fx(ctx,'flame',fx,fy,1,{color:ink,alpha:fade});for(let k=0;k<3;k++)vfx.fx(ctx,'orb',fx+(k-1)*.3,fy,.3,{color:'#ffdb75',alpha:fade});return;}
    if(e.char==='frostnet'){for(const off of [-.22,.22]){const a=e.angle+off;vfx.beam(ctx,'trail',e.x,e.y-.8,e.x+Math.cos(a)*e.r,e.y-.8+Math.sin(a)*e.r*.78,.35,{color:'#eaffff',alpha:fade});}vfx.fx(ctx,'shard',fx,fy,.85,{color:ink,alpha:fade,rotation:e.angle+Math.PI/4});return;}

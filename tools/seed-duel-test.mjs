@@ -4,6 +4,9 @@ import './duel-blastlance-test.mjs';
 import './duel-frostnet-test.mjs';
 import './duel-fusion-02-test.mjs';
 import './duel-fusion-02-art-test.mjs';
+import './duel-fusion-03-test.mjs';
+import './duel-fusion-03-art-test.mjs';
+import './duel-input-test.mjs';
 
 const idle={};
 const fight=(p='pierce',e='burst')=>{const s=createDuel({player:p,enemy:e,seed:7});s.phase='fight';const [a,b]=s.fighters;a.x=10;a.y=8;b.x=11.6;b.y=8;a.fx=1;b.fx=-1;return s;};
@@ -69,7 +72,7 @@ const run=(s,sec,p={},e={})=>{for(let t=0;t<sec;t+=1/60)stepDuel(s,1/60,p,e);};
 for(const id of DUEL_ORDER.slice(9)){const s=fixture(id);s.fighters[0].meter=100;run(s,.02,{ult:true});assert.equal(s.fighters[0].meter<100,true);assert.ok(s.effects.length>0);assert.ok(s.shots.length<=5);assert.ok(s.hazards.length<=3);run(s,6);assert.equal(s.shots.length,0,id+' shots expire');assert.equal(s.hazards.length,0,id+' zones expire');assert.equal(s.fighters[0].counterShield,0);}
 // Even deliberately reset cooldowns cannot flood the runtime with new persistent fields or fork shots.
 for(const id of ['thorn','lotus','prism']){const s=fixture(id,'pierce',12);s.fighters[1].inv=99;for(let i=0;i<300;i++){const f=s.fighters[0];f.state='idle';f.t=0;f.cd[0]=0;s.freeze=0;stepDuel(s,.001,{skill1:true},{});assert.ok(s.hazards.length<=3);assert.ok(s.shots.length<=64);assert.ok(s.effects.length<=120);}run(s,6);assert.equal(s.hazards.length,0);assert.equal(s.shots.length,0);}
-assert.equal(DUEL_ORDER.length,26);for(const id of DUEL_ORDER.slice(9)){assert.equal(DUEL_CHARACTERS[id].skills.length,2);assert.ok(DUEL_CHARACTERS[id].law);}
+assert.equal(DUEL_ORDER.length,28);for(const id of DUEL_ORDER.slice(9)){assert.equal(DUEL_CHARACTERS[id].skills.length,2);assert.ok(DUEL_CHARACTERS[id].law);}
 console.log('Six duel characters: trap arming/block/dodge, lateral movement, finite counter shield/grab, recursion guard, rush interrupt, cold detonation, fork limits and expiry passed.');
 }
 // Six more identities: fixed tells, actual orbit contact, previous-position strikes, ring crossing, bounded frost.

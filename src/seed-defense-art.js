@@ -3,6 +3,21 @@ import {DEFENSE_FORMS} from './seed-defense-catalog.js';
 const SOLO={reflect:0,split:1,chain:2,orbit:3,pierce:4,burst:5,recall:6,gravity:7,frost:8};
 const FUSION={collapse:0,frostguard:1,returnblade:2,prism:3,thunderlance:4,frostbloom:5,stormcrown:6,tidepull:7,seedstorm:8,mirrorguard:9};
 const AWAKEN={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspear:4,icegarden:5,tempestcrown:6,maelstrom:7,bloomtempest:8,mirrorhall:9};
+// Same three canonical HP states as the journey billboard. This painter never
+// changes terrain HP or collision and keeps the common .88 grounded anchor.
+export function paintDefenseCrystal(g,wall,image){
+ const ready=image?.complete&&image.naturalWidth>0;
+ if(wall.broken&&!ready)return false;
+ g.save();g.translate(wall.x,wall.z);g.fillStyle='#192438';g.beginPath();g.ellipse(0,.25,wall.w*.58,wall.d*.22,0,0,Math.PI*2);g.fill();
+ if(ready){
+  const frame=wall.broken?2:wall.hp/wall.maxHp<.5?1:0,cell=image.width/3,size=wall.w/.88;
+  g.drawImage(image,frame*cell,0,cell,image.height,-size/2,-size*.88,size,size);
+ }else{
+  g.beginPath();g.moveTo(0,-5);g.lineTo(2,-1.6);g.lineTo(1.4,1.8);g.lineTo(-1.8,1.8);g.lineTo(-2,-1.6);g.closePath();g.fillStyle='#517eaa';g.fill();g.strokeStyle='#c4e4f5';g.lineWidth=.2;g.stroke();g.beginPath();g.moveTo(0,-5);g.lineTo(.4,1.7);g.lineTo(2,-1.6);g.stroke();
+ }
+ if(!wall.broken&&wall.hp<wall.maxHp){g.fillStyle='#182736';g.fillRect(-wall.w/2,1.1,wall.w,.35);g.fillStyle='#a9def7';g.fillRect(-wall.w/2,1.1,wall.w*wall.hp/wall.maxHp,.35);}
+ g.restore();return true;
+}
 // Reuse the main game's painted bodies. Forms without a dedicated body use both
 // ingredient silhouettes, not a cropped card or a claim of 153 unique paintings.
 export function defenseBodyParts(t){

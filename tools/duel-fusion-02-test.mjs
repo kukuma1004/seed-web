@@ -32,6 +32,11 @@ for(const id of ['gravitymirror','chainburst']){const s=fixture(id,15,10,16.5,10
 {const s=fixture('chainburst');s.fighters[0].relayRefundUntil=90;s.fighters[0].relayCast=4;s.phase='roundEnd';s.ready=.01;run(s,.03);assert.equal(s.fighters[0].relayRefundUntil,0);assert.equal(s.fighters[0].relayCast,0);assert.equal(s.hazards.length,0);}
 // Three hops activate in order, retain fixed points and share one beam/one explosion hit budget.
 {const s=fixture('chainburst',15,10,18.5,10);cast(s);assert.equal(s.hazards.length,3);const points=s.hazards.map(h=>[h.x,h.y,h.endX,h.endY]);run(s,.4);assert.equal(s.fighters[1].hp,1000);run(s,.14);assert.equal(s.hazards.filter(h=>h.triggered).length,1);run(s,1.2);assert.ok(1000-s.fighters[1].hp<=16);assert.ok(s.events.includes('emberRelay'));run(s,2);assert.equal(s.hazards.length,0);assert.ok(points.every(p=>p.every(Number.isFinite)));}
+// A warned, fixed relay cannot hit a stationary target five units away. The
+// AI must use the actual unmarked reach rather than wasting this cooldown.
+{const far=fixture('chainburst'),near=fixture('chainburst',15,10,18.5,10);let nearInput=null;
+ for(let n=0;n<500;n++){assert(!duelAi(far,0,dt).skill1);const input=duelAi(near,0,dt);if(input.skill1)nearInput=input;}
+ assert(nearInput,'an unmarked opponent in genuine relay reach permits the skill');stepDuel(near,dt,nearInput,{});run(near,1.5);assert(near.fighters[1].hp<1000,'actual AI action, fixed warning and real relay deal damage in range');}
 {const s=fixture('chainburst',15,10,18.5,10);cast(s);s.fighters[1].y=14;run(s,2);assert.equal(s.fighters[1].hp,1000);}
 {const s=fixture('chainburst',15,10,18.5,10);run(s,.3,{}, {block:true});cast(s);run(s,2,{}, {block:true});assert.ok(1000-s.fighters[1].hp<=16*.2+.01);}
 {const s=fixture('chainburst',15,10,27,10);s.fighters[0].meter=100;cast(s,{skill1:false,ult:true});assert.equal(s.fighters[0].meter,0);assert.equal(s.hazards.length,3);assert.equal(s.fighters[1].hp,1000);run(s,.4);assert.equal(s.events.includes('emberRelay'),false);run(s,2);assert.equal(s.events.filter(v=>v==='emberRelay').length,3);assert.equal(s.hazards.length,0);}
