@@ -44,7 +44,7 @@ export function normalizeTree(value){
  if(value.bag&&typeof value.bag==='object')for(const [id,n] of Object.entries(value.bag))if(TREE_SEEDS[id]&&int(n,99))t.bag[id]=int(n,99);
  t.shards={common:int(value.shards?.common,9999),rare:int(value.shards?.rare,9999)};
  t.bloomed=Array.isArray(value.bloomed)?TREE_SEED_IDS.filter(id=>value.bloomed.includes(id)):[];
- if(value.once&&typeof value.once==='object')for(const k of Object.keys(value.once))if(value.once[k]===true&&(/^[\w:.-]{1,60}$/.test(k)||/^boss-v1:(defense|survival|adventure|journey):[-\w]{1,90}:(crosswindKeeper|crystalGardener):(?:[1-9]\d{0,5}|1000000)$/.test(k)))t.once[k]=true;
+ if(value.once&&typeof value.once==='object')for(const k of Object.keys(value.once))if(value.once[k]===true&&(/^[\w:.-]{1,60}$/.test(k)||/^boss-v1:(defense|survival|adventure|journey):[-\w]{1,90}:(austin|alwaysbeginner|tempestcarrier|crosswindKeeper|crystalGardener):(?:[1-9]\d{0,5}|1000000)$/.test(k)))t.once[k]=true;
  return t;
 }
 const need=(seed,stage)=>Math.ceil(TREE_STAGES.find(s=>s.id===stage).water*TREE_RARITY[TREE_SEEDS[seed].rarity].growth);

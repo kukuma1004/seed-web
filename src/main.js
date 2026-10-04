@@ -848,7 +848,10 @@ function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  practice=Boolean(practice||localInspection||developerRun);
  if(practice)return true;
  const outbox=modeBossOutbox(),receipt={mode,runId,boss,ordinal};
- if(!outbox.enqueue(receipt)){$('#toast').textContent='보스 격파 기록을 보관하지 못했어요 · 지급을 다시 시도해요';return false;}
+ // Mark new grants before the counter write. Legacy already-counted receipts
+ // have no tree marker, so old checkpoints cannot reroll historical rewards.
+ const before=readAccountProfile(runStorage),previous=before.bossRuns?.[mode+':'+runId]?.[boss]||0,treeContext={wins:Math.min(100000,(before[MODE_BOSSES[boss]?.counter]||0)+1),law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null};
+ if(!outbox.enqueue(receipt,{durableTree:ordinal>previous,treeContext})){$('#toast').textContent='보스 격파 기록을 보관하지 못했어요 · 지급을 다시 시도해요';return false;}
  const result=recordModeBossVictory(runStorage,{mode,runId,boss,ordinal,practice});
  if(!result.saved){$('#toast').textContent='보스 칭호 저장을 다시 시도하고 있어요';return false;}
  // Read current discoveries to preserve data merged from another device.
@@ -856,9 +859,8 @@ function awardModeBoss(mode,runId,boss,ordinal,practice=false){
  for(const id of result.awards){const reward=remember('bosses',id,true);saved=reward.saved&&saved;}
  const persisted=readDiscoveries(runStorage);saved=result.awards.every(id=>persisted.bosses.includes(id))&&saved;
  if(saved){
-  const act=MODE_BOSSES[boss].act,event={type:'boss',boss,act,final:true,wins:result.wins,law:mode==='survival'?dominantLaw(Object.fromEntries(effectiveLevels(levels,heldForms))):null};
-  if(act>=4){if(!awardExpansionBossTree(mode,runId,boss,ordinal,event))return false;}
-  else if(result.counted){treeReward(event);treeWater(1);}
+  const act=MODE_BOSSES[boss].act,frozen=outbox.treeContext(receipt),event={type:'boss',boss,act,final:true,wins:frozen?.wins??result.wins,law:frozen?frozen.law:treeContext.law};
+  if(act>=4||outbox.requiresTree(receipt)){if(!awardExpansionBossTree(mode,runId,boss,ordinal,event))return false;}
   void cloud.flush().catch(()=>{});
  }
  return saved&&outbox.ack(receipt);

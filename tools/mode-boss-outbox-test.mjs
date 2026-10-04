@@ -10,6 +10,8 @@ const box=()=>createModeBossOutbox(storage,'A',{currentOwner:()=>owner,practice:
 const a={mode:'defense',runId:'same-run',boss:'crosswindKeeper',ordinal:1},b={...a,boss:'crystalGardener'};
 assert(box().enqueue(a));assert(box().enqueue(b));assert.equal(data.size,2);
 assert(box().enqueue(a));assert.equal(data.size,2);
+assert.equal(box().requiresTree(a),false);assert(box().enqueue(a,{durableTree:true}));assert.equal(box().requiresTree(a),true);
+assert(box().enqueue(a));assert.equal(box().requiresTree(a),true,'retry cannot erase the pre-counter tree intent');
 assert.equal(box().retry(()=>false),false);assert.equal(data.size,2,'failed grants survive ending a run');
 let first=true;
 assert.equal(box().retry(e=>{const result=recordModeBossVictory(storage,e);assert(result.saved);if(first){first=false;return false;}return true;}),false);
@@ -37,7 +39,7 @@ const denied=createModeBossOutbox({...storage,setItem(){throw Error('quota');}},
 // Execute the actual main delivery bridge with a failure between profile and discovery.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function modeBossOutbox(){'),end=main.indexOf('function remember(',start);
 let discoveryOk=false,flushes=0;const toast={textContent:''};
-const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
+const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,readAccountProfile,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
 vm.runInContext(main.slice(start,end),ctx);
 assert.equal(ctx.awardModeBoss('defense','new-run','crosswindKeeper',1),false);
 assert.equal(readAccountProfile(storage).crosswindWins,5);storage.setItem('seed-cloud-owner-v1','A');ctx.remember=()=>({saved:true});ctx.retryModeBossRewards();assert.equal(flushes,0,'a skipped or silently dropped discovery cannot acknowledge the receipt');discoveryOk=true;ctx.retryModeBossRewards();
