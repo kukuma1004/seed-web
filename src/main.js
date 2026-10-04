@@ -2233,10 +2233,10 @@ async function showGardenHub(start=null){
  }catch(error){console.error('정원 열기 실패',error);resume();showIntro();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 async function showSeedDefense({actCount=3,bossPreview=null}={}){
- const serial=++defenseLoadSerial;
+ const serial=++defenseLoadSerial;let accountPreparation=null,defenseNext=showDungeon;
  mode='defense-loading';touch.reset();keys.clear();stopAnimation();
  const overlay=$('#overlay');overlay.hidden=false;
- overlay.innerHTML='<div class="menu-panel"><p class="eyebrow">SEED · 씨앗 수호전</p><h2>정원을 준비하고 있어요</h2><p id="defense-load-status" role="status">수호전 파일을 불러오는 중이에요…</p><button id="defense-load-reload" hidden>최신 화면으로 다시 열기</button><button id="defense-load-back">돌아가기</button></div>';
+ overlay.innerHTML='<div class="menu-panel"><p class="eyebrow">SEED · 씨앗 수호전</p><h2>정원을 준비하고 있어요</h2><p id="defense-load-status" role="status">수호전 파일을 불러오는 중이에요…</p><div id="defense-account-choices"></div><button id="defense-load-reload" hidden>최신 화면으로 다시 열기</button><button id="defense-load-back">돌아가기</button></div>';
  const back=()=>{if(serial!==defenseLoadSerial)return;++defenseLoadSerial;clearTimeout(slow);showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
  $('#defense-load-back').onclick=back;
  $('#defense-load-reload').onclick=()=>location.reload();
@@ -2244,18 +2244,29 @@ async function showSeedDefense({actCount=3,bossPreview=null}={}){
  try{
   const {mountSeedDefense}=await import('./seed-defense-view.js');
   clearTimeout(slow);if(serial!==defenseLoadSerial)return;
-  mode='defense';overlay.hidden=true;
-  const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun;
-  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,bossPreview:localInspection?bossPreview:null,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),practice:()=>testRun||developerRun||localInspection,actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseScreen?.close();showDefenseRanking();},onResult:async state=>{
+  const owner=account.user()?.uid||'guest',testRun=localInspection||developerRun,circuit=publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3;
+  if(!testRun&&owner!=='guest'&&!account.user()?.isAnonymous){
+   const {prepareDefenseAccount}=await import('./defense-account-entry.js');
+   if(serial!==defenseLoadSerial)return;
+   accountPreparation=await prepareDefenseAccount({storage:rawStorage,account,owner,circuit,databaseURL:FIREBASE_APP.databaseURL,practice:()=>testRun||developerRun||localInspection,isCurrent:()=>serial===defenseLoadSerial&&owner===account.user()?.uid,status:$('#defense-load-status'),controls:$('#defense-account-choices')});
+   if(serial!==defenseLoadSerial){await accountPreparation?.release();return;}
+   if(!accountPreparation)return;
+  }
+  mode='defense';overlay.hidden=true;accountPreparation?.activate();
+  defenseScreen=mountSeedDefense({storage:rawStorage,owner,audio,preparation:accountPreparation?.preparation||null,bossPreview:localInspection?bossPreview:null,currentOwner:()=>account.user()?.uid||'guest',titleStats:()=>seedTitle.state(),practice:()=>testRun||developerRun||localInspection,actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3,onBossDefeated:event=>localInspection&&actCount===5?true:awardModeBoss('defense',event.runId,event.boss,event.ordinal,testRun||owner!==(account.user()?.uid||'guest')),onRanking:()=>{defenseNext=showDefenseRanking;defenseScreen?.close();},onResult:async state=>{
    const entry=defenseRankEntry(state,{uid:owner,name:playerName});
    const decision=rankingDecision({isTestRun:testRun,localInspection,score:entry?.score||0,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user()});
    if(testRun)return '연습 기록은 온라인 랭킹에 등록하지 않아요.';
    if(owner===(account.user()?.uid||'guest')){treeWater(.5);treeReward({type:'defense',wave:state.wave,runId:state.runId});}
    if(!decision.eligible||owner!==account.user()?.uid)return '온라인 기록은 같은 계정으로 로그인한 정상 플레이만 등록해요.';
    try{await defenseRanking.submit(entry);return '계정 최고기록 확인 완료 · 사용한 씨앗도 랭킹에 남았어요.';}catch{return '온라인 등록 대기 · 이 계정에 보관하고 랭킹을 열면 다시 전송해요.';}
-  },onClose:()=>{defenseScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
+  },onClose:async()=>{defenseScreen=null;
+   if(accountPreparation){mode='defense-loading';overlay.hidden=false;$('#defense-load-status').textContent='수호전 준비를 계정에 저장하고 있어요…';$('#defense-account-choices').replaceChildren();const saved=await accountPreparation.close();if(serial!==defenseLoadSerial)return;if(!['synced','empty'].includes(saved?.kind))$('#toast').textContent='수호전은 이 기기에 보존했어요 · 계정 전송은 다음 입장 때 다시 확인합니다';}
+   defenseNext();last=performance.now();realLast=Date.now();startAnimation();}});
  }catch(error){
   clearTimeout(slow);if(serial!==defenseLoadSerial)return;
+  await accountPreparation?.release();
+  if(serial!==defenseLoadSerial)return;
   console.error('씨앗 수호전 시작 실패',error);
   document.querySelector('#seed-defense')?.remove();document.body.classList.remove('seed-defense-open');
   mode='defense-loading';overlay.hidden=false;

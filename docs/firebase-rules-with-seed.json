@@ -856,6 +856,33 @@
           }
         }
       }
+    },
+    "seedDefenseSaves": {
+      "$uid": {
+        "$circuit": {
+          ".read": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && ($circuit == '3' || ($circuit == '5' && root.child('seedExpansionRelease/crosswind').val() == true && root.child('seedExpansionRelease/crystalGorge').val() == true))",
+          ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && ($circuit == '3' || ($circuit == '5' && root.child('seedExpansionRelease/crosswind').val() == true && root.child('seedExpansionRelease/crystalGorge').val() == true)) && newData.exists()",
+          ".validate": "newData.hasChildren(['version','ownerUid','circuit','revision','checkpoint'])",
+          "version": {
+            ".validate": "newData.val() == 1"
+          },
+          "ownerUid": {
+            ".validate": "newData.val() == $uid"
+          },
+          "circuit": {
+            ".validate": "newData.isNumber() && (($circuit == '3' && newData.val() == 3) || ($circuit == '5' && newData.val() == 5))"
+          },
+          "revision": {
+            ".validate": "newData.isNumber() && newData.val() <= 1000000000 && ((!data.exists() && newData.val() == 1) || (data.exists() && newData.val() == data.val() + 1))"
+          },
+          "checkpoint": {
+            ".validate": "newData.isString() && newData.val().length > 0 && newData.val().length <= 100000"
+          },
+          "$other": {
+            ".validate": false
+          }
+        }
+      }
     }
   }
 }
