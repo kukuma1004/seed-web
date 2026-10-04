@@ -18,7 +18,8 @@ export const PADS = Object.freeze([{x:14,y:21},{x:38,y:21},{x:62,y:21},{x:86,y:2
  {x:22,y:21},{x:46,y:21},{x:94,y:21},{x:6,y:30},{x:94,y:30},{x:54,y:39},{x:70,y:39},{x:6,y:39}].map(Object.freeze));
 // 2026-09-28 사용자: "씨앗 8개가 한계면 순환이 올라가면 못 깨는 거 아니야?" — 순환(36습격)을 넘길 때마다 씨앗 칸 +2(최대 16).
 // 계급장 방식에서는 같은 계열을 3개씩 모아야 해서 칸이 더 필요하다 → 막(12습격)을 넘길 때마다 +2(8 → 최대 16).
-export function defenseSeedCap(s){return Math.min(DEFENSE.maxSeeds,8+2*Math.floor(Math.max(0,s?.wave||0)/12));}
+// Migration skips unplayed waves for routing only; it cannot unlock beds.
+export function defenseSeedCap(s){const earned=Math.max(0,(s?.wave||0)-(s?.migratedWaves||0));return Math.min(DEFENSE.maxSeeds,8+2*Math.floor(earned/12));}
 // 누른 곳이 속한 칸(칸 안쪽이면). 없으면 null.
 export function defenseCellAt(x,y){return DEFENSE_CELLS.find(c=>Math.abs(c.x-x)<=DEFENSE_CELL_SIZE.w/2&&Math.abs(c.y-y)<=DEFENSE_CELL_SIZE.h/2)||null;}
 const law = (id,name,color,desc)=>Object.freeze({id,name,color,desc});
@@ -241,6 +242,9 @@ export function restoreDefense(raw){
  try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![5,6].includes(r.version)||r.phase!=='build')return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
  if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,1000000)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,DEFENSE.maxSeeds-1)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
+ // Older five-act inspection saves could already own beds unlocked by the
+ // routing coordinate. Keep those towers on restore; plantDefense separately
+ // enforces the earned cap so skipped waves cannot create further beds.
  if(r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>defenseSeedCap({wave:r.wave}))return null;
  if((Array.isArray(r.enemies)&&r.enemies.length)||(Array.isArray(r.shots)&&r.shots.length)||(Array.isArray(r.fields)&&r.fields.length))return null;
  if(r.actCount!==undefined&&r.actCount!==3&&r.actCount!==5)return null;const s=createDefense(r.seed,{actCount:r.actCount});

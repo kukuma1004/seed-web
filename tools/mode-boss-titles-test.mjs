@@ -4,6 +4,7 @@ import {normalizeBossRuns,mergeBossRuns} from '../src/boss-title-ledger.js';
 import {readAccountProfile,writeAccountProfile} from '../src/account-profile.js';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {settleSurvivalTitles} from '../src/survival-save.js';
 const data=new Map(),store={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
 writeAccountProfile(store,{austinWins:8});
 const event={mode:'defense',runId:'same-run',boss:'austin',ordinal:1};
@@ -34,10 +35,10 @@ const broken={getItem:()=>null,setItem:()=>{throw Error('quota');}};assert(!reco
 // Execute the real survival retry bridge: a failed write remains in its
 // checkpoint's primitive fields; practice and switched accounts cannot grant.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-const calls=[],ctx=vm.createContext({survivalSession:{titleBoss:'tempestcarrier',titleOrdinal:3},localInspection:false,developerRun:false,survivalSaveToken:{id:'saved-run',owner:'same'},survivalOwner:()=> 'same',awardModeBoss:(...args)=>{calls.push(args);return false;}});
+const calls=[],ctx=vm.createContext({settleSurvivalTitles,survivalSession:{titleBoss:'tempestcarrier',titleOrdinal:3},localInspection:false,developerRun:false,survivalSaveToken:{id:'saved-run',owner:'same'},survivalOwner:()=> 'same',awardModeBoss:(...args)=>{calls.push(args);return false;}});
 vm.runInContext(main.slice(main.indexOf('function settleSurvivalTitle(){'),main.indexOf('function saveSurvival(){')),ctx);
 ctx.settleSurvivalTitle();assert.equal(ctx.survivalSession.titleBoss,'tempestcarrier');assert.deepEqual(calls[0],['survival','saved-run','tempestcarrier',3,false]);
-ctx.awardModeBoss=(...args)=>{calls.push(args);return true;};ctx.survivalSaveToken.owner='different';ctx.settleSurvivalTitle();assert.equal(calls.at(-1).at(-1),true);assert.equal(ctx.survivalSession.titleBoss,undefined);
+ctx.awardModeBoss=(...args)=>{calls.push(args);return true;};ctx.survivalSaveToken.owner='different';ctx.settleSurvivalTitle();assert.equal(calls.length,1,'a switched UID cannot consume the original receipt as practice');assert.equal(ctx.survivalSession.titleBoss,'tempestcarrier');ctx.survivalSaveToken.owner='same';ctx.settleSurvivalTitle();assert.equal(ctx.survivalSession.titleBoss,undefined);
 // Execute the actual adventure view bridge with deterministic timers and real
 // account receipts. These are VM checks, not browser/device validation.
 const view=readFileSync(new URL('../src/seed-adventure-view.js',import.meta.url),'utf8');

@@ -80,7 +80,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   if(bookOpen||confirming||['won','lost'].includes(state.phase))return;if(dragJustEnded){dragJustEnded=false;return;}
   const rect=canvas.getBoundingClientRect(),cell=defenseCellAt((e.clientX-rect.left-ox)/scale,(e.clientY-rect.top-oy)/scale);if(!cell){closeSelection();hint('테두리가 있는 화단 칸을 눌러 주세요');return;}const {x,y}=cell;
   const pad=moving?selected:state.pads.findIndex((_,i)=>!state.towers.some(t=>t.pad===i));
-  if(!moving&&state.towers.length>=defenseSeedCap(state)){hint(`씨앗은 지금 ${defenseSeedCap(state)}개까지예요 · 순환(36습격)을 넘길 때마다 2개씩 늘어요 · 합체나 뽑기로 자리를 만들어 보세요`);return;}
+  if(!moving&&state.towers.length>=defenseSeedCap(state)){hint(`씨앗은 지금 ${defenseSeedCap(state)}개까지예요 · ${defenseSeedCap(state)<DEFENSE.maxSeeds?'막(12습격)을 넘길 때마다 2개씩 늘어요 · ':''}합체나 뽑기로 자리를 만들어 보세요`);return;}
   if(pad<0){hint('빈 자리가 없어요 · 씨앗을 선택해 위치를 옮겨 보세요');return;}
   const error=defensePlacement(state,x,y,pad);if(error){closeSelection();hint(error);return;}
   if(placeDefensePad(state,pad,x,y)){selected=pad;moving=false;combat.reset();dirty=true;placeButtons();save();uiKey='';updateUI();showSelection();hint(tower()?'씨앗을 새 위치로 옮겼어요':'사거리를 확인하고 ‘여기에 심기’를 누르세요');}
@@ -143,7 +143,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
    const next=steps.map(st=>`<li>같은 <b style="color:${color(line)}">${DEFENSE_LAWS[line].name} 계열 ${tier}계급</b> 씨앗 ${st.need}개 더 → <b>${st.tier}계급 ${esc(st.name)}</b> ${st.pool}가지 중 무작위</li>`).join('');
    html+=`<div class="td-evolution-progress"><b>진급</b>${badge}${tier<4?`<div class="td-merit">${'●'.repeat(merit+1)}${'○'.repeat(2-merit)} <span>${merit+1}/3</span></div><ul class="td-next-steps">${next}</ul>`:`<p class="td-star-note">가장 높은 계급이에요 · 같은 ${DEFENSE_LAWS[line].name} 계열 4계급을 합치면 <b>★ 별</b>(별마다 피해 +30%) · 지금 ★${t.stars||0}/12</p>`}${t.stars&&tier<4?`<p class="td-star-note">★${t.stars} · 피해 +${t.stars*30}%</p>`:''}<small>씨앗을 끌어 같은 계열·같은 계급 씨앗 위에 놓으면 합체 · 빈 칸에 놓으면 옮기기 · 습격 중에도 돼요</small></div>`;if(tier===1&&!merit)html+=`<button id="td-reroll" ${state.currency<DEFENSE.rerollCost?'disabled':''}>계열 다시 뽑기 · ${DEFENSE.rerollCost} 햇살</button>`;}
   if(t&&!['won','lost'].includes(state.phase))html+=`<button id="td-move">${moving?'위치 옮기기 취소':'위치 옮기기 · 무료'}</button><button id="td-remove" class="${removing===t.id?'td-danger':''}">${removing===t.id?`정말 뽑을까요? · 햇살 ${defenseRemoveRefund(t)} 돌려받기`:`씨앗 뽑기 · 햇살 ${defenseRemoveRefund(t)} 돌려받기`}</button>`;
-  if(!t)html+='<p class="td-detail">원하는 땅을 누르면 위치를 바꿀 수 있어요. 최대 8개의 씨앗을 심을 수 있어요.</p>';
+  if(!t)html+=`<p class="td-detail">원하는 땅을 누르면 위치를 바꿀 수 있어요. 지금 씨앗 ${defenseSeedCap(state)}개까지${defenseSeedCap(state)<DEFENSE.maxSeeds?` · 막마다 2개씩 늘어나 최대 ${DEFENSE.maxSeeds}개`:''} 심을 수 있어요.</p>`;
   const evolutions=t?getDefenseEvolutionOptions(t):[];
   if(t?.formId)html+=`<button id="td-ultimate" ${state.phase!=='wave'||paused||(t.ultimateCharge||0)<DEFENSE_COMBAT.ultimateSeconds?'disabled':''}>${esc(SIGNATURES[t.formId]?.name||'궁극기')} · ${(t.ultimateCharge||0)>=30?'사용':Math.floor((t.ultimateCharge||0)/30*100)+'%'}</button><small class="td-ultimate-note">${autoSkill?'자동 사용 중 · ':''}적이 사거리 안에 있을 때 충전 · ${esc(SIGNATURES[t.formId]?.desc||'')}</small>`;
   if(false)html+=`<div class="td-draft-title">지금 진화할 수 있어요</div><div class="td-evolutions">${evolutions.map(f=>`<button data-evolution="${f.id}">${formArt(f.id)}<b>${esc(f.name)}</b><small>${KIND[f.kind]} · ${esc(recipe(f))}</small></button>`).join('')}</div><p class="td-detail">진화는 선택 사항이에요. 완성을 고르면 쌍둥이로 바꿀 수 없어요.</p>`;

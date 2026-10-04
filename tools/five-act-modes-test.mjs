@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {createSurvivalSession,survivalAct,survivalActCount,settleSurvivalKill,advanceSurvivalAct,survivalScaling,survivalSpawn,survivalOutcome} from '../src/survival-rules.js';
 import {createSurvivalExpansion,migrateSurvivalToFiveActs} from '../src/survival-expansion.js';
 import {validSurvivalSave,createSurvivalSaveStore} from '../src/survival-save.js';
-import {createDefense,defenseWaveInfo,defensePath,defensePathLength,defensePoint,plantDefense,startDefenseWave,stepDefense,defenseHurt,checkpointDefense,restoreDefense,migrateDefenseToFiveActs} from '../src/seed-defense-rules.js';
+import {createDefense,defenseSeedCap,defenseWaveInfo,defensePath,defensePathLength,defensePoint,plantDefense,removeDefense,startDefenseWave,stepDefense,defenseHurt,checkpointDefense,restoreDefense,migrateDefenseToFiveActs} from '../src/seed-defense-rules.js';
 import {createDefenseCombat} from '../src/seed-defense-combat.js';
 import {defenseRankEntry,defenseExpansionRankProgress} from '../src/defense-ranking.js';
 import {survivalExpansionRankProgress} from '../src/survival-ranking.js';
@@ -44,9 +44,20 @@ function circuit(reload){let s=createDefense(77,{actCount:5}),ticks=0;while(s.wa
 const td=circuit(false),resumed=circuit(true);assert.deepEqual(td.bossWins,{austin:1,alwaysbeginner:1,tempestcarrier:1,crosswindKeeper:1,crystalGardener:1});
 for(const key of ['wave','time','kills','rng','currency'])assert.equal(td[key],resumed[key]);assert.deepEqual(td.bossWins,resumed.bossWins);
 assert.equal(defenseRankEntry({...td,phase:'lost'},{uid:'a',name:'테스터'}),null,'preview never leaks into live ranks');
-for(const wave of [0,12,24,35,36,37,60,72,73]){const s=createDefense(3);s.wave=wave;assert(plantDefense(s,2));const old=checkpointDefense(s),next=migrateDefenseToFiveActs(old);assert(next,`migration wave ${wave}`);assert.equal(next.wave,Math.floor(wave/36)*60+wave%36);assert.deepEqual(next.towers,s.towers);assert.equal(next.currency,s.currency);assert.equal(next.rng,s.rng);assert.equal(defenseExpansionRankProgress(next).cleared,wave,'skipped new acts never grant ranking waves');assert(restoreDefense(checkpointDefense(next)));}
+for(const wave of [0,12,24,35,36,37,60,72,73]){const s=createDefense(3);s.wave=wave;assert(plantDefense(s,2));const old=checkpointDefense(s),next=migrateDefenseToFiveActs(old);assert(next,`migration wave ${wave}`);assert.equal(next.wave,Math.floor(wave/36)*60+wave%36);assert.equal(defenseSeedCap(next),defenseSeedCap(s),'skipped migration waves cannot unlock extra beds');const resumed=restoreDefense(checkpointDefense(next));assert(resumed);assert.equal(defenseSeedCap(resumed),defenseSeedCap(s));if(wave===36){assert.equal(defenseSeedCap(next),14);assert.equal(defenseSeedCap({...next,wave:next.wave+12}),16,'twelve actually played expansion waves unlock two beds');}assert.deepEqual(next.towers,s.towers);assert.equal(next.currency,s.currency);assert.equal(next.rng,s.rng);assert.equal(defenseExpansionRankProgress(next).cleared,wave,'skipped new acts never grant ranking waves');assert(restoreDefense(checkpointDefense(next)));}
 const rewarded=createDefense(91);rewarded.wave=72;rewarded.bossWins={austin:2,alwaysbeginner:2,tempestcarrier:2};rewarded.pendingBosses=[12,24,36,48,60,72].map((wave,i)=>({wave,boss:['austin','alwaysbeginner','tempestcarrier'][i%3],ordinal:Math.floor(i/3)+1}));assert(plantDefense(rewarded,2));const rewardMigration=migrateDefenseToFiveActs(checkpointDefense(rewarded));assert(rewardMigration);assert.deepEqual(rewardMigration.bossWins,{...rewarded.bossWins,crosswindKeeper:0,crystalGardener:0});assert.deepEqual(rewardMigration.pendingBosses.map(e=>e.wave),[12,24,36,72,84,96]);assert.equal(defenseExpansionRankProgress(rewardMigration).cleared,72);
 const horizontal=createDefense(2,{actCount:5});horizontal.wave=37;assert.equal(defensePath(horizontal).length,3);assert.equal(defensePathLength(horizontal),144);assert.deepEqual(defensePoint(60,horizontal),{x:56,y:12});
+// Preserve existing towers from the earlier local migration prototype rather
+// than rejecting a previously valid save. Further planting uses earned waves.
+const oldBeds=createDefense(123);oldBeds.wave=48;oldBeds.currency=1000;
+for(let p=0;p<16;p++)assert(plantDefense(oldBeds,p));
+const oldRoute=createDefense(456);oldRoute.wave=36;
+const oldInspection=checkpointDefense(migrateDefenseToFiveActs(checkpointDefense(oldRoute)));
+oldInspection.towers=checkpointDefense(oldBeds).towers;oldInspection.nextId=oldBeds.nextId;
+const kept=restoreDefense(oldInspection);assert(kept);assert.equal(kept.towers.length,16);assert.equal(defenseSeedCap(kept),14);
+assert.deepEqual(checkpointDefense(kept).towers,oldInspection.towers);
+for(const p of [0,1]){assert(removeDefense(kept,kept.towers.find(t=>t.pad===p).id));assert.equal(plantDefense(kept,p),false);}
+assert(removeDefense(kept,kept.towers.find(t=>t.pad===2).id));assert(plantDefense(kept,2));assert.equal(kept.towers.length,14);
 for(let room=0;room<5;room++){
  const walls=createDefenseCrystalWalls(room);assert.equal(new Set(walls.map(w=>`${w.x},${w.z}`)).size,walls.length,'one visible crystal is one physical wall');
  for(const w of walls)assert(w.x>=0&&w.x<=100&&w.z>=0&&w.z<=60);

@@ -2,6 +2,7 @@ import {buildLevel} from '../src/progression.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
+import {survivalTitleEvents,SURVIVAL_TITLE_LIMIT} from '../src/survival-save.js';
 import * as THREE from 'three';
 import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,createSurvivalSession,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
 import {createSpatialIndex} from '../src/spatial-index.js';
@@ -81,7 +82,7 @@ const nodes=new Map(),node=id=>{
  return nodes.get(id);
 };
 let writes=0,retryLab,homeVisits=0,setupVisits=0,stored=null;
-const finishContext=vm.createContext({survivalSaveToken:null,
+const finishContext=vm.createContext({survivalSaveToken:null,survivalPendingEnd:null,settleSurvivalTitle(){},
  rankingDecision:()=>({eligible:false}),developerRun:false,localInspection:false,score:100,playerName:'씨앗',adminMode:false,betaTesterMode:false,account:{user:()=>null},paceTrusted:()=>true,paceGame:1,paceReal:1,
  survivalPersonalRecord:()=>readSurvivalRecord(finishContext.rawStorage),survivalRecordStorage:s=>s,survivalOwner:()=> 'guest',
  document:{body:{classList:{add(){}}}},elapsed:34,
@@ -131,7 +132,7 @@ assert(main.includes('survivalBase=survivalSession?.act===1'));
 
 // Exercise the real world transition. Keep build/progress; discard old hazards.
 let nextWorld=0,released=0;
-const travel=vm.createContext({queueMicrotask:()=>{},
+const travel=vm.createContext({queueMicrotask:()=>{},survivalTitleEvents,SURVIVAL_TITLE_LIMIT,
  survivalSession:{...createSurvivalSession(9),act:1,won:true,time:600,bossesDefeated:2},advanceSurvivalAct,
  enemies:[{id:1}],fallen:[{e:{id:2}}],shots:[{ob:{id:3}}],enemyShots:[{ob:{id:4}}],effects:[{ob:{id:5}}],releaseEnemy(){released++;},release(){released++;},
  heldForms:new Map([['prism',4]]),levels:new Map([['chain',3]]),bankedUpgrades:12,choiceKills:123,choicesTaken:25,score:54321,

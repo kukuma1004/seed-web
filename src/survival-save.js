@@ -2,10 +2,51 @@
 export const SURVIVAL_SAVE_KEY='seed-survival-checkpoint-v1';
 const newWriteId=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}-${Math.random()}`;
 export const survivalRecordId=s=>s?JSON.stringify(s):'none';
-export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.version===1&&s.ended===true&&typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0);}
+export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.version===1&&s.ended===true&&typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0&&survivalTitleEvents(s)!==null);}
 const forbidden=new Set(['__proto__','prototype','constructor']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e12;
 import {validSurvivalExpansionCheckpoint} from './survival-expansion-save.js';
+// Exact pending events, not a per-boss high-water: three failed Austin wins
+// must credit three victories when storage recovers. FIFO also prevents a
+// later ordinal from bypassing an earlier failed account receipt.
+export const SURVIVAL_TITLE_LIMIT=96;
+const titleBosses=new Set(['austin','alwaysbeginner','tempestcarrier','crosswindKeeper','crystalGardener']);
+const titleEvent=e=>e&&titleBosses.has(e.boss)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000;
+export function survivalTitleEvents(session){
+ if(!session)return [];
+ const events=session.pendingBossTitles;
+ if(events!==undefined&&(!Array.isArray(events)||events.length>SURVIVAL_TITLE_LIMIT||!events.every(titleEvent)))return null;
+ const out=(events||[]).map(e=>({boss:e.boss,ordinal:e.ordinal}));
+ if(session.titleBoss!==undefined||session.titleOrdinal!==undefined){
+  const legacy={boss:session.titleBoss,ordinal:session.titleOrdinal};if(!titleEvent(legacy))return null;
+  // New saves keep the first pending event as a compatible legacy mirror.
+  if(events!==undefined){if(!out.length||out[0].boss!==legacy.boss||out[0].ordinal!==legacy.ordinal)return null;}
+  else out.push(legacy);
+ }
+ const high=new Map();for(const e of out){if(e.ordinal<=(high.get(e.boss)||0))return null;high.set(e.boss,e.ordinal);}
+ return out;
+}
+function setTitleEvents(session,events){
+ session.pendingBossTitles=events;
+ if(events.length){session.titleBoss=events[0].boss;session.titleOrdinal=events[0].ordinal;}
+ else {delete session.titleBoss;delete session.titleOrdinal;}
+}
+export function queueSurvivalTitle(session,boss,ordinal){
+ const events=survivalTitleEvents(session),event={boss,ordinal};if(!events||!titleEvent(event))return false;
+ if(events.some(e=>e.boss===boss&&e.ordinal===ordinal))return true;
+ if(events.length>=SURVIVAL_TITLE_LIMIT||events.some(e=>e.boss===boss&&e.ordinal>ordinal))return false;
+ events.push(event);setTitleEvents(session,events);return true;
+}
+export function settleSurvivalTitles(session,award){
+ const events=survivalTitleEvents(session);if(!events)return false;
+ while(events.length){const e=events[0];if(award(e)!==true){setTitleEvents(session,events);return false;}events.shift();}
+ setTitleEvents(session,events);return true;
+}
+export function captureSurvivalSession(session){
+ const out=captureCombatFields(session),events=survivalTitleEvents(session);
+ if(!events)throw Error('invalid-survival-title-events');setTitleEvents(out,events);return out;
+}
+
 export function captureCombatFields(actor){
  const out={};
  for(const [key,value] of Object.entries(actor)){
@@ -29,7 +70,7 @@ export function restoreCombatFields(actor,fields,vector){
 export function validSurvivalSave(s){
  if(s?.version!==1||s.ended||typeof s.id!=='string'||!Number.isInteger(s.revision)||s.revision<1)return false;
  const t=s.session,p=s.progress;
- if(!t||t.lab||t.benchmark||t.finished||!p||!finite(p.hp)||p.hp<=0)return false;
+ if(!t||t.lab||t.benchmark||t.finished||!p||!finite(p.hp)||p.hp<=0||survivalTitleEvents(t)===null)return false;
  if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3)return false;
  if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
  if(t.act>=3&&!validSurvivalExpansionCheckpoint(s.expansion,t.act,t.lap))return false;
@@ -68,6 +109,7 @@ export function createSurvivalSaveStore(storage,owner='guest'){
   write(snapshot,{fresh=false}={}){
    try{
     const old=raw();
+    if(fresh&&validSurvivalRecord(old)&&(survivalTitleEvents(old.ended?old:old.session)?.length||0)>0)return {ok:false,reason:'rewards'};
     if(!fresh&&(!old||old.ended||old.id!==snapshot.id||old.revision!==snapshot.revision||snapshot.writeId&&old.writeId!==snapshot.writeId))return {ok:false,reason:'conflict'};
     const next={...snapshot,version:1,revision:fresh?1:snapshot.revision+1,savedAt:Date.now(),writeId:newWriteId()};
     if(!validSurvivalSave(next))return {ok:false,reason:'invalid'};
@@ -76,9 +118,23 @@ export function createSurvivalSaveStore(storage,owner='guest'){
     return {ok:true,value:next};
    }catch{return {ok:false,reason:'storage'};}
   },
-  end(id,revision,writeId){
+  retryTitles(award){
+   const old=raw();if(!validSurvivalRecord(old))return {ok:old===null,reason:'invalid'};
+   const session=old.ended?old:old.session,events=survivalTitleEvents(session);
+   if(!events.length)return {ok:true,value:old};
+   const next=structuredClone(old),target=next.ended?next:next.session;
+   const settled=settleSurvivalTitles(target,award);
+   if(!settled&&survivalTitleEvents(target).length===events.length)return {ok:false,reason:'rewards',value:old};
+   // A successful receipt may precede a failed checkpoint ACK. Retrying is
+   // safe because the account ledger owns deduplication, not this queue.
+   next.revision++;next.savedAt=Date.now();next.writeId=newWriteId();
+   const result=this.replace(old,next);return {...result,ok:result.ok&&settled,value:result.ok?next:old,reason:result.ok&&!settled?'rewards':result.reason};
+  },
+  end(id,revision,writeId,pending){
    try{const old=raw();if(!old||old.ended||old.id!==id||old.revision!==revision||writeId&&old.writeId!==writeId)return false;
-    storage.setItem(key,JSON.stringify({version:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId()}));return true;
+    const events=survivalTitleEvents(pending||old.session);if(!events)return false;
+    const next={version:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId(),pendingBossTitles:events};
+    const json=JSON.stringify(next);storage.setItem(key,json);return storage.getItem(key)===json;
    }catch{return false;}
   }
  };

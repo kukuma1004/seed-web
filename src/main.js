@@ -61,7 +61,7 @@ import {activeCombatEvolutions,orbitCore,isOrbitEvolution,canAcquireEvolution,or
 import {lawArt} from './law-art.js';
 import * as THREE from 'three';
 import {SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,SURVIVAL_ACTS,survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,createSurvivalSession,survivalPressure,tickSurvivalRush,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,settleSurvivalKill,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from './survival-rules.js';
-import {createSurvivalSaveStore,captureCombatFields,restoreCombatFields} from './survival-save.js';
+import {createSurvivalSaveStore,captureCombatFields,restoreCombatFields,captureSurvivalSession,queueSurvivalTitle,settleSurvivalTitles,survivalTitleEvents,SURVIVAL_TITLE_LIMIT} from './survival-save.js';
 import {createSurvivalSync,survivalSyncLabel} from './survival-sync.js';
 import {createSurvivalArt} from './survival-art.js';
 import {mountSurvivalComparison} from './survival-readability.js';
@@ -959,7 +959,7 @@ $('#save-exit').onclick=async()=>{
  leavePausedRun();
 };
 // Separate challenge: shares the real combat engine, never a journey checkpoint.
-let survivalSaveToken=null,survivalSaveMessage='',survivalPendingChoice=null,survivalAutosaveAt=0;
+let survivalSaveToken=null,survivalSaveMessage='',survivalPendingChoice=null,survivalAutosaveAt=0,survivalTitleRetryAt=0,survivalPendingEnd=null;
 const survivalOwner=()=>account.user()?.uid||'guest';
 const survivalStore=()=>createSurvivalSaveStore(rawStorage,survivalOwner());
 const survivalCloud=createSurvivalSync({storage:rawStorage,account,databaseURL:FIREBASE_APP.databaseURL,isActive:()=>Boolean(survivalSession&&!survivalSession.finished&&mode!=='ready'),onState:state=>{const el=$('#survival-cloud-status');if(el)el.textContent=survivalSyncLabel(state);}});
@@ -967,15 +967,39 @@ const survivalBestCloud=createSurvivalRecordSync({storage:rawStorage,account,dat
 const survivalPersonalRecord=()=>readSurvivalAccountRecord(rawStorage,survivalOwner());
 const packSurvivalActor=e=>({fields:captureCombatFields(e),position:e.g.position.toArray(),rotation:e.g.rotation.y});
 function settleSurvivalTitle(){
- if(!survivalSession?.titleBoss)return;
- const practice=Boolean(localInspection||survivalSession.lab||survivalSession.benchmark||developerRun||survivalSaveToken?.owner!==survivalOwner());
- if(awardModeBoss('survival',survivalSaveToken?.id,survivalSession.titleBoss,survivalSession.titleOrdinal,practice)){delete survivalSession.titleBoss;delete survivalSession.titleOrdinal;}
+ if(!survivalSession)return true;
+ // A switched UID is not a practice run: retain the original owner's events.
+ if(!survivalSaveToken||survivalSaveToken.owner!==survivalOwner())return false;
+ const practice=Boolean(localInspection||survivalSession.lab||survivalSession.benchmark||developerRun);
+ if(practice)return true;
+ return settleSurvivalTitles(survivalSession,e=>awardModeBoss('survival',survivalSaveToken.id,e.boss,e.ordinal,practice));
+}
+function persistSurvivalEnd(){
+ if(!survivalPendingEnd)return true;
+ const end=survivalPendingEnd,store=createSurvivalSaveStore(rawStorage,end.owner),record=store.readRecord();
+ if(record?.ended&&record.id===end.id){
+  if(JSON.stringify(survivalTitleEvents(record))!==JSON.stringify(survivalTitleEvents(end.session))){survivalSaveMessage='다른 화면의 종료 기록이 있어요. 미지급 보상을 덮어쓰지 않았습니다.';return false;}
+  survivalPendingEnd=null;return true;
+ }
+ if(!store.end(end.id,end.revision,end.writeId,end.session)){survivalSaveMessage='종료 기록과 보스 보상을 저장하지 못했어요. 원래 계정에서 저장 공간을 확인하고 다시 시도해 주세요.';return false;}
+ survivalPendingEnd=null;if(end.owner===survivalOwner())survivalCloud.changed();return true;
+}
+function retryStoredSurvivalTitles(){
+ // Inspection may have pulled an authentic account checkpoint. Do not
+ // acknowledge its earned events as practice merely by opening this menu.
+ if(localInspection)return true;
+ if(!persistSurvivalEnd())return false;
+ const owner=survivalOwner(),store=survivalStore(),resultRunId=store.readRecord()?.id,result=store.retryTitles(e=>{
+  if(owner!==survivalOwner())return false;
+  return awardModeBoss('survival',resultRunId,e.boss,e.ordinal,localInspection);
+ });
+ return result.ok;
 }
 function saveSurvival(){
  if(!survivalSession||survivalSession.lab||survivalSession.finished||hp<=0||!survivalSaveToken)return false;
  if(survivalSaveToken.owner!==survivalOwner()){survivalSaveMessage='로그인 계정이 바뀌었어요. 원래 계정으로 돌아온 뒤 저장해 주세요.';return false;}
  settleSurvivalTitle();
- const snapshot={...survivalSaveToken,session:captureCombatFields(survivalSession),analysis:combatAnalysis.snapshot(),...(survivalSession.actCount===5?{expansion:survivalExpansion?.checkpoint()||null}:{}),
+ const snapshot={...survivalSaveToken,session:captureSurvivalSession(survivalSession),analysis:combatAnalysis.snapshot(),...(survivalSession.actCount===5?{expansion:survivalExpansion?.checkpoint()||null}:{}),
   progress:{hp,kills,score,choicesTaken,choiceKills,bankedUpgrades,elapsed,runDashes,runDamageTaken,levels:Object.fromEntries(levels),forms:Object.fromEntries(heldForms),inventory:{...inventory},mutations:mutationsToSave(mutations),runBonuses:{...runBonuses},rerollUsed,hasteTime,shellTime,potionCD,selectedItem,dashState:{...dashState},dashLock,activeValue:activeGauge.value,activeCooldown:activeGauge.plan?ACTIVE.cooldownSeconds:activeGauge.cooldown,shootCD,playerSlow,invuln},
   player:{position:player.position.toArray(),baseSlideTime,baseSlideCooldown,baseSlideLock,baseSlideTarget:baseSlideTarget.toArray(),baseSlideDir:baseSlideDir.toArray(),lastMove:lastMove.toArray()},
   pending:survivalPendingChoice?{offered:[...survivalPendingChoice],bonus:runBonusOffer||[]}:null,evolution:!survivalPendingChoice&&['evolving','forms','awaken','solo'].includes(mode),
@@ -1102,7 +1126,7 @@ async function showModeRanking(kind,back){
 }
 function showSurvivalSetup(refresh=true){
  $('#overlay').classList.add('survival-overlay');
- mode='ready';paused=false;touch.reset();keys.clear();const record=survivalPersonalRecord(),saved=survivalStore().read();
+ mode='ready';paused=false;touch.reset();keys.clear();retryStoredSurvivalTitles();const record=survivalPersonalRecord(),saved=survivalStore().read();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">SEED · 별도 도전</p><h2>밀려오는 숲</h2><p class="survival-lead">작은 씨앗 하나로, 끝없는 무리를 뚫으세요.</p><div class="survival-facts"><span><b>3분</b>각 막 생존 후 보스</span><span><b>자동 공격</b>이동과 회피에 집중</span><span><b>조합 성장</b>처치하면 법칙 선택</span></div><p>1막 오스틴 → 2막 항상초심 → 3막 요한. 조합을 유지하고 이어 싸워요. 2막은 베이스를 밟으면 다음 베이스까지 미끄러져요(무적 없음). 3막을 깨면 더 강한 다음 순환으로 넘어갑니다. 일반 몹은 몸으로 밀려오고 보스만 고유 공격을 사용해요. 한쪽 접근 → 양쪽 압박 → 사방 포위 뒤, 매분 마지막 6초는 작은 무리만 접근해요. 빠른 적이 몸을 낮추면 옆으로 피하세요.</p><p class="survival-note">회복 물약 2개로 출발 · 각 막 60·120초에 1개 보급(최대 5개) · 막 이동 시 체력 25 회복 + 물약 1개<br>별도 시험 모드예요. 여정 저장·조합 도감·창고는 별도예요. 보스 첫 격파·누적 10회·한 판 같은 보스 3회 완주 칭호는 여정과 함께 집계해요.<br>일시정지에서 저장하고 나가기 · 이 기기·브라우저에서 이어하기 가능<br>Google 계정 저장 완료 후 같은 계정으로 다른 기기에서 이어할 수 있어요.<br>기록을 합치지는 않아요 · 날아가던 내 탄과 순간 효과는 재개 시 정리됩니다.</p><p class="survival-record">최고 ${record.bestKills.toLocaleString()} 처치 · 최장 ${survivalClock(record.bestTime)} · 세 막 완주 ${record.wins}회 · 최고 ${record.bestBosses}보스${record.fastestClear?` · 최단 완주 ${survivalClock(record.fastestClear)}`:''}</p><p class="survival-note" role="status">${saved?`저장된 도전 · ${saved.session.lap+1}순환 ${saved.session.act+1}막 · ${survivalClock(saved.session.time)} · ${saved.progress.kills}처치`:survivalSaveMessage}</p><p id="survival-cloud-status" class="survival-note" role="status"></p><button id="survival-cloud-retry" class="survival-sync-button">계정 저장 다시 확인</button><div id="survival-cloud-conflict"></div><div class="survival-actions">${saved?'<button id="resume-survival" class="primary">이어하기</button>':''}<button id="start-survival" class="primary">${saved?'새로 시작':'생존전 시작'}</button><button id="survival-back">돌아가기</button></div>${localInspection?'<details class="survival-lab"><summary>로컬 검증 · 기록 제외</summary><button id="survival-pierce">관통·연쇄 무리 시연</button><button id="survival-frost">빙결·연쇄 무리 시연</button><button id="survival-stress">후반 300마리 · 조합 부하</button><button id="survival-boss">최종 보스 전환</button><button id="survival-duel">1막 보스전 연습 · 피해 적용</button><button id="survival-stress2">2막 300마리 부하</button><button id="survival-stress3">3막 300마리 부하</button><button id="survival-base">2막 베이스 이동 검증 · 피해 적용</button><button id="survival-route">세 막 연결 검증 · 보스 체력 1</button><button id="survival-act2">2막 물량·항상초심 연습</button><button id="survival-act3">3막 물량·요한 연습</button><button id="survival-loop">3막 격파 → 다음 순환 검증</button><p>가속 자동 비교 · 처음부터 성장 · 실제 피해 · 지정 선택 · 기록 제외</p><button id="compare-still">정지 생존 비교 · 이동·회피 없음</button><button id="compare-area">광역형 3분 비교</button><button id="compare-frost">빙결형 3분 비교</button><button id="compare-orbit">공전형 3분 비교</button></details>':''}</div>`;
  $('#start-survival').onclick=()=>{if(!saved){startSurvival();return;}$('#overlay').innerHTML='<div class="menu-panel survival-panel"><h2>새로 시작할까요?</h2><p>기존 생존전 이어하기가 새 도전으로 바뀝니다.</p><div class="survival-actions"><button id="survival-new-confirm">새 도전 시작</button><button id="survival-new-cancel">취소</button></div></div>';$('#survival-new-confirm').onclick=()=>startSurvival();$('#survival-new-cancel').onclick=showSurvivalSetup;};if($('#resume-survival'))$('#resume-survival').onclick=resumeSurvival;$('#survival-back').onclick=()=>{$('#overlay').classList.remove('survival-overlay');showDungeon();};
@@ -1117,11 +1141,12 @@ function startSurvival(lab=null,saved=null){
  const fiveActs=localInspection&&(['act4','act5','five'].includes(lab)||saved?.session?.actCount===5);
  if(fiveActs&&!expansionJourneyView)return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>startSurvival(lab,saved));
  if(!localInspection&&!requireName())return;
+ if(!saved&&!retryStoredSurvivalTitles()){survivalSaveMessage=survivalSaveMessage||'미지급 보스 보상을 보관하고 있어요. 계정과 저장 공간을 확인한 뒤 다시 시작해 주세요.';$('#toast').textContent=survivalSaveMessage;return;}
  document.body.classList.remove('survival-result');
  $('#overlay').classList.remove('survival-overlay');
  if(gameplayPaused()||maintenanceOn){showIntro();return;}
  expansionJourney=null;expansionEntry=null;survivalExpansion=null;mirrorSession=null;trainingSession=null;developerRun=false;labSafe=false;baseSlideTime=baseSlideCooldown=0;baseSlideLock=-1;startRegion='garden';
- survivalSaveMessage='';survivalPendingChoice=null;survivalSaveToken=saved?{id:saved.id,revision:saved.revision,writeId:saved.writeId,owner:survivalOwner()}:{id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,revision:0,owner:survivalOwner()};survivalAutosaveAt=15;
+ survivalSaveMessage='';survivalPendingChoice=null;survivalSaveToken=saved?{id:saved.id,revision:saved.revision,writeId:saved.writeId,owner:survivalOwner()}:{id:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}`,revision:0,owner:survivalOwner()};survivalAutosaveAt=15;survivalTitleRetryAt=0;
  survivalSession=createSurvivalSession(localInspection&&SURVIVAL_BENCHES[lab]?413:Date.now(),{actCount:fiveActs?5:3});survivalSession.nextSupply=SURVIVAL.supplyInterval;survivalSession.lab=localInspection&&lab||null;survivalSession.benchmark=localInspection?createSurvivalBenchmark(lab):null;
  document.body.classList.add('survival-mode');restart();
  if(mode!=='playing'){survivalSession=null;return;}
@@ -1201,6 +1226,11 @@ function tickSurvivalBoss(e,dt,time){
  e.updateActionArt?.(time);
 }
 function continueSurvival(){
+ const pending=survivalTitleEvents(survivalSession);
+ if(!pending||pending.length>=SURVIVAL_TITLE_LIMIT){
+  if(Date.now()>=survivalTitleRetryAt){survivalTitleRetryAt=Date.now()+2000;settleSurvivalTitle();saveSurvival();$('#toast').textContent='미지급 보스 보상을 보관 중이에요 · 계정과 저장 공간을 확인하면 다음 막으로 이어집니다';}
+  if((survivalTitleEvents(survivalSession)?.length??SURVIVAL_TITLE_LIMIT)>=SURVIVAL_TITLE_LIMIT)return;
+ }
  if(!advanceSurvivalAct(survivalSession))return;
  queueMicrotask(()=>saveSurvival());
  for(const e of enemies)releaseEnemy(e);for(const f of fallen)releaseEnemy(f.e);fallen.length=0;enemies=[];
@@ -1252,7 +1282,9 @@ function moveSurvivalEnemy(e,edt,dt,time){
  if(Math.hypot(player.position.x-pos.x,player.position.z-pos.z)<e.radius+.42&&e.timer<=0){hitPlayer(e.damage);e.timer=.9;}
 }
 function finishSurvival(won=false,left=false){
- const session=survivalSession;if(!session||session.finished)return;session.finished=true;if(!session.lab&&survivalSaveToken&&survivalStore().end(survivalSaveToken.id,survivalSaveToken.revision,survivalSaveToken.writeId)){survivalCloud.changed();void survivalCloud.flush();}document.body.classList.add('survival-result');$('#overlay').classList.add('survival-overlay');
+ const session=survivalSession;if(!session||session.finished)return;settleSurvivalTitle();session.finished=true;
+ if(!session.lab&&survivalSaveToken){survivalPendingEnd={...survivalSaveToken,session:captureSurvivalSession(session)};if(persistSurvivalEnd())void survivalCloud.flush();}
+ document.body.classList.add('survival-result');$('#overlay').classList.add('survival-overlay');
  if(session.benchmark){session.benchmark.damageTaken=runDamageTaken;session.benchmark.dashes=runDashes;}
  if(session.benchmark)sampleSurvivalBenchmark(session.benchmark,{time:session.time,hp,kills,choices:choicesTaken,enemies:enemies.filter(e=>!e.dead).length,shots:shots.length+enemyShots.length,bossHp:enemies.find(e=>e.survivalBoss)?.hp,force:true});
  const outcome=survivalOutcome(session,{left,boss:enemies.find(e=>e.survivalBoss)});won=outcome.won;
@@ -1266,6 +1298,7 @@ function finishSurvival(won=false,left=false){
  $('.survival-record').insertAdjacentHTML('afterend','<p id="survival-submit-status" class="survival-note" role="status"></p><button id="survival-result-ranking" class="survival-sync-button">물량생존전 랭킹 보기</button>');$('#survival-result-ranking').onclick=()=>showSurvivalRanking(()=>{showIntro();showSurvivalSetup();});
  const decision=rankingDecision({isTestRun:Boolean(session.lab||session.benchmark||developerRun),localInspection,score,name:playerName,native:account.native,admin:adminMode,tester:betaTesterMode,user:account.user(),paceTrusted:paceTrusted(paceGame,paceReal)});
  const status=$('#survival-submit-status');
+ if(survivalPendingEnd?.owner===survivalOwner()){status.textContent=survivalSaveMessage;return;}
  if(!decision.eligible||survivalSaveToken?.owner!==account.user()?.uid){status.textContent=localInspection||session.lab?'연습 기록은 온라인 랭킹에 등록하지 않아요.':'이 기기 기록에 남았어요 · 온라인 랭킹은 로그인한 테스트 계정의 정상 플레이만 등록해요.';return;}
  const build=buildRecord({levels,forms:heldForms}),entry={uid:account.user().uid,name:playerName,score:Math.floor(score),kills:session.kills,bosses:session.bossesDefeated,time:Math.max(1,Math.ceil(session.time)),laws:build.laws,forms:build.forms};
  status.textContent='생존전 최고기록을 등록하는 중…';
@@ -1392,7 +1425,7 @@ function enemyDown(e){perf.event(PE.enemyDeath);
  if(e.expansionActor){score+=20;releaseEnemy(e);return;}
  if(survivalSession){
   score+=e.survivalScore||500;settleSurvivalKill(survivalSession,{boss:Boolean(e.survivalBoss)});
-  if(e.survivalBoss){survivalSession.titleBoss=e.type;survivalSession.titleOrdinal=survivalSession.lap+1;settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}
+  if(e.survivalBoss){if(!localInspection&&!survivalSession.lab&&!survivalSession.benchmark&&!developerRun&&!queueSurvivalTitle(survivalSession,e.type,survivalSession.lap+1))throw Error('survival-title-queue-full');settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}
   else{survivalArt?.defeat(e,player.position);releaseEnemy(e);}
   return;
  }
