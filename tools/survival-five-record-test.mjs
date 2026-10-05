@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
 import {SURVIVAL,createSurvivalSession,advanceSurvivalAct,settleSurvivalKill,survivalAct,survivalBossOrdinal,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
 import {migrateSurvivalToFiveActs,createSurvivalExpansion} from '../src/survival-expansion.js';
@@ -6,13 +7,13 @@ import {captureSurvivalSession,restoreCombatFields,createSurvivalSaveStore,queue
 import {recordModeBossVictory} from '../src/mode-boss-titles.js';
 import {createSurvivalRecordSync,survivalRecordStorage,readSurvivalAccountRecord} from '../src/survival-record-sync.js';
 
-const released=Object.fromEntries(Object.entries(EXPANSION_ACTS).map(([k,v])=>[k,{...v,released:true}]));
+const released=openExpansionActs;
 const memory=()=>{const rows=new Map();return {rows,getItem:k=>rows.get(k)??null,setItem:(k,v)=>rows.set(k,v)};};
 const storage=memory();
 const legacy=recordSurvivalResult(storage,{kills:700,time:650,bossesDefeated:3,completedLaps:1,fastestLap:650});
 const initial=storage.getItem(SURVIVAL.recordKey);
 const result={actCount:5,kills:1234,bossesDefeated:5,time:960,completedLaps:1,fastestLap:960,legacyCompletedLaps:7};
-for(const [session,options] of [[result,{}],[result,{acts:released,inspection:true}],[{...result,lab:true},{acts:released}],[{...result,benchmark:{}},{acts:released}],[result,{acts:{...released,crystalGorge:{released:false}}}]]){
+for(const [session,options] of [[result,{acts:closedExpansionActs}],[result,{acts:released,inspection:true}],[{...result,lab:true},{acts:released}],[{...result,benchmark:{}},{acts:released}],[result,{acts:{...released,crystalGorge:{released:false}}}]]){
  assert.deepEqual(recordSurvivalResult(storage,session,options),legacy);assert.equal(storage.getItem(SURVIVAL.recordKey),initial,'closed/inspection saves remain byte-identical');
 }
 const five=recordSurvivalResult(storage,result,{acts:released});

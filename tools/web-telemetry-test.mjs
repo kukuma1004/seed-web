@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {createWebTelemetry,loginFailureReason,seoulDay} from '../src/web-telemetry.js';
 import {summarizeWebDay} from './web-telemetry-report.mjs';
 import {summarizeUsageDay,usageTotals,usageModeTotals,readUsageDays} from '../src/usage-dashboard.js';
@@ -85,10 +86,9 @@ console.log('Web telemetry counting, privacy and platform gating passed.');
 
 // Released expansion journeys keep exact act4/5 identity, while closed or
 // partially opened gates make no anonymous telemetry writes or auth requests.
-const {EXPANSION_ACTS:expansionActs}=await import('../src/act-expansion.js');
-const openActs=Object.fromEntries(Object.entries(expansionActs).map(([k,v])=>[k,{...v,released:true}]));
+const openActs=openExpansionActs;
 for(const platform of ['web','android'])for(const act of [4,5]){
- for(const acts of [expansionActs,{...openActs,crosswind:expansionActs.crosswind},openActs]){
+ for(const acts of [closedExpansionActs,{...openActs,crosswind:closedExpansionActs.crosswind},openActs]){
   const rows=[];let authCount=0;
   const t=createWebTelemetry({enabled:true,platform,databaseURL:'https://example.invalid',acts,now:()=>Date.parse('2026-10-04T12:00:00Z'),eventId:()=> 'expansion-session-01',session:async()=>{authCount++;return {uid:'install',token:async()=> 'mock'};},fetchImpl:async(url,options)=>{rows.push({url,body:JSON.parse(options.body)});return {ok:true};}});
   const expected=acts===openActs;assert.equal(await t.playStart(act),expected);for(let second=0;second<42;second++)t.playTick(1);await t.endPlay('cleared');

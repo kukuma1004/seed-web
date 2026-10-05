@@ -204,3 +204,15 @@ art-refs/
 !tools/boss-victory-migration-rules.mjs
 !tools/boss-victory-migration-test.mjs
 !tools/boss-victory-migration-emulator-test.mjs
+
+!tools/boss-victory-account-test.mjs
+!tools/boss-victory-cloud-cutover-test.mjs
+!tools/boss-receipt-epoch-test.mjs
+!tools/adventure-boss-epoch-test.mjs
+!tools/boss-legacy-quarantine-test.mjs
+!tools/boss-account-menu-test.mjs
+!tools/defense-live-boss-epoch-test.mjs
+!tools/boss-victory-cloud-integrated-emulator-test.mjs
+!tools/defense-expansion-geometry-test.mjs
+!tools/linked-course-defense-test.mjs
+!tools/expansion-gate-fixtures.mjs

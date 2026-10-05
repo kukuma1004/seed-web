@@ -1,12 +1,13 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
 import {createDefense,checkpointDefense,restoreDefense} from '../src/seed-defense-rules.js';
 import {defensePreparationKey,readDefensePreparation,canWriteDefensePreparation} from '../src/defense-save-route.js';
-const both=Object.fromEntries(Object.entries(EXPANSION_ACTS).map(([id,act])=>[id,{...act,released:true}]));
+const both=openExpansionActs;
 const data=new Map(),storage={getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,v),removeItem:k=>data.delete(k)};
-const owner='account-A',oldKey=defensePreparationKey(owner,3),inspectionKey=defensePreparationKey(owner,5),newKey=defensePreparationKey(owner,5,{acts:both});
+const owner='account-A',oldKey=defensePreparationKey(owner,3),inspectionKey=defensePreparationKey(owner,5,{acts:closedExpansionActs}),newKey=defensePreparationKey(owner,5,{acts:both});
 assert.notEqual(newKey,inspectionKey);assert.notEqual(newKey,oldKey);
 const experiment=checkpointDefense(createDefense(3,{actCount:5}));storage.setItem(inspectionKey,JSON.stringify(experiment));
 const before=storage.getItem(inspectionKey);assert.equal(readDefensePreparation(storage,newKey,{owner,actCount:5}),null,'inspection bytes cannot become a public preparation');
@@ -19,4 +20,4 @@ const context=vm.createContext({storage,key:newKey,actCount:5,state:converted,is
 for(const unknown of ['{broken',JSON.stringify({...accepted,version:999}),JSON.stringify(legacy)]){
  storage.setItem(newKey,unknown);assert.equal(readDefensePreparation(storage,newKey,{owner,actCount:5}),null);assert.equal(canWriteDefensePreparation(storage,newKey,{actCount:5}),false);context.save();context.clearSave();assert.equal(storage.getItem(newKey),unknown,'actual view cannot replace or clear unrecognized preparation bytes');assert.equal(storage.getItem(oldKey),oldBytes);assert.equal(storage.getItem(inspectionKey),before);
 }
-console.log('TD save routing: separate public/inspection keys, read-only legacy migration, same run/build/HP, UID separation and real view protection of unknown/cross-route bytes passed; real release gates remain closed.');
+console.log('TD save routing: separate public/inspection keys, read-only legacy migration, same run/build/HP, UID separation and real view protection of unknown/cross-route bytes passed; explicit closed/open release fixtures verified.');

@@ -1,11 +1,12 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {createExpansionJourney,advanceExpansionJourney} from '../src/expansion-journey.js';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
 import {createExpansionEntry,createExpansionSaveStore,EXPANSION_SAVE_KEY} from '../src/expansion-run-save.js';
 import {acquireExpansionSaveLease} from '../src/expansion-save-lease.js';
 import {EXPANSION_ACCOUNT_SAVE_KEY,EXPANSION_ACCOUNT_SAVE_LIMIT,expansionAccountSaveKey,expansionAccountSaveLockKey,expansionAccountEligible,createExpansionAccountEntry,validExpansionAccountSave,expansionAccountExitCheckpoint,createExpansionAccountSaveStore,collectExpansionAccountSaves,mergeExpansionAccountSaves} from '../src/expansion-account-save.js';
 const copy=v=>JSON.parse(JSON.stringify(v));
-const released=Object.fromEntries(Object.entries(EXPANSION_ACTS).map(([id,value])=>[id,{...value,released:true}]));
+const released=openExpansionActs;
 const run={version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:3,elapsed:15,rules:[],mutated:[],forms:{returnblade:5},inventory:{potion:3,tonic:2,wind:1,shell:1,sprout:1},score:300,choicesTaken:2,choiceKills:3};
 function memory(){const data=new Map();return {data,fail:false,getItem:k=>data.get(k)??null,setItem(k,v){if(this.fail)throw Error('quota');data.set(k,v);},removeItem:k=>data.delete(k)};}
 // Contract mocks only: real Web Locks implementation acquires these mock locks.
@@ -17,8 +18,8 @@ for(const act of ['crosswind','crystalGorge']){
  const journey=createExpansionJourney(act,0,413),inspection=createExpansionSaveStore(storage,act,'owner-a');
  const local=inspection.write(createExpansionEntry(journey,run,[0,0,5]),{fresh:true});assert(local.ok);
  const inspectionBytes=storage.getItem(inspection.key);
- const defaults={owner:'owner-a',currentOwner:'owner-a'};
- assert.equal(createExpansionAccountEntry(journey,run,[0,0,5],defaults),null,'actual unreleased gate rejects issuance');
+ const defaults={owner:'owner-a',currentOwner:'owner-a',acts:closedExpansionActs};
+ assert.equal(createExpansionAccountEntry(journey,run,[0,0,5],defaults),null,'explicit closed gate rejects issuance');
  assert.deepEqual(collectExpansionAccountSaves(storage,defaults),{});
  for(const bad of [{currentOwner:'owner-b'},{currentOwner:'guest',owner:'guest'},{inspection:true},{practice:true},{owner:''},{acts:{}}]){
   const options={...defaults,acts:released,...bad};assert.equal(expansionAccountEligible(act,options.owner,options),false);assert.equal(createExpansionAccountEntry(journey,run,[0,0,5],options),null);
@@ -46,7 +47,7 @@ for(const act of ['crosswind','crystalGorge']){
  const saved=store.write(losses);assert(saved.ok);assert.equal(saved.value.entry.revision,2);
  assert.equal(store.write(first.value).reason,'conflict');assert.equal(store.finish(first.value).reason,'conflict');
  const before=JSON.stringify([...storage.data]);
- for(const mutation of [c=>c.currentOwner='owner-b',c=>c.inspection=true,c=>c.practice=true,c=>c.acts=EXPANSION_ACTS]){
+ for(const mutation of [c=>c.currentOwner='owner-b',c=>c.inspection=true,c=>c.practice=true,c=>c.acts=closedExpansionActs]){
   const savedContext={...ctx};mutation(ctx);assert.equal(store.read(),null);assert.equal(store.collect(),null);assert.equal(store.write(saved.value).reason,'ineligible');assert.equal(store.finish(saved.value).reason,'ineligible');assert.equal(JSON.stringify([...storage.data]),before);Object.assign(ctx,savedContext);
  }
  const both=collectExpansionAccountSaves(storage,{...defaults,acts:released});assert.deepEqual(both[act==='crosswind'?'act4':'act5'],saved.value);
@@ -65,7 +66,7 @@ for(const act of ['crosswind','crystalGorge']){
  const boss=createExpansionJourney(act,4,413);advanceExpansionJourney(boss);assert(createExpansionAccountEntry(boss,{...run,stage:4},[0,0,5],{...defaults,acts:released}));
 }
 assert.equal(storage.getItem('seed-run-checkpoint-v1'),'ordinary act1 bytes');assert.equal(storage.getItem('seed-account-profile-v1'),'ordinary account bytes');
-assert.deepEqual(collectExpansionAccountSaves(storage,{owner:'owner-a',currentOwner:'owner-a'}),{},'the actual closed gates do not collect explicitly issued fixtures');
+assert.deepEqual(collectExpansionAccountSaves(storage,{owner:'owner-a',currentOwner:'owner-a',acts:closedExpansionActs}),{},'rollback gates do not collect explicitly issued fixtures');
 
 const act='crosswind',eligible={owner:'owner-a',currentOwner:'owner-a',acts:released},entry=createExpansionAccountEntry(createExpansionJourney(act),run,[0,0,5],{...eligible,id:'edge-fixture'});
 const context=()=>eligible,lease=await acquireExpansionSaveLease(act,'owner-a',{locks});

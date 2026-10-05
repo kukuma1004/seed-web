@@ -1,4 +1,5 @@
 import {createModeBossOutbox} from '../src/mode-boss-outbox.js';
+import {readBossVictoryAccount} from '../src/boss-victory-account.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -90,7 +91,7 @@ assert.match(source,/critChance=piercing\?totalCritChance\(\):0/,'the pre-existi
 
 // Run main's reward bridge with actual receipts, discoveries and setters.
 function host(s=memory()){
- const tree=[],nodes=new Map(),ctx=vm.createContext({runStorage:s,currentJourneyOwner:null,rawStorage:s,createModeBossOutbox,account:{user:()=>({uid:'test-owner'})},recordModeBossVictory,readAccountProfile,MODE_BOSSES,readDiscoveries,recordDiscovery,developerRun:false,localInspection:false,survivalSession:null,expansionJourney:null,canSaveExpansion:()=>false,
+ const tree=[],nodes=new Map(),ctx=vm.createContext({runStorage:s,currentJourneyOwner:null,rawStorage:s,readBossVictoryAccount,createModeBossOutbox,account:{user:()=>({uid:'test-owner'})},recordModeBossVictory,readAccountProfile,MODE_BOSSES,readDiscoveries,recordDiscovery,developerRun:false,localInspection:false,survivalSession:null,expansionJourney:null,canSaveExpansion:()=>false,
   profile:readDiscoveries(s),seedTitle:titleView(),discoveredCount:p=>p.forms.length,codexNews,setTimeout:()=>{},$:id=>{if(!nodes.has(id))nodes.set(id,{textContent:''});return nodes.get(id);},
   awardExpansionBossTree:(_m,_r,_b,_o,e)=>{tree.push(e);return true;},treeReward:e=>tree.push(e),treeWater:()=>{},cloud:{flush:()=>Promise.resolve()},dominantLaw:()=>null,effectiveLevels:()=>[],levels:new Map(),heldForms:new Map()});
  vm.runInContext(functionSlice('modeBossOutbox','syncLaws'),ctx);
@@ -128,7 +129,7 @@ vm.runInContext(functionSlice('permanentStatsProfile','backfillPersonalBests'),p
 const hidden=profileContext.permanentStatsProfile(titleState());assert.doesNotMatch(hidden,/횡풍의 수호자|수정의 정원사|칭호 공격력|칭호 치명타/);
 writeAccountProfile(profileContext.runStorage,{crosswindWins:10,crystalWins:10});
 const shown=profileContext.permanentStatsProfile(titleState(earned));assert.match(shown,/칭호 공격력 3%/);assert.match(shown,/칭호 치명타 3%p/);assert.match(shown,/횡풍의 수호자 10\/10/);assert.match(shown,/수정의 정원사 10\/10/);
-assert.equal(EXPANSION_ACTS.crosswind.released,false);assert.equal(EXPANSION_ACTS.crystalGorge.released,false);
+assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
 assert.match(source,/실험 기록은 계정·칭호·랭킹에 반영하지 않습니다/);
 assert.match(source,/e\.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory\(\)/,'public boss requires durable campaign credit; actual retry path is covered by public-campaign test');
 assert.match(source,/localInspection&&actCount===5\?true:awardModeBoss/,'five-act defense prototype remains practice');

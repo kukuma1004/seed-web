@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import fs from 'node:fs';
 import vm from 'node:vm';
 import {expansionJourneyResult,expansionRankView} from '../src/expansion-journey-result.js';
@@ -11,7 +12,7 @@ const both=released.EXPANSION_ACTS;
 const input={act:'crosswind',owner:'owner-A',currentOwner:'owner-A',ended:true,done:true,name:'테스터',score:20520,cycle:2,stage:4,kills:126,time:680,acts:both};
 for(const act of ['crosswind','crystalGorge']){
  const e=expansionJourneyResult({...input,act});assert(e);assert.equal(e.act,act==='crosswind'?4:5);assert.equal(Object.isFrozen(e),true);assert.equal(e.done,true);
- for(const patch of [{acts:EXPANSION_ACTS},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:385},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
+ for(const patch of [{acts:closedExpansionActs},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:385},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
  assert.equal(expansionJourneyResult({...input,act,done:false,cycle:0,stage:0,kills:10,score:200,time:10}).done,false);
 }
 assert.equal(expansionRankView('crosswind'),'crosswind');assert.equal(expansionRankView('crystalGorge'),'crystal');assert.equal(expansionRankView('austin'),null);
@@ -39,7 +40,7 @@ for(const open of [false,true])for(const view of ['crosswind','crystal']){
 const menu=source.slice(source.indexOf('function showJourneys(){'),source.indexOf('// Every visible ranking line')).replaceAll('import.meta.env.BASE_URL',"'/'");
 for(const variant of ['closed','one','open','inspection','anonymous']){
  const nodes=new Map(),$=k=>{if(!nodes.has(k))nodes.set(k,{innerHTML:'',classList:{remove(){},add(){}}});return nodes.get(k);};let launch;
- const acts=variant==='closed'?EXPANSION_ACTS:variant==='one'?{...both,crystalGorge:{...both.crystalGorge,released:false}}:both;
+ const acts=variant==='closed'?closedExpansionActs:variant==='one'?{...both,crystalGorge:{...both.crystalGorge,released:false}}:both;
  const c=vm.createContext({$,mode:'ready',touch:{reset(){}},keys:new Set(),readCheckpoint:()=>null,actStorage:s=>s,act3Storage:s=>s,runStorage:{},rawStorage:{},profile:{},act2Available:()=>true,act3Available:()=>true,act2Unlocked:()=>true,act3Unlocked:()=>true,localInspection:variant==='inspection',EXPANSION_ACTS:acts,expansionCircuitReleased:()=>expansionCircuitReleased(acts),expansionOwner:()=> 'owner-A',account:{user:()=>({uid:'owner-A',isAnonymous:variant==='anonymous'})},createExpansionAccountSaveStore:()=>({read:()=>null}),MIRROR_TRIAL_PROTOTYPE:{released:false},austinKnown:()=>false,readMirrorRecord:()=>({}),readMirrorCheckpoint:()=>null,readCheckpointBackups:()=>({}),readShop:()=>({carry:{}}),itemCounts:()=>'',escapeHtml:s=>s,AUSTIN:{name:'オ'},requireName:()=>true,startPublicExpansionJourney:(...args)=>{launch=args;},showIntro(){},showShop(){},showDungeon(){}});
  vm.runInContext(menu,c);c.showJourneys();assert.equal(c.$('#overlay').innerHTML.includes('id="start-crosswind"'),variant==='open');assert.equal(c.$('#overlay').innerHTML.includes('id="start-crystalGorge"'),variant==='open');
  if(variant==='open'){c.$('#start-crosswind').onclick();assert.deepEqual(JSON.parse(JSON.stringify(launch)),['crosswind',{resume:false}]);for(const path of [...c.$('#overlay').innerHTML.matchAll(/assets\/(expansion\/[^']+\.webp)/g)].map(m=>m[1]))assert(fs.existsSync('public/assets/'+path),path);assert.match(c.$('#overlay').innerHTML,/background-size:400% 200%/);}

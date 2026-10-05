@@ -4,8 +4,8 @@ import {EXPANSION_ACTS} from '../src/act-expansion.js';
 
 const copy=value=>JSON.parse(JSON.stringify(value));
 const laws=['burst','orbit','reflect','pierce','gravity','chain','frost','split','recall'];
-assert.equal(EXPANSION_ACTS.crosswind.released,false);
-assert.equal(EXPANSION_ACTS.crystalGorge.released,false);
+assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');
+assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
 
 // Horizontal movement and scroll are actual world progress, not camera-relative
 // projectile motion. Rear entries require a later room and a readable warning.

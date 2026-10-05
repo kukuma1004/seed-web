@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createDefense,checkpointDefense,plantDefense} from '../src/seed-defense-rules.js';
@@ -7,7 +8,7 @@ import {EXPANSION_ACTS} from '../src/act-expansion.js';
 import {createDefenseAccountStore,defenseAccountKey,acquireDefenseAccountLease} from '../src/defense-account-save.js';
 import {createDefenseAccountSync,decodeDefenseAccountCloud} from '../src/defense-account-sync.js';
 
-const acts=Object.fromEntries(Object.entries(EXPANSION_ACTS).map(([id,a])=>[id,{...a,released:true}]));
+const acts=openExpansionActs;
 const memory=()=>{const map=new Map();return {map,getItem:k=>map.get(k)??null,setItem:(k,v)=>map.set(k,v),removeItem:k=>map.delete(k)};};
 const server=new Map();let requests=0,puts=0,getHook=null,putHook=null,mode='ok';
 const fetchImpl=async(url,options)=>{
@@ -52,7 +53,7 @@ d=device();save(d,createDefense(3));d.storage.setItem(d.store.key+':sync',JSON.s
 d=device();getHook=()=>{d.user.uid='other';};const retained=d.storage.getItem(d.store.key);assert.equal((await d.sync.sync({allowPull:true})).kind,'account');assert.equal(d.storage.getItem(d.store.key),retained);
 d=device();save(d,createDefense(4));const c=await d.sync.sync({allowPull:true});assert.equal(c.kind,'conflict');putHook=()=>{d.user.uid='other';};assert.equal((await d.sync.sync({choice:'local',expected:c.expected})).kind,'account');assert.equal(d.storage.getItem(d.store.key+':sync'),null);
 // Guest, practice, closed five-act gates and lost leases never write remotely.
-for(const kind of ['guest','practice','lease','closed']){d=device(kind==='closed'?5:3);if(kind==='guest')d.user.isAnonymous=true;if(kind==='practice')d.setPractice(true);if(kind==='lease')d.setHeld(false);if(kind==='closed')d.sync=createDefenseAccountSync({storage:d.storage,account:d.account,owner:'owner-A',circuit:5,lease:d.lease,databaseURL:'https://example.invalid',fetchImpl});n=requests;await d.sync.sync();assert.equal(requests,n,kind);}
+for(const kind of ['guest','practice','lease','closed']){d=device(kind==='closed'?5:3);if(kind==='guest')d.user.isAnonymous=true;if(kind==='practice')d.setPractice(true);if(kind==='lease')d.setHeld(false);if(kind==='closed')d.sync=createDefenseAccountSync({storage:d.storage,account:d.account,owner:'owner-A',circuit:5,lease:d.lease,acts:closedExpansionActs,databaseURL:'https://example.invalid',fetchImpl});n=requests;await d.sync.sync();assert.equal(requests,n,kind);}
 // Same-origin stale tab tokens cannot silently overwrite newer local writes.
 d=device(5);let five=createDefense(5,{actCount:5});five.wave=48;five.currency=1000;save(d,five);const stale=d.store.readRecord();five.currency=1050;save(d,five);assert.equal(d.store.write(stale,five).reason,'conflict');
 assert.equal((await d.sync.flush()).kind,'synced');const fivePhone=device(5);await fivePhone.sync.sync({allowPull:true});assert.equal(fivePhone.store.read().wave,48);assert.equal(fivePhone.store.read().actCount,5);assert.equal(fivePhone.store.read().currency,1050);

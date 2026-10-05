@@ -26,7 +26,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const phoneStore=memory();let remote=null,uploads=0;
  const account={ready:async()=>{},user:()=>({uid:'puzzle-user'}),tokenSession:async()=>({uid:'puzzle-user',idToken:'test-token'})};
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(options.method==='PUT'){remote=JSON.parse(options.body);uploads++;}
   return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
  };
@@ -140,7 +140,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 {
  let remote=null;const user={ready:async()=>({uid:'same-user'}),user:()=>({uid:'same-user'}),tokenSession:async()=>({uid:'same-user',idToken:'token'})};
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(options.method==='PUT')remote=JSON.parse(options.body);
   return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
  };
@@ -301,6 +301,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const fetchImpl=async(url,options={})=>{
   const path=new URL(url).pathname.replace(/^\//,'').replace(/\.json$/,'');
   const key=path==='seedUsers/u1/save'?'save':path==='seedUserRewards/u1'?'rewards':null;
+  if(url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(!key)return {ok:false,status:404,json:async()=>({error:'not found'})};
   if(options.method==='PUT'){state[key]=JSON.parse(options.body);state.puts++;return {ok:true,status:200,json:async()=>state[key]};}
   return {ok:true,status:200,json:async()=>state[key]};
@@ -322,7 +323,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const account={ready:async()=>({uid:'same-run'}),user:()=>({uid:'same-run'}),tokenSession:async()=>({uid:'same-run',idToken:'token'})};
  let remote=null,duringPut=null,failUpload=false;
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(options.method==='PUT'){
    if(failUpload){failUpload=false;return {ok:false,status:503,json:async()=>({error:'offline'})};}
    remote=JSON.parse(options.body);if(duringPut){const callback=duringPut;duringPut=null;callback();}
@@ -359,7 +360,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const account={ready:async()=>({uid:'race'}),user:()=>({uid:'race'}),tokenSession:async()=>({uid:'race',idToken:'token'})};
  let remote=normalizeCloudSnapshot({revision:1,updatedAt:100,discoveries:{version:1,forms:[],bosses:[],records:{}}}),tag='v1',raced=false,puts=0;
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(options.method==='PUT'){
    puts++;
    if(!raced){raced=true;remote=normalizeCloudSnapshot({revision:2,updatedAt:200,discoveries:{version:1,forms:['prism'],bosses:[],records:{}}});tag='v2';return {ok:false,status:412,json:async()=>remote};}
@@ -441,7 +442,7 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const state={save:collectCloudSnapshot(phone,{revision:9,updatedAt:9000}),puts:0};
  const account={ready:async()=>({uid:'uid'}),user:()=>({uid:'uid'}),tokenSession:async()=>({uid:'uid',idToken:'t'})};
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   if(options.method==='PUT'){state.puts++;state.save=JSON.parse(options.body);}
   return {ok:true,status:200,json:async()=>state.save};
  };

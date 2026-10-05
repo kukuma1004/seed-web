@@ -45,7 +45,7 @@ export function createBossVictoryEventQueue({storage,ownerUid,epoch,currentOwner
  };
 }
 
-export function createBossVictoryEventSync({storage,account,ownerUid,epoch,baseline,databaseURL,practice=()=>false,fetchImpl=globalThis.fetch,timeout=10000}={}){
+export function createBossVictoryEventSync({storage,account,ownerUid,epoch,baseline,databaseURL,practice=()=>false,fetchImpl=globalThis.fetch,timeout=10000,onConfirmed=()=>true}={}){
  const queue=createBossVictoryEventQueue({storage,ownerUid,epoch,currentOwner:()=>account.user()?.uid,practice});let flight=null;
  const current=()=>{if(account.user()?.uid!==ownerUid||account.user()?.isAnonymous||practice()!==false)throw Error('account');};
  const recognized=value=>{
@@ -81,6 +81,9 @@ export function createBossVictoryEventSync({storage,account,ownerUid,epoch,basel
    // A PUT success alone never removes a receipt. Check immutable metadata and
    // all delivered events again; a lost readback leaves the entire batch safe.
    const confirmed=events.length?await read():remote;mergeBossVictoryLedgers(remote,confirmed);
+   // Persist the confirmed projection before removing pending receipts. A
+   // failed cache write keeps the queue available for an idempotent retry.
+   if(await onConfirmed(confirmed)===false)throw Error('storage');current();
    for(const event of events)if(!queue.acknowledge(event,confirmed))throw Error('ack');
    current();return {ok:true,kind:queue.pending().length?'pending':'synced',ledger:confirmed};
   }catch(error){return {ok:false,kind:['account','migration','not-migrated','permission','invalid','storage','ledger-full','queue-full','ack'].includes(error.message)?error.message:'offline'};}

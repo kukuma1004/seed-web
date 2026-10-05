@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {createSurvivalSession,survivalAct,survivalActCount,settleSurvivalKill,advanceSurvivalAct,survivalScaling,survivalSpawn,survivalOutcome} from '../src/survival-rules.js';
 import {createSurvivalExpansion,migrateSurvivalToFiveActs} from '../src/survival-expansion.js';
 import {validSurvivalSave,createSurvivalSaveStore} from '../src/survival-save.js';
@@ -32,7 +33,7 @@ function snapshot(s){return {version:1,id:'five-save',revision:1,savedAt:1,sessi
 const old=snapshot({...legacy,act:1,lap:2,completedLaps:2,fastestLap:650,time:1600,legStartedAt:1500});
 const migrated=migrateSurvivalToFiveActs(old);assert(validSurvivalSave(migrated));assert.deepEqual(migrated.progress,old.progress);assert.deepEqual(migrated.player,old.player);assert.equal(migrated.session.act,1);assert.equal(migrated.session.lap,2);assert.equal(migrated.session.completedLaps,0);assert.equal(migrated.session.legacyCompletedLaps,2);
 for(const act of [3,4]){const saved=snapshot({...createSurvivalSession(7,{actCount:5}),act});assert(validSurvivalSave(saved));const storage=new Map(),store=createSurvivalSaveStore({getItem:k=>storage.get(k)||null,setItem:(k,v)=>storage.set(k,v)},'tester');assert(store.write(saved,{fresh:true}).ok);assert.equal(store.read().session.act,act);const first=store.read();assert(store.write(first).ok);assert(!store.write(first).ok,'stale expansion checkpoint cannot overwrite accepted revision');for(const mutate of [s=>s.expansion=null,s=>s.expansion.boss.id='austin',s=>s.expansion.walls.push({id:'bad',hp:1})]){const bad=structuredClone(saved);mutate(bad);assert(!validSurvivalSave(bad));}}
-assert.equal(survivalExpansionRankProgress(migrated.session).eligible,false);
+assert.equal(survivalExpansionRankProgress(migrated.session,{acts:closedExpansionActs}).eligible,false);
 
 assert.deepEqual([12,24,36,48,60].map(w=>defenseWaveInfo(w,{actCount:5}).bossId),bosses.slice(0,5));
 assert.equal(defenseWaveInfo(61,{actCount:5}).act,0);assert.equal(defenseWaveInfo(61,{actCount:5}).lap,1);assert(defenseWaveInfo(61,{actCount:5}).hp>defenseWaveInfo(60,{actCount:5}).hp);
@@ -43,7 +44,7 @@ function circuit(reload){let s=createDefense(77,{actCount:5}),ticks=0;while(s.wa
  }return s;}
 const td=circuit(false),resumed=circuit(true);assert.deepEqual(td.bossWins,{austin:1,alwaysbeginner:1,tempestcarrier:1,crosswindKeeper:1,crystalGardener:1});
 for(const key of ['wave','time','kills','rng','currency'])assert.equal(td[key],resumed[key]);assert.deepEqual(td.bossWins,resumed.bossWins);
-assert.equal(defenseRankEntry({...td,phase:'lost'},{uid:'a',name:'테스터'}),null,'preview never leaks into live ranks');
+assert.equal(defenseRankEntry({...td,phase:'lost'},{uid:'a',name:'테스터',acts:closedExpansionActs}),null,'preview never leaks into live ranks');
 for(const wave of [0,12,24,35,36,37,60,72,73]){const s=createDefense(3);s.wave=wave;assert(plantDefense(s,2));const old=checkpointDefense(s),next=migrateDefenseToFiveActs(old);assert(next,`migration wave ${wave}`);assert.equal(next.wave,Math.floor(wave/36)*60+wave%36);assert.equal(defenseSeedCap(next),defenseSeedCap(s),'skipped migration waves cannot unlock extra beds');const resumed=restoreDefense(checkpointDefense(next));assert(resumed);assert.equal(defenseSeedCap(resumed),defenseSeedCap(s));if(wave===36){assert.equal(defenseSeedCap(next),14);assert.equal(defenseSeedCap({...next,wave:next.wave+12}),16,'twelve actually played expansion waves unlock two beds');}assert.deepEqual(next.towers,s.towers);assert.equal(next.currency,s.currency);assert.equal(next.rng,s.rng);assert.equal(defenseExpansionRankProgress(next).cleared,wave,'skipped new acts never grant ranking waves');assert(restoreDefense(checkpointDefense(next)));}
 const rewarded=createDefense(91);rewarded.wave=72;rewarded.bossWins={austin:2,alwaysbeginner:2,tempestcarrier:2};rewarded.pendingBosses=[12,24,36,48,60,72].map((wave,i)=>({wave,boss:['austin','alwaysbeginner','tempestcarrier'][i%3],ordinal:Math.floor(i/3)+1}));assert(plantDefense(rewarded,2));const rewardMigration=migrateDefenseToFiveActs(checkpointDefense(rewarded));assert(rewardMigration);assert.deepEqual(rewardMigration.bossWins,{...rewarded.bossWins,crosswindKeeper:0,crystalGardener:0});assert.deepEqual(rewardMigration.pendingBosses.map(e=>e.wave),[12,24,36,72,84,96]);assert.equal(defenseExpansionRankProgress(rewardMigration).cleared,72);
 const horizontal=createDefense(2,{actCount:5});horizontal.wave=37;assert.equal(defensePath(horizontal).length,3);assert.equal(defensePathLength(horizontal),144);assert.deepEqual(defensePoint(60,horizontal),{x:56,y:12});

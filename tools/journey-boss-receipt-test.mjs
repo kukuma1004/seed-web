@@ -1,3 +1,6 @@
+import {readBossVictoryAccount,installBossVictoryAccount} from '../src/boss-victory-account.js';
+import {createBossMigrationSeal} from '../src/boss-victory-migration.js';
+import {createBossVictoryLedger} from '../src/boss-victory-events.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -8,7 +11,7 @@ import {collectCloudSnapshot,normalizeCloudSnapshot} from '../src/cloud-save.js'
 import {MODE_BOSSES,recordModeBossVictory} from '../src/mode-boss-titles.js';
 import {readAccountProfile,writeAccountProfile} from '../src/account-profile.js';
 import {readDiscoveries,recordDiscovery} from '../src/discoveries.js';
-import {createModeBossOutbox} from '../src/mode-boss-outbox.js';
+import {createModeBossOutbox,modeBossLegacyArchiveKey} from '../src/mode-boss-outbox.js';
 const memory=()=>{const rows=new Map();return {get length(){return rows.size;},key:i=>[...rows.keys()][i]??null,getItem:k=>rows.get(k)??null,setItem:(k,v)=>rows.set(k,String(v)),removeItem:k=>rows.delete(k)};};
 const old={version:1,cycle:4,region:'garden',stage:4,mode:'austin',hp:100,kills:30,elapsed:100,rules:['recall'],mutated:[],wardens:5,austins:0,savedAt:123};
 assert(validCheckpoint(old));
@@ -36,7 +39,7 @@ const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 let allowDiscovery=false,treeGrants=0;
 const toast={textContent:''};
 const ctx=vm.createContext({currentJourneyOwner:'owner',rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'owner'})},localInspection:false,developerRun:false,
- createModeBossOutbox,addJourneyBossReceipt,readCheckpoint,writeCheckpoint,actStore:()=>storage,currentJourneyRunId:legacy,pendingJourneyBossTitles:[],survivalSession:null,expansionJourney:null,paused:false,togglePause:()=>{ctx.paused=true;},MODE_BOSSES,recordModeBossVictory,readAccountProfile,readDiscoveries,profile:readDiscoveries(storage),
+ bossRecordReady:()=>true,createModeBossOutbox,addJourneyBossReceipt,readCheckpoint,writeCheckpoint,actStore:()=>storage,currentJourneyRunId:legacy,pendingJourneyBossTitles:[],survivalSession:null,expansionJourney:null,paused:false,togglePause:()=>{ctx.paused=true;},MODE_BOSSES,recordModeBossVictory,readAccountProfile,readBossVictoryAccount,readDiscoveries,profile:readDiscoveries(storage),
  remember:(_kind,id)=>allowDiscovery?recordDiscovery(storage,readDiscoveries(storage),'bosses',id):{saved:false},$:()=>toast,
  dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map(),cloud:{flush:()=>Promise.resolve()},
  awardExpansionBossTree:()=>{treeGrants++;return true;}});
@@ -141,4 +144,23 @@ assert.equal(ctx.currentJourneyOwner,'previous-owner','foreign pending checkpoin
 assert.equal(storage.getItem(SAVE_KEY),previousEntry);
 const pendingCloud=normalizeCloudSnapshot(collectCloudSnapshot(storage)).checkpoints.act1;
 assert.equal(pendingCloud.bossReceiptOwner,'owner');
-console.log('Journey receipts passed: shared legacy identity, save/cloud continuity, 3 actual boss hooks, partial retry, 10-win/clear titles, no double tree and no-op storage. Legacy max-count merge and 64-row eviction still require V2 migration.');
+// A migrated actual death retains its epoch in the independent Journey copy
+// when the shared queue is unavailable, including a subsequent deleted save.
+const bossEpoch='journey-epoch';
+const seal=createBossMigrationSeal('owner',bossEpoch,{version:1,account:JSON.parse(storage.getItem('seed-account-profile-v1')),discoveries:readDiscoveries(storage)},1);
+installBossVictoryAccount(storage,{ownerUid:'owner',seal,ledger:createBossVictoryLedger('owner',bossEpoch,seal.baseline)});
+Object.assign(ctx,{currentJourneyOwner:'owner',currentJourneyRunId:'v2-fallback',pendingJourneyBossTitles:[],austinsDefeated:0,paused:false});
+assert(writeCheckpoint(storage,{...old,runId:'v2-fallback'}));storage.setItem(corrupt,'{unknown');
+const beforeV2Death=readAccountProfile(storage).austinWins;ctx.actualDeath({type:'austin'});
+assert.equal(readAccountProfile(storage).austinWins,beforeV2Death);assert.equal(readCheckpoint(storage).pendingBossTitles[0].bossEpoch,bossEpoch);
+const fallbackPath='seed-journey-boss-outbox-v1:owner:'+encodeURIComponent('journey:v2-fallback:austin:1');
+assert.equal(JSON.parse(storage.getItem(fallbackPath)).bossEpoch,bossEpoch,'actual death independent fallback preserves the fresh epoch');assert(ctx.protectJourneyBossReceipts());
+storage.removeItem(SAVE_KEY);storage.removeItem(corrupt);ctx.retryModeBossRewards();assert.equal(readAccountProfile(storage).austinWins,beforeV2Death+1);assert.equal(storage.getItem(fallbackPath),null);
+ctx.retryModeBossRewards();assert.equal(readAccountProfile(storage).austinWins,beforeV2Death+1,'copied V2 death receipt cannot recount');
+// Resumed old pending is archived through the real bridge, never upgraded or counted.
+Object.assign(ctx,{currentJourneyRunId:'old-after-seal',pendingJourneyBossTitles:[{boss:'austin',ordinal:1}]});assert(writeCheckpoint(storage,{...old,runId:'old-after-seal',bossReceiptOwner:'owner',pendingBossTitles:[{boss:'austin',ordinal:1}]}));
+const legacyReceipt={mode:'journey',runId:'old-after-seal',boss:'austin',ordinal:1};assert(ctx.journeyBossOutbox().enqueue(legacyReceipt));
+const beforeLegacyArchive=readAccountProfile(storage).austinWins,discoveriesBeforeArchive=storage.getItem('seed-discoveries-v1'),masteryBeforeArchive=mastery;
+assert(ctx.settleJourneyBossTitles());assert.equal(readCheckpoint(storage).pendingBossTitles.length,0);assert.equal(readAccountProfile(storage).austinWins,beforeLegacyArchive);
+assert.equal(storage.getItem('seed-discoveries-v1'),discoveriesBeforeArchive);assert.equal(mastery,masteryBeforeArchive);assert(storage.getItem(modeBossLegacyArchiveKey('owner',legacyReceipt)),'legacy original remains separately recoverable');
+console.log('Journey receipts passed: shared legacy identity, save/cloud continuity, 3 actual boss hooks, partial retry, 10-win/clear titles, no double tree, migrated actual-death epoch fallback/replay repair and legacy archival without recount. Local VM only; production migration and legacy loot idempotency remain separate.');

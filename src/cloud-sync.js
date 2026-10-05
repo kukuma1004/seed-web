@@ -1,6 +1,9 @@
 import {FIREBASE_APP} from './account-auth.js';
 import {CLOUD_META_KEY,CLOUD_OWNER_KEY,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,applyRewardGrants,applyCloudSnapshot,isSyncKey,readCloudMeta,normalizeCloudMeta,clearCloudLocalData,replacedRuns,rememberReplacedRuns,snapshotAdds} from './cloud-save.js';
 import {normalizeDuelStory,mergeDuelStory} from './seed-duel-story-progress.js';
+import {installBossVictoryAccount,readBossVictoryAccount,serializeBossVictoryProfile} from './boss-victory-account.js';
+import {createBossVictoryEventSync} from './boss-victory-event-sync.js';
+import {bossAccountAwards} from './mode-boss-titles.js';
 
 const encode=value=>encodeURIComponent(value);
 const wait=ms=>new Promise(resolve=>setTimeout(resolve,ms));
@@ -16,6 +19,7 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
  const setOwner=uid=>{try{raw?.setItem(CLOUD_OWNER_KEY,uid);}catch{}};
  const markDirty=()=>{if(!active)return;const m=meta();writeMeta({...m,ownerUid:account.user()?.uid||m.ownerUid,localRevision:m.localRevision+1,updatedAt:now()});dirty=true;schedule();};
  const tracked={
+  get length(){return raw?.length;},key:i=>raw?.key(i)??null,
   getItem:key=>raw?.getItem(key)??null,
   setItem(key,value){raw?.setItem(key,value);if(isSyncKey(key))markDirty();},
   removeItem(key){raw?.removeItem(key);if(isSyncKey(key))markDirty();}
@@ -36,11 +40,20 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   const runEpoch=epoch;
   const session=await account.tokenSession();if(!session?.uid)return {ok:false,reason:'signed-out',changed:false,rewards:[]};
   const uid=session.uid,previousOwner=owner(),m=meta(),migration=account.pendingMigration?.(),migrating=Boolean(migration?.fromUid&&migration?.toUid===uid&&(!previousOwner||previousOwner===migration.fromUid));
-  let remote=null,remoteEtag=null,rewards=null,storyBackup=null,storyEtag=null;
+  let remote=null,remoteEtag=null,rewards=null,storyBackup=null,storyEtag=null,bossSeal=null,bossPending=false;
   // A separate owner record protects new chapters from older apps which only
   // know the original nine and normalize away unknown stages in /save.
-  try{const [save,result,story]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true}),firebase(`seedUserRewards/${uid}`),firebase(`seedUsers/${uid}/duelStory`,{etag:true}).catch(error=>{if(error.status===404)return {value:null,etag:null};throw error;})]);remote=save.value;remoteEtag=save.etag;rewards=result;storyBackup=normalizeDuelStory(story.value);storyEtag=story.etag;}catch(error){if(error.status!==401&&error.status!==403&&(dirty||meta().localRevision>meta().syncedRevision))scheduleRetry();return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
+  try{const [save,result,story,seal]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true}),firebase(`seedUserRewards/${uid}`),firebase(`seedUsers/${uid}/duelStory`,{etag:true}).catch(error=>{if(error.status===404)return {value:null,etag:null};throw error;}),firebase(`seedUsers/${uid}/bossMigration`)]);remote=save.value;remoteEtag=save.etag;rewards=result;storyBackup=normalizeDuelStory(story.value);storyEtag=story.etag;bossSeal=seal;}catch(error){if(error.status!==401&&error.status!==403&&(dirty||meta().localRevision>meta().syncedRevision))scheduleRetry();return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
   const accountChanged=()=>runEpoch!==epoch||account.user()?.uid!==uid;
+  if(accountChanged())return {ok:false,reason:'account-changed',changed:false,rewards:[]};
+  try{
+   if(bossSeal){
+    const ledger=await firebase(`seedBossVictories/${uid}`);if(accountChanged())return {ok:false,reason:'account-changed',changed:false,rewards:[]};
+    installBossVictoryAccount(raw,{ownerUid:uid,seal:bossSeal,ledger});
+    const transport=createBossVictoryEventSync({storage:raw,account,ownerUid:uid,epoch:bossSeal.epoch,baseline:bossSeal.baseline,databaseURL:base,fetchImpl,onConfirmed:confirmed=>{if(accountChanged())return false;installBossVictoryAccount(raw,{ownerUid:uid,seal:bossSeal,ledger:confirmed});return true;}});
+    const bossResult=await transport.sync();if(!bossResult.ok){scheduleRetry();return {ok:false,reason:'boss-'+bossResult.kind,changed:false,rewards:[]};}bossPending=bossResult.kind==='pending';
+   }else if(remote?.bossProtocol||readBossVictoryAccount(raw,uid))throw Error('boss-migration');
+  }catch(error){return {ok:false,reason:'boss-migration',error,changed:false,rewards:[]};}
   if(accountChanged())return {ok:false,reason:'account-changed',changed:false,rewards:[]};
   // 2026-09-21: 서버에서 받아 오는 동안 새로 저장한 것이 있으면 그것도 '올려야 할 것'으로 본다.
   // (예전에는 시작할 때 읽은 표시만 봐서, 그 사이 저장을 서버의 옛 저장으로 덮어쓸 수 있었다.)
@@ -55,6 +68,12 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   const expandedStory=Object.keys(story.cleared).some(k=>Number(k.slice(1))>9)||!['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost'].includes(story.hero);
   if(expandedStory)merged.garden={...merged.garden,duelStory:story};
   const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=[...carriedRewards,...rewardResult.applied];
+  if(bossSeal){
+   const serialized=serializeBossVictoryProfile(raw,merged.account,uid);merged={...merged,account:serialized.profile,bossProtocol:serialized.bossProtocol};
+   // Legacy entitlements survive even when an old historical counter was
+   // lower than the title threshold. Never fabricate missing past victories.
+   merged.discoveries.bosses=[...new Set([...merged.discoveries.bosses,...bossAccountAwards(raw,uid)])];
+  }
   // 2026-09-23: 이 기기에만 있던 것(도감·더 최근 판)이 병합에 들어갔으면, 이 기기에 새 저장이 없어도 올린다.
   // 예전에는 올리지 않아서, 다른 기기가 그 도감을 받지 못한 채 계속 옛 저장을 보았다.
   const shouldUpload=!remote||migrating||localDirty||lastRewards.length>0||(sameOwner&&snapshotAdds(merged,remote));
@@ -77,9 +96,9 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   // 2026-09-21: 올리는 사이에 저장한 것(방 저장·코인 등)은 이번 업로드에 들어가지 않았다. 예전에는 여기서 '다 올림'으로
   // 덮어써서, 다음 실행 때 서버의 옛 저장이 기기의 최신 저장을 이겨 진행이 되돌아갔다. 그 경우 '아직 안 올림'으로 남기고 곧 다시 올린다.
   const wroteDuring=meta().localRevision>fresh.localRevision;
-  setOwner(uid);writeMeta({ownerUid:uid,localRevision:wroteDuring?nextRevision+1:nextRevision,syncedRevision:nextRevision,updatedAt:wroteDuring?now():merged.updatedAt});dirty=wroteDuring;
+  setOwner(uid);writeMeta({ownerUid:uid,localRevision:wroteDuring?nextRevision+1:nextRevision,syncedRevision:nextRevision,updatedAt:wroteDuring?now():merged.updatedAt});dirty=wroteDuring||bossPending;
   retryDelayMs=10_000;
-  if(wroteDuring)schedule();
+  if(dirty)schedule();
   if(migrating)account.finishMigration?.();
   if(lastRewards.length)try{globalThis.sessionStorage?.setItem('seed-cloud-reward-notice-v1',JSON.stringify(lastRewards));}catch{}
   try{raw?.setItem('seed-cloud-last-sync-v1',String(now()));}catch{}

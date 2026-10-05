@@ -5,6 +5,7 @@ import {readAccountProfile,writeAccountProfile} from '../src/account-profile.js'
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {settleSurvivalTitles} from '../src/survival-save.js';
+import {adventureBossReceipt} from '../src/seed-adventure-rules.js';
 const data=new Map(),store={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
 // Public expansion campaigns use a saved UUID, not an inspector entry id or a
 // newly generated id on every restore. The same-run third clear is exact.
@@ -54,7 +55,7 @@ const broken={getItem:()=>null,setItem:()=>{throw Error('quota');}};assert(!reco
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const calls=[],ctx=vm.createContext({settleSurvivalTitles,survivalSession:{titleBoss:'tempestcarrier',titleOrdinal:3},localInspection:false,developerRun:false,survivalSaveToken:{id:'saved-run',owner:'same'},survivalOwner:()=> 'same',awardModeBoss:(...args)=>{calls.push(args);return false;}});
 vm.runInContext(main.slice(main.indexOf('function settleSurvivalTitle(){'),main.indexOf('function saveSurvival(){')),ctx);
-ctx.settleSurvivalTitle();assert.equal(ctx.survivalSession.titleBoss,'tempestcarrier');assert.deepEqual(calls[0],['survival','saved-run','tempestcarrier',3,false]);
+ctx.settleSurvivalTitle();assert.equal(ctx.survivalSession.titleBoss,'tempestcarrier');assert.deepEqual(calls[0],['survival','saved-run','tempestcarrier',3,false,null]);
 ctx.awardModeBoss=(...args)=>{calls.push(args);return true;};ctx.survivalSaveToken.owner='different';ctx.settleSurvivalTitle();assert.equal(calls.length,1,'a switched UID cannot consume the original receipt as practice');assert.equal(ctx.survivalSession.titleBoss,'tempestcarrier');ctx.survivalSaveToken.owner='same';ctx.settleSurvivalTitle();assert.equal(ctx.survivalSession.titleBoss,undefined);
 // Execute the actual adventure view bridge with deterministic timers and real
 // account receipts. These are VM checks, not browser/device validation.
@@ -66,7 +67,7 @@ const adventureStore={getItem:k=>adventureData.get(k)||null,setItem:(k,v)=>{if(f
 function adventureBridge(runId,bossesDefeated){
  const timers=new Map(),attempts=[];let serial=0;
  const b=vm.createContext({s:{runId,bossesDefeated},document:{hidden:false},closed:false,practice:false,
-  bossRetryTimer:0,lastBossRun:'',settledBosses:new Set(),ROOMS_PER_ACT:4,
+  bossRetryTimer:0,lastBossRun:'',settledBosses:new Set(),ROOMS_PER_ACT:4,adventureBossReceipt,
   adventureRoomInfo:room=>({actInfo:{boss:['austin','alwaysbeginner','tempestcarrier'][Math.floor(room/4)]}}),
   onBossDefeated:e=>{attempts.push(e);return recordModeBossVictory(adventureStore,{...e,mode:'adventure'}).saved;},
   setTimeout:(fn,delay)=>{assert.equal(delay,2000);timers.set(++serial,fn);return serial;},clearTimeout:id=>timers.delete(id)
@@ -98,7 +99,7 @@ const closing=adventureBridge('close-retry',1);failNext=true;closing.b.syncBossA
 assert.equal(closing.timers.size,0);assert.equal(closing.b.bossRetryTimer,0);assert.equal(closing.b.settledBosses.size,0);
 closing.b.closed=true;closing.b.syncBossAccount();assert.equal(closing.attempts.length,1);
 assert(view.includes("resetBossAccount();lastForm=null;combat?.dispose();s=binding.attach(createAdventure"));
-assert(view.includes('resetBossAccount();combat?.dispose();s=binding.attach(run);refreshAdventureTitleHp(s);lastForm=s.formId;'));
+assert(view.includes('resetBossAccount();combat?.dispose();s=binding.attach(run);bindBossEpoch(s);refreshAdventureTitleHp(s);lastForm=s.formId;'));
 assert(view.includes("listen(window,'pageshow',()=>{syncBossAccount();"));
 const modal=view.slice(view.indexOf('function syncModal(){'),view.indexOf("if(key==='setup')"));
 assert(modal.indexOf('syncAccount();')>=0&&modal.indexOf('syncAccount();')<modal.indexOf("if(key===modalKey)"));

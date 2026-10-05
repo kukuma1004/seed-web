@@ -1,5 +1,6 @@
 const clone=v=>JSON.parse(JSON.stringify(v));
 const bosses=Object.freeze({crosswind:'crosswindKeeper',crystalGorge:'crystalGardener'});
+const validEpoch=value=>typeof value==='string'&&/^[\w-]{6,96}$/.test(value);
 export const EXPANSION_CAMPAIGN_PENDING_LIMIT=96;
 export const EXPANSION_CAMPAIGN_CLEARS=3;
 export const expansionCampaignBoss=act=>bosses[act]||null;
@@ -13,11 +14,11 @@ export function validExpansionPublicCampaign(c,act){
  if(typeof c.receiptRunId!=='string'||!/^[-\w]{1,90}$/.test(c.receiptRunId)||!Number.isSafeInteger(c.lap)||c.lap<0||c.lap>=EXPANSION_CAMPAIGN_CLEARS||typeof c.bossCleared!=='boolean')return false;
  if(!c.bossWins||Object.keys(c.bossWins).length!==1||!Object.hasOwn(c.bossWins,boss)||!Number.isSafeInteger(c.bossWins[boss])||c.bossWins[boss]!==c.lap+(c.bossCleared?1:0))return false;
  if(!Array.isArray(c.pendingBossTitles)||c.pendingBossTitles.length>EXPANSION_CAMPAIGN_PENDING_LIMIT)return false;
- let previous=0;for(const e of c.pendingBossTitles){if(!e||Object.keys(e).length!==2||e.boss!==boss||!Number.isSafeInteger(e.ordinal)||e.ordinal<=previous||e.ordinal>c.bossWins[boss])return false;previous=e.ordinal;}return true;
+ let previous=0;for(const e of c.pendingBossTitles){if(!e||Object.keys(e).length!==(Object.hasOwn(e,'bossEpoch')?3:2)||Object.keys(e).some(k=>!['boss','ordinal','bossEpoch'].includes(k))||Object.hasOwn(e,'bossEpoch')&&!validEpoch(e.bossEpoch)||e.boss!==boss||!Number.isSafeInteger(e.ordinal)||e.ordinal<=previous||e.ordinal>c.bossWins[boss])return false;previous=e.ordinal;}return true;
 }
-export function completeExpansionPublicBoss(c,act){
- if(!validExpansionPublicCampaign(c,act)||c.bossCleared||c.pendingBossTitles.length>=EXPANSION_CAMPAIGN_PENDING_LIMIT)return null;
- const next=clone(c),boss=expansionCampaignBoss(act),ordinal=++next.bossWins[boss];next.bossCleared=true;next.pendingBossTitles.push({boss,ordinal});return validExpansionPublicCampaign(next,act)?next:null;
+export function completeExpansionPublicBoss(c,act,bossEpoch=null){
+ if(!validExpansionPublicCampaign(c,act)||bossEpoch!==null&&!validEpoch(bossEpoch)||c.bossCleared||c.pendingBossTitles.length>=EXPANSION_CAMPAIGN_PENDING_LIMIT)return null;
+ const next=clone(c),boss=expansionCampaignBoss(act),ordinal=++next.bossWins[boss];next.bossCleared=true;next.pendingBossTitles.push({boss,ordinal,...(bossEpoch===null?{}:{bossEpoch})});return validExpansionPublicCampaign(next,act)?next:null;
 }
 export function advanceExpansionPublicCampaign(c,act){
  if(!validExpansionPublicCampaign(c,act)||!c.bossCleared||c.pendingBossTitles.length||c.bossWins[expansionCampaignBoss(act)]>=EXPANSION_CAMPAIGN_CLEARS)return null;
@@ -44,7 +45,8 @@ export function validExpansionCampaignTransition(before,after,act,{ack=false}={}
  if(!before)return after.lap===0&&!after.bossCleared&&!after.pendingBossTitles.length;
  if(!validExpansionPublicCampaign(before,act)||before.receiptRunId!==after.receiptRunId)return false;
  if(JSON.stringify(before)===JSON.stringify(after))return !ack;
- const candidates=ack?[ackExpansionPublicTitle(before,act)]:[completeExpansionPublicBoss(before,act),advanceExpansionPublicCampaign(before,act)];return candidates.some(c=>c&&JSON.stringify(c)===JSON.stringify(after));
+ const newEvent=after.pendingBossTitles.at(-1);
+ const candidates=ack?[ackExpansionPublicTitle(before,act)]:[completeExpansionPublicBoss(before,act,newEvent?.bossEpoch??null),advanceExpansionPublicCampaign(before,act)];return candidates.some(c=>c&&JSON.stringify(c)===JSON.stringify(after));
 }
 // A transport choice cannot erase locally durable, unacknowledged receipts or
 // silently change this run's account receipt identity. Incompatible branches
@@ -53,5 +55,5 @@ export function expansionCampaignCanReplace(before,after,act){
  if(!before)return !after||validExpansionPublicCampaign(after,act);
  if(!validExpansionPublicCampaign(before,act)||!validExpansionPublicCampaign(after,act)||before.receiptRunId!==after.receiptRunId)return false;
  const boss=expansionCampaignBoss(act);if(after.bossWins[boss]<before.bossWins[boss])return false;
- return before.pendingBossTitles.every(e=>after.pendingBossTitles.some(q=>q.boss===e.boss&&q.ordinal===e.ordinal));
+ return before.pendingBossTitles.every(e=>after.pendingBossTitles.some(q=>q.boss===e.boss&&q.ordinal===e.ordinal&&q.bossEpoch===e.bossEpoch));
 }

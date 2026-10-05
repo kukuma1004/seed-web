@@ -1,4 +1,5 @@
 import {normalizeBossRuns} from './boss-title-ledger.js';
+import {readBossVictoryAccount,projectBossVictoryProfile} from './boss-victory-account.js';
 export const ACCOUNT_PROFILE_KEY='seed-account-profile-v1';
 export const FOUNDING_BADGE='founding-tester';
 export const FOUNDING_SEED='founder';
@@ -41,12 +42,29 @@ export function normalizeAccountProfile(value){
  };
 }
 
-export function readAccountProfile(storage){
- try{return normalizeAccountProfile(JSON.parse(storage?.getItem(ACCOUNT_PROFILE_KEY)));}catch{return EMPTY();}
+const cloudOwner=storage=>storage?.getItem('seed-cloud-owner-v1');
+export function readAccountProfile(storage,ownerUid=cloudOwner(storage)){
+ let profile;try{profile=normalizeAccountProfile(JSON.parse(storage?.getItem(ACCOUNT_PROFILE_KEY)));}catch{profile=EMPTY();}
+ // A corrupt/newer V2 cache must not silently fall back to historical numbers.
+ return ownerUid?projectBossVictoryProfile(storage,profile,ownerUid):profile;
 }
 
-export function writeAccountProfile(storage,value){
- try{storage?.setItem(ACCOUNT_PROFILE_KEY,JSON.stringify(normalizeAccountProfile(value)));return true;}catch{return false;}
+export function writeAccountProfile(storage,value,ownerUid){
+ try{
+  if(ownerUid===undefined)ownerUid=cloudOwner(storage);
+  let profile=normalizeAccountProfile(value);
+  if(ownerUid&&readBossVictoryAccount(storage,ownerUid)){
+   const raw=storage.getItem(ACCOUNT_PROFILE_KEY),previous=raw===null?null:JSON.parse(raw);
+   if(previous!==null&&(!previous||typeof previous!=='object'||Array.isArray(previous)||previous.version!==1))return false;
+   // Derived event totals are a view. Keep the original local counters/history
+   // intact, and serialize the frozen server baseline separately for cloud saves.
+   profile={...(previous||{}),...profile};
+   for(const field of ['austinWins','alwaysWins','johanWins','crosswindWins','crystalWins','bossRuns']){
+    if(previous&&Object.hasOwn(previous,field))profile[field]=previous[field];else delete profile[field];
+   }
+  }
+  const raw=JSON.stringify(profile);storage?.setItem(ACCOUNT_PROFILE_KEY,raw);return storage?.getItem(ACCOUNT_PROFILE_KEY)===raw;
+ }catch{return false;}
 }
 
 export function accountBadgeLine(profile){

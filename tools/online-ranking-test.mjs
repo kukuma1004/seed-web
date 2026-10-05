@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs} from './expansion-gate-fixtures.mjs';
 import fs from 'node:fs';
 import {createOnlineRanking,bestPerPlayer,validRun,seasonRun,AUTH_KEY,FIREBASE,SEASON,PREVIOUS_SEASON,ARCHIVE_SEASON,ARCHIVE_SEASONS,ACT,runAct,FETCH_RECENT,MAX_KILLS_PER_JOURNEY,RANKING_CYCLE_CAP,inSeason,pushKeyPrefix,RUNS_PATH,BUILDS_PATH,SEASON11_RUNS_PATH,SEASON11_BUILDS_PATH,LEGACY_RUNS_PATH,LEGACY_BUILDS_PATH} from '../src/online-ranking.js';
 import {buildRecord,bossText,buildText} from '../src/ranking-build.js';
@@ -64,7 +65,7 @@ function fakeFirebase({clock}){
  assert.equal(bestPerPlayer(null).length,0);assert.equal(bestPerPlayer(data,1,null).length,1);
  assert.ok(!validRun({...data.a,stage:5})&&!validRun({...data.a,score:0}));
  assert.equal(runAct(data.a),ACT.AUSTIN,'old season 1.1 rows without act remain Austin records');
- assert.ok(validRun({...data.a,act:ACT.ALWAYS_BEGINNER})&&validRun({...data.a,act:ACT.JOHAN})&&!validRun({...data.a,act:4}));
+ assert.ok(validRun({...data.a,act:ACT.ALWAYS_BEGINNER})&&validRun({...data.a,act:ACT.JOHAN})&&!validRun({...data.a,act:4},{acts:closedExpansionActs}));
  const split={...data,a:{...data.a,act:ACT.AUSTIN},b:{...data.b,act:ACT.ALWAYS_BEGINNER},c:{...data.c,act:ACT.ALWAYS_BEGINNER}};
  assert.deepEqual(bestPerPlayer(split,20,null,ACT.ALWAYS_BEGINNER).map(e=>e.id),['b','c'],'boss boards filter before choosing each player best');
  assert.ok(!validRun({...data.a,cycle:2,kills:1000,time:90}),'impossible old kill counts are hidden even if they predate the database rules');

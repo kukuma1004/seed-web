@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {readFileSync} from 'node:fs';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
 import {createExpansionJourney} from '../src/expansion-journey.js';
@@ -8,8 +9,8 @@ import {createExpansionAccountSync,decodeExpansionAccountCloud} from '../src/exp
 import {acquireExpansionSaveLease} from '../src/expansion-save-lease.js';
 
 // Explicit test fixture only. The real content remains unreleased.
-assert.equal(EXPANSION_ACTS.crosswind.released,false);assert.equal(EXPANSION_ACTS.crystalGorge.released,false);
-const released=Object.fromEntries(Object.entries(EXPANSION_ACTS).map(([k,v])=>[k,{...v,released:true}]));
+assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
+const released=openExpansionActs;
 const run={version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:3,elapsed:15,rules:[],mutated:[],forms:{returnblade:5},inventory:{potion:3,tonic:2,wind:1,shell:1,sprout:1},score:300,choicesTaken:2,choiceKills:3};
 const clone=v=>structuredClone(v),memory=()=>{const m=new Map();return {m,getItem:k=>m.get(k)??null,setItem:(k,v)=>m.set(k,v)};};
 function locks(){const held=new Set();return {request:async(key,options,fn)=>{if(held.has(key))return fn(null);held.add(key);try{return await fn({name:key});}finally{held.delete(key);}}};}
@@ -78,7 +79,7 @@ for(const act of ['crosswind','crystalGorge']){
  await pc.release();await phone.release();
 }
 // Real gates prevent all public account network I/O, including inspection drafts.
-const gated=device({acts:EXPANSION_ACTS}),draft=createExpansionSaveStore(gated.s,'crosswind','a');assert(draft.write(createExpansionEntry(createExpansionJourney(),run,[0,0,5]),{fresh:true}).ok);
+const gated=device({acts:closedExpansionActs}),draft=createExpansionSaveStore(gated.s,'crosswind','a');assert(draft.write(createExpansionEntry(createExpansionJourney(),run,[0,0,5]),{fresh:true}).ok);
 const requests=gets+puts;assert.equal((await gated.sync.flush()).kind,'ineligible');assert.equal(gets+puts,requests);assert.equal(gated.s.getItem(expansionAccountSaveKey('a','crosswind')),null);
 const unsigned=device();unsigned.u.isAnonymous=true;assert.equal((await unsigned.sync.sync()).kind,'ineligible');assert.equal(gets+puts,requests);
 // Future/corrupt local, cloud and metadata bytes remain intact.
@@ -104,4 +105,4 @@ const timeout=createExpansionAccountSync({storage:memory(),account:{user:()=>({u
 const source=readFileSync(new URL('../src/expansion-account-sync.js',import.meta.url),'utf8');assert(!source.includes('mergeExpansionAccountSaves('),'runtime never uses revision-only pure merge to join independent combat timelines');
 const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules,privateRule=rules.seedExpansionSaves.$uid.$act;
 assert.equal(rules['.read'],false);assert.equal(rules['.write'],false);assert.equal(rules.seedExpansionRelease['.write'],false);assert(privateRule['.read'].includes('auth.uid == $uid'));assert(privateRule['.write'].includes("root.child('seedExpansionRelease').child($act).val() == true"));assert(privateRule['.write'].includes('newData.exists()'));assert(privateRule.revision['.validate'].includes('data.val() + 1'));assert.equal(privateRule.$other['.validate'],false);
-console.log('Expansion cloud candidate: both acts mocked PC-phone-PC, exact build/potions/attrition, explicit timeline choices/ETags, stale choices, death, concurrent upload, UID/gate, corrupt preservation, no unconditional PUT and auth timeout passed; real content gates remain false and no live/device QA is claimed.');
+console.log('Expansion cloud candidate: both acts mocked PC-phone-PC, exact build/potions/attrition, explicit timeline choices/ETags, stale choices, death, concurrent upload, UID/gate, corrupt preservation, no unconditional PUT and auth timeout passed; explicit closed/open gate isolation verified and no live/device QA is claimed.');

@@ -115,4 +115,5 @@ await migrateBossVictoryUser({admin,ownerUid:interrupted,epoch,apply:true});
 assert.deepEqual(await read(interruptedPath),frozen);
 await allow(interruptedPath+'/save',{method:'PUT',value:halfCurrent,authentication:token(interrupted)});
 assert.deepEqual(await read('.settings/rules'),rules);
+await (await import('./boss-victory-cloud-integrated-emulator-test.mjs')).runBossCloudCutoverEmulator();
 console.log('Real demo RTDB migration passed: full rules compile/preserve siblings, real old-write ETag 412, exact server baseline/archive, old-client overwrite/delete and protocol/count bypass denials, owner-only readiness/seal, migrated profile writes, actual PC+phone event union/copy dedupe, interrupted seal resume, conflicting ledger preflight and immutable retry. No production rules/accounts migrated.');

@@ -1,7 +1,7 @@
-// Shared encounter content for the next two acts. Not released until all three
-// mode adapters, checkpoint migration, boss rewards and visual QA are complete.
+// Shared released encounter content. Journey, Survival and Defense promote
+// both acts together and retain rollback guards for saved five-act circuits.
 export const EXPANSION_ACTS=Object.freeze({
- crosswind:Object.freeze({number:4,name:'횡풍의 항로',grammar:'B',released:false,
+ crosswind:Object.freeze({number:4,name:'횡풍의 항로',grammar:'B',released:true,
   camera:'horizontal',bossId:'crosswindKeeper',bossName:'횡풍의 수호자',
   rooms:Object.freeze([
    {name:'잎배의 출항',role:'front',length:96,hint:'앞의 단발 사선을 피하며 전진하세요'},
@@ -12,7 +12,7 @@ export const EXPANSION_ACTS=Object.freeze({
   ].map(Object.freeze)),
   boss:Object.freeze({patterns:['locked-sweep','rear-salvo','crossing-flight'],windup:.75,recovery:1.1,maxProjectiles:48}),
   budget:Object.freeze({enemies:24,projectiles:48,props:16})}),
- crystalGorge:Object.freeze({number:5,name:'무너지는 수정 협곡',grammar:'F/K',released:false,
+ crystalGorge:Object.freeze({number:5,name:'무너지는 수정 협곡',grammar:'F/K',released:true,
   camera:'corridor',bossId:'crystalGardener',bossName:'수정의 정원사',
   rooms:Object.freeze([
    {name:'수정의 틈',role:'teach-break',hint:'수정벽을 부숴 새로운 길을 만드세요'},

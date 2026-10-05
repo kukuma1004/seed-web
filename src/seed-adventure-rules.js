@@ -69,7 +69,7 @@ const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const direction=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function random(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 const pick=(s,list)=>list[Math.floor(random(s)*list.length)];
-export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${seed>>>0}-${Math.floor(Math.random()*1e9)}`,earned:0,credited:0,seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:2,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
+export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${seed>>>0}-${Math.floor(Math.random()*1e9)}`,earned:0,credited:0,seed:seed>>>0,phase:'setup',time:0,room:0,kills:0,serial:0,weapon:'slash',shapes:[],choiceKind:null,roomType:'combat',roomReward:'law',elite:false,doors:[],bonus:'',offerLaws:[],actFlags:{},shop:[],pendingCuts:[],orbitUntil:0,orbitRadius:1.9,laws:[],ranks:{},formId:null,level:1,charge:35,coins:0,potions:2,buffs:{power:0,swift:0,guard:0},props:[],pickups:[],clearTimer:0,cleared:false,arena:{...ADVENTURE_ARENA},region:null,events:[],enemies:[],shots:[],effects:[],fields:[],spawn:0,wave:0,hitstop:0,stopReady:0,shake:0,hits:0,hitsTime:0,bossesDefeated:0,bossEpoch:null,bossEpochs:{},summoned:false,player:{x:12,y:10,hp:100,maxHp:100,aimX:1,aimY:0,attack:0,dash:0,inv:0,dashing:0,dx:0,dy:0,combo:0,comboTime:0,buffer:0,dashStrike:0,lx:0,ly:0,swing:-1,moving:false},message:'작은 씨앗, 나만의 전투'};}
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
@@ -379,7 +379,11 @@ function hit(s,e,damage,secondary=false,meta=null,formHit=false,alreadyTitled=fa
   }
  }
  if(e.hp<=0){s.kills++;s.charge=clamp(s.charge+4,0,100);fx(s,'leaf',e.x,e.y,{life:.6,max:.6});
-  if(e.type==='boss'){s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.15);s.shake=.45;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
+  if(e.type==='boss'){
+   // Only a new combat death may acquire the current migration epoch. A resumed
+   // older clear remains unmarked even if its account has since migrated.
+   if(validBossEpoch(s.bossEpoch)&&Number.isInteger(e.act)&&e.act>=0&&e.act<ADVENTURE_ACTS.length&&!Object.hasOwn(s.bossEpochs||{},e.act))s.bossEpochs={...(s.bossEpochs||{}),[e.act]:s.bossEpoch};
+   s.bossesDefeated++;s.hitstop=Math.max(s.hitstop,.15);s.shake=.45;event(s,'bossDefeat');dropCoins(s,e.x,e.y,30+e.act*10);drop(s,'potion',e.x,e.y);}
   else if(!e.noDrop&&!e.raid&&(random(s)<.6||s.elite))dropCoins(s,e.x,e.y,(e.role==='tank'?2:1)+(e.act||0)+(s.elite?2:0));}
 }
 // 적의 공격이 나가는 순간. 근접: 가끔 곧바로 한 번 더(연속 공격). 돌격: 예고한 줄을 따라 돌진해 꿰뚫고 지나감.
@@ -560,11 +564,19 @@ export const ADVENTURE_SAVE_KEY='seed-adventure-run-v1';
 export const ADVENTURE_CLOUD_READY=true;
 export const adventureTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const ADVENTURE_JP=Object.freeze({perRoomMax:400,perRunMax:4000});
+const validBossEpoch=value=>typeof value==='string'&&/^[\w-]{6,96}$/.test(value);
+const validBossEpochs=(value,cleared)=>value===undefined||value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(act=>/^[0-2]$/.test(act)&&Number(act)<cleared&&validBossEpoch(value[act]));
+export function adventureBossReceipt(s,act){
+ if(!s||!Number.isInteger(s.bossesDefeated)||s.bossesDefeated<0||s.bossesDefeated>ADVENTURE_ACTS.length||!Number.isInteger(act)||act<0||act>=ADVENTURE_ACTS.length||act>=s.bossesDefeated||typeof s.runId!=='string'||!/^[\w-]{1,90}$/.test(s.runId)||!validBossEpochs(s.bossEpochs,s.bossesDefeated))return null;
+ const bossEpoch=s.bossEpochs?.[act];
+ return {boss:ADVENTURE_ACTS[act].boss,runId:s.runId,ordinal:1,...(bossEpoch?{bossEpoch}:{})};
+}
 export function adventureCheckpoint(s){
  if(s?.phase!=='doors'||!Array.isArray(s.doors)||!s.doors.length)return null;
+ if(!validBossEpochs(s.bossEpochs,s.bossesDefeated))return null;
  return {version:ADVENTURE_SAVE_VERSION,runId:s.runId,seed:s.seed,room:s.room,doors:s.doors.map(d=>({room:d.room,reward:d.reward??null})),actFlags:{...s.actFlags},
   shapes:[...s.shapes],weapon:s.weapon,laws:[...s.laws],ranks:{...s.ranks},formId:s.formId,level:s.level,coins:s.coins,potions:s.potions,charge:Math.floor(s.charge),
-  ...checkpointAdventureTitleHp(s),kills:s.kills,time:Math.round(s.time*10)/10,bossesDefeated:s.bossesDefeated,earned:s.earned,credited:s.credited,savedAt:Date.now()};
+  ...checkpointAdventureTitleHp(s),kills:s.kills,time:Math.round(s.time*10)/10,bossesDefeated:s.bossesDefeated,...(Object.keys(s.bossEpochs||{}).length?{bossEpochs:{...s.bossEpochs}}:{}),earned:s.earned,credited:s.credited,savedAt:Date.now()};
 }
 const int=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b;
 export function restoreAdventure(raw){
@@ -587,9 +599,10 @@ export function restoreAdventure(raw){
   if(!Number.isFinite(r.time)||r.time<0||r.time>1e6||!Number.isFinite(r.maxHp)||r.maxHp<100||r.maxHp>100+r.level*10+rooms*25||!Number.isFinite(r.hp)||r.hp<=0||r.hp>r.maxHp)return null;
   if(!validAdventureTitleHp(r.titleHp,r.maxHp,r.hp))return null;
   const bossRooms=ADVENTURE_ACTS.map((_,a)=>a*ROOMS_PER_ACT+ROOMS_PER_ACT-1).filter(i=>i<=r.room).length;if(r.bossesDefeated!==bossRooms)return null;
+  if(!validBossEpochs(r.bossEpochs,r.bossesDefeated))return null;
   const flags=r.actFlags&&typeof r.actFlags==='object'?r.actFlags:{};
   const s=createAdventure(r.seed);Object.assign(s,{runId:r.runId,seed:r.seed,room:r.room,phase:'doors',doors:r.doors.map(d=>({room:d.room,reward:d.reward})),actFlags:{act:int(flags.act,0,2)?flags.act:next.act,treasure:flags.treasure===true,shop:flags.shop===true,fountain:flags.fountain===true},
-   shapes:[...r.shapes],weapon:r.weapon,laws:[...r.laws],ranks:{...r.ranks},formId:r.formId,level:r.level,coins:r.coins,potions:r.potions,charge:r.charge,kills:r.kills,time:r.time,bossesDefeated:r.bossesDefeated,earned:r.earned,credited:r.credited,message:'저장한 문 앞에서 이어가요'});
+   shapes:[...r.shapes],weapon:r.weapon,laws:[...r.laws],ranks:{...r.ranks},formId:r.formId,level:r.level,coins:r.coins,potions:r.potions,charge:r.charge,kills:r.kills,time:r.time,bossesDefeated:r.bossesDefeated,bossEpochs:{...(r.bossEpochs||{})},earned:r.earned,credited:r.credited,message:'저장한 문 앞에서 이어가요'});
   s.player.hp=r.hp;s.player.maxHp=r.maxHp;restoreAdventureTitleHp(s,r.titleHp);return s;
  }catch{return null;}
 }

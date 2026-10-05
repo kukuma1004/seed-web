@@ -11,12 +11,13 @@ import {validSurvivalExpansionCheckpoint} from './survival-expansion-save.js';
 // later ordinal from bypassing an earlier failed account receipt.
 export const SURVIVAL_TITLE_LIMIT=96;
 const titleBosses=new Set(['austin','alwaysbeginner','tempestcarrier','crosswindKeeper','crystalGardener']);
-const titleEvent=e=>e&&titleBosses.has(e.boss)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000;
+const validEpoch=value=>typeof value==='string'&&/^[\w-]{6,96}$/.test(value);
+const titleEvent=e=>e&&titleBosses.has(e.boss)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000&&(!Object.hasOwn(e,'bossEpoch')||validEpoch(e.bossEpoch));
 export function survivalTitleEvents(session){
  if(!session)return [];
  const events=session.pendingBossTitles;
  if(events!==undefined&&(!Array.isArray(events)||events.length>SURVIVAL_TITLE_LIMIT||!events.every(titleEvent)))return null;
- const out=(events||[]).map(e=>({boss:e.boss,ordinal:e.ordinal}));
+ const out=(events||[]).map(e=>({boss:e.boss,ordinal:e.ordinal,...(Object.hasOwn(e,'bossEpoch')?{bossEpoch:e.bossEpoch}:{})}));
  if(session.titleBoss!==undefined||session.titleOrdinal!==undefined){
   const legacy={boss:session.titleBoss,ordinal:session.titleOrdinal};if(!titleEvent(legacy))return null;
   // New saves keep the first pending event as a compatible legacy mirror.
@@ -31,9 +32,9 @@ function setTitleEvents(session,events){
  if(events.length){session.titleBoss=events[0].boss;session.titleOrdinal=events[0].ordinal;}
  else {delete session.titleBoss;delete session.titleOrdinal;}
 }
-export function queueSurvivalTitle(session,boss,ordinal){
- const events=survivalTitleEvents(session),event={boss,ordinal};if(!events||!titleEvent(event))return false;
- if(events.some(e=>e.boss===boss&&e.ordinal===ordinal))return true;
+export function queueSurvivalTitle(session,boss,ordinal,bossEpoch=null){
+ const events=survivalTitleEvents(session),event={boss,ordinal,...(bossEpoch===null?{}:{bossEpoch})};if(!events||!titleEvent(event))return false;
+ const previous=events.find(e=>e.boss===boss&&e.ordinal===ordinal);if(previous)return previous.bossEpoch===event.bossEpoch;
  if(events.length>=SURVIVAL_TITLE_LIMIT||events.some(e=>e.boss===boss&&e.ordinal>ordinal))return false;
  events.push(event);setTitleEvents(session,events);return true;
 }

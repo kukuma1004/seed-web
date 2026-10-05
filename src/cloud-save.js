@@ -15,6 +15,7 @@ import {ACCOUNT_PROFILE_KEY,normalizeAccountProfile,mergeBestScores} from './acc
 import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,normalizeMirrorCheckpoint,normalizeMirrorRecord} from './mirror-trial.js';
 import {BOSS_PET_KEY,normalizeBossPet} from './boss-pets.js';
 import {ADVENTURE_SAVE_KEY,ADVENTURE_CLOUD_READY,restoreAdventure} from './seed-adventure-rules.js';
+import {serializeBossVictoryProfile} from './boss-victory-account.js';
 
 export const CLOUD_SCHEMA=1;
 export const CLOUD_META_KEY='seed-cloud-meta-v1';
@@ -48,17 +49,20 @@ export function collectCloudSnapshot(storage,{revision=0,updatedAt=Date.now(),ow
  if(puzzle)garden.puzzle=mergePuzzleProgress(garden.puzzle,puzzle,{prefer:'remote'});
  const story=ownerUid&&ownerUid!=='guest'?json(storage,duelStorySaveKey(ownerUid)):null;
  if(story)garden.duelStory=mergeDuelStory(garden.duelStory,story);
+ const bossAccount=ownerUid&&ownerUid!=='guest'?serializeBossVictoryProfile(storage,json(storage,ACCOUNT_PROFILE_KEY),ownerUid):{profile:json(storage,ACCOUNT_PROFILE_KEY),bossProtocol:null};
  return normalizeCloudSnapshot({
   version:CLOUD_SCHEMA,revision,updatedAt,
   discoveries:json(storage,DISCOVERIES_KEY),garden,shop:shop??{version:3,coins:STARTING_COINS},
   checkpoints:{act1:json(storage,SAVE_KEY),act2:json(storage,ACT2_STORAGE_KEYS[SAVE_KEY]),act3:json(storage,ACT3_STORAGE_KEYS[SAVE_KEY])},
   mirror:{checkpoint:json(storage,MIRROR_CHECKPOINT_KEY),record:json(storage,MIRROR_RECORD_KEY)},
   settings:{theme:storage?.getItem(THEME_KEY),sound:storage?.getItem(SOUND_KEY)},
-  player:{name:storage?.getItem(NAME_KEY)},account:json(storage,ACCOUNT_PROFILE_KEY),bossPet:json(storage,BOSS_PET_KEY),...(ADVENTURE_CLOUD_READY?{adventure:json(storage,ADVENTURE_SAVE_KEY)}:{})
+  player:{name:storage?.getItem(NAME_KEY)},account:bossAccount.profile,...(bossAccount.bossProtocol?{bossProtocol:bossAccount.bossProtocol}:{}),bossPet:json(storage,BOSS_PET_KEY),...(ADVENTURE_CLOUD_READY?{adventure:json(storage,ADVENTURE_SAVE_KEY)}:{})
  });
 }
 
 export function normalizeCloudSnapshot(value){
+ const bossProtocol=value?.bossProtocol;
+ if(bossProtocol!==undefined&&(!bossProtocol||Object.keys(bossProtocol).length!==3||bossProtocol.version!==2||typeof bossProtocol.ownerUid!=='string'||! /^[\w-]{1,128}$/.test(bossProtocol.ownerUid)||typeof bossProtocol.epoch!=='string'||! /^[\w-]{6,96}$/.test(bossProtocol.epoch)))throw Error('boss-migration');
  return {
   version:CLOUD_SCHEMA,
   revision:int(value?.revision,0,1e12),
@@ -73,7 +77,8 @@ export function normalizeCloudSnapshot(value){
   // applyCloudSnapshot deliberately leaves QUALITY_KEY untouched.
   settings:{quality:1,theme:normalizeTheme(value?.settings?.theme),sound:value?.settings?.sound==='off'?'off':'on'},
   player:{name:cleanName(value?.player?.name)},
-  account:normalizeAccountProfile(value?.account),bossPet:normalizeBossPet(value?.bossPet),...(ADVENTURE_CLOUD_READY?{adventure:adventureSave(value?.adventure)}:{})
+  account:normalizeAccountProfile(value?.account),bossPet:normalizeBossPet(value?.bossPet),...(ADVENTURE_CLOUD_READY?{adventure:adventureSave(value?.adventure)}:{}),
+  ...(bossProtocol?{bossProtocol:{version:2,ownerUid:bossProtocol.ownerUid,epoch:bossProtocol.epoch}}:{})
  };
 }
 
@@ -110,11 +115,13 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
 }
 export function mergeCloudSnapshots(localValue,remoteValue,{prefer='remote'}={}){
  const local=normalizeCloudSnapshot(localValue),remote=normalizeCloudSnapshot(remoteValue);
+ if(local.bossProtocol&&remote.bossProtocol&&['version','ownerUid','epoch'].some(key=>local.bossProtocol[key]!==remote.bossProtocol[key]))throw Error('boss-migration');
  const winner=prefer==='local'?local:remote;
  const recordIds=new Set([...Object.keys(local.discoveries.records||{}),...Object.keys(remote.discoveries.records||{})]),records={};
  for(const id of recordIds){const a=local.discoveries.records?.[id],b=remote.discoveries.records?.[id];records[id]=!a?b:!b?a:a.dps>=b.dps?a:b;}
  return normalizeCloudSnapshot({
   ...winner,
+  ...(remote.bossProtocol||local.bossProtocol?{bossProtocol:remote.bossProtocol||local.bossProtocol}:{}),
   revision:Math.max(local.revision,remote.revision),updatedAt:Math.max(local.updatedAt,remote.updatedAt),
   garden:mergeGardenProgress(local.garden,remote.garden,{prefer}),
   checkpoints:{version:1,act1:newerCheckpoint(local.checkpoints.act1,remote.checkpoints.act1,winner.checkpoints.act1),act2:newerCheckpoint(local.checkpoints.act2,remote.checkpoints.act2,winner.checkpoints.act2),act3:newerCheckpoint(local.checkpoints.act3,remote.checkpoints.act3,winner.checkpoints.act3)},

@@ -1,3 +1,4 @@
+import {readBossVictoryAccount} from '../src/boss-victory-account.js';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -38,7 +39,7 @@ const denied=createModeBossOutbox({...storage,setItem(){throw Error('quota');}},
 // Execute the actual main delivery bridge with a failure between profile and discovery.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function modeBossOutbox(){'),end=main.indexOf('function remember(',start);
 let discoveryOk=false,flushes=0;const toast={textContent:''};
-const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,readAccountProfile,currentJourneyOwner:null,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
+const ctx=vm.createContext({createModeBossOutbox,recordModeBossVictory,readAccountProfile,readBossVictoryAccount,currentJourneyOwner:null,rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'A'})},localInspection:false,developerRun:false,$:()=>toast,profile:{},readDiscoveries:()=>({bosses:discoveryOk?['crosswindKeeper']:[]}),remember:()=>({saved:discoveryOk}),MODE_BOSSES:{crosswindKeeper:{act:4}},awardExpansionBossTree:()=>true,cloud:{flush:async()=>{flushes++;}},dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map()});
 vm.runInContext(main.slice(start,end),ctx);
 assert.equal(ctx.awardModeBoss('defense','new-run','crosswindKeeper',1),false);
 assert.equal(readAccountProfile(storage).crosswindWins,5);storage.setItem('seed-cloud-owner-v1','A');ctx.remember=()=>({saved:true});ctx.retryModeBossRewards();assert.equal(flushes,0,'a skipped or silently dropped discovery cannot acknowledge the receipt');discoveryOk=true;ctx.retryModeBossRewards();

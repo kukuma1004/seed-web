@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createSurvivalSaveStore,captureSurvivalSession,queueSurvivalTitle,settleSurvivalTitles,survivalTitleEvents,SURVIVAL_TITLE_LIMIT,validSurvivalRecord,validSurvivalSave} from '../src/survival-save.js';
@@ -19,7 +20,7 @@ function snapshot(session,id='contract-run'){
 }
 function host(storage,session=createSurvivalSession(17)){
  const nodes=new Map(),owner={uid:'a'},save=createSurvivalSaveStore(storage,'a'),init=save.write(snapshot(session),{fresh:true});assert(init.ok);
- const ctx=vm.createContext({survivalSession:session,survivalSaveToken:{id:init.value.id,revision:init.value.revision,writeId:init.value.writeId,owner:'a'},localInspection:false,developerRun:false,
+ const ctx=vm.createContext({currentBossEpoch:()=>null,survivalSession:session,survivalSaveToken:{id:init.value.id,revision:init.value.revision,writeId:init.value.writeId,owner:'a'},localInspection:false,developerRun:false,
   settleSurvivalTitles,queueSurvivalTitle,survivalTitleEvents,captureSurvivalSession,SURVIVAL_TITLE_LIMIT,createSurvivalSaveStore,
   rawStorage:storage,survivalOwner:()=>owner.uid,survivalStore:()=>createSurvivalSaveStore(storage,owner.uid),survivalCloud:{changed(){}},survivalPendingEnd:null,survivalSaveMessage:'',
   awardModeBoss:(mode,runId,boss,ordinal,practice)=>practice||recordModeBossVictory(storage,{mode,runId,boss,ordinal,practice}).saved,
@@ -106,14 +107,14 @@ for(const failAt of [0,1,2]){
 {
  const old={...createSurvivalSession(21),lap:2,act:2,bossesDefeated:8,completedLaps:2,time:1800,legStartedAt:1700,titleBoss:'tempestcarrier',titleOrdinal:2};
  const migrated=migrateSurvivalToFiveActs(snapshot(old));assert.equal(migrated.session.completedLaps,0);assert.equal(migrated.session.legacyCompletedLaps,2);assert.equal(migrated.session.bossesDefeated,8);assert.deepEqual(survivalTitleEvents(migrated.session),survivalTitleEvents(old));
- assert.equal(survivalExpansionRankProgress(migrated.session).eligible,false);
+ assert.equal(survivalExpansionRankProgress(migrated.session,{acts:closedExpansionActs}).eligible,false);
  const s=migrated.session;for(let n=0;n<3;n++){s.bossSpawned=true;settleSurvivalKill(s,{boss:true});assert(advanceSurvivalAct(s));}
  assert.equal(s.act,0);assert.equal(s.lap,3);assert.equal(s.completedLaps,1);assert.equal(s.bossesDefeated,11);
 }
 {
  const legacy=createDefense(30);legacy.wave=72;legacy.bossWins={austin:2,alwaysbeginner:2,tempestcarrier:2};legacy.pendingBosses=[12,24,36,48,60,72].map((wave,i)=>({wave,boss:['austin','alwaysbeginner','tempestcarrier'][i%3],ordinal:Math.floor(i/3)+1}));
  const migrated=migrateDefenseToFiveActs(checkpointDefense(legacy));assert(migrated);assert.equal(migrated.wave,120);assert.equal(migrated.migratedWaves,48);assert.equal(defenseSeedCap(migrated),defenseSeedCap(legacy));
- assert.deepEqual(migrated.bossWins,{...legacy.bossWins,crosswindKeeper:0,crystalGardener:0});assert.equal(defenseExpansionRankProgress(migrated).cleared,72);assert.equal(defenseRankEntry({...migrated,phase:'lost'},{uid:'a',name:'테스터'}),null);
+ assert.deepEqual(migrated.bossWins,{...legacy.bossWins,crosswindKeeper:0,crystalGardener:0});assert.equal(defenseExpansionRankProgress(migrated).cleared,72);assert.equal(defenseRankEntry({...migrated,phase:'lost'},{uid:'a',name:'테스터',acts:closedExpansionActs}),null);
  const restored=restoreDefense(checkpointDefense(migrated));assert(restored);assert.deepEqual(restored.pendingBosses,migrated.pendingBosses);assert.deepEqual(restored.bossWins,migrated.bossWins);
  const s=createDefense(32,{actCount:5});assert(plantDefense(s,2));while(s.wave<60){assert(startDefenseWave(s));let ticks=0;while(s.phase==='wave'){stepDefense(s,.1,{update(){for(const e of s.enemies)defenseHurt(s,e,e.hp,true);}});assert(++ticks<2000);}}
  assert.deepEqual(s.bossWins,{austin:1,alwaysbeginner:1,tempestcarrier:1,crosswindKeeper:1,crystalGardener:1});assert(startDefenseWave(s));assert.equal(s.wave,61);assert.equal(s.bossWins.austin,1);

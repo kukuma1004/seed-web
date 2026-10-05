@@ -54,21 +54,21 @@ assert.equal(readDuelStory(pc,'other-uid').cleared.s1,undefined);assert.equal(re
 assert.ok(isSyncKey(duelStorySaveKey('same-uid')));assert.equal(isSyncKey('seed-duel-story-v1-invalid'),false);
 // The actual save coordinator transfers a story-only write PC -> phone -> PC.
 let remote=null,puts=0,clock=1000;const account={ready:async()=>{},user:()=>({uid:'player'}),tokenSession:async()=>({uid:'player',idToken:'test'})};
-const fetchImpl=async(url,options={})=>{if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};if(options.method==='PUT'){remote=JSON.parse(options.body);puts++;}return {ok:true,status:200,json:async()=>remote};};
+const fetchImpl=async(url,options={})=>{if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};if(options.method==='PUT'){remote=JSON.parse(options.body);puts++;}return {ok:true,status:200,json:async()=>remote};};
 const devices=[memory(),memory()].map(storage=>createCloudSync({storage,account,fetchImpl,now:()=>++clock,debounceMs:60000}));
-await devices[0].start();writeDuelStory(devices[0].storage,a,'player',500);assert.equal(devices[0].isDirty(),true);await devices[0].flush();
-await devices[1].start();assert.ok(readDuelStory(devices[1].storage,'player').cleared.s2);writeDuelStory(devices[1].storage,b,'player',600);await devices[1].flush();await devices[0].syncNow();assert.equal(nextStoryStage(readDuelStory(devices[0].storage,'player')),4);
+assert.equal((await devices[0].start()).ok,true);writeDuelStory(devices[0].storage,a,'player',500);assert.equal(devices[0].isDirty(),true);assert.equal((await devices[0].flush()).ok,true);
+assert.equal((await devices[1].start()).ok,true);assert.ok(readDuelStory(devices[1].storage,'player').cleared.s2);writeDuelStory(devices[1].storage,b,'player',600);assert.equal((await devices[1].flush()).ok,true);assert.equal((await devices[0].syncNow()).ok,true);assert.equal(nextStoryStage(readDuelStory(devices[0].storage,'player')),4);
 const before=puts;await devices[0].syncNow();assert.equal(puts,before,'a synchronized campaign does not keep uploading');for(const d of devices)d.signOutCleanup();
 // A different signed-in UID must not inherit the previous player's local key.
 let otherSave=null;
-const other=createCloudSync({storage:devices[0].storage,account:{...account,user:()=>({uid:'other'}),tokenSession:async()=>({uid:'other',idToken:'test'})},fetchImpl:async(url,options={})=>{if(options.method==='PUT')otherSave=JSON.parse(options.body);return {ok:true,status:200,json:async()=>otherSave};},debounceMs:60000});
+const other=createCloudSync({storage:devices[0].storage,account:{...account,user:()=>({uid:'other'}),tokenSession:async()=>({uid:'other',idToken:'test'})},fetchImpl:async(url,options={})=>{if(url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};if(options.method==='PUT')otherSave=JSON.parse(options.body);return {ok:true,status:200,json:async()=>otherSave};},debounceMs:60000});
 await other.start();assert.equal(readDuelStory(other.storage,'other').cleared.s1,undefined);assert.equal(otherSave?.garden?.duelStory?.cleared.s1,undefined);other.signOutCleanup();
 // A legacy nine-stage app may overwrite /save after a newer web session. The
 // separate record survives and restores all new chapters on a fresh device.
 {
  const state={save:null,story:null,puts:0,backupRevision:0,conflict:false,deny:false};let clock=2000;
  const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards'))return {ok:true,status:200,json:async()=>null};
+  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
   const backup=url.includes('/duelStory.json'),key=backup?'story':'save';
   if(options.method==='PUT'){
    if(backup&&state.deny)return {ok:false,status:403,json:async()=>({error:'denied'})};

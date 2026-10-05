@@ -25,6 +25,18 @@ export function prepareDefenseTerrain(s,info){
 // view passed to the boss rules; refresh every field before each simulation step.
 // Weak keys let a finished run release its scratch data without an extra hook.
 const bossScratch=new WeakMap();
+const coreStrikes=new WeakMap();
+// Mobile action salvos offer a player space to dodge their separate bullets.
+// A stationary heart has no such movement: one committed volley is one strike,
+// while every projectile remains a real interceptable shot. These receipts are
+// wave-local because preparation checkpoints never serialize an active battle.
+export function acceptDefenseCoreStrike(s,q){
+ if(!q.coreStrike)return true;
+ let receipt=coreStrikes.get(s);
+ if(!receipt||receipt.wave!==s.wave){receipt={wave:s.wave,seen:new Set()};coreStrikes.set(s,receipt);}
+ if(receipt.seen.has(q.coreStrike))return false;
+ receipt.seen.add(q.coreStrike);return true;
+}
 function bossContext(s,e,walls){
  let c=bossScratch.get(s);
  if(!c){c={position:{x:0,z:0},player:{x:104/5,z:48/5},walls:[],activeProjectiles:0,hpRatio:1};bossScratch.set(s,c);}
@@ -36,7 +48,7 @@ function bossContext(s,e,walls){
  c.activeProjectiles=0;for(const q of s.shots)if(q.law==='hostile')c.activeProjectiles++;
  return c;
 }
-export function tickDefenseExpansionBoss(s,e,dt,emit){
+export function tickDefenseExpansionBoss(s,e,dt,emit,{travelScale=1}={}){
  if(e.bossId!=='crosswindKeeper'&&e.bossId!=='crystalGardener')return false;
  e.expansionBoss??=createExpansionBoss(e.bossId,{seed:s.rng});
  const walls=s.crystalWalls||[],out=stepExpansionBoss(e.expansionBoss,dt,bossContext(s,e,walls));
@@ -44,9 +56,22 @@ export function tickDefenseExpansionBoss(s,e,dt,emit){
  e.expansionState=out.state;e.expansionPattern=out.pattern;
  // Regrowth never appears under a planted seed; the path is already separate.
  applyCrystalTerrainActions(walls,out.terrain.filter(a=>{const w=walls.find(w=>w.id===a.id);return w&&!s.towers.some(t=>Math.hypot(t.x-w.x,t.y-w.z)<4);}));
- for(const q of out.bolts)emit(q);
+ for(const q of out.bolts){
+  const strike={...q,coreStrike:`${e.id}:${e.bossId}:${e.expansionBoss.sequence}`};
+  if(q.pattern==='rear-salvo'){
+   // In an action arena these escorts appear behind the moving player. The
+   // defense target is the stationary heart: spawning relative to that target
+   // would teleport six shots past the whole planted road (even off the map).
+   // Keep escorts beside the boss instead, with a committed aim at the heart.
+   // Their unchanged speed/lifetime gives the road's towers time to intercept.
+   const sign=q.position.z>=e.expansionBoss.target.z?1:-1;
+   const origin={x:Math.max(0,Math.min(100,e.x))/5,z:Math.max(1,Math.min(59,e.y+sign*6))/5};
+   const dx=e.expansionBoss.target.x-origin.x,dz=e.expansionBoss.target.z-origin.z,length=Math.hypot(dx,dz)||1;
+   emit({...strike,position:origin,dir:{x:dx/length,z:dz/length}});
+  }else emit(strike);
+ }
  // Movement is translated along the existing road, preserving lane collision.
- if(e.bossId==='crosswindKeeper'&&out.move.x)e.progress+=Math.abs(out.move.x)*5;
+ if(e.bossId==='crosswindKeeper'&&out.move.x)e.progress+=Math.abs(out.move.x)*5*travelScale;
  return true;
 }
 export const defenseBossCheckpoint=e=>e?.expansionBoss?checkpointExpansionBoss(e.expansionBoss):null;
