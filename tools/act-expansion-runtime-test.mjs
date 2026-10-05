@@ -14,11 +14,11 @@ let front=0,rear=0,maxSpawns=0;
 for(let i=0;i<700;i++){
  const o=stepExpansionCourse(room,.05,{player:{x:20+i*.12,z:0}});
  maxSpawns=Math.max(maxSpawns,o.spawns.length);
- for(const e of o.spawns){if(e.side==='rear')rear++;else front++;assert.equal(e.shots,1);assert.ok(e.position.x>o.camera.x+8);}
+ for(const e of o.spawns){if(e.side==='rear')rear++;else front++;assert.equal(e.shots,1);assert.ok(e.position.x>o.camera.x+4&&e.position.x<o.camera.x+5);}
 }
 assert.ok(front>10);assert.equal(rear,0);assert.equal(room.distance,699*.12);assert.ok(maxSpawns<=LIMIT.spawnsPerStep);
 const sequel=createExpansionCourse('crosswind',{room:2,seed:452});
-for(let i=0;i<750;i++)for(const e of stepExpansionCourse(sequel,.05,{player:{x:0,z:0}}).spawns)if(e.side==='rear'){rear++;assert.ok(e.windup>=1);assert.ok(e.position.x<-8);}
+for(let i=0;i<750;i++)for(const e of stepExpansionCourse(sequel,.05,{player:{x:0,z:0}}).spawns)if(e.side==='rear'){rear++;assert.ok(e.windup>=1);assert.ok(e.position.x<-6&&e.position.x>-7);}
 assert.ok(rear>0);
 const full=createExpansionCourse('crosswind',{room:4});
 for(let i=0;i<400;i++)assert.equal(stepExpansionCourse(full,.05,{enemyCount:24}).spawns.length,0);
@@ -56,17 +56,17 @@ assert.equal(corrupted.room,4);assert.equal(corrupted.time,0);assert.equal(corru
 
 // Every original law opens a route with damage; no law is a compulsory key.
 for(const law of laws){
- const s=createExpansionCourse('crystalGorge',{room:0}),wall=s.walls[0];
+ const s=createExpansionCourse('crystalGorge',{room:0,encounterVersion:1}),wall=s.walls[0];
  for(let i=0;i<20&&!wall.broken;i++)sweepCrystalTerrain(s.walls,{x:-7,z:-5},{x:0,z:-5},{damage:10,law});
  assert.equal(wall.broken,true,law);assert.equal(solidCrystalCover(s.walls).some(o=>o.id===wall.id),false,law);
 }
-const spear=createExpansionCourse('crystalGorge');
+const spear=createExpansionCourse('crystalGorge',{encounterVersion:1});
 const across=sweepCrystalTerrain(spear.walls,{x:-8,z:-5},{x:8,z:-5},{damage:11,law:'pierce'});
 assert.equal(across.blocked,false);assert.equal(across.hits.length,2);assert.equal(spear.walls[0].hp,109);assert.equal(spear.walls[1].hp,109);
-const reflect=createExpansionCourse('crystalGorge');
+const reflect=createExpansionCourse('crystalGorge',{encounterVersion:1});
 const bounce=sweepCrystalTerrain(reflect.walls,{x:-8,z:-5},{x:8,z:-5},{damage:0,law:'reflect',maxBounces:2});assert.ok(bounce.blocked&&bounce.reflected);assert.ok(bounce.point.x<-3.6);assert.equal(bounce.dir.x,-1);
 assert.equal(sweepCrystalTerrain(reflect.walls,{x:-8,z:-5},{x:8,z:-5},{damage:0,law:'reflect',maxBounces:2,bounces:2}).reflected,false);
-const explosion=createExpansionCourse('crystalGorge');assert.equal(damageCrystalTerrain(explosion.walls,{x:-3,z:-5},.4,20,'burst')[0].damage,30);
+const explosion=createExpansionCourse('crystalGorge',{encounterVersion:1});assert.equal(damageCrystalTerrain(explosion.walls,{x:-3,z:-5},.4,20,'burst')[0].damage,30);
 const actor={x:8,z:-5};constrainCrystalActor(actor,.45,reflect.walls,{x:-8,z:-5});assert.ok(actor.x<-4,'fast actor cannot cross a crystal between frames');
 const overlap={x:-3,z:-5};constrainCrystalActor(overlap,.45,reflect.walls);assert.ok(Math.abs(overlap.x+3)>1||Math.abs(overlap.z+5)>1,'saved overlapping actor is ejected');
 

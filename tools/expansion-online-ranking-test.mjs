@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 import fs from 'node:fs';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
+import {EXPANSION_CIRCUIT_KILLS} from '../src/act-expansion-runtime.js';
 import {ACT,SEASON,PENDING_KEY,RUNS_PATH,BUILDS_PATH,runAct,validRun,bestPerPlayer,createOnlineRanking} from '../src/online-ranking.js';
 import {buildRecord,bossText} from '../src/ranking-build.js';
 const acts=openExpansionActs;
@@ -21,7 +22,7 @@ assert.deepEqual(bestPerPlayer(board,20,SEASON,4,{acts}).map(e=>e.id),['c','a'])
 const rules=JSON.parse(fs.readFileSync('docs/firebase-rules-with-seed.json','utf8')).rules.seedRanking.season12.runs.$runId;
 function snap(value){return {val:()=>value,child:key=>snap(value?.[key]),hasChildren:keys=>keys.every(k=>value?.[k]!==undefined),isNumber:()=>typeof value==='number'};}
 function allowed(e,released){const root=snap({seedExpansionRelease:released?{crosswind:true,crystalGorge:true}:{crosswind:true,crystalGorge:false}});return Function('newData','root',`return (${rules['.validate']});`)(snap(e),root)&&Function('newData','root',`return (${rules.act['.validate']});`)(snap(e.act),root);}
-for(const act of [4,5]){const e={...entry,act};assert(allowed(e,true));assert(!allowed(e,false));for(const edit of [{cycle:3},{done:true,stage:2},{score:1e9},{time:1},{kills:372.5}])assert(!allowed({...e,...edit},true));}
+for(const act of [4,5]){const e={...entry,act};assert(allowed(e,true));assert(!allowed(e,false));const max={...e,kills:EXPANSION_CIRCUIT_KILLS*3};assert(validRun(max,{acts})&&allowed(max,true),'fresh maximum agrees between client and candidate server validation');assert(!validRun({...max,kills:max.kills+1},{acts})&&!allowed({...max,kills:max.kills+1},true),'one beyond the physical budget is rejected on both sides');for(const edit of [{cycle:3},{done:true,stage:2},{score:1e9},{time:1},{kills:372.5}])assert(!allowed({...e,...edit},true));}
 const old={...entry,act:1,score:5000,kills:30,time:700,cycle:4,stage:4,done:false};assert(allowed(old,false));assert(validRun(old));
 
 const rows=new Map(),storage={getItem:k=>rows.get(k)??null,setItem:(k,v)=>rows.set(k,v)};let serial=0,reads=0;const sent={},builds={};

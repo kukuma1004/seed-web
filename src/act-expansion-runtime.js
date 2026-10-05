@@ -6,9 +6,9 @@ import {EXPANSION_ACTS,crosswindFormation,createCrystalWalls,restoreCrystalWalls
 // Outputs are reused until the next step: consume/copy them before stepping again.
 export const EXPANSION_RUNTIME_VERSION=1;
 export const EXPANSION_COURSE_PACKETS=Object.freeze([18,20,22,24,26]);
-// Later rooms have a second actor on every fourth accepted packet. Include
+// New courses alternate one and two actors, with the same hard live caps. Include
 // exactly one true boss; broken scenery and missed packets are never kills.
-export const EXPANSION_CIRCUIT_KILLS=1+EXPANSION_COURSE_PACKETS.reduce((n,v,i)=>n+v+(i>=2?Math.floor(v/4):0),0);
+export const EXPANSION_CIRCUIT_KILLS=1+EXPANSION_COURSE_PACKETS.reduce((n,v)=>n+v+Math.floor(v/2),0);
 export const EXPANSION_RUNTIME_LIMITS=Object.freeze({enemies:24,projectiles:48,walls:20,spawnsPerStep:2,boltsPerStep:8,terrainPerStep:3,maxStep:.1});
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const finite=(n,fallback=0)=>Number.isFinite(n)?n:fallback;
@@ -21,18 +21,22 @@ function direction(from,to){const x=to.x-from.x,z=to.z-from.z,length=Math.hypot(
 const rotate=(d,angle)=>({x:d.x*Math.cos(angle)-d.z*Math.sin(angle),z:d.x*Math.sin(angle)+d.z*Math.cos(angle)});
 const output=()=>({spawns:[],telegraphs:[],bolts:[],terrain:[],events:[],camera:{x:0,z:0},move:{x:0,z:0},contacts:[],coreOpen:false});
 function resetOutput(out){for(const key of ['spawns','telegraphs','bolts','terrain','events','contacts'])out[key].length=0;out.move.x=out.move.z=0;out.coreOpen=false;return out;}
-export function createExpansionCrystalWalls(room=0,saved){
+export function createExpansionCrystalWalls(room=0,saved,{layout=1}={}){
  const walls=saved?restoreCrystalWalls(room,saved):createCrystalWalls(room);
- // Pair columns leave a 4.8-unit central lane and side routes. Unlike adjacent
- // old draft columns, each AABB is separated, so one visible crystal is one hit.
- for(let i=0;i<walls.length;i++){const pair=Math.floor(i/2),column=Math.floor(pair/6);walls[i].x=(i%2?1:-1)*(3+column*2.2);walls[i].z=-5+(pair%6)*2;}
+ // New courses use alternating short fences: one broken crystal opens a direct
+ // crossing, while outer detours stay open. Older saved courses retain their
+ // exact paired-column geometry. Each visible crystal has its own hit box.
+ for(let i=0;i<walls.length;i++){
+  if(layout===2){const row=Math.floor(i/4),side=row%2?-1:1;walls[i].x=side*(-3+(i%4)*1.3);walls[i].z=3-row*2.4;walls[i].maxHp=76+Math.max(0,Math.min(4,room|0))*18;walls[i].hp=Math.min(walls[i].hp,walls[i].maxHp);}
+  else{const pair=Math.floor(i/2),column=Math.floor(pair/6);walls[i].x=(i%2?1:-1)*(3+column*2.2);walls[i].z=-5+(pair%6)*2;}
+ }
  return walls;
 }
 
-export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0}}={}){
+export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0},encounterVersion=2}={}){
  const act=actId(id),stage=clamp(room|0,0,4),start=point(origin);
- const walls=act==='crystalGorge'?createExpansionCrystalWalls(stage):[];for(const w of walls){w.x+=start.x;w.z+=start.z;}
- return {version:EXPANSION_RUNTIME_VERSION,act,room:stage,seed:(seed>>>0)||1,origin:start,time:0,distance:0,spawnClock:.9,spawnIndex:0,finishAnnounced:false,walls,out:output()};
+ const revision=encounterVersion===2?2:1,walls=act==='crystalGorge'?createExpansionCrystalWalls(stage,undefined,{layout:revision}):[];for(const w of walls){w.x+=start.x;w.z+=start.z;}
+ return {version:EXPANSION_RUNTIME_VERSION,encounterVersion:revision,act,room:stage,seed:(seed>>>0)||1,origin:start,time:0,distance:0,spawnClock:revision===2?.45:.9,spawnIndex:0,finishAnnounced:false,walls,out:output()};
 }
 
 // Act 4 is a horizontal course, never an enclosed arena. travel is positive
@@ -58,14 +62,16 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  if(s.spawnIndex>=EXPANSION_COURSE_PACKETS[s.room])return out;
  s.spawnClock-=step;if(s.spawnClock>0)return out;
  // Re-arm even when saturated; capacity reopening cannot release queued waves.
- s.spawnClock=Math.max(.82,1.7-s.room*.14)+random(s)*.25;
+ const close=s.encounterVersion===2;
+ s.spawnClock=(close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);
  const free=EXPANSION_RUNTIME_LIMITS.enemies-Math.max(0,finite(enemyCount));
  if(free<1||projectileCount>=EXPANSION_RUNTIME_LIMITS.projectiles)return out;
  const index=s.spawnIndex++,formation=s.act==='crosswind'?crosswindFormation(index,s.room):{side:'front',lane:[-4.8,0,4.8][index%3],type:index%5===4?'charger':'shooter',shots:1,windup:.85};
- const count=Math.min(free,s.room>=2&&index%4===3?2:1,EXPANSION_RUNTIME_LIMITS.spawnsPerStep);
+ const count=Math.min(free,(close?index%2===1:s.room>=2&&index%4===3)?2:1,EXPANSION_RUNTIME_LIMITS.spawnsPerStep);
  for(let i=0;i<count;i++){
-  const side=formation.side,front=side==='front',cx=s.origin.x+s.distance;
-  const position=s.act==='crosswind'?{x:cx+(front?12:-11),z:s.origin.z+clamp(formation.lane+(i?1.6:0),-6.4,6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:s.origin.z-9};
+  const side=s.act==='crystalGorge'&&close&&p.z<s.origin.z-1.4?'rear':formation.side,front=side==='front',cx=close?p.x:s.origin.x+s.distance;
+  const position=s.act==='crosswind'?{x:cx+(front?(close?6.8:12):(close?-6.4:-11)),z:s.origin.z+clamp(formation.lane+(i?1.6:0),close?-4.5:-6.4,close?4.5:6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:close?clamp(p.z+(front?-6:6),s.origin.z-7.8,s.origin.z+7.8):s.origin.z-9};
+  if(s.act==='crystalGorge'&&close)constrainCrystalActor(position,.65,s.walls);
   const threat={id:`${s.act}-${s.room}-${index}-${i}`,type:formation.type,position,side,shots:formation.shots,windup:formation.windup,
    hp:formation.type==='charger'?42+s.room*8:86+s.room*18,speed:formation.type==='charger'?4.1:2.1,cooldown:formation.type==='lobber'?2.1:1.7,bulletSpeed:5.2+s.room*.2,damage:12+s.room};
   out.spawns.push(threat);out.telegraphs.push({kind:'entry',id:threat.id,position:{...position},duration:formation.windup,side});
@@ -73,12 +79,12 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  return out;
 }
 
-export function checkpointExpansionCourse(s){return {version:EXPANSION_RUNTIME_VERSION,act:s.act,room:s.room,seed:s.seed,origin:{...s.origin},time:s.time,distance:s.distance,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,finishAnnounced:s.finishAnnounced,walls:s.walls.map(w=>({id:w.id,hp:w.hp}))};}
+export function checkpointExpansionCourse(s){return {version:EXPANSION_RUNTIME_VERSION,...(s.encounterVersion===2?{encounterVersion:2}:{}),act:s.act,room:s.room,seed:s.seed,origin:{...s.origin},time:s.time,distance:s.distance,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,finishAnnounced:s.finishAnnounced,walls:s.walls.map(w=>({id:w.id,hp:w.hp}))};}
 export function restoreExpansionCourse(saved,fallback={act:'crosswind',room:0}){
- const valid=saved?.version===EXPANSION_RUNTIME_VERSION&&acts.includes(saved.act),s=createExpansionCourse(valid?saved.act:actId(fallback.act),valid?saved:fallback);if(!valid)return s;
+ const valid=saved?.version===EXPANSION_RUNTIME_VERSION&&acts.includes(saved.act),s=createExpansionCourse(valid?saved.act:actId(fallback.act),valid?{...saved,encounterVersion:saved.encounterVersion===2?2:1}:fallback);if(!valid)return s;
  s.time=clamp(finite(saved.time),0,1e6);s.distance=clamp(finite(saved.distance),0,s.act==='crystalGorge'?14:EXPANSION_ACTS[s.act].rooms[s.room].length);
  s.spawnClock=clamp(finite(saved.spawnClock,.9),0,3);s.spawnIndex=clamp(Math.floor(finite(saved.spawnIndex)),0,1e7);s.finishAnnounced=Boolean(saved.finishAnnounced);
- if(s.act==='crystalGorge'){s.walls=createExpansionCrystalWalls(s.room,saved.walls);for(const w of s.walls){w.x+=s.origin.x;w.z+=s.origin.z;}}return s;
+ if(s.act==='crystalGorge'){s.walls=createExpansionCrystalWalls(s.room,saved.walls,{layout:s.encounterVersion});for(const w of s.walls){w.x+=s.origin.x;w.z+=s.origin.z;}}return s;
 }
 
 // Swept slab collision also catches fast spears crossing a thin crystal entirely.

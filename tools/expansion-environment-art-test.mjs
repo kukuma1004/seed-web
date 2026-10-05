@@ -33,6 +33,8 @@ const view=createExpansionJourneyView(scene,sharedFloor);view.setActive(true);co
 const floor=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===8),planeGeometry=plate.geometry,material=plate.material;
 assert.equal(plate.visible,false);assert.equal(floor.visible,true);
 view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,true,'long panorama keeps world-sized road detail');assert.equal(material.map,plate4);
+const edgeMarks=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===.16);assert.equal(edgeMarks.visible,false,'old plate has no new edge markers');
+view.setCourse('crosswind',{halfDepth:5.4});assert.equal(edgeMarks.visible,true,'fresh closer ricochet boundaries are visible over the same plate');const edgeMatrix=new THREE.Matrix4();for(let i=0;i<edgeMarks.count;i++){edgeMarks.getMatrixAt(i,edgeMatrix);assert(Math.abs(Math.abs(edgeMatrix.elements[14])-5.25)<1e-6);}assert.equal(edgeMarks.count,40,'reuse the existing fixed marker pool');view.setCourse('crosswind');assert.equal(edgeMarks.visible,false,'legacy and other modes reset the optional marker layout');
 const roadMatrix=new THREE.Matrix4();floor.getMatrixAt(0,roadMatrix);assert(roadMatrix.elements[13]>plate.position.y,'road detail must be above the opaque panorama');
 assert(roadMatrix.elements[12]-4<=-20,'initial camera cannot reveal the rear road seam');
 floor.getMatrixAt(floor.count-1,roadMatrix);assert(roadMatrix.elements[12]+4>=148,'road detail spans the late course');

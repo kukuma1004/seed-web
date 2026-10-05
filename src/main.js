@@ -622,7 +622,7 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   if(publicRun&&!expansionEntry)throw Error('checkpoint');
   if(saved)player.position.fromArray(saved.position);
   if(publicRun)void webTelemetry.playStart(rules.EXPANSION_ACTS[act].number);
-  $('#toast').textContent=(act==='crosswind'?'4막':'5막')+(bossPreview?' 로컬 보스 시연 · 구간 생략 · 저장/보상/랭킹 제외':publicRun?' · 방 입구 저장 · 계정 동기화 상태는 일시정지에서 확인':' 로컬 시제품 · 방 입구 이어하기 · 계정 보상/랭킹 제외');return true;
+  $('#toast').textContent=bossPreview?(act==='crosswind'?'4막':'5막')+' 로컬 보스 시연 · 구간 생략 · 저장/보상/랭킹 제외':rules.EXPANSION_ACTS[act].rooms[stage].hint;return true;
  }catch{
   if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionPendingBossCheckpoint=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}
   if(!reused||expansionSaveLease!==lease)await lease.release();return false;
@@ -670,6 +670,7 @@ function waveExpansionJourney(){
  combatAnalysis.begin(elapsed,{stage:stage+1,cycle:1,region:s.act});$('#encounter').textContent=definition.number+(expansionChannel==='public'?'막 · ':'막 로컬 · ')+(s.phase==='boss'?definition.bossName:definition.name+' · '+(stage+1)+' / 5');
  $('#boss-hud strong').textContent=definition.bossName;$('#boss-hud').hidden=s.phase!=='boss';$('#stages').hidden=false;
  [...document.querySelectorAll('#stages span')].forEach((n,i)=>n.classList.toggle('active',i<=stage));
+ if(s.phase==='course')$('#toast').textContent=definition.rooms[stage].hint;
  if(!s.inspectionPreview&&!captureExpansionEntry())$('#toast').textContent='로컬 저장을 만들지 못했어요. 저장 공간 또는 다른 탭의 기록을 확인하세요.';
 }
 function showExpansionResult(won,ended=true){
@@ -732,8 +733,8 @@ function drawRoom(){
   obstacles.length=0;traps=[];clockFloor=null;stadium.setActive(false);skyway.setActive(false);mirrorPanels.setActive(false);mirrorPanelsActive=false;survivalArt?.setActive(false);
   for(const object of hiddenGarden)object.visible=false;player.scale.setScalar(1.25);
   const s=expansionJourney,distance=s.course.distance,canyon=s.act==='crystalGorge',length=s.phase==='boss'?distance+14:140;
-  expansionJourneyView.setCourse(s.act);expansionJourneyView.setTerrainOnly(false);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
-  arena=canyon?{shape:'rect',halfWidth:8,halfDepth:10,start:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:{x:0,z:-7,radius:2}}:{shape:'rect',halfWidth:length,halfDepth:7,start:{x:s.phase==='boss'?distance-4:0,z:0},exit:{x:distance,z:0,radius:2}};
+  expansionJourneyView.setCourse(s.act,{halfDepth:!canyon&&s.phase==='course'&&s.course.encounterVersion===2?5.4:null});expansionJourneyView.setTerrainOnly(false);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
+  arena=canyon?{shape:'rect',halfWidth:8,halfDepth:10,start:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:{x:0,z:-7,radius:2}}:{shape:'rect',halfWidth:length,halfDepth:s.phase==='course'&&s.course.encounterVersion===2?5.4:7,start:{x:s.phase==='boss'?distance-4:0,z:0},exit:{x:distance,z:0,radius:2}};
   gate.position.set(arena.exit.x,0,arena.exit.z);syncExpansionCrystals();return;
  }
  if(survivalSession){

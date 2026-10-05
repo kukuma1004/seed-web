@@ -4,7 +4,7 @@ export const EXPANSION_ACTS=Object.freeze({
  crosswind:Object.freeze({number:4,name:'횡풍의 항로',grammar:'B',released:true,
   camera:'horizontal',bossId:'crosswindKeeper',bossName:'횡풍의 수호자',
   rooms:Object.freeze([
-   {name:'잎배의 출항',role:'front',length:96,hint:'앞의 단발 사선을 피하며 전진하세요'},
+   {name:'잎배의 출항',role:'front',length:96,hint:'가까운 편대의 단발 사선을 피하며 전진하세요 · 위아래 가장자리로 반사 길을 만들 수 있어요'},
    {name:'뒤따르는 그림자',role:'rear',length:112,hint:'귀환하는 탄과 뒤따르는 적의 위치를 함께 보세요'},
    {name:'가지 사이의 교전',role:'split-lanes',length:120,hint:'위아래 가지 사이로 옮겨 사선을 바꾸세요'},
    {name:'횡풍 함대',role:'pincer',length:128,hint:'양쪽에서 오는 편대 중 한쪽을 먼저 끊으세요'},
@@ -15,7 +15,7 @@ export const EXPANSION_ACTS=Object.freeze({
  crystalGorge:Object.freeze({number:5,name:'무너지는 수정 협곡',grammar:'F/K',released:true,
   camera:'corridor',bossId:'crystalGardener',bossName:'수정의 정원사',
   rooms:Object.freeze([
-   {name:'수정의 틈',role:'teach-break',hint:'수정벽을 부숴 새로운 길을 만드세요'},
+   {name:'수정의 틈',role:'teach-break',hint:'중앙 수정 하나를 깨면 짧은 길이 열려요 · 그대로 두면 옆길로 돌며 엄폐로 쓰세요'},
    {name:'돌아오는 빛',role:'reflect',hint:'벽의 각도로 사선을 꺾거나 길을 열어 직진하세요'},
    {name:'갈라진 온실',role:'two-routes',hint:'좁은 빠른 길과 넓은 돌아가는 길 중 골라 보세요'},
    {name:'무너지는 꽃길',role:'changing-cover',hint:'엄폐가 깨진 뒤에도 피할 공간을 남기세요'},

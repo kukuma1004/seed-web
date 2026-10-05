@@ -4,7 +4,7 @@ import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
- const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false;
+ const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
@@ -44,17 +44,19 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   // The panorama spans the whole journey. Its painted paving cannot supply
   // local floor detail at that scale: keep world-sized stones on the corridor.
   floor.visible=!terrainOnly&&(course==='crosswind'||!plate.visible);
-  lanes.visible=!terrainOnly&&!plate.visible&&course==='crosswind';
+  lanes.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||laneBound!==null);
  }
  function setPlate(act,texture){if(disposed)return;plates.set(act,texture);if(course===act)syncFloor();}
- function setCourse(act){
+ function setCourse(act,{halfDepth=null}={}){
   course=act;
+  laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Never repeat the full illustration. The crosswind stone band (image
   // V=.29..63) spans +/-7.5 world units; the movable corridor stays on stone.
   const environment=EXPANSION_ENVIRONMENTS[act]||EXPANSION_ENVIRONMENTS.crosswind;
   plate.scale.set(environment.width,environment.depth,1);plate.position.set(environment.x,.02,environment.z);
   for(let i=0;i<floor.count;i++){m.makeTranslation(canyon?(Math.floor(i/4)-1)*8:Math.floor(i/4)*8-16,.035,(i%4)*4-6);floor.setMatrixAt(i,m);}floor.instanceMatrix.needsUpdate=true;floor.computeBoundingSphere();
+  for(let i=0;i<40;i++){m.makeTranslation(i*3,.045,(i%2?1:-1)*(laneBound===null?6.3:laneBound-.15));lanes.setMatrixAt(i,m);}lanes.instanceMatrix.needsUpdate=true;lanes.computeBoundingSphere();
   if(!canyon){for(const batch of coverStages)batch.count=0;shadows.count=0;}
   syncFloor();
  }

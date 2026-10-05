@@ -216,3 +216,6 @@ art-refs/
 !tools/defense-expansion-geometry-test.mjs
 !tools/linked-course-defense-test.mjs
 !tools/expansion-gate-fixtures.mjs
+
+!tools/expansion-encounter-readability-test.mjs
+!tools/prepare-expansion-ceiling-rules.mjs

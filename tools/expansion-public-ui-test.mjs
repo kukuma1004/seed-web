@@ -4,6 +4,7 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import {expansionJourneyResult,expansionRankView} from '../src/expansion-journey-result.js';
 import {EXPANSION_ACTS,expansionCircuitReleased} from '../src/act-expansion.js';
+import {EXPANSION_CIRCUIT_KILLS} from '../src/act-expansion-runtime.js';
 import {ACT} from '../src/online-ranking.js';
 import {readAccountProfile,writeAccountProfile,recordBestScore} from '../src/account-profile.js';
 import {accountRole,rankingDecision,classifySubmitError} from '../src/ranking-eligibility.js';
@@ -12,7 +13,8 @@ const both=released.EXPANSION_ACTS;
 const input={act:'crosswind',owner:'owner-A',currentOwner:'owner-A',ended:true,done:true,name:'테스터',score:20520,cycle:2,stage:4,kills:126,time:680,acts:both};
 for(const act of ['crosswind','crystalGorge']){
  const e=expansionJourneyResult({...input,act});assert(e);assert.equal(e.act,act==='crosswind'?4:5);assert.equal(Object.isFrozen(e),true);assert.equal(e.done,true);
- for(const patch of [{acts:closedExpansionActs},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:385},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
+ for(const patch of [{acts:closedExpansionActs},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:EXPANSION_CIRCUIT_KILLS*3+1},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
+ assert(expansionJourneyResult({...input,act,kills:EXPANSION_CIRCUIT_KILLS*3}),'fresh three-circuit maximum remains eligible');
  assert.equal(expansionJourneyResult({...input,act,done:false,cycle:0,stage:0,kills:10,score:200,time:10}).done,false);
 }
 assert.equal(expansionRankView('crosswind'),'crosswind');assert.equal(expansionRankView('crystalGorge'),'crystal');assert.equal(expansionRankView('austin'),null);
