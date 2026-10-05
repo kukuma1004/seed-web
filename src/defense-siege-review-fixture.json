@@ -1,0 +1,382 @@
+{
+  "version": 6,
+  "actCount": 5,
+  "crystalRoom": -1,
+  "crystalLap": 0,
+  "migratedWaves": 0,
+  "crystalWalls": [],
+  "runId": "51280ebb-7478-4a8b-a40d-13879939a5d9",
+  "bossWins": {
+    "austin": 1,
+    "alwaysbeginner": 1,
+    "tempestcarrier": 1,
+    "crosswindKeeper": 1,
+    "crystalGardener": 0
+  },
+  "pendingBosses": [
+    {
+      "boss": "austin",
+      "ordinal": 1,
+      "wave": 12
+    },
+    {
+      "boss": "alwaysbeginner",
+      "ordinal": 1,
+      "wave": 24
+    },
+    {
+      "boss": "tempestcarrier",
+      "ordinal": 1,
+      "wave": 36
+    },
+    {
+      "boss": "crosswindKeeper",
+      "ordinal": 1,
+      "wave": 48
+    }
+  ],
+  "pads": [
+    {
+      "x": 14,
+      "y": 21
+    },
+    {
+      "x": 38,
+      "y": 21
+    },
+    {
+      "x": 62,
+      "y": 21
+    },
+    {
+      "x": 86,
+      "y": 21
+    },
+    {
+      "x": 14,
+      "y": 39
+    },
+    {
+      "x": 38,
+      "y": 39
+    },
+    {
+      "x": 62,
+      "y": 39
+    },
+    {
+      "x": 86,
+      "y": 39
+    },
+    {
+      "x": 22,
+      "y": 21
+    },
+    {
+      "x": 46,
+      "y": 21
+    },
+    {
+      "x": 94,
+      "y": 21
+    },
+    {
+      "x": 6,
+      "y": 30
+    },
+    {
+      "x": 94,
+      "y": 30
+    },
+    {
+      "x": 54,
+      "y": 39
+    },
+    {
+      "x": 70,
+      "y": 39
+    },
+    {
+      "x": 6,
+      "y": 39
+    }
+  ],
+  "seed": 2,
+  "rng": 3022352964,
+  "phase": "build",
+  "wave": 48,
+  "coreHp": 15,
+  "currency": 231,
+  "time": 1145.5999999992869,
+  "kills": 1956,
+  "leaked": 0,
+  "selectedPad": 4,
+  "draftCredit": 0,
+  "nextId": 3422,
+  "towers": [
+    {
+      "id": 277,
+      "pad": 5,
+      "level": 2,
+      "laws": [
+        "chain",
+        "gravity"
+      ],
+      "lawRanks": {
+        "chain": 1,
+        "gravity": 3
+      },
+      "formId": "final-stormanchor-gravity",
+      "line": "gravity",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 27.699999999999708
+    },
+    {
+      "id": 664,
+      "pad": 0,
+      "level": 3,
+      "laws": [
+        "orbit",
+        "recall"
+      ],
+      "lawRanks": {
+        "orbit": 3,
+        "recall": 1
+      },
+      "formId": "final-ebbring-orbit",
+      "line": "recall",
+      "tier": 3,
+      "merit": 1,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 17.900000000000265
+    },
+    {
+      "id": 919,
+      "pad": 8,
+      "level": 2,
+      "laws": [
+        "burst",
+        "frost"
+      ],
+      "lawRanks": {
+        "burst": 1,
+        "frost": 3
+      },
+      "formId": "icegarden",
+      "line": "burst",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 1.6833333333333322
+    },
+    {
+      "id": 1508,
+      "pad": 1,
+      "level": 2,
+      "laws": [
+        "reflect",
+        "gravity"
+      ],
+      "lawRanks": {
+        "reflect": 1,
+        "gravity": 3
+      },
+      "formId": "final-gravitymirror-gravity",
+      "line": "reflect",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 24.14999999999991
+    },
+    {
+      "id": 1576,
+      "pad": 11,
+      "level": 2,
+      "laws": [
+        "pierce",
+        "burst"
+      ],
+      "lawRanks": {
+        "pierce": 1,
+        "burst": 1
+      },
+      "formId": "blastlance",
+      "line": "burst",
+      "tier": 2,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 10.600000000000106
+    },
+    {
+      "id": 1950,
+      "pad": 7,
+      "level": 2,
+      "laws": [
+        "pierce",
+        "split"
+      ],
+      "lawRanks": {
+        "pierce": 3,
+        "split": 1
+      },
+      "formId": "final-pierceshower-pierce",
+      "line": "split",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 11.450000000000149
+    },
+    {
+      "id": 1999,
+      "pad": 6,
+      "level": 2,
+      "laws": [
+        "chain",
+        "burst"
+      ],
+      "lawRanks": {
+        "chain": 3,
+        "burst": 1
+      },
+      "formId": "final-chainburst-chain",
+      "line": "chain",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 8.24999999999999
+    },
+    {
+      "id": 2192,
+      "pad": 2,
+      "level": 2,
+      "laws": [
+        "frost",
+        "split"
+      ],
+      "lawRanks": {
+        "frost": 3,
+        "split": 1
+      },
+      "formId": "final-rimepetal-frost",
+      "line": "frost",
+      "tier": 3,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 2.0499999999999976
+    },
+    {
+      "id": 2585,
+      "pad": 13,
+      "level": 2,
+      "laws": [
+        "pierce",
+        "split"
+      ],
+      "lawRanks": {
+        "pierce": 1,
+        "split": 1
+      },
+      "formId": "pierceshower",
+      "line": "split",
+      "tier": 2,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 12.533333333333536
+    },
+    {
+      "id": 3022,
+      "pad": 12,
+      "level": 2,
+      "laws": [
+        "reflect",
+        "split"
+      ],
+      "lawRanks": {
+        "reflect": 1,
+        "split": 1
+      },
+      "formId": "prism",
+      "line": "reflect",
+      "tier": 2,
+      "merit": 1,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 20.033333333333477
+    },
+    {
+      "id": 3023,
+      "pad": 4,
+      "level": 2,
+      "laws": [
+        "pierce",
+        "chain"
+      ],
+      "lawRanks": {
+        "pierce": 1,
+        "chain": 1
+      },
+      "formId": "thunderlance",
+      "line": "pierce",
+      "tier": 2,
+      "merit": 1,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 25.999999999999805
+    },
+    {
+      "id": 3270,
+      "pad": 10,
+      "level": 1,
+      "laws": [
+        "recall"
+      ],
+      "lawRanks": {
+        "recall": 1
+      },
+      "formId": null,
+      "line": "recall",
+      "tier": 1,
+      "merit": 1,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 0
+    },
+    {
+      "id": 3272,
+      "pad": 9,
+      "level": 1,
+      "laws": [
+        "burst"
+      ],
+      "lawRanks": {
+        "burst": 1
+      },
+      "formId": null,
+      "line": "burst",
+      "tier": 1,
+      "merit": 0,
+      "stars": 0,
+      "reinforce": 0,
+      "ultimateCharge": 0
+    }
+  ],
+  "stats": {
+    "damage": 6212981.577001884,
+    "shots": 8162,
+    "slows": 325487,
+    "pulls": 38563,
+    "chains": 276,
+    "blocked": 0
+  }
+}

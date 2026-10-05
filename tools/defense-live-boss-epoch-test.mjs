@@ -16,7 +16,7 @@ assert(view.includes('hint(bossEpochBlocked?saveNote:'));
 function restored(){const s=createDefense(4);s.wave=12;const enemy={hp:1,kind:'boss',bossId:'austin',x:10,y:10};defenseHurt(s,enemy,10);const cp=checkpointDefense(s);assert(cp);const r=restoreDefense(cp);assert(r);return r;}
 function context(state=restored()){
  const nodes=new Map(),messages=[],audio=[],data={state,paused:false,bossEpochBlocked:false,saveNote:'',uiKey:'cached',bossEpoch:()=>epoch,isolated:()=>false,setDefenseBossEpoch,stepDefense,audio:{setPaused:v=>audio.push(v)},$:key=>{if(!nodes.has(key))nodes.set(key,{textContent:'',hidden:true,setAttribute(){}});return nodes.get(key);},hint:m=>messages.push(m)};
- const ctx=vm.createContext(data);vm.runInContext(refresh,ctx);return {ctx,nodes,messages,audio};
+ const ctx=vm.createContext({freshObjective:()=>null,localSiege:false,...data});vm.runInContext(refresh,ctx);return {ctx,nodes,messages,audio};
 }
 {
  const original=restored(),pending=copy(original.pendingBosses),{ctx}=context(original);

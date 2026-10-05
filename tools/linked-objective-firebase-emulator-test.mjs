@@ -1,0 +1,33 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import {createMockUserToken} from '@firebase/util';
+assert.equal(process.env.FIREBASE_DATABASE_EMULATOR_HOST,'127.0.0.1:19004');
+const project='demo-seed-linked',base='http://127.0.0.1:19004',owner='objective-emulator-owner';
+const token=(uid,provider='password')=>createMockUserToken({sub:uid,firebase:{sign_in_provider:provider}},project);
+async function request(path,{method='GET',value,auth=token(owner),admin=false,headers={}}={}){
+ const url=new URL(base+'/'+path+'.json');url.searchParams.set('ns',project);if(!admin&&auth)url.searchParams.set('auth',auth);
+ return fetch(url,{method,headers:{...headers,...(admin?{Authorization:'Bearer owner'}:{}),'Content-Type':'application/json'},...(value===undefined?{}:{body:JSON.stringify(value)})});
+}
+const allow=async(path,options)=>{const r=await request(path,options);assert(r.ok,`${path}: ${r.status} ${await r.clone().text()}`);return r;};
+const deny=async(path,options)=>{const r=await request(path,options);assert.equal(r.status,401,`${path}: expected access denial`);};
+const rules=JSON.parse(readFileSync(process.argv[2]||'artifacts/firebase-objective-prepared.json','utf8'));
+await allow('.settings/rules',{method:'PUT',value:rules,admin:true});
+await allow('',{method:'PUT',value:null,admin:true});
+const path='seedSurvivalSaves/'+owner;
+const payload=(version,revision)=>({version,revision,updatedAt:{'.sv':'timestamp'},checkpoint:JSON.stringify({test:'rule-boundary',version})});
+await allow(path,{method:'PUT',value:payload(1,1)});
+await allow(path,{method:'PUT',value:payload(1,2)});
+await allow(path,{method:'PUT',value:payload(2,3)});
+await deny(path,{method:'PUT',value:payload(1,4)});
+await deny(path,{method:'PUT',value:payload(2,3)});
+await deny(path,{method:'PUT',value:payload(2,4),auth:token('foreign-owner')});
+await deny(path,{method:'PUT',value:payload(2,4),auth:token(owner,'anonymous')});
+await deny(path,{method:'PUT',value:payload(2,4),auth:null});
+await deny(path,{auth:token('foreign-owner')});
+await deny(path,{method:'DELETE'});
+const read=await allow(path,{headers:{'X-Firebase-ETag':'true'}}),etag=read.headers.get('etag');assert(etag);
+await allow(path,{method:'PUT',value:payload(2,4),headers:{'if-match':etag}});
+const stale=await request(path,{method:'PUT',value:payload(2,5),headers:{'if-match':etag}});assert.equal(stale.status,412);
+assert.equal((await (await allow(path)).json()).version,2);
+assert.deepEqual(await (await allow('.settings/rules',{admin:true})).json(),rules);
+console.log('Local Firebase emulator: legacy updates, v1->v2, no downgrade, owner-only access, anonymous denial, tombstone retention, strict revision and ETag412 PASS. No real player data or real auth used.');

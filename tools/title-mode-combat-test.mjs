@@ -69,7 +69,7 @@ for(const [file,start,end,functions] of [
  ['seed-defense-view.js','function save(){','function sound(',['save','clearSave']]
 ]){
  const source=readFileSync(new URL('../src/'+file,import.meta.url),'utf8');let blocked=true,writes=0,reads=0,credits=0;const original='original-account-checkpoint';
- const ctx=vm.createContext({isolated:()=>blocked,storage:{getItem(){reads++;return original;},setItem(){writes++;},removeItem(){writes++;}},state:{phase:'build'},actCount:3,canWriteDefensePreparation:()=>true,s:{},key:'save',saveKey:'save',owner:'same',ADVENTURE_SAVE_KEY:'old',adventureCheckpoint:()=>({}),adventureTombstone:()=>({}),checkpointDefense:()=>({}),restoreAdventure:()=>({}),adventureCredit:()=>1,onCredit:()=>{credits++;return '';},preparation:null,saveNote:'',creditNote:''});
+ const ctx=vm.createContext({localSiege:false,isolated:()=>blocked,storage:{getItem(){reads++;return original;},setItem(){writes++;},removeItem(){writes++;}},state:{phase:'build'},actCount:3,canWriteDefensePreparation:()=>true,s:{},key:'save',saveKey:'save',owner:'same',ADVENTURE_SAVE_KEY:'old',adventureCheckpoint:()=>({}),adventureTombstone:()=>({}),checkpointDefense:()=>({}),restoreAdventure:()=>({}),adventureCredit:()=>1,onCredit:()=>{credits++;return '';},preparation:null,saveNote:'',creditNote:''});
  vm.runInContext(source.slice(source.indexOf(start),source.indexOf(end)),ctx);for(const name of functions)ctx[name]();assert.equal(reads,0);assert.equal(writes,0);assert.equal(credits,0);blocked=false;ctx[functions.at(-1)]();assert.equal(writes,1);
  // Evaluate the real isolation predicate, including the original guest local
  // checkpoint path; guest may save, but never receives account title stats.

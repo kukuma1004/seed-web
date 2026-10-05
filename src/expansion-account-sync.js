@@ -1,5 +1,5 @@
 import {EXPANSION_ACTS} from './act-expansion.js';
-import {createExpansionAccountSaveStore,expansionAccountEligible,validExpansionAccountSave,EXPANSION_ACCOUNT_SAVE_LIMIT} from './expansion-account-save.js';
+import {createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountObjective,expansionAccountObjectiveEligible,validExpansionAccountSave,EXPANSION_ACCOUNT_SAVE_LIMIT} from './expansion-account-save.js';
 import {acquireExpansionSaveLease} from './expansion-save-lease.js';
 
 const META='seed-expansion-account-sync-v1:';
@@ -54,6 +54,10 @@ export function createExpansionAccountSync({storage,account,act,databaseURL,fetc
    if(!lease.active())throw Error('lease');
    const local=read(),localBytes=bytes(local),remoteBytes=bytes(remote.record);
    const conflict=()=>set('conflict',owner,{local,remote:remote.record,expected:{revision:remote.revision,local:localBytes,etag}});
+   const objectiveCurrent=()=>{if([local,remote.record].some(v=>v&&!expansionAccountObjectiveEligible(v,facts(owner))))throw Error('ineligible');};
+   objectiveCurrent();
+   const verifiedFreshPull=Boolean(local?.version===1&&local.entry.ended&&remote.record?.version===2&&local.entry.id!==remote.record.entry.id&&remote.record.previousObjective===localBytes&&beforeMeta.record===localBytes);
+   if(local&&remote.record&&expansionAccountObjective(local)!==expansionAccountObjective(remote.record)&&!verifiedFreshPull&&!(remote.record.entry.ended&&local.entry.id!==remote.record.entry.id&&local.previousObjective===remoteBytes&&beforeMeta.record===remoteBytes))return conflict();
    if(remote.revision<beforeMeta.revision)return conflict();
    if(localBytes===remoteBytes){ack(owner,remote.revision,local);return set(local?'synced':'empty',owner);}
    if(choice!==null&&!['local','remote'].includes(choice))throw Error('invalid');
@@ -64,7 +68,7 @@ export function createExpansionAccountSync({storage,account,act,databaseURL,fetc
    if(pull){
     if(!remote.record)return conflict(); // Missing server data cannot erase a local run.
     if(!allowPull||isActive())return set('remote',owner);
-    const replaced=store.replace(local,remote.record,{allowDifferentRun:choice==='remote',allowEnded:dead,allowFork:choice==='remote'||clean});
+    const replaced=store.replace(local,remote.record,{allowDifferentRun:choice==='remote'||verifiedFreshPull,allowObjectiveParent:verifiedFreshPull,allowEnded:dead,allowFork:choice==='remote'||clean});
     if(!replaced.ok)return replaced.reason==='conflict'?conflict():set(replaced.reason==='storage'?'storage':'invalid',owner);
     current(owner);ack(owner,remote.revision,remote.record);return set('synced',owner,{pulled:true});
    }
@@ -76,13 +80,13 @@ export function createExpansionAccountSync({storage,account,act,databaseURL,fetc
     if(previous!==null){let value;try{value=JSON.parse(previous);}catch{throw Error('invalid');}if(!committed(value,owner,act))throw Error('invalid');}
     persist(store.key+':previous-cloud',remoteBytes);
    }
-   current(owner);if(!lease.active())throw Error('lease');
+   current(owner);objectiveCurrent();if(!lease.active())throw Error('lease');
    // Saving during GET/backup never licenses uploading a stale local snapshot.
    if(bytes(read())!==localBytes)return set('local',owner);
    const revision=remote.revision+1;
    const body={version:1,ownerUid:owner,act,revision,checkpoint:localBytes};
    const put=await fetchImpl(url,{method:'PUT',headers:{'Content-Type':'application/json','if-match':etag},body:JSON.stringify(body),signal:controller.signal,cache:'no-store'});
-   current(owner);
+   current(owner);objectiveCurrent();if(!lease.active())throw Error('lease');
    if(put.status===412)return conflict();
    if(!put.ok)throw Error(put.status===401||put.status===403?'permission':'offline');
    ack(owner,revision,local);return set(bytes(read())===localBytes?'synced':'local',owner);

@@ -9,6 +9,7 @@ import {createSpatialIndex} from '../src/spatial-index.js';
 import {constrainToArena} from '../src/arena.js';
 import {baseSlideFor,stadiumBaseAt,BASE_SLIDE} from '../src/stadium.js';
 import {emptyInventory,addItem} from '../src/inventory.js';
+import {CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from '../src/expansion-objective.js';
 
 // Run the actual integration functions against the real spawn/grid/inventory
 // rules. No renderer/network/browser is needed to check their state transitions.
@@ -17,7 +18,7 @@ function between(start,end){const i=main.indexOf(start),j=main.indexOf(end,i+sta
 const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:''});return dom.get(id);};
 let bossSpawns=0,hits=0;
 const session=createSurvivalSession(4123);session.nextSupply=60;
-const ctx=vm.createContext({THREE,SURVIVAL,buildLevel,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
+const ctx=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSiegeActive:()=>false,THREE,SURVIVAL,buildLevel,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
  levels:new Map(),heldForms:new Map(),enemies:[],expansionTerrain:null,player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
  spawnSurvivalBoss(){bossSpawns++;},enemyIndex:createSpatialIndex(2.5),separationEnemies:[],hitPlayer(a){hits+=a;}});
 vm.runInContext(between('function spawnSurvivalEnemy(', 'function spawnSurvivalBoss(')+between('function updateSurvival(', 'function finishSurvival('),ctx);
@@ -132,7 +133,7 @@ assert(main.includes('survivalBase=survivalSession?.act===1'));
 
 // Exercise the real world transition. Keep build/progress; discard old hazards.
 let nextWorld=0,released=0;
-const travel=vm.createContext({queueMicrotask:()=>{},survivalTitleEvents,SURVIVAL_TITLE_LIMIT,
+const travel=vm.createContext({survivalSiegeApi:null,survivalSiege:null,queueMicrotask:()=>{},survivalTitleEvents,SURVIVAL_TITLE_LIMIT,
  survivalSession:{...createSurvivalSession(9),act:1,won:true,time:600,bossesDefeated:2},advanceSurvivalAct,
  enemies:[{id:1}],fallen:[{e:{id:2}}],shots:[{ob:{id:3}}],enemyShots:[{ob:{id:4}}],effects:[{ob:{id:5}}],releaseEnemy(){released++;},release(){released++;},
  heldForms:new Map([['prism',4]]),levels:new Map([['chain',3]]),bankedUpgrades:12,choiceKills:123,choicesTaken:25,score:54321,

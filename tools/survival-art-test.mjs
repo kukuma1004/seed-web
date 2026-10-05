@@ -82,6 +82,7 @@ try{
  }
  assert.equal(art.state().maxBodyBatches,12);assert.equal(art.state().capacity,3);
  art.setReadability(true);art.setAct(0);assert.equal(floor.material.map,surface);assert.deepEqual(Array.from(floor.geometry.attributes.uv.array),originalFloorUv);assert.deepEqual(Array.from(floor.geometry.attributes.color.array),originalFloorColors);art.setActive(false);
+ const previousVisibility=root.children.map(o=>o.visible),previousObjects=[...root.children];art.setSceneryVisible(false);art.setSceneryVisible(false);assert.equal(floor.visible,false);art.setSceneryVisible(true);assert.deepEqual(root.children.map(o=>o.visible),previousVisibility,'temporary siege scenery suppression restores the exact prior mode');assert.deepEqual(root.children,previousObjects,'scenery reuse allocates no new meshes');
  const resources=new Set();root.traverse(o=>{if(o.geometry)resources.add(o.geometry);if(o.material)resources.add(o.material);});for(const t of loaded)resources.add(t);
  const disposed=new Map();for(const resource of resources)resource.addEventListener('dispose',()=>disposed.set(resource,(disposed.get(resource)||0)+1));
  art.dispose();art.dispose();assert.deepEqual(scene.children,[existing]);assert.equal(art.state().disposed,true);

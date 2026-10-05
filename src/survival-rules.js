@@ -1,6 +1,7 @@
 // Pure rules for the separate survival challenge. The caller owns actors and
 // only ticks while playing; menus and law choices therefore freeze the clock.
 import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
+import {EXPANSION_OBJECTIVES,CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from './expansion-objective.js';
 export const SURVIVAL=Object.freeze({
  duration:180,supplyInterval:60,
  arena:Object.freeze({shape:'rect',halfWidth:24,halfDepth:20,start:Object.freeze({x:0,z:0})}),
@@ -19,9 +20,9 @@ const bounded=(value,limit,fallback=0)=>Number.isFinite(value)?Math.max(0,Math.m
 const count=(value,limit=1000000)=>Math.floor(bounded(value,limit));
 
 export const survivalActCount=session=>session?.actCount===5?5:3;
-export function createSurvivalSession(seed=1,{actCount=3}={}){
+export function createSurvivalSession(seed=1,{actCount=3,objective=null}={}){
  const initial=Number.isFinite(seed)?seed>>>0:1;
- return {seed:initial,rngState:initial,...(actCount===5?{actCount:5,crosswindBossWins:0,crystalBossWins:0}:{}),time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
+ return {seed:initial,rngState:initial,...(actCount===5?{actCount:5,crosswindBossWins:0,crystalBossWins:0,...(objective==='crystal-defense-v1'?{objective}:{})}:{}),time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
 }
 
 export const SURVIVAL_ACTS=Object.freeze([
@@ -225,11 +226,11 @@ export function readSurvivalRecord(storage){
 
 // A device-local personal best, independent of accounts, rankings and saves.
 // bestTime is longest survival time, including the final boss battle.
-export function recordSurvivalResult(storage,result={}, {acts=EXPANSION_ACTS,inspection=false}={}){
+export function recordSurvivalResult(storage,result={}, {acts=EXPANSION_ACTS,inspection=false,objectives=EXPANSION_OBJECTIVES}={}){
  // Closed expansion, inspection and accelerated outcomes never become public
  // records. Promotion lets genuine five-act play share best kills/time/bosses.
  const five=result?.actCount===5;
- if(inspection||result?.lab||result?.benchmark||five&&!expansionCircuitReleased(acts))return readSurvivalRecord(storage);
+ if(inspection||result?.lab||result?.benchmark||result?.siegeReview||five&&!expansionCircuitReleased(acts)||result?.objective&&(result.objective!==CRYSTAL_DEFENSE_OBJECTIVE||!expansionObjectiveReleased('crystalGorge',result.objective,objectives)))return readSurvivalRecord(storage);
  const previous=readSurvivalRecord(storage),source=result&&typeof result==='object'?result:{};
  const loops=count(source.completedLaps),clearTime=loops&&source.fastestLap>=SURVIVAL.duration*(five?5:3)?bounded(source.fastestLap,86400):0;
  const record=normalizeRecord({...previous,bestKills:Math.max(previous.bestKills,count(source.kills)),bestTime:Math.max(previous.bestTime,bounded(source.time,86400)),wins:previous.wins+(five?0:loops),bestBosses:Math.max(previous.bestBosses,count(source.bossesDefeated)),runs:previous.runs+1,fastestClear:!five&&clearTime?Math.min(previous.fastestClear||clearTime,clearTime):previous.fastestClear,...(five?{fiveWins:(previous.fiveWins||0)+loops,fastestFiveClear:clearTime?Math.min(previous.fastestFiveClear||clearTime,clearTime):previous.fastestFiveClear||0}:{})});

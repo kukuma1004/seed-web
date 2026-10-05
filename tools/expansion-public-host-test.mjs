@@ -6,7 +6,7 @@ import vm from 'node:vm';
 import * as THREE from 'three';
 import * as rules from '../src/expansion-journey.js';
 import {createExpansionEntry,createExpansionSaveStore,expansionExitCheckpoint} from '../src/expansion-run-save.js';
-import {createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountExitCheckpoint,expansionAccountSaveKey,expansionAccountSaveLockKey} from '../src/expansion-account-save.js';
+import {createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountObjectiveEligible,expansionAccountExitCheckpoint,expansionAccountSaveKey,expansionAccountSaveLockKey} from '../src/expansion-account-save.js';
 import {createExpansionAccountSync} from '../src/expansion-account-sync.js';
 import {acquireExpansionSaveLease} from '../src/expansion-save-lease.js';
 import {normalizeRelics} from '../src/relics.js';
@@ -23,7 +23,7 @@ const source=fs.readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const launched=source.slice(source.indexOf('async function startPublicExpansionJourney('),source.indexOf('\nfunction spawnExpansionActor(')).replace("import('./expansion-journey.js')",'Promise.resolve(__rules)').replace("import('./expansion-journey-view.js')",'Promise.resolve(__view)').replaceAll('import.meta.env.BASE_URL',"'/'");
 const helpers=source.slice(source.indexOf('const expansionPublicFacts='),source.indexOf('const expansionTargets='));
 const restart=source.slice(source.indexOf('function restart('),source.indexOf('\nfunction togglePause('));
-const released={...rules,EXPANSION_ACTS:openExpansionActs};
+const released={...rules,EXPANSION_ACTS:openExpansionActs,freshExpansionObjective:()=>null};
 const closedRules={...rules,EXPANSION_ACTS:closedExpansionActs};
 const run={version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:3,elapsed:15,rules:[],mutated:[],forms:{returnblade:5},inventory:{potion:3,tonic:2,wind:1,shell:1,sprout:1},score:300,choicesTaken:2,choiceKills:3};
 const clone=v=>JSON.parse(JSON.stringify(v));
@@ -37,10 +37,10 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
  const fetchImpl=async(url,o)=>{if(fetchFail)throw Error('offline');assert.match(url,/seedExpansionSaves\/owner-A\/(crosswind|crystalGorge)\.json/);if(o.method==='PUT'){stats.puts++;if(o.headers['if-match']!==String(etag))return {ok:false,status:412};remote=JSON.parse(o.body);etag++;return {ok:true,status:200};}stats.gets++;const value=clone(remote),tag=String(etag);if(getHook){const hook=getHook;getHook=null;await hook();}return {ok:true,status:200,json:async()=>value,headers:{get:()=>tag}};};
  const c=vm.createContext({bossRecordReady:()=>true,protectJourneyBossReceipts:()=>true,account:{user:()=>({uid:'owner-A'})},journeyRunId,currentJourneyOwner:null,currentJourneyRunId:null,pendingJourneyBossTitles:[],__rules:acts,__view:{},console,setTimeout,clearTimeout,Promise,localInspection:inspection,expansionLaunch:0,expansionApi:acts,expansionOwner:()=>owner,
   expansionSaveLease:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionPendingBossCheckpoint:null,
-  rawStorage:storage,currentBossEpoch:()=>null,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountExitCheckpoint,createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS,awardModeBoss:()=>true,
+  rawStorage:storage,currentBossEpoch:()=>null,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountObjectiveEligible,expansionAccountExitCheckpoint,createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS,awardModeBoss:()=>true,
   createExpansionAccountSync:opts=>createExpansionAccountSync({...opts,fetchImpl}),account:{user:()=>({uid:owner,isAnonymous:anonymous}),tokenSession:async()=>({uid:owner,idToken:'token'})},FIREBASE_APP:{databaseURL:'https://example.invalid'},
   acquireExpansionSaveLease:(act,id)=>acquireExpansionSaveLease(act,id,{locks:manager}),expansionCrystalTexture:{},expansionJourneyView:{setActive(){}},scene:{},stone:{},prepareExpansionEnvironment:prepare,prepareExpansionCover:async()=>{},
-  mirrorSession:null,survivalSession:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:'garden',region:'garden',maintenanceOn:false,gameplayPaused:()=>false,showSeasonPause(){},showMaintenance(){},showIntro(){c.mode='ready';},isAct2:r=>r==='stadium',isAct3:r=>r==='skyway',
+  mirrorSession:null,survivalSession:null,survivalSiege:null,survivalSiegeOwner:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:'garden',region:'garden',maintenanceOn:false,gameplayPaused:()=>false,showSeasonPause(){},showMaintenance(){},showIntro(){c.mode='ready';},isAct2:r=>r==='stadium',isAct3:r=>r==='skyway',
   enemies:[],fallen:[],shots:[],enemyShots:[],effects:[],player:{position:new THREE.Vector3(),userData:{}},releaseEnemy(){},release(){},$,
   rankSerial:0,expansionJourneyResult,expansionRankView,formatScore,formatTime,playerName:'테스터',buildRecord:()=>null,
   stage:0,mode:'ready',paused:false,hp:100,inventory:clone(run.inventory),rerollUsed:false,chosen:new Set(),mutated:new Set(),levels:new Map(),heldForms:new Map(),mutations:new Map(),cycle:0,

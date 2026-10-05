@@ -11,6 +11,7 @@ import {defenseExpansionRankProgress,defenseRankEntry} from '../src/defense-rank
 import {recordModeBossVictory} from '../src/mode-boss-titles.js';
 import {readAccountProfile,writeAccountProfile,ACCOUNT_PROFILE_KEY} from '../src/account-profile.js';
 import {collectCloudSnapshot,mergeCloudSnapshots} from '../src/cloud-save.js';
+import {routeSurvivalSaveStore} from '../src/survival-save.js';
 
 // Actual pure engines + actual main bridge in a VM. No auth/network/GPU claims.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
@@ -22,7 +23,7 @@ function host(storage,session=createSurvivalSession(17)){
  const nodes=new Map(),owner={uid:'a'},save=createSurvivalSaveStore(storage,'a'),init=save.write(snapshot(session),{fresh:true});assert(init.ok);
  const ctx=vm.createContext({currentBossEpoch:()=>null,survivalSession:session,survivalSaveToken:{id:init.value.id,revision:init.value.revision,writeId:init.value.writeId,owner:'a'},localInspection:false,developerRun:false,
   settleSurvivalTitles,queueSurvivalTitle,survivalTitleEvents,captureSurvivalSession,SURVIVAL_TITLE_LIMIT,createSurvivalSaveStore,
-  rawStorage:storage,survivalOwner:()=>owner.uid,survivalStore:()=>createSurvivalSaveStore(storage,owner.uid),survivalCloud:{changed(){}},survivalPendingEnd:null,survivalSaveMessage:'',
+  routeSurvivalSaveStore,survivalSaveContext:{currentOwner:()=>owner.uid,inspection:()=>false},rawStorage:storage,survivalOwner:()=>owner.uid,survivalStore:()=>createSurvivalSaveStore(storage,owner.uid),survivalCloud:{changed(){}},survivalPendingEnd:null,survivalSaveMessage:'',
   awardModeBoss:(mode,runId,boss,ordinal,practice)=>practice||recordModeBossVictory(storage,{mode,runId,boss,ordinal,practice}).saved,
   settleSurvivalKill,survivalBossOrdinal,survivalAct,score:0,fallen:[],enemyShots:[],invuln:0,audio:{play(){}},perf:{event(){}},PE:{enemyDeath:0},$:id=>{if(!nodes.has(id))nodes.set(id,{});return nodes.get(id);},release(){},releaseEnemy(){throw Error('unexpected ordinary actor');}
  });
@@ -64,8 +65,9 @@ for(const failAt of [0,1,2]){
  const storage=memory(),h=host(storage);storage.fail=true;h.kill();
  const saved=h.checkpoint();
  h.ctx.survivalPendingEnd={...h.ctx.survivalSaveToken,session:captureSurvivalSession(h.ctx.survivalSession)};
- h.owner.uid='b';assert(h.ctx.persistSurvivalEnd());
+ h.owner.uid='b';assert.equal(h.ctx.persistSurvivalEnd(),false);assert(h.ctx.survivalPendingEnd,'unpaid end remains pending until its original account returns');
  assert.equal(createSurvivalSaveStore(storage,'b').readRecord(),null,'UID change cannot write a death marker to the other account');
+ h.owner.uid='a';assert(h.ctx.persistSurvivalEnd());
  const ended=h.save.readRecord();assert(ended.ended&&validSurvivalRecord(ended));assert.equal(ended.pendingBossTitles.length,1);assert.equal(h.save.read(),null);
  assert.equal(h.save.write(snapshot(createSurvivalSession(19),'new-run'),{fresh:true}).reason,'rewards','a new run cannot erase unpaid ended rewards');
  h.owner.uid='a';assert.equal(h.ctx.retryStoredSurvivalTitles(),false);assert.equal(h.save.readRecord().pendingBossTitles.length,1);

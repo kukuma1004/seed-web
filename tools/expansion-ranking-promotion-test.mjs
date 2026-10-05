@@ -7,6 +7,7 @@ import {createSurvivalSession} from '../src/survival-rules.js';
 import {survivalExpansionRankProgress} from '../src/survival-ranking.js';
 import {defenseRankEntry,defenseExpansionRankProgress,validDefenseRank,defenseRankScore} from '../src/defense-ranking.js';
 import {migrateSurvivalToFiveActs} from '../src/survival-expansion.js';
+import {CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from '../src/expansion-objective.js';
 
 const both=openExpansionActs;
 for(const acts of [closedExpansionActs,{...both,crosswind:{...both.crosswind,released:false}},{...both,crystalGorge:{...both.crystalGorge,released:false}}]){
@@ -37,7 +38,7 @@ const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=
 assert(start>=0&&end>start,'actual survival launch prefix must be present');
 const prefix=main.slice(start,end)+' return {fiveActs,saved};\n}';
 function host({released=false,inspection=false,ready=true}={}){
- let owner='A',resolve;const toast={textContent:''},c=vm.createContext({bossRecordReady:()=>true,expansionLaunch:0,releaseExpansionSaveLease:()=>{},publicCircuitActCount:()=>released?5:3,localInspection:inspection,expansionJourneyView:ready?{}:null,survivalOwner:()=>owner,prepareExpansionAssets:()=>new Promise(r=>resolve=r),migrateSurvivalToFiveActs,$:()=>toast});
+ let owner='A',resolve;const toast={textContent:''},c=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,bossRecordReady:()=>true,expansionLaunch:0,releaseExpansionSaveLease:()=>{},publicCircuitActCount:()=>released?5:3,localInspection:inspection,expansionJourneyView:ready?{}:null,survivalOwner:()=>owner,prepareExpansionAssets:()=>new Promise(r=>resolve=r),migrateSurvivalToFiveActs,$:()=>toast});
  vm.runInContext(prefix,c);return {c,toast,setOwner:v=>owner=v,complete:()=>{c.expansionJourneyView={};resolve();}};
 }
 const oldSave={id:'kept-run',revision:4,session:{...createSurvivalSession(3),time:900,act:2,lap:1,completedLaps:1,fastestLap:800},progress:{forms:{returnblade:5},inventory:{tonic:2},hp:45}};

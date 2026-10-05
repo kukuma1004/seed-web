@@ -121,7 +121,7 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
  #seed-defense .td-top{grid-template-columns:minmax(0,1fr) 58px 46px 64px 44px}
  #seed-defense .td-meters{grid-column:1/6}
  #seed-defense #td-auto-skill{grid-column:2;grid-row:1;font-size:10px;padding:4px}
- #seed-defense #td-speed{grid-column:3;grid-row:1}
+ #seed-defense #td-speed{grid-column:3;grid-row:1;white-space:nowrap;padding-inline:2px}
  #seed-defense #td-book{grid-column:4;grid-row:1}
  #seed-defense #td-pause{grid-column:5;grid-row:1}
 }
@@ -129,3 +129,10 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
 #seed-defense .td-rank-img{grid-row:1/3;width:44px;height:44px;background-size:400% 100%;background-repeat:no-repeat;filter:drop-shadow(0 2px 4px #000a)}
 
 #seed-defense .td-preview-note{position:absolute;left:12px;bottom:12px;z-index:8;max-width:calc(100% - 24px);padding:6px 10px;border-radius:8px;background:#071b19e8;color:#f3d69c;font-size:11px;pointer-events:none}
+#seed-defense .td-siege-nodes{position:absolute;inset:0;pointer-events:none;z-index:4}
+#seed-defense .td-siege-nodes[hidden],#seed-defense .td-siege-crystal[hidden]{display:none}
+#seed-defense .td-siege-crystal{position:absolute;transform:translate(-50%,-50%);width:48px;height:60px;min-width:44px;min-height:44px;padding:0;border:1px solid #b7d2c377;border-radius:14px;background-color:#132c2788;background-size:42px 42px;background-repeat:no-repeat;background-position:center 2px;pointer-events:auto;touch-action:manipulation;cursor:pointer;box-shadow:0 3px 9px #04171477}
+#seed-defense .td-siege-crystal span{position:absolute;bottom:2px;left:0;right:0;font-size:12px;font-weight:700;color:#fff0ba;text-shadow:0 1px 3px #02140f}
+#seed-defense .td-siege-crystal:hover,#seed-defense .td-siege-crystal:focus-visible{border-color:#f5e1a6;outline:2px solid #e4cc8588;outline-offset:2px}
+#seed-defense .td-siege-crystal:active{transform:translate(-50%,-50%) scale(.94)}
+#seed-defense .td-siege-crystal:disabled{opacity:.5;cursor:default}

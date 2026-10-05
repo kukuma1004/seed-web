@@ -1,3 +1,4 @@
+import {CRYSTAL_DEFENSE_OBJECTIVE,defenseObjectiveGather,validDefenseObjectiveGather} from './defense-objective.js';
 import {DEFENSE_FORMS,FUSIONS,defenseFusionOf,defenseFormKind,defenseRankTotal,defenseFormStats,getDefenseEvolutionOptions,validDefenseForm} from './seed-defense-catalog.js';
 import {hitCrystalWall} from './act-expansion.js';
 import {titleCombatBonuses,titleCriticalMultiplier,TITLE_CRIT_DAMAGE} from './title-combat-bonuses.js';
@@ -38,7 +39,7 @@ export const DEFENSE_LAWS = Object.freeze({
 const IDS=Object.keys(DEFENSE_LAWS), SEGMENTS=PATH.slice(1).map((p,i)=>Math.hypot(p.x-PATH[i].x,p.y-PATH[i].y));
 export const DEFENSE_PATH_LENGTH=SEGMENTS.reduce((a,b)=>a+b,0);
 export const defenseActCount=s=>s?.actCount===5?5:3;
-export const defensePath=s=>s?.actCount===5&&Math.floor((Math.max(1,s.wave||0)-1)/12)%5===3?DEFENSE_CROSSWIND_PATH:PATH;
+export const defensePath=s=>s?.actCount===5&&Math.floor((Math.max(1,(s.wave||0)+((s.siegeReview||s.objective)&&s.phase==='build'?1:0))-1)/12)%5===3?DEFENSE_CROSSWIND_PATH:PATH;
 export const defensePathLength=s=>defensePath(s)===DEFENSE_CROSSWIND_PATH?144:DEFENSE_PATH_LENGTH;
 const dist2=(a,b)=>(a.x-b.x)**2+(a.y-b.y)**2;
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -55,7 +56,7 @@ export function setDefenseBossEpoch(state,epoch){
  // epoch they actually earned, including legacy receipts with no epoch.
  state.bossEpoch=epoch;return true;
 }
-export function createDefense(seed=1,{actCount=3,bossEpoch=null}={}){if(bossEpoch!==null&&!validBossEpoch(bossEpoch))throw Error('invalid-boss-epoch');const n=Number.isFinite(seed)?seed>>>0:1;const s={version:6,...(bossEpoch===null?{}:{bossEpoch}),...(actCount===5?{actCount:5,crystalWalls:[],crystalRoom:-1,crystalLap:0,migratedWaves:0}:{}),runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0,...(actCount===5?{crosswindKeeper:0,crystalGardener:0}:{})},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:90,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:0,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'땅을 골라 씨앗을 심으세요. 무작위 법칙이 싹터요.'};s.offers=getDefenseOffers(s);return s;}
+export function createDefense(seed=1,{actCount=3,bossEpoch=null,objective=null}={}){if(objective!==null&&(objective!==CRYSTAL_DEFENSE_OBJECTIVE||actCount!==5))throw Error('invalid-defense-objective');if(bossEpoch!==null&&!validBossEpoch(bossEpoch))throw Error('invalid-boss-epoch');const n=Number.isFinite(seed)?seed>>>0:1;const s={version:objective?7:6,...(objective?{objective,objectiveGather:null}:{}),...(bossEpoch===null?{}:{bossEpoch}),...(actCount===5?{actCount:5,crystalWalls:[],crystalRoom:-1,crystalLap:0,migratedWaves:0}:{}),runId:globalThis.crypto?.randomUUID?.()||`${Date.now()}-${n}-${Math.floor(Math.random()*1e9)}`,bossWins:{austin:0,alwaysbeginner:0,tempestcarrier:0,...(actCount===5?{crosswindKeeper:0,crystalGardener:0}:{})},pendingBosses:[],pads:PADS.map(p=>({...p})),seed:n,rng:n,phase:'build',wave:0,coreHp:20,currency:90,time:0,towers:[],enemies:[],shots:[],effects:[],fields:[],offers:[],kills:0,selectedPad:0,draftCredit:0,nextId:1,spawned:0,spawnTimer:0,waveTime:0,leaked:0,stats:{damage:0,shots:0,slows:0,pulls:0,chains:0,blocked:0},lastEvent:'땅을 골라 씨앗을 심으세요. 무작위 법칙이 싹터요.'};s.offers=getDefenseOffers(s);return s;}
 export function defenseUpgradeCost(t){return t&&t.level<5?25+t.level*15:Infinity;}
 export function defenseTowerName(t){return (!t?'빈 화단':t.formId?DEFENSE_FORMS[t.formId].name:t.laws.length?`${DEFENSE_LAWS[t.laws[0]].name} 씨앗`:'씨앗')+(t?.stars?` ★${t.stars}`:'');}
 export function defenseTowerStats(t){
@@ -247,11 +248,12 @@ export function stepDefense(s,dt,combat=null){if(!s||!Number.isFinite(dt)||dt<=0
 export {hurt as defenseHurt,effect as defenseEffect,slow as defenseSlow,random as defenseRandom};
 
 // Between-wave snapshots only. A combat adapter is never serialized.
-export function checkpointDefense(s){if(!canBuild(s)||Object.hasOwn(s,'bossEpoch')&&!validBossEpoch(s.bossEpoch))return null;return {version:6,...(Object.hasOwn(s,'bossEpoch')?{bossEpoch:s.bossEpoch}:{}),...(s.actCount===5?{actCount:5,crystalRoom:s.crystalRoom,crystalLap:s.crystalLap,migratedWaves:s.migratedWaves||0,crystalWalls:(s.crystalWalls||[]).map(w=>({id:w.id,hp:w.hp}))}:{}),runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,line:t.line||t.laws[0],tier:defenseTierOf(t),merit:t.merit||0,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
+export function checkpointDefense(s){if(['siegeReview','inspectionPreview','practice','developerRun','lab'].some(k=>Boolean(s?.[k])))return null;if(!canBuild(s)||Object.hasOwn(s,'bossEpoch')&&!validBossEpoch(s.bossEpoch))return null;return {version:s.objective?7:6,...(s.objective?{objective:s.objective,objectiveGather:defenseObjectiveGather(s)?{...defenseObjectiveGather(s)}:null}:{}),...(Object.hasOwn(s,'bossEpoch')?{bossEpoch:s.bossEpoch}:{}),...(s.actCount===5?{actCount:5,crystalRoom:s.crystalRoom,crystalLap:s.crystalLap,migratedWaves:s.migratedWaves||0,crystalWalls:(s.crystalWalls||[]).map(w=>({id:w.id,hp:w.hp}))}:{}),runId:s.runId,bossWins:{...s.bossWins},pendingBosses:s.pendingBosses.map(e=>({...e})),pads:s.pads.map(p=>({...p})),seed:s.seed,rng:s.rng,phase:s.phase,wave:s.wave,coreHp:s.coreHp,currency:s.currency,time:s.time,kills:s.kills,leaked:s.leaked,selectedPad:s.selectedPad,draftCredit:s.draftCredit,nextId:s.nextId,towers:s.towers.map(t=>({id:t.id,pad:t.pad,level:t.level,laws:[...t.laws],lawRanks:{...t.lawRanks},formId:t.formId,line:t.line||t.laws[0],tier:defenseTierOf(t),merit:t.merit||0,stars:t.stars||0,reinforce:t.reinforce,ultimateCharge:t.ultimateCharge})),stats:{...s.stats}};}
 export function restoreDefense(raw){
  // 합체 방식(v5)부터는 예전 준비 저장(법칙 고르기 방식)을 불러오지 않는다.
  // 계급장 방식(v6). 합체 방식(v5) 저장은 계급으로 바꿔 불러온다(형태 종류 → 계급, 첫 법칙 → 계열).
- try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||![5,6].includes(r.version)||r.phase!=='build')return null;
+ try{const r=typeof raw==='string'?JSON.parse(raw):raw;if(!r||['siegeReview','inspectionPreview','practice','developerRun','lab'].some(k=>Boolean(r[k]))||![5,6,7].includes(r.version)||r.phase!=='build')return null;
+ if(r.version===7?(r.objective!==CRYSTAL_DEFENSE_OBJECTIVE||r.actCount!==5):(r.objective!==undefined||r.objectiveGather!==undefined))return null;
  const integer=(v,a,b)=>Number.isInteger(v)&&v>=a&&v<=b,finite=(v,a,b)=>Number.isFinite(v)&&v>=a&&v<=b;
  if(!integer(r.seed,0,4294967295)||!integer(r.rng,0,4294967295)||!integer(r.wave,0,1000000)||!integer(r.coreHp,1,20)||!integer(r.currency,0,1e12)||!finite(r.time,0,1e12)||!integer(r.kills,0,1e9)||!integer(r.leaked,0,1e9)||!integer(r.selectedPad,0,DEFENSE.maxSeeds-1)||!integer(r.draftCredit,0,1)||!integer(r.nextId,1,1e12))return null;
  // Older five-act inspection saves could already own beds unlocked by the
@@ -259,7 +261,7 @@ export function restoreDefense(raw){
  // enforces the earned cap so skipped waves cannot create further beds.
  if(r.draftCredit!==0||!Array.isArray(r.towers)||r.towers.length>defenseSeedCap({wave:r.wave}))return null;
  if((Array.isArray(r.enemies)&&r.enemies.length)||(Array.isArray(r.shots)&&r.shots.length)||(Array.isArray(r.fields)&&r.fields.length))return null;
- if(r.actCount!==undefined&&r.actCount!==3&&r.actCount!==5||Object.hasOwn(r,'bossEpoch')&&!validBossEpoch(r.bossEpoch))return null;const s=createDefense(r.seed,{actCount:r.actCount,bossEpoch:r.bossEpoch??null});
+ if(r.actCount!==undefined&&r.actCount!==3&&r.actCount!==5||Object.hasOwn(r,'bossEpoch')&&!validBossEpoch(r.bossEpoch))return null;const s=createDefense(r.seed,{actCount:r.actCount,bossEpoch:r.bossEpoch??null,objective:r.objective??null});
  if(r.version>=4){if(typeof r.runId!=='string'||! /^[\w-]{1,90}$/.test(r.runId)||!r.bossWins||Object.keys(s.bossWins).some((id,i)=>!integer(r.bossWins[id],0,Math.max(0,Math.floor((r.wave-12*(i+1))/(12*defenseActCount(s)))+1))))return null;s.runId=r.runId;s.bossWins=Object.fromEntries(Object.keys(s.bossWins).map(id=>[id,r.bossWins[id]]));if(!Array.isArray(r.pendingBosses)||r.pendingBosses.length>90||r.pendingBosses.some(e=>!e||!Object.hasOwn(s.bossWins,e.boss)||!integer(e.ordinal,1,s.bossWins[e.boss])||!integer(e.wave,1,r.wave)||Object.hasOwn(e,'bossEpoch')&&!validBossEpoch(e.bossEpoch)||defenseWaveInfo(e.wave,s).bossId!==e.boss))return null;s.pendingBosses=r.pendingBosses.map(e=>({boss:e.boss,ordinal:e.ordinal,wave:e.wave,...(Object.hasOwn(e,'bossEpoch')?{bossEpoch:e.bossEpoch}:{})}));}
  else s.runId=`legacy-${r.seed}`;
  for(const key of ['rng','phase','wave','coreHp','currency','time','kills','leaked','selectedPad','draftCredit','nextId'])s[key]=r[key];
@@ -288,6 +290,7 @@ export function restoreDefense(raw){
  }
  // 단계 합은 심은 씨앗 수로 정해지지 않으니(합체) 따로 세지 않는다. 씨앗 하나의 단계는 최대 3.
  if(r.stats)for(const key of Object.keys(s.stats)){if(!finite(r.stats[key],0,1e9))return null;s.stats[key]=r.stats[key];}
+ if(r.version===7){if(!validDefenseObjectiveGather(r.objectiveGather,s))return null;s.objectiveGather=r.objectiveGather?{...r.objectiveGather}:null;}
  s.offers=r.draftCredit?getDefenseOffers(s):[];s.lastEvent=r.version===1?'이전 저장의 강화점을 보존해 불러왔습니다.':'웨이브 사이 저장을 불러왔습니다.';return s;
  }catch{return null;}
 }

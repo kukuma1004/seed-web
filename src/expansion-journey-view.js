@@ -4,7 +4,7 @@ import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
- const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null;
+ const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
@@ -47,14 +47,15 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   lanes.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||laneBound!==null);
  }
  function setPlate(act,texture){if(disposed)return;plates.set(act,texture);if(course===act)syncFloor();}
- function setCourse(act,{halfDepth=null}={}){
-  course=act;
+ function setCourse(act,{halfDepth=null,plateBounds=null}={}){
+  course=act;siegePhase=null;plateMaterial.color.setHex(0xffffff);
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Never repeat the full illustration. The crosswind stone band (image
   // V=.29..63) spans +/-7.5 world units; the movable corridor stays on stone.
   const environment=EXPANSION_ENVIRONMENTS[act]||EXPANSION_ENVIRONMENTS.crosswind;
-  plate.scale.set(environment.width,environment.depth,1);plate.position.set(environment.x,.02,environment.z);
+  const compact=plateBounds&&Number.isFinite(plateBounds.width)&&Number.isFinite(plateBounds.depth)&&plateBounds.width>0&&plateBounds.depth>0;
+  plate.scale.set(compact?plateBounds.width:environment.width,compact?plateBounds.depth:environment.depth,1);plate.position.set(environment.x,.02,environment.z);
   for(let i=0;i<floor.count;i++){m.makeTranslation(canyon?(Math.floor(i/4)-1)*8:Math.floor(i/4)*8-16,.035,(i%4)*4-6);floor.setMatrixAt(i,m);}floor.instanceMatrix.needsUpdate=true;floor.computeBoundingSphere();
   for(let i=0;i<40;i++){m.makeTranslation(i*3,.045,(i%2?1:-1)*(laneBound===null?6.3:laneBound-.15));lanes.setMatrixAt(i,m);}lanes.instanceMatrix.needsUpdate=true;lanes.computeBoundingSphere();
   if(!canyon){for(const batch of coverStages)batch.count=0;shadows.count=0;}
@@ -70,12 +71,13 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   for(let i=0;i<3;i++){const batch=coverStages[i];batch.count=coverCounts[i];batch.instanceMatrix.needsUpdate=true;if(batch.instanceColor)batch.instanceColor.needsUpdate=true;}shadows.count=count;shadows.instanceMatrix.needsUpdate=true;
  }
  const lineGeometry=new THREE.PlaneGeometry(1,1),lineMaterial=new THREE.MeshBasicMaterial({color:0xff9351,transparent:true,opacity:.38,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const siegeWarningGeometry=new THREE.RingGeometry(.72,.85,24),siegeEntryMaterial=new THREE.MeshBasicMaterial({color:0xc7e9ef,transparent:true,opacity:.45,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
  const tells=Array.from({length:28},()=>{const o=new THREE.Mesh(lineGeometry,lineMaterial);o.visible=false;root.add(o);return o;});let tellCount=0;
- function tell(t){if(tellCount>=tells.length)return;const o=tells[tellCount++],p=t.position;o.visible=true;o.position.set(p.x,.05,p.z);const d=t.dir||t.direction,length=t.length||6;
+ function tell(t){if(tellCount>=tells.length)return;const o=tells[tellCount++],p=t.position,round=t.kind==='siege-strike'||siegePhase&&t.kind==='entry';o.geometry=round?siegeWarningGeometry:lineGeometry;o.material=round&&t.kind==='entry'?siegeEntryMaterial:lineMaterial;o.visible=true;o.position.set(p.x,.05,p.z);const d=t.dir||t.direction,length=t.length||6;
   if(d){o.scale.set(t.width||.16,length,1);o.rotation.set(-Math.PI/2,0,Math.atan2(d.x,d.z));o.position.x+=d.x*length/2;o.position.z+=d.z*length/2;}
-  else{o.rotation.set(-Math.PI/2,0,0);o.scale.set(1.3,1.3,1);}
+  else{o.rotation.set(-Math.PI/2,0,0);o.scale.set(round?1:1.3,round?1:1.3,1);}
  }
  setCourse(course);
- return {root,setPlate,setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
-  dispose:()=>{disposed=true;root.removeFromParent();plates.clear();for(const o of [floor,lanes,...coverStages,shadows])o.dispose();for(const o of [plateGeometry,plateMaterial,floorGeometry,laneGeometry,lineGeometry,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial])o.dispose();}};
+ return {root,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xa1abd0:0xffedcb);},setPlate,setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
+  dispose:()=>{disposed=true;root.removeFromParent();plates.clear();for(const o of [floor,lanes,...coverStages,shadows])o.dispose();for(const o of [plateGeometry,plateMaterial,floorGeometry,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial])o.dispose();}};
 }

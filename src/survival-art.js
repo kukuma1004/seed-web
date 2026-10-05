@@ -285,5 +285,12 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  function state(){return {readability:readability?'quiet':'classic',act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?5:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:act===1?'stadium-clay-hd-v1.webp':act===2||act===3?'act3-storm-route-v1.webp':readability?'quiet-stone-v1.webp':GARDEN_SURFACE,groundTextureSize:readability&&act===0?768:mobile?768:1024,actorTextureSize:act>=3?(mobile?768:1536):512,actorArt:act>=3?[EXPANSION_ENEMY_ART[act===3?'crosswind':'crystalGorge'].file]:ACT_FILES[act],actorFolder:act>=3?'':readability?CUTE_FOLDER:'mobile/',mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
  function dispose(){if(disposed)return;setActive(false);disposed=true;root.removeFromParent();for(const b of bodies)b.dispose();for(const b of [edging,leaves,rocks,shadows,undergrowth,flecks,bases])b.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  applyGardenFloor();
- return {setReadability,setAct,setActive,update,defeat,state,dispose};
+ let sceneryVisibility=null;
+ function setSceneryVisible(visible){
+  if(disposed)return;
+  const objects=[floor,earth,moss,leaves,rocks,edging,undergrowth,diamond,bases];
+  if(!visible&&!sceneryVisibility){sceneryVisibility=objects.map(o=>o.visible);for(const o of objects)o.visible=false;}
+  else if(visible&&sceneryVisibility){objects.forEach((o,i)=>{o.visible=sceneryVisibility[i];});sceneryVisibility=null;}
+ }
+ return {setReadability,setAct,setActive,setSceneryVisible,update,defeat,state,dispose};
 }

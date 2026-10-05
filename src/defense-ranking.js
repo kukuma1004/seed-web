@@ -29,7 +29,7 @@ export function validDefenseRank(e){
 export function defenseRankEntry(state,{uid,name,acts=EXPANSION_ACTS,inspection=false,practice=false}){
  // Local expansion checkpoints are intentionally excluded from production
  // rankings until 4/5 art, save rules and device QA are promoted together.
- if(inspection||practice||state?.practice||state?.actCount===5&&!expansionCircuitReleased(acts))return null;
+ if(inspection||practice||state?.practice||state?.siegeReview||state?.actCount===5&&!expansionCircuitReleased(acts))return null;
  if(!['won','lost'].includes(state.phase))return null;
  if(state.actCount===5&&!integer(state.migratedWaves??0,0,Math.max(0,state.wave-1)))return null;
  if(state.actCount===5&&state.phase==='won')return null; // The promoted route is endless; legacy 12-wave wins stay three-act records.
@@ -40,7 +40,7 @@ export function defenseExpansionRankProgress(state,{acts=EXPANSION_ACTS,inspecti
  const wave=Math.max(0,Math.floor(state?.wave||0)),migrated=Math.max(0,Math.floor(state?.migratedWaves||0));
  const cleared=Math.max(0,wave-(state?.phase==='wave'||state?.phase==='lost'?1:0)-migrated);
  return {cleared,act:wave?Math.floor((wave-1)/12)%5:0,lap:wave?Math.floor((wave-1)/60):0,
-  bosses:Object.values(state?.bossWins||{}).reduce((n,v)=>n+Math.max(0,Math.floor(v||0)),0),eligible:state?.actCount===5&&inspection!==true&&practice!==true&&!state?.practice&&expansionCircuitReleased(acts)};
+  bosses:Object.values(state?.bossWins||{}).reduce((n,v)=>n+Math.max(0,Math.floor(v||0)),0),eligible:state?.actCount===5&&!state?.siegeReview&&inspection!==true&&practice!==true&&!state?.practice&&expansionCircuitReleased(acts)};
 }
 export const defensePlaces=rows=>rows.sort((a,b)=>b.score-a.score||a.uid.localeCompare(b.uid)).map((e,i,all)=>({...e,rank:all.findIndex(v=>v.score===e.score)+1}));
 export function createDefenseRanking(options={}){

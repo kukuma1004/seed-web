@@ -1,0 +1,29 @@
+import * as THREE from 'three';
+// Local siege review uses eleven persistent sprites and four build rings.
+// All combat ownership stays in crystal-siege-rules; no lights or per-frame DOM.
+export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
+ const world=new THREE.Group();world.name='crystal-siege-review';world.visible=false;scene.add(world);
+ const owned=[],textures=[],rings=[];let disposed=false,uiKey='',buildKey='',padId=null;
+ const load=path=>{const t=loader.load(base+'assets/'+path);t.colorSpace=THREE.SRGBColorSpace;textures.push(t);return t;};
+ const crystal=load('mobile/mirror-crystal-v1.webp'),turret=load('cute/enemy-turret-v4.webp'),plants=load('garden-growth-atlas-v3.webp');
+ const plantCell=cell=>{const t=plants.clone();t.repeat.set(.25,1/3);t.offset.set(cell%4/4,(2-Math.floor(cell/4))/3);t.needsUpdate=true;textures.push(t);return t;};
+ const coreTexture=plantCell(4),snareTexture=plantCell(8),wallTexture=plantCell(2);
+ const sprite=(texture,size)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:false,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
+ const heart=sprite(coreTexture,3),nodes=Array.from({length:6},()=>sprite(crystal,1.15)),facilities=Array.from({length:4},()=>sprite(turret,1.55));
+ const geometry=new THREE.RingGeometry(.63,.72,32);owned.push(geometry);
+ for(let i=0;i<4;i++){const material=new THREE.MeshBasicMaterial({color:0xe1d2a1,transparent:true,opacity:.65,depthWrite:false,side:THREE.DoubleSide});owned.push(material);const ring=new THREE.Mesh(geometry,material);ring.rotation.x=-Math.PI/2;world.add(ring);rings.push(ring);}
+ const style=document.createElement('style');style.textContent=`#crystal-siege-ui[hidden],#crystal-siege-build[hidden]{display:none!important}#crystal-siege-ui{position:fixed;z-index:24;left:16px;top:108px;max-width:calc(100vw - 32px);padding:9px 13px;background:#102329e8;color:#e6f1de;border:1px solid #a8b78b80;border-radius:12px;pointer-events:none;font:14px system-ui}#crystal-siege-ui strong{display:block;font-size:17px}#crystal-siege-build{position:fixed;z-index:28;left:50%;bottom:max(88px,env(safe-area-inset-bottom));transform:translateX(-50%);max-width:calc(100vw - 24px);padding:8px;background:#11272dee;border:1px solid #b8bc8d;border-radius:12px;display:flex;gap:7px;flex-wrap:wrap;justify-content:center;color:#f2f0cb}#crystal-siege-build button{margin:0;padding:8px 12px;font:14px system-ui;min-height:44px;width:auto;color:#f2f0cb;background:#30494a;border:1px solid #9dac88;border-radius:8px}#crystal-siege-build button:disabled{opacity:.45}#crystal-siege-build span{width:100%;text-align:center;font:13px system-ui}@media(max-height:500px){#crystal-siege-ui{top:76px;font-size:12px;padding:5px 9px}#crystal-siege-ui strong{font-size:14px}#crystal-siege-build{bottom:58px;padding:5px}#crystal-siege-build button{padding:4px 8px}}`;
+ document.head.append(style);const hud=document.createElement('div');hud.id='crystal-siege-ui';hud.hidden=true;hud.setAttribute('role','status');const menu=document.createElement('div');menu.id='crystal-siege-build';menu.hidden=true;menu.innerHTML='<span></span><button data-kind="turret">씨앗 포탑 · 3</button><button data-kind="snare">덩굴 덫 · 2</button><button data-kind="wall">잎 울타리 · 2</button><button data-start>밤 시작</button>';document.body.append(hud,menu);
+ const buildButtons=[...menu.querySelectorAll('[data-kind]')],buildHint=menu.querySelector('span');
+ for(const b of buildButtons)b.onclick=()=>{if(padId!==null)onBuild?.(padId,b.dataset.kind);};menu.querySelector('[data-start]').onclick=()=>onStart?.();
+ function update(s,player,{visible=false,interactive=false,boss=false,roundCount=5,prepDuration=20,prepRemaining=null}={}){
+  world.visible=visible&&!!s;hud.hidden=!world.visible;menu.hidden=true;if(!world.visible)return;
+  heart.position.set(s.core.x,.04,s.core.z);
+  for(let i=0;i<nodes.length;i++){const n=s.nodes[i];nodes[i].visible=!boss&&s.phase==='prep'&&!!n&&!n.harvested; if(n)nodes[i].position.set(n.x,.02,n.z);}
+  let nearest=null,best=1.7;for(let i=0;i<rings.length;i++){const p=s.pads[i];rings[i].position.set(p.x,.05,p.z);facilities[i].visible=!!p.kind&&p.hp>0;facilities[i].position.set(p.x,.04,p.z);facilities[i].material.map=p.kind==='snare'?snareTexture:p.kind==='wall'?wallTexture:turret;const d=Math.hypot(player.x-p.x,player.z-p.z);rings[i].material.opacity=d<=1.7?.95:.4;if(d<best){best=d;nearest=p;}}
+  const phase=boss?' 보스 결전 · 심어 둔 포탑과 함께':s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}`;
+  if(text!==uiKey){hud.innerHTML='<strong>'+phase+'</strong>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(s.phase==='prep'?remaining+'초 뒤 습격':'습격 '+(s.room+1)+'/'+roundCount);uiKey=text;}
+  if(!boss&&s.phase==='prep'&&interactive){menu.hidden=false;padId=nearest?.id??null;const key=padId+'|'+nearest?.kind+'|'+nearest?.level+'|'+(nearest?.hp>0)+'|'+s.resources;if(key!==buildKey){buildKey=key;buildHint.textContent=nearest?nearest.kind?(nearest.level>=2&&nearest.hp>0?'최대 강화':'시설 강화 · 같은 버튼으로 강화'):'이 화단에 시설을 심으세요':'반짝이는 수정에 다가가 채집 · 둥근 화단에 다가가 건설';for(const b of buildButtons){const cost=b.dataset.kind==='turret'?3:2;b.disabled=!nearest||nearest.level>=2&&nearest.hp>0||nearest.kind&&nearest.kind!==b.dataset.kind||s.resources<cost;}} }
+ }
+ return {update,hide(){world.visible=false;hud.hidden=menu.hidden=true;},dispose(){if(disposed)return;disposed=true;world.removeFromParent();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();style.remove();}};
+}

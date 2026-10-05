@@ -1,11 +1,21 @@
-import {createSurvivalSaveStore,validSurvivalRecord,survivalRecordId} from './survival-save.js';
+import {routeSurvivalSaveStore,validSurvivalRecord,survivalRecordId,SURVIVAL_OBJECTIVE_SAVE_KEY} from './survival-save.js';
+import {validSurvivalObjectiveRecord,objectiveEnabled,sameSurvivalObjectiveParent} from './survival-objective-save.js';
 
 const META='seed-survival-sync-v1:';
 const identity=s=>s?.writeId||survivalRecordId(s);
-export function decodeSurvivalCloud(value){
+export function decodeSurvivalCloud(value,{objectives=false,owner}={}){
  if(value===null)return {revision:0,record:null};
- if(value?.version!==1||!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.checkpoint!=='string'||value.checkpoint.length>800000)throw Error('invalid');
- let record;try{record=JSON.parse(value.checkpoint);}catch{throw Error('invalid');}if(!validSurvivalRecord(record))throw Error('invalid');
+ if(![1,2].includes(value?.version)||!Number.isSafeInteger(value.revision)||value.revision<1||typeof value.checkpoint!=='string'||value.checkpoint.length>800000)throw Error('invalid');
+ let record;try{record=JSON.parse(value.checkpoint);}catch{throw Error('invalid');}
+ if(!objectiveEnabled(objectives)){
+  if(value.version!==1||!validSurvivalRecord(record))throw Error('invalid');
+  return {revision:value.revision,record};
+ }
+ if(value.version===1){
+  if(!validSurvivalRecord(record))throw Error('invalid');
+  return {revision:value.revision,record:null,legacyRecord:record};
+ }
+ if(!validSurvivalObjectiveRecord(record,{owner,enabled:objectives}))throw Error('invalid');
  return {revision:value.revision,record};
 }
 export function survivalSyncLabel(state){
@@ -15,31 +25,43 @@ export function survivalSyncLabel(state){
 // Separate from progression merges: an active combat timeline is never unioned.
 // No wall-clock last-writer-wins. Only the server revision read by this device
 // may be replaced, using Firebase's ETag conditional write.
-export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,delay=30000,timeout=10000,isActive=()=>false,onState=()=>{}}){
+export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,delay=30000,timeout=10000,isActive=()=>false,onState=()=>{},objectives=false,currentOwner=()=>account.user()?.uid,inspection=()=>false}){
  let state={kind:'idle'},flight=null,timer=null;
  const user=()=>account.user();
  const eligible=u=>u?.uid&&!u.isAnonymous;
  const set=(kind,extra={})=>{state={kind,owner:user()?.uid,...extra};onState(state);return state;};
- const metaKey=uid=>META+encodeURIComponent(uid);
- const meta=uid=>{try{return JSON.parse(storage.getItem(metaKey(uid)))||{};}catch{return {};}};
+ const metaKey=(uid,modern)=>META+(modern?'objective-v2:':'')+encodeURIComponent(uid);
+ const meta=(uid,modern)=>{try{return JSON.parse(storage.getItem(metaKey(uid,modern)))||{};}catch{return {};}};
  const persist=(key,value)=>{try{storage.setItem(key,value);}catch{throw Error('storage');}};
- const ack=(uid,revision,record)=>persist(metaKey(uid),JSON.stringify({revision,writeId:identity(record)}));
- const unchanged=uid=>{if(user()?.uid!==uid||!eligible(user()))throw Error('account');};
+ const ack=(uid,revision,record,modern)=>persist(metaKey(uid,modern),JSON.stringify({revision,writeId:identity(record),recordId:survivalRecordId(record)}));
+ const unchanged=(uid,modern)=>{if(user()?.uid!==uid||!eligible(user())||currentOwner()!==uid||inspection()||modern&&!objectiveEnabled(objectives))throw Error('account');};
  async function perform({allowPull=false,choice=null,expected=null}={}){
-  const u=user();if(!eligible(u))return set('guest');const uid=u.uid,store=createSurvivalSaveStore(storage,uid);
+  const u=user();if(!eligible(u))return set('guest');const uid=u.uid,route=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection}),store=route.store,modern=Boolean(store?.key?.startsWith(SURVIVAL_OBJECTIVE_SAVE_KEY));if(route.kind==='objective-locked')return set('invalid');
   set('checking');const controller=new AbortController(),alarm=setTimeout(()=>controller.abort(),timeout);
   try{
    // Token acquisition also has a deadline: an auth popup must not hang save/exit.
    const session=await Promise.race([account.tokenSession(),new Promise((_,reject)=>controller.signal.addEventListener('abort',()=>reject(Error('offline')),{once:true}))]);
-   unchanged(uid);if(session?.uid!==uid||!session.idToken)throw Error('account');
+   unchanged(uid,modern);if(session?.uid!==uid||!session.idToken)throw Error('account');
    const url=databaseURL.replace(/\/$/,'')+'/seedSurvivalSaves/'+encodeURIComponent(uid)+'.json?auth='+encodeURIComponent(session.idToken);
    const response=await fetchImpl(url,{headers:{'X-Firebase-ETag':'true'},signal:controller.signal,cache:'no-store'});
    if(!response.ok)throw Error(response.status===401||response.status===403?'permission':'offline');
-   const remote=decodeSurvivalCloud(await response.json()),etag=response.headers.get('ETag');unchanged(uid);
-   const local=store.readRecord(),m=meta(uid),localId=survivalRecordId(local);
+   const remote=decodeSurvivalCloud(await response.json(),{objectives:modern,owner:uid}),etag=response.headers.get('ETag');unchanged(uid,modern);
+   const local=store.readRecord(),m=meta(uid,modern),localId=survivalRecordId(local);
+   if(modern&&local&&remote.record&&local.id===remote.record.id&&survivalRecordId(local.parent)!==survivalRecordId(remote.record.parent))return set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
+   if(modern&&!local&&remote.record?.parent){
+    const legacy=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection}).legacy,receipt=meta(uid,false);
+    if(!sameSurvivalObjectiveParent(remote.record.parent,legacy)||!Number.isSafeInteger(receipt.revision)||receipt.revision<1||receipt.writeId!==identity(legacy)||receipt.recordId&&receipt.recordId!==survivalRecordId(legacy))return set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
+   }
+   if(modern&&remote.legacyRecord){
+    // A new circuit may replace a terminal legacy parent only if the exact
+    // cloud terminal is its ancestor and this device already acknowledged it.
+    // A matching copied local file without a cloud receipt is not authority.
+    const receipt=meta(uid,false);
+    if(!local||!sameSurvivalObjectiveParent(local.parent,remote.legacyRecord)||receipt.revision!==remote.revision||receipt.writeId!==identity(remote.legacyRecord)||receipt.recordId&&receipt.recordId!==survivalRecordId(remote.legacyRecord))return set('conflict',{local,remote:remote.legacyRecord,expected:{revision:remote.revision,localId}});
+   }
    const conflict=()=>set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
    if(remote.revision<(m.revision||0))return conflict();
-   if(survivalRecordId(local)===survivalRecordId(remote.record)){ack(uid,remote.revision,local);return set(local?'synced':'empty');}
+   if(!remote.legacyRecord&&survivalRecordId(local)===survivalRecordId(remote.record)){ack(uid,remote.revision,local,modern);return set(local?'synced':'empty');}
    if(choice&&(!expected||expected.revision!==remote.revision||expected.localId!==localId))return conflict();
    const clean=identity(local)===m.writeId;
    // A death marker wins over the same run's old combat save even after a
@@ -50,18 +72,19 @@ export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,
     if(!remote.record)return conflict(); // A missing cloud record cannot erase local progress.
     if(!allowPull||isActive())return set('remote');
     const result=store.replace(local,remote.record);if(!result.ok)return result.reason==='conflict'?conflict():set('storage');
-    ack(uid,remote.revision,remote.record);return set('synced',{pulled:true});
+    ack(uid,remote.revision,remote.record,modern);return set('synced',{pulled:true});
    }
    if(!local)return set('empty');
-   if(choice!=='local'&&remote.revision!==(m.revision||0))return conflict();
+   if(choice!=='local'&&!remote.legacyRecord&&remote.revision!==(m.revision||0))return conflict();
    if(!etag)throw Error('offline'); // Never fall back to an unconditional write.
    if(choice==='local'&&remote.record)persist(store.key+':previous-cloud',JSON.stringify(remote.record));
-   const payload={version:1,revision:remote.revision+1,updatedAt:{'.sv':'timestamp'},checkpoint:JSON.stringify(local)};
+   unchanged(uid,modern);if(survivalRecordId(store.readRecord())!==localId)return set('local');
+   const payload={version:modern?2:1,revision:remote.revision+1,updatedAt:{'.sv':'timestamp'},checkpoint:JSON.stringify(local)};
    const put=await fetchImpl(url,{method:'PUT',headers:{'Content-Type':'application/json','if-match':etag},body:JSON.stringify(payload),signal:controller.signal});
-   unchanged(uid);
+   unchanged(uid,modern);
    if(put.status===412)return set('remote');
    if(!put.ok)throw Error(put.status===401||put.status===403?'permission':'offline');
-   ack(uid,payload.revision,local);
+   ack(uid,payload.revision,local,modern);
    // A save/consumption that happened during upload stays dirty for the next flush.
    return set(survivalRecordId(store.readRecord())===localId?'synced':'local');
   }catch(error){return set(['account','permission','invalid','storage'].includes(error.message)?error.message:'offline');}

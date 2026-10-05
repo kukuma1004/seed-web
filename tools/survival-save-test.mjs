@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {createSurvivalSaveStore,validSurvivalSave,captureCombatFields,restoreCombatFields} from '../src/survival-save.js';
 import {createSurvivalSession,survivalAct} from '../src/survival-rules.js';
 import {createCombatAnalysis} from '../src/combat-analysis.js';
+import {CRYSTAL_DEFENSE_OBJECTIVE} from '../src/expansion-objective.js';
 const data=new Map(),storage={getItem:k=>data.get(k)||null,setItem:(k,v)=>data.set(k,v)};
 const store=createSurvivalSaveStore(storage,'player-a');
 const snapshot={version:1,id:'run-a',revision:0,session:{...createSurvivalSession(123),act:1,lap:1,time:945,legStartedAt:900,nextSupply:990,bossSpawned:true},
@@ -35,7 +36,7 @@ const analysisSave=analysis.snapshot();assert(analysisSave.buckets.length<=3);co
 // Execute the real main.js restore function with lightweight scene hooks.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function restoreSurvivalWorld('),end=main.indexOf('// Choice/evolution transactions',start);
 let offer=null;const nodes=new Map();const ctx=vm.createContext({
- THREE,V:THREE.Vector3,restoreCombatFields,survivalAct,enemies:[],enemyShots:[],player:{position:new THREE.Vector3()},playerMotion:{reset(){}},levels:new Map(),heldForms:new Map(),mutations:new Map(),mutated:new Set(),survivalOwner:()=> 'player-a',
+ THREE,V:THREE.Vector3,restoreCombatFields,survivalAct,CRYSTAL_DEFENSE_OBJECTIVE,enemies:[],enemyShots:[],player:{position:new THREE.Vector3()},playerMotion:{reset(){}},levels:new Map(),heldForms:new Map(),mutations:new Map(),mutated:new Set(),survivalOwner:()=> 'player-a',
  normalizeInventory:v=>({...v}),normalizeRunBonuses:v=>({...v}),mutationsFromSave:()=>[],syncLaws(){},syncForms(){},growth:{select(){}},effectiveLaws:()=>[],drawRoom(){},releaseEnemy(){},
  spawnSurvivalBoss(){const e={g:new THREE.Object3D(),dir:new THREE.Vector3(),survivalBoss:true};ctx.enemies.push(e);return e;},spawnSurvivalEnemy(){throw Error('fixture has only a boss');},
  baseSlideTarget:new THREE.Vector3(),baseSlideDir:new THREE.Vector3(),lastMove:new THREE.Vector3(),createDashState:id=>({id,charges:1,recharge:0}),createActiveGauge:(value,cooldown)=>({value,cooldown}),combatAnalysis:createCombatAnalysis(),

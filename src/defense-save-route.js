@@ -11,7 +11,7 @@ export function defensePreparationKey(owner,actCount,{acts=EXPANSION_ACTS}={}){
 export function readDefensePreparation(storage,key,{owner,actCount=3}={}){
  try{
   const raw=storage.getItem(key);
-  if(raw!==null){const saved=restoreDefense(raw);return saved&&(saved.actCount??3)===actCount?saved:null;}
+  if(raw!==null){const saved=restoreDefense(raw);return saved&&!saved.objective&&(saved.actCount??3)===actCount?saved:null;}
   if(actCount!==5||key!==publicFive(owner))return null;
   const old=restoreDefense(storage.getItem(legacy(owner)));
   // Routing conversion is performed on a copy. The old preparation stays at
@@ -20,5 +20,5 @@ export function readDefensePreparation(storage,key,{owner,actCount=3}={}){
  }catch{return null;}
 }
 export function canWriteDefensePreparation(storage,key,{actCount=3}={}){
- try{const raw=storage.getItem(key);if(raw===null)return true;const old=restoreDefense(raw);return Boolean(old&&(old.actCount??3)===actCount);}catch{return false;}
+ try{const raw=storage.getItem(key);if(raw===null)return true;const old=restoreDefense(raw);return Boolean(old&&!old.objective&&(old.actCount??3)===actCount);}catch{return false;}
 }

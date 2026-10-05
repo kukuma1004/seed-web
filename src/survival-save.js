@@ -6,6 +6,8 @@ export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.v
 const forbidden=new Set(['__proto__','prototype','constructor']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e12;
 import {validSurvivalExpansionCheckpoint} from './survival-expansion-save.js';
+import {SURVIVAL_OBJECTIVE,validSurvivalObjectiveSave,validSurvivalObjectiveRecord,objectiveEnabled,survivalObjectiveParent,sameSurvivalObjectiveParent} from './survival-objective-save.js';
+export const SURVIVAL_OBJECTIVE_SAVE_KEY='seed-survival-checkpoint-v2';
 // Exact pending events, not a per-boss high-water: three failed Austin wins
 // must credit three victories when storage recovers. FIFO also prevents a
 // later ordinal from bypassing an earlier failed account receipt.
@@ -71,7 +73,8 @@ export function restoreCombatFields(actor,fields,vector){
 export function validSurvivalSave(s){
  if(s?.version!==1||s.ended||typeof s.id!=='string'||!Number.isInteger(s.revision)||s.revision<1)return false;
  const t=s.session,p=s.progress;
- if(!t||t.lab||t.benchmark||t.finished||!p||!finite(p.hp)||p.hp<=0||survivalTitleEvents(t)===null)return false;
+ if(s.objective!==undefined||s.parent!==undefined||s.siege!==undefined||t?.objective!==undefined)return false;
+ if(!t||t.lab||t.benchmark||t.siegeReview||t.finished||!p||!finite(p.hp)||p.hp<=0||survivalTitleEvents(t)===null)return false;
  if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3)return false;
  for(const key of ['crosswindBossWins','crystalBossWins'])if(t[key]!==undefined&&(!Number.isInteger(t[key])||t[key]<0||t[key]>1000000||t[key]>(t.bossesDefeated||0)))return false;
  if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
@@ -92,36 +95,59 @@ export function validSurvivalSave(s){
  if(t.bossSpawned&&!t.won&&!s.enemies.some(e=>e.fields.survivalBoss))return false;
  return true;
 }
-export function createSurvivalSaveStore(storage,owner='guest'){
- const key=SURVIVAL_SAVE_KEY+':'+encodeURIComponent(owner||'guest');
+export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,currentOwner=()=>owner,inspection=()=>false}={}){
+ const v2=objectiveEnabled(objectives),key=(v2?SURVIVAL_OBJECTIVE_SAVE_KEY:SURVIVAL_SAVE_KEY)+':'+encodeURIComponent(owner||'guest');
+ const allowed=()=>currentOwner()===owner&&inspection()!==true&&(!v2||objectiveEnabled(objectives));
+ const validRecord=s=>v2?validSurvivalObjectiveRecord(s,{owner,enabled:objectives}):validSurvivalRecord(s);
+ const validSave=s=>v2?validSurvivalObjectiveSave(s,{owner,enabled:objectives}):validSurvivalSave(s);
  const raw=()=>{try{return JSON.parse(storage?.getItem(key)||'null');}catch{return null;}};
  return {key,
-  readRecord(){const s=raw();return validSurvivalRecord(s)?s:null;},
-  read(){const s=raw();return validSurvivalSave(s)?s:null;},
+  readRecord(){if(!allowed())return null;const s=raw();return validRecord(s)?s:null;},
+  read(){if(!allowed())return null;const s=raw();return validSave(s)?s:null;},
   replace(expected,next){
    try{
+    if(!allowed())return {ok:false,reason:'account'};
     if(survivalRecordId(raw())!==survivalRecordId(expected))return {ok:false,reason:'conflict'};
-    if(!validSurvivalRecord(next))return {ok:false,reason:'invalid'};
+    if(!validRecord(next))return {ok:false,reason:'invalid'};
+    if(v2){
+     if(expected&&survivalRecordId(expected.parent)!==survivalRecordId(next.parent))return {ok:false,reason:'parent'};
+     if(!expected){const parent=createSurvivalSaveStore(storage,owner,{currentOwner,inspection}).readRecord();if(!sameSurvivalObjectiveParent(next.parent,parent))return {ok:false,reason:'parent'};}
+    }
     const json=JSON.stringify(next);if(json.length>800000)return {ok:false,reason:'invalid'};
     // One bounded recovery copy before accepting another device's checkpoint.
+    if(!allowed())return {ok:false,reason:'account'};
     if(expected)storage.setItem(key+':previous',JSON.stringify(expected));
+    if(!allowed())return {ok:false,reason:'account'};
+    if(survivalRecordId(raw())!==survivalRecordId(expected))return {ok:false,reason:'conflict'};
     storage.setItem(key,json);return {ok:storage.getItem(key)===json};
    }catch{return {ok:false,reason:'storage'};}
   },
   write(snapshot,{fresh=false}={}){
    try{
+    if(!allowed())return {ok:false,reason:'account'};
     const old=raw();
-    if(fresh&&validSurvivalRecord(old)&&(survivalTitleEvents(old.ended?old:old.session)?.length||0)>0)return {ok:false,reason:'rewards'};
+    if(fresh&&validRecord(old)&&(survivalTitleEvents(old.ended?old:old.session)?.length||0)>0)return {ok:false,reason:'rewards'};
     if(!fresh&&(!old||old.ended||old.id!==snapshot.id||old.revision!==snapshot.revision||snapshot.writeId&&old.writeId!==snapshot.writeId))return {ok:false,reason:'conflict'};
-    const next={...snapshot,version:1,revision:fresh?1:snapshot.revision+1,savedAt:Date.now(),writeId:newWriteId()};
-    if(!validSurvivalSave(next))return {ok:false,reason:'invalid'};
+    if(v2&&fresh){
+     if(snapshot.parent!=null)return {ok:false,reason:'parent'};
+     const legacy=createSurvivalSaveStore(storage,owner,{currentOwner,inspection}).readRecord();
+     if(legacy&&!legacy.ended)return {ok:false,reason:'legacy-active'};
+     const parent=survivalObjectiveParent(legacy);
+     if(legacy&&!parent)return {ok:false,reason:'legacy-invalid'};
+     snapshot={...snapshot,parent};
+    }
+    if(v2&&!fresh&&survivalRecordId(snapshot.parent)!==survivalRecordId(old.parent))return {ok:false,reason:'parent'};
+    const next={...snapshot,version:v2?2:1,revision:fresh?1:snapshot.revision+1,savedAt:Date.now(),writeId:newWriteId()};
+    if(!validSave(next))return {ok:false,reason:'invalid'};
     const json=JSON.stringify(next);if(json.length>800000||!storage)return {ok:false,reason:'storage'};
+    if(!allowed())return {ok:false,reason:'account'};
+    if(survivalRecordId(raw())!==survivalRecordId(old))return {ok:false,reason:'conflict'};
     storage.setItem(key,json);if(storage.getItem(key)!==json)return {ok:false,reason:'storage'};
     return {ok:true,value:next};
    }catch{return {ok:false,reason:'storage'};}
   },
   retryTitles(award){
-   const old=raw();if(!validSurvivalRecord(old))return {ok:old===null,reason:'invalid'};
+   if(!allowed())return {ok:false,reason:'account'};const old=raw();if(!validRecord(old))return {ok:old===null,reason:'invalid'};
    const session=old.ended?old:old.session,events=survivalTitleEvents(session);
    if(!events.length)return {ok:true,value:old};
    const next=structuredClone(old),target=next.ended?next:next.session;
@@ -133,11 +159,24 @@ export function createSurvivalSaveStore(storage,owner='guest'){
    const result=this.replace(old,next);return {...result,ok:result.ok&&settled,value:result.ok?next:old,reason:result.ok&&!settled?'rewards':result.reason};
   },
   end(id,revision,writeId,pending){
-   try{const old=raw();if(!old||old.ended||old.id!==id||old.revision!==revision||writeId&&old.writeId!==writeId)return false;
+   try{if(!allowed())return false;const old=raw();if(!validSave(old)||old.id!==id||old.revision!==revision||writeId&&old.writeId!==writeId)return false;
     const events=survivalTitleEvents(pending||old.session);if(!events)return false;
-    const next={version:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId(),pendingBossTitles:events};
-    const json=JSON.stringify(next);storage.setItem(key,json);return storage.getItem(key)===json;
+    const next={version:v2?2:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId(),pendingBossTitles:events,...(v2?{owner,objective:SURVIVAL_OBJECTIVE,parent:old.parent}:{} )};
+    const json=JSON.stringify(next);if(!allowed()||survivalRecordId(raw())!==survivalRecordId(old))return false;storage.setItem(key,json);return storage.getItem(key)===json;
    }catch{return false;}
   }
  };
+}
+// A live legacy run owns its slot until death/clear; enabling the new circuit
+// cannot silently replace its timeline. Ended v1 records remain as ancestry.
+export function routeSurvivalSaveStore(storage,owner='guest',options={}){
+ const legacy=createSurvivalSaveStore(storage,owner,{currentOwner:options.currentOwner||(()=>owner),inspection:options.inspection||(()=>false)});
+ const modern=objectiveEnabled(options.objectives)?createSurvivalSaveStore(storage,owner,options):null;
+ const old=legacy.readRecord(),next=modern?.readRecord();
+ const held=storage?.getItem?.(SURVIVAL_OBJECTIVE_SAVE_KEY+':'+encodeURIComponent(owner||'guest'));
+ if(held&&!modern)return {kind:'objective-locked',store:{key:SURVIVAL_OBJECTIVE_SAVE_KEY+':'+encodeURIComponent(owner||'guest'),readRecord:()=>null,read:()=>null,replace:()=>({ok:false,reason:'locked'}),write:()=>({ok:false,reason:'locked'}),retryTitles:()=>({ok:false,reason:'locked'}),end:()=>false},legacy:old};
+ if(held&&modern&&!next)return {kind:'objective-invalid',store:{key:modern.key,readRecord:()=>null,read:()=>null,replace:()=>({ok:false,reason:'invalid'}),write:()=>({ok:false,reason:'invalid'}),retryTitles:()=>({ok:false,reason:'invalid'}),end:()=>false},legacy:old};
+ if(old&&!old.ended)return {kind:'legacy-live',store:legacy,legacy:old};
+ if(next)return {kind:'objective',store:modern,legacy:old,record:next};
+ return modern?{kind:old?.ended?'objective-after-legacy':'objective-fresh',store:modern,legacy:old,parent:survivalObjectiveParent(old)}:{kind:'legacy',store:legacy,legacy:old};
 }

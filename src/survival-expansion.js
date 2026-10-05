@@ -19,10 +19,10 @@ export function createSurvivalExpansion(session,saved=null){
  const terrain=survivalExpansionWalls(session,saved?.walls),boss=saved?.boss?restoreExpansionBoss(saved.boss,definition.type):createExpansionBoss(definition.type,{seed:session.rngState});
  return {act:session.act,terrain,boss,coreOpen:false,
   trace(from,to,options){return sweepCrystalTerrain(terrain,from,to,options);},
-  stepBoss(dt,{position,player,activeProjectiles=0,hpRatio=1,enemies=[]}={}){
+  stepBoss(dt,{position,player,activeProjectiles=0,hpRatio=1,enemies=[],facilities=[]}={}){
    const out=stepExpansionBoss(boss,dt,{position,player,activeProjectiles,hpRatio,walls:terrain});
    // Shared regrowth respects the player AND the crowd, not just the boss.
-   const actions=out.terrain.filter(a=>{const w=terrain.find(w=>w.id===a.id);return w&&(!player||Math.hypot(player.x-w.x,player.z-w.z)>=2.5)&&!enemies.some(e=>Math.hypot((e.x??e.g?.position?.x)-w.x,(e.z??e.g?.position?.z)-w.z)<2);});
+   const actions=out.terrain.filter(a=>{const w=terrain.find(w=>w.id===a.id);return w&&(!player||Math.hypot(player.x-w.x,player.z-w.z)>=2.5)&&!enemies.some(e=>Math.hypot((e.x??e.g?.position?.x)-w.x,(e.z??e.g?.position?.z)-w.z)<2)&&!facilities.some(p=>p.kind&&p.hp>0&&Math.abs(p.x-w.x)<w.w/2+.75&&Math.abs(p.z-w.z)<w.d/2+.75);});
    applyCrystalTerrainActions(terrain,actions);this.coreOpen=out.coreOpen;return out;
   },
   camera(player){return definition.expansion==='crosswind'?{x:player.x+3,z:player.z,scroll:survivalActTime(session)*1.8}:{x:player.x,z:player.z,scroll:0};},

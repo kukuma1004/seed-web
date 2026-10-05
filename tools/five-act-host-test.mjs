@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
+import * as survivalSiegeApi from '../src/survival-crystal-siege.js';
 import * as expansionApi from '../src/expansion-journey.js';
 import {createSurvivalExpansion} from '../src/survival-expansion.js';
 import {validSurvivalExpansionCheckpoint} from '../src/survival-expansion-save.js';
@@ -18,7 +19,7 @@ const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:'',hidden:tru
 for(const act of [3,4]){
  const session=createSurvivalSession(413,{actCount:5});session.act=act;
  const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionActorArt,expansionApi,ACT3_ART,constrainToArena,
-  survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
+  survivalSiege:null,survivalSiegeApi,survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
   camera:new THREE.PerspectiveCamera(),arena:SURVIVAL.arena,player:new THREE.Object3D(),enemies:[],enemyShots:[],obstacles:[],traps:[],clockFloor:null,shadowClock:0,SHADOW_REFRESH:1,
   arenaGroup:new THREE.Group(),roomCover:new THREE.Group(),trapGroup:new THREE.Group(),hiddenGarden:[],mirrorPanelsActive:false,
   stadium:{setActive(){}},skyway:{setActive(){}},mirrorPanels:{setActive(){}},survivalArt:{setReadability(){},setAct(){},setActive(){}},survivalComparisonEnabled:false,survivalReadability:true,
@@ -26,7 +27,7 @@ for(const act of [3,4]){
   createAustin:forbidden,createAlwaysBeginner:forbidden,createTempestCarrier:forbidden,tickAustin:forbidden,tickAlwaysBeginner:forbidden,tickTempestCarrier:forbidden,
   skywayBolt:(p,d,s)=>ctx.enemyShots.push({position:p.clone(),dir:d.clone(),life:s.life||4,speed:s.speed}),hitPlayer:a=>{ctx.hits+=a;},audio:{setScene(){}},musicSceneFor:x=>x,$,
  });
- for(const name of ['syncExpansionCrystals','collide','drawRoom','spawnSurvivalEnemy','moveSurvivalEnemy','spawnSurvivalBoss','tickSurvivalBoss'])vm.runInContext(fn(name).replaceAll('import.meta.env.BASE_URL',"'/'"),ctx);
+ for(const name of ['survivalSiegeActive','syncExpansionCrystals','collide','drawRoom','spawnSurvivalEnemy','moveSurvivalEnemy','spawnSurvivalBoss','tickSurvivalBoss'])vm.runInContext(fn(name).replaceAll('import.meta.env.BASE_URL',"'/'"),ctx);
  ctx.drawRoom();assert(ctx.survivalExpansion);assert.equal(ctx.survivalExpansion.act,act);
  const boss=ctx.spawnSurvivalBoss();assert.equal(boss.type,act===3?'crosswindKeeper':'crystalGardener');assert(boss.artAttached&&boss.expansionBoss&&boss.survivalBoss);
  let maximum=0,spawned=0,states=new Set();

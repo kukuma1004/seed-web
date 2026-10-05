@@ -16,7 +16,7 @@ const converted=readDefensePreparation(storage,newKey,{owner,actCount:5});assert
 assert.equal(readDefensePreparation(storage,defensePreparationKey('account-B',5,{acts:both}),{owner:'account-B',actCount:5}),null);
 const accepted=checkpointDefense(converted);assert(accepted&&restoreDefense(accepted));storage.setItem(newKey,JSON.stringify(accepted));assert.equal(readDefensePreparation(storage,newKey,{owner,actCount:5}).runId,legacy.runId);assert(canWriteDefensePreparation(storage,newKey,{actCount:5}));
 const source=readFileSync(new URL('../src/seed-defense-view.js',import.meta.url),'utf8'),start=source.indexOf('function save(){'),end=source.indexOf('function sound(',start);
-const context=vm.createContext({storage,key:newKey,actCount:5,state:converted,isolated:()=>false,checkpointDefense,canWriteDefensePreparation,preparation:null,saveNote:''});vm.runInContext(source.slice(start,end),context);
+const context=vm.createContext({localSiege:false,storage,key:newKey,actCount:5,state:converted,isolated:()=>false,checkpointDefense,canWriteDefensePreparation,preparation:null,saveNote:''});vm.runInContext(source.slice(start,end),context);
 for(const unknown of ['{broken',JSON.stringify({...accepted,version:999}),JSON.stringify(legacy)]){
  storage.setItem(newKey,unknown);assert.equal(readDefensePreparation(storage,newKey,{owner,actCount:5}),null);assert.equal(canWriteDefensePreparation(storage,newKey,{actCount:5}),false);context.save();context.clearSave();assert.equal(storage.getItem(newKey),unknown,'actual view cannot replace or clear unrecognized preparation bytes');assert.equal(storage.getItem(oldKey),oldBytes);assert.equal(storage.getItem(inspectionKey),before);
 }

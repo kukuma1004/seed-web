@@ -286,7 +286,7 @@
         ".write": "auth != null && auth.uid == $uid && auth.token.firebase.sign_in_provider != 'anonymous' && newData.exists()",
         ".validate": "newData.hasChildren(['version', 'revision', 'updatedAt', 'checkpoint'])",
         "version": {
-          ".validate": "newData.val() == 1"
+          ".validate": "(newData.val() == 1 || newData.val() == 2) && (!data.exists() || data.val() != 2 || newData.val() == 2)"
         },
         "revision": {
           ".validate": "newData.isNumber() && ((!data.exists() && newData.val() == 1) || (data.exists() && newData.val() == data.val() + 1))"

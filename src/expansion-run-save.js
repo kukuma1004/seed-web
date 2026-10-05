@@ -1,5 +1,6 @@
 import {validCheckpoint,roomExitCheckpoint} from './run-save.js';
 import {checkpointExpansionJourney,restoreExpansionJourney} from './expansion-journey.js';
+import {restoreCrystalSiege} from './crystal-siege-rules.js';
 // Separate local-inspection key: the ordinary journey/account saves are never
 // overwritten. Resume restarts a room; losses persist, unfinished gains do not.
 export const EXPANSION_SAVE_KEY='seed-expansion-entry-v1';
@@ -14,6 +15,7 @@ export function validExpansionEntry(value){
   // Reject future/corrupt runtime state instead of silently clamping it away.
   if(JSON.stringify(checkpointExpansionJourney(restored))!==JSON.stringify(value.journey))return false;
   if(value.journey.phase==='course'&&value.journey.course.time!==0)return false;
+  if(value.journey.phase==='course'&&value.journey.siege&&(value.journey.siege.phase!=='prep'||value.journey.siege.elapsed!==0||value.journey.siege.spawnIndex!==0))return false;
   return Array.isArray(value.position)&&value.position.length===3&&value.position.every(n=>Number.isFinite(n)&&Math.abs(n)<=10000);
  }catch{return false;}
 }
@@ -23,7 +25,17 @@ export function createExpansionEntry(journey,run,position,{id=uid(),revision=0}=
 }
 export function expansionExitCheckpoint(entry,losses){
  if(!validExpansionEntry(entry))return null;
- const run=roomExitCheckpoint(entry.run,losses);if(run)run.rerollUsed=entry.run.rerollUsed===true||losses?.rerollUsed===true;return run?{...copy(entry),run}:null;
+ const run=roomExitCheckpoint(entry.run,losses);if(!run)return null;run.rerollUsed=entry.run.rerollUsed===true||losses?.rerollUsed===true;
+ const next={...copy(entry),run};
+ if(entry.journey.siege&&losses?.siege){
+  let current;try{current=restoreCrystalSiege(losses.siege);}catch{return null;}
+  const saved=next.journey.siege;if(current.room!==saved.room||current.core.hp<=0)return null;
+  saved.core.hp=Math.min(saved.core.hp,current.core.hp);saved.resources=Math.min(saved.resources,current.resources);
+  // Keep entrance facilities and levels, retaining only actual damage. Newly
+  // planted facilities, upgrades and harvested nodes are unfinished gains.
+  for(const pad of saved.pads)if(pad.kind){const live=current.pads.find(p=>p.id===pad.id);if(!live||live.kind!==pad.kind)return null;pad.hp=Math.min(pad.hp,live.hp);}
+ }
+ return validExpansionEntry(next)?next:null;
 }
 export function createExpansionSaveStore(storage,act,owner='guest'){
  const key=`${EXPANSION_SAVE_KEY}:${encodeURIComponent(owner)}:${act}`;
