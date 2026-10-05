@@ -33,7 +33,8 @@ assert.equal(defenseExpansionRankProgress(migrated,{acts:closedExpansionActs}).e
 assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
 // Execute the actual launch prefix, including asynchronous scenery preparation.
 // A resumed checkpoint must never be rebound to a UID which changed during load.
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function startSurvival('),end=main.indexOf(' if(!localInspection&&!requireName())return;',start);
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function startSurvival('),end=main.indexOf(' if(!localInspection&&!requireName())',start);
+assert(start>=0&&end>start,'actual survival launch prefix must be present');
 const prefix=main.slice(start,end)+' return {fiveActs,saved};\n}';
 function host({released=false,inspection=false,ready=true}={}){
  let owner='A',resolve;const toast={textContent:''},c=vm.createContext({bossRecordReady:()=>true,expansionLaunch:0,releaseExpansionSaveLease:()=>{},publicCircuitActCount:()=>released?5:3,localInspection:inspection,expansionJourneyView:ready?{}:null,survivalOwner:()=>owner,prepareExpansionAssets:()=>new Promise(r=>resolve=r),migrateSurvivalToFiveActs,$:()=>toast});
