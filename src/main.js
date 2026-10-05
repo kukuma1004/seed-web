@@ -1346,7 +1346,7 @@ function startSurvival(lab=null,saved=null){
  if(!localInspection&&!publicFive&&saved?.session?.actCount===5){$('#toast').textContent='이 기록의 추가 막이 아직 공개되지 않았어요. 저장은 그대로 남겨 두었습니다.';return;}
  if(fiveActs&&!expansionJourneyView){const owner=survivalOwner();return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>{if(owner!==survivalOwner()){$('#toast').textContent='준비 중 계정이 바뀌었어요. 원래 계정의 저장은 그대로 남아 있습니다.';return;}return startSurvival(lab,saved);});}
  if(publicFive&&saved&&saved.session?.actCount!==5){saved=migrateSurvivalToFiveActs(saved);if(!saved){$('#toast').textContent='저장된 진행을 확인하지 못했어요. 이전 기록을 보존했습니다.';return;}}
- if(!localInspection&&!requireName())return;
+ if(!localInspection&&!requireName()){$('#toast').textContent='시작하려면 별명을 먼저 정해주세요 · 타이틀 화면에서 입력할 수 있어요';return;}
  if(!saved&&!retryStoredSurvivalTitles()){survivalSaveMessage=survivalSaveMessage||'미지급 보스 보상을 보관하고 있어요. 계정과 저장 공간을 확인한 뒤 다시 시작해 주세요.';$('#toast').textContent=survivalSaveMessage;return;}
  document.body.classList.remove('survival-result');
  $('#overlay').classList.remove('survival-overlay');
