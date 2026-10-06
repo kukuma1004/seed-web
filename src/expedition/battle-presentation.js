@@ -10,8 +10,8 @@ export function expeditionFormationSpot(side,slot){
 }
 const TARGET={single:'단일',column:'한 열',adjacent:'주변',all:'전체',self:'자신',ally:'아군'};
 const EFFECT={damage:'타격',return:'귀환',split:'분열',protection:'보호',counter:'반격',chill:'냉기',vulnerable:'취약',conductive:'전도',pull:'끌어당김'};
-export function expeditionProtectionStatus(battle,unit){return `보호 ${Math.ceil(unit.status.protection)}${battle?.version===2?` / ${unit.maxHp}`:''}`;}
-export function expeditionProtectionActionHint(battle,unit,kind){return battle?.version===2&&unit?.actions?.[kind]?.some(op=>op.type==='protection')?'보호는 대상 최대 HP까지':'';}
+export function expeditionProtectionStatus(battle,unit){return `보호 ${Math.ceil(unit.status.protection)}${battle?.version>=2?` / ${unit.maxHp}`:''}`;}
+export function expeditionProtectionActionHint(battle,unit,kind){return battle?.version>=2&&unit?.actions?.[kind]?.some(op=>op.type==='protection')?'보호는 대상 최대 HP까지':'';}
 export function expeditionActionPresentation(speciesId,kind){
  const species=getExpeditionSpecies(speciesId),law=LAWS[species?.dominantLaw];
  const ops=species?.actionPattern?.[kind]||[];

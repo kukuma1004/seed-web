@@ -9,6 +9,7 @@ import {selectExpeditionStory} from './story.js';
 import {emptyExpeditionNursery,canResowExpedition,nurseryGrowthCandidates,NURSERY_GROWTH_XP} from './nursery.js';
 import {expeditionBossCommand} from './boss-ai.js';
 import {applyExpeditionRelicsToActions} from './relics.js';
+import {applyExpeditionMilestonesToActions} from './milestones.js';
 
 const copy=v=>JSON.parse(JSON.stringify(v));
 const freeze=v=>{if(v&&typeof v==='object'&&!Object.isFrozen(v)){Object.values(v).forEach(freeze);Object.freeze(v);}return v;};
@@ -36,8 +37,12 @@ export function projectExpeditionRuntime(previous,intent,{idFactory=randomId,com
   const resonances=eligibleResonancePairs(s.roster).filter(pair=>pair.memberIds.every(id=>s.roster.party.includes(id)));
   // Apply once at battle creation, never on restore or an already accepted
   // action. Version1 account receipts explicitly retain the old projection.
+  for(const a of allies){
+   const base=getExpeditionSpecies(a.speciesId).actionPattern;
+   const grown=combatVersion>=3?applyExpeditionMilestonesToActions(a.speciesId,base,a.level):base;
+   if(combatVersion>=3||combatRelics)a.actions=combatRelics?applyExpeditionRelicsToActions(a.speciesId,grown,s.meta.relics):grown;
+  }
   if(combatRelics){
-   for(const a of allies)a.actions=applyExpeditionRelicsToActions(a.speciesId,getExpeditionSpecies(a.speciesId).actionPattern,s.meta.relics);
    for(const pair of resonances)pair.actions=applyExpeditionRelicsToActions(pair.speciesId,{resonance:pair.actions},s.meta.relics).resonance;
   }
   s.battle=createExpeditionCombat({version:combatVersion,battleId,allies,enemies:expeditionEncounter(s.route.gardenId,{difficulty:s.route.difficulty,kind,battleId}),resonances,getSpecies:id=>getExpeditionSpecies(id)||expeditionEnemyProfile(id)});

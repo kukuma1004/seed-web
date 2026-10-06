@@ -1,9 +1,10 @@
 // Renderless Expedition P2. One accepted command is calculated atomically;
 // presentation merely replays its immutable receipt and cannot change results.
-export const EXPEDITION_COMBAT_VERSION=2;
-export const EXPEDITION_COMBAT_SUPPORTED_VERSIONS=Object.freeze([1,2]);
+export const EXPEDITION_COMBAT_VERSION=3;
+export const EXPEDITION_COMBAT_SUPPORTED_VERSIONS=Object.freeze([1,2,3]);
 // V1 checkpoints retain their original cap and nominal-gain receipts.
 // V2 caps protection per recipient, without changing HP, actions or expiry.
+// V3 additionally identifies battle-start compiled Lv3/Lv7 ally actions.
 export function expeditionProtectionLimit(version,unit){if(!EXPEDITION_COMBAT_SUPPORTED_VERSIONS.includes(version))throw Error('Unsupported expedition combat rules');return version===1?100000:unit.maxHp;}
 export const EXPEDITION_COMBAT_LIMITS=Object.freeze({unitsPerSide:8,active:5,actions:1024,rounds:128,log:256,pending:32,ops:8,targets:5});
 const KINDS=['attack','skill1','skill2','awaken','guard','switch','resonance'],TYPES=['damage','chill','vulnerable','conductive','protection','pull','delay','return','counter','split'],TARGETS=['single','column','all','self','ally','adjacent'],WHEN=['always','chilled','conductive','protected','crowded','alone','marked','hit','guarded'];

@@ -41,7 +41,7 @@ await check('New namespace is narrow, release gate owner/anonymous protection en
  const prior={rules:{closedBossV2:{'.read':false,'.write':false},seedSurvivalSaves:{value:'existing'}}},merged=appendExpeditionAccountRules(prior);assert.deepEqual(merged.rules.closedBossV2,prior.rules.closedBossV2);assert.deepEqual(merged.rules.seedSurvivalSaves,prior.rules.seedSurvivalSaves);assert.throws(()=>appendExpeditionAccountRules(merged));
  await allow('seedExpeditionRelease/accountV1',{method:'PUT',body:false,admin:true});assert.equal((await pc.transport.acquire()).reason,'permission');
  await deny('seedExpeditionRelease/accountV1',{method:'PUT',body:EXPEDITION_ACCOUNT_RELEASE_POLICY});
- for(const policy of [true,{...EXPEDITION_ACCOUNT_RELEASE_POLICY,runtimeVersion:2},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,combatVersion:3},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,enabled:false}]){await allow('seedExpeditionRelease/accountV1',{method:'PUT',body:policy,admin:true});assert.equal((await pc.transport.acquire()).reason,'permission');}
+ for(const policy of [true,{...EXPEDITION_ACCOUNT_RELEASE_POLICY,runtimeVersion:2},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,combatVersion:EXPEDITION_ACCOUNT_RELEASE_POLICY.combatVersion+1},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,enabled:false}]){await allow('seedExpeditionRelease/accountV1',{method:'PUT',body:policy,admin:true});assert.equal((await pc.transport.acquire()).reason,'permission');}
  await allow('seedExpeditionRelease/accountV1',{method:'PUT',body:EXPEDITION_ACCOUNT_RELEASE_POLICY,admin:true});
  await deny(leasePath,{uid:'foreign'});await deny(leasePath,{provider:'anonymous'});
 });
@@ -139,7 +139,7 @@ await check('Lease TTL/future clock/active takeover denied; ETag 412 is an actua
 });
 await check('Policy upgrade blocks reads and stale writes without changing head, receipts or finite lease',async()=>{
  const original=await (await allow(prefix,{admin:true})).json();
- for(const policy of [true,{...EXPEDITION_ACCOUNT_RELEASE_POLICY,runtimeVersion:4},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,combatVersion:3},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,enabled:false}]){
+ for(const policy of [true,{...EXPEDITION_ACCOUNT_RELEASE_POLICY,runtimeVersion:EXPEDITION_ACCOUNT_RELEASE_POLICY.runtimeVersion+1},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,combatVersion:EXPEDITION_ACCOUNT_RELEASE_POLICY.combatVersion+1},{...EXPEDITION_ACCOUNT_RELEASE_POLICY,enabled:false}]){
   await allow('seedExpeditionRelease/accountV1',{method:'PUT',body:policy,admin:true});
   await deny(headPath);await deny(leasePath);await deny(headPath,{method:'PUT',body:original.head});
   await deny(leasePath,{method:'PUT',body:original.lease});

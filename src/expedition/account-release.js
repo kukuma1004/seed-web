@@ -1,7 +1,7 @@
 // Switch only after art/play/device acceptance and exact production rule
 // publication. Developer/review sessions never inherit this authority.
 export const EXPEDITION_ACCOUNT_RELEASED=false;
-export const EXPEDITION_ACCOUNT_RELEASE_POLICY=Object.freeze({enabled:true,runtimeVersion:3,combatVersion:2});
+export const EXPEDITION_ACCOUNT_RELEASE_POLICY=Object.freeze({enabled:true,runtimeVersion:4,combatVersion:3});
 const denied=reason=>Object.freeze({ok:false,reason});
 export function expeditionAccountReleaseStatus(value){
  if(value===false||value===null)return denied('closed');

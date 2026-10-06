@@ -1,0 +1,2028 @@
+{
+  "sourceCommit": "b6e5fcf62416ac5bdfa3c8ab239439d3174aabe8",
+  "owner": "milestone-legacy",
+  "writer": {
+    "deviceId": "fixture-pc",
+    "leaseId": "fixture-lease",
+    "issuedAt": 1700000000000,
+    "expiresAt": 1700000120000
+  },
+  "actor": "seed-legacy-5",
+  "cases": [
+    {
+      "previous": {
+        "kind": "seed-expedition-account",
+        "version": 1,
+        "protocol": "seed-expedition-account-v1",
+        "ownerUid": "milestone-legacy",
+        "channel": "account",
+        "campaignId": "campaign-legacy-1",
+        "writeId": "write-5-fixture-16",
+        "revision": 5,
+        "createdAt": 1700000000001,
+        "updatedAt": 1700000000006,
+        "parent": {
+          "ownerUid": "milestone-legacy",
+          "campaignId": "campaign-legacy-1",
+          "writeId": "write-4-fixture-15",
+          "revision": 4,
+          "checkpointHash": "88b5ebc29cab2a781be2b8fc6284e3fa5c0914ef456abc45f7a20f3351dbbeeb"
+        },
+        "writer": {
+          "deviceId": "fixture-pc",
+          "leaseId": "fixture-lease",
+          "issuedAt": 1700000000000,
+          "expiresAt": 1700000120000
+        },
+        "state": {
+          "screen": "explore",
+          "roster": {
+            "kind": "seed-expedition-roster",
+            "version": 1,
+            "owner": "milestone-legacy",
+            "channel": "account",
+            "revision": 20,
+            "instances": {
+              "seed-legacy-3": {
+                "instanceId": "seed-legacy-3",
+                "originSpeciesId": "orbit",
+                "speciesId": "orbit",
+                "nickname": "",
+                "maxHp": 192,
+                "hp": 192,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-3": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-4": {
+                "instanceId": "seed-legacy-4",
+                "originSpeciesId": "reflect",
+                "speciesId": "reflect",
+                "nickname": "",
+                "maxHp": 187,
+                "hp": 187,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-4": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-5": {
+                "instanceId": "seed-legacy-5",
+                "originSpeciesId": "pierce",
+                "speciesId": "pierce",
+                "nickname": "",
+                "maxHp": 164,
+                "hp": 164,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-5": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-6": {
+                "instanceId": "seed-legacy-6",
+                "originSpeciesId": "split",
+                "speciesId": "split",
+                "nickname": "",
+                "maxHp": 170,
+                "hp": 170,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-6": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-7": {
+                "instanceId": "seed-legacy-7",
+                "originSpeciesId": "frost",
+                "speciesId": "frost",
+                "nickname": "",
+                "maxHp": 172,
+                "hp": 172,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-7": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-8": {
+                "instanceId": "seed-legacy-8",
+                "originSpeciesId": "burst",
+                "speciesId": "burst",
+                "nickname": "",
+                "maxHp": 167,
+                "hp": 167,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-8": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-9": {
+                "instanceId": "seed-legacy-9",
+                "originSpeciesId": "gravity",
+                "speciesId": "gravity",
+                "nickname": "",
+                "maxHp": 174,
+                "hp": 174,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-9": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-10": {
+                "instanceId": "seed-legacy-10",
+                "originSpeciesId": "recall",
+                "speciesId": "recall",
+                "nickname": "",
+                "maxHp": 174,
+                "hp": 174,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-10": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-11": {
+                "instanceId": "seed-legacy-11",
+                "originSpeciesId": "chain",
+                "speciesId": "chain",
+                "nickname": "",
+                "maxHp": 168,
+                "hp": 168,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-11": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              }
+            },
+            "party": [
+              "seed-legacy-3",
+              "seed-legacy-4",
+              "seed-legacy-5",
+              "seed-legacy-6",
+              "seed-legacy-7",
+              "seed-legacy-8",
+              "seed-legacy-9",
+              "seed-legacy-10"
+            ],
+            "discoveries": [
+              "burst",
+              "chain",
+              "frost",
+              "gravity",
+              "orbit",
+              "pierce",
+              "recall",
+              "reflect",
+              "split"
+            ],
+            "recipes": [],
+            "story": [
+              "story:prologue"
+            ],
+            "tombstones": {}
+          },
+          "route": {
+            "version": 1,
+            "runId": "run-legacy-route",
+            "gardenId": "meadow",
+            "difficulty": 1,
+            "partyIds": [
+              "seed-legacy-3",
+              "seed-legacy-4",
+              "seed-legacy-5",
+              "seed-legacy-6",
+              "seed-legacy-7",
+              "seed-legacy-8",
+              "seed-legacy-9",
+              "seed-legacy-10"
+            ],
+            "step": 2,
+            "position": 13.999999999999982,
+            "status": "exploring",
+            "pendingLoot": [],
+            "completedBattles": [],
+            "restUsed": false,
+            "elapsedSeconds": 6.999999999999983,
+            "pendingFinds": []
+          },
+          "battle": null,
+          "lastResult": null,
+          "meta": {
+            "cores": {
+              "burst": 0,
+              "pierce": 0,
+              "split": 0,
+              "gravity": 0,
+              "chain": 0,
+              "frost": 0,
+              "orbit": 0,
+              "reflect": 0,
+              "recall": 0
+            },
+            "awakenMaterials": 0,
+            "highRisk": [],
+            "returnCount": 0,
+            "bossWins": 0,
+            "committedRuns": [],
+            "eggs": [],
+            "rewardIds": [],
+            "growthCharges": 0,
+            "growthReceipts": [],
+            "restoration": {
+              "meadow": 0,
+              "blossom": 0,
+              "autumn": 0,
+              "snow": 0,
+              "moon": 0,
+              "fire": 0,
+              "shadow": 0,
+              "dream": 0
+            },
+            "relics": [],
+            "resowIds": []
+          }
+        }
+      },
+      "transaction": {
+        "version": 3,
+        "kind": "runtime",
+        "receiptId": "write-6-fixture-17",
+        "commands": [
+          {
+            "type": "interact"
+          }
+        ],
+        "generatedIds": []
+      },
+      "now": 1700000000007,
+      "raw": "{\"kind\":\"seed-expedition-account\",\"version\":1,\"protocol\":\"seed-expedition-account-v1\",\"ownerUid\":\"milestone-legacy\",\"channel\":\"account\",\"campaignId\":\"campaign-legacy-1\",\"writeId\":\"write-6-fixture-17\",\"revision\":6,\"createdAt\":1700000000001,\"updatedAt\":1700000000007,\"parent\":{\"ownerUid\":\"milestone-legacy\",\"campaignId\":\"campaign-legacy-1\",\"writeId\":\"write-5-fixture-16\",\"revision\":5,\"checkpointHash\":\"9237045de73b2db2bede5d89b739bf4e77ac60175d7f0ffaed3b16c7613a9c59\"},\"writer\":{\"deviceId\":\"fixture-pc\",\"leaseId\":\"fixture-lease\",\"issuedAt\":1700000000000,\"expiresAt\":1700000120000},\"state\":{\"screen\":\"battle\",\"roster\":{\"kind\":\"seed-expedition-roster\",\"version\":1,\"owner\":\"milestone-legacy\",\"channel\":\"account\",\"revision\":20,\"instances\":{\"seed-legacy-3\":{\"instanceId\":\"seed-legacy-3\",\"originSpeciesId\":\"orbit\",\"speciesId\":\"orbit\",\"nickname\":\"\",\"maxHp\":192,\"hp\":192,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-3\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-4\":{\"instanceId\":\"seed-legacy-4\",\"originSpeciesId\":\"reflect\",\"speciesId\":\"reflect\",\"nickname\":\"\",\"maxHp\":187,\"hp\":187,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-4\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-5\":{\"instanceId\":\"seed-legacy-5\",\"originSpeciesId\":\"pierce\",\"speciesId\":\"pierce\",\"nickname\":\"\",\"maxHp\":164,\"hp\":164,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-5\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-6\":{\"instanceId\":\"seed-legacy-6\",\"originSpeciesId\":\"split\",\"speciesId\":\"split\",\"nickname\":\"\",\"maxHp\":170,\"hp\":170,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-6\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-7\":{\"instanceId\":\"seed-legacy-7\",\"originSpeciesId\":\"frost\",\"speciesId\":\"frost\",\"nickname\":\"\",\"maxHp\":172,\"hp\":172,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-7\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-8\":{\"instanceId\":\"seed-legacy-8\",\"originSpeciesId\":\"burst\",\"speciesId\":\"burst\",\"nickname\":\"\",\"maxHp\":167,\"hp\":167,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-8\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-9\":{\"instanceId\":\"seed-legacy-9\",\"originSpeciesId\":\"gravity\",\"speciesId\":\"gravity\",\"nickname\":\"\",\"maxHp\":174,\"hp\":174,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-9\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-10\":{\"instanceId\":\"seed-legacy-10\",\"originSpeciesId\":\"recall\",\"speciesId\":\"recall\",\"nickname\":\"\",\"maxHp\":174,\"hp\":174,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-10\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-11\":{\"instanceId\":\"seed-legacy-11\",\"originSpeciesId\":\"chain\",\"speciesId\":\"chain\",\"nickname\":\"\",\"maxHp\":168,\"hp\":168,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-11\":{\"kind\":\"xp\",\"amount\":360}}}},\"party\":[\"seed-legacy-3\",\"seed-legacy-4\",\"seed-legacy-5\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-8\",\"seed-legacy-9\",\"seed-legacy-10\"],\"discoveries\":[\"burst\",\"chain\",\"frost\",\"gravity\",\"orbit\",\"pierce\",\"recall\",\"reflect\",\"split\"],\"recipes\":[],\"story\":[\"story:prologue\"],\"tombstones\":{}},\"route\":{\"version\":1,\"runId\":\"run-legacy-route\",\"gardenId\":\"meadow\",\"difficulty\":1,\"partyIds\":[\"seed-legacy-3\",\"seed-legacy-4\",\"seed-legacy-5\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-8\",\"seed-legacy-9\",\"seed-legacy-10\"],\"step\":2,\"position\":13.999999999999982,\"status\":\"battle\",\"pendingLoot\":[],\"completedBattles\":[],\"restUsed\":false,\"elapsedSeconds\":6.999999999999983,\"pendingFinds\":[]},\"battle\":{\"version\":2,\"battleId\":\"run-legacy-route:b2\",\"phase\":\"fight\",\"round\":1,\"actionCount\":0,\"eventSeq\":0,\"units\":[{\"id\":\"seed-legacy-3\",\"instanceId\":\"seed-legacy-3\",\"speciesId\":\"orbit\",\"side\":\"ally\",\"slot\":0,\"hp\":192,\"maxHp\":192,\"power\":32,\"defense\":14,\"speed\":7,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-4\",\"instanceId\":\"seed-legacy-4\",\"speciesId\":\"reflect\",\"side\":\"ally\",\"slot\":1,\"hp\":187,\"maxHp\":187,\"power\":33,\"defense\":13,\"speed\":8,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"speciesId\":\"pierce\",\"side\":\"ally\",\"slot\":2,\"hp\":164,\"maxHp\":164,\"power\":39,\"defense\":10,\"speed\":10,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-6\",\"instanceId\":\"seed-legacy-6\",\"speciesId\":\"split\",\"side\":\"ally\",\"slot\":3,\"hp\":170,\"maxHp\":170,\"power\":36,\"defense\":11,\"speed\":9,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-7\",\"instanceId\":\"seed-legacy-7\",\"speciesId\":\"frost\",\"side\":\"ally\",\"slot\":4,\"hp\":172,\"maxHp\":172,\"power\":34,\"defense\":11,\"speed\":9,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-8\",\"instanceId\":\"seed-legacy-8\",\"speciesId\":\"burst\",\"side\":\"ally\",\"slot\":5,\"hp\":167,\"maxHp\":167,\"power\":40,\"defense\":10,\"speed\":8,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-9\",\"instanceId\":\"seed-legacy-9\",\"speciesId\":\"gravity\",\"side\":\"ally\",\"slot\":6,\"hp\":174,\"maxHp\":174,\"power\":34,\"defense\":12,\"speed\":7,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-10\",\"instanceId\":\"seed-legacy-10\",\"speciesId\":\"recall\",\"side\":\"ally\",\"slot\":7,\"hp\":174,\"maxHp\":174,\"power\":35,\"defense\":11,\"speed\":11,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:0\",\"instanceId\":\"run-legacy-route:b2:enemy:0\",\"speciesId\":\"meadow-normal-0\",\"side\":\"enemy\",\"slot\":0,\"hp\":55,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:1\",\"instanceId\":\"run-legacy-route:b2:enemy:1\",\"speciesId\":\"meadow-normal-1\",\"side\":\"enemy\",\"slot\":1,\"hp\":55,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:2\",\"instanceId\":\"run-legacy-route:b2:enemy:2\",\"speciesId\":\"meadow-normal-3\",\"side\":\"enemy\",\"slot\":2,\"hp\":55,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}}],\"resonances\":[],\"order\":[\"seed-legacy-5\",\"run-legacy-route:b2:enemy:0\",\"run-legacy-route:b2:enemy:1\",\"run-legacy-route:b2:enemy:2\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-4\",\"seed-legacy-3\"],\"acted\":[],\"delayed\":[],\"seen\":[],\"pending\":[],\"warnings\":[],\"deaths\":[],\"log\":[],\"lastResult\":null},\"lastResult\":null,\"meta\":{\"cores\":{\"burst\":0,\"pierce\":0,\"split\":0,\"gravity\":0,\"chain\":0,\"frost\":0,\"orbit\":0,\"reflect\":0,\"recall\":0},\"awakenMaterials\":0,\"highRisk\":[],\"returnCount\":0,\"bossWins\":0,\"committedRuns\":[],\"eggs\":[],\"rewardIds\":[],\"growthCharges\":0,\"growthReceipts\":[],\"restoration\":{\"meadow\":0,\"blossom\":0,\"autumn\":0,\"snow\":0,\"moon\":0,\"fire\":0,\"shadow\":0,\"dream\":0},\"relics\":[],\"resowIds\":[]}}}",
+      "events": []
+    },
+    {
+      "previous": {
+        "kind": "seed-expedition-account",
+        "version": 1,
+        "protocol": "seed-expedition-account-v1",
+        "ownerUid": "milestone-legacy",
+        "channel": "account",
+        "campaignId": "campaign-legacy-1",
+        "writeId": "write-6-fixture-17",
+        "revision": 6,
+        "createdAt": 1700000000001,
+        "updatedAt": 1700000000007,
+        "parent": {
+          "ownerUid": "milestone-legacy",
+          "campaignId": "campaign-legacy-1",
+          "writeId": "write-5-fixture-16",
+          "revision": 5,
+          "checkpointHash": "9237045de73b2db2bede5d89b739bf4e77ac60175d7f0ffaed3b16c7613a9c59"
+        },
+        "writer": {
+          "deviceId": "fixture-pc",
+          "leaseId": "fixture-lease",
+          "issuedAt": 1700000000000,
+          "expiresAt": 1700000120000
+        },
+        "state": {
+          "screen": "battle",
+          "roster": {
+            "kind": "seed-expedition-roster",
+            "version": 1,
+            "owner": "milestone-legacy",
+            "channel": "account",
+            "revision": 20,
+            "instances": {
+              "seed-legacy-3": {
+                "instanceId": "seed-legacy-3",
+                "originSpeciesId": "orbit",
+                "speciesId": "orbit",
+                "nickname": "",
+                "maxHp": 192,
+                "hp": 192,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-3": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-4": {
+                "instanceId": "seed-legacy-4",
+                "originSpeciesId": "reflect",
+                "speciesId": "reflect",
+                "nickname": "",
+                "maxHp": 187,
+                "hp": 187,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-4": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-5": {
+                "instanceId": "seed-legacy-5",
+                "originSpeciesId": "pierce",
+                "speciesId": "pierce",
+                "nickname": "",
+                "maxHp": 164,
+                "hp": 164,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-5": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-6": {
+                "instanceId": "seed-legacy-6",
+                "originSpeciesId": "split",
+                "speciesId": "split",
+                "nickname": "",
+                "maxHp": 170,
+                "hp": 170,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-6": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-7": {
+                "instanceId": "seed-legacy-7",
+                "originSpeciesId": "frost",
+                "speciesId": "frost",
+                "nickname": "",
+                "maxHp": 172,
+                "hp": 172,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-7": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-8": {
+                "instanceId": "seed-legacy-8",
+                "originSpeciesId": "burst",
+                "speciesId": "burst",
+                "nickname": "",
+                "maxHp": 167,
+                "hp": 167,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-8": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-9": {
+                "instanceId": "seed-legacy-9",
+                "originSpeciesId": "gravity",
+                "speciesId": "gravity",
+                "nickname": "",
+                "maxHp": 174,
+                "hp": 174,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-9": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-10": {
+                "instanceId": "seed-legacy-10",
+                "originSpeciesId": "recall",
+                "speciesId": "recall",
+                "nickname": "",
+                "maxHp": 174,
+                "hp": 174,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-10": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              },
+              "seed-legacy-11": {
+                "instanceId": "seed-legacy-11",
+                "originSpeciesId": "chain",
+                "speciesId": "chain",
+                "nickname": "",
+                "maxHp": 168,
+                "hp": 168,
+                "xp": 360,
+                "level": 7,
+                "survivals": 0,
+                "bossSurvivals": 0,
+                "status": "alive",
+                "deathRecord": null,
+                "events": {
+                  "fixture-xp-seed-legacy-11": {
+                    "kind": "xp",
+                    "amount": 360
+                  }
+                }
+              }
+            },
+            "party": [
+              "seed-legacy-3",
+              "seed-legacy-4",
+              "seed-legacy-5",
+              "seed-legacy-6",
+              "seed-legacy-7",
+              "seed-legacy-8",
+              "seed-legacy-9",
+              "seed-legacy-10"
+            ],
+            "discoveries": [
+              "burst",
+              "chain",
+              "frost",
+              "gravity",
+              "orbit",
+              "pierce",
+              "recall",
+              "reflect",
+              "split"
+            ],
+            "recipes": [],
+            "story": [
+              "story:prologue"
+            ],
+            "tombstones": {}
+          },
+          "route": {
+            "version": 1,
+            "runId": "run-legacy-route",
+            "gardenId": "meadow",
+            "difficulty": 1,
+            "partyIds": [
+              "seed-legacy-3",
+              "seed-legacy-4",
+              "seed-legacy-5",
+              "seed-legacy-6",
+              "seed-legacy-7",
+              "seed-legacy-8",
+              "seed-legacy-9",
+              "seed-legacy-10"
+            ],
+            "step": 2,
+            "position": 13.999999999999982,
+            "status": "battle",
+            "pendingLoot": [],
+            "completedBattles": [],
+            "restUsed": false,
+            "elapsedSeconds": 6.999999999999983,
+            "pendingFinds": []
+          },
+          "battle": {
+            "version": 2,
+            "battleId": "run-legacy-route:b2",
+            "phase": "fight",
+            "round": 1,
+            "actionCount": 0,
+            "eventSeq": 0,
+            "units": [
+              {
+                "id": "seed-legacy-3",
+                "instanceId": "seed-legacy-3",
+                "speciesId": "orbit",
+                "side": "ally",
+                "slot": 0,
+                "hp": 192,
+                "maxHp": 192,
+                "power": 32,
+                "defense": 14,
+                "speed": 7,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "protection",
+                      "target": "ally",
+                      "ratio": 1.4,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "protection",
+                      "target": "ally",
+                      "ratio": 1.4,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "protection",
+                      "target": "ally",
+                      "ratio": 1.4,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-4",
+                "instanceId": "seed-legacy-4",
+                "speciesId": "reflect",
+                "side": "ally",
+                "slot": 1,
+                "hp": 187,
+                "maxHp": 187,
+                "power": 33,
+                "defense": 13,
+                "speed": 8,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "protection",
+                      "target": "self",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "counter",
+                      "target": "self",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "protection",
+                      "target": "self",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "counter",
+                      "target": "self",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "protection",
+                      "target": "self",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "counter",
+                      "target": "self",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-5",
+                "instanceId": "seed-legacy-5",
+                "speciesId": "pierce",
+                "side": "ally",
+                "slot": 2,
+                "hp": 164,
+                "maxHp": 164,
+                "power": 39,
+                "defense": 10,
+                "speed": 10,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.75,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 1.1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 1.1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 1.1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-6",
+                "instanceId": "seed-legacy-6",
+                "speciesId": "split",
+                "side": "ally",
+                "slot": 3,
+                "hp": 170,
+                "maxHp": 170,
+                "power": 36,
+                "defense": 11,
+                "speed": 9,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "split",
+                      "target": "adjacent",
+                      "ratio": 0.65,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 3,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "split",
+                      "target": "adjacent",
+                      "ratio": 0.65,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 3,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "split",
+                      "target": "adjacent",
+                      "ratio": 0.65,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 3,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-7",
+                "instanceId": "seed-legacy-7",
+                "speciesId": "frost",
+                "side": "ally",
+                "slot": 4,
+                "hp": 172,
+                "maxHp": 172,
+                "power": 34,
+                "defense": 11,
+                "speed": 9,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "chill",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 2,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "chill",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 2,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "chill",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 2,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.7,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-8",
+                "instanceId": "seed-legacy-8",
+                "speciesId": "burst",
+                "side": "ally",
+                "slot": 5,
+                "hp": 167,
+                "maxHp": 167,
+                "power": 40,
+                "defense": 10,
+                "speed": 8,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "return",
+                      "target": "adjacent",
+                      "ratio": 0.75,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "return",
+                      "target": "adjacent",
+                      "ratio": 0.75,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "return",
+                      "target": "adjacent",
+                      "ratio": 0.75,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-9",
+                "instanceId": "seed-legacy-9",
+                "speciesId": "gravity",
+                "side": "ally",
+                "slot": 6,
+                "hp": 174,
+                "maxHp": 174,
+                "power": 34,
+                "defense": 12,
+                "speed": 7,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "pull",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "pull",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "pull",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "seed-legacy-10",
+                "instanceId": "seed-legacy-10",
+                "speciesId": "recall",
+                "side": "ally",
+                "slot": 7,
+                "hp": 174,
+                "maxHp": 174,
+                "power": 35,
+                "defense": 11,
+                "speed": 11,
+                "level": 7,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "return",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "return",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "return",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 1,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "marked",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "run-legacy-route:b2:enemy:0",
+                "instanceId": "run-legacy-route:b2:enemy:0",
+                "speciesId": "meadow-normal-0",
+                "side": "enemy",
+                "slot": 0,
+                "hp": 55,
+                "maxHp": 55,
+                "power": 10,
+                "defense": 2,
+                "speed": 10,
+                "level": 1,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "run-legacy-route:b2:enemy:1",
+                "instanceId": "run-legacy-route:b2:enemy:1",
+                "speciesId": "meadow-normal-1",
+                "side": "enemy",
+                "slot": 1,
+                "hp": 55,
+                "maxHp": 55,
+                "power": 10,
+                "defense": 2,
+                "speed": 10,
+                "level": 1,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": true,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": true,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": true,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "run-legacy-route:b2:enemy:2",
+                "instanceId": "run-legacy-route:b2:enemy:2",
+                "speciesId": "meadow-normal-3",
+                "side": "enemy",
+                "slot": 2,
+                "hp": 55,
+                "maxHp": 55,
+                "power": 10,
+                "defense": 2,
+                "speed": 10,
+                "level": 1,
+                "boss": false,
+                "dead": false,
+                "status": {
+                  "chill": 0,
+                  "vulnerable": 0,
+                  "conductive": 0,
+                  "protection": 0
+                },
+                "gauge": 0,
+                "awakenUsed": false,
+                "guarding": false,
+                "guardedReceipt": false,
+                "counter": {
+                  "ratio": 0,
+                  "uses": 0,
+                  "expiresRound": 0
+                },
+                "actions": {
+                  "attack": [
+                    {
+                      "type": "damage",
+                      "target": "column",
+                      "ratio": 0.8,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill1": [
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "skill2": [
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ],
+                  "awaken": [
+                    {
+                      "type": "vulnerable",
+                      "target": "single",
+                      "ratio": 0,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    },
+                    {
+                      "type": "damage",
+                      "target": "single",
+                      "ratio": 0.6,
+                      "amount": 1,
+                      "rounds": 1,
+                      "when": "always",
+                      "ignoreFront": false,
+                      "column": null,
+                      "maxTargets": 5,
+                      "gaugeAdd": 0,
+                      "gaugeSpend": 0
+                    }
+                  ]
+                }
+              }
+            ],
+            "resonances": [],
+            "order": [
+              "seed-legacy-5",
+              "run-legacy-route:b2:enemy:0",
+              "run-legacy-route:b2:enemy:1",
+              "run-legacy-route:b2:enemy:2",
+              "seed-legacy-6",
+              "seed-legacy-7",
+              "seed-legacy-4",
+              "seed-legacy-3"
+            ],
+            "acted": [],
+            "delayed": [],
+            "seen": [],
+            "pending": [],
+            "warnings": [],
+            "deaths": [],
+            "log": [],
+            "lastResult": null
+          },
+          "lastResult": null,
+          "meta": {
+            "cores": {
+              "burst": 0,
+              "pierce": 0,
+              "split": 0,
+              "gravity": 0,
+              "chain": 0,
+              "frost": 0,
+              "orbit": 0,
+              "reflect": 0,
+              "recall": 0
+            },
+            "awakenMaterials": 0,
+            "highRisk": [],
+            "returnCount": 0,
+            "bossWins": 0,
+            "committedRuns": [],
+            "eggs": [],
+            "rewardIds": [],
+            "growthCharges": 0,
+            "growthReceipts": [],
+            "restoration": {
+              "meadow": 0,
+              "blossom": 0,
+              "autumn": 0,
+              "snow": 0,
+              "moon": 0,
+              "fire": 0,
+              "shadow": 0,
+              "dream": 0
+            },
+            "relics": [],
+            "resowIds": []
+          }
+        }
+      },
+      "transaction": {
+        "version": 3,
+        "kind": "runtime",
+        "receiptId": "write-7-fixture-18",
+        "commands": [
+          {
+            "type": "action",
+            "kind": "attack",
+            "targetId": "run-legacy-route:b2:enemy:0"
+          }
+        ],
+        "generatedIds": []
+      },
+      "now": 1700000000008,
+      "raw": "{\"kind\":\"seed-expedition-account\",\"version\":1,\"protocol\":\"seed-expedition-account-v1\",\"ownerUid\":\"milestone-legacy\",\"channel\":\"account\",\"campaignId\":\"campaign-legacy-1\",\"writeId\":\"write-7-fixture-18\",\"revision\":7,\"createdAt\":1700000000001,\"updatedAt\":1700000000008,\"parent\":{\"ownerUid\":\"milestone-legacy\",\"campaignId\":\"campaign-legacy-1\",\"writeId\":\"write-6-fixture-17\",\"revision\":6,\"checkpointHash\":\"f98303f4d3eeee0fab0bacc2620858ff699eaf12e46f50afee15d4449a567be5\"},\"writer\":{\"deviceId\":\"fixture-pc\",\"leaseId\":\"fixture-lease\",\"issuedAt\":1700000000000,\"expiresAt\":1700000120000},\"state\":{\"screen\":\"battle\",\"roster\":{\"kind\":\"seed-expedition-roster\",\"version\":1,\"owner\":\"milestone-legacy\",\"channel\":\"account\",\"revision\":21,\"instances\":{\"seed-legacy-3\":{\"instanceId\":\"seed-legacy-3\",\"originSpeciesId\":\"orbit\",\"speciesId\":\"orbit\",\"nickname\":\"\",\"maxHp\":192,\"hp\":192,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-3\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-4\":{\"instanceId\":\"seed-legacy-4\",\"originSpeciesId\":\"reflect\",\"speciesId\":\"reflect\",\"nickname\":\"\",\"maxHp\":187,\"hp\":187,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-4\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-5\":{\"instanceId\":\"seed-legacy-5\",\"originSpeciesId\":\"pierce\",\"speciesId\":\"pierce\",\"nickname\":\"\",\"maxHp\":164,\"hp\":164,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-5\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-6\":{\"instanceId\":\"seed-legacy-6\",\"originSpeciesId\":\"split\",\"speciesId\":\"split\",\"nickname\":\"\",\"maxHp\":170,\"hp\":170,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-6\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-7\":{\"instanceId\":\"seed-legacy-7\",\"originSpeciesId\":\"frost\",\"speciesId\":\"frost\",\"nickname\":\"\",\"maxHp\":172,\"hp\":172,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-7\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-8\":{\"instanceId\":\"seed-legacy-8\",\"originSpeciesId\":\"burst\",\"speciesId\":\"burst\",\"nickname\":\"\",\"maxHp\":167,\"hp\":167,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-8\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-9\":{\"instanceId\":\"seed-legacy-9\",\"originSpeciesId\":\"gravity\",\"speciesId\":\"gravity\",\"nickname\":\"\",\"maxHp\":174,\"hp\":174,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-9\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-10\":{\"instanceId\":\"seed-legacy-10\",\"originSpeciesId\":\"recall\",\"speciesId\":\"recall\",\"nickname\":\"\",\"maxHp\":174,\"hp\":174,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-10\":{\"kind\":\"xp\",\"amount\":360}}},\"seed-legacy-11\":{\"instanceId\":\"seed-legacy-11\",\"originSpeciesId\":\"chain\",\"speciesId\":\"chain\",\"nickname\":\"\",\"maxHp\":168,\"hp\":168,\"xp\":360,\"level\":7,\"survivals\":0,\"bossSurvivals\":0,\"status\":\"alive\",\"deathRecord\":null,\"events\":{\"fixture-xp-seed-legacy-11\":{\"kind\":\"xp\",\"amount\":360}}}},\"party\":[\"seed-legacy-3\",\"seed-legacy-4\",\"seed-legacy-5\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-8\",\"seed-legacy-9\",\"seed-legacy-10\"],\"discoveries\":[\"burst\",\"chain\",\"frost\",\"gravity\",\"orbit\",\"pierce\",\"recall\",\"reflect\",\"split\"],\"recipes\":[],\"story\":[\"story:prologue\"],\"tombstones\":{}},\"route\":{\"version\":1,\"runId\":\"run-legacy-route\",\"gardenId\":\"meadow\",\"difficulty\":1,\"partyIds\":[\"seed-legacy-3\",\"seed-legacy-4\",\"seed-legacy-5\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-8\",\"seed-legacy-9\",\"seed-legacy-10\"],\"step\":2,\"position\":13.999999999999982,\"status\":\"battle\",\"pendingLoot\":[],\"completedBattles\":[],\"restUsed\":false,\"elapsedSeconds\":6.999999999999983,\"pendingFinds\":[]},\"battle\":{\"version\":2,\"battleId\":\"run-legacy-route:b2\",\"phase\":\"fight\",\"round\":1,\"actionCount\":1,\"eventSeq\":3,\"units\":[{\"id\":\"seed-legacy-3\",\"instanceId\":\"seed-legacy-3\",\"speciesId\":\"orbit\",\"side\":\"ally\",\"slot\":0,\"hp\":192,\"maxHp\":192,\"power\":32,\"defense\":14,\"speed\":7,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"protection\",\"target\":\"ally\",\"ratio\":1.4,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-4\",\"instanceId\":\"seed-legacy-4\",\"speciesId\":\"reflect\",\"side\":\"ally\",\"slot\":1,\"hp\":187,\"maxHp\":187,\"power\":33,\"defense\":13,\"speed\":8,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"protection\",\"target\":\"self\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"counter\",\"target\":\"self\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"speciesId\":\"pierce\",\"side\":\"ally\",\"slot\":2,\"hp\":164,\"maxHp\":164,\"power\":39,\"defense\":10,\"speed\":10,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":1.1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-6\",\"instanceId\":\"seed-legacy-6\",\"speciesId\":\"split\",\"side\":\"ally\",\"slot\":3,\"hp\":170,\"maxHp\":170,\"power\":36,\"defense\":11,\"speed\":9,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"split\",\"target\":\"adjacent\",\"ratio\":0.65,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":3,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-7\",\"instanceId\":\"seed-legacy-7\",\"speciesId\":\"frost\",\"side\":\"ally\",\"slot\":4,\"hp\":172,\"maxHp\":172,\"power\":34,\"defense\":11,\"speed\":9,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"chill\",\"target\":\"single\",\"ratio\":0,\"amount\":2,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.7,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-8\",\"instanceId\":\"seed-legacy-8\",\"speciesId\":\"burst\",\"side\":\"ally\",\"slot\":5,\"hp\":167,\"maxHp\":167,\"power\":40,\"defense\":10,\"speed\":8,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"return\",\"target\":\"adjacent\",\"ratio\":0.75,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-9\",\"instanceId\":\"seed-legacy-9\",\"speciesId\":\"gravity\",\"side\":\"ally\",\"slot\":6,\"hp\":174,\"maxHp\":174,\"power\":34,\"defense\":12,\"speed\":7,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"pull\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"seed-legacy-10\",\"instanceId\":\"seed-legacy-10\",\"speciesId\":\"recall\",\"side\":\"ally\",\"slot\":7,\"hp\":174,\"maxHp\":174,\"power\":35,\"defense\":11,\"speed\":11,\"level\":7,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"return\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":1,\"amount\":1,\"rounds\":1,\"when\":\"marked\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:0\",\"instanceId\":\"run-legacy-route:b2:enemy:0\",\"speciesId\":\"meadow-normal-0\",\"side\":\"enemy\",\"slot\":0,\"hp\":28,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:1\",\"instanceId\":\"run-legacy-route:b2:enemy:1\",\"speciesId\":\"meadow-normal-1\",\"side\":\"enemy\",\"slot\":1,\"hp\":55,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":true,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}},{\"id\":\"run-legacy-route:b2:enemy:2\",\"instanceId\":\"run-legacy-route:b2:enemy:2\",\"speciesId\":\"meadow-normal-3\",\"side\":\"enemy\",\"slot\":2,\"hp\":28,\"maxHp\":55,\"power\":10,\"defense\":2,\"speed\":10,\"level\":1,\"boss\":false,\"dead\":false,\"status\":{\"chill\":0,\"vulnerable\":0,\"conductive\":0,\"protection\":0},\"gauge\":0,\"awakenUsed\":false,\"guarding\":false,\"guardedReceipt\":false,\"counter\":{\"ratio\":0,\"uses\":0,\"expiresRound\":0},\"actions\":{\"attack\":[{\"type\":\"damage\",\"target\":\"column\",\"ratio\":0.8,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill1\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"skill2\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}],\"awaken\":[{\"type\":\"vulnerable\",\"target\":\"single\",\"ratio\":0,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0},{\"type\":\"damage\",\"target\":\"single\",\"ratio\":0.6,\"amount\":1,\"rounds\":1,\"when\":\"always\",\"ignoreFront\":false,\"column\":null,\"maxTargets\":5,\"gaugeAdd\":0,\"gaugeSpend\":0}]}}],\"resonances\":[],\"order\":[\"seed-legacy-5\",\"run-legacy-route:b2:enemy:0\",\"run-legacy-route:b2:enemy:1\",\"run-legacy-route:b2:enemy:2\",\"seed-legacy-6\",\"seed-legacy-7\",\"seed-legacy-4\",\"seed-legacy-3\"],\"acted\":[\"seed-legacy-5\"],\"delayed\":[],\"seen\":[\"run-legacy-route:b2:a1\"],\"pending\":[],\"warnings\":[],\"deaths\":[],\"log\":[{\"seq\":1,\"round\":1,\"type\":\"action\",\"actionId\":\"run-legacy-route:b2:a1\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"kind\":\"attack\"},{\"seq\":2,\"round\":1,\"type\":\"damage\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"targetId\":\"run-legacy-route:b2:enemy:0\",\"targetInstanceId\":\"run-legacy-route:b2:enemy:0\",\"amount\":27,\"absorbed\":0,\"kind\":\"attack\",\"guarded\":false},{\"seq\":3,\"round\":1,\"type\":\"damage\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"targetId\":\"run-legacy-route:b2:enemy:2\",\"targetInstanceId\":\"run-legacy-route:b2:enemy:2\",\"amount\":27,\"absorbed\":0,\"kind\":\"attack\",\"guarded\":false}],\"lastResult\":{\"id\":\"run-legacy-route:b2:a1\",\"round\":1,\"events\":[{\"seq\":1,\"round\":1,\"type\":\"action\",\"actionId\":\"run-legacy-route:b2:a1\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"kind\":\"attack\"},{\"seq\":2,\"round\":1,\"type\":\"damage\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"targetId\":\"run-legacy-route:b2:enemy:0\",\"targetInstanceId\":\"run-legacy-route:b2:enemy:0\",\"amount\":27,\"absorbed\":0,\"kind\":\"attack\",\"guarded\":false},{\"seq\":3,\"round\":1,\"type\":\"damage\",\"unitId\":\"seed-legacy-5\",\"instanceId\":\"seed-legacy-5\",\"targetId\":\"run-legacy-route:b2:enemy:2\",\"targetInstanceId\":\"run-legacy-route:b2:enemy:2\",\"amount\":27,\"absorbed\":0,\"kind\":\"attack\",\"guarded\":false}]}},\"lastResult\":null,\"meta\":{\"cores\":{\"burst\":0,\"pierce\":0,\"split\":0,\"gravity\":0,\"chain\":0,\"frost\":0,\"orbit\":0,\"reflect\":0,\"recall\":0},\"awakenMaterials\":0,\"highRisk\":[],\"returnCount\":0,\"bossWins\":0,\"committedRuns\":[],\"eggs\":[],\"rewardIds\":[],\"growthCharges\":0,\"growthReceipts\":[],\"restoration\":{\"meadow\":0,\"blossom\":0,\"autumn\":0,\"snow\":0,\"moon\":0,\"fire\":0,\"shadow\":0,\"dream\":0},\"relics\":[],\"resowIds\":[]}}}",
+      "events": [
+        {
+          "seq": 1,
+          "round": 1,
+          "type": "action",
+          "actionId": "run-legacy-route:b2:a1",
+          "unitId": "seed-legacy-5",
+          "instanceId": "seed-legacy-5",
+          "kind": "attack"
+        },
+        {
+          "seq": 2,
+          "round": 1,
+          "type": "damage",
+          "unitId": "seed-legacy-5",
+          "instanceId": "seed-legacy-5",
+          "targetId": "run-legacy-route:b2:enemy:0",
+          "targetInstanceId": "run-legacy-route:b2:enemy:0",
+          "amount": 27,
+          "absorbed": 0,
+          "kind": "attack",
+          "guarded": false
+        },
+        {
+          "seq": 3,
+          "round": 1,
+          "type": "damage",
+          "unitId": "seed-legacy-5",
+          "instanceId": "seed-legacy-5",
+          "targetId": "run-legacy-route:b2:enemy:2",
+          "targetInstanceId": "run-legacy-route:b2:enemy:2",
+          "amount": 27,
+          "absorbed": 0,
+          "kind": "attack",
+          "guarded": false
+        }
+      ]
+    }
+  ]
+}

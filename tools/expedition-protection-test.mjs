@@ -15,7 +15,7 @@ const perform=(s,kind,extra={})=>{const result=act(s,{id:'ward-check-'+(++seq),u
 const battle=(a={},e={},extra={})=>create({allies:[unit('a',0,{speed:30,...a})],enemies:[unit('e',0,{...e})],...extra});
 async function check(label,fn){await fn();checks++;console.log('PASS '+label);}
 await check('Frozen V1 snapshots and accepted receipts survive byte-for-byte, including over-HP protection',()=>{
- assert.equal(EXPEDITION_COMBAT_VERSION,2);assert.equal(EXPEDITION_RUNTIME_TRANSACTION_VERSION,3);
+ assert.equal(EXPEDITION_COMBAT_VERSION,3);assert.equal(EXPEDITION_RUNTIME_TRANSACTION_VERSION,4);
  for(const c of frozen.cases){const state=restore(c.before);assert.deepEqual(state,c.before);assert.deepEqual(act(state,c.command),c.result,c.name);assert.deepEqual(checkpoint(state),c.after,c.name);const raw=JSON.stringify(state);assert.equal(act(state,c.command).reason,'replay');assert.equal(JSON.stringify(state),raw);accepted++;}
  const c=frozen.cases[0];assert.equal(c.after.units[0].status.protection,100000);assert.equal(c.result.events.find(e=>e.type==='protection').amount,100);
  const legacy=clone(c.before);delete legacy.resonances;assert.deepEqual(restore(legacy).resonances,[]);
@@ -52,8 +52,8 @@ await check('Boss lethal warning still evaluates damage after capped protection 
 });
 await check('V2 unknown version/fields/over-cap snapshots fail closed without altering source; V1 over-cap remains loadable',()=>{
  const s=battle(),before=JSON.stringify(s);
- for(const alter of [v=>v.version=3,v=>v.future=true,v=>v.units[0].status.protection=191,v=>v.units[0].status.expiresRound=2]){const bad=clone(s);alter(bad);const raw=JSON.stringify(bad);assert.throws(()=>restore(bad));assert.equal(JSON.stringify(bad),raw);assert.equal(act(bad,{id:'bad',unitId:'a',kind:'guard'}).reason,'invalid-state');assert.equal(JSON.stringify(bad),raw);}
- assert.equal(JSON.stringify(s),before);assert.throws(()=>battle({status:{protection:191}}));assert.throws(()=>battle({}, {},{version:3}));
+ for(const alter of [v=>v.version=EXPEDITION_COMBAT_VERSION+1,v=>v.future=true,v=>v.units[0].status.protection=191,v=>v.units[0].status.expiresRound=2]){const bad=clone(s);alter(bad);const raw=JSON.stringify(bad);assert.throws(()=>restore(bad));assert.equal(JSON.stringify(bad),raw);assert.equal(act(bad,{id:'bad',unitId:'a',kind:'guard'}).reason,'invalid-state');assert.equal(JSON.stringify(bad),raw);}
+ assert.equal(JSON.stringify(s),before);assert.throws(()=>battle({status:{protection:191}}));assert.throws(()=>battle({}, {},{version:EXPEDITION_COMBAT_VERSION+1}));
  assert.equal(battle({status:{protection:99999}},{},{version:1}).units[0].status.protection,99999);
 });
 await check('RuntimeV3 resumes a V1 battle unchanged, while a new battle starts V2 and both codec/session checkpoints restore',async()=>{
@@ -66,11 +66,11 @@ await check('RuntimeV3 resumes a V1 battle unchanged, while a new battle starts 
  const reviewOwner='protection-review',controller=createExpeditionController({storage,owner:reviewOwner,idFactory:()=>String(++seq)});
  assert(controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1}).ok);
  for(let n=0;n<2;n++){for(let i=0;i<35;i++)assert(controller.dispatch({type:'move',dx:1,dt:.1}).ok);assert(controller.dispatch({type:'interact'}).ok);}
- const reviewBattle=controller.state().battle;assert.equal(reviewBattle.version,2);controller.close();
+ const reviewBattle=controller.state().battle;assert.equal(reviewBattle.version,EXPEDITION_COMBAT_VERSION);controller.close();
  const store=createExpeditionSessionStore({storage,owner:reviewOwner,currentOwner:()=>reviewOwner,channel:'review'}),loaded=store.load();assert(loaded.ok,loaded.reason);assert.deepEqual(loaded.session.battle,reviewBattle,'review and account channels remain independent');
 });
-await check('Pending tx1/tx2/tx3 survive expired writer recovery without re-versioning and publish once',async()=>{
- for(const version of [1,2,3]){
+await check('Pending tx1/tx2/tx3/tx4 survive expired writer recovery without re-versioning and publish once',async()=>{
+ for(const version of [1,2,3,4]){
   const f=frozen.accounts[0],transaction={...f.transaction,version},candidate=await nextExpeditionRuntimeAccount(f.previous,{owner:frozen.owner,transaction,writer:frozen.writer,now:f.now});assert(candidate.ok);
   let remote=JSON.stringify(f.previous),etag='"0"',writes=0,clock=f.now,writer=frozen.writer;const history=new Map(),memory=new Map(),key=expeditionAccountStoreKey(frozen.owner),storage={getItem:k=>memory.get(k)??null,setItem:(k,v)=>memory.set(k,v)};
   const port={authorizeFresh:async()=>false,verifyLease:async()=>true,get:async()=>({raw:remote,etag}),put:async scope=>{assert.equal(scope.ifMatch,etag);writes++;remote=scope.raw;etag='"'+writes+'"';assert(scope.lineage);history.set(scope.lineage.writeId,clone(scope.lineage));return {status:200};},getLineage:async scope=>{const receipts=[];let head=scope.head;while(head.revision>scope.stopAfterRevision&&receipts.length<scope.limit){const r=history.get(head.writeId);if(!r)break;receipts.push(clone(r));head=r.parent;}return {receipts};}};
