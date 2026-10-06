@@ -30,7 +30,7 @@ assert.match(main,/다른 Google 계정으로 바꾸기/,'이미 다른 Google �
 const betaScreen=main.slice(main.indexOf('function showBetaLock'),main.indexOf('function showEntry'));
 assert.ok(betaScreen.indexOf('id="beta-admin"')<betaScreen.indexOf('class="beta-test-path"'),'설치형 웹앱의 짧은 화면에서도 개발자 로그인이 먼저 보여야 합니다.');
 const accountScreen=main.slice(main.indexOf('function showAccount'),main.indexOf('function showIntro'));
-assert.match(accountScreen,/await action\(\);[\s\S]*await refreshAccessMode\(\);[\s\S]*showEntry\(\)/,'공개 화면에서 로그인 직후 관리자와 테스터 권한을 다시 확인해야 합니다.');
+assert.match(accountScreen,/await accountLoginFlow\.run\(action,[\s\S]*await refreshAccessMode\(\);[\s\S]*showEntry\(\)/,'공개 화면에서 인증 완료 후 저장과 관리자·테스터 권한을 다시 확인해야 합니다. 실제 순서는 account-login-flow-test의 main seam에서 검사합니다.');
 assert.match(main,/WEB_ACCESS_POLL_MS=15_000/,'이미 열린 웹 게임도 짧은 주기로 차단 상태를 다시 확인해야 합니다.');
 assert.match(main,/visibilitychange[\s\S]*enforceCurrentWebAccess/,'백그라운드에서 돌아온 웹 게임은 즉시 차단 상태를 확인해야 합니다.');
 assert.match(main,/if\(!betaLocked&&!seasonPaused\)\{[\s\S]*mode==='season-pause'[\s\S]*showEntry\(\)/,'공개 상태로 돌아오면 잘못 나타난 플레이 중지 화면에서 빠져나와야 합니다.');

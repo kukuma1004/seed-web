@@ -252,3 +252,5 @@ art-refs/
 !tools/survival-objective-test.mjs
 !tools/linked-objective-main-host-test.mjs
 !tools/linked-objective-firebase-emulator-test.mjs
+
+!tools/account-login-flow-test.mjs

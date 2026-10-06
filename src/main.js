@@ -139,6 +139,7 @@ import {createPerfMonitor,describeEnvironment,saveSession,uploadSession,S as PS,
 import {mountPerfDevMenu} from './perf-dev-menu.js';
 import {createProjectileSprites,projectileCellGeometry} from './projectile-sprites.js';
 import {createAccountAuth,FIREBASE_APP} from './account-auth.js';
+import {createAccountLoginFlow} from './account-login-flow.js';
 import {anonymousTelemetrySession,createWebTelemetry} from './web-telemetry.js';
 import {readUsageDays,usageTotals,usageModeTotals,USAGE_MODE_NAMES} from './usage-dashboard.js';
 import {createCloudSync} from './cloud-sync.js';
@@ -159,6 +160,7 @@ const revealApp=()=>document.documentElement.classList.add('seed-loaded');
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
 let rawStorage;try{rawStorage=window.localStorage;}catch{rawStorage=null;}
 const account=createAccountAuth({storage:rawStorage});
+const accountLoginFlow=createAccountLoginFlow({onState:refreshAccountLoginState});
 let bossPresentationReady=false;
 const cloud=createCloudSync({storage:rawStorage,account,onSynced:()=>{
  if(!bossPresentationReady)return;
@@ -2009,6 +2011,15 @@ async function backfillBossVeterans(){
  }
  if(changed)void cloud.syncNow();
 }
+function refreshAccountLoginState(){
+ const state=accountLoginFlow.state(),status=$('#account-login-status'),retry=$('#account-login-recheck');if(!status)return;
+ status.hidden=!state.busy;if(retry)retry.hidden=!state.waiting;
+ if(!state.busy)return;
+ document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);
+ status.textContent=state.phase==='sync'
+  ?state.waiting?'계정 저장 기록의 응답이 늦어지고 있어요. 연결을 확인한 뒤 다시 확인해 주세요.':'계정의 저장 기록을 확인하고 있어요.'
+  :state.waiting?'로그인 응답이 늦어지고 있어요. 새 창이 열렸다면 그곳에서 계정 선택을 마쳐 주세요.':'로그인 계정을 확인하고 있어요.';
+}
 function showAccount(error=''){
  mode='ready';touch.reset();keys.clear();$('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
  const user=account.user(),linked=user&&!user.isAnonymous,appleOff=!account.appleConfigured,accountProfile=readAccountProfile(runStorage),badgeLine=accountBadgeLine(accountProfile),titleInfo=seedTitle.state();
@@ -2035,10 +2046,13 @@ function showAccount(error=''){
    ${!user&&!gameplayPaused()?'<button id="account-guest" class="account-button"><span><b>게스트로 시작</b><small>익명 UID에 진행을 저장합니다</small></span></button>':''}
    ${user?`<button id="account-continue" class="account-button"><span><b>${gameplayPaused()?'접속 권한 확인':'게임으로 돌아가기'}</b></span></button>`:''}
   </div>
+  <p id="account-login-status" class="account-copy" role="status" hidden></p><button id="account-login-recheck" class="menu-item small-item" hidden>새로 열어 로그인 확인</button>
   <p id="account-error" class="account-error" role="alert">${escapeHtml(error)}</p>
   <p class="account-note">계정 로그인은 랭킹의 플레이어를 구분하고 앞으로 여러 기기에서 이어하기 위한 기반으로 사용합니다. 실명은 랭킹에 표시하지 않아요.</p>
   ${linked?'<button id="account-signout" class="menu-item small-item">로그아웃</button>':''}</div>`;
- const busy=async(action,provider)=>{document.querySelectorAll('.account-button').forEach(button=>button.disabled=true);try{await action();}catch(err){void webTelemetry.loginFailure(provider,err);showAccount(authMessage(err));return;}try{backfillPersonalBests();const result=await cloud.retry();await refreshAccessMode();if(result?.changed){location.reload();return;}showEntry();void backfillBossVeterans();}catch(err){showAccount(authMessage(err));}};
+ const busy=async(action,provider)=>{if(accountLoginFlow.state().busy)return;try{await accountLoginFlow.run(action,async()=>{backfillPersonalBests();const result=await cloud.retry();await refreshAccessMode();if(result?.changed){location.reload();return;}showEntry();void backfillBossVeterans();});}catch(err){void webTelemetry.loginFailure(provider,err);showAccount(authMessage(err));}};
+ if($('#account-login-recheck'))$('#account-login-recheck').onclick=()=>location.reload();
+ refreshAccountLoginState();
  if($('#account-google'))$('#account-google').onclick=()=>busy(account.signInWithGoogle,'google');
  if($('#account-apple'))$('#account-apple').onclick=()=>busy(account.signInWithApple,'apple');
  if($('#account-guest'))$('#account-guest').onclick=()=>busy(account.guest,'guest');
