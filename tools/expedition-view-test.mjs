@@ -51,6 +51,14 @@ try{
  assert.deepEqual(audioCalls,['garden'],'mount selects HOME music even after another mode');
  assert.equal(timers.size,timersBeforeMount+1,'one foreground music clock, independent of rendering');
  const button=(key,value)=>Object.assign(new Element(),{dataset:{[key]:value}});
+ // Codex is read-only presentation and mounts only one bounded page.
+ assert.match(main.innerHTML,/종 도감 · 9\/162 발견/);assert(!main.innerHTML.includes('data-codex-species'));
+ const codex=new Element(),codexBody=root.querySelector('[data-codex-body]');codex.open=true;codex.matches=q=>q==='.exv-codex';codex.querySelector=()=>codexBody;
+ root.emit('toggle',codex);assert.equal((codexBody.innerHTML.match(/data-codex-species=/g)||[]).length,12);assert.equal(calls.length,0);assert.equal(frames.size,0);
+ root.emit('click',button('codexSpecies','frost'));assert.match(codexBody.innerHTML,/원정대 기술/);assert.match(codexBody.innerHTML,/성장과 유물 적용 전/);assert.equal(calls.length,0);
+ const filter=new Element();filter.value='final';filter.matches=q=>q==='[data-codex-kind]';root.emit('change',filter);assert.match(codexBody.innerHTML,/72종 · 1\/6쪽/);
+ for(let page=1;page<6;page++)root.emit('click',button('codexPage','next'));assert.match(codexBody.innerHTML,/72종 · 6\/6쪽/);assert.equal(calls.length,0);
+ codex.open=false;root.emit('toggle',codex);assert.equal(codexBody.innerHTML,'');assert.equal(frames.size,0);
  // Choosing a form must never spend a core. A separate explicit click commits.
  const {EXPEDITION_SPECIES}=await vite.ssrLoadModule('/src/expedition/species.js');
  const chosen=Object.values(EXPEDITION_SPECIES).find(s=>s.kind==='solo'&&s.parents.includes('pierce'));
