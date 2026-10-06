@@ -6,6 +6,7 @@ import {createFreshExpeditionAccount,decodeExpeditionAccount,expeditionAccountPa
 import {nextExpeditionRuntimeAccount} from '../src/expedition/account-runtime.js';
 import {createExpeditionLineageReceipt} from '../src/expedition/account-lineage.js';
 import {expeditionCombatTurn} from '../src/expedition/combat.js';
+import {expeditionMovementJournalKey} from '../src/expedition/account-movement-journal.js';
 const copy=v=>structuredClone(v),owner='transport-test',base=1700000000000;
 let serial=0,checks=0;const id=()=>`test-${++serial}`;
 async function check(name,run){await run();checks++;console.log('PASS '+name);}
@@ -206,8 +207,8 @@ await check('UID loss during a movement flight stops queued input and preserves 
  const e=rig(),d=e.device(),c=await controlled(e,d);assert.ok((await c.controller.dispatch({type:'depart',gardenId:'snow',difficulty:1})).ok);
  let release,entered,once=true;const held=new Promise(r=>release=r),reached=new Promise(r=>entered=r);e.hook=async({path,method})=>{if(path===e.head&&method==='PUT'&&once){once=false;entered();await held;}};
  for(let n=0;n<31;n++)await c.controller.dispatch({type:'move',dx:1,dt:.01});const flight=c.controller.dispatch({type:'move',dx:1,dt:.01});await reached;
- const original=d.store.read().pendingRaw,position=c.controller.state().route.position;e.uid='foreign';assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);assert.equal(c.controller.state().route.position,position);assert(c.controller.state().paused);assert.equal(c.controller.canMoveWhileSaving(),false);
- release();assert.equal((await flight).ok,false);assert.equal(d.store.read().pendingRaw,original);await c.controller.close();
+ const original=d.map.get(expeditionAccountStoreKey(owner)),position=c.controller.state().route.position;e.uid='foreign';assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);assert.equal(c.controller.state().route.position,position);assert(c.controller.state().paused);assert.equal(c.controller.canMoveWhileSaving(),false);
+ release();assert.equal((await flight).ok,false);assert.equal(d.map.get(expeditionAccountStoreKey(owner)),original);await c.controller.close();
 });
 await check('Controller clean lease rotation preserves exact campaign and normal invalid action does not poison session',async()=>{
  const e=rig(),d=e.device(),c=await controlled(e,d),before=c.controller.state();assert.equal((await c.controller.dispatch({type:'action',kind:'attack',targetId:'absent'})).ok,false);assert.equal(c.controller.state().saveState,'saved');
@@ -248,5 +249,78 @@ await check('A PC clock jump cannot claim the server lease is released while the
  pcClock=ticket.expiresAt;const closed=await c.controller.close();assert.equal(closed.ok,false);assert.equal(closed.saved,true);assert.equal(closed.handoff,false);assert.equal(c.released,1);
  assert.equal(e.requests.length,requests,'expired client cleanup has no authority to close a different clock lease');assert.equal(e.values.get(e.lease).closed,false);assert.equal(e.values.get(e.head).checkpoint,raw);
  const phone=e.device('phone-clock');assert.equal((await phone.transport.acquire()).reason,'busy');e.clock=ticket.expiresAt;assert.ok((await phone.transport.acquire()).ok);assert.ok((await phone.store.sync({allowPull:true})).ok);assert.equal(phone.store.read().confirmedRaw,raw);await phone.transport.release();
+});
+await check('Movement journal persists accepted inputs before pre-stage network failure and replays exact position once',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);assert.ok((await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1})).ok);
+ for(let n=0;n<31;n++)assert.ok((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok);
+ e.hook=({path,method})=>{if(path===e.lease&&method==='GET')throw Error('pre-stage outage');};
+ assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);assert.equal(c.controller.state().route.position,1.2800000000000005);
+ const journal=JSON.parse(d.map.get(expeditionMovementJournalKey(owner)));assert.equal(journal.moves.length,32);assert.equal(d.store.read().dirty,false);
+ e.hook=null;await c.controller.close();const reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'saved');assert.equal(reopened.controller.state().route.position,c.controller.state().route.position);assert.equal(JSON.parse(d.map.get(expeditionMovementJournalKey(owner))).moves.length,0);
+ await reopened.controller.close();const writes=e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,again=await controlled(e,d);assert.equal(again.controller.state().route.position,reopened.controller.state().route.position);assert.equal(e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,writes);await again.controller.close();
+});
+await check('Lost movement upload and accepted tail recover exactly, including unsent expired reissue',async()=>{
+ for(const accepted of [false,true])for(const expired of [false,true]){
+  const e=rig(),d=e.device(),c=await controlled(e,d);assert.ok((await c.controller.dispatch({type:'depart',gardenId:'fire',difficulty:1})).ok);
+  let release,entered,once=true;const held=new Promise(r=>release=r),reached=new Promise(r=>entered=r);
+  e.hook=async({path,method,options})=>{if(path===e.head&&method==='PUT'&&once){once=false;entered();await held;if(accepted)e.put(path,JSON.parse(options.body));throw Error('lost movement upload');}};
+  for(let n=0;n<31;n++)await c.controller.dispatch({type:'move',dx:1,dt:.01});const flight=c.controller.dispatch({type:'move',dx:1,dt:.01});await reached;
+  for(let n=0;n<12;n++)assert.ok((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok);
+  const position=c.controller.state().route.position,elapsed=c.controller.state().route.elapsedSeconds;assert.equal(JSON.parse(d.map.get(expeditionMovementJournalKey(owner))).moves.length,44);
+  release();assert.equal((await flight).ok,false);e.hook=null;if(expired)e.clock=d.transport.writer().expiresAt+1;await c.controller.close();
+  const reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'saved');assert.equal(reopened.controller.state().route.position,position);assert.equal(reopened.controller.state().route.elapsedSeconds,elapsed);assert.equal(JSON.parse(d.map.get(expeditionMovementJournalKey(owner))).moves.length,0);
+  assert.equal(e.values.get(e.head).revision,3,'depart, first batch, tail; no duplicate prefix');await reopened.controller.close();
+ }
+});
+await check('Interrupted process below batch threshold replays only durable movement after lease expiry',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'snow',difficulty:1});
+ for(let n=0;n<17;n++)assert.ok((await c.controller.dispatch({type:'move',dx:1,dt:.008})).ok);
+ const position=c.controller.state().route.position,elapsed=c.controller.state().route.elapsedSeconds;e.clock=d.transport.writer().expiresAt+1;
+ // Deliberately do not close/flush the old controller: emulate process death.
+ const reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'saved');assert.equal(reopened.controller.state().route.position,position);assert.equal(reopened.controller.state().route.elapsedSeconds,elapsed);assert.equal(e.values.get(e.head).revision,2);await reopened.controller.close();
+});
+await check('Movement append quota failure never accepts a new position or erases existing queue',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1});await c.controller.dispatch({type:'move',dx:1,dt:.01});
+ const key=expeditionMovementJournalKey(owner),original=d.map.get(key),position=c.controller.state().route.position,set=d.map.set.bind(d.map);
+ d.map.set=(k,v)=>{if(k===key)throw Error('quota');return set(k,v);};assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);assert.equal(c.controller.state().route.position,position);assert.equal(d.map.get(key),original);d.map.set=set;await c.controller.close();
+ const reopened=await controlled(e,d);assert.equal(reopened.controller.state().route.position,position);await reopened.controller.close();
+});
+await check('Queue ACK quota failure keeps journal and audits already committed prefix instead of replaying it',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1});const key=expeditionMovementJournalKey(owner),set=d.map.set.bind(d.map);let once=true;
+ d.map.set=(k,v)=>{if(k===key&&once&&JSON.parse(v).moves.length===0){once=false;throw Error('ACK quota');}return set(k,v);};
+ for(let n=0;n<31;n++)await c.controller.dispatch({type:'move',dx:1,dt:.01});assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);
+ const position=c.controller.state().route.position;assert.equal(JSON.parse(d.map.get(key)).moves.length,32);d.map.set=set;await c.controller.close();
+ const writes=e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'saved');assert.equal(reopened.controller.state().route.position,position);assert.equal(e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,writes);await reopened.controller.close();
+});
+await check('Unknown or tampered movement journal is retained and never used for checkpoint mutation',async()=>{
+ for(const mode of ['unknown','paid','hash']){
+  const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1});await c.controller.dispatch({type:'move',dx:1,dt:.01});
+  const key=expeditionMovementJournalKey(owner),value=JSON.parse(d.map.get(key));if(mode==='paid')value.moves=[{type:'return'}];if(mode==='hash')value.base.checkpointHash='0'.repeat(64);const raw=mode==='unknown'?'original unknown bytes':JSON.stringify(value);d.map.set(key,raw);
+  const writes=e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length;assert.equal((await c.controller.close()).ok,false);const reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'error');assert.equal(d.map.get(key),raw);assert.equal(e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,writes);await reopened.controller.close();
+ }
+});
+await check('Foreign device descendant cannot absorb, replace or replay unresolved local movement',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1});await c.controller.dispatch({type:'move',dx:1,dt:.01});const key=expeditionMovementJournalKey(owner),original=d.map.get(key);
+ e.hook=({path,method})=>{if(path===e.lease&&method==='GET')throw Error('outage');};assert.equal((await c.controller.dispatch({type:'pause',paused:true})).ok,false);e.hook=null;await c.controller.close();
+ const phone=e.device('foreign-phone');assert.ok((await phone.transport.acquire()).ok);assert.ok((await phone.store.sync({allowPull:true})).ok);await play(e,phone,[{type:'move',dx:-1,dt:.01}]);await phone.transport.release();
+ const remote=e.values.get(e.head).checkpoint,writes=e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,reopened=await controlled(e,d);assert.equal(reopened.controller.state().saveState,'error');assert.equal(d.map.get(key),original);assert.equal(e.values.get(e.head).checkpoint,remote);assert.equal(e.requests.filter(r=>r.path===e.head&&r.method==='PUT').length,writes);await reopened.controller.close();
+});
+await check('Inputs arriving during post-ACK hashing retain the entire bounded tail without double application',async()=>{
+ const e=rig(),d=e.device(),c=await controlled(e,d);await c.controller.dispatch({type:'depart',gardenId:'meadow',difficulty:1});
+ const subtle=globalThis.crypto.subtle,digest=subtle.digest;let release,entered,once=true;const held=new Promise(r=>release=r),reached=new Promise(r=>entered=r);
+ subtle.digest=async function(algorithm,bytes){
+  const document=d.store.read();
+  if(once&&document.ok&&!document.dirty&&decodeExpeditionAccount(document.confirmedRaw,{owner})?.revision===2){once=false;entered();await held;}
+  return digest.call(this,algorithm,bytes);
+ };
+ try{
+  for(let n=0;n<31;n++)await c.controller.dispatch({type:'move',dx:1,dt:.01});const flight=c.controller.dispatch({type:'move',dx:1,dt:.01});await reached;
+  for(let n=0;n<128;n++)assert.ok((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok);
+  const position=c.controller.state().route.position,elapsed=c.controller.state().route.elapsedSeconds;assert.equal(JSON.parse(d.map.get(expeditionMovementJournalKey(owner))).moves.length,160);
+  assert.equal((await c.controller.dispatch({type:'move',dx:1,dt:.01})).ok,false);assert.equal(c.controller.state().route.position,position);
+  release();assert.ok((await flight).ok);assert.equal(c.controller.state().route.position,position);assert.equal(JSON.parse(d.map.get(expeditionMovementJournalKey(owner))).moves.length,0,'the existing dispatch loop drains the full 128-input tail');assert.equal(e.values.get(e.head).revision,3);
+  assert.ok((await c.controller.dispatch({type:'pause',paused:true})).ok);assert.equal(c.controller.state().route.position,position);assert.equal(c.controller.state().route.elapsedSeconds,elapsed);assert.equal(e.values.get(e.head).revision,3);await c.controller.close();
+  const reopened=await controlled(e,d);assert.equal(reopened.controller.state().route.position,position);assert.equal(reopened.controller.state().route.elapsedSeconds,elapsed);await reopened.controller.close();
+ }finally{release();subtle.digest=digest;}
 });
 console.log(`Account REST transport/controller: ${checks} groups PASS. Actual transport/shared rules and gameplay controller, fake HTTP Firebase responses and synthetic accounts. No live Firebase rules/auth, main integration, physical-device or deployment proof.`);

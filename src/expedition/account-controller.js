@@ -1,5 +1,5 @@
-import {decodeExpeditionAccount} from './account-codec.js';
-import {nextExpeditionRuntimeAccount,EXPEDITION_RUNTIME_TRANSACTION_VERSION} from './account-runtime.js';
+import {decodeExpeditionAccount,expeditionAccountParent} from './account-codec.js';
+import {nextExpeditionRuntimeAccount,auditExpeditionRuntimeTransaction,EXPEDITION_RUNTIME_TRANSACTION_VERSION} from './account-runtime.js';
 import {projectExpeditionRuntime} from './controller.js';
 import {acquireExpeditionAccountLock} from './account-lock.js';
 import {createExpeditionAccountTransport} from './account-transport.js';
@@ -14,13 +14,20 @@ const uuid=()=>globalThis.crypto.randomUUID();
 // Movement is projected at input speed, committed in bounded replay batches;
 // battle and HOME operations are shown only after their durable local stage.
 export async function createExpeditionAccountController({owner,currentOwner=()=>owner,store,transport,localLease,now=Date.now,idFactory=uuid,movementBatch=32,rotationMargin=15000}={}){
- if(!store||!transport||!localLease||!Number.isInteger(movementBatch)||movementBatch<1||movementBatch>128||!Number.isInteger(rotationMargin)||rotationMargin<1000||rotationMargin>30000)throw TypeError('Account controller requires finite authority/store ports');
+ if(!store?.movementJournal||!transport||!localLease||!Number.isInteger(movementBatch)||movementBatch<1||movementBatch>128||!Number.isInteger(rotationMargin)||rotationMargin<1000||rotationMargin>30000)throw TypeError('Account controller requires finite authority/store ports');
  let confirmed=null,current=null,snapshot=null,moves=[],events=[],notice='',saveState='saved',paused=false,closed=false,closing=false,flight=null,closeFlight=null,movementOnlyFlight=false;
+ let journalRaw=null,journalBase=null,movementPrefix=0;
+ const same=(a,b)=>JSON.stringify(a)===JSON.stringify(b);
+ function journalWrite(base,queue){
+  const result=store.movementJournal.write({kind:'seed-expedition-movement',version:1,ownerUid:owner,base,moves:queue},journalRaw);
+  if(!result.ok)throw Error(`이동 원본을 보존하고 멈췄어요 · ${result.reason}`);
+  journalRaw=result.raw;journalBase=base;
+ }
  const fail=reason=>{notice=String(reason);saveState='error';paused=true;return {ok:false,reason:notice,events:[],saveState};};
  function owned(){const authority=transport.authority();if(currentOwner()!==owner||authority.uid!==owner||authority.isAnonymous!==false)throw Error('계정이 바뀌어 원정대를 멈췄어요');if(authority.enabled!==true)throw Error('원정대 공개 권한을 확인해 주세요');if(!localLease.active())throw Error('다른 창에서 사용 중인 원정대예요');}
  function identity(){const value=idFactory();if(!token(value))throw Error('유효한 저장 식별자를 만들지 못했어요');return value;}
  function accept(raw){const a=decodeExpeditionAccount(raw,{owner});if(!a)throw Error('계정 저장 원본을 확인해 주세요');confirmed=a;current=copy(a.state);snapshot=null;events=[];}
- async function synchronize(){owned();const result=await store.sync({allowPull:true,recoverPending:true});owned();if(!result.ok)throw Error(`계정 저장 확인 실패 · ${result.reason}`);if(result.raw)accept(result.raw);return result;}
+ async function synchronize({allowPull=true}={}){owned();const result=await store.sync({allowPull,recoverPending:true});owned();if(!result.ok)throw Error(`계정 저장 확인 실패 · ${result.reason}`);if(result.raw)accept(result.raw);return result;}
  async function authorize(){
   owned();let writer=transport.writer();
   if(!writer||writer.expiresAt-now()<=rotationMargin){
@@ -30,16 +37,17 @@ export async function createExpeditionAccountController({owner,currentOwner=()=>
    const acquired=await transport.acquire();owned();if(!acquired.ok)throw Error(`저장 권한 확인 실패 · ${acquired.reason}`);
   }
   const d=store.read();if(!d.ok)throw Error(`계정 저장 확인 실패 · ${d.reason}`);
-  if(d.dirty)await synchronize();
+  if(d.dirty)await synchronize({allowPull:moves.length===0});
   return transport.writer();
  }
- function displayMovement(base){
+ function displayMovement(base,skip=0){
   current=copy(base);
-  for(const move of moves){const projected=projectExpeditionRuntime(current,move);if(!projected.ok)throw Error('이동 기록을 다시 확인해 주세요');current=projected.state;}
+  for(const move of moves.slice(skip)){const projected=projectExpeditionRuntime(current,move);if(!projected.ok)throw Error('이동 기록을 다시 확인해 주세요');current=projected.state;}
   snapshot=null;
  }
  async function commit(commands,{movement=false}={}){
   const previous=confirmed;if(!previous)throw Error('계정 저장을 불러오지 못했어요');
+  const journal=store.movementJournal.read();if(!journal.ok||journal.raw!==journalRaw)throw Error('이동 원본이 바뀌어 보존하고 멈췄어요.');
   const writer=await authorize();owned();
   // A recovery can change the base. Only replay these new commands after an
   // exact unchanged state check; never apply them to a competing campaign.
@@ -49,15 +57,24 @@ export async function createExpeditionAccountController({owner,currentOwner=()=>
   const transaction={version:EXPEDITION_RUNTIME_TRANSACTION_VERSION,kind:'runtime',receiptId:`write-${confirmed.revision+1}-${identity()}`,commands:copy(commands),generatedIds};
   const next=await nextExpeditionRuntimeAccount(confirmed,{owner,transaction,now:now(),writer});owned();if(!next.ok)return {ok:false,reason:next.reason,events:[],saveState};
   const staged=await store.stage(next.raw,{expectedRaw:JSON.stringify(confirmed),transaction});owned();if(!staged.ok)throw Error(`진행 저장 실패 · ${staged.reason}`);
-  if(movement)displayMovement(next.record.state);else{current=copy(next.record.state);snapshot=null;}
+  if(movement)displayMovement(next.record.state,commands.length);else{current=copy(next.record.state);snapshot=null;}
   events=copy(next.events);saveState='pending';
   const result=await store.sync({recoverPending:true});owned();if(!result.ok)throw Error(`서버 저장을 확인하지 못해 멈췄어요 · ${result.reason}`);
   const actual=decodeExpeditionAccount(result.raw,{owner});if(!actual||JSON.stringify(actual.state)!==JSON.stringify(next.record.state))throw Error('서버 저장 결과가 달라 기록을 보존했어요');
+  // ACK of the account and ACK of the local queue are separate. Retain the
+  // old journal on quota/readback failure; its prefix can be audited next open.
+  const base=await expeditionAccountParent(actual,{owner});owned();
+  const remaining=movement?moves.slice(commands.length):moves;journalWrite(base,remaining);
+  if(movement)moves=remaining;
   confirmed=actual;if(movement)displayMovement(actual.state);else{current=copy(actual.state);snapshot=null;}
   saveState='saved';notice='';return {ok:true,events:copy(events),saveState};
  }
- async function flush(){return moves.length?commit(moves.splice(0,128),{movement:true}):({ok:true,events:[],saveState});}
- const canMoveWhileSaving=()=>Boolean(flight&&movementOnlyFlight&&!closed&&!closing&&!paused&&saveState!=='error'&&current?.screen==='explore'&&moves.length<128);
+ async function flush(){
+  if(!moves.length)return {ok:true,events:[],saveState};
+  const batch=moves.slice(0,128);movementPrefix=batch.length;
+  try{return await commit(batch,{movement:true});}finally{movementPrefix=0;}
+ }
+ const canMoveWhileSaving=()=>Boolean(flight&&movementOnlyFlight&&!closed&&!closing&&!paused&&saveState!=='error'&&current?.screen==='explore'&&moves.length-movementPrefix<128&&moves.length<256);
  async function dispatch(intent){
   if(closed||closing)return {ok:false,reason:'원정대를 닫았어요',events:[],saveState};
   if(flight&&!(intent?.type==='move'&&canMoveWhileSaving()))return {ok:false,reason:'저장을 확인하고 있어요',events:[],saveState};
@@ -67,7 +84,10 @@ export async function createExpeditionAccountController({owner,currentOwner=()=>
     if(paused)return {ok:false,reason:'원정이 일시정지됐어요',events:[],saveState};
     const p=projectExpeditionRuntime(current,intent);if(!p.ok)return {ok:false,reason:p.reason,events:[],saveState};
     // Clone input so later mutation cannot alter the replay receipt.
-    current=p.state;if(snapshot)snapshot=Object.freeze({...snapshot,route:Object.freeze({...snapshot.route,position:current.route.position,elapsedSeconds:current.route.elapsedSeconds})});moves.push(copy(intent));events=[];
+    // Persist the small pure-input tail before claiming or displaying success.
+    // Its base digest is cached per checkpoint, not recomputed each frame.
+    const queued=[...moves,copy(intent)];journalWrite(journalBase,queued);moves=queued;
+    current=p.state;if(snapshot)snapshot=Object.freeze({...snapshot,route:Object.freeze({...snapshot.route,position:current.route.position,elapsedSeconds:current.route.elapsedSeconds})});events=[];
     // A slow movement-only upload may collect one bounded tail. It changes
     // route scalars only; paid actions remain blocked until server confirmation.
     if(flight||moves.length<movementBatch&&transport.writer()?.expiresAt-now()>rotationMargin)return {ok:true,events:[],saveState:'pending'};
@@ -88,8 +108,24 @@ export async function createExpeditionAccountController({owner,currentOwner=()=>
  async function initialize(){
   try{
    owned();const acquired=await transport.acquire();owned();if(!acquired.ok)throw Error(`원정대 저장 권한 확인 실패 · ${acquired.reason}`);
-   const result=await synchronize();
+   const journal=store.movementJournal.read();if(!journal.ok)throw Error(`이동 원본을 확인해 주세요 · ${journal.reason}`);journalRaw=journal.raw;
+   const before=store.read();if(!before.ok)throw Error(`계정 저장 확인 실패 · ${before.reason}`);
+   const queued=journal.value?.moves||[];
+   const result=await synchronize({allowPull:queued.length===0});
    if(result.raw===null){const fresh=await store.fresh({idFactory:identity});owned();if(!fresh.ok)throw Error(`새 원정대 저장 실패 · ${fresh.reason}`);await synchronize();}
+   const base=await expeditionAccountParent(confirmed,{owner});owned();let remaining=queued;
+   if(queued.length&&!same(journal.value.base,base)){
+    // Only this device's retained clean pending runtime receipt can ACK a
+    // prefix. Foreign descendants and equal positions alone are insufficient.
+    const document=store.read(),pending=document.pending,tx=pending?.transaction;
+    let original=null;
+    for(const raw of [before.confirmedRaw,document.backupRaw]){if(raw){const a=decodeExpeditionAccount(raw,{owner});if(a&&same(await expeditionAccountParent(a,{owner}),journal.value.base)){original=raw;break;}}}
+    const commands=tx?.commands;
+    if(!document.ok||pending?.raw!==document.confirmedRaw||!original||tx?.kind!=='runtime'||!Array.isArray(commands)||commands.length<1||commands.length>queued.length||tx.generatedIds?.length!==0||!commands.every((c,n)=>same(c,queued[n]))||!(await auditExpeditionRuntimeTransaction(original,document.confirmedRaw,{owner,transaction:tx})).ok)throw Error('다른 진행과 겹쳐 이동 원본을 보존했어요. 기록을 먼저 확인해 주세요.');
+    remaining=queued.slice(commands.length);
+   }
+   journalWrite(base,remaining);moves=copy(remaining);displayMovement(confirmed.state);
+   while(moves.length){const recovered=await flush();if(!recovered.ok)throw Error(recovered.reason);}
    saveState='saved';
   }catch(error){fail(error.message);}
  }

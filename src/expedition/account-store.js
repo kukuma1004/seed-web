@@ -3,6 +3,7 @@ import {auditExpeditionHomeTransaction} from './account-economy.js';
 import {auditExpeditionRuntimeTransaction} from './account-runtime.js';
 import {createExpeditionLineageReceipt,verifyExpeditionAccountLineage} from './account-lineage.js';
 import {setParty} from './roster.js';
+import {createExpeditionMovementJournal} from './account-movement-journal.js';
 
 // Exact account store; deployment and normal-mode entry remain separate gates.
 // A caller must hold a real owner-scoped local lock; server verifyLease and
@@ -167,5 +168,6 @@ export function createExpeditionAccountStore({storage,owner,authority,localLease
    return await Promise.race([work(),new Promise((_,reject)=>{timer=setTimeout(()=>{controller.abort();reject(Error('offline'));},timeout);})]);
   }catch(e){return error(e);}finally{clearTimeout(timer);controller.abort();}
  }
- return {key,namespace:EXPEDITION_ACCOUNT_NAMESPACE,read,stage,fresh,sync(options={}){if(flight)return flight;flight=perform(options).finally(()=>{flight=null;});return flight;}};
+ const movementJournal=createExpeditionMovementJournal({storage,owner,allowed:()=>{const a=authority();return a?.uid===owner&&a.isAnonymous===false&&a.enabled===true&&localLease?.key===key&&localLease.active()===true;}});
+ return {key,namespace:EXPEDITION_ACCOUNT_NAMESPACE,movementJournal,read,stage,fresh,sync(options={}){if(flight)return flight;flight=perform(options).finally(()=>{flight=null;});return flight;}};
 }
