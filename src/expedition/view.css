@@ -187,3 +187,4 @@
 .exv-relic-reward{margin:15px 0}
 .exv-battle-relics{font-size:11px;color:#e7daa7;max-height:92px;overflow:auto}.exv-battle-relics summary{cursor:pointer;padding:3px}.exv-battle-relics p{margin:5px 3px;line-height:1.45}
 @media(max-width:600px){.exv-relic-grid{grid-template-columns:1fr}.exv-relics{margin:8px}.exv-relic{padding:10px}}
+.exv-roster-card>.exv-evolution{grid-column:2/-1;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;min-width:0}.exv-evolution select{width:100%;min-width:0}.exv-evolution small{grid-column:1/-1;line-height:1.5;color:#c8d7be;overflow-wrap:anywhere}.exv-evolution button{grid-column:2;grid-row:1;min-height:44px}.exv-evolution option:disabled{color:#a3a99d}@media(max-width:500px){.exv-roster-card>.exv-evolution{grid-column:1/-1;grid-template-columns:minmax(0,1fr)}.exv-evolution button{grid-column:1;grid-row:3;justify-self:end}}

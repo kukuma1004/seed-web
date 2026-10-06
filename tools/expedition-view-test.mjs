@@ -51,6 +51,16 @@ try{
  assert.deepEqual(audioCalls,['garden'],'mount selects HOME music even after another mode');
  assert.equal(timers.size,timersBeforeMount+1,'one foreground music clock, independent of rendering');
  const button=(key,value)=>Object.assign(new Element(),{dataset:{[key]:value}});
+ // Choosing a form must never spend a core. A separate explicit click commits.
+ const {EXPEDITION_SPECIES}=await vite.ssrLoadModule('/src/expedition/species.js');
+ const chosen=Object.values(EXPEDITION_SPECIES).find(s=>s.kind==='solo'&&s.parents.includes('pierce'));
+ const seed=roster.instances[ids[0]],previousLevel=seed.level;seed.level=5;model.meta.cores.pierce=1;
+ const group=new Element(),select=group.querySelector('[data-evolve]');select.dataset.evolve=seed.instanceId;select.value=chosen.id;select.matches=q=>q==='[data-evolve]';select.closest=()=>group;
+ root.emit('change',select);assert.equal(calls.length,0);assert.equal(group.querySelector('[data-evolve-confirm]').disabled,false);assert.match(group.querySelector('[data-evolve-info]').textContent,/관통 법칙핵 1\/1/);
+ const confirm=button('evolveConfirm',seed.instanceId);confirm.closest=q=>q==='.exv-evolution'?group:confirm;
+ model.meta.cores.pierce=0;root.emit('click',confirm);assert.equal(calls.length,0,'recheck resources before committing');
+ model.meta.cores.pierce=1;root.emit('click',confirm);await Promise.resolve();await Promise.resolve();assert.deepEqual(calls.pop(),{type:'evolve',instanceId:seed.instanceId,to:chosen.id});
+ seed.level=previousLevel;model.meta.cores.pierce=0;
  root.emit('click',button('intent','depart'));await Promise.resolve();await Promise.resolve();
  assert.deepEqual(calls[0],{type:'depart',gardenId:'meadow',difficulty:1});
  assert.match(main.innerHTML,/exv-explore/);assert.equal(view.isActive(),true);
