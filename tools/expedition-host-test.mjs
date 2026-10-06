@@ -9,7 +9,7 @@ assert(host.includes("import('./expedition/account-controller.js')"));
 assert(host.includes('clientEnabled:EXPEDITION_ACCOUNT_RELEASED'));
 assert(host.includes('createController:()=>opened.controller'));
 assert(host.includes('if(opened.controller)await opened.controller.close()'));
-assert.match(readFileSync(new URL('../src/expedition/account-release.js',import.meta.url),'utf8'),/EXPEDITION_ACCOUNT_RELEASED=false/);
+assert.match(readFileSync(new URL('../src/expedition/account-release.js',import.meta.url),'utf8'),/EXPEDITION_ACCOUNT_RELEASED=true/);
 assert(host.includes("import('./expedition/view.js')"));
 assert(!host.includes('seed-expedition-view.js'));assert(!host.includes('seed-character-core.js'));
 assert(host.includes('serial!==expeditionLoadSerial'));assert(host.includes("owner!==(account.user()?.uid||'guest')"));
@@ -18,5 +18,5 @@ assert(source.includes("if(!localInspection&&!developerRun&&!EXPEDITION_ACCOUNT_
 assert(source.includes("trackedMode=()=>mode==='expedition'?null:"),'review expedition cannot enter public mode usage');
 const view=readFileSync(new URL('../src/expedition/view.js',import.meta.url),'utf8');
 assert(view.includes("channel:'review'"));assert(!view.includes('AudioContext'));assert(!view.includes('setInterval'));
-const {PATCH_NOTES}=await import('../src/patch-notes.js');assert(!PATCH_NOTES.some(note=>[note.title,...note.lines].some(text=>text.includes('원정대'))),'unreleased Expedition must not be announced; unrelated historical note IDs remain valid');
-console.log('PASS local-only final ZIP host, lazy import/owner guard, no duel unlock dependency or realtime legacy import/false release note.');
+const {PATCH_NOTES}=await import('../src/patch-notes.js');assert(PATCH_NOTES.some(note=>note.title.includes('원정대')&&note.title.includes('베타')),'beta release must be announced separately from final acceptance');
+console.log('PASS beta ZIP host with isolated local review, lazy import/owner guard, no duel unlock dependency or realtime legacy import/beta release note.');
