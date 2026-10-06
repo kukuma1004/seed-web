@@ -1,0 +1,181 @@
+{
+  "version": 1,
+  "campaignGardens": [
+    {
+      "id": "meadow",
+      "name": "초원의 정원",
+      "law": "pierce",
+      "lesson": "전열/후열과 직선 관통",
+      "normal": [
+        "갈대 창병",
+        "가시 사수벌",
+        "창꼬리 도마뱀",
+        "송곳꽃"
+      ],
+      "elite": [
+        "긴뿔 들소",
+        "유리창 사슴"
+      ],
+      "boss": "가시뿔 수호자",
+      "reward": "관통핵"
+    },
+    {
+      "id": "blossom",
+      "name": "벚꽃의 정원",
+      "law": "split",
+      "lesson": "다수전과 증식 억제",
+      "normal": [
+        "꽃잎콩",
+        "쌍둥이 새싹",
+        "꽃가루 사수",
+        "벚꽃벌"
+      ],
+      "elite": [
+        "천갈래 덩굴",
+        "꽃잎 기사"
+      ],
+      "boss": "천개의 꽃잎",
+      "reward": "분열핵"
+    },
+    {
+      "id": "autumn",
+      "name": "가을의 정원",
+      "law": "recall",
+      "lesson": "왕복 공격과 미래 경로",
+      "normal": [
+        "낙엽 칼날",
+        "도토리 투척꾼",
+        "회귀새",
+        "되돌이 덩굴"
+      ],
+      "elite": [
+        "황혼 멧돼지",
+        "회귀 사슴"
+      ],
+      "boss": "낙엽 사냥꾼",
+      "reward": "회귀핵"
+    },
+    {
+      "id": "snow",
+      "name": "설원의 정원",
+      "law": "frost",
+      "lesson": "행동순서와 지연",
+      "normal": [
+        "서리토끼",
+        "고드름새",
+        "눈송이꽃",
+        "빙판갑충"
+      ],
+      "elite": [
+        "빙결 늑대",
+        "설원 방울탑"
+      ],
+      "boss": "백설의 거인",
+      "reward": "서리핵"
+    },
+    {
+      "id": "moon",
+      "name": "달빛의 정원",
+      "law": "orbit",
+      "lesson": "보호와 지속 압박",
+      "normal": [
+        "달구슬",
+        "반딧불 위성",
+        "초승달 벌레",
+        "밤꽃"
+      ],
+      "elite": [
+        "쌍월 수호자",
+        "환월 사슴"
+      ],
+      "boss": "월륜 수호자",
+      "reward": "공전핵"
+    },
+    {
+      "id": "fire",
+      "name": "불의 정원",
+      "law": "burst",
+      "lesson": "지연폭발과 빠른 처형",
+      "normal": [
+        "불씨콩",
+        "화약꽃",
+        "용암갑충",
+        "잿불 사수"
+      ],
+      "elite": [
+        "폭열도마뱀",
+        "화산 포탑"
+      ],
+      "boss": "용암의 심장",
+      "reward": "폭발핵"
+    },
+    {
+      "id": "shadow",
+      "name": "어둠의 정원",
+      "law": "gravity",
+      "lesson": "진형 이동과 구조",
+      "normal": [
+        "심연 젤리",
+        "중력눈",
+        "흑점 거미",
+        "낙하석"
+      ],
+      "elite": [
+        "궤도 포식자",
+        "흑점 기사"
+      ],
+      "boss": "심연의 문지기",
+      "reward": "중력핵"
+    },
+    {
+      "id": "dream",
+      "name": "설렘의 정원",
+      "law": "reflect",
+      "lesson": "반격과 패턴 읽기",
+      "normal": [
+        "프리즘 나비",
+        "유리토끼",
+        "메아리꽃",
+        "환영새"
+      ],
+      "elite": [
+        "만화경 사슴",
+        "쌍면 기사"
+      ],
+      "boss": "거울의 여왕",
+      "reward": "반사핵"
+    }
+  ],
+  "safeZones": {
+    "greenhouse": {
+      "name": "온실",
+      "role": "육성/보관/연쇄 생명전류",
+      "law": "chain",
+      "combatStage": false
+    },
+    "treeOfLife": {
+      "name": "생명의 나무",
+      "role": "HOME/진화/기억/스토리/엔드게임",
+      "combatStage": false
+    }
+  },
+  "runStructure": [
+    "deploy",
+    "explore",
+    "normal1",
+    "choice",
+    "normal2",
+    "rest",
+    "elite",
+    "return_or_boss",
+    "boss",
+    "return"
+  ],
+  "party": {
+    "total": 8,
+    "active": 5,
+    "reserve": 3,
+    "front": 2,
+    "back": 3
+  }
+}

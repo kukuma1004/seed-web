@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {acquireExpeditionAccountLock} from '../src/expedition/account-lock.js';
+import {expeditionAccountStoreKey} from '../src/expedition/account-store.js';
+const held=new Set(),locks={async request(key,options,fn){assert.deepEqual(options,{mode:'exclusive',ifAvailable:true});if(held.has(key))return fn(null);held.add(key);try{return await fn({name:key});}finally{held.delete(key);}}};
+assert.equal((await acquireExpeditionAccountLock('guest',{locks})).reason,'account');
+assert.equal((await acquireExpeditionAccountLock('owner',{locks:null})).reason,'unsupported');
+const a=await acquireExpeditionAccountLock('owner',{locks});assert.ok(a.ok);assert.ok(a.active());assert.equal(a.key,expeditionAccountStoreKey('owner'));
+const b=await acquireExpeditionAccountLock('owner',{locks});assert.equal(b.reason,'busy');assert.equal(b.active(),false);await b.release();assert.ok(a.active());
+const other=await acquireExpeditionAccountLock('other',{locks});assert.ok(other.ok);assert.ok(other.active());
+let completed=false;const slow=Promise.resolve().then(async()=>{await new Promise(resolve=>setTimeout(resolve,10));assert.ok(a.active());completed=true;});await slow;assert.equal(completed,true);await a.release();assert.equal(a.active(),false);await a.release();
+const again=await acquireExpeditionAccountLock('owner',{locks});assert.ok(again.ok);await again.release();await other.release();assert.equal(held.size,0);
+for(const request of [()=>{throw Error('disabled');},()=>Promise.reject(Error('disabled'))])assert.equal((await acquireExpeditionAccountLock('owner',{locks:{request}})).reason,'unavailable');
+console.log('Expedition local lock PASS: same-owner contention, separate owners, async hold, release, retry and unsupported failure. Web Locks mock; browser/physical device validation pending.');
