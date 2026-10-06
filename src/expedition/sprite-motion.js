@@ -12,7 +12,9 @@ export function expeditionSpriteSequence(unit,units,events,presentation={}){
  const configured=presentation.impactPoses?.[fx.action];
  const mapped=Array.isArray(configured)?configured[Math.max(0,fx.pose-1)%configured.length]:configured;
  const impact=fx.hit?7:fx.action==='guard'?6:Number.isInteger(mapped)&&mapped>=0&&mapped<8?mapped:fx.action==='attack'?fx.pose:['skill1','skill2','resonance','awaken'].includes(fx.action)?5:rest;
- const preparation=fx.hit?7:fx.action==='guard'?6:animate?4:rest;
+ const authoredPreparation=presentation.preparationPose;
+ const windup=Number.isInteger(authoredPreparation)&&authoredPreparation>=0&&authoredPreparation<8?authoredPreparation:4;
+ const preparation=fx.hit?7:fx.action==='guard'?6:animate?windup:rest;
  return Object.freeze({animate,duration:EXPEDITION_FEEDBACK_MS,preparation:cell(preparation,presentation.poseOffsets),impact:cell(impact,presentation.poseOffsets),rest:cell(rest,presentation.poseOffsets)});
 }
 

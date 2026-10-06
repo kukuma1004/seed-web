@@ -8,7 +8,7 @@ import {expeditionEnemyProfile,expeditionEncounter} from '../src/expedition/worl
 import {expeditionBossActionPattern,expeditionBossCommand} from '../src/expedition/boss-ai.js';
 
 const art=expeditionEnemyArt('meadow-normal-0');
-assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,14);assert.equal(expeditionArtAudit().enemies.motionReady,0);
+assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,21);assert.equal(expeditionArtAudit().enemies.motionReady,0);
 const unit={id:'e',speciesId:'meadow-normal-0',side:'enemy',hp:40},units=[unit,{id:'a',speciesId:'pierce',side:'ally',hp:40}];
 for(let seq=0;seq<8;seq++){
  const s=expeditionSpriteSequence(unit,units,[{type:'action',unitId:'e',kind:'attack',seq}],art);
@@ -210,6 +210,62 @@ assert(enemyActs>=80);console.log(`PASS 80 actual P2 simulated encounters/${comm
  }
  assert(kinds.has('skill1'));assert(kinds.has('guard'));
  console.log('PASS Blossom seven native56 contacts, 36 simulated P2 normal/elite battles/'+commands+' actions/'+enemyTurns+' enemy turns; actual boss AI/'+bossCommands+' actions; exact accepted-state restore');
+}
+{
+ // Independent native PNG contact measurements. Ignore unused low-tail
+ // poses whose feet are partly occluded rather than testing effect bounds.
+ const contacts={
+  'autumn-normal-0':[373,372,376,373,752,751,752,752],
+  'autumn-normal-1':[369,369,368,369,780,779,780,780],
+  'autumn-normal-2':[378,377,377,null,752,753,754,754],
+  'autumn-normal-3':[387,388,null,396,760,764,770,764],
+  'autumn-elite-0':[399,395,null,403,null,777,777,775],
+  'autumn-elite-1':[375,372,373,366,772,772,769,771],
+  'autumn-boss':[403,401,null,402,802,801,801,800]
+ };
+ let accepted=0,enemyTurns=0;const seen=new Set();
+ for(const [id,feet] of Object.entries(contacts)){
+  const meta=expeditionEnemyArt(id);assert.equal(meta.facing,'left');
+  for(let pose=0;pose<8;pose++)if(feet[pose]!==null){
+   const pivot=(feet[pose]-(pose>=4?443.5:0))/443.5;
+   assert(Math.abs(pivot+meta.poseOffsets[pose]/100-meta.baseline)<.000002,id+' actual root contact '+pose);
+  }
+  const u={id:'e',side:'enemy',hp:140};
+  for(const kind of ['attack','skill1','skill2','awaken'])for(let seq=0;seq<6;seq++){
+   const s=expeditionSpriteSequence(u,[u,{id:'a',side:'ally',hp:240}],[{type:'action',unitId:'e',kind,seq}],meta);
+   assert.equal(s.preparation.pose,id==='autumn-elite-0'?3:4);assert.notEqual(s.preparation.pose,s.impact.pose);
+   assert([1,2,3,5].includes(s.impact.pose));assert.equal(s.rest.pose,0);
+   if(id==='autumn-normal-2')assert.notEqual(s.impact.pose,3,'rear tail must not play as a LEFT attack');
+   if(['autumn-elite-0','autumn-boss'].includes(id))assert.notEqual(s.impact.pose,2,'wrong-facing or low-tail pose must not be a mapped attack');
+  }
+  const guarding={...u,guarding:true};assert.equal(expeditionSpriteSequence(guarding,[guarding],[{type:'action',unitId:'e',kind:'guard'}],meta).preparation.pose,6);
+  assert.equal(expeditionSpriteSequence(u,[u],[{type:'damage',targetId:'e',unitId:'a',amount:1}],meta).impact.pose,7,'authored windup must not override hit priority');
+  if(id==='autumn-boss')continue;
+  for(let n=0;n<6;n++){
+   const battle=createExpeditionCombat({battleId:`autumn-${id}-${n}`,allies:[{id:'a',speciesId:'pierce',slot:0,level:8,hp:240,maxHp:240,power:30,defense:5,speed:20}],enemies:[{id:'e',speciesId:id,slot:0,level:5,hp:140,maxHp:140,power:25,defense:4,speed:12}],getSpecies:id=>getExpeditionSpecies(id)||expeditionEnemyProfile(id)});
+   while(battle.phase==='fight'){
+    const actor=expeditionCombatTurn(battle),kind=actor.side==='ally'?'attack':['attack','skill1','skill2'][n%3];
+    const result=performExpeditionCombatAction(battle,{id:'autumn-act-'+(++accepted),unitId:actor.id,kind,targetId:actor.side==='ally'?'e':'a'});assert(result.ok,result.reason);
+    for(const event of result.events)seen.add(event.type);
+    const before=JSON.stringify(battle),enemy=battle.units.find(u=>u.side==='enemy');expeditionSpriteSequence(enemy,battle.units,result.events,meta);
+    if(actor.side==='enemy')enemyTurns++;
+    assert.equal(JSON.stringify(battle),before,'autumn presentation cannot mutate delayed returns, counter uses, protection, HP or receipts');
+    assert.deepEqual(restoreExpeditionCombat(battle),battle);assert(accepted<3000);
+   }
+  }
+ }
+ const battle=createExpeditionCombat({battleId:'autumn-boss-motion',allies:Array.from({length:5},(_,slot)=>({id:'a'+slot,speciesId:'orbit',slot,level:8,hp:1000,maxHp:1000,power:0,defense:0,speed:10})),enemies:expeditionEncounter('autumn',{kind:'boss',battleId:'autumn-boss-motion'}).filter(u=>u.boss),getSpecies:id=>{const p=getExpeditionSpecies(id)||expeditionEnemyProfile(id);return id==='autumn-boss'?{...p,actionPattern:expeditionBossActionPattern('autumn')}:p;}});
+ const kinds=new Set();let bossCommands=0,returnedDamage=false;
+ while(battle.phase==='fight'&&battle.round<=6){
+  const actor=expeditionCombatTurn(battle),id='autumn-boss-act-'+(++bossCommands),input=actor.boss?expeditionBossCommand(battle,id):{id,unitId:actor.id,kind:'guard'};
+  const result=performExpeditionCombatAction(battle,input);assert(result.ok,result.reason);
+  for(const event of result.events){seen.add(event.type);if(event.type==='damage'&&event.unitId===battle.units.find(u=>u.boss).id)returnedDamage=true;}
+  const before=JSON.stringify(battle),boss=battle.units.find(u=>u.boss),s=expeditionSpriteSequence(boss,battle.units,result.events,expeditionEnemyArt('autumn-boss'));
+  if(actor.boss){kinds.add(input.kind);if(input.kind==='guard')assert.equal(s.rest.pose,6);else{assert.equal(s.preparation.pose,4);assert([1,3,5].includes(s.impact.pose));}}
+  assert.equal(JSON.stringify(battle),before);assert.deepEqual(restoreExpeditionCombat(battle),battle);assert(bossCommands<100);
+ }
+ assert.deepEqual([...kinds].sort(),['attack','guard','skill1']);assert(returnedDamage);assert(seen.has('returnWarning'));assert(seen.has('counterReady'));assert(seen.has('protection'));assert(enemyTurns>=36);
+ console.log(`PASS Autumn seven native contact sets with explicit occluded exclusions; 36 simulated normal/elite battles/${accepted} actions/${enemyTurns} enemy turns; boss AI/${bossCommands} commands with returns/guard; exact restore`);
 }
 const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'utf8'),view=readFileSync(new URL('../src/expedition/view.js',import.meta.url),'utf8');
 assert.match(css,/background-size:400% 200%/);assert.match(css,/translate:0 var\(--pose-impact-offset,0%\)/);assert.match(css,/prefers-reduced-motion:reduce.*pose-impact-offset/s);

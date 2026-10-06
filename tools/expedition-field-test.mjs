@@ -67,6 +67,9 @@ for(const id of ['meadow','blossom','autumn','snow','moon','fire','shadow','drea
  for(const path of Object.values(field.layers)){assert.ok(expeditionAssetUrl(path,'/seed-web/'));bytes+=statSync(new URL('../public/assets/'+path,import.meta.url)).size;}
  assert.ok(bytes<600000,`${id} current-garden field stays bounded`);gardenBytes[id]=bytes;
 }
-const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'utf8').split('/* Native three-layer side field.')[1];assert.ok(!/animation:/.test(css),'no idle layer animation');assert.ok(css.includes('pointer-events:none'));assert.ok(css.includes('background-repeat:no-repeat'));
+const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'utf8');
+const fieldRules=[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(([,selector])=>/\.exv-(?:field-layer|layered)|\.field-(?:far|middle|foreground)/.test(selector)).map(([,selector,body])=>selector+'{'+body+'}').join('\n');
+assert.ok(fieldRules.includes('.exv-field-layer'),'test actual field declarations rather than all later UI sections');
+assert.ok(!/animation\s*:(?!\s*none\b)/.test(fieldRules),'no idle layer animation');assert.ok(fieldRules.includes('pointer-events:none'));assert.ok(fieldRules.includes('background-repeat:no-repeat'));
 const view=readFileSync(new URL('../src/expedition/view.js',import.meta.url),'utf8');assert.ok(view.includes("if(next!=='explore'&&fieldTarget){fieldObserver?.disconnect()"));assert.ok(view.includes('closed=true;stop();fieldObserver?.disconnect()'));assert.ok(view.includes('if(fieldTarget!==view)'),'layout read must only happen on new field/ResizeObserver');
 console.log(`Expedition finite field: ${cases} responsive/progress cases PASS, layer bytes ${JSON.stringify(gardenBytes)}, no idle animation; browser and physical contact/readability QA remain separate.`);
