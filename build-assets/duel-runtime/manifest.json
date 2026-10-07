@@ -1,0 +1,359 @@
+{
+  "schema": 1,
+  "method": "lossless WebP; alpha and every nonzero-alpha RGB channel identical",
+  "entries": [
+    {
+      "file": "bloomtempest-motions-recovery-20261007.webp",
+      "sourceSha256": "37505fba72b206ec827d06bac8ed183fc3474fc7c32fdfcc93d48518e2a121d8",
+      "runtimeSha256": "aa8c4e609c8631f7dd81e81561c35d6e376a0981fbe15bae65d06677038df7cb",
+      "sourceBytes": 1637512,
+      "runtimeBytes": 1135550,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2756706
+    },
+    {
+      "file": "echolane-motions-recovery-20261007.webp",
+      "sourceSha256": "e5aec5d6adf7b42dfcc69b71fc1ac4b37c909a599c5a20ca1b65bc8a609e951f",
+      "runtimeSha256": "6a3deb49af510f595836bf9259910338612f7ed2a37f1b097dc73509650f31cd",
+      "sourceBytes": 1633912,
+      "runtimeBytes": 1139886,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2703103
+    },
+    {
+      "file": "final-accretiondisk-orbit-motions-recovery-20261007.webp",
+      "sourceSha256": "9376e58b5199b7d478c62786f23563365cf2a13b5bea5fa9e5d5b442c97ec7e5",
+      "runtimeSha256": "af8ff809ac05f9839f70415e7e0696926efee159766897d51718d13a38714b86",
+      "sourceBytes": 1601644,
+      "runtimeBytes": 1137842,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2605626
+    },
+    {
+      "file": "final-chainburst-chain-motions-recovery-20261007.webp",
+      "sourceSha256": "1e8c70e7013ab3607735f429a973078a196fa83f70d20ef28b52cc75e894fe41",
+      "runtimeSha256": "a2018d6d26020db21a3049979da324b645ad38bd57e53657c7421602be469e3b",
+      "sourceBytes": 1713386,
+      "runtimeBytes": 1253394,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2424109
+    },
+    {
+      "file": "final-frostbloom-burst-motions-recovery-20261007.webp",
+      "sourceSha256": "049c3b00431bb61086f8f7e2a3f1ebdcc33b565bc336db182ef8f35e286b444e",
+      "runtimeSha256": "da5ede1a29b2f65ee3caedf5a88ed339e38ace9bc319f302c8394c0635d9e1c4",
+      "sourceBytes": 1495912,
+      "runtimeBytes": 970732,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3124064
+    },
+    {
+      "file": "final-frostguard-frost-motions-recovery-20261007.webp",
+      "sourceSha256": "11fd1a14be0c3e4522ea56eeadf90d05c9e4dd43a188cf51dc1b33e54635a602",
+      "runtimeSha256": "2e73c363aa7b9b9912ef630dc6bd649ac3ff8e456055fdaa88bc7c4aa8640678",
+      "sourceBytes": 1631180,
+      "runtimeBytes": 1128186,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2853590
+    },
+    {
+      "file": "final-halobloom-orbit-motions-recovery-20261007.webp",
+      "sourceSha256": "cc7bf31524b441357e4f540bc48656990e2447a8e8d0c32c7d05b02577940870",
+      "runtimeSha256": "9fd91570374e71c5e8711516d34bd7fa5d875a66d4da276c9990a5b243341497",
+      "sourceBytes": 1686378,
+      "runtimeBytes": 1189000,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2754030
+    },
+    {
+      "file": "final-halobloom-split-motions-recovery-20261007.webp",
+      "sourceSha256": "ea56e347a1b0dcc6210a6e77d68c3b845c072012329832b14a48be9edc675cac",
+      "runtimeSha256": "d64c2cad1f5dd31225cac631f4f6f4330f1620152fbdd2e6309d6a8a66c4bd78",
+      "sourceBytes": 1499284,
+      "runtimeBytes": 1000952,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2808020
+    },
+    {
+      "file": "final-mirrorguard-orbit-motions-recovery-20261007.webp",
+      "sourceSha256": "d989187695a4cf87476c52710830612ae8a0f2f7b197b4d991e90efc82e1c9e9",
+      "runtimeSha256": "b50775cbab84eba8ecd97d0ae6394eb76b6475025b7df403fa2a6d865c9ea2ee",
+      "sourceBytes": 1430180,
+      "runtimeBytes": 873598,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3215247
+    },
+    {
+      "file": "final-spearring-orbit-motions-recovery-20261007.webp",
+      "sourceSha256": "2785d0a5bd6a8735e89d4ef80ee642aa9fe8062e038d6f19d8e94d862f3e8e39",
+      "runtimeSha256": "4649d5273019426a7d22e381900255defb7def42ed950771c02d15762bb83a2c",
+      "sourceBytes": 1509662,
+      "runtimeBytes": 974524,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3115090
+    },
+    {
+      "file": "final-spearring-orbit-motions-tail-b-20261007-4.webp",
+      "sourceSha256": "0376bc26793e753af995a35f81c1df64ce95e4d7099d1fca3f0a03a866999119",
+      "runtimeSha256": "45700be48f4ddae79a694462318a70bc0a15d4b01c9c84b2694579bf0cbd4c04",
+      "sourceBytes": 1202938,
+      "runtimeBytes": 625692,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3510686
+    },
+    {
+      "file": "final-spearring-orbit-motions-tail-b-20261007-5.webp",
+      "sourceSha256": "575c58b646e2ad405fae21bd9ae78fd6177d94a12b9b2bcaeb60881d947aa9c9",
+      "runtimeSha256": "f2083ba9d2802f584522f9eaa3ac459ad01c0b3e8169baa4079d580d11d8bda1",
+      "sourceBytes": 1238428,
+      "runtimeBytes": 672672,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3423696
+    },
+    {
+      "file": "final-stormcrown-orbit-motions-recovery-20261007.webp",
+      "sourceSha256": "88621baa6b9b9a6fa93f32ffe179dddbe782fcf74fc9db60f6c1f5ace83f5368",
+      "runtimeSha256": "ba99dadcaee9d536a94121c2f428a8db4a0859c13f682f595e3f4a059244e98d",
+      "sourceBytes": 1491942,
+      "runtimeBytes": 924374,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3180781
+    },
+    {
+      "file": "final-sunmirror-burst-motions-recovery-20261007.webp",
+      "sourceSha256": "4be878ece745aba681c327346cc4a805a585e5e277ce32ba3ad982a8d7b55c9a",
+      "runtimeSha256": "0d923914b5ea944e8011eb8abc94a7e33e56c9f1d842091caa5012a47a13d675",
+      "sourceBytes": 1646530,
+      "runtimeBytes": 1154304,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2757368
+    },
+    {
+      "file": "icegarden-motions-recovery-20261007.webp",
+      "sourceSha256": "758b512d2ccb611a9ebe2df020d37d69edffcd2a2c2fc5e62027be5beef6fa9e",
+      "runtimeSha256": "9bc87ff5412b27cd7533a669710478201e0204a37acd9fc36b59e81e77543c39",
+      "sourceBytes": 1590444,
+      "runtimeBytes": 1091248,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2808692
+    },
+    {
+      "file": "infiniteprism-motions-recovery-20261007.webp",
+      "sourceSha256": "c3fecf8d43bddfa027c84a04e74053bd0fcc670c8c442cae119784dad12e64f0",
+      "runtimeSha256": "a32c279c97499b6c09aa143e4e247b32e1afabc160f45b4387031bb0762adae7",
+      "sourceBytes": 1541240,
+      "runtimeBytes": 1009962,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3121347
+    },
+    {
+      "file": "infiniteprism-motions-tail-a-20261007.webp",
+      "sourceSha256": "3d0d5cbffb877483a657640494caafd7fc711d0c5fc5f1659868123bda9f7adc",
+      "runtimeSha256": "dfff2846e04b320e395198be716bd48d371643511beaf6a61ea109f757d6a3ad",
+      "sourceBytes": 1292102,
+      "runtimeBytes": 776486,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3003107
+    },
+    {
+      "file": "lightningpetal-motions-recovery-20261007.webp",
+      "sourceSha256": "27a9720311f8be4ae45d917cc3f63672be61e2fe5752d5ae648c94a61acd05d7",
+      "runtimeSha256": "05791e4ab9188c42ffa7f204b8ca76707d5baafbdc749e73f743e680682355e4",
+      "sourceBytes": 1682714,
+      "runtimeBytes": 1201086,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2545853
+    },
+    {
+      "file": "pierceshower-motions-tail-a-20261007.webp",
+      "sourceSha256": "4a631809806189c4fc2c40a4958d78dae4b71c92a0083b7c19c6c21912c1092a",
+      "runtimeSha256": "100a9ac66f7c3f07c528d53fe2af7bb0d08e35d72b82cb4fad0575c2750eb44f",
+      "sourceBytes": 1203230,
+      "runtimeBytes": 678264,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2964748
+    },
+    {
+      "file": "refractlance-motions-recovery-20261007.webp",
+      "sourceSha256": "06f3cb7a17fc153952499acdc327f09f240e711ac05cce17fb5644f2ab936a0f",
+      "runtimeSha256": "94e507080c39381efe8d6c61bd7f9162c7f60a7dca1497e67c31ec5f76a74187",
+      "sourceBytes": 1536162,
+      "runtimeBytes": 985266,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3176835
+    },
+    {
+      "file": "refractlance-motions-tail-a-20261007.webp",
+      "sourceSha256": "34b0a441d2bdd823bf25d64dd41304dbbb40f833b4d195d7ae6d0461e97c0ec5",
+      "runtimeSha256": "858e08822ebd77135719671e60931b278c6c18c5305ee1cf1328dc0d2a78a712",
+      "sourceBytes": 1322546,
+      "runtimeBytes": 759770,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3509940
+    },
+    {
+      "file": "rimepetal-motions-recovery-20261007.webp",
+      "sourceSha256": "1b66b454d682518f7978f027f96fc0c1d8b04a6756fea1f33afe603cae314317",
+      "runtimeSha256": "a020c4076e173bcd0b193b0e1958cce70de287efa497d5069f5bb4105a956538",
+      "sourceBytes": 1694590,
+      "runtimeBytes": 1212484,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2660622
+    },
+    {
+      "file": "rimepetal-motions-tail-a-20261007.webp",
+      "sourceSha256": "650a16f9eee33f1eb03e1e07eb538ce00d4c85963efbc1be67b6526918cf0d64",
+      "runtimeSha256": "4eeaba69ff610f837a63a2e16b1f721413a3a49e4f3b9c259ffc9b478fdccc54",
+      "sourceBytes": 1472762,
+      "runtimeBytes": 971498,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2968508
+    },
+    {
+      "file": "skyspear-motions-recovery-20261007.webp",
+      "sourceSha256": "59e627b51f79b6f4cdc430413a132028e6771811887d84d2b423fc263f8a672d",
+      "runtimeSha256": "bd809484930b923a033ff65f382600f533a41edce799361441515c6ba9bda25e",
+      "sourceBytes": 1603702,
+      "runtimeBytes": 1088414,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3010778
+    },
+    {
+      "file": "tempestcrown-motions-recovery-20261007.webp",
+      "sourceSha256": "a3a7c14f26b387db721b9903b7a33351dc748579ae127da8387439a6778e9ef1",
+      "runtimeSha256": "9e0e53dc9bacdfd818e80b902d477316a6fd4ce689ee3feae1673f7d676cf6ae",
+      "sourceBytes": 1612306,
+      "runtimeBytes": 1085670,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 2935708
+    },
+    {
+      "file": "tempestcrown-motions-tail-b-20261007-1.webp",
+      "sourceSha256": "1abe8ee2261e00584d761c40db579d61c6a571910eff9114c13f406a5f6bd9ce",
+      "runtimeSha256": "14a6ec17d3c7f29921be36323d5693a810f60e5253480846871ee74f936b128a",
+      "sourceBytes": 1107744,
+      "runtimeBytes": 584738,
+      "width": 1536,
+      "height": 1024,
+      "alphaDifferences": 0,
+      "visibleRGBDifferences": 0,
+      "changedInvisibleChannels": 3588306
+    }
+  ],
+  "rejected": [
+    {
+      "file": "bloomtempest-motions-tail-b-20261007-2.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 785458,
+      "encodedBytes": 761860
+    },
+    {
+      "file": "final-blastlance-burst-motions-recovery-20261007.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 976206,
+      "encodedBytes": 945578
+    },
+    {
+      "file": "final-frostguard-frost-motions-tail-b-20261007-3.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 749056,
+      "encodedBytes": 731108
+    },
+    {
+      "file": "frostarmada-motions-recovery-20261007.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 1132602,
+      "encodedBytes": 1108380
+    },
+    {
+      "file": "pierceshower-motions-recovery-20261007.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 917490,
+      "encodedBytes": 886616
+    },
+    {
+      "file": "skyspear-motions-tail-b-20261007-0.webp",
+      "reason": "less than 10% reduction",
+      "sourceBytes": 652108,
+      "encodedBytes": 634860
+    }
+  ],
+  "sourceBytes": 39078430,
+  "runtimeBytes": 25625592,
+  "savedBytes": 13452838
+}

@@ -2,6 +2,7 @@
 // The online ranking still needs internet; runs finished offline wait in the browser and go up later.
 const CACHE='seed-play-v55';
 const ROOT=new URL('./',self.location).href;
+const REVISIONS=ROOT+'offline-asset-revisions.json';
 const SHELL=[ROOT,ROOT+'manifest.webmanifest',ROOT+'icons/seed-cute-v1-192.png',ROOT+'icons/seed-cute-v1-512.png',ROOT+'icons/seed-cute-v1-maskable-512.png'];
 let lastSync=0,syncing=null;
 const downloadPolicies=new Map();
@@ -23,17 +24,30 @@ function syncOfflineCopy(){
    if(!downloadsAllowed()||clients.some(client=>!downloadPolicies.get(client.id)))return;
    const response=await fetch(ROOT+'offline-manifest.json',{cache:'no-store'});
    if(!response.ok)return;
-   const {files}=await response.json(),cache=await caches.open(CACHE);
+   const {files,assetVersions={}}=await response.json(),cache=await caches.open(CACHE);
+   // A static art path can change bytes without changing its filename. Refresh only
+   // explicitly revised copies; the old cached image survives a failed download.
+   let revisions={};
+   try{const stored=await cache.match(REVISIONS);if(stored)revisions=await stored.json();}catch{}
+   if(!revisions||typeof revisions!=='object'||Array.isArray(revisions))revisions={};
+   let revisionChanged=false;
    const wanted=new Set([...SHELL,...files.filter(f=>f!=='index.html').map(f=>ROOT+f)]);
    let complete=true;
    for(const url of wanted){
     // Finish at most the in-flight file when play starts or the app is hidden.
     if(!downloadsAllowed()){complete=false;break;}
-    if(url===ROOT||await cache.match(url,{ignoreVary:true}))continue;
-    try{const file=await fetch(url);if(file.ok)await cache.put(url,file);else complete=false;}catch{complete=false;}
+    if(url===ROOT)continue;
+    const asset=url.slice(ROOT.length),revision=/^assets\/duel\/[a-z0-9-]+\.webp$/.test(asset)&&/^[a-f0-9]{64}$/.test(assetVersions?.[asset])?assetVersions[asset]:null;
+    const cached=await cache.match(url,{ignoreVary:true});
+    if(cached&&(!revision||revisions[asset]===revision))continue;
+    if(!downloadsAllowed()){complete=false;break;}
+    try{const file=await fetch(url,revision?{cache:'no-store'}:undefined);if(file.ok){await cache.put(url,file);if(revision){revisions[asset]=revision;revisionChanged=true;}}else complete=false;}catch{complete=false;}
    }
+   if(!downloadsAllowed())complete=false;
+   if(revisionChanged)await cache.put(REVISIONS,new Response(JSON.stringify(revisions),{headers:{'content-type':'application/json'}}));
    // A partial/failed update must retain old cached assets for offline players.
    if(!complete)return;
+   wanted.add(REVISIONS);
    for(const request of await cache.keys())if(!wanted.has(request.url))await cache.delete(request);
    await Promise.all((await caches.keys()).filter(k=>k.startsWith('seed-play-')&&k!==CACHE).map(k=>caches.delete(k)));
    lastSync=Date.now();
