@@ -145,7 +145,7 @@ assert.ok(analyzeCauses({frameMs:30,sections:{render:2},state:{drawCalls:160}}).
  assert.doesNotMatch(frameBody,/JSON\.stringify|document\.|innerHTML/);
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
  assert.match(main,/perf\.frame\(raw\*1000,mode==='playing'&&!paused,perfSnapshot\)/);
- assert.match(main,/function animate\(now\)\{animationHandle=0;if\(document\.hidden\)return;startAnimation\(\)/);
+ assert.match(main,/function animate\(now\)\{animationHandle=0;if\(document\.hidden\|\|!mainOwnsFrames\(\)\)return;startAnimation\(\)/);
  for(const k of ['player','collision','forms','enemyAI','projectiles','enemyShots','particles','hud','render'])assert.match(main,new RegExp(`perfMark\\(PS\\.${k}\\)`),k);
  assert.match(main,/function perfFinish[\s\S]*saveSession\(rawStorage,report\)[\s\S]*if\(adminMode&&!localInspection\)/,'개발자 계정만 올립니다.');
  assert.doesNotMatch(main.slice(main.indexOf('function perfSnapshot'),main.indexOf('function perfBegin')),/playerName|email|displayName/,'성능 기록에 이름·이메일을 넣지 않습니다.');
