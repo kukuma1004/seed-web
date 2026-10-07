@@ -37,7 +37,7 @@ try{
  globalThis.setTimeout=(fn,delay)=>{timers.set(++nextId,{fn,delay});return nextId;};globalThis.clearTimeout=id=>timers.delete(id);
  const timerBaseline=timers.size;
  function fixture(screen='explore',queuedMovement=false){
-  doc.hidden=false;let owner='lifecycle-owner',resolveFlight,flight=null,delayedType='move',pauseFailure=false;
+  doc.hidden=false;let owner='lifecycle-owner',resolveFlight,flight=null,delayedType='interact',pauseFailure=false;
   const roster=createRoster({owner,channel:'review'}),ids=['pierce','split','orbit','frost','burst','gravity','reflect','recall'].map((speciesId,n)=>{const id=`seed-${n}`;assert.ok(recruitInstance(roster,{instanceId:id,speciesId}));return id;});assert.ok(setParty(roster,ids));
   const route=newExpeditionRoute({runId:'lifecycle-run',gardenId:'meadow',difficulty:1,partyIds:ids});advanceExpeditionRoute(route);
   const model={screen,roster,meta:{...emptyExpeditionNursery(),cores:{},awakenMaterials:0},route,battle:null,notice:'',saveState:'saved',events:[],lastResult:null,paused:false,review:false};
@@ -71,7 +71,7 @@ try{
   assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);assert.equal(f.view.isActive(),false);assert.equal(f.calls.length,1,'pause waits for accepted command');
   assert.equal(f.root.querySelector('.exv-save').textContent,'서버 저장 확인 중');
   f.resolve();await settle();
-  assert.deepEqual(f.calls.map(x=>x.type),['move','pause']);assert.equal(f.calls[1].paused,true);assert.equal(f.model.paused,true);assert.equal(f.durable.position,before+.4);assert.equal(f.model.saveState,'saved');
+  assert.deepEqual(f.calls.map(x=>x.type),['interact','pause']);assert.equal(f.calls[1].paused,true);assert.equal(f.model.paused,true);assert.equal(f.durable.position,before);assert.equal(f.model.saveState,'saved');
   assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);assert.equal(f.sounds.length,0);
   doc.hidden=false;doc.emit('visibilitychange');assert.equal(f.view.isActive(),false,'return never resumes a suspended run');
   f.root.emit('click',button('intent','resume'));await settle();assert.equal(f.model.paused,false);assert.equal(f.view.isActive(),true);assert.equal(timers.size,timerBaseline+1);assert.equal(frames.size,0,'held keys were cleared');cleanup(f);groups++;
@@ -90,10 +90,10 @@ try{
   assert.deepEqual(f.calls.map(x=>[x.type,x.paused]),[['pause',true],['pause',false],['pause',true]]);assert.equal(f.model.paused,true);assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(f.audioPause.at(-1),true,'resume ACK cannot restart suspended audio');cleanup(f);groups++;
  }
  {
-  const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');f.owner('other-owner');f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'queued pause must not cross UID boundary');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);cleanup(f);groups++;
+  const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');f.owner('other-owner');f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['interact'],'queued pause must not cross UID boundary');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);cleanup(f);groups++;
  }
  {
-  const f=fixture();f.root.emit('click',button('travel',''));doc.hidden=true;doc.emit('visibilitychange');const closing=f.view.close();f.resolve();await closing;await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'close owns its final flush, no late dispatch');assert.equal(f.root.removed,true);assert.equal(f.durable.position,f.model.route.position);assert.equal(timers.size,timerBaseline);assert.equal(doc.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(f.audioPause.at(-1),true,'late close completion must leave background audio suspended');doc.hidden=false;groups++;
+  const f=fixture();f.root.emit('click',button('travel',''));doc.hidden=true;doc.emit('visibilitychange');const closing=f.view.close();f.resolve();await closing;await settle();assert.deepEqual(f.calls.map(x=>x.type),['interact'],'close owns its final flush, no late dispatch');assert.equal(f.root.removed,true);assert.equal(f.durable.position,f.model.route.position);assert.equal(timers.size,timerBaseline);assert.equal(doc.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(f.audioPause.at(-1),true,'late close completion must leave background audio suspended');doc.hidden=false;groups++;
  }
  {
   const f=fixture();f.pauseFailure();f.root.emit('click',button('travel',''));win.emit('blur');f.resolve();await settle();assert.equal(f.model.saveState,'error');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(f.root.querySelector('.exv-save').textContent,'저장 오류 · 진행 중단');assert.match(f.root.querySelector('.exv-notice').textContent,/durable original retained/);assert.equal(f.root.querySelector('.exv-pause-layer').querySelector('[data-intent="resume"]').disabled,true,'cannot resume before durable recovery');cleanup(f);groups++;
@@ -103,7 +103,7 @@ try{
   f.root.emit('click',button('travel',''));f.root.emit('click',button('travel',''));
   assert.equal(f.calls.length,1,'duplicate event click cannot overlap accepted work');assert.equal(frames.size,0);
   win.emit('blur');f.resolve();await settle();
-  assert.deepEqual(f.calls.map(x=>x.type),['move','pause']);assert.equal(f.durable.position,before+.4);cleanup(f);groups++;
+  assert.deepEqual(f.calls.map(x=>x.type),['interact','pause']);assert.equal(f.durable.position,before);cleanup(f);groups++;
  }
  {
   const f=fixture('battle');f.delay('action');
@@ -121,8 +121,8 @@ try{
  {
   const f=fixture();f.delay('none');f.root.emit('click',button('travel',''));
   for(let n=0;n<100;n++)await settle();
-  assert.equal(f.calls.filter(i=>i.type==='move').length,32,'bounded audited arrival');
-  assert.equal(f.calls.at(-1).type,'interact');assert.equal(f.calls.length,33);
+  assert.equal(f.calls.filter(i=>i.type==='move').length,0,'direct choice has no simulated arrival');
+  assert.equal(f.calls.at(-1).type,'interact');assert.equal(f.calls.length,1);
   assert.equal(f.model.screen,'battle');assert.equal(frames.size,0,'event starts without any RAF');cleanup(f);groups++;
  }
  {
@@ -132,8 +132,8 @@ try{
  }
  {
   const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');
-  assert.equal(frames.size,0);assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'move');f.resolve();await settle();
-  assert.deepEqual(f.calls.map(i=>i.type),['move','pause'],'suspension blocks event transition after arrival receipt');cleanup(f);groups++;
+  assert.equal(frames.size,0);assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'interact');f.resolve();await settle();
+  assert.deepEqual(f.calls.map(i=>i.type),['interact','pause'],'suspension preserves the accepted event and pauses before the next paid action');cleanup(f);groups++;
  }
  {
   const f=fixture();f.delay('none');f.model.route.step=3;f.root.emit('click',button('law','pierce'));

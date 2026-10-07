@@ -53,7 +53,7 @@ export async function createExpeditionAccountController({owner,currentOwner=()=>
   // exact unchanged state check; never apply them to a competing campaign.
   if(JSON.stringify(previous.state)!==JSON.stringify(confirmed.state))throw Error('다른 기기의 기록을 확인하고 다시 열어 주세요');
   const generatedIds=[];let projected=confirmed.state;
-  for(const command of commands){const p=projectExpeditionRuntime(projected,command,{idFactory:()=>{const id=identity();generatedIds.push(id);return id;}});if(!p.ok)return {ok:false,reason:p.reason,events:[],saveState};projected=p.state;}
+  for(const command of commands){const p=projectExpeditionRuntime(projected,command,{directEvents:true,idFactory:()=>{const id=identity();generatedIds.push(id);return id;}});if(!p.ok)return {ok:false,reason:p.reason,events:[],saveState};projected=p.state;}
   const transaction={version:EXPEDITION_RUNTIME_TRANSACTION_VERSION,kind:'runtime',receiptId:`write-${confirmed.revision+1}-${identity()}`,commands:copy(commands),generatedIds};
   const next=await nextExpeditionRuntimeAccount(confirmed,{owner,transaction,now:now(),writer});owned();if(!next.ok)return {ok:false,reason:next.reason,events:[],saveState};
   const staged=await store.stage(next.raw,{expectedRaw:JSON.stringify(confirmed),transaction});owned();if(!staged.ok)throw Error(`진행 저장 실패 · ${staged.reason}`);

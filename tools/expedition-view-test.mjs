@@ -91,7 +91,8 @@ try{
  root.emit('click',button('intent','resume'));await Promise.resolve();await Promise.resolve();await Promise.resolve();
  assert.equal(root.querySelector('.exv-notice').textContent,'','successful resume clears the stale pause notice');
  assert.equal(timers.size,timersBeforeMount+1,'resuming restores one music clock');assert.equal(frames.size,0);
- root.emit('click',button('intent','interact'));for(let n=0;n<150;n++)await Promise.resolve();
+ const beforeEvent=calls.length;root.emit('click',button('intent','interact'));for(let n=0;n<8;n++)await Promise.resolve();
+ assert.deepEqual(calls.slice(beforeEvent),[{type:'interact'}],'one event choice, no simulated movement commands');
  assert.match(main.innerHTML,/기본공격/);assert.match(main.innerHTML,/기술 1/);assert.match(main.innerHTML,/각성기/);assert.match(main.innerHTML,/대기 3/);
  assert.match(main.innerHTML,/후열<\/span><span>전열 →/);assert.match(main.innerHTML,/← 전열/);
  assert.match(main.innerHTML,/관통 발현/);assert.match(main.innerHTML,/한 열 타격/);
@@ -136,7 +137,7 @@ try{
   let resolveClose,exited=0,observed;model.review=false;model.saveState='pending';
   const asyncController={state:()=>model,dispatch:controller.dispatch,close:()=>new Promise(resolve=>{resolveClose=resolve;})};
   const accountView=mountExpedition({host,owner:'ui-owner',currentOwner:()=>ownerNow,createController:()=>asyncController,audio:sharedAudio,onClose:result=>{exited++;observed=result;}}),accountRoot=host.child;
-  assert.equal(accountRoot.querySelector('.exv-save').textContent,'이동 기록 저장 대기');assert.equal(accountRoot.querySelector('.exv-brand span').textContent,'원정대 · 계정 기록');
+  assert.equal(accountRoot.querySelector('.exv-save').textContent,'원정 진행 저장 대기');assert.equal(accountRoot.querySelector('.exv-brand span').textContent,'원정대 · 계정 기록');
   const leaving=accountView.close();assert.equal(accountRoot.removed,undefined);assert.equal(exited,0);assert.equal(accountRoot.querySelector('.exv-save').textContent,'저장 확인 중');assert.equal(timers.size,timersBeforeMount);assert.equal(win.handlers.size,0);
   accountView.close();resolveClose(outcome);await leaving;assert.equal(accountRoot.removed,true);assert.equal(exited,1);assert.deepEqual(observed,outcome);
  }

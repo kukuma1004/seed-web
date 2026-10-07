@@ -21,7 +21,7 @@ function recordScene(s,context){const result=selectExpeditionStory(context,s.ros
 // Shared pure rule projection. Callers must validate their own channel and
 // exact parent before applying it. This does not read/write storage or authorize
 // a review-to-account migration. Random identities are injected by the caller.
-export function projectExpeditionRuntime(previous,intent,{idFactory=randomId,combatRelics=true,combatVersion=EXPEDITION_COMBAT_VERSION}={}){
+export function projectExpeditionRuntime(previous,intent,{idFactory=randomId,combatRelics=true,combatVersion=EXPEDITION_COMBAT_VERSION,directEvents=false}={}){
  // Movement changes only route scalars. Keep roster/battle/history references
  // intact instead of cloning every individual at animation-frame frequency.
  if(intent?.type==='move'){
@@ -113,16 +113,16 @@ export function projectExpeditionRuntime(previous,intent,{idFactory=randomId,com
     if(s.screen!=='home'||!aliveParty(s).length||!s.roster.party.slice(0,5).some(Boolean))throw Error('출전할 씨앗을 먼저 배치해 주세요');
     s.route=newExpeditionRoute({runId:`run-${idFactory()}`,gardenId:intent.gardenId,difficulty:intent.difficulty??1,partyIds:s.roster.party});s.route.pendingFinds=[];advanceExpeditionRoute(s.route);s.screen='explore';s.lastResult=null;
    }else if(intent.type==='interact'){
-    if(s.screen!=='explore'||s.route.position<12.6)throw Error('길의 표식 가까이 이동해 주세요');
+    if(s.screen!=='explore'||!directEvents&&s.route.position<12.6)throw Error('원정 사건을 열 수 없어요');
     const step=EXPEDITION_RUN_STEPS[s.route.step];
     if(['normal1','normal2','elite','boss'].includes(step))battleStart(s,step==='elite'?'elite':step==='boss'?'boss':'normal');
     else if(step==='return')conclude(s,'return');
-    else if(step==='rest')throw Error('쉼터에서 회복하거나 계속 이동해 주세요');
+    else if(step==='rest')throw Error('쉼터에서 회복을 선택해 주세요');
     else if(step==='choice')throw Error('가져갈 법칙핵을 선택해 주세요');
     else if(step==='return_or_boss')throw Error('지금 귀환하거나 보스에게 도전해 주세요');
     else advanceExpeditionRoute(s.route);
    }else if(intent.type==='choice'){
-    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='choice'||!Object.hasOwn(LAW_DNA,intent.lawId)||s.route.position<12.6)throw Error('법칙핵을 선택할 수 없어요');
+    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='choice'||!Object.hasOwn(LAW_DNA,intent.lawId)||!directEvents&&s.route.position<12.6)throw Error('법칙핵을 선택할 수 없어요');
     if(intent.mode&&intent.mode!=='core'){
      if(!['egg','rescue'].includes(intent.mode))throw Error('발견 선택이 올바르지 않아요');
      const speciesId=EXPEDITION_GARDENS[s.route.gardenId].law;s.route.pendingFinds.push({rewardId:`${s.route.runId}:find:choice`,kind:intent.mode,speciesId,gardenId:s.route.gardenId});
@@ -130,11 +130,11 @@ export function projectExpeditionRuntime(previous,intent,{idFactory=randomId,com
      message=intent.mode==='egg'?'씨앗알을 챙겼어요 · 살아 돌아와야 온실에 남아요':'약한 씨앗을 구조했어요 · 살아 돌아와야 함께할 수 있어요';
     }else s.route.pendingLoot.push({lawId:intent.lawId,amount:1,material:0});advanceExpeditionRoute(s.route);
    }else if(intent.type==='rest'){
-    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='rest'||s.route.restUsed||s.route.position<12.6)throw Error('쉼터를 사용할 수 없어요');
+    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='rest'||s.route.restUsed||!directEvents&&s.route.position<12.6)throw Error('쉼터를 사용할 수 없어요');
     for(const id of aliveParty(s)){const i=s.roster.instances[id],amount=Math.min(i.maxHp-i.hp,Math.ceil(i.maxHp*.3));if(amount>0&&!healInstance(s.roster,id,amount,expeditionHealReceipt(s.route.runId,id,'camp')))throw Error('쉼터 회복 오류');}
     s.route.restUsed=true;advanceExpeditionRoute(s.route);message='살아 있는 씨앗이 쉼터에서 회복했어요';
    }else if(intent.type==='boss'){
-    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='return_or_boss'||s.route.position<12.6)throw Error('아직 보스 앞이 아니에요');advanceExpeditionRoute(s.route);
+    if(s.screen!=='explore'||EXPEDITION_RUN_STEPS[s.route.step]!=='return_or_boss'||!directEvents&&s.route.position<12.6)throw Error('아직 보스 앞이 아니에요');advanceExpeditionRoute(s.route);
    }else if(intent.type==='return'||intent.type==='skipBoss'){
     if(s.screen!=='explore')throw Error('전투 중에는 귀환할 수 없어요');conclude(s,'return');
    }else if(intent.type==='action'||intent.type==='enemy'||intent.type==='resonance'){
@@ -216,7 +216,7 @@ export function createExpeditionController({storage,owner,currentOwner=()=>owner
    if(++movesSinceSave>=32)return commit(copy(current));
    return {ok:true,events:[],saveState};
   }
-  const projected=projectExpeditionRuntime(current,intent,{idFactory,combatVersion});
+  const projected=projectExpeditionRuntime(current,intent,{idFactory,combatVersion,directEvents:true});
   return projected.ok?commit(projected.state,projected.events,projected.message):fail(projected.reason);
  }
  return Object.freeze({state:()=>{if(!current)return {screen:'home',roster:null,route:null,battle:null,meta:null,lastResult:null,notice,saveState,events:[],paused:true,review:true};snapshot??=freeze(copy(current));return {...snapshot,notice,saveState,events:freeze(copy(events)),paused,review:true};},dispatch,isActive:()=>!closed&&!paused&&saveState==='saved'&&current?.screen!=='home'&&current?.screen!=='result',close(){if(!closed&&current&&currentOwner()===owner&&saveState!=='error')commit(copy(current));closed=true;paused=true;}});

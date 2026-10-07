@@ -1,6 +1,6 @@
 import {decodeExpeditionAccount,encodeExpeditionAccount,expeditionAccountParent} from './account-codec.js';
 import {projectExpeditionRuntime} from './controller.js';
-export const EXPEDITION_RUNTIME_TRANSACTION_VERSION=4;
+export const EXPEDITION_RUNTIME_TRANSACTION_VERSION=5;
 
 // A deterministic, exact-parent gameplay receipt. This does not grant a
 // Firebase lease, turn review records into accounts or merge independent runs.
@@ -43,7 +43,7 @@ function command(c){
  return false;
 }
 function validTransaction(tx,revision){
- if(!safe(tx)||!keys(tx,['version','kind','receiptId','commands','generatedIds'])||![1,2,3,4].includes(tx.version)||tx.kind!=='runtime'||!token(tx.receiptId,100)||!tx.receiptId.startsWith(`write-${revision+1}-`)||!token(tx.receiptId.slice(`write-${revision+1}-`.length),80))return false;
+ if(!safe(tx)||!keys(tx,['version','kind','receiptId','commands','generatedIds'])||![1,2,3,4,5].includes(tx.version)||tx.kind!=='runtime'||!token(tx.receiptId,100)||!tx.receiptId.startsWith(`write-${revision+1}-`)||!token(tx.receiptId.slice(`write-${revision+1}-`.length),80))return false;
  if(!Array.isArray(tx.commands)||!tx.commands.length||tx.commands.length>128||!tx.commands.every(command)||tx.commands.length>1&&!tx.commands.every(c=>c.type==='move'))return false;
  return Array.isArray(tx.generatedIds)&&tx.generatedIds.length<=3&&new Set(tx.generatedIds).size===tx.generatedIds.length&&tx.generatedIds.every(id=>token(id,80));
 }
@@ -53,7 +53,7 @@ export function projectExpeditionRuntimeTransaction(previous,{owner,transaction}
  let state=a.state,index=0;const events=[];
  const idFactory=()=>{if(index>=transaction.generatedIds.length)throw Error('missing generated identity');return transaction.generatedIds[index++];};
  for(const intent of transaction.commands){
-  const result=projectExpeditionRuntime(state,intent,{idFactory,combatRelics:transaction.version>=2,combatVersion:transaction.version>=4?3:transaction.version>=3?2:1});if(!result.ok)return fail(result.reason);
+  const result=projectExpeditionRuntime(state,intent,{idFactory,combatRelics:transaction.version>=2,directEvents:transaction.version>=5,combatVersion:transaction.version>=4?3:transaction.version>=3?2:1});if(!result.ok)return fail(result.reason);
   state=result.state;events.push(...result.events);
  }
  if(index!==transaction.generatedIds.length)return fail('unused generated identity');

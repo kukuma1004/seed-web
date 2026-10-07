@@ -118,7 +118,7 @@ await check('Fresh account crosses PC→phone→PC during combat, defeats meadow
    const live=c.state(),actor=expeditionCombatTurn(live.battle),target=live.battle.units.filter(u=>u.side==='enemy'&&!u.dead&&u.slot<5).sort((a,b)=>a.slot-b.slot)[0];
    assert(actor);await send(actor.side==='enemy'?{type:'enemy'}:{type:'action',kind:actor.actions.skill1.some(op=>['damage','split','return'].includes(op.type))?'skill1':'attack',targetId:target.id});battleTurns++;
   }else{
-   assert.equal(s.screen,'explore');for(let m=0;m<35;m++)await send({type:'move',dx:1,dt:.1});
+   assert.equal(s.screen,'explore');assert.equal(s.route.position,0,'Current account event flow has no simulated walking');
    const stepName=EXPEDITION_RUN_STEPS[c.state().route.step];await send(stepName==='choice'?{type:'choice',lawId:'pierce'}:stepName==='rest'?{type:'rest'}:stepName==='return_or_boss'?{type:'boss'}:{type:'interact'});
   }
  }
