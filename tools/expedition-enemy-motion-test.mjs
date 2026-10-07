@@ -23,7 +23,47 @@ for(const kind of ['skill1','skill2','awaken']){
  assert.equal(expeditionSpriteSequence(u,[u],[{type:'action',unitId:u.id,kind}],rabbit).impact.pose,5,'cold-breath impact must use the release pose');
 }
 console.log('PASS Frost rabbit eight native contacts, three claw impacts and cold-breath release map; final-ready remains false');
-assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,22);assert.equal(expeditionArtAudit().enemies.motionReady,0);
+{
+ // Measured opaque frame bottoms, not fabricated anatomy/foot acceptance.
+ // Native second-row origin is fractional 443.5 despite rounded PNG bounds.
+ const bottoms={
+  'snow-normal-1':[379,379,379,378,331.5,332.5,333.5,330.5],
+  'snow-normal-2':[387,384,384,384,339.5,339.5,337.5,342.5],
+  'snow-normal-3':[380,381,381,381,344.5,345.5,345.5,348.5]
+ };
+ let commands=0,enemyTurns=0;const seen=new Set();
+ for(const [id,positions] of Object.entries(bottoms)){
+  const meta=expeditionEnemyArt(id);assert.equal(meta.ready,false);
+  assert.equal(meta.facing,'left');assert.equal(meta.motionDefects.length,1);
+  for(let pose=0;pose<8;pose++)assert(Math.abs(positions[pose]/443.5+meta.poseOffsets[pose]/100-meta.baseline)<.000002,id+' native frame bottom '+pose);
+  const u={id:'e',speciesId:id,side:'enemy',hp:140};
+  for(const kind of ['attack','skill1','skill2','awaken'])for(let seq=0;seq<3;seq++){
+   const frames=expeditionSpriteSequence(u,[u],[{type:'action',unitId:'e',kind,seq}],meta);
+   assert.equal(frames.preparation.pose,4);assert.equal(frames.impact.pose,kind==='attack'?seq+1:5);assert.equal(frames.rest.pose,0);
+  }
+  assert.equal(expeditionSpriteSequence({...u,guarding:true},[u],[{type:'action',unitId:'e',kind:'guard'}],meta).rest.pose,6);
+  assert.equal(expeditionSpriteSequence(u,[u],[{type:'damage',unitId:'a',targetId:'e',amount:1}],meta).impact.pose,7);
+  for(const skill of ['attack','skill1','skill2']){
+   const battle=createExpeditionCombat({battleId:id+'-'+skill,allies:[{id:'a',speciesId:'pierce',slot:0,level:8,hp:500,maxHp:500,power:10,defense:3,speed:10}],enemies:[{id:'e',speciesId:id,slot:0,level:5,hp:140,maxHp:140,power:25,defense:4,speed:12}],getSpecies:id=>getExpeditionSpecies(id)||expeditionEnemyProfile(id)});
+   while(battle.phase==='fight'){
+    const actor=expeditionCombatTurn(battle),input={id:'snow-trio-'+(++commands),unitId:actor.id,kind:actor.side==='enemy'?skill:'attack',targetId:actor.side==='enemy'?'a':'e'};
+    const beforeHP=battle.units.find(x=>x.id==='a').hp;
+    const result=performExpeditionCombatAction(battle,input);assert(result.ok,result.reason);
+    if(actor.side==='enemy'){
+     enemyTurns++;
+     if(id==='snow-normal-2'&&skill!=='attack')assert.equal(battle.units.find(x=>x.id==='a').hp,beforeHP,'status-only ice spirit skill must not gain invented VFX damage');
+     if(id==='snow-normal-3'&&skill!=='attack')assert.equal(battle.units.find(x=>x.id==='a').hp,beforeHP,'status-only beetle skill must retain existing control-only rules');
+    }
+    for(const event of result.events)seen.add(event.type);
+    const frozen=JSON.stringify(battle);expeditionSpriteSequence(battle.units.find(x=>x.id==='e'),battle.units,result.events,meta);
+    assert.equal(JSON.stringify(battle),frozen,'presentation must not alter HP/status/queue');assert.deepEqual(restoreExpeditionCombat(battle),battle);assert(commands<1200);
+   }
+  }
+ }
+ assert(enemyTurns>20);
+ console.log(`PASS Snow trio finite pose mapping, measured frame normalization and status-only rules; nine simulated battles/${commands} commands/${enemyTurns} enemy turns with exact restore`);
+}
+assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,28);assert.equal(expeditionArtAudit().enemies.motionReady,0);
 const unit={id:'e',speciesId:'meadow-normal-0',side:'enemy',hp:40},units=[unit,{id:'a',speciesId:'pierce',side:'ally',hp:40}];
 for(let seq=0;seq<8;seq++){
  const s=expeditionSpriteSequence(unit,units,[{type:'action',unitId:'e',kind:'attack',seq}],art);
@@ -281,6 +321,45 @@ assert(enemyActs>=80);console.log(`PASS 80 actual P2 simulated encounters/${comm
  }
  assert.deepEqual([...kinds].sort(),['attack','guard','skill1']);assert(returnedDamage);assert(seen.has('returnWarning'));assert(seen.has('counterReady'));assert(seen.has('protection'));assert(enemyTurns>=36);
  console.log(`PASS Autumn seven native contact sets with explicit occluded exclusions; 36 simulated normal/elite battles/${accepted} actions/${enemyTurns} enemy turns; boss AI/${bossCommands} commands with returns/guard; exact restore`);
+}
+{
+ const contacts={
+  'snow-elite-0':[367,366,363,360,334.5,335.5,337.5,339.5],
+  'snow-elite-1':[364,362,362,362,339.5,339.5,339.5,340.5],
+  'snow-boss':[386,386,385,385,371.5,372.5,372.5,372.5]
+ };
+ let commands=0,enemyTurns=0;
+ for(const [id,positions] of Object.entries(contacts)){
+  const meta=expeditionEnemyArt(id);assert.equal(meta.ready,false);assert.equal(meta.facing,'left');
+  for(let pose=0;pose<8;pose++)assert(Math.abs(positions[pose]/443.5+meta.poseOffsets[pose]/100-meta.baseline)<.000002,id+' measured opaque bottom '+pose);
+  const u={id:'e',speciesId:id,side:'enemy',hp:300};
+  for(const kind of ['attack','skill1','skill2','awaken'])for(let seq=0;seq<3;seq++){
+   const s=expeditionSpriteSequence(u,[u],[{type:'action',unitId:'e',kind,seq}],meta);
+   assert.equal(s.preparation.pose,id==='snow-boss'?2:4);
+   assert.equal(s.impact.pose,id==='snow-boss'?(kind==='attack'||kind==='awaken'?5:3):kind==='attack'?seq+1:5);
+   assert.equal(s.rest.pose,0);
+  }
+  if(id==='snow-boss')continue;
+  for(const skill of ['attack','skill1','skill2']){
+   const battle=createExpeditionCombat({battleId:id+'-'+skill,allies:[{id:'a',speciesId:'pierce',slot:0,level:8,hp:500,maxHp:500,power:15,defense:3,speed:10}],enemies:[{id:'e',speciesId:id,slot:0,level:5,hp:140,maxHp:140,power:25,defense:4,speed:12}],getSpecies:id=>getExpeditionSpecies(id)||expeditionEnemyProfile(id)});
+   while(battle.phase==='fight'){
+    const actor=expeditionCombatTurn(battle),r=performExpeditionCombatAction(battle,{id:'snow-complete-'+(++commands),unitId:actor.id,kind:actor.side==='enemy'?skill:'attack',targetId:actor.side==='enemy'?'a':'e'});assert(r.ok,r.reason);
+    if(actor.side==='enemy')enemyTurns++;
+    const frozen=JSON.stringify(battle);expeditionSpriteSequence(battle.units.find(x=>x.id==='e'),battle.units,r.events,meta);assert.equal(JSON.stringify(battle),frozen);assert.deepEqual(restoreExpeditionCombat(battle),battle);assert(commands<1000);
+   }
+  }
+ }
+ const battle=createExpeditionCombat({battleId:'snow-boss-motion',allies:Array.from({length:5},(_,slot)=>({id:'a'+slot,speciesId:'orbit',slot,level:8,hp:1000,maxHp:1000,power:0,defense:0,speed:10})),enemies:expeditionEncounter('snow',{kind:'boss',battleId:'snow-boss-motion'}).filter(x=>x.boss),getSpecies:id=>{const p=getExpeditionSpecies(id)||expeditionEnemyProfile(id);return id==='snow-boss'?{...p,actionPattern:expeditionBossActionPattern('snow')}:p;}});
+ const kinds=new Set(),seen=new Set();let bossCommands=0;
+ while(battle.phase==='fight'&&battle.round<=8){
+  const actor=expeditionCombatTurn(battle),input=actor.boss?expeditionBossCommand(battle,'snow-boss-act-'+(++bossCommands)):{id:'snow-boss-act-'+(++bossCommands),unitId:actor.id,kind:'guard'};
+  const r=performExpeditionCombatAction(battle,input);assert(r.ok,r.reason);for(const e of r.events)seen.add(e.type);
+  const frozen=JSON.stringify(battle),boss=battle.units.find(x=>x.boss),s=expeditionSpriteSequence(boss,battle.units,r.events,expeditionEnemyArt('snow-boss'));
+  if(actor.boss){kinds.add(input.kind);if(input.kind==='guard')assert.equal(s.rest.pose,6);else{assert.equal(s.preparation.pose,2);assert.equal(s.impact.pose,input.kind==='attack'?5:3);assert.notEqual(s.impact.pose,2,'overhead preparation must never count as a strike');}}
+  assert.equal(JSON.stringify(battle),frozen);assert.deepEqual(restoreExpeditionCombat(battle),battle);assert(bossCommands<100);
+ }
+ assert(kinds.has('attack'));assert(kinds.has('skill1'));assert(kinds.has('guard'));assert(seen.has('chill'));assert(seen.has('damage'));assert(enemyTurns>10);
+ console.log(`PASS Snow elites six simulated battles/${commands} commands/${enemyTurns} enemy turns; actual boss AI/${bossCommands} commands cold breath5/crush3/overhead windup2/guard6; exact restore`);
 }
 const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'utf8'),view=readFileSync(new URL('../src/expedition/view.js',import.meta.url),'utf8');
 assert.match(css,/background-size:400% 200%/);assert.match(css,/translate:0 var\(--pose-impact-offset,0%\)/);assert.match(css,/prefers-reduced-motion:reduce.*pose-impact-offset/s);

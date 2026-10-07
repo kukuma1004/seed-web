@@ -8,7 +8,7 @@ import {expeditionAllyArt,expeditionEnemyArt,expeditionGardenArt,expeditionAsset
 
 const file=path=>fileURLToPath(new URL(`../public/assets/${path}`,import.meta.url));
 const audit=expeditionArtAudit();
-assert.deepEqual(audit,{allies:{total:162,reusable:162,placeholder:0,ready:0},enemies:{total:56,placeholder:0,authoredCandidate:56,missing:0,motionCandidate:22,motionReady:0,ready:0},gardens:{total:8,reusable:8,threeLayerReady:0}});
+assert.deepEqual(audit,{allies:{total:162,reusable:162,placeholder:0,ready:0},enemies:{total:56,placeholder:0,authoredCandidate:56,missing:0,motionCandidate:28,motionReady:0,ready:0},gardens:{total:8,reusable:8,threeLayerReady:0}});
 for(const id of Object.keys(EXPEDITION_SPECIES)){
  const art=expeditionAllyArt(id);
  assert.equal(art.ready,false);
@@ -21,7 +21,7 @@ for(const [id,enemy] of Object.entries(EXPEDITION_ENEMIES)){
  if(enemy.gardenId==='blossom')assert.equal(art.facing,'left','inspected native blossom portraits must face the allied inner column without a second mirror');
  if(enemy.rank==='boss'){
   assert.equal(art.status,'authored_candidate');
-  if(['meadow-boss','blossom-boss','autumn-boss'].includes(id)){
+  if(['meadow-boss','blossom-boss','autumn-boss','snow-boss'].includes(id)){
    assert.equal(art.reason,'authored_motion_candidate_final_gameplay_device_qa_pending');
    assert.equal(art.cols,4);assert.equal(art.rows,2);assert.equal(art.facing,'left');assert.equal(art.poseOffsets.length,8);
    assert.ok(existsSync(file(art.motionPath)));assert.ok(statSync(file(art.motionPath)).size<300000);
@@ -33,7 +33,7 @@ for(const [id,enemy] of Object.entries(EXPEDITION_ENEMIES)){
  }
  else {
   assert.equal(art.status,'authored_candidate');
-  if(/^(meadow|blossom|autumn)-(normal-[0-3]|elite-[01])$/.test(id)||id==='snow-normal-0'){
+  if(/^(meadow|blossom|autumn|snow)-(normal-[0-3]|elite-[01])$/.test(id)){
    assert.equal(art.cols,4);assert.equal(art.rows,2);assert.equal(art.facing,'left');assert.ok(existsSync(file(art.motionPath)));assert.ok(statSync(file(art.motionPath)).size<300000,'first native enemy atlas transfer budget');
    assert.equal(expeditionAssetUrl(art.motionPath,'./'),`./assets/${art.motionPath}`);assert.equal(art.poseOffsets.length,8);assert.ok(Object.isFrozen(art.poseOffsets));
   }else{assert.equal(art.cols,null);assert.equal(art.rows,null);assert.equal(art.motionPath,null);}
@@ -80,4 +80,4 @@ assert.equal(expeditionAssetUrl('duel/pierce-motion-v1.webp','./../'),null);
 assert.equal(expeditionAssetUrl('duel/pierce-motion-v1.webp','javascript:evil'),null);
 assert.deepEqual(expeditionGardenAssetBatch('greenhouse'),[],'safe area is not a ninth combat garden');
 assert.equal(expeditionAllyArt('unknown'),null);assert.equal(expeditionEnemyArt('unknown'),null);assert.equal(expeditionGardenArt('unknown'),null);
-console.log('expedition art audit PASS: 162 allies, 56 authored enemy candidates, twenty-two connected motion candidates/zero final motion-ready, bounded lazy URLs');
+console.log('expedition art audit PASS: 162 allies, 56 authored enemy candidates, twenty-eight connected motion candidates/zero final motion-ready, bounded lazy URLs');
