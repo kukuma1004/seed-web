@@ -3,6 +3,7 @@ import {build} from 'esbuild';
 import {createRoster,recruitInstance,setParty} from '../src/expedition/roster.js';
 import {newExpeditionRoute,advanceExpeditionRoute} from '../src/expedition/world.js';
 import {emptyExpeditionNursery} from '../src/expedition/nursery.js';
+import {createExpeditionCombat} from '../src/expedition/combat.js';
 
 // Delayed controller responses reproduce the view/transport race. This is a
 // mocked lifecycle test, not a physical mobile suspend or Google-account test.
@@ -40,7 +41,7 @@ try{
   const roster=createRoster({owner,channel:'review'}),ids=['pierce','split','orbit','frost','burst','gravity','reflect','recall'].map((speciesId,n)=>{const id=`seed-${n}`;assert.ok(recruitInstance(roster,{instanceId:id,speciesId}));return id;});assert.ok(setParty(roster,ids));
   const route=newExpeditionRoute({runId:'lifecycle-run',gardenId:'meadow',difficulty:1,partyIds:ids});advanceExpeditionRoute(route);
   const model={screen,roster,meta:{...emptyExpeditionNursery(),cores:{},awakenMaterials:0},route,battle:null,notice:'',saveState:'saved',events:[],lastResult:null,paused:false,review:false};
-  if(screen==='battle')model.battle={battleId:'race-battle',phase:'fight',round:1,units:[{id:'seed-0',instanceId:'seed-0',speciesId:'pierce',side:'ally',slot:0,hp:92,maxHp:92,level:1,status:{}},{id:'enemy',instanceId:'enemy',speciesId:'meadow-normal-0',side:'enemy',slot:0,hp:40,maxHp:40,level:1,status:{}}],order:['seed-0','enemy'],acted:[],pending:[],warnings:[]};
+  if(screen==='battle')model.battle=createExpeditionCombat({battleId:'race-battle',allies:[{id:'seed-0',instanceId:'seed-0',speciesId:'pierce',slot:0,hp:92,maxHp:92,level:1,speed:99}],enemies:[{id:'enemy',instanceId:'enemy',speciesId:'meadow-normal-0',slot:0,hp:40,maxHp:40,level:1,speed:1}]});
   const calls=[],sounds=[],audioPause=[],durable={position:route.position,actions:0};
   const apply=intent=>{
    if(intent.type==='pause'){
