@@ -2449,10 +2449,10 @@ async function showGardenHub(start=null){
    onSpend:jp=>sameOwner()&&spendCoins(runStorage,jp).ok,
    onCredit:jp=>{if(!sameOwner())return false;earnCoins(runStorage,jp);return true;},
    garden:{get:()=>garden,set:next=>{if(!sameOwner())return;garden=normalizeGarden(next);writeGarden(runStorage,garden);}},
-   onOpenSanctuary:()=>{resume();showGarden(()=>showGardenHub());},
-   onClose:()=>{resume();showIntro();}});
+   onOpenSanctuary:()=>{showGarden(()=>showGardenHub());resume();},
+   onClose:()=>{showIntro();resume();}});
   if(localInspection)window.seedGardenHub=gardenHubScreen;
- }catch(error){console.error('정원 열기 실패',error);resume();showIntro();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
+ }catch(error){console.error('정원 열기 실패',error);showIntro();resume();$('#toast').textContent='정원을 불러오지 못했어요. 다시 눌러 주세요.';}
 }
 async function showSeedDefense({actCount=3,bossPreview=null,siegeReview=false}={}){
  if(!bossRecordReady())return;
@@ -2801,9 +2801,11 @@ if(!mirrorSession&&!survivalSession?.lab&&mode==='playing'&&!roomCleared&&!bossF
 // 예전에는 기록 시간이 그만큼 줄어 '분당 처치'가 부풀려졌다. 실제 시계는 그렇게 줄지 않는다.
 let last=performance.now(),realLast=Date.now(),paceGame=0,paceReal=0,frames=[],frameCounter=0,animationHandle=0;
 const framePacer=createFramePacer();
-function startAnimation(){if(mode!=='defense'&&mode!=='adventure'&&mode!=='expedition'&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
+// Separate views own their canvas loop even after a visibilitychange resume.
+function mainOwnsFrames(){switch(mode){case 'duel':case 'puzzle':case 'garden-hub':case 'defense-loading':case 'defense':case 'adventure':case 'expedition':return false;default:return true;}}
+function startAnimation(){if(mainOwnsFrames()&&!animationHandle&&!document.hidden)animationHandle=requestAnimationFrame(animate);}
 function stopAnimation(){if(animationHandle)cancelAnimationFrame(animationHandle);animationHandle=0;}
-function animate(now){animationHandle=0;if(document.hidden)return;startAnimation();const coveredMenu=menuArtCovers();if(!framePacer(now,coveredMenu?10:mode==='playing'&&!paused?60:30))return;let raw=(now-last)/1000;last=now;
+function animate(now){animationHandle=0;if(document.hidden||!mainOwnsFrames())return;startAnimation();const coveredMenu=menuArtCovers();if(!framePacer(now,coveredMenu?10:mode==='playing'&&!paused?60:30))return;let raw=(now-last)/1000;last=now;
  // The static menu painting fully covers the scene: only music needs a tick.
  if(coveredMenu){realLast=Date.now();audio.tick(Math.min(.1,Math.max(0,raw)));return;}
  {const realNow=Date.now();const realDelta=(realNow-realLast)/1000;realLast=realNow;if(mode==='playing'&&!paused&&!survivalSession?.benchmark&&realDelta>0&&realDelta<2){elapsed+=realDelta;paceReal+=realDelta;paceGame+=Math.min(2,Math.max(0,raw));webTelemetry.playTick(realDelta);}}if(perfEnabled)try{perf.frame(raw*1000,mode==='playing'&&!paused,perfSnapshot);perf.beginFrame();if(perf.due())perf.sampleState(perfSnapshot());}catch{}frames.push(raw*1000);if(frames.length>180)frames.shift();const visualDt=Math.min(.1,Math.max(0,raw)),timeScale=cameraFeel.stepEffects(visualDt),dt=survivalSession?.benchmark?(()=>{for(let i=0;i<4;i++)stepSurvivalBenchmark(1/60);return 4/60;})():advanceFrame(raw*timeScale,now*.001,(step,time)=>update(step,time));if(survivalSession&&(!survivalSession.lab||survivalSession.siegeReview)&&!survivalSession.finished&&survivalSession.time>=survivalAutosaveAt){survivalAutosaveAt=survivalSession.time+15;saveSurvival();}audio.tick(visualDt);perfT=performance.now();if(!paused)vfx.update(visualDt);perfMark(PS.particles);frameCounter++;
