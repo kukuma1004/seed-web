@@ -16,6 +16,9 @@ const ENEMY_SKELETON_ART=Object.freeze({assault:'cute/enemy-hound-v4.webp',range
 // Feet are aligned in presentation only. These are connected candidates, not
 // final human/device acceptance and never additional combat species.
 const ENEMY_MOTION_CANDIDATES=Object.freeze({
+ 'snow-normal-0':Object.freeze({motionPath:'expedition/enemies/snow-normal-0-motion-v3.webp',cols:4,rows:2,facing:'left',baseline:.8500563697857948,renderScale:2.6,
+  poseOffsets:Object.freeze([0,.451,-1.1274,-1.1274,14.0924,12.7396,13.416,12.0631]),
+  impactPoses:Object.freeze({attack:Object.freeze([1,2,3]),skill1:5,skill2:5,awaken:5})}),
  'meadow-normal-0':Object.freeze({motionPath:'expedition/enemies/meadow-normal-0-motion-v1.webp',cols:4,rows:2,facing:'left',baseline:.8771138669673055,renderScale:1.4,
   poseOffsets:Object.freeze([0,-.2255,-.2255,0,5.9752,5.7497,5.7497,5.7497]),
   impactPoses:Object.freeze({attack:Object.freeze([1,3]),skill1:3,skill2:5,awaken:5})}),

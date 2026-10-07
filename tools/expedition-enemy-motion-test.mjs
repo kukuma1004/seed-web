@@ -8,7 +8,22 @@ import {expeditionEnemyProfile,expeditionEncounter} from '../src/expedition/worl
 import {expeditionBossActionPattern,expeditionBossCommand} from '../src/expedition/boss-ai.js';
 
 const art=expeditionEnemyArt('meadow-normal-0');
-assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,21);assert.equal(expeditionArtAudit().enemies.motionReady,0);
+const rabbit=expeditionEnemyArt('snow-normal-0');
+assert.equal(rabbit.ready,false);assert.equal(rabbit.facing,'left');
+assert.equal(rabbit.renderScale,2.6);assert.equal(rabbit.poseOffsets.length,8);
+const rabbitContacts=[377,375,382,382,314.5,320.5,317.5,323.5].map(y=>y/443.5);
+for(let pose=0;pose<8;pose++)assert(Math.abs(rabbitContacts[pose]+rabbit.poseOffsets[pose]/100-rabbit.baseline)<.000002,`frost rabbit pose${pose} native fractional-cell contact`);
+for(let combo=0;combo<3;combo++){
+ const u={id:'rabbit',speciesId:'snow-normal-0',side:'enemy',hp:55};
+ const frames=expeditionSpriteSequence(u,[u],[{type:'action',unitId:u.id,kind:'attack',seq:combo}],rabbit);
+ assert.equal(frames.impact.pose,combo+1);assert.equal(frames.preparation.pose,4);assert.equal(frames.rest.pose,0);
+}
+for(const kind of ['skill1','skill2','awaken']){
+ const u={id:'rabbit',speciesId:'snow-normal-0',side:'enemy',hp:55};
+ assert.equal(expeditionSpriteSequence(u,[u],[{type:'action',unitId:u.id,kind}],rabbit).impact.pose,5,'cold-breath impact must use the release pose');
+}
+console.log('PASS Frost rabbit eight native contacts, three claw impacts and cold-breath release map; final-ready remains false');
+assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,22);assert.equal(expeditionArtAudit().enemies.motionReady,0);
 const unit={id:'e',speciesId:'meadow-normal-0',side:'enemy',hp:40},units=[unit,{id:'a',speciesId:'pierce',side:'ally',hp:40}];
 for(let seq=0;seq<8;seq++){
  const s=expeditionSpriteSequence(unit,units,[{type:'action',unitId:'e',kind:'attack',seq}],art);
