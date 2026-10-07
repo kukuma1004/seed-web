@@ -1,5 +1,65 @@
+import {DUEL_RELEASE_STORY_ORDER} from './seed-duel-release-catalog.js';
+import {DUEL_BATCH63_STORY} from './seed-duel-batch63.js';
+import {DUEL_BATCH64_STORY} from './seed-duel-batch64.js';
+import {DUEL_BATCH65_STORY} from './seed-duel-batch65.js';
+import {DUEL_BATCH66_STORY} from './seed-duel-batch66.js';
+import {DUEL_BATCH67_STORY} from './seed-duel-batch67.js';
+import {DUEL_BATCH61_STORY} from './seed-duel-batch61.js';
+import {DUEL_BATCH62_STORY} from './seed-duel-batch62.js';
+import {DUEL_BATCH60_STORY} from './seed-duel-batch60.js';
+import {DUEL_BATCH59_STORY} from './seed-duel-batch59.js';
+import {DUEL_BATCH58_STORY} from './seed-duel-batch58.js';
+import {DUEL_BATCH57_STORY} from './seed-duel-batch57.js';
+import {DUEL_BATCH56_STORY} from './seed-duel-batch56.js';
+import {DUEL_BATCH55_STORY} from './seed-duel-batch55.js';
+import {DUEL_BATCH54_STORY} from './seed-duel-batch54.js';
+import {DUEL_BATCH53_STORY} from './seed-duel-batch53.js';
+import {DUEL_BATCH52_STORY} from './seed-duel-batch52.js';
+import {DUEL_BATCH51_STORY} from './seed-duel-batch51.js';
+import {DUEL_BATCH50_STORY} from './seed-duel-batch50.js';
+import {DUEL_BATCH49_STORY} from './seed-duel-batch49.js';
+import {DUEL_BATCH48_STORY} from './seed-duel-batch48.js';
+import {DUEL_BATCH47_STORY} from './seed-duel-batch47.js';
+import {DUEL_BATCH46_STORY} from './seed-duel-batch46.js';
+import {DUEL_BATCH45_STORY} from './seed-duel-batch45.js';
+import {DUEL_BATCH44_STORY} from './seed-duel-batch44.js';
+import {DUEL_BATCH43_STORY} from './seed-duel-batch43.js';
+import {DUEL_BATCH42_STORY} from './seed-duel-batch42.js';
+import {DUEL_BATCH41_STORY} from './seed-duel-batch41.js';
+import {DUEL_BATCH40_STORY} from './seed-duel-batch40.js';
+import {DUEL_BATCH39_STORY} from './seed-duel-batch39.js';
+import {DUEL_BATCH38_STORY} from './seed-duel-batch38.js';
+import {DUEL_BATCH37_STORY} from './seed-duel-batch37.js';
+import {DUEL_BATCH36_STORY} from './seed-duel-batch36.js';
+import {DUEL_BATCH35_STORY} from './seed-duel-batch35.js';
+import {DUEL_BATCH34_STORY} from './seed-duel-batch34.js';
+import {DUEL_BATCH33_STORY} from './seed-duel-batch33.js';
+import {DUEL_BATCH32_STORY} from './seed-duel-batch32.js';
+import {DUEL_BATCH31_STORY} from './seed-duel-batch31.js';
+import {DUEL_BATCH30_STORY} from './seed-duel-batch30.js';
+import {DUEL_BATCH29_STORY} from './seed-duel-batch29.js';
+import {DUEL_BATCH28_STORY} from './seed-duel-batch28.js';
+import {DUEL_BATCH27_STORY} from './seed-duel-batch27.js';
+import {DUEL_BATCH26_STORY} from './seed-duel-batch26.js';
+import {DUEL_BATCH25_STORY} from './seed-duel-batch25.js';
+import {DUEL_BATCH24_STORY} from './seed-duel-batch24.js';
+import {DUEL_BATCH23_STORY} from './seed-duel-batch23.js';
+import {DUEL_BATCH22_STORY} from './seed-duel-batch22.js';
+import {DUEL_BATCH21_STORY} from './seed-duel-batch21.js';
+import {DUEL_BATCH20_STORY} from './seed-duel-batch20.js';
+import {DUEL_BATCH19_STORY} from './seed-duel-batch19.js';
+import {DUEL_BATCH18_STORY} from './seed-duel-batch18.js';
+import {DUEL_BATCH17_STORY} from './seed-duel-batch17.js';
+import {DUEL_BATCH16_STORY} from './seed-duel-batch16.js';
+import {DUEL_BATCH15_STORY} from './seed-duel-batch15.js';
+import {DUEL_BATCH14_STORY} from './seed-duel-batch14.js';
+import {DUEL_BATCH13_STORY} from './seed-duel-batch13.js';
+import {DUEL_BATCH12_STORY} from './seed-duel-batch12.js';
 import {DUEL_BATCH07_STORY} from './seed-duel-batch07.js';
 import {DUEL_BATCH08_STORY} from './seed-duel-batch08.js';
+import {DUEL_BATCH09_STORY} from './seed-duel-batch09.js';
+import {DUEL_BATCH10_STORY} from './seed-duel-batch10.js';
+import {DUEL_BATCH11_STORY} from './seed-duel-batch11.js';
 import {DUEL_BATCH06_STORY} from './seed-duel-batch06.js';
 import {DUEL_BATCH05_STORY} from './seed-duel-batch05.js';
 import {DUEL_BATCH04_STORY} from './seed-duel-batch04.js';
@@ -47,15 +107,74 @@ encounters.push(...DUEL_BATCH03_STORY,...DUEL_BATCH04_STORY,...DUEL_BATCH05_STOR
 export const DUEL_STORY_STAGES=Object.freeze(encounters.map(([enemy,title,label,difficulty,before,tip,after],i)=>Object.freeze({id:`s${i+1}`,number:i+1,chapter:i<22?Math.min(6,Math.floor(i/3)):7,enemy,title,label,difficulty,before,tip,after,boss:enemy==='heart'})));
 // Separate, memory-only review campaign. Never normalize into s37/s38 or submit
 // it to the existing 36-stage account/ranking contract.
-export const DUEL_INSPECTION_STORY_STAGES=DUEL_BATCH08_STORY;
+export const DUEL_INSPECTION_STORY_STAGES=Object.freeze([...DUEL_BATCH08_STORY,...DUEL_BATCH09_STORY,...DUEL_BATCH10_STORY,...DUEL_BATCH11_STORY,...DUEL_BATCH12_STORY,...DUEL_BATCH13_STORY,...DUEL_BATCH14_STORY,...DUEL_BATCH15_STORY,...DUEL_BATCH16_STORY,...DUEL_BATCH17_STORY,...DUEL_BATCH18_STORY,...DUEL_BATCH19_STORY,...DUEL_BATCH20_STORY,...DUEL_BATCH21_STORY,...DUEL_BATCH22_STORY,...DUEL_BATCH23_STORY,...DUEL_BATCH24_STORY,...DUEL_BATCH25_STORY,...DUEL_BATCH26_STORY,...DUEL_BATCH27_STORY,...DUEL_BATCH28_STORY,...DUEL_BATCH29_STORY,...DUEL_BATCH30_STORY,...DUEL_BATCH31_STORY,...DUEL_BATCH32_STORY,...DUEL_BATCH33_STORY,...DUEL_BATCH34_STORY,...DUEL_BATCH35_STORY,...DUEL_BATCH36_STORY,...DUEL_BATCH37_STORY,...DUEL_BATCH38_STORY,...DUEL_BATCH39_STORY,...DUEL_BATCH40_STORY,...DUEL_BATCH41_STORY,...DUEL_BATCH42_STORY,...DUEL_BATCH43_STORY,...DUEL_BATCH44_STORY,...DUEL_BATCH45_STORY,...DUEL_BATCH46_STORY,...DUEL_BATCH47_STORY,...DUEL_BATCH48_STORY,...DUEL_BATCH49_STORY,...DUEL_BATCH50_STORY,...DUEL_BATCH51_STORY,...DUEL_BATCH52_STORY,...DUEL_BATCH53_STORY,...DUEL_BATCH54_STORY,...DUEL_BATCH55_STORY,...DUEL_BATCH56_STORY,...DUEL_BATCH57_STORY,...DUEL_BATCH58_STORY,...DUEL_BATCH59_STORY,...DUEL_BATCH60_STORY,...DUEL_BATCH61_STORY,...DUEL_BATCH62_STORY,...DUEL_BATCH63_STORY,...DUEL_BATCH64_STORY,...DUEL_BATCH65_STORY,...DUEL_BATCH66_STORY,...DUEL_BATCH67_STORY].map(stage=>Object.freeze({...stage,label:(stage.boss===true||['bigcrunch','icicle','gravitystake','pulsegravity'].includes(stage.enemy))?'어려움 · 스테이지 보스':'어려움 · 동료 대전',boss:(stage.boss===true||['bigcrunch','icicle','gravitystake','pulsegravity'].includes(stage.enemy)),...(stage.enemy==='pulsegravity'?{title:'세 박자의 정원사',bossName:'세 박자의 정원사',tip:'느린 씨앗의 낙점에 고정된 원이 세 번 좁아져요. 한 번 맞힌 맥동을 빨리 닫을 때는 남은 맥동을 포기해요. 준비 중 끊거나 고정 원을 떠나세요. 끝난 뒤 정원사는 실제로 쉬며 반격할 틈을 줘요.'}:stage.enemy==='icicle'?{title:'겨울 약속의 파수꾼',bossName:'겨울 약속의 파수꾼'}:stage.enemy==='gravitystake'?{title:'한 점의 파수꾼',bossName:'한 점의 파수꾼',tip:'좁은 삽입선을 벗어나면 표식이 없어요. 못이 박히면 시전자를 때려 집중을 끊거나 마지막 순간 막기·회피로 내파를 피하세요. 가까운 공격 준비를 보고 못을 뽑아 칠 수도 있지만, 공격 뒤에는 집중이 풀리는 반격 틈이 있어요.'}:{})})));
 export const inspectionStoryUnlocked=(cleared,stage)=>DUEL_INSPECTION_STORY_STAGES.includes(stage)&&(!stage.unlockAfter||cleared.includes(stage.unlockAfter));
 export function completeInspectionStoryMatch(cleared,stage,match){
- if(!inspectionStoryUnlocked(cleared,stage)||!match?.inspection||match.practice||match.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy)return null;
+ if(!inspectionStoryUnlocked(cleared,stage)||!match?.inspection||match.practice||match.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;
  return [...new Set([...cleared,stage.id])];
 }
+
+// Public campaign uses permanent append-only s37..s175 identities. Inspection
+// clears remain memory-only and are never converted into permanent progress.
+const RELEASE_CHAPTERS=[
+  [
+    37,
+    "9장 · 깊은 빛의 문",
+    "두 빛으로 연 길 끝에서 오래된 수호자가 깨어난다. 붕괴의 중심과 겨울의 창 사이에도 한 걸음의 빈틈이 있다."
+  ],
+  [
+    50,
+    "10장 · 흩어져도 이어지는 길",
+    "씨앗들은 서로 다른 방향으로 흩어지고 돌아온다. 발걸음을 고정하는 파수꾼 앞에서 너만의 길을 만들어 보자."
+  ],
+  [
+    56,
+    "11장 · 정원을 잇는 박자",
+    "고리와 꽃잎과 맥동이 서로의 싸움법을 바꾼다. 세 박자의 정원사가 그동안 익힌 움직임을 시험한다."
+  ],
+  [
+    71,
+    "12장 · 하나의 법칙이 깊어질 때",
+    "오래 키운 하나의 힘도 정원을 바꿀 수 있다. 함대와 칼날과 왕관 속에서 깊어진 법칙을 만나자."
+  ],
+  [
+    79,
+    "13장 · 두 빛, 서로 다른 꽃",
+    "같은 두 빛도 무엇을 더 깊이 키웠는지에 따라 다른 꽃으로 피어난다. 완성된 씨앗들의 선택을 읽어 보자."
+  ],
+  [
+    101,
+    "14장 · 거울 너머의 약속",
+    "돌아오는 길과 꺾이는 빛을 좇아 거울 정원으로 들어간다. 먼저 보이는 공격 뒤의 두 번째 순간을 기다려 보자."
+  ],
+  [
+    121,
+    "15장 · 겨울과 메아리의 숲",
+    "끌림과 서리와 갈라진 꽃잎이 숲에 길을 새긴다. 붙잡혀도 다음 발걸음은 네가 고를 수 있다."
+  ],
+  [
+    140,
+    "16장 · 두 뿌리의 시작",
+    "서로 다른 두 힘이 같은 뿌리를 나누어 키운 씨앗들을 만난다. 두 힘을 한꺼번에 펼친 뒤에는 반드시 쉬는 순간이 있다."
+  ],
+  [
+    152,
+    "17장 · 쌍둥이가 지킨 자리",
+    "같이 자란 두 힘은 똑같이 움직이지 않는다. 남겨진 자리와 돌아오는 길을 구별하고 동료의 약속에 답하자."
+  ],
+  [
+    162,
+    "18장 · 마지막 세 파수꾼",
+    "낙성의 창지기와 겨울핵의 파수꾼, 왕복의 수문장이 마지막 길을 지킨다. 그들의 힘을 이기면 같은 힘을 함께 키울 수 있다."
+  ]
+];
+export const DUEL_RELEASE_STORY_CHAPTERS=Object.freeze([...DUEL_STORY_CHAPTERS,...RELEASE_CHAPTERS.map(([,name,intro])=>Object.freeze({name,intro}))]);
+export const DUEL_RELEASE_STORY_STAGES=Object.freeze([...DUEL_STORY_STAGES,...DUEL_INSPECTION_STORY_STAGES.map((stage,i)=>{const number=i+37;const chapter=8+RELEASE_CHAPTERS.reduce((last,[start],index)=>number>=start?index:last,0);const {unlockAfter,id,...authored}=stage;return Object.freeze({...authored,id:`s${number}`,number,chapter,label:stage.boss?'스테이지 보스':'동료 대전'});})]);
+if(DUEL_RELEASE_STORY_STAGES.some((stage,i)=>stage.enemy!==DUEL_RELEASE_STORY_ORDER[i]))throw new Error('Permanent duel story identities changed');
+
 // Only an actual, finished best-of-three campaign victory can open the next encounter.
 export function completeStoryMatch(raw,stage,match,now=Date.now()){
- if(!DUEL_STORY_STAGES.includes(stage)||!storyUnlocked(raw,stage.number)||match?.inspection||match?.practice||match?.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;
+ if(!(DUEL_STORY_STAGES.includes(stage)||DUEL_RELEASE_STORY_STAGES.includes(stage))||!storyUnlocked(raw,stage.number)||match?.inspection||match?.practice||match?.phase!=='over'||match.winner!==0||match.wins?.[0]!==2||![0,1].includes(match.wins?.[1])||match.fighters?.[1]?.char!==stage.enemy||(stage.boss&&!match.boss))return null;
  const out=normalizeDuelStory(raw);out.hero=match.fighters[0].char;out.updatedAt=Math.max(now,out.updatedAt+1);
  const prev=out.cleared[stage.id];out.cleared[stage.id]={losses:Math.min(prev?.losses??2,match.wins[1]),at:now};return normalizeDuelStory(out);
 }

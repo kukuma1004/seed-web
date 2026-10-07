@@ -14,7 +14,7 @@ let remote={},rev=0,puts=0;const fetchImpl=async(url,options={})=>{const path=ne
 const ranking=createAdventureRanking({storage:store(),authProvider:async()=>({uid:'u1',idToken:'token'}),fetchImpl});await ranking.submit(a);assert.equal(remote.u1.score,a.score);await ranking.submit(a);assert.equal(puts,1);
 const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedModeRanking;for(const mode of ['adventure','duel','puzzle']){assert.deepEqual(rules[mode]['.indexOn'],['score']);assert(rules[mode].$uid['.write'].includes('auth.uid == $uid'));assert.equal(rules[mode].$uid.$other['.validate'],false);}
 console.log('Mode rankings: adventure, duel, puzzle records, scores, identity queue and Firebase rules passed');
-const backupRules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedUsers.$uid.duelStory.cleared.$stage['.validate'];
+const backupRules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules.seedUsers.$uid.duelStoryV2.cleared.$stage['.validate'];
 const backupStagePattern=new RegExp(backupRules.match(/\$stage\.matches\(\/(.*?)\/\)/)[1]);
 for(let n=1;n<=DUEL_STORY_STAGE_COUNT;n++)assert(backupStagePattern.test('s'+n),'local backup rule accepts campaign stage '+n);
 for(const id of ['s0','s'+(DUEL_STORY_STAGE_COUNT+1),'s24evil'])assert(!backupStagePattern.test(id));
@@ -31,7 +31,8 @@ for(const field of ['character','opponent']){
 
 
 // Display labels follow the combat catalog, including newly unlocked bosses.
-const {duelCharacterName,adventureBuildLabels}=await import('../src/mode-ranking-labels.js');
+const {adventureBuildLabels}=await import('../src/mode-ranking-labels.js');
+const {duelCharacterName}=await import('../src/mode-ranking-duel-labels.js');
 const {DUEL_CHARACTERS}=await import('../src/seed-duel-rules.js');
 for(const [id,c] of Object.entries(DUEL_CHARACTERS))assert.equal(duelCharacterName(id),c.name);
 assert.deepEqual(adventureBuildLabels({weapon:'hybrid',laws:'recall,chain',form:'returnblade'}),{weapon:'베기 + 던지기',laws:'귀환 · 연쇄',form:'귀환의 칼날'});

@@ -1,8 +1,9 @@
+import {DUEL_RELEASE_ORDER,DUEL_RELEASE_STAGE_COUNT} from './seed-duel-release-catalog.js';
 // Account progress only; the duel renderer and campaign dialogue stay lazy-loaded.
 export const DUEL_STORY_SAVE_KEY='seed-duel-story-v1';
-export const DUEL_STORY_STAGE_COUNT=36;
+export const DUEL_STORY_STAGE_COUNT=DUEL_RELEASE_STAGE_COUNT;
 export const duelStorySaveKey=(owner='guest')=>`${DUEL_STORY_SAVE_KEY}:${encodeURIComponent(owner||'guest')}`;
-const HEROES=['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind'];
+const HEROES=DUEL_RELEASE_ORDER;
 const GARDEN_KEY='seed-garden-v1',OWNER_KEY='seed-cloud-owner-v1';
 const integer=v=>Number.isFinite(v)?Math.max(0,Math.min(Number.MAX_SAFE_INTEGER,Math.floor(v))):0;
 const json=(storage,key)=>{try{return JSON.parse(storage?.getItem(key)||'null');}catch{return null;}};

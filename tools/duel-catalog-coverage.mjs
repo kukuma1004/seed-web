@@ -10,6 +10,22 @@ import {DUEL_STORY_STAGES} from '../src/seed-duel-story.js';
 const originals=[...Object.entries(LAWS).map(([id,f])=>({id,name:f.name,kind:'base',laws:[id]})),
  ...Object.values(DISCOVERY_FORMS).map(f=>({id:f.id,name:f.name,kind:f.twin?'twin':f.awakened?'final':f.solo?'solo':'fusion',laws:[...f.requires]}))];
 const originalById=new Map(originals.map(f=>[f.id,f]));
+
+// Current private connection contract. Recipe totals come from the ORIGINAL
+// book, never from the roster being asserted. Thirteen independent fighters
+// remain a separate explicit boundary; public36 and completion remain gated.
+export const DUEL_CATALOG_COUNT_CONTRACT=Object.freeze({
+ sourceTotal:originalById.size,
+ twinTotal:originals.filter(f=>f.kind==='twin').length,
+ independentExtras:13,
+ privateRoster:originalById.size+13,
+ publicRoster:36,
+ unconnected:0,
+ completedArt:null,
+ completedBalance:null,
+ fullyVerified:null,
+});
+
 export function duelCatalogCoverage(characters=DUEL_CHARACTERS,order=DUEL_ORDER,stages=DUEL_STORY_STAGES){
  assert.equal(originalById.size,162,'the source book must contain exactly162 distinct recipes');
  assert.equal(new Set(order).size,order.length,'selectable fighter IDs are unique');
@@ -28,7 +44,7 @@ export function duelCatalogCoverage(characters=DUEL_CHARACTERS,order=DUEL_ORDER,
  const rows=originals.map(f=>({...f,characterId:linked.get(f.id)||null,status:linked.has(f.id)?'connected-candidate':'unconnected'}));
  const byKind=Object.fromEntries(['base','solo','fusion','final','twin'].map(kind=>[kind,{total:rows.filter(f=>f.kind===kind).length,connected:rows.filter(f=>f.kind===kind&&f.characterId).length}]));
  assert.deepEqual(Object.fromEntries(Object.entries(byKind).map(([k,v])=>[k,v.total])),{base:9,solo:9,fusion:36,final:72,twin:36});
- return {sourceTotal:162,roster:order.length,connected:linked.size,unconnected:162-linked.size,fullyVerified:null,
+ return {sourceTotal:originalById.size,roster:order.length,connected:linked.size,unconnected:originalById.size-linked.size,fullyVerified:null,
   verification:'Completion requires separate art, human play, device, audio, save and balance evidence; connection is not completion.',independent,byKind,rows};
 }
 

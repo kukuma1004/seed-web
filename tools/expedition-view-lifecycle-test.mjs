@@ -29,7 +29,7 @@ const settle=async()=>{for(let n=0;n<12;n++)await Promise.resolve();};
 const button=(key,value)=>Object.assign(new Element(),{dataset:{[key]:value}});
 let vite,groups=0;
 try{
- vite=await createServer({server:{middlewareMode:true},appType:'custom'});
+ vite=await createServer({server:{middlewareMode:true},appType:'custom',optimizeDeps:{noDiscovery:true,entries:[]}});
  const {mountExpedition}=await vite.ssrLoadModule('/src/expedition/view.js');
  const timerBaseline=timers.size;
  function fixture(screen='explore',queuedMovement=false){

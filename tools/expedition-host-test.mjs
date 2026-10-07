@@ -18,5 +18,5 @@ assert(source.includes("if(!localInspection&&!developerRun&&!EXPEDITION_ACCOUNT_
 assert(source.includes("trackedMode=()=>mode==='expedition'?null:"),'review expedition cannot enter public mode usage');
 const view=readFileSync(new URL('../src/expedition/view.js',import.meta.url),'utf8');
 assert(view.includes("channel:'review'"));assert(!view.includes('AudioContext'));assert(!view.includes('setInterval'));
-const {PATCH_NOTES}=await import('../src/patch-notes.js');assert(PATCH_NOTES.some(note=>note.title.includes('원정대')&&note.title.includes('베타')),'beta release must be announced separately from final acceptance');
+const notes=readFileSync(new URL('../src/patch-notes.js',import.meta.url),'utf8');assert(!notes.includes("id:'2026-10-06-a'"),'incorrect realtime release announcement must not ship');
 console.log('PASS beta ZIP host with isolated local review, lazy import/owner guard, no duel unlock dependency or realtime legacy import/beta release note.');

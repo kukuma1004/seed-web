@@ -30,7 +30,7 @@ globalThis.setTimeout=(fn,delay)=>{timers.set(++timerId,{fn,delay});return timer
 
 let vite;
 try{
- vite=await createServer({server:{middlewareMode:true},appType:'custom'});
+ vite=await createServer({server:{middlewareMode:true},appType:'custom',optimizeDeps:{noDiscovery:true,entries:[]}});
  const {mountExpedition}=await vite.ssrLoadModule('/src/expedition/view.js');
  assert.equal(typeof mountExpedition,'function');
  const roster=createRoster({owner:'ui-owner',channel:'review'});

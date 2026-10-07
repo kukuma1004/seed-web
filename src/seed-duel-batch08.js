@@ -16,6 +16,15 @@ const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return{x:x/d,y:y/d};},dist=(a,b)=>
 const segment=(a,b,p)=>{const x=b.x-a.x,y=b.y-a.y,k=Math.max(0,Math.min(1,((p.x-a.x)*x+(p.y-a.y)*y)/(x*x+y*y||1)));return Math.hypot(p.x-a.x-x*k,p.y-a.y-y*k);};
 const windup=(f,t)=>Object.assign(f,{state:'skill',total:t,t,blocking:false,inv:0});
 const activeHall=(s,f)=>s.hazards.find(h=>h.owner===f.team&&h.kind==='hallOpen'&&h.arm<=0&&h.t>0);
+function visibleHallThreat(s,f){
+ const lane=q=>{const x=f.x-q.x,y=f.y-q.y,along=x*q.dx+y*q.dy;
+  return along>0&&along<=9&&Math.abs(x*q.dy-y*q.dx)<1.65&&(!Number.isFinite(q.speed)||along<=q.speed*q.life+.4);};
+ const incoming=s.shots.filter(q=>q.owner!==f.team&&q.life>0&&!q.hallReturned&&q.kind!=='hallReturn'&&lane(q));
+ // Authored projectile lines only: area/hitscan/generic skill states are not
+ // evidence of a projectile, regardless of the opponent's unobserved input.
+ const tell=s.hazards.find(h=>h.owner!==f.team&&h.t>0&&h.arm>0&&!h.triggered&&['bladeSend','thunderSend','fullSend','rewindSend','crunchSend','mirrorTell'].includes(h.kind)&&Number.isFinite(h.endX)&&segment(h,{x:h.endX,y:h.endY},f)<1.65);
+ return {incoming,tell,hall:activeHall(s,f)};
+}
 function retire(s,f,kinds){for(const h of s.hazards)if(h.owner===f.team&&kinds.includes(h.kind))h.t=0;for(const q of s.shots)if(q.owner===f.team&&kinds.includes(q.kind)){q.life=0;q.crunchSpent=true;}}
 export function batch08Melee(s,f,{step,heavy,hit,guarded}){if(!hit||guarded||!heavy&&step!==2)return;if(f.char==='bigcrunch'){f.crunchWeight=Math.min(2,(f.crunchWeight||0)+1);f.crunchWeightTime=5;}if(f.char==='mirrorhall'){f.hallFacet=1;f.hallFacetTime=4;}}
 export function batch08Action(s,f,index,ctx,ult=false){
@@ -71,6 +80,10 @@ export function batch08Ai(s,f,o,input,dt){
  const body=['attack','heavy'].includes(o.state),spent=body&&o.hitDone&&o.t>.03,free=!['attack','heavy','skill','dash','dodge'].includes(f.state);
  ai.finalRecovery=spent?(ai.finalRecovery||0)+dt:0;
  ai.finalBody=body&&!o.hitDone&&d<3.4?(ai.finalBody||0)+dt:0;
+ // A visible projectile is observable while finishing a swing as well. Keep
+ // the ordinary reaction interval; do not wait to start observing until free.
+ const hallRead=f.char==='mirrorhall'?visibleHallThreat(s,f):null;
+ if(hallRead)ai.hallSeen=hallRead.incoming.length||hallRead.tell?(ai.hallSeen||0)+dt:0;
  // Spend an earned close-range finisher BEFORE crossing the same recovery
  // with dodge. Otherwise the dodge takes every eligible charged fold window.
  if(free&&ai.finalRecovery>=react*.65&&d<2.8&&f.cd[1]<=0){
@@ -89,12 +102,12 @@ export function batch08Ai(s,f,o,input,dt){
    // A symmetric cast aimed straight at one foe leaves that foe in the safe
    // corridor. Rotate the SAME player aim so one fixed well covers its visible
    // present position; the second well and empty corridor remain unchanged.
-   if(!wells.length&&(f.cd[0]<=0||f.meter>=100)&&d>3.3){const a=Math.atan2(v.y,v.x)+Math.asin(1.65/d);input.aimX=Math.cos(a);input.aimY=Math.sin(a);if(f.meter>=100)input.ult=true;else input.skill1=true;return true;}
+   if(!wells.length&&(f.cd[0]<=0||f.meter>=100)&&d>4.4){const a=Math.atan2(v.y,v.x)+Math.asin(1.65/d);input.aimX=Math.cos(a);input.aimY=Math.sin(a);if(f.meter>=100)input.ult=true;else input.skill1=true;return true;}
    if(f.cd[1]<=0&&!s.shots.some(q=>q.owner===f.team&&q.kind==='crunchSeed'&&q.life>0)){input.skill2=true;return true;}
   }
   // Prepare a genuinely interruptible placement outside melee, then approach
   // and fight during both cooldowns instead of orbiting idle wells forever.
-  if(f.cd[0]<=0&&!wells.length&&open){if(d<3.4){input.x=-v.x-v.y*.35;input.y=-v.y+v.x*.35;}else if(d>4.8){input.x=v.x;input.y=v.y;}else return false;return true;}
+  if(f.cd[0]<=0&&!wells.length&&open){if(d<4.4){input.x=-v.x-v.y*.35;input.y=-v.y+v.x*.35;}else if(d>4.8){input.x=v.x;input.y=v.y;}else return false;return true;}
  }else if(f.char==='mirrorhall'){
   // An uncharged fold still has a purpose after a visible guard break; do not
   // replace ordinary jabs with its slow windup after every short recovery.
@@ -103,18 +116,32 @@ export function batch08Ai(s,f,o,input,dt){
   // projectile earlier than the old five-unit boundary, but only if its
   // current direction/lifetime can reach this finite mirror ring. Parallel
   // misses and returning mirrors are not threats. No future aim is read.
-  const lane=q=>{const x=f.x-q.x,y=f.y-q.y,along=x*q.dx+y*q.dy;
-   return along>0&&along<=9&&Math.abs(x*q.dy-y*q.dx)<1.65&&(!Number.isFinite(q.speed)||along<=q.speed*q.life+.4);};
-  const incoming=s.shots.filter(q=>q.owner!==f.team&&q.life>0&&!q.hallReturned&&q.kind!=='hallReturn'&&lane(q)),hall=activeHall(s,f);
-  // These authored lines visibly announce actual projectiles; hitscan beams,
-  // area circles and generic skill states are deliberately excluded.
-  const tell=s.hazards.find(h=>h.owner!==f.team&&h.t>0&&h.arm>0&&!h.triggered&&['bladeSend','thunderSend','fullSend','rewindSend','crunchSend','mirrorTell'].includes(h.kind)&&Number.isFinite(h.endX)&&segment(h,{x:h.endX,y:h.endY},f)<1.65);
-  ai.hallSeen=incoming.length||tell?(ai.hallSeen||0)+dt:0;
+  const {incoming,hall}=hallRead;
   // Do not spend a defensive ultimate on an empty melee exchange. Observe a
   // real incoming lane before opening, then move the finite panel into it.
-  if(ai.hallSeen>=react&&!hall&&d>2.4&&!body){if(f.meter>=100)input.ult=true;else if(f.cd[0]<=0)input.skill1=true;else return false;return true;}
+  if(ai.hallSeen>=react&&!hall&&d>2.4&&!body){
+   // Arrival is derived only from a shot already on screen. The wider ultimate
+   // has a slower arm: full meter is not a reason to commit after its front
+   // panel has already been crossed. Authored projectile tells remain visible
+   // opening opportunities; no opponent's next action/aim is inspected.
+   const timeToFront=r=>incoming.length?Math.min(...incoming.map(q=>((f.x-q.x)*q.dx+(f.y-q.y)*q.dy-r)/(q.speed||Infinity))):Infinity;
+   if(f.meter>=100&&timeToFront(1.85)>=.5+dt)input.ult=true;
+   // A small finite hall may open after the leading shot crossed the ring:
+   // subsequent observed volley shots still need their own actual contact.
+   // Do not pretend that casting it itself blocks the already-arriving shot.
+   else if(f.cd[0]<=0)input.skill1=true;
+   else if(incoming.length&&f.dodgeCd<=0){const q=incoming[0];input.x=-q.dy;input.y=q.dx;input.dodge=true;}
+   else return false;return true;
+  }
   if(f.cd[1]<=0&&d<2.8&&f.hallStored&&ai.finalRecovery>=react*.65){input.skill2=true;return true;}
-  if(hall&&incoming.length&&d>2.8&&!body){const q=incoming[0],along=Math.max(0,(f.x-q.x)*q.dx+(f.y-q.y)*q.dy),lane={x:q.x+q.dx*along,y:q.y+q.dy*along},move=norm(lane.x-f.x,lane.y-f.y);if(dist(lane,f)>.35){input.x=move.x;input.y=move.y;return true;}}
+  if(hall&&incoming.length&&d>2.8&&!body){
+   // Put a CURRENT forward flower panel on the observed line, not the body.
+   // A perpendicular walk preserves distance; rotating gaps remain gaps and
+   // neither the interception budget nor the panel phase is rewritten.
+   const q=incoming[0],along=(f.x-q.x)*q.dx+(f.y-q.y)*q.dy;
+   const forward=hallPanels(hall,f).map(p=>({p,a:(p.x-q.x)*q.dx+(p.y-q.y)*q.dy,error:(p.x-q.x)*q.dy-(p.y-q.y)*q.dx})).filter(p=>p.a>0&&p.a<along-.2).sort((a,b)=>Math.abs(a.error)-Math.abs(b.error))[0];
+   if(forward){const sign=Math.sign(forward.error);input.x=Math.abs(forward.error)>.12?-q.dy*sign:0;input.y=Math.abs(forward.error)>.12?q.dx*sign:0;return true;}
+  }
  }return false;
 }
 export function batch08DangerAi(s,f,input,dt){const ai=s.ai[f.team],react={easy:.32,normal:.2,hard:.12}[s.difficulty]??.2;

@@ -12,9 +12,11 @@ const run=(s,t,p={},e={})=>{for(let n=0;n<t;n+=dt)stepDuel(s,dt,p,e);};
 const lock=(s,t,seat=1)=>{const o=s.fighters[seat],position={x:o.x,y:o.y};for(let n=0;n<t;n+=dt){Object.assign(o,{...position,kx:0,ky:0});s.freeze=0;stepDuel(s,dt,{},{});}};
 const shot=(s,p,extra={})=>{const q={kind:'crystal',owner:1,x:p.x+.15,y:p.y,dx:-1,dy:0,speed:9,life:2,damage:20,hit:new Set(),pierce:0,bounces:0,...extra};s.shots.push(q);return q;};
 
-// Canonical FINAL identities and public/private boundary, including unknowns.
+// Legacy36 constructor identities stay isolated from the opt-in released175
+// campaign. The persistent account accepts175 permanent stages; inspection
+// stage IDs still cannot enter account progress.
 assert.equal(DUEL_ORDER.length,36);assert.equal(Object.keys(DUEL_CHARACTERS).length,36);
-assert.equal(DUEL_STORY_STAGES.length,36);assert.equal(DUEL_STORY_STAGE_COUNT,36);
+assert.equal(DUEL_STORY_STAGES.length,36);assert.equal(DUEL_STORY_STAGE_COUNT,175);
 for(const id of ['bigcrunch','mirrorhall']){
  const c=DUEL_INSPECTION_CHARACTERS[id];assert.equal(c.comboId,AWAKEN_FORMS[id].id);assert(AWAKEN_FORMS[id].awakened);
  assert.equal(c.final,true);assert.equal(c.inspectionOnly,true);assert.equal(c.artReady,false);assert.equal(duelCharacterKind(id),'final');
@@ -125,7 +127,7 @@ for(const id of ['bigcrunch','mirrorhall']){
 // Delayed AI reacts only to visible current tells/shots. It uses the same
 // actions/charges as player input and never invents an instant defensive field.
 {
- const s=scene('bigcrunch'),f=s.fighters[0],o=s.fighters[1];const a={};assert.equal(batch08Ai(s,f,o,a,.1),false);const b={};assert.equal(batch08Ai(s,f,o,b,.15),true);assert.equal(b.skill1,true);
+ const s=scene('bigcrunch',4.6),f=s.fighters[0],o=s.fighters[1];const a={};assert.equal(batch08Ai(s,f,o,a,.1),false);const b={};assert.equal(batch08Ai(s,f,o,b,.15),true);assert.equal(b.skill1,true);
  cast(s);const input={};assert.equal(batch08DangerAi(s,o,input,.1),false);o.y=8.35;assert.equal(batch08DangerAi(s,o,input,.25),true);assert(Math.hypot(input.x,input.y)>0);
 }
 {
@@ -143,7 +145,7 @@ for(const id of ['bigcrunch','mirrorhall']){
 // stages. View inspection forcibly suppresses account and ranking callbacks.
 {
  const [first,second]=DUEL_INSPECTION_STORY_STAGES;assert(!inspectionStoryUnlocked([],second));let cleared=[];
- for(const stage of [first,second]){const m=createDuel({inspection:true,player:'bigcrunch',enemy:stage.enemy});Object.assign(m,{phase:'over',wins:[2,1],winner:0});cleared=completeInspectionStoryMatch(cleared,stage,m);assert(cleared);assert.equal(completeStoryMatch({},stage,m),null);}
+ for(const stage of [first,second]){const m=createDuel({inspection:true,player:'bigcrunch',enemy:stage.enemy,boss:Boolean(stage.boss)});Object.assign(m,{phase:'over',wins:[2,1],winner:0});cleared=completeInspectionStoryMatch(cleared,stage,m);assert(cleared);assert.equal(completeStoryMatch({},stage,m),null);}
  assert.deepEqual(cleared,[first.id,second.id]);assert.deepEqual(normalizeDuelStory({hero:'bigcrunch',cleared:Object.fromEntries(cleared.map(id=>[id,{losses:0,at:1}]))}).cleared,{});
  const v=readFileSync(new URL('../src/seed-duel-view.js',import.meta.url),'utf8');assert(v.includes("if(inspection){canSave=()=>false;onProgress=()=>{};onSaveAccount=null;onResult="));assert(v.includes('completeInspectionStoryMatch(inspectionCleared,storyStage,s)'));assert(v.includes("if(inspection){inspectionStoryMap();return;}"));
  for(const event of ['crunchPlant','crunchSend','crunchClose','hallOpen','hallReturn','hallBlock','hallFold'])assert(DUEL_BATCH08_AUDIO[event]);

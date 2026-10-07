@@ -10,7 +10,7 @@ const duel=candidate.rules.seedModeRanking.duel.$uid;
 duel.storyStage['.validate']=`newData.isNumber() && newData.val() >= 0 && newData.val() <= ${DUEL_STORY_STAGE_COUNT} && newData.val() % 1 == 0`;
 duel.score['.validate']=`newData.isNumber() && newData.val() >= 1 && newData.val() <= ${DUEL_RANK_LIMITS.score} && newData.val() % 1 == 0`;
 for(const field of ['character','opponent'])duel[field]['.validate']=`newData.isString() && newData.val().length <= ${DUEL_RANK_LIMITS.character}`;
-const stage=candidate.rules.seedUsers.$uid.duelStory.cleared.$stage;
+const stage=candidate.rules.seedUsers.$uid.duelStoryV2.cleared.$stage;
 const pattern=`^s(${Array.from({length:DUEL_STORY_STAGE_COUNT},(_,i)=>i+1).join('|')})$`;
 stage['.validate']=stage['.validate'].replace(/\$stage\.matches\(\/.*?\/\)/,`$stage.matches(/${pattern}/)`);
 const expected=new RegExp(pattern);

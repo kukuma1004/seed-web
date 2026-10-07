@@ -1,4 +1,72 @@
+import {DUEL_RELEASE_ORDER} from './seed-duel-release-catalog.js';
+export {DUEL_RELEASE_ORDER} from './seed-duel-release-catalog.js';
+import {DUEL_BATCH67,DUEL_BATCH67_KINDS,DUEL_BATCH67_SHOTS,batch67CanAction,batch67Action,batch67Melee,batch67Tick,batch67InterceptShot,batch67Ai,batch67DangerAi,batch67MovementRatio} from './seed-duel-batch67.js';
+import {DUEL_BATCH66,DUEL_BATCH66_KINDS,DUEL_BATCH66_SHOTS,batch66CanAction,batch66Action,batch66Melee,batch66Tick,batch66InterceptShot,batch66Ai,batch66DangerAi,batch66MovementRatio} from './seed-duel-batch66.js';
+import {DUEL_BATCH65,DUEL_BATCH65_KINDS,DUEL_BATCH65_SHOTS,batch65CanAction,batch65Action,batch65Melee,batch65Tick,batch65InterceptShot,batch65Ai,batch65DangerAi,batch65MovementRatio} from './seed-duel-batch65.js';
+import {DUEL_BATCH64,DUEL_BATCH64_KINDS,DUEL_BATCH64_SHOTS,batch64CanAction,batch64Action,batch64Melee,batch64Tick,batch64InterceptShot,batch64Ai,batch64DangerAi,batch64MovementRatio} from './seed-duel-batch64.js';
+import {DUEL_BATCH63,DUEL_BATCH63_KINDS,DUEL_BATCH63_SHOTS,batch63CanAction,batch63Action,batch63Melee,batch63Tick,batch63InterceptShot,batch63Ai,batch63DangerAi,batch63MovementRatio} from './seed-duel-batch63.js';
+import {TWIN_STAGE_BOSSES,isTwinStageBoss,resetTwinStageBoss,twinBossInput} from './seed-duel-twin-boss.js';
+import {DUEL_BATCH62,DUEL_BATCH62_KINDS,DUEL_BATCH62_SHOTS,batch62CanAction,batch62Action,batch62Melee,batch62Tick,batch62InterceptShot,batch62Ai,batch62DangerAi} from './seed-duel-batch62.js';
+import {DUEL_BATCH61,DUEL_BATCH61_KINDS,DUEL_BATCH61_SHOTS,batch61CanAction,batch61Action,batch61Melee,batch61Tick,batch61InterceptShot,batch61Ai,batch61DangerAi} from './seed-duel-batch61.js';
+import {DUEL_BATCH60,DUEL_BATCH60_KINDS,DUEL_BATCH60_SHOTS,batch60CanAction,batch60Action,batch60Tick,batch60Ai,batch60DangerAi,batch60MovementRatio} from './seed-duel-batch60.js';
+import {duelSegmentInterception} from './seed-duel-segment-guards.js';
+import {DUEL_BATCH59,DUEL_BATCH59_KINDS,DUEL_BATCH59_SHOTS,batch59CanAction,batch59Action,batch59Tick,batch59Ai,batch59DangerAi} from './seed-duel-batch59.js';
+import {DUEL_BATCH58,DUEL_BATCH58_KINDS,DUEL_BATCH58_SHOTS,batch58InterceptShot,batch58MovementRatio,batch58CanAction,batch58Action,batch58Melee,batch58Tick,batch58Ai,batch58DangerAi} from './seed-duel-batch58.js';
+import {DUEL_BATCH57,DUEL_BATCH57_KINDS,DUEL_BATCH57_SHOTS,batch57InterceptShot,batch57CanAction,batch57Action,batch57Melee,batch57Tick,batch57Ai,batch57DangerAi} from './seed-duel-batch57.js';
+import {DUEL_BATCH56,DUEL_BATCH56_KINDS,DUEL_BATCH56_SHOTS,batch56CanAction,batch56Action,batch56Melee,batch56Tick,batch56Ai,batch56DangerAi,batch56MovementRatio} from './seed-duel-batch56.js';
+import {DUEL_BATCH55,DUEL_BATCH55_KINDS,DUEL_BATCH55_SHOTS,batch55CanAction,batch55Action,batch55Melee,batch55Tick,batch55Ai,batch55DangerAi} from './seed-duel-batch55.js';
+import {DUEL_BATCH54,DUEL_BATCH54_KINDS,DUEL_BATCH54_SHOTS,batch54InterceptShot,batch54CanAction,batch54Action,batch54Melee,batch54Tick,batch54Ai,batch54DangerAi} from './seed-duel-batch54.js';
+import {DUEL_BATCH53,DUEL_BATCH53_KINDS,DUEL_BATCH53_SHOTS,batch53CanFold,batch53InterceptShot,batch53CanAction,batch53Action,batch53Melee,batch53Tick,batch53Ai,batch53DangerAi} from './seed-duel-batch53.js';
+import {DUEL_BATCH52,DUEL_BATCH52_KINDS,DUEL_BATCH52_SHOTS,batch52MovementRatio,batch52CanAction,batch52Action,batch52Melee,batch52Tick,batch52Ai,batch52DangerAi} from './seed-duel-batch52.js';
+import {DUEL_BATCH51,DUEL_BATCH51_KINDS,DUEL_BATCH51_SHOTS,batch51CanAction,batch51Action,batch51Melee,batch51Tick,batch51Ai,batch51DangerAi} from './seed-duel-batch51.js';
+import {DUEL_BATCH50,DUEL_BATCH50_KINDS,DUEL_BATCH50_SHOTS,batch50CanAction,batch50Action,batch50Melee,batch50Tick,batch50Ai,batch50DangerAi} from './seed-duel-batch50.js';
+import {DUEL_BATCH49,DUEL_BATCH49_KINDS,DUEL_BATCH49_SHOTS,batch49Melee,batch49CanAction,batch49Action,batch49Tick,batch49Ai,batch49DangerAi} from './seed-duel-batch49.js';
+import {DUEL_BATCH48,DUEL_BATCH48_KINDS,DUEL_BATCH48_SHOTS,batch48Melee,batch48CanAction,batch48Action,batch48Tick,batch48Ai,batch48DangerAi} from './seed-duel-batch48.js';
+import {DUEL_BATCH47,DUEL_BATCH47_KINDS,DUEL_BATCH47_SHOTS,batch47Melee,batch47CanAction,batch47Action,batch47Tick,batch47Ai,batch47DangerAi} from './seed-duel-batch47.js';
+import {DUEL_BATCH46,DUEL_BATCH46_KINDS,DUEL_BATCH46_SHOTS,batch46Melee,batch46CanAction,batch46Action,batch46Tick,batch46Ai,batch46DangerAi} from './seed-duel-batch46.js';
+import {DUEL_BATCH45,DUEL_BATCH45_KINDS,DUEL_BATCH45_SHOTS,batch45Melee,batch45CanAction,batch45Action,batch45Tick,batch45Ai,batch45DangerAi} from './seed-duel-batch45.js';
+import {DUEL_BATCH44,DUEL_BATCH44_KINDS,DUEL_BATCH44_SHOTS,batch44Melee,batch44CanAction,batch44Action,batch44Tick,batch44Ai,batch44DangerAi} from './seed-duel-batch44.js';
+import {DUEL_BATCH43,DUEL_BATCH43_KINDS,DUEL_BATCH43_SHOTS,batch43Melee,batch43CanAction,batch43Action,batch43Tick,batch43Ai,batch43DangerAi} from './seed-duel-batch43.js';
+import {DUEL_BATCH42,DUEL_BATCH42_KINDS,DUEL_BATCH42_SHOTS,batch42Melee,batch42CanAction,batch42Action,batch42Tick,batch42Ai,batch42DangerAi} from './seed-duel-batch42.js';
+import {DUEL_BATCH41,DUEL_BATCH41_KINDS,DUEL_BATCH41_SHOTS,batch41Melee,batch41CanAction,batch41Action,batch41Tick,batch41Ai,batch41DangerAi} from './seed-duel-batch41.js';
+import {DUEL_BATCH40,DUEL_BATCH40_KINDS,DUEL_BATCH40_SHOTS,batch40Melee,batch40CanAction,batch40Action,batch40Tick,batch40Ai,batch40DangerAi} from './seed-duel-batch40.js';
+import {DUEL_BATCH39,DUEL_BATCH39_KINDS,DUEL_BATCH39_SHOTS,batch39Melee,batch39CanAction,batch39Action,batch39Tick,batch39Ai,batch39DangerAi} from './seed-duel-batch39.js';
+import {DUEL_BATCH38,DUEL_BATCH38_KINDS,DUEL_BATCH38_SHOTS,batch38Melee,batch38CanAction,batch38Action,batch38Tick,batch38Ai,batch38DangerAi} from './seed-duel-batch38.js';
+import {DUEL_BATCH37,DUEL_BATCH37_KINDS,DUEL_BATCH37_SHOTS,batch37Melee,batch37CanAction,batch37Action,batch37Tick,batch37Ai,batch37DangerAi} from './seed-duel-batch37.js';
+import {DUEL_BATCH36,DUEL_BATCH36_KINDS,DUEL_BATCH36_SHOTS,batch36Melee,batch36CanAction,batch36Action,batch36Tick,batch36Ai,batch36DangerAi} from './seed-duel-batch36.js';
+import {DUEL_BATCH35,DUEL_BATCH35_KINDS,DUEL_BATCH35_SHOTS,batch35Melee,batch35CanAction,batch35Action,batch35Tick,batch35Ai,batch35DangerAi} from './seed-duel-batch35.js';
+import {DUEL_BATCH34,DUEL_BATCH34_KINDS,DUEL_BATCH34_SHOTS,batch34Melee,batch34CanAction,batch34Action,batch34Tick,batch34Ai,batch34DangerAi} from './seed-duel-batch34.js';
+import {DUEL_BATCH33,DUEL_BATCH33_KINDS,DUEL_BATCH33_SHOTS,batch33Melee,batch33Action,batch33Tick,batch33Ai,batch33DangerAi} from './seed-duel-batch33.js';
+import {DUEL_BATCH32,DUEL_BATCH32_KINDS,DUEL_BATCH32_SHOTS,batch32Melee,batch32Action,batch32Tick,batch32Ai,batch32DangerAi} from './seed-duel-batch32.js';
+import {DUEL_BATCH31,DUEL_BATCH31_KINDS,DUEL_BATCH31_SHOTS,batch31Melee,batch31Action,batch31Tick,batch31Ai,batch31DangerAi} from './seed-duel-batch31.js';
+import {DUEL_BATCH30,DUEL_BATCH30_KINDS,DUEL_BATCH30_SHOTS,batch30Melee,batch30Action,batch30Tick,batch30Ai,batch30DangerAi,batch30InterceptShot} from './seed-duel-batch30.js';
+import {DUEL_BATCH29,DUEL_BATCH29_KINDS,DUEL_BATCH29_SHOTS,batch29Melee,batch29Action,batch29Tick,batch29Ai,batch29DangerAi,batch29InterceptShot} from './seed-duel-batch29.js';
+import {DUEL_BATCH28,DUEL_BATCH28_KINDS,DUEL_BATCH28_SHOTS,batch28Melee,batch28Action,batch28Tick,batch28Ai,batch28DangerAi,batch28InterceptShot} from './seed-duel-batch28.js';
+import {DUEL_BATCH27,DUEL_BATCH27_KINDS,DUEL_BATCH27_SHOTS,batch27Melee,batch27Action,batch27Tick,batch27Ai,batch27DangerAi,batch27InterceptShot} from './seed-duel-batch27.js';
+import {DUEL_BATCH26,DUEL_BATCH26_KINDS,DUEL_BATCH26_SHOTS,batch26Melee,batch26Action,batch26Tick,batch26Ai,batch26DangerAi,batch26InterceptShot} from './seed-duel-batch26.js';
+import {DUEL_BATCH25,DUEL_BATCH25_KINDS,DUEL_BATCH25_SHOTS,batch25Melee,batch25Action,batch25Tick,batch25Ai,batch25DangerAi,batch25InterceptShot} from './seed-duel-batch25.js';
+import {DUEL_BATCH24,DUEL_BATCH24_KINDS,DUEL_BATCH24_SHOTS,batch24Melee,batch24Action,batch24Tick,batch24Ai,batch24DangerAi,batch24InterceptShot} from './seed-duel-batch24.js';
+import {DUEL_BATCH23,DUEL_BATCH23_KINDS,DUEL_BATCH23_SHOTS,batch23Melee,batch23Action,batch23Tick,batch23Ai,batch23DangerAi,batch23InterceptShot} from './seed-duel-batch23.js';
+import {DUEL_BATCH22,DUEL_BATCH22_KINDS,DUEL_BATCH22_SHOTS,batch22Melee,batch22Action,batch22Tick,batch22Ai,batch22DangerAi,batch22InterceptShot} from './seed-duel-batch22.js';
+import {DUEL_BATCH21,DUEL_BATCH21_KINDS,DUEL_BATCH21_SHOTS,batch21Melee,batch21Action,batch21Tick,batch21Ai,batch21DangerAi,batch21InterceptShot} from './seed-duel-batch21.js';
+import {isPulseStageBoss,resetPulseStageBoss,pulseBossInput,commitPulseBossPattern,canStartPulseBossPattern} from './seed-duel-pulse-boss.js';
+import {DUEL_BATCH20,DUEL_BATCH20_KINDS,DUEL_BATCH20_SHOTS,batch20Melee,batch20Action,batch20Tick,batch20Ai,batch20DangerAi,batch20InterceptShot} from './seed-duel-batch20.js';
+import {DUEL_BATCH19,DUEL_BATCH19_KINDS,DUEL_BATCH19_SHOTS,batch19Melee,batch19Action,batch19Tick,batch19Ai,batch19DangerAi,batch19InterceptShot} from './seed-duel-batch19.js';
+import {DUEL_BATCH18,DUEL_BATCH18_KINDS,DUEL_BATCH18_SHOTS,batch18Melee,batch18Action,batch18Tick,batch18Ai,batch18DangerAi,batch18InterceptShot} from './seed-duel-batch18.js';
+import {DUEL_BATCH17,DUEL_BATCH17_KINDS,DUEL_BATCH17_SHOTS,batch17Melee,batch17Action,batch17Tick,batch17Ai,batch17DangerAi,batch17InterceptShot} from './seed-duel-batch17.js';
+import {isStakeStageBoss,resetStakeStageBoss,stakeBossInput,commitStakeBossPattern,canStartStakeBossPattern} from './seed-duel-stake-boss.js';
+import {DUEL_BATCH16,DUEL_BATCH16_KINDS,DUEL_BATCH16_SHOTS,batch16Melee,batch16Action,batch16Tick,batch16Ai,batch16DangerAi,batch16InterceptShot} from './seed-duel-batch16.js';
+import {DUEL_BATCH15,DUEL_BATCH15_KINDS,DUEL_BATCH15_SHOTS,batch15Melee,batch15Action,batch15Tick,batch15Ai,batch15DangerAi,batch15InterceptShot} from './seed-duel-batch15.js';
+import {DUEL_BATCH14,DUEL_BATCH14_KINDS,DUEL_BATCH14_SHOTS,batch14Melee,batch14Action,batch14Tick,batch14Ai,batch14DangerAi,batch14InterceptShot} from './seed-duel-batch14.js';
+import {DUEL_BATCH13,DUEL_BATCH13_KINDS,DUEL_BATCH13_SHOTS,batch13Melee,batch13Action,batch13Tick,batch13Ai,batch13DangerAi} from './seed-duel-batch13.js';
+import {isIcicleStageBoss,resetIcicleStageBoss,icicleBossInput,commitIcicleBossPattern,canStartIcicleBossPattern} from './seed-duel-icicle-boss.js';
+import {DUEL_BATCH12,DUEL_BATCH12_KINDS,DUEL_BATCH12_SHOTS,batch12Melee,batch12Action,batch12Tick,batch12Ai,batch12DangerAi,batch12InterceptShot} from './seed-duel-batch12.js';
 import {duelCharacterUnlock} from './seed-duel-unlocks.js';
+import {duelSurfaceHit} from './seed-duel-surface.js';
+import {DUEL_BATCH11,DUEL_BATCH11_KINDS,DUEL_BATCH11_SHOTS,batch11Melee,batch11Action,batch11Tick,batch11Ai,batch11DangerAi,batch11InterceptShot} from './seed-duel-batch11.js';
+import {DUEL_BATCH10,DUEL_BATCH10_KINDS,DUEL_BATCH10_SHOTS,batch10Melee,batch10Action,batch10Tick,batch10Ai,batch10DangerAi} from './seed-duel-batch10.js';
+import {DUEL_BATCH09,DUEL_BATCH09_KINDS,batch09Melee,batch09Action,batch09Tick,batch09Ai,batch09DangerAi} from './seed-duel-batch09.js';
+import {isCrunchStageBoss,resetCrunchStageBoss,crunchBossInput,commitCrunchBossPattern,canStartCrunchBossPattern} from './seed-duel-crunch-boss.js';
 import {DUEL_BATCH08,DUEL_BATCH08_KINDS,DUEL_BATCH08_SHOTS,batch08Melee,batch08Action,batch08Tick,batch08Ai,batch08DangerAi,batch08InterceptShot} from './seed-duel-batch08.js';
 import {DUEL_BATCH07,DUEL_BATCH07_KINDS,DUEL_BATCH07_SHOTS,batch07Melee,batch07Action,batch07Tick,batch07Ai,batch07DangerAi} from './seed-duel-batch07.js';
 import {DUEL_BATCH06,DUEL_BATCH06_KINDS,batch06Melee,batch06Action,batch06Tick,batch06Ai,batch06DangerAi,batch06InterceptShot} from './seed-duel-batch06.js';
@@ -89,38 +157,42 @@ export const DUEL_CHARACTERS=Object.freeze({
   skills:[skill('심장의 자리',6.2,'상대 자리를 예고한 뒤 약하게 끌어요 · 피해는 한 번'),skill('정원의 공전',6.8,'돌 하나가 몸을 돌아 두 번까지 닿아요')],ult:skill('정원의 맥박',0,'예고 중력장과 돌 하나를 함께 펼쳐요'),blurb:'정원의 마지막 시험을 이기면 함께할 수 있어요. 예고한 자리는 따라오지 않아요.'})
 });
 export const DUEL_ORDER=Object.freeze(['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost','thorn','gale','bastion','comet','lotus','prism','reed','cinder','pebble','echo','pulse','shard','heart','blastlance','frostnet','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind']);
-export function duelCharacterKind(id){const c=character(id);return c?.final?'final':c?.solo?'solo':c?.comboId?'fusion':DUEL_ORDER.slice(0,9).includes(id)?'base':'guest';}
-export const DUEL_INSPECTION_CHARACTERS=Object.freeze({...DUEL_CHARACTERS,...DUEL_BATCH08});
-export const DUEL_INSPECTION_ORDER=Object.freeze([...DUEL_ORDER,...Object.keys(DUEL_BATCH08)]);
+export function duelCharacterKind(id){const c=character(id);return c?.twin?'twin':c?.final?'final':c?.solo?'solo':c?.comboId?'fusion':DUEL_ORDER.slice(0,9).includes(id)?'base':'guest';}
+export const DUEL_INSPECTION_CHARACTERS=Object.freeze({...DUEL_CHARACTERS,...DUEL_BATCH08,...DUEL_BATCH09,...DUEL_BATCH10,...DUEL_BATCH11,...DUEL_BATCH12,...DUEL_BATCH13,...DUEL_BATCH14,...DUEL_BATCH15,...DUEL_BATCH16,...DUEL_BATCH17,...DUEL_BATCH18,...DUEL_BATCH19,...DUEL_BATCH20,...DUEL_BATCH21,...DUEL_BATCH22,...DUEL_BATCH23,...DUEL_BATCH24,...DUEL_BATCH25,...DUEL_BATCH26,...DUEL_BATCH27,...DUEL_BATCH28,...DUEL_BATCH29,...DUEL_BATCH30,...DUEL_BATCH31,...DUEL_BATCH32,...DUEL_BATCH33,...DUEL_BATCH34,...DUEL_BATCH35,...DUEL_BATCH36,...DUEL_BATCH37,...DUEL_BATCH38,...DUEL_BATCH39,...DUEL_BATCH40,...DUEL_BATCH41,...DUEL_BATCH42,...DUEL_BATCH43,...DUEL_BATCH44,...DUEL_BATCH45,...DUEL_BATCH46,...DUEL_BATCH47,...DUEL_BATCH48,...DUEL_BATCH49,...DUEL_BATCH50,...DUEL_BATCH51,...DUEL_BATCH52,...DUEL_BATCH53,...DUEL_BATCH54,...DUEL_BATCH55,...DUEL_BATCH56,...DUEL_BATCH57,...DUEL_BATCH63,...DUEL_BATCH64,...DUEL_BATCH65,...DUEL_BATCH66,...DUEL_BATCH67,...DUEL_BATCH61,...DUEL_BATCH62,...DUEL_BATCH60,...DUEL_BATCH59,...DUEL_BATCH58});
+export const DUEL_INSPECTION_ORDER=Object.freeze([...DUEL_ORDER,...Object.keys(DUEL_BATCH08),...Object.keys(DUEL_BATCH09),...Object.keys(DUEL_BATCH10),...Object.keys(DUEL_BATCH11),...Object.keys(DUEL_BATCH12),...Object.keys(DUEL_BATCH13),...Object.keys(DUEL_BATCH14),...Object.keys(DUEL_BATCH15),...Object.keys(DUEL_BATCH16),...Object.keys(DUEL_BATCH17),...Object.keys(DUEL_BATCH18),...Object.keys(DUEL_BATCH19),...Object.keys(DUEL_BATCH20),...Object.keys(DUEL_BATCH21),...Object.keys(DUEL_BATCH22),...Object.keys(DUEL_BATCH23),...Object.keys(DUEL_BATCH24),...Object.keys(DUEL_BATCH25),...Object.keys(DUEL_BATCH26),...Object.keys(DUEL_BATCH27),...Object.keys(DUEL_BATCH28),...Object.keys(DUEL_BATCH29),...Object.keys(DUEL_BATCH30),...Object.keys(DUEL_BATCH31),...Object.keys(DUEL_BATCH32),...Object.keys(DUEL_BATCH33),...Object.keys(DUEL_BATCH34),...Object.keys(DUEL_BATCH35),...Object.keys(DUEL_BATCH36),...Object.keys(DUEL_BATCH37),...Object.keys(DUEL_BATCH38),...Object.keys(DUEL_BATCH39),...Object.keys(DUEL_BATCH40),...Object.keys(DUEL_BATCH41),...Object.keys(DUEL_BATCH42),...Object.keys(DUEL_BATCH43),...Object.keys(DUEL_BATCH44),...Object.keys(DUEL_BATCH45),...Object.keys(DUEL_BATCH46),...Object.keys(DUEL_BATCH47),...Object.keys(DUEL_BATCH48),...Object.keys(DUEL_BATCH49),...Object.keys(DUEL_BATCH50),...Object.keys(DUEL_BATCH51),...Object.keys(DUEL_BATCH52),...Object.keys(DUEL_BATCH53),...Object.keys(DUEL_BATCH54),...Object.keys(DUEL_BATCH55),...Object.keys(DUEL_BATCH56),...Object.keys(DUEL_BATCH57),...Object.keys(DUEL_BATCH58),...Object.keys(DUEL_BATCH59),...Object.keys(DUEL_BATCH60),...Object.keys(DUEL_BATCH61),...Object.keys(DUEL_BATCH62),...Object.keys(DUEL_BATCH63),...Object.keys(DUEL_BATCH64),...Object.keys(DUEL_BATCH65),...Object.keys(DUEL_BATCH66),...Object.keys(DUEL_BATCH67)]);
 const character=id=>DUEL_INSPECTION_CHARACTERS[id];
-export function availableDuelCharacters(progress,{inspection=false}={}){return (inspection?DUEL_INSPECTION_ORDER:DUEL_ORDER).filter(id=>duelCharacterUnlock(progress,id,{inspection}).unlocked);}
+export const DUEL_RELEASE_CHARACTERS=Object.freeze(Object.fromEntries(DUEL_RELEASE_ORDER.map(id=>[id,Object.freeze({...DUEL_INSPECTION_CHARACTERS[id],inspectionOnly:false})])));
+export function availableDuelCharacters(progress,{inspection=false,released=false}={}){return (inspection?DUEL_INSPECTION_ORDER:released?DUEL_RELEASE_ORDER:DUEL_ORDER).filter(id=>duelCharacterUnlock(progress,id,{inspection}).unlocked);}
 // Training opponents can remain locked as playable heroes. No free match unlocks them.
-export function availableDuelOpponents(progress,{inspection=false}={}){return (inspection?DUEL_INSPECTION_ORDER:DUEL_ORDER).filter(id=>id!=='heart'||duelCharacterUnlock(progress,id,{inspection}).unlocked);}
+export function availableDuelOpponents(progress,{inspection=false,released=false}={}){return (inspection?DUEL_INSPECTION_ORDER:released?DUEL_RELEASE_ORDER:DUEL_ORDER).filter(id=>id!=='heart'||duelCharacterUnlock(progress,id,{inspection}).unlocked);}
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
 const norm=(x,y)=>{const d=Math.hypot(x,y)||1;return {x:x/d,y:y/d};};
 function rnd(s){s.seed=(Math.imul(s.seed,1664525)+1013904223)>>>0;return s.seed/4294967296;}
 
-function fighter(team,char,x,y){const c=character(char);return {team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0,bladeCast:0,bladeCatch:0,wardCold:0,wardColdTime:0,collapseCharge:0,collapseChargeTime:0,collapseCast:0,thunderCharge:0,thunderChargeTime:0,thunderCast:0,bloomCast:0,bloomPetal:0,bloomPetalTime:0,bloomChillCd:0,crownCast:0,crownCharge:0,crownChargeTime:0,starCast:0,starBeat:0,starBeatTime:0,glassCast:0,glassFacet:0,glassFacetTime:0,fullCast:0,fullReady:0,fullReadyTime:0,rewindCast:0,rewindBeat:0,rewindBeatTime:0,finalCast:0,crunchWeight:0,crunchWeightTime:0,hallFacet:0,hallFacetTime:0,hallStored:0,hallStoredTime:0};}
+function fighter(team,char,x,y){const c=character(char);return {twin63Serial:[0,0],twin63Marks:[null,null],twin64Serial:[0,0],twin64Marks:[null,null],twin65Serial:[0,0],twin65Marks:[null,null],twin66Serial:[0,0],twin66Marks:[null,null],twin67Serial:[0,0],twin67Marks:[null,null],twin61Serial:[0,0],twin61Marks:[null,null],twin62Serial:[0,0],twin62Marks:[null,null],twin60Serial:[0,0],twin60Marks:[null,null],twin60BaseCold:null,twin60PairCold:null,twin60ColdUntil:0,twin60ColdRatio:1,twin59Serial:[0,0],twin59Marks:[null,null],twin58Cold:null,twin58RegisteredCold:null,twin58ColdUntil:0,twin58ColdRatio:1,twin56Cold:null,twin56ColdUntil:0,twin56ColdRatio:1,...(DUEL_BATCH58[char]?{twin58Serial:[0,0],twin58Marks:[null,null]}:{}),...(DUEL_BATCH57[char]?{twin57Serial:[0,0],twin57Marks:[null,null]}:{}),...(DUEL_BATCH56[char]?{twin56Serial:[0,0],twin56Marks:[null,null]}:{}),...(DUEL_BATCH55[char]?{twin55Serial:[0,0],twin55Marks:[null,null]}:{}),...(DUEL_BATCH54[char]?{twin54Serial:[0,0],twin54Marks:[null,null],twin54Beat:0,twin54BeatTime:0}:{}),...(DUEL_BATCH53[char]?{twin53Serial:[0,0],twin53Marks:[null,null],twin53Beat:0,twin53BeatTime:0}:{}),...(DUEL_BATCH52[char]?{twin52Serial:[0,0],twin52Marks:[null,null],twin52Beat:0,twin52BeatTime:0}:{}),...(DUEL_BATCH51[char]?{twin51Serial:[0,0],twin51Marks:[null,null],twin51Beat:0,twin51BeatTime:0}:{}),...(DUEL_BATCH50[char]?{twin50Serial:[0,0],twin50Marks:[null,null],twin50Beat:0,twin50BeatTime:0}:{}),...(DUEL_BATCH49[char]?{final49Cast:0,stoneEdge49:0,stoneEdgeTime49:0}:{}),...(DUEL_BATCH48[char]?{final48Cast:0,petalEdge48:0,petalEdgeTime48:0}:{}),...(DUEL_BATCH47[char]?{final47Cast:0,rimeEdge47:0,rimeEdgeTime47:0}:{}),...(DUEL_BATCH46[char]?{final46Cast:0,gardenEdge46:0,gardenEdgeTime46:0}:{}),...(DUEL_BATCH45[char]?{final45Cast:0,circuitEdge45:0,circuitEdgeTime45:0}:{}),...(DUEL_BATCH44[char]?{final44Cast:0,branchEdge44:0,branchEdgeTime44:0}:{}),...(DUEL_BATCH43[char]?{final43Cast:0,frostEdge43:0,frostEdgeTime43:0}:{}),...(DUEL_BATCH42[char]?{final42Cast:0,anchorEdge42:0,anchorEdgeTime42:0}:{}),...(DUEL_BATCH41[char]?{final41Cast:0,wellEdge41:0,wellEdgeTime41:0}:{}),...(DUEL_BATCH40[char]?{final40Cast:0,gardenEdge40:0,gardenEdgeTime40:0}:{}),...(DUEL_BATCH39[char]?{final39Cast:0,veinEdge39:0,veinEdgeTime39:0}:{}),...(DUEL_BATCH38[char]?{final38Cast:0,lanceEdge38:0,lanceEdgeTime38:0}:{}),...(DUEL_BATCH37[char]?{final37Cast:0,iceEdge37:0,iceEdgeTime37:0,iceMemory37:null}:{}),...(DUEL_BATCH36[char]?{final36Cast:0,pinEdge36:0,pinEdgeTime36:0}:{}),...(DUEL_BATCH35[char]?{final35Cast:0,echoEdge35:0,echoEdgeTime35:0}:{}),...(DUEL_BATCH34[char]?{final34Cast:0,crystalEdge34:0,crystalEdgeTime34:0}:{}),...(DUEL_BATCH33[char]?{final33Cast:0,conductorEdge33:0,conductorEdgeTime33:0}:{}),...(DUEL_BATCH32[char]?{final32Cast:0,mirrorEdge32:0,mirrorEdgeTime32:0}:{}),...(DUEL_BATCH31[char]?{final31Cast:0,angleEdge31:0,angleEdgeTime31:0}:{}),team,char,x,y,hp:c.hp,maxHp:c.hp,guard:DUEL_RULES.guardMax,meter:0,fx:team===0?1:-1,fy:0,state:'idle',t:0,combo:0,comboTime:0,blockSince:-9,blocking:false,stun:0,inv:0,dodgeCd:0,cd:[0,0],kx:0,ky:0,shield:0,counterShield:0,shieldHits:0,slow:0,heldBy:0,hitDone:false,dx:0,dy:0,step:0,lastHitBy:0,total:0,cancelAt:0,buffer:null,linked:false,chain:0,chainTime:0,flash:0,trail:[],trailClock:0,reedCast:0,shardStacks:0,shardTime:0,shardSlowCd:0,netCold:0,netColdTime:0,frostCast:0,mirrorCast:0,relayCast:0,relayRefundUntil:0,bladeCast:0,bladeCatch:0,wardCold:0,wardColdTime:0,collapseCharge:0,collapseChargeTime:0,collapseCast:0,thunderCharge:0,thunderChargeTime:0,thunderCast:0,bloomCast:0,bloomPetal:0,bloomPetalTime:0,bloomChillCd:0,crownCast:0,crownCharge:0,crownChargeTime:0,starCast:0,starBeat:0,starBeatTime:0,glassCast:0,glassFacet:0,glassFacetTime:0,fullCast:0,fullReady:0,fullReadyTime:0,rewindCast:0,rewindBeat:0,rewindBeatTime:0,final30Cast:0,bandEdge30:0,bandEdge30Time:0,breathEdge30:0,breathEdge30Time:0,spiralEdge30:0,spiralEdge30Time:0,final29Cast:0,binaryEdge29:0,binaryEdge29Time:0,captureEdge29:0,captureEdge29Time:0,relayEdge29:0,relayEdge29Time:0,final28Cast:0,foldEdge28:0,foldEdge28Time:0,longEdge28:0,longEdge28Time:0,drillEdge28:0,drillEdge28Time:0,final27Cast:0,ringsEdge27:0,ringsEdge27Time:0,tangentEdge27:0,tangentEdge27Time:0,pathsEdge27:0,pathsEdge27Time:0,final26Cast:0,clusterEdge26:0,clusterEdge26Time:0,homeEdge26:0,homeEdge26Time:0,beatEdge26:0,beatEdge26Time:0,final25Cast:0,bindEdge25:0,bindEdge25Time:0,relayEdge25:0,relayEdge25Time:0,iceEdge25:0,iceEdge25Time:0,final24Cast:0,ricoEdge24:0,ricoEdge24Time:0,deepEdge24:0,deepEdge24Time:0,pikeEdge24:0,pikeEdge24Time:0,final23Cast:0,mortarWalkFrame:0,mortarEdge23:0,mortarEdge23Time:0,satelliteEdge23:0,satelliteEdge23Time:0,fuseEdge23:0,fuseEdge23Time:0,final22Cast:0,crownEdge22:0,crownEdge22Time:0,maelEdge22:0,maelEdge22Time:0,bloomEdge22:0,bloomEdge22Time:0,final21Cast:0,infiniteEdge21:0,infiniteEdge21Time:0,skyEdge21:0,skyEdge21Time:0,iceEdge21:0,iceEdge21Time:0,final20Cast:0,pulseEdge20:0,pulseEdge20Time:0,fleetEdge20:0,fleetEdge20Time:0,bladeEdge20:0,bladeEdge20Time:0,bladeCatch20:0,bladeCatchTime20:0,fusion19Cast:0,echoEdge19:0,echoEdge19Time:0,rimeEdge19:0,rimeEdge19Time:0,fusion18Cast:0,anchorSerial18:0,anchorBossHits18:0,anchorBossTime18:0,anchorBossLast18:0,anchorReceipt18:0,anchorEdge18:0,anchorEdge18Time:0,showerEdge18:0,showerEdge18Time:0,gardenEdge18:0,gardenEdge18Time:0,fusion17Cast:0,prismEdge17:0,prismEdge17Time:0,tideEdge17:0,tideEdge17Time:0,lightEdge17:0,lightEdge17Time:0,fusion16Cast:0,petalEdge16:0,petalEdge16Time:0,haloEdge16:0,haloEdge16Time:0,wellEdge16:0,wellEdge16Time:0,fusion15Cast:0,thunderEdge15:0,thunderEdge15Time:0,spearEdge15:0,spearEdge15Time:0,rimeEdge15:0,rimeEdge15Time:0,rimeMark15:0,rimeMark15Time:0,rimeMarkCast15:0,fusion14Cast:0,ebbEdge:0,ebbEdgeTime:0,ebbTide:0,ebbTideTime:0,diskChip:0,diskChipTime:0,stakeResolve:0,stakeResolveTime:0,fusion13Cast:0,boltWalkFrame:0,stormPod:0,stormPodTime:0,stormStored:0,stormStoredTime:0,lanceEdge:0,lanceEdgeTime:0,lanceStored:0,lanceStoredTime:0,boltKnot:0,boltKnotTime:0,fusion12Cast:0,guardFacet:0,guardFacetTime:0,guardStored:0,guardStoredTime:0,kaleidoFacet:0,kaleidoFacetTime:0,kaleidoStored:0,kaleidoStoredTime:0,icicleEdge:0,icicleEdgeTime:0,icicleMark:0,icicleMarkTime:0,fusion11Cast:0,sunHeat:0,sunHeatTime:0,cometStride:0,cometStrideTime:0,returnHeat:0,returnHeatTime:0,returnWarm:0,returnWarmTime:0,solo10Cast:0,mazeFacet:0,mazeFacetTime:0,mazeEcho:0,mazeEchoTime:0,flareHeat:0,flareHeatTime:0,flareGather:0,flareGatherTime:0,winterRime:0,winterRimeTime:0,winterCold:0,winterColdTime:0,winterBreakCd:0,solo09Cast:0,webThread:0,webThreadTime:0,webSpark:0,webSparkTime:0,holeDensity:0,holeDensityTime:0,finalCast:0,crunchWeight:0,crunchWeightTime:0,hallFacet:0,hallFacetTime:0,hallStored:0,hallStoredTime:0};}
 // practice: 콤보 연습(쓰러지지 않고 체력이 다시 차며, 시간이 흐르지 않는다).
-export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false,boss=false,inspection=false}={}){
- if(![player,enemy].every(id=>Object.hasOwn(inspection?DUEL_INSPECTION_CHARACTERS:DUEL_CHARACTERS,id)))throw new RangeError('Inspection-only or unknown duel character');
- const s={inspection:Boolean(inspection),seed:seed>>>0,practice:Boolean(practice),boss:Boolean(boss&&enemy==='heart'),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
- if(s.boss)resetHeartBoss(s);
+export function createDuel({player='pierce',enemy='burst',seed=1,difficulty='normal',practice=false,boss=false,inspection=false,released=false}={}){
+ if(![player,enemy].every(id=>Object.hasOwn(inspection?DUEL_INSPECTION_CHARACTERS:released?DUEL_RELEASE_CHARACTERS:DUEL_CHARACTERS,id)))throw new RangeError('Inspection-only or unknown duel character');
+ const s={inspection:Boolean(inspection),expandedRules:Boolean(inspection||released),seed:seed>>>0,practice:Boolean(practice),boss:Boolean(boss&&(enemy==='heart'||(inspection||released)&&(['bigcrunch','icicle','gravitystake','pulsegravity'].includes(enemy)||Object.hasOwn(TWIN_STAGE_BOSSES,enemy)))),phase:'ready',round:1,wins:[0,0],time:0,roundTime:DUEL_RULES.roundSeconds,difficulty,fighters:[fighter(0,player,DUEL_SPAWN[0].x,DUEL_SPAWN[0].y),fighter(1,enemy,DUEL_SPAWN[1].x,DUEL_SPAWN[1].y)],shots:[],hazards:[],effects:[],events:[],message:'1라운드',ready:1.2,winner:-1,ai:[{},{}]};
+ if(s.boss)resetStageBoss(s);
  return s;
 }
 function resetHeartBoss(s){Object.assign(s.fighters[1],{hp:330,maxHp:330,bossPhase:1,bossPattern:'',bossRecovery:1,bossActiveUntil:s.time,bossWindupUntil:s.time,bossNextAt:s.time+1,bossPatternIndex:0});}
+function resetStageBoss(s){if(isTwinStageBoss(s))resetTwinStageBoss(s);else if(isCrunchStageBoss(s))resetCrunchStageBoss(s);else if(isIcicleStageBoss(s))resetIcicleStageBoss(s);else if(isStakeStageBoss(s))resetStakeStageBoss(s);else if(isPulseStageBoss(s))resetPulseStageBoss(s);else resetHeartBoss(s);}
 function event(s,type){s.events.push(type);if(s.events.length>24)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=120)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
-function resetRound(s){for(const f of s.fighters){const c=character(f.char),p=DUEL_SPAWN[f.team];Object.assign(f,fighter(f.team,f.char,p.x,p.y),{meter:f.meter*.5});f.hp=c.hp;}if(s.boss)resetHeartBoss(s);s.shots.length=0;s.hazards.length=0;s.roundTime=DUEL_RULES.roundSeconds;s.phase='ready';s.ready=1.2;s.message=`${s.round}라운드`;}
+function resetRound(s){for(const f of s.fighters){const c=character(f.char),p=DUEL_SPAWN[f.team];Object.assign(f,fighter(f.team,f.char,p.x,p.y),{meter:f.meter*.5});f.hp=c.hp;}if(s.boss)resetStageBoss(s);s.shots.length=0;s.hazards.length=0;s.roundTime=DUEL_RULES.roundSeconds;s.phase='ready';s.ready=1.2;s.message=`${s.round}라운드`;}
 const facingHit=(def,att)=>{const v=norm(att.x-def.x,att.y-def.y);return v.x*def.fx+v.y*def.fy>-.2;};
 // 한 번의 피해. kind: light|heavy|skill|shot|grab. 막기·반격 막기·막기 파괴를 여기서 가른다.
-function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=false,breaker=1,dir=null,reflected=false}={}){
+function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=false,breaker=1,dir=null,guardDir=null,reflected=false,flinch=true}={}){
  if(s.boss&&att.team===1)damage*=1.2;
  if(def.hp<=0||def.inv>0)return false;const c=character(def.char);
- if(def.counterShield>0&&def.shieldHits>0&&kind!=='grab'&&facingHit(def,att)&&!reflected){def.shieldHits--;fx(s,'block',def.x,def.y,{ink:c.ink});event(s,'block');def.meter=clamp(def.meter+8,0,100);if(dist(def,att)<2.8)strike(s,def,att,7,{kind:'skill',stun:.18,knock:.5,reflected:true});return false;}
+ // Curved physical projectiles can approach from a different side than their
+ // caster. Keep the real caster for attribution; only the guard direction varies.
+ const front=guardDir?guardDir.x*def.fx+guardDir.y*def.fy>-.2:facingHit(def,att);
+ if(def.counterShield>0&&def.shieldHits>0&&kind!=='grab'&&front&&!reflected){def.shieldHits--;fx(s,'block',def.x,def.y,{ink:c.ink});event(s,'block');def.meter=clamp(def.meter+8,0,100);if(dist(def,att)<2.8)strike(s,def,att,7,{kind:'skill',stun:.18,knock:.5,reflected:true});return false;}
  if(def.shield>0&&kind!=='grab'&&!reflected){fx(s,'parry',def.x,def.y,{ink:c.ink});event(s,'reflect');if(kind!=='shot'){strike(s,def,att,10,{kind:'skill',stun:.35,knock:.8,reflected:true});}return false;}
- const front=facingHit(def,att);
  if(def.blocking&&front&&!unblockable){
   // 반격 막기: 막기를 누른 직후(짧은 창) 맞으면 공격한 쪽이 크게 흔들린다.
   if(s.time-def.blockSince<=DUEL_RULES.parryWindow*c.parry&&kind!=='shot'){att.state='stagger';att.t=.85;att.stun=.85;att.buffer=null;def.meter=clamp(def.meter+22,0,100);s.freeze=.08;s.shake=Math.max(s.shake||0,.3);fx(s,'parry',def.x,def.y,{ink:c.ink});event(s,'parry');s.message='반격 막기!';return false;}
@@ -131,7 +203,7 @@ function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=fals
   if(kind==='light'&&att.state==='attack'){att.cancelAt=-1;att.t=Math.max(att.t,.24);att.buffer=null;att.combo=0;const v=norm(att.x-def.x,att.y-def.y);att.kx+=v.x*2.2;att.ky+=v.y*2.2;}
   att.meter=clamp(att.meter+3,0,100);checkKo(s);return true;
  }
- def.hp-=damage;def.stun=Math.max(def.stun,stun);def.state='hit';def.t=stun;def.blocking=false;def.buffer=null;def.flash=.14;att.chain=(att.chainTime>0?att.chain:0)+1;att.chainTime=.9;
+ def.hp-=damage;if(flinch){def.stun=Math.max(def.stun,stun);def.state='hit';def.t=stun;def.blocking=false;def.buffer=null;}def.flash=.14;att.chain=(att.chainTime>0?att.chain:0)+1;att.chainTime=.9;
  // 멈칫(히트스톱)은 강공격·스킬에만 아주 짧게 — 모험에서 과하면 끊겨 보였다.
  if(kind==='heavy'||kind==='skill')s.freeze=Math.max(s.freeze||0,.055);s.shake=Math.max(s.shake||0,kind==='heavy'?.35:kind==='skill'?.25:.08);const v=dir||norm(def.x-att.x,def.y-att.y);def.kx+=v.x*knock*5;def.ky+=v.y*knock*5;
  att.meter=clamp(att.meter+8,0,100);def.meter=clamp(def.meter+5,0,100);def.lastHitBy=att.team;event(s,kind==='heavy'?'heavyHit':'hit');fx(s,kind==='heavy'?'heavy':'hit',def.x,def.y,{ink:character(att.char).ink,text:Math.round(damage)});
@@ -140,11 +212,13 @@ function strike(s,att,def,damage,{kind='light',knock=1,stun=.25,unblockable=fals
 function checkKo(s){for(const f of s.fighters)if(f.hp<=0&&s.phase==='fight'){if(s.practice){f.hp=f.maxHp;f.guard=DUEL_RULES.guardMax;continue;}f.hp=0;endRound(s,1-f.team,'쓰러뜨렸어요');}}
 function endRound(s,winner,why){s.wins[winner]++;s.phase='roundEnd';s.ready=1.8;s.message=`${winner===0?'승리':'패배'} · ${why}`;event(s,winner===0?'win':'lose');if(s.wins[winner]>=DUEL_RULES.roundsToWin){s.phase='over';s.winner=winner;s.message=winner===0?'대전 승리!':'대전 패배';}}
 function melee(s,f,reach,arc,damage,opts={}){const o=s.fighters[1-f.team],v=norm(o.x-f.x,o.y-f.y),front=v.x*f.fx+v.y*f.fy;if(dist(f,o)<=reach+.45&&front>Math.cos(arc))return strike(s,f,o,damage,opts);return false;}
-function shoot(s,f,extra){if(s.shots.length>=64)return;s.shots.push({owner:f.team,x:f.x+f.fx*.6,y:f.y+f.fy*.6,dx:f.fx,dy:f.fy,speed:11,life:1.2,damage:12,pierce:0,bounces:0,hit:new Set(),law:f.char,...extra});}
+function shoot(s,f,extra){if(s.shots.length>=64)return;s.shots.push({owner:f.team,originalOwner:f.team,x:f.x+f.fx*.6,y:f.y+f.fy*.6,dx:f.fx,dy:f.fy,speed:11,life:1.2,damage:12,pierce:0,bounces:0,hit:new Set(),law:f.char,...extra});}
 // Placed areas are capped per owner, so cooldown resets cannot make persistent particle or damage storms.
 function area(s,f,kind,extra={}){const own=s.hazards.filter(h=>h.owner===f.team&&h.kind===kind);if(own.length>=3){const old=own[0];s.hazards.splice(s.hazards.indexOf(old),1);}if(s.hazards.length>=32)s.hazards.shift();const h={kind,owner:f.team,x:f.x+f.fx*2.4,y:f.y+f.fy*2.4,r:1.65,t:3.2,arm:.45,ink:character(f.char).ink,...extra};h.total=h.t;s.hazards.push(h);return h;}
-const batch03Context={strike,shoot,area,fx,event,interceptShot:(s,q,x0,y0,dt)=>batch08InterceptShot(s,q,x0,y0,dt,batch04Context)||batch06InterceptShot(s,q,x0,y0,dt,batch03Context)||((s.fighters[0].char==='stormcrown'||s.fighters[1].char==='stormcrown')&&batch05InterceptShot(s,q,x0,y0,dt,batch03Context)),wall:q=>q.x<DUEL_ARENA.minX||q.x>DUEL_ARENA.maxX||q.y<DUEL_ARENA.minY||q.y>DUEL_ARENA.maxY||DUEL_PILLARS.some(p=>dist(q,p)<p.r)};
-const batch04Context={...batch03Context,clampArena,blocked:(a,b)=>DUEL_PILLARS.some(p=>{const dx=b.x-a.x,dy=b.y-a.y,k=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(p.x-a.x-dx*k,p.y-a.y-dy*k)<p.r+.08;})};
+const batch03Context={strike,shoot,area,fx,event,interceptShot:(s,q,x0,y0,dt)=>q.guardReturned?false:((s.inspection||s.expandedRules)&&batch63InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch64InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch65InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch66InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch67InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch61InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch62InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch58InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch57InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch54InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch53InterceptShot(s,q,x0,y0,dt,batch04Context)||(s.inspection||s.expandedRules)&&batch30InterceptShot(s,q,x0,y0,dt,batch04Context)||batch29InterceptShot(s,q,x0,y0,dt,batch04Context)||batch28InterceptShot(s,q,x0,y0,dt,batch04Context)||batch27InterceptShot(s,q,x0,y0,dt,batch04Context)||batch26InterceptShot(s,q,x0,y0,dt,batch04Context)||batch25InterceptShot(s,q,x0,y0,dt,batch04Context)||batch24InterceptShot(s,q,x0,y0,dt,batch04Context)||batch23InterceptShot(s,q,x0,y0,dt,batch04Context)||batch22InterceptShot(s,q,x0,y0,dt,batch04Context)||batch21InterceptShot(s,q,x0,y0,dt,batch04Context)||batch20InterceptShot(s,q,x0,y0,dt,batch04Context)||batch19InterceptShot(s,q,x0,y0,dt,batch04Context)||batch18InterceptShot(s,q,x0,y0,dt,batch04Context)||batch17InterceptShot(s,q,x0,y0,dt,batch04Context)||batch16InterceptShot(s,q,x0,y0,dt,batch04Context))||((s.inspection||s.expandedRules)&&batch15InterceptShot(s,q,x0,y0,dt,batch04Context))||((s.inspection||s.expandedRules)&&batch14InterceptShot(s,q,x0,y0,dt,batch04Context))||((s.inspection||s.expandedRules)&&batch12InterceptShot(s,q,x0,y0,dt,batch04Context))||((s.inspection||s.expandedRules)&&batch11InterceptShot(s,q,x0,y0,dt,batch04Context))||batch08InterceptShot(s,q,x0,y0,dt,batch04Context)||batch06InterceptShot(s,q,x0,y0,dt,batch03Context)||((s.fighters[0].char==='stormcrown'||s.fighters[1].char==='stormcrown')&&batch05InterceptShot(s,q,x0,y0,dt,batch03Context)),wall:q=>q.x<DUEL_ARENA.minX||q.x>DUEL_ARENA.maxX||q.y<DUEL_ARENA.minY||q.y>DUEL_ARENA.maxY||DUEL_PILLARS.some(p=>dist(q,p)<p.r)};
+const batch04Context={...batch03Context,segmentInterception:(s,q,from,to,elapsed)=>duelSegmentInterception(s,q,from,to,elapsed,batch04Context),clampArena,arena:DUEL_ARENA,pillars:DUEL_PILLARS,surfaceHit:(a,b)=>duelSurfaceHit(a,b,DUEL_ARENA,DUEL_PILLARS),blocked:(a,b)=>DUEL_PILLARS.some(p=>{const dx=b.x-a.x,dy=b.y-a.y,k=clamp(((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);return Math.hypot(p.x-a.x-dx*k,p.y-a.y-dy*k)<p.r+.08;})};
+// Only the road crossing adapter needs the actual character speed lookup.
+const batch37Context={...batch04Context,character};
 function fork(s,f,count,damage,kind='crystal'){for(let k=0;k<count;k++){const off=(k-(count-1)/2)*.28,a=Math.atan2(f.fy,f.fx)-off;shoot(s,f,{x:f.x-f.fy*off*2,y:f.y+f.fx*off*2,dx:Math.cos(a),dy:Math.sin(a),speed:10,life:.9,damage,kind,bounces:kind==='crystal'?1:0});}}
 function bloomLance(s,f,ult=false){
  f.bloomCast=(f.bloomCast||0)+1;f.state='skill';f.t=ult?1.35:.8;f.total=f.t;f.blocking=false;
@@ -227,10 +301,98 @@ function emberScatter(s,f){
  f.state='dash';f.total=f.t=.14;f.dx=-f.fy;f.dy=f.fx;f.hitDone=true;
 }
 function useSkill(s,f,i){
- const c=character(f.char),o=s.fighters[1-f.team],fold=i===0&&(batch03Repress(s,f)||f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0));if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
+ const c=character(f.char),o=s.fighters[1-f.team],fold=i===1&&DUEL_BATCH53[f.char]&&batch53CanFold(s,f)||i===0&&(batch03Repress(s,f)||f.char==='gravitymirror'&&s.hazards.some(h=>h.owner===f.team&&h.kind==='mirrorAnchor'&&h.t>0));if(f.cd[i]>0&&!fold||f.stun>0||['attack','heavy','skill','dodge'].includes(f.state))return false;
+ // Paid petal redirect must validate the actual idle actor before the generic
+ // skill transition. Its module owns the meter debit and cooldown restart.
+ if(i===1&&DUEL_BATCH53[f.char]&&batch53CanFold(s,f))return batch53Action(s,f,i,batch04Context);
+ if(DUEL_BATCH63[f.char]){if(!batch63Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH64[f.char]){if(!batch64Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH65[f.char]){if(!batch65Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH66[f.char]){if(!batch66Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH67[f.char]){if(!batch67Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH61[f.char]){if(!batch61Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH62[f.char]){if(!batch62Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH60[f.char]){if(!batch60Action(s,f,i,batch04Context))return false;f.cd[i]=c.skills[i].cooldown;f.hitDone=false;event(s,'skill');return true;}
+ if(DUEL_BATCH59[f.char]&&!batch59CanAction(s,f,i))return false;
+ if(DUEL_BATCH58[f.char]&&!batch58CanAction(s,f,i))return false;
+ if(DUEL_BATCH57[f.char]&&!batch57CanAction(s,f,i))return false;
+ if(DUEL_BATCH56[f.char]&&!batch56CanAction(s,f,i))return false;
+ if(DUEL_BATCH55[f.char]&&!batch55CanAction(s,f,i))return false;
+ if(DUEL_BATCH54[f.char]&&!batch54CanAction(s,f,i))return false;
+ if(DUEL_BATCH53[f.char]&&!batch53CanAction(s,f,i))return false;
+ if(DUEL_BATCH52[f.char]&&!batch52CanAction(s,f,i))return false;
+ if(DUEL_BATCH51[f.char]&&!batch51CanAction(s,f,i))return false;
+ if(DUEL_BATCH50[f.char]&&!batch50CanAction(s,f,i))return false;
+ if(DUEL_BATCH49[f.char]&&!batch49CanAction(s,f,i))return false;
+ if(DUEL_BATCH48[f.char]&&!batch48CanAction(s,f,i))return false;
+ if(DUEL_BATCH47[f.char]&&!batch47CanAction(s,f,i))return false;
+ if(DUEL_BATCH46[f.char]&&!batch46CanAction(s,f,i))return false;
+ if(DUEL_BATCH45[f.char]&&!batch45CanAction(s,f,i))return false;
+ if(DUEL_BATCH44[f.char]&&!batch44CanAction(s,f,i))return false;
+ if(DUEL_BATCH43[f.char]&&!batch43CanAction(s,f,i))return false;
+ if(DUEL_BATCH42[f.char]&&!batch42CanAction(s,f,i))return false;
+ if(DUEL_BATCH41[f.char]&&!batch41CanAction(s,f,i))return false;
+ if(DUEL_BATCH40[f.char]&&!batch40CanAction(s,f,i))return false;
+ if(DUEL_BATCH39[f.char]&&!batch39CanAction(s,f,i))return false;
+ if(DUEL_BATCH38[f.char]&&!batch38CanAction(s,f,i))return false;
+ if(DUEL_BATCH37[f.char]&&!batch37CanAction(s,f,i))return false;
+ if(DUEL_BATCH36[f.char]&&!batch36CanAction(s,f,i))return false;
+ if(DUEL_BATCH35[f.char]&&!batch35CanAction(s,f,i))return false;
+ if(DUEL_BATCH34[f.char]&&!batch34CanAction(s,f,i))return false;
  if(!fold)f.cd[i]=c.skills[i].cooldown;f.state='skill';f.t=.35;f.hitDone=false;if(DUEL_ORDER.indexOf(f.char)>=15)f.blocking=false;event(s,'skill');
  if(DUEL_BATCH03[f.char])batch03Action(s,f,i,batch03Context);
- if(DUEL_BATCH08[f.char])batch08Action(s,f,i,batch04Context);
+ if(DUEL_BATCH59[f.char])batch59Action(s,f,i,batch04Context);
+ if(DUEL_BATCH58[f.char])batch58Action(s,f,i,batch04Context);
+ if(DUEL_BATCH57[f.char])batch57Action(s,f,i,batch04Context);
+ if(DUEL_BATCH56[f.char])batch56Action(s,f,i,batch04Context);
+ if(DUEL_BATCH55[f.char])batch55Action(s,f,i,batch04Context);
+ if(DUEL_BATCH54[f.char])batch54Action(s,f,i,batch04Context);
+ if(DUEL_BATCH53[f.char])batch53Action(s,f,i,batch04Context);
+ if(DUEL_BATCH52[f.char])batch52Action(s,f,i,batch04Context);
+ if(DUEL_BATCH51[f.char])batch51Action(s,f,i,batch04Context);
+ if(DUEL_BATCH50[f.char])batch50Action(s,f,i,batch04Context);
+ if(DUEL_BATCH49[f.char])batch49Action(s,f,i,batch04Context);
+ if(DUEL_BATCH48[f.char])batch48Action(s,f,i,batch04Context);
+ if(DUEL_BATCH47[f.char])batch47Action(s,f,i,batch04Context);
+ if(DUEL_BATCH46[f.char])batch46Action(s,f,i,batch04Context);
+ if(DUEL_BATCH45[f.char])batch45Action(s,f,i,batch04Context);
+ if(DUEL_BATCH44[f.char])batch44Action(s,f,i,batch04Context);
+ if(DUEL_BATCH43[f.char])batch43Action(s,f,i,batch04Context);
+ if(DUEL_BATCH42[f.char])batch42Action(s,f,i,batch04Context);
+ if(DUEL_BATCH41[f.char])batch41Action(s,f,i,batch04Context);
+ if(DUEL_BATCH40[f.char])batch40Action(s,f,i,batch04Context);
+ if(DUEL_BATCH39[f.char])batch39Action(s,f,i,batch04Context);
+ if(DUEL_BATCH38[f.char])batch38Action(s,f,i,batch04Context);
+ if(DUEL_BATCH37[f.char])batch37Action(s,f,i,batch37Context);
+ if(DUEL_BATCH36[f.char])batch36Action(s,f,i,batch04Context);
+ if(DUEL_BATCH35[f.char])batch35Action(s,f,i,batch04Context);
+ if(DUEL_BATCH34[f.char])batch34Action(s,f,i,batch04Context);
+ if(DUEL_BATCH33[f.char])batch33Action(s,f,i,batch04Context);
+ if(DUEL_BATCH32[f.char])batch32Action(s,f,i,batch04Context);
+ if(DUEL_BATCH31[f.char])batch31Action(s,f,i,batch04Context);
+ if(DUEL_BATCH30[f.char])batch30Action(s,f,i,batch04Context);
+ if(DUEL_BATCH29[f.char])batch29Action(s,f,i,batch04Context);
+ if(DUEL_BATCH28[f.char])batch28Action(s,f,i,batch04Context);
+ if(DUEL_BATCH27[f.char])batch27Action(s,f,i,batch04Context);
+ if(DUEL_BATCH26[f.char])batch26Action(s,f,i,batch04Context);
+ if(DUEL_BATCH25[f.char])batch25Action(s,f,i,batch04Context);
+ if(DUEL_BATCH24[f.char])batch24Action(s,f,i,batch04Context);
+ if(DUEL_BATCH23[f.char])batch23Action(s,f,i,batch04Context);
+ if(DUEL_BATCH22[f.char])batch22Action(s,f,i,batch04Context);
+ if(DUEL_BATCH21[f.char])batch21Action(s,f,i,batch04Context);
+ if(DUEL_BATCH20[f.char])batch20Action(s,f,i,batch04Context);
+ if(DUEL_BATCH19[f.char])batch19Action(s,f,i,batch04Context);
+ if(DUEL_BATCH18[f.char])batch18Action(s,f,i,batch04Context);
+ if(DUEL_BATCH17[f.char])batch17Action(s,f,i,batch04Context);
+ if(DUEL_BATCH16[f.char])batch16Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH15[f.char])batch15Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH14[f.char])batch14Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH13[f.char])batch13Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH12[f.char])batch12Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH11[f.char])batch11Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH10[f.char])batch10Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH09[f.char])batch09Action(s,f,i,batch04Context);
+ else if(DUEL_BATCH08[f.char])batch08Action(s,f,i,batch04Context);
  else if(DUEL_BATCH07[f.char])batch07Action(s,f,i,batch04Context);
  else if(DUEL_BATCH06[f.char])batch06Action(s,f,i,batch04Context);
  else if(DUEL_BATCH05[f.char])batch05Action(s,f,i,batch04Context);
@@ -272,9 +434,86 @@ function useSkill(s,f,i){
  return true;
 }
 function useUlt(s,f){
+ if(DUEL_BATCH63[f.char]&&!batch63CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH64[f.char]&&!batch64CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH65[f.char]&&!batch65CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH66[f.char]&&!batch66CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH67[f.char]&&!batch67CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH61[f.char]&&!batch61CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH62[f.char]&&!batch62CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH60[f.char]&&!batch60CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH59[f.char]&&!batch59CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH58[f.char]&&!batch58CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH57[f.char]&&!batch57CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH56[f.char]&&!batch56CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH55[f.char]&&!batch55CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH54[f.char]&&!batch54CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH53[f.char]&&!batch53CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH52[f.char]&&!batch52CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH51[f.char]&&!batch51CanAction(s,f,0,true))return false;
+ if(DUEL_BATCH50[f.char]&&!batch50CanAction(s,f,0,true))return false;
  const o=s.fighters[1-f.team],c=character(f.char);if(f.meter<DUEL_RULES.meterMax||f.stun>0||f.char==='returnblade'&&s.shots.some(q=>q.kind==='returnSpear'&&q.owner===f.team&&q.life>0))return false;f.meter=0;f.inv=.5;event(s,'ultimate');fx(s,'ult',f.x,f.y,{ink:c.ink,life:.8,max:.8});s.message=c.ult.name;
  if(DUEL_BATCH03[f.char])batch03Action(s,f,0,batch03Context,true);
- if(DUEL_BATCH08[f.char])batch08Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH63[f.char]){batch63Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH64[f.char]){batch64Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH65[f.char]){batch65Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH66[f.char]){batch66Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH67[f.char]){batch67Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH61[f.char]){batch61Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH62[f.char]){batch62Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH60[f.char]){batch60Action(s,f,0,batch04Context,true);f.cd=c.skills.map(x=>x.cooldown);}
+ if(DUEL_BATCH59[f.char])batch59Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH58[f.char])batch58Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH57[f.char])batch57Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH56[f.char])batch56Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH55[f.char])batch55Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH54[f.char])batch54Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH53[f.char])batch53Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH52[f.char])batch52Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH51[f.char])batch51Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH50[f.char])batch50Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH49[f.char])batch49Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH48[f.char])batch48Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH47[f.char])batch47Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH46[f.char])batch46Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH45[f.char])batch45Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH44[f.char])batch44Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH43[f.char])batch43Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH42[f.char])batch42Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH41[f.char])batch41Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH40[f.char])batch40Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH39[f.char])batch39Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH38[f.char])batch38Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH37[f.char])batch37Action(s,f,0,batch37Context,true);
+ if(DUEL_BATCH36[f.char])batch36Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH35[f.char])batch35Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH34[f.char])batch34Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH33[f.char])batch33Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH32[f.char])batch32Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH31[f.char])batch31Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH30[f.char])batch30Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH29[f.char])batch29Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH28[f.char])batch28Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH27[f.char])batch27Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH26[f.char])batch26Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH25[f.char])batch25Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH24[f.char])batch24Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH23[f.char])batch23Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH22[f.char])batch22Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH21[f.char])batch21Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH20[f.char])batch20Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH19[f.char])batch19Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH18[f.char])batch18Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH17[f.char])batch17Action(s,f,0,batch04Context,true);
+ if(DUEL_BATCH16[f.char])batch16Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH15[f.char])batch15Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH14[f.char])batch14Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH13[f.char])batch13Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH12[f.char])batch12Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH11[f.char])batch11Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH10[f.char])batch10Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH09[f.char])batch09Action(s,f,0,batch04Context,true);
+ else if(DUEL_BATCH08[f.char])batch08Action(s,f,0,batch04Context,true);
  else if(DUEL_BATCH07[f.char])batch07Action(s,f,0,batch04Context,true);
  else if(DUEL_BATCH06[f.char])batch06Action(s,f,0,batch04Context,true);
  else if(DUEL_BATCH05[f.char])batch05Action(s,f,0,batch04Context,true);
@@ -310,8 +549,11 @@ function useUlt(s,f){
 // 입력: {x,y 이동, aimX,aimY, attack, heavy, block(누르는 중), dodge, skill1, skill2, ult}
 function act(s,f,input,dt){
  const c=character(f.char),A=DUEL_ARENA;
+ if(f.char==='rewindbolt')f.boltWalkFrame=0;
+ if(f.char==='final-comethalo-burst')f.mortarWalkFrame=0;
  for(const k of ['t','stun','inv','dodgeCd','comboTime','shield','counterShield','slow','chainTime','flash'])f[k]=Math.max(0,f[k]-dt);
  if(s.boss&&f.team===1&&s.time>=f.bossActiveUntil&&s.time<f.bossNextAt){f.buffer=null;f.blocking=false;if(['attack','heavy','block','skill'].includes(f.state)){f.state='idle';f.t=0;}}
+ if((isCrunchStageBoss(s)||isIcicleStageBoss(s)||isStakeStageBoss(s)||isPulseStageBoss(s))&&f.team===1&&s.time>=f.bossActiveUntil&&s.time<f.bossNextAt){f.kx=f.ky=0;}
  f.shardTime=Math.max(0,(f.shardTime||0)-dt);f.shardSlowCd=Math.max(0,(f.shardSlowCd||0)-dt);if(f.shardTime<=0)f.shardStacks=0;
  // 2026-09-28 사용자: "평타 1·2타가 이어지는 맛 · 공격과 강공격이 끊어져 연계가 없다 · 모션이 답답하다"
  // 누른 행동은 잠깐(0.3초) 기억해 두었다가, 지금 동작이 끝나거나 끊을 수 있는 순간에 바로 이어서 낸다.
@@ -331,31 +573,56 @@ function act(s,f,input,dt){
  const o=s.fighters[1-f.team];
  if(!busy){const aim=Math.hypot(input.aimX||0,input.aimY||0)>.1?norm(input.aimX,input.aimY):norm(o.x-f.x,o.y-f.y);f.fx=aim.x;f.fy=aim.y;}
  // 행동 끝(공격 판정은 시작 뒤 잠깐 있다가 나간다).
- if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=(c.comboReach?.[step]??c.reach*(step===2?1.12:1))*batch03Reach(s,f),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});batch03Melee(s,f,{step,hit,guarded});batch04Melee(s,f,{step,hit,guarded});batch05Melee(s,f,{step,hit,guarded});batch06Melee(s,f,{step,hit,guarded});batch07Melee(s,f,{step,hit,guarded});batch08Melee(s,f,{step,hit,guarded});if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
- if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach*batch03Reach(s,f,true),life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach*batch03Reach(s,f,true),c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});batch03Melee(s,f,{heavy:true,hit,guarded});batch04Melee(s,f,{heavy:true,hit,guarded});batch05Melee(s,f,{heavy:true,hit,guarded});batch06Melee(s,f,{heavy:true,hit,guarded});batch07Melee(s,f,{heavy:true,hit,guarded});batch08Melee(s,f,{heavy:true,hit,guarded});if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
+ if(f.state==='attack'&&!f.hitDone&&f.t<=f.hitAt){f.hitDone=true;const step=f.step,reach=(c.comboReach?.[step]??c.reach*(step===2?1.12:1))*batch03Reach(s,f),arc=c.comboArc?.[step]??c.arc*(step===2?1.25:1);fx(s,'swing',f.x,f.y,{ink:c.ink,char:f.char,step,angle:Math.atan2(f.fy,f.fx),r:reach,life:.26,max:.26,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,reach,arc,c.damage[step],{kind:'light',stun:step===2?.3:.24,knock:step===2?1.7:.5});if(s.practice&&f.team===0&&hit&&!guarded)event(s,'practiceMelee'+step);batch03Melee(s,f,{step,hit,guarded});batch04Melee(s,f,{step,hit,guarded});batch05Melee(s,f,{step,hit,guarded});batch06Melee(s,f,{step,hit,guarded});batch07Melee(s,f,{step,hit,guarded});batch08Melee(s,f,{step,hit,guarded});batch09Melee(s,f,{step,hit,guarded});if(DUEL_BATCH13[f.char])batch13Melee(s,f,{step,hit,guarded});if(DUEL_BATCH63[f.char])batch63Melee(s,f,{step,hit,guarded});if(DUEL_BATCH64[f.char])batch64Melee(s,f,{step,hit,guarded});if(DUEL_BATCH65[f.char])batch65Melee(s,f,{step,hit,guarded});if(DUEL_BATCH66[f.char])batch66Melee(s,f,{step,hit,guarded});if(DUEL_BATCH67[f.char])batch67Melee(s,f,{step,hit,guarded});if(DUEL_BATCH61[f.char])batch61Melee(s,f,{step,hit,guarded});if(DUEL_BATCH62[f.char])batch62Melee(s,f,{step,hit,guarded});if(DUEL_BATCH58[f.char])batch58Melee(s,f,{step,hit,guarded});if(DUEL_BATCH57[f.char])batch57Melee(s,f,{step,hit,guarded});if(DUEL_BATCH56[f.char])batch56Melee(s,f,{step,hit,guarded});if(DUEL_BATCH55[f.char])batch55Melee(s,f,{step,hit,guarded});if(DUEL_BATCH54[f.char])batch54Melee(s,f,{step,hit,guarded});if(DUEL_BATCH53[f.char])batch53Melee(s,f,{step,hit,guarded});if(DUEL_BATCH52[f.char])batch52Melee(s,f,{step,hit,guarded});if(DUEL_BATCH51[f.char])batch51Melee(s,f,{step,hit,guarded});if(DUEL_BATCH50[f.char])batch50Melee(s,f,{step,hit,guarded});if(DUEL_BATCH49[f.char])batch49Melee(s,f,{step,hit,guarded});if(DUEL_BATCH48[f.char])batch48Melee(s,f,{step,hit,guarded});if(DUEL_BATCH47[f.char])batch47Melee(s,f,{step,hit,guarded});if(DUEL_BATCH46[f.char])batch46Melee(s,f,{step,hit,guarded});if(DUEL_BATCH45[f.char])batch45Melee(s,f,{step,hit,guarded});if(DUEL_BATCH44[f.char])batch44Melee(s,f,{step,hit,guarded});if(DUEL_BATCH43[f.char])batch43Melee(s,f,{step,hit,guarded});if(DUEL_BATCH42[f.char])batch42Melee(s,f,{step,hit,guarded});if(DUEL_BATCH41[f.char])batch41Melee(s,f,{step,hit,guarded});if(DUEL_BATCH40[f.char])batch40Melee(s,f,{step,hit,guarded});if(DUEL_BATCH39[f.char])batch39Melee(s,f,{step,hit,guarded});if(DUEL_BATCH38[f.char])batch38Melee(s,f,{step,hit,guarded});if(DUEL_BATCH37[f.char])batch37Melee(s,f,{step,hit,guarded});if(DUEL_BATCH36[f.char])batch36Melee(s,f,{step,hit,guarded});if(DUEL_BATCH35[f.char])batch35Melee(s,f,{step,hit,guarded});if(DUEL_BATCH34[f.char])batch34Melee(s,f,{step,hit,guarded});if(DUEL_BATCH33[f.char])batch33Melee(s,f,{step,hit,guarded});if(DUEL_BATCH32[f.char])batch32Melee(s,f,{step,hit,guarded});if(DUEL_BATCH31[f.char])batch31Melee(s,f,{step,hit,guarded});if(DUEL_BATCH30[f.char])batch30Melee(s,f,{step,hit,guarded});if(DUEL_BATCH29[f.char])batch29Melee(s,f,{step,hit,guarded});if(DUEL_BATCH28[f.char])batch28Melee(s,f,{step,hit,guarded});if(DUEL_BATCH27[f.char])batch27Melee(s,f,{step,hit,guarded});if(DUEL_BATCH26[f.char])batch26Melee(s,f,{step,hit,guarded});if(DUEL_BATCH25[f.char])batch25Melee(s,f,{step,hit,guarded});if(DUEL_BATCH24[f.char])batch24Melee(s,f,{step,hit,guarded});if(DUEL_BATCH23[f.char])batch23Melee(s,f,{step,hit,guarded});if(DUEL_BATCH22[f.char])batch22Melee(s,f,{step,hit,guarded});if(DUEL_BATCH21[f.char])batch21Melee(s,f,{step,hit,guarded});if(DUEL_BATCH20[f.char])batch20Melee(s,f,{step,hit,guarded});if(DUEL_BATCH19[f.char])batch19Melee(s,f,{step,hit,guarded});if(DUEL_BATCH18[f.char])batch18Melee(s,f,{step,hit,guarded});if(DUEL_BATCH17[f.char])batch17Melee(s,f,{step,hit,guarded});if(DUEL_BATCH16[f.char])batch16Melee(s,f,{step,hit,guarded});if(DUEL_BATCH15[f.char])batch15Melee(s,f,{step,hit,guarded});if(DUEL_BATCH14[f.char])batch14Melee(s,f,{step,hit,guarded});if(DUEL_BATCH12[f.char])batch12Melee(s,f,{step,hit,guarded});if(DUEL_BATCH11[f.char])batch11Melee(s,f,{step,hit,guarded});if(DUEL_BATCH10[f.char])batch10Melee(s,f,{step,hit,guarded},batch04Context);if(f.char==='chainburst'&&step===2&&hit&&!guarded)emberMark(s,f,o);}
+ if(f.state==='heavy'&&!f.hitDone&&f.t<=.12){f.hitDone=true;fx(s,'heavySwing',f.x,f.y,{ink:c.ink,char:f.char,linked:f.linked,angle:Math.atan2(f.fy,f.fx),r:c.heavy.reach*batch03Reach(s,f,true),life:.34,max:.34,team:f.team});const guarded=o.blocking&&facingHit(o,f),hit=melee(s,f,c.heavy.reach*batch03Reach(s,f,true),c.arc*1.1,Math.round(c.heavy.damage*(f.linked?1.15:1)),{kind:'heavy',stun:.6,knock:2.2,breaker:c.heavy.breaker||1});batch03Melee(s,f,{heavy:true,hit,guarded});batch04Melee(s,f,{heavy:true,hit,guarded});batch05Melee(s,f,{heavy:true,hit,guarded});batch06Melee(s,f,{heavy:true,hit,guarded});batch07Melee(s,f,{heavy:true,hit,guarded});batch08Melee(s,f,{heavy:true,hit,guarded});batch09Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH13[f.char])batch13Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH63[f.char])batch63Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH64[f.char])batch64Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH65[f.char])batch65Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH66[f.char])batch66Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH67[f.char])batch67Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH61[f.char])batch61Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH62[f.char])batch62Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH58[f.char])batch58Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH57[f.char])batch57Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH56[f.char])batch56Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH55[f.char])batch55Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH54[f.char])batch54Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH53[f.char])batch53Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH52[f.char])batch52Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH51[f.char])batch51Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH50[f.char])batch50Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH49[f.char])batch49Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH48[f.char])batch48Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH47[f.char])batch47Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH46[f.char])batch46Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH45[f.char])batch45Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH44[f.char])batch44Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH43[f.char])batch43Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH42[f.char])batch42Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH41[f.char])batch41Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH40[f.char])batch40Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH39[f.char])batch39Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH38[f.char])batch38Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH37[f.char])batch37Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH36[f.char])batch36Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH35[f.char])batch35Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH34[f.char])batch34Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH33[f.char])batch33Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH32[f.char])batch32Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH31[f.char])batch31Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH30[f.char])batch30Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH29[f.char])batch29Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH28[f.char])batch28Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH27[f.char])batch27Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH26[f.char])batch26Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH25[f.char])batch25Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH24[f.char])batch24Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH23[f.char])batch23Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH22[f.char])batch22Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH21[f.char])batch21Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH20[f.char])batch20Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH19[f.char])batch19Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH18[f.char])batch18Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH17[f.char])batch17Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH16[f.char])batch16Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH15[f.char])batch15Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH14[f.char])batch14Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH12[f.char])batch12Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH11[f.char])batch11Melee(s,f,{heavy:true,hit,guarded});if(DUEL_BATCH10[f.char])batch10Melee(s,f,{heavy:true,hit,guarded},batch04Context);if(f.char==='chainburst'&&hit&&!guarded)emberMark(s,f,o);if(f.char==='gravitymirror'&&hit&&!guarded)fx(s,'mirrorImpact',o.x,o.y,{ink:c.ink,life:.25,max:.25});}
  if(f.state==='dash'&&f.t>0){const speed=f.char==='comet'&&f.hitGap>0?1.8:13;f.x+=f.dx*speed*dt;f.y+=f.dy*speed*dt;if(f.char==='comet'){f.hitGap=Math.max(0,(f.hitGap||0)-dt);if((f.dashHits||0)<(f.hitLimit||2)&&f.hitGap<=0&&dist(f,o)<1.1){f.dashHits=(f.dashHits||0)+1;f.hitGap=.15;strike(s,f,o,f.dashDamage||11,{kind:'skill',stun:.12,knock:.22,dir:{x:f.dx,y:f.dy}});}}else if(!f.hitDone&&dist(f,o)<1.1){f.hitDone=true;strike(s,f,o,f.char==='bastion'?15:20,{kind:'skill',stun:.5,knock:1.6,dir:{x:f.dx,y:f.dy}});}}
  if(f.state==='leap'&&f.t<=0.02&&!f.hitDone){f.hitDone=true;f.x=f.tx;f.y=f.ty;fx(s,'boom',f.x,f.y,{r:2.1,ink:c.ink,life:.4,max:.4});if(dist(f,o)<2.1)strike(s,f,o,18,{kind:'skill',breaker:2,stun:.55,knock:1.8});event(s,'heavyHit');}
  if(f.state==='dodge'&&f.t>0){f.x+=f.dx*12*dt;f.y+=f.dy*12*dt;}
  // 휘두르는 동안에도 조금은 움직일 수 있다(발이 묶인 답답함 줄이기).
- if(busy&&(f.state==='attack'||f.state==='heavy')&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=(input.x/m)*c.speed*.28*dt;f.y+=(input.y/m)*c.speed*.28*dt;}}
+ if(busy&&(f.state==='attack'||f.state==='heavy')&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=((input.x||0)/m)*c.speed*.28*dt;f.y+=((input.y||0)/m)*c.speed*.28*dt;}}
  // The first placement stays stationary. After release the caster may reposition
  // at a reduced pace; existing fixed warning coordinates never track that move.
- if(busy&&f.state==='skill'&&['gravitymirror','chainburst'].includes(f.char)&&f.t<f.total-.5&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=(input.x/m)*c.speed*.6*dt;f.y+=(input.y/m)*c.speed*.6*dt;}}
+ if(busy&&f.state==='skill'&&['gravitymirror','chainburst'].includes(f.char)&&f.t<f.total-.5&&f.stun<=0){const m=Math.hypot(input.x||0,input.y||0);if(m>.1){f.x+=((input.x||0)/m)*c.speed*.6*dt;f.y+=((input.y||0)/m)*c.speed*.6*dt;}}
  if(busy){clampArena(f);return;}
  const was=cancel?f.state:'';if(cancel){f.state='idle';f.t=0;}
  // 새 행동.
- if(s.boss&&f.team===1&&input.bossAttack&&heartPattern(s,f,input.bossAttack)){clampArena(f);return;}
+ if(s.boss&&f.team===1&&input.bossAttack){
+  if(isCrunchStageBoss(s)&&canStartCrunchBossPattern(s,f,input.bossAttack)){
+   const kind=input.bossAttack;let accepted=false;
+   if(kind==='pairedWells')accepted=useSkill(s,f,0);
+   else if(kind==='slowSeed')accepted=useSkill(s,f,1);
+   else if(kind==='crunchSlam'){f.buffer=null;Object.assign(f,{state:'heavy',linked:false,total:.58,t:.58,cancelAt:.06,hitDone:false,blocking:false,combo:0});event(s,'charge');accepted=true;}
+   if(accepted){commitCrunchBossPattern(s,f,kind);clampArena(f);return;}
+  }else if(isIcicleStageBoss(s)&&canStartIcicleBossPattern(s,f,input.bossAttack)){
+   const kind=input.bossAttack;let accepted=false;
+   if(kind==='firstShaft')accepted=useSkill(s,f,0);
+   else if(kind==='secondShaft')accepted=useSkill(s,f,1);
+   else if(kind==='sideStep')accepted=true;
+   else if(kind==='iceSweep'){f.buffer=null;Object.assign(f,{state:'heavy',linked:false,total:.58,t:.58,cancelAt:.06,hitDone:false,blocking:false,combo:0});event(s,'charge');accepted=true;}
+   if(accepted){commitIcicleBossPattern(s,f,kind);clampArena(f);return;}
+  }else if(isStakeStageBoss(s)&&canStartStakeBossPattern(s,f,input.bossAttack)){
+   const kind=input.bossAttack,accepted=useSkill(s,f,kind==='stakeInsert'?0:1);
+   if(accepted){commitStakeBossPattern(s,f,kind);clampArena(f);return;}
+  }else if(isPulseStageBoss(s)&&canStartPulseBossPattern(s,f,input.bossAttack)){
+   const kind=input.bossAttack,accepted=useSkill(s,f,kind==='pulsePlant'?0:1);
+   if(accepted){commitPulseBossPattern(s,f,kind);clampArena(f);return;}
+  }else if(!isTwinStageBoss(s)&&!isCrunchStageBoss(s)&&!isIcicleStageBoss(s)&&!isStakeStageBoss(s)&&!isPulseStageBoss(s)&&heartPattern(s,f,input.bossAttack)){clampArena(f);return;}
+ }
  f.blocking=Boolean(input.block)&&f.stun<=0;if(f.blocking&&f.state!=='block'){f.blockSince=s.time;f.state='block';}if(!f.blocking&&f.state==='block')f.state='idle';
- if(wants('dodge')&&f.dodgeCd<=0){f.buffer=null;const d=Math.hypot(input.x||0,input.y||0)>.1?norm(input.x,input.y):{x:-f.fx,y:-f.fy};f.state='dodge';f.t=.24;f.inv=.2;f.dodgeCd=DUEL_RULES.dodgeCd;f.dx=d.x;f.dy=d.y;f.blocking=false;event(s,'dash');clampArena(f);return;}
+ if(wants('dodge')&&f.dodgeCd<=0){f.buffer=null;const d=Math.hypot(input.x||0,input.y||0)>.1?norm(input.x||0,input.y||0):{x:-f.fx,y:-f.fy};f.state='dodge';f.t=.24;f.inv=.2;f.dodgeCd=DUEL_RULES.dodgeCd;f.dx=d.x;f.dy=d.y;f.blocking=false;event(s,'dash');clampArena(f);return;}
  if(wants('ult')&&useUlt(s,f)){f.buffer=null;clampArena(f);return;}
  if(wants('skill1')&&useSkill(s,f,0)){f.buffer=null;clampArena(f);return;}
  if(wants('skill2')&&useSkill(s,f,1)){f.buffer=null;clampArena(f);return;}
  // 연계 강공격: 평타가 나간 직후 이어 누르면 준비가 짧고(0.24초) 조금 더 세다.
  if(wants('heavy')){const link=was==='attack';f.buffer=null;f.state='heavy';f.linked=link;f.total=f.t=link?.36:.58;f.cancelAt=.06;f.hitDone=false;f.blocking=false;f.combo=0;lunge(s,f,link?5.5:3.2);event(s,link?'link':'charge');clampArena(f);return;}
  if(wants('attack')){f.buffer=null;f.step=f.combo%3;f.combo++;f.comboTime=c.cadence+.45;f.state='attack';f.total=f.t=c.cadence*(f.step===2?1.3:1)+(f.step===2?.16:0);f.hitAt=f.t-.1;f.cancelAt=f.t-.17;f.hitDone=false;f.blocking=false;lunge(s,f,f.step===2?4.2:2.6);event(s,'swing'+f.step);clampArena(f);return;}
- const mv=norm(input.x||0,input.y||0),moving=Math.hypot(input.x||0,input.y||0)>.1,speed=c.speed*(f.blocking?.45:1)*(f.slow>0?.55:1);
+ const mv=norm(input.x||0,input.y||0),moving=Math.hypot(input.x||0,input.y||0)>.1,speed=c.speed*(f.blocking?.45:1)*Math.min(f.slow>0?.55:1,batch52MovementRatio(s,f),batch56MovementRatio(s,f),batch58MovementRatio(s,f),batch60MovementRatio(s,f),batch63MovementRatio(s,f),batch64MovementRatio(s,f),batch65MovementRatio(s,f),batch66MovementRatio(s,f),batch67MovementRatio(s,f));
+ if(f.char==='rewindbolt'||f.char==='final-comethalo-burst')clampArena(f);
+ const walkX=f.x,walkY=f.y;
  if(moving){f.x+=mv.x*speed*dt;f.y+=mv.y*speed*dt;}
  clampArena(f);
+ if(f.char==='rewindbolt'&&moving)f.boltWalkFrame=Math.min(speed*dt,Math.hypot(f.x-walkX,f.y-walkY));
+ if(f.char==='final-comethalo-burst'&&moving)f.mortarWalkFrame=Math.min(speed*dt,Math.hypot(f.x-walkX,f.y-walkY));
 }
 // 휘두를 때 앞으로 한 걸음(상대가 코앞이면 덜 나간다).
 function lunge(s,f,speed){const o=s.fighters[1-f.team],d=dist(f,o),v=norm(o.x-f.x,o.y-f.y),front=v.x*f.fx+v.y*f.fy>.5,k=front?clamp((d-1)/1.6,0,1):1;f.kx+=f.fx*speed*k;f.ky+=f.fy*speed*k;}
@@ -380,12 +647,75 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
  batch05Tick(s,dt,batch04Context);
  batch06Tick(s,dt,batch04Context);
  batch07Tick(s,dt,batch04Context);
- batch08Tick(s,dt,batch04Context);
- for(const q of s.shots){if(q.life<=0||DUEL_BATCH08_SHOTS.includes(q.kind)||DUEL_BATCH07_SHOTS.includes(q.kind)||['returnSpear','collapseSeed','thunderSpear'].includes(q.kind))continue;q.life-=dt;
+ // Candidate adapters are dormant during public matches. Adding more of the
+ // original catalog must not multiply per-frame work for existing fighters.
+ if((s.inspection||s.expandedRules)){
+  if(s.fighters.some(f=>DUEL_BATCH08[f.char]))batch08Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH09[f.char]))batch09Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH10[f.char]))batch10Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH11[f.char]))batch11Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH12[f.char]))batch12Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH59[f.char]||f.twin59Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH59_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH59_KINDS.includes(h.kind)))batch59Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH58[f.char]||f.twin58Cold||f.twin58Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH58_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH58_KINDS.includes(h.kind)))batch58Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH57[f.char]||f.twin57Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH57_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH57_KINDS.includes(h.kind)))batch57Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH63[f.char]||f.twin63Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH63_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH63_KINDS.includes(h.kind)))batch63Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH64[f.char]||f.twin64Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH64_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH64_KINDS.includes(h.kind)))batch64Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH65[f.char]||f.twin65Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH65_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH65_KINDS.includes(h.kind)))batch65Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH66[f.char]||f.twin66Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH66_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH66_KINDS.includes(h.kind)))batch66Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH67[f.char]||f.twin67Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH67_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH67_KINDS.includes(h.kind)))batch67Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH61[f.char]||f.twin61Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH61_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH61_KINDS.includes(h.kind)))batch61Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH62[f.char]||f.twin62Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH62_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH62_KINDS.includes(h.kind)))batch62Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH60[f.char]||f.twin60BaseCold||f.twin60PairCold||f.twin60Marks?.some(Boolean))||s.shots.some(q=>q.life>0&&DUEL_BATCH60_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH60_KINDS.includes(h.kind)))batch60Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH56[f.char]||f.twin56Cold)||s.shots.some(q=>q.life>0&&DUEL_BATCH56_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH56_KINDS.includes(h.kind)))batch56Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH55[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH55_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH55_KINDS.includes(h.kind)))batch55Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH54[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH54_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH54_KINDS.includes(h.kind)))batch54Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH53[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH53_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH53_KINDS.includes(h.kind)))batch53Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH52[f.char]||f.twin52Cold)||s.shots.some(q=>q.life>0&&DUEL_BATCH52_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH52_KINDS.includes(h.kind)))batch52Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH51[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH51_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH51_KINDS.includes(h.kind)))batch51Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH50[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH50_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH50_KINDS.includes(h.kind)))batch50Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH49[f.char])||s.shots.some(q=>q.life>0&&DUEL_BATCH49_SHOTS.includes(q.kind))||s.hazards.some(h=>h.t>0&&DUEL_BATCH49_KINDS.includes(h.kind)))batch49Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH48[f.char]))batch48Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH47[f.char]))batch47Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH46[f.char]))batch46Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH45[f.char]))batch45Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH44[f.char]))batch44Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH43[f.char]))batch43Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH42[f.char]))batch42Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH41[f.char]))batch41Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH40[f.char]))batch40Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH39[f.char]))batch39Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH38[f.char]))batch38Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH37[f.char]))batch37Tick(s,dt,batch37Context);
+  if(s.fighters.some(f=>DUEL_BATCH36[f.char]))batch36Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH35[f.char]))batch35Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH34[f.char]))batch34Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH33[f.char]))batch33Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH32[f.char]))batch32Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH31[f.char]))batch31Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH30[f.char]))batch30Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH29[f.char]))batch29Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH28[f.char]))batch28Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH27[f.char]))batch27Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH26[f.char]))batch26Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH25[f.char]))batch25Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH24[f.char]))batch24Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH23[f.char]))batch23Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH22[f.char]))batch22Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH21[f.char]))batch21Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH20[f.char]))batch20Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH19[f.char]))batch19Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH18[f.char]))batch18Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH17[f.char]))batch17Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH16[f.char]))batch16Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH15[f.char]))batch15Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH14[f.char]))batch14Tick(s,dt,batch04Context);
+  if(s.fighters.some(f=>DUEL_BATCH13[f.char]))batch13Tick(s,dt,batch04Context);
+ }
+ for(const q of s.shots){if(q.life<=0||DUEL_BATCH63_SHOTS.includes(q.kind)||DUEL_BATCH64_SHOTS.includes(q.kind)||DUEL_BATCH65_SHOTS.includes(q.kind)||DUEL_BATCH66_SHOTS.includes(q.kind)||DUEL_BATCH67_SHOTS.includes(q.kind)||DUEL_BATCH61_SHOTS.includes(q.kind)||DUEL_BATCH62_SHOTS.includes(q.kind)||DUEL_BATCH60_SHOTS.includes(q.kind)||DUEL_BATCH59_SHOTS.includes(q.kind)||DUEL_BATCH58_SHOTS.includes(q.kind)||DUEL_BATCH57_SHOTS.includes(q.kind)||DUEL_BATCH56_SHOTS.includes(q.kind)||DUEL_BATCH55_SHOTS.includes(q.kind)||DUEL_BATCH54_SHOTS.includes(q.kind)||DUEL_BATCH53_SHOTS.includes(q.kind)||DUEL_BATCH52_SHOTS.includes(q.kind)||DUEL_BATCH51_SHOTS.includes(q.kind)||DUEL_BATCH50_SHOTS.includes(q.kind)||DUEL_BATCH49_SHOTS.includes(q.kind)||DUEL_BATCH48_SHOTS.includes(q.kind)||DUEL_BATCH47_SHOTS.includes(q.kind)||DUEL_BATCH46_SHOTS.includes(q.kind)||DUEL_BATCH45_SHOTS.includes(q.kind)||DUEL_BATCH44_SHOTS.includes(q.kind)||DUEL_BATCH43_SHOTS.includes(q.kind)||DUEL_BATCH42_SHOTS.includes(q.kind)||DUEL_BATCH41_SHOTS.includes(q.kind)||DUEL_BATCH40_SHOTS.includes(q.kind)||DUEL_BATCH39_SHOTS.includes(q.kind)||DUEL_BATCH38_SHOTS.includes(q.kind)||DUEL_BATCH37_SHOTS.includes(q.kind)||DUEL_BATCH36_SHOTS.includes(q.kind)||DUEL_BATCH35_SHOTS.includes(q.kind)||DUEL_BATCH34_SHOTS.includes(q.kind)||DUEL_BATCH33_SHOTS.includes(q.kind)||DUEL_BATCH32_SHOTS.includes(q.kind)||DUEL_BATCH31_SHOTS.includes(q.kind)||DUEL_BATCH30_SHOTS.includes(q.kind)||DUEL_BATCH29_SHOTS.includes(q.kind)||DUEL_BATCH28_SHOTS.includes(q.kind)||DUEL_BATCH27_SHOTS.includes(q.kind)||DUEL_BATCH26_SHOTS.includes(q.kind)||DUEL_BATCH25_SHOTS.includes(q.kind)||DUEL_BATCH24_SHOTS.includes(q.kind)||DUEL_BATCH23_SHOTS.includes(q.kind)||DUEL_BATCH22_SHOTS.includes(q.kind)||DUEL_BATCH21_SHOTS.includes(q.kind)||DUEL_BATCH20_SHOTS.includes(q.kind)||DUEL_BATCH19_SHOTS.includes(q.kind)||DUEL_BATCH18_SHOTS.includes(q.kind)||DUEL_BATCH17_SHOTS.includes(q.kind)||DUEL_BATCH16_SHOTS.includes(q.kind)||DUEL_BATCH15_SHOTS.includes(q.kind)||DUEL_BATCH14_SHOTS.includes(q.kind)||DUEL_BATCH13_SHOTS.includes(q.kind)||DUEL_BATCH12_SHOTS.includes(q.kind)||DUEL_BATCH11_SHOTS.includes(q.kind)||DUEL_BATCH10_SHOTS.includes(q.kind)||DUEL_BATCH08_SHOTS.includes(q.kind)||DUEL_BATCH07_SHOTS.includes(q.kind)||['returnSpear','collapseSeed','thunderSpear'].includes(q.kind))continue;q.life-=dt;
   // 귀환 칼날: 잠깐 날아간 뒤 던진 씨앗에게 돌아온다(돌아오는 길에 한 번 더 벨 수 있다). 받으면 사라진다.
   if(q.kind==='blade'){q.age+=dt;if(q.age>=q.turn){const home=s.fighters[q.owner],v=norm(home.x-q.x,home.y-q.y);if(!q.back){q.back=true;q.hit.clear();q.pierce=1;}q.dx=v.x;q.dy=v.y;q.speed=12;if(Math.hypot(home.x-q.x,home.y-q.y)<.6)q.life=0;}}
   const shotX=q.x,shotY=q.y;q.x+=q.dx*q.speed*dt;q.y+=q.dy*q.speed*dt;const A=DUEL_ARENA;
-  if(batch03Context.interceptShot(s,q,shotX,shotY,0))continue;
+  if((s.inspection||s.expandedRules)&&!q.guardReturned&&(batch63InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch64InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch65InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch66InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch67InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch61InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch62InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch58InterceptShot(s,q,shotX,shotY,dt,batch04Context)||batch57InterceptShot(s,q,shotX,shotY,dt,batch04Context))||batch03Context.interceptShot(s,q,shotX,shotY,0))continue;
   if(q.kind==='mirrorCore'){
    let normal=null;
    if(q.x<A.minX||q.x>A.maxX){normal={x:q.x<A.minX?1:-1,y:0};q.x=clamp(q.x,A.minX,A.maxX);}else if(q.y<A.minY||q.y>A.maxY){normal={x:0,y:q.y<A.minY?1:-1};q.y=clamp(q.y,A.minY,A.maxY);}
@@ -402,7 +732,7 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
   if(dist(q,target)<radius)strike(s,att,target,q.tipDamage,{kind:'skill',stun:.18,knock:.6,dir:{x:q.dx,y:q.dy}});
  }
  s.shots=s.shots.filter(q=>q.life>0);
- for(const h of s.hazards){if(DUEL_BATCH08_KINDS.includes(h.kind)||DUEL_BATCH07_KINDS.includes(h.kind)||DUEL_BATCH06_KINDS.includes(h.kind)||['bladeSend','frostWard','wardPunish','wardFan','collapseSend','collapseBurst','thunderSend','thunderRod','thunderArc','bloomPlant','bloomBud','bloomFan','crownOrbit','crownLink','crownDrop'].includes(h.kind))continue;h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
+ for(const h of s.hazards){if(DUEL_BATCH63_KINDS.includes(h.kind)||DUEL_BATCH64_KINDS.includes(h.kind)||DUEL_BATCH65_KINDS.includes(h.kind)||DUEL_BATCH66_KINDS.includes(h.kind)||DUEL_BATCH67_KINDS.includes(h.kind)||DUEL_BATCH61_KINDS.includes(h.kind)||DUEL_BATCH62_KINDS.includes(h.kind)||DUEL_BATCH60_KINDS.includes(h.kind)||DUEL_BATCH59_KINDS.includes(h.kind)||DUEL_BATCH58_KINDS.includes(h.kind)||DUEL_BATCH57_KINDS.includes(h.kind)||DUEL_BATCH56_KINDS.includes(h.kind)||DUEL_BATCH55_KINDS.includes(h.kind)||DUEL_BATCH54_KINDS.includes(h.kind)||DUEL_BATCH53_KINDS.includes(h.kind)||DUEL_BATCH52_KINDS.includes(h.kind)||DUEL_BATCH51_KINDS.includes(h.kind)||DUEL_BATCH50_KINDS.includes(h.kind)||DUEL_BATCH49_KINDS.includes(h.kind)||DUEL_BATCH48_KINDS.includes(h.kind)||DUEL_BATCH47_KINDS.includes(h.kind)||DUEL_BATCH46_KINDS.includes(h.kind)||DUEL_BATCH45_KINDS.includes(h.kind)||DUEL_BATCH44_KINDS.includes(h.kind)||DUEL_BATCH43_KINDS.includes(h.kind)||DUEL_BATCH42_KINDS.includes(h.kind)||DUEL_BATCH41_KINDS.includes(h.kind)||DUEL_BATCH40_KINDS.includes(h.kind)||DUEL_BATCH39_KINDS.includes(h.kind)||DUEL_BATCH38_KINDS.includes(h.kind)||DUEL_BATCH37_KINDS.includes(h.kind)||DUEL_BATCH36_KINDS.includes(h.kind)||DUEL_BATCH35_KINDS.includes(h.kind)||DUEL_BATCH34_KINDS.includes(h.kind)||DUEL_BATCH33_KINDS.includes(h.kind)||DUEL_BATCH32_KINDS.includes(h.kind)||DUEL_BATCH31_KINDS.includes(h.kind)||DUEL_BATCH30_KINDS.includes(h.kind)||DUEL_BATCH29_KINDS.includes(h.kind)||DUEL_BATCH28_KINDS.includes(h.kind)||DUEL_BATCH27_KINDS.includes(h.kind)||DUEL_BATCH26_KINDS.includes(h.kind)||DUEL_BATCH25_KINDS.includes(h.kind)||DUEL_BATCH24_KINDS.includes(h.kind)||DUEL_BATCH23_KINDS.includes(h.kind)||DUEL_BATCH22_KINDS.includes(h.kind)||DUEL_BATCH21_KINDS.includes(h.kind)||DUEL_BATCH20_KINDS.includes(h.kind)||DUEL_BATCH19_KINDS.includes(h.kind)||DUEL_BATCH18_KINDS.includes(h.kind)||DUEL_BATCH17_KINDS.includes(h.kind)||DUEL_BATCH16_KINDS.includes(h.kind)||DUEL_BATCH15_KINDS.includes(h.kind)||DUEL_BATCH14_KINDS.includes(h.kind)||DUEL_BATCH13_KINDS.includes(h.kind)||DUEL_BATCH12_KINDS.includes(h.kind)||DUEL_BATCH11_KINDS.includes(h.kind)||DUEL_BATCH10_KINDS.includes(h.kind)||DUEL_BATCH09_KINDS.includes(h.kind)||DUEL_BATCH08_KINDS.includes(h.kind)||DUEL_BATCH07_KINDS.includes(h.kind)||DUEL_BATCH06_KINDS.includes(h.kind)||['bladeSend','frostWard','wardPunish','wardFan','collapseSend','collapseBurst','thunderSend','thunderRod','thunderArc','bloomPlant','bloomBud','bloomFan','crownOrbit','crownLink','crownDrop'].includes(h.kind))continue;h.t-=dt;const owner=s.fighters[h.owner],o=s.fighters[1-h.owner];
   if(h.kind==='emberMark'&&h.t>0){h.x=o.x;h.y=o.y;}
   if(h.kind==='mirrorTell'){
    if(owner.stun>0||owner.state!=='skill'||owner.mirrorCast!==h.cast){h.t=0;continue;}
@@ -470,6 +800,11 @@ export function stepDuel(s,dt,playerInput={},enemyInput=null){
 export const DUEL_AI=Object.freeze({easy:{react:.32,block:.35,parry:.05,heavyRead:.2,aggro:.5,link:.1},normal:{react:.2,block:.6,parry:.18,heavyRead:.5,aggro:.75,link:.3},hard:{react:.12,block:.8,parry:.38,heavyRead:.75,aggro:.9,link:.55}});
 export function duelAi(s,team,dt){
  const f=s.fighters[team],o=s.fighters[1-team],c=character(f.char),cfg=DUEL_AI[s.difficulty]||DUEL_AI.normal,ai=s.ai[team],d=dist(f,o),v=norm(o.x-f.x,o.y-f.y),input={aimX:v.x,aimY:v.y};
+ if(s.boss&&team===1&&isTwinStageBoss(s))return twinBossInput(s,f,o);
+ if(s.boss&&team===1&&isCrunchStageBoss(s))return crunchBossInput(s,f,o,input,dt);
+ if(s.boss&&team===1&&isIcicleStageBoss(s))return icicleBossInput(s,f,o,input);
+ if(s.boss&&team===1&&isPulseStageBoss(s))return pulseBossInput(s,f,o,input,dt);
+ if(s.boss&&team===1&&isStakeStageBoss(s))return stakeBossInput(s,f,o,input,dt);
  if(s.boss&&team===1){f.bossPhase=f.hp<f.maxHp*.5?2:1;f.bossRecovery=s.time>=f.bossActiveUntil?Math.max(0,f.bossNextAt-s.time):0;
   if(f.stun<=0&&s.time>=f.bossNextAt&&!s.hazards.some(h=>h.owner===team)){input.bossAttack=['well','orbit','ring'][f.bossPatternIndex];return input;}
   // Recovery is a genuine stationary punish window. During an active pattern the heart can still be fought normally.
@@ -486,6 +821,65 @@ export function duelAi(s,team,dt){
  // 방금 맞았으면(1.5초) 더 빨리·자주 막는다. 막아서 상대가 튕기면 바로 반격.
  if(f.hp<(ai.hp??f.hp))ai.hurtAt=s.time;ai.hp=f.hp;const wary=s.time-(ai.hurtAt??-9)<1.5,react=wary?cfg.react*.55:cfg.react,block=wary?Math.min(.95,cfg.block+.3):cfg.block;
  // These two solo adapters observe a spent swing before the shared forced jab.
+ if(f.stun<=0&&DUEL_BATCH63[f.char]&&batch63Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH64[f.char]&&batch64Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH65[f.char]&&batch65Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH66[f.char]&&batch66Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH67[f.char]&&batch67Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH61[f.char]&&batch61Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH62[f.char]&&batch62Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH60[f.char]&&batch60Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH59[f.char]&&batch59Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH58[f.char]&&batch58Ai(s,f,o,input,dt,batch37Context))return input;
+ if(f.stun<=0&&DUEL_BATCH57[f.char]&&batch57Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH56[f.char]&&batch56Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH55[f.char]&&batch55Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH54[f.char]&&batch54Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH53[f.char]&&batch53Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH52[f.char]&&batch52Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH51[f.char]&&batch51Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH50[f.char]&&batch50Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH49[f.char]&&batch49Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH48[f.char]&&batch48Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH47[f.char]&&batch47Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH46[f.char]&&batch46Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH45[f.char]&&batch45Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH44[f.char]&&batch44Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH43[f.char]&&batch43Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH42[f.char]&&batch42Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH41[f.char]&&batch41Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH40[f.char]&&batch40Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH39[f.char]&&batch39Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH38[f.char]&&batch38Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH37[f.char]&&batch37Ai(s,f,o,input,dt,batch37Context))return input;
+ if(f.stun<=0&&DUEL_BATCH36[f.char]&&batch36Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH35[f.char]&&batch35Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH34[f.char]&&batch34Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH33[f.char]&&batch33Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH32[f.char]&&batch32Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH31[f.char]&&batch31Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH30[f.char]&&batch30Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH29[f.char]&&batch29Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH28[f.char]&&batch28Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH27[f.char]&&batch27Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH26[f.char]&&batch26Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH25[f.char]&&batch25Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH24[f.char]&&batch24Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH23[f.char]&&batch23Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH22[f.char]&&batch22Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH21[f.char]&&batch21Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH20[f.char]&&batch20Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH19[f.char]&&batch19Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH18[f.char]&&batch18Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH17[f.char]&&batch17Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH16[f.char]&&batch16Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH15[f.char]&&batch15Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH14[f.char]&&batch14Ai(s,f,o,input,dt))return input;
+ if(f.stun<=0&&DUEL_BATCH13[f.char]&&batch13Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH12[f.char]&&batch12Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH11[f.char]&&batch11Ai(s,f,o,input,dt))return input;
+ if(f.stun<=0&&DUEL_BATCH10[f.char]&&batch10Ai(s,f,o,input,dt,batch04Context))return input;
+ if(f.stun<=0&&DUEL_BATCH09[f.char]&&batch09Ai(s,f,o,input,dt))return input;
  if(f.stun<=0&&DUEL_BATCH08[f.char]&&batch08Ai(s,f,o,input,dt))return input;
  if(f.stun<=0&&DUEL_BATCH07[f.char]&&batch07Ai(s,f,o,input,dt))return input;
  if(f.stun<=0&&DUEL_BATCH06[f.char]&&batch06Ai(s,f,o,input,dt))return input;
@@ -496,7 +890,7 @@ export function duelAi(s,team,dt){
  else ai.seen=0;
  if(ai.guarding){ai.guardFor-=dt;input.block=!(ai.parryTry&&f.blocking&&s.time-f.blockSince>.2);if(ai.guardFor<=0)ai.guarding=false;if(f.stun<=0)return input;}
  if(f.stun>0)return input;
- if(batch08DangerAi(s,f,input,dt)||batch07DangerAi(s,f,input,dt)||batch06DangerAi(s,f,input,dt)||batch04DangerAi(s,f,input,dt)||batch05DangerAi(s,f,input,dt))return input;
+ if((s.inspection||s.expandedRules)&&(batch63DangerAi(s,f,input,dt)||batch64DangerAi(s,f,input,dt)||batch65DangerAi(s,f,input,dt)||batch66DangerAi(s,f,input,dt)||batch67DangerAi(s,f,input,dt)||batch61DangerAi(s,f,input,dt)||batch62DangerAi(s,f,input,dt)||batch60DangerAi(s,f,input,dt)||batch59DangerAi(s,f,input,dt)||batch58DangerAi(s,f,input,dt)||batch57DangerAi(s,f,input,dt)||batch56DangerAi(s,f,input,dt)||batch55DangerAi(s,f,input,dt)||batch54DangerAi(s,f,input,dt)||batch53DangerAi(s,f,input,dt)||batch52DangerAi(s,f,input,dt)||batch51DangerAi(s,f,input,dt)||batch50DangerAi(s,f,input,dt)||batch49DangerAi(s,f,input,dt)||batch48DangerAi(s,f,input,dt)||batch47DangerAi(s,f,input,dt)||batch46DangerAi(s,f,input,dt)||batch45DangerAi(s,f,input,dt)||batch44DangerAi(s,f,input,dt)||batch43DangerAi(s,f,input,dt)||batch42DangerAi(s,f,input,dt)||batch41DangerAi(s,f,input,dt)||batch40DangerAi(s,f,input,dt)||batch39DangerAi(s,f,input,dt)||batch38DangerAi(s,f,input,dt)||batch37DangerAi(s,f,input,dt)||batch36DangerAi(s,f,input,dt)||batch35DangerAi(s,f,input,dt)||batch34DangerAi(s,f,input,dt)||batch33DangerAi(s,f,input,dt)||batch32DangerAi(s,f,input,dt)||batch31DangerAi(s,f,input,dt)||batch30DangerAi(s,f,input,dt)||batch29DangerAi(s,f,input,dt)||batch28DangerAi(s,f,input,dt)||batch27DangerAi(s,f,input,dt)||batch26DangerAi(s,f,input,dt)||batch25DangerAi(s,f,input,dt)||batch24DangerAi(s,f,input,dt)||batch23DangerAi(s,f,input,dt)||batch22DangerAi(s,f,input,dt)||batch21DangerAi(s,f,input,dt)||batch20DangerAi(s,f,input,dt)||batch19DangerAi(s,f,input,dt)||batch18DangerAi(s,f,input,dt)||batch17DangerAi(s,f,input,dt)||batch16DangerAi(s,f,input,dt)||batch15DangerAi(s,f,input,dt)||batch14DangerAi(s,f,input,dt)||batch13DangerAi(s,f,input,dt)||batch12DangerAi(s,f,input,dt)||batch11DangerAi(s,f,input,dt)||batch10DangerAi(s,f,input,dt)||batch09DangerAi(s,f,input,dt)||batch08DangerAi(s,f,input,dt))||batch07DangerAi(s,f,input,dt)||batch06DangerAi(s,f,input,dt)||batch04DangerAi(s,f,input,dt)||batch05DangerAi(s,f,input,dt))return input;
  if(DUEL_BATCH03[f.char]&&batch03Ai(s,f,o,input,dt))return input;
  if(DUEL_BATCH04[f.char]&&batch04Ai(s,f,o,input,dt))return input;
  if(DUEL_BATCH05[f.char]&&batch05Ai(s,f,o,input,dt))return input;
@@ -522,7 +916,7 @@ export function duelAi(s,team,dt){
  if(f.state==='attack'&&f.hitDone&&f.chainTime>.6&&ai.rolled!==f.combo){ai.rolled=f.combo;if(rnd(s)<cfg.link){input.heavy=true;return input;}}
  // 오래 막는 상대에게는 강공격·잡기.
  if(o.blocking&&s.time-o.blockSince>.45&&d<c.heavy.reach+.4&&rnd(s)<cfg.aggro*dt*6){if(f.char==='gravity'&&f.cd[0]<=0){input.skill1=true;return input;}input.heavy=true;return input;}
- const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!['bigcrunch','mirrorhall','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind'].includes(f.char)){input.ult=true;return input;}
+ const ultRange={frostnet:5,blastlance:7,pierce:9,chain:12,recall:7,split:4.5,frost:4.2,orbit:2.6,thorn:6,gale:6,bastion:2.7,comet:6,lotus:6,prism:6,reed:7.5,cinder:3.3,pebble:3.1,echo:7,pulse:5,shard:7,heart:6}[f.char]||4;if(f.meter>=100&&d<ultRange&&!DUEL_BATCH63[f.char]&&!DUEL_BATCH64[f.char]&&!DUEL_BATCH65[f.char]&&!DUEL_BATCH66[f.char]&&!DUEL_BATCH67[f.char]&&!DUEL_BATCH61[f.char]&&!DUEL_BATCH62[f.char]&&!DUEL_BATCH60[f.char]&&!DUEL_BATCH59[f.char]&&!DUEL_BATCH58[f.char]&&!DUEL_BATCH57[f.char]&&!DUEL_BATCH56[f.char]&&!DUEL_BATCH55[f.char]&&!DUEL_BATCH54[f.char]&&!DUEL_BATCH53[f.char]&&!DUEL_BATCH52[f.char]&&!DUEL_BATCH51[f.char]&&!DUEL_BATCH50[f.char]&&!DUEL_BATCH49[f.char]&&!DUEL_BATCH48[f.char]&&!DUEL_BATCH47[f.char]&&!DUEL_BATCH46[f.char]&&!DUEL_BATCH45[f.char]&&!DUEL_BATCH44[f.char]&&!DUEL_BATCH43[f.char]&&!DUEL_BATCH42[f.char]&&!DUEL_BATCH41[f.char]&&!DUEL_BATCH40[f.char]&&!['thunderweb','blackhole','bigcrunch','mirrorhall','gravitymirror','chainburst','returnblade','frostguard','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind'].includes(f.char)){input.ult=true;return input;}
  // 기술2는 방어+회피 또는 방어 중 기존 +로 접근한다. 위 조건은 같은 시전·쿨다운을 사용한다.
  if(f.cd[0]<=0&&(f.char==='frostnet'&&d>1.5&&d<4.8&&!threat||f.char==='blastlance'&&d>3&&d<6.5&&!threat||f.char==='pierce'&&d>2.5&&d<5.5||f.char==='burst'&&d<2||f.char==='gravity'&&d<5&&d>1.6||f.char==='reflect'&&threat||f.char==='split'&&d<3.6||f.char==='chain'&&d<5.5&&d>1.4||f.char==='recall'&&d>2&&d<6.5||f.char==='orbit'&&d<2.4||f.char==='frost'&&d<3.6||f.char==='thorn'&&d<4.3||f.char==='gale'&&d>2.8&&d<5||f.char==='bastion'&&threat&&d<3||f.char==='comet'&&d>3&&d<5.5&&!threat||f.char==='lotus'&&d>1.7&&d<4||f.char==='prism'&&d>1.5&&d<6||f.char==='reed'&&d>2.8&&d<6&&!threat||f.char==='cinder'&&d<1.8||f.char==='pebble'&&d>1.2&&d<3||f.char==='echo'&&d<4.5&&(threat||o.blocking)||f.char==='pulse'&&d>1.6&&d<4||f.char==='shard'&&d>3.2&&d<5.5&&!threat||f.char==='heart'&&d>2&&d<5.5&&!threat)&&rnd(s)<dt*2.5){input.skill1=true;return input;}
  // Weavers set lanes from midrange, then close for melee in recovery. Staying

@@ -19,17 +19,33 @@ import {titleState} from '../src/titles.js';
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
 
+// Independent Firebase REST nodes and ETags; device tests use mocked transport,
+// not authenticated Firebase or physical PC/phone sessions.
+const cloudFixture=({read=()=>undefined,onPut=()=>{},beforePut=()=>null}={})=>{
+ const records=new Map(),etags=new Map();
+ const set=(path,value)=>{const copy=structuredClone(value);if(!records.has(path)||JSON.stringify(records.get(path))!==JSON.stringify(copy)){records.set(path,copy);etags.set(path,(etags.get(path)||0)+1);}};
+ const fetch=async(url,options={})=>{
+  const path=new URL(url).pathname.replace(/^\//,'').replace(/\.json$/,'');
+  const external=read(path);if(external!==undefined)set(path,external);
+  const response=(status=200,value=records.get(path)??null)=>({ok:status>=200&&status<300,status,headers:{get:name=>name.toLowerCase()==='etag'?String(etags.get(path)||0):null},json:async()=>structuredClone(value)});
+  if(options.method==='PUT'){
+   const interrupted=beforePut({path,options,response,set});if(interrupted)return interrupted;
+   if(options.headers?.['if-match']!==undefined&&options.headers['if-match']!==String(etags.get(path)||0))return response(412,{error:'stale ETag'});
+   const value=JSON.parse(options.body);set(path,value);onPut(path,structuredClone(value));
+  }
+  return response();
+ };
+ return {records,etags,set,fetch};
+};
+
 // Puzzle records travel PC -> phone -> PC via the existing garden payload.
 // A stale device must preserve best stars, but not resurrect spent lives/streaks.
 {
  const pcStore=memory({[puzzleSaveKey('puzzle-user')]:JSON.stringify({version:2,stages:{s1:{stars:3,best:5000,clears:1}},streak:1,lives:4,livesAt:100}),[puzzleSaveKey('other-user')]:JSON.stringify({stages:{s999:{stars:3}}})});
  const phoneStore=memory();let remote=null,uploads=0;
  const account={ready:async()=>{},user:()=>({uid:'puzzle-user'}),tokenSession:async()=>({uid:'puzzle-user',idToken:'test-token'})};
- const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){remote=JSON.parse(options.body);uploads++;}
-  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
- };
+ const fixture=cloudFixture({onPut:(path,value)=>{if(path==='seedUsers/puzzle-user/save'){remote=value;uploads++;}}});
+ const fetchImpl=fixture.fetch;
  const pc=createCloudSync({storage:pcStore,account,fetchImpl,debounceMs:60_000}),phone=createCloudSync({storage:phoneStore,account,fetchImpl,debounceMs:60_000});
  try{
   assert.equal((await pc.start()).ok,true);assert.equal(remote.garden.puzzle.stages.s1.stars,3,'legacy UID key migrates on first sync');
@@ -139,11 +155,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 // returns to the foreground and explicitly refreshes the same UID's save.
 {
  let remote=null;const user={ready:async()=>({uid:'same-user'}),user:()=>({uid:'same-user'}),tokenSession:async()=>({uid:'same-user',idToken:'token'})};
- const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT')remote=JSON.parse(options.body);
-  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
- };
+ const fixture=cloudFixture({onPut:(path,value)=>{if(path==='seedUsers/same-user/save')remote=value;}});
+ const fetchImpl=fixture.fetch;
  const padStore=memory(),phoneStore=memory();
  const padCloud=createCloudSync({storage:padStore,account:user,fetchImpl,debounceMs:60_000});
  const phoneCloud=createCloudSync({storage:phoneStore,account:user,fetchImpl,debounceMs:60_000});
@@ -298,14 +311,11 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 {
  const storage=memory({[SHOP_KEY]:JSON.stringify({version:2,coins:100,stash:{tonic:0,sprout:0},carry:{tonic:0,sprout:0},gifts:[]})});
  const state={save:null,rewards:null,puts:0},account={ready:async()=>({uid:'u1'}),user:()=>({uid:'u1'}),tokenSession:async()=>({uid:'u1',idToken:'token'})};
- const fetchImpl=async(url,options={})=>{
-  const path=new URL(url).pathname.replace(/^\//,'').replace(/\.json$/,'');
-  const key=path==='seedUsers/u1/save'?'save':path==='seedUserRewards/u1'?'rewards':null;
-  if(url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(!key)return {ok:false,status:404,json:async()=>({error:'not found'})};
-  if(options.method==='PUT'){state[key]=JSON.parse(options.body);state.puts++;return {ok:true,status:200,json:async()=>state[key]};}
-  return {ok:true,status:200,json:async()=>state[key]};
- };
+ const fixture=cloudFixture({
+  read:path=>path==='seedUsers/u1/save'?state.save:path==='seedUserRewards/u1'?state.rewards:undefined,
+  onPut:(path,value)=>{if(path==='seedUsers/u1/save'){state.save=value;state.puts++;}}
+ });
+ const fetchImpl=fixture.fetch;
  let clock=1000;const cloud=createCloudSync({storage,account,fetchImpl,now:()=>++clock,debounceMs:60_000});
  const first=await cloud.start();assert.equal(first.ok,true);assert.equal(state.puts,1);assert.equal(state.save.shop.coins,100);
  cloud.storage.setItem(SHOP_KEY,JSON.stringify({...state.save.shop,coins:150}));
@@ -322,14 +332,11 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  const run=stage=>({version:1,cycle:0,stage,mode:'entry',region:'garden',hp:90,rules:[],mutated:[],kills:stage*10,elapsed:stage*60});
  const account={ready:async()=>({uid:'same-run'}),user:()=>({uid:'same-run'}),tokenSession:async()=>({uid:'same-run',idToken:'token'})};
  let remote=null,duringPut=null,failUpload=false;
- const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){
-   if(failUpload){failUpload=false;return {ok:false,status:503,json:async()=>({error:'offline'})};}
-   remote=JSON.parse(options.body);if(duringPut){const callback=duringPut;duringPut=null;callback();}
-  }
-  return {ok:true,status:200,headers:{get:()=>null},json:async()=>remote};
- };
+ const fixture=cloudFixture({
+  onPut:(path,value)=>{if(path==='seedUsers/same-run/save'){remote=value;if(duringPut){const callback=duringPut;duringPut=null;callback();}}},
+  beforePut:({path,response})=>{if(path==='seedUsers/same-run/save'&&failUpload){failUpload=false;return response(503,{error:'offline'});}}
+ });
+ const fetchImpl=fixture.fetch;
  const padStore=memory(),phoneStore=memory();
  let synced=0;
  const pad=createCloudSync({storage:padStore,account,fetchImpl,debounceMs:60_000,onSynced:()=>{synced++;}});
@@ -358,16 +365,17 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 {
  const storage=memory({[DISCOVERIES_KEY]:JSON.stringify({version:1,forms:['collapse'],bosses:['austin'],records:{}})});
  const account={ready:async()=>({uid:'race'}),user:()=>({uid:'race'}),tokenSession:async()=>({uid:'race',idToken:'token'})};
- let remote=normalizeCloudSnapshot({revision:1,updatedAt:100,discoveries:{version:1,forms:[],bosses:[],records:{}}}),tag='v1',raced=false,puts=0;
- const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){
+ let remote=normalizeCloudSnapshot({revision:1,updatedAt:100,discoveries:{version:1,forms:[],bosses:[],records:{}}}),raced=false,puts=0;
+ const fixture=cloudFixture({
+  read:path=>path==='seedUsers/race/save'?remote:undefined,
+  beforePut:({path,options,response,set})=>{
+   if(path!=='seedUsers/race/save')return;
    puts++;
-   if(!raced){raced=true;remote=normalizeCloudSnapshot({revision:2,updatedAt:200,discoveries:{version:1,forms:['prism'],bosses:[],records:{}}});tag='v2';return {ok:false,status:412,json:async()=>remote};}
-   assert.equal(options.headers['if-match'],'v2');remote=JSON.parse(options.body);tag='v3';return {ok:true,status:200,json:async()=>remote};
-  }
-  return {ok:true,status:200,headers:{get:name=>name==='etag'?tag:null},json:async()=>remote};
- };
+   if(!raced){raced=true;remote=normalizeCloudSnapshot({revision:2,updatedAt:200,discoveries:{version:1,forms:['prism'],bosses:[],records:{}}});set(path,remote);return response(412,remote);}
+   assert.equal(options.headers['if-match'],'2');
+  },onPut:(path,value)=>{if(path==='seedUsers/race/save')remote=value;}
+ });
+ const fetchImpl=fixture.fetch;
  const cloud=createCloudSync({storage,account,fetchImpl,now:()=>300,debounceMs:60_000});
  const result=await cloud.start();
  assert.equal(result.ok,true);assert.equal(puts,2);
@@ -388,11 +396,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
   ready:async()=>({uid:'google-uid'}),user:()=>({uid:'google-uid'}),tokenSession:async()=>({uid:'google-uid',idToken:'token'}),
   pendingMigration:()=>({fromUid:'guest-uid',toUid:'google-uid'}),finishMigration:()=>{state.finished=true;}
  };
- const fetchImpl=async(url,options={})=>{
-  if(!url.includes('seedUsers/google-uid/save'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){state.save=JSON.parse(options.body);return {ok:true,status:200,json:async()=>state.save};}
-  return {ok:true,status:200,json:async()=>state.save};
- };
+ const fixture=cloudFixture({read:path=>path==='seedUsers/google-uid/save'?state.save:undefined,onPut:(path,value)=>{if(path==='seedUsers/google-uid/save')state.save=value;}});
+ const fetchImpl=fixture.fetch;
  const cloud=createCloudSync({storage,account,fetchImpl,now:()=>1000,debounceMs:60_000});
  const migrated=await cloud.start();
  assert.equal(migrated.ok,true);assert.equal(migrated.migrated,true);assert.equal(state.finished,true);
@@ -404,12 +409,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
 {
  const storage=memory({[SHOP_KEY]:JSON.stringify({version:2,coins:100,stash:{tonic:0,sprout:0},carry:{tonic:0,sprout:0},gifts:[]})});
  const state={save:null,puts:0,duringPut:null},account={ready:async()=>({uid:'u9'}),user:()=>({uid:'u9'}),tokenSession:async()=>({uid:'u9',idToken:'t'})};
- const fetchImpl=async(url,options={})=>{
-  const path=new URL(url).pathname.replace(/^\//,'').replace(/\.json$/,'');
-  if(path!=='seedUsers/u9/save')return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){state.save=JSON.parse(options.body);state.puts++;if(state.duringPut){const f=state.duringPut;state.duringPut=null;f();}return {ok:true,status:200,json:async()=>state.save};}
-  return {ok:true,status:200,json:async()=>state.save};
- };
+ const fixture=cloudFixture({read:path=>path==='seedUsers/u9/save'?state.save:undefined,onPut:(path,value)=>{if(path==='seedUsers/u9/save'){state.save=value;state.puts++;if(state.duringPut){const f=state.duringPut;state.duringPut=null;f();}}}});
+ const fetchImpl=fixture.fetch;
  let clock=5000;const cloud=createCloudSync({storage,account,fetchImpl,now:()=>++clock,debounceMs:60_000});
  await cloud.start();
  cloud.storage.setItem(SHOP_KEY,JSON.stringify({...state.save.shop,coins:200}));
@@ -441,11 +442,8 @@ const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v]
  phone.setItem(GARDEN_KEY,JSON.stringify(emptyGarden()));
  const state={save:collectCloudSnapshot(phone,{revision:9,updatedAt:9000}),puts:0};
  const account={ready:async()=>({uid:'uid'}),user:()=>({uid:'uid'}),tokenSession:async()=>({uid:'uid',idToken:'t'})};
- const fetchImpl=async(url,options={})=>{
-  if(url.includes('seedUserRewards')||url.includes('/bossMigration.json'))return {ok:true,status:200,json:async()=>null};
-  if(options.method==='PUT'){state.puts++;state.save=JSON.parse(options.body);}
-  return {ok:true,status:200,json:async()=>state.save};
- };
+ const fixture=cloudFixture({read:path=>path==='seedUsers/uid/save'?state.save:undefined,onPut:(path,value)=>{if(path==='seedUsers/uid/save'){state.puts++;state.save=value;}}});
+ const fetchImpl=fixture.fetch;
  const cloud=createCloudSync({storage:pc,account,fetchImpl,now:()=>10_000,debounceMs:60_000});
  assert.equal((await cloud.start()).ok,true);
  assert.equal(readCheckpoint(pc).elapsed,120,'이어하기 칸은 여전히 더 최근 판(휴대폰)');

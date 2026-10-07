@@ -25,8 +25,9 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   removeItem(key){raw?.removeItem(key);if(isSyncKey(key))markDirty();}
  };
 
- async function firebase(path,{method='GET',body,etag=false,ifMatch=null}={}){
+ async function firebase(path,{method='GET',body,etag=false,ifMatch=null,expectedUid=null}={}){
   const session=await account.tokenSession();if(!session?.uid||!session.idToken)throw new Error('AUTH_REQUIRED');
+  if(expectedUid&&session.uid!==expectedUid)throw new Error('account-changed');
   const headers={};if(body!==undefined)headers['Content-Type']='application/json';
   if(etag)headers['X-Firebase-ETag']='true';
   if(ifMatch)headers['if-match']=ifMatch;
@@ -40,10 +41,11 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   const runEpoch=epoch;
   const session=await account.tokenSession();if(!session?.uid)return {ok:false,reason:'signed-out',changed:false,rewards:[]};
   const uid=session.uid,previousOwner=owner(),m=meta(),migration=account.pendingMigration?.(),migrating=Boolean(migration?.fromUid&&migration?.toUid===uid&&(!previousOwner||previousOwner===migration.fromUid));
-  let remote=null,remoteEtag=null,rewards=null,storyBackup=null,storyEtag=null,bossSeal=null,bossPending=false;
-  // A separate owner record protects new chapters from older apps which only
-  // know the original nine and normalize away unknown stages in /save.
-  try{const [save,result,story,seal]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true}),firebase(`seedUserRewards/${uid}`),firebase(`seedUsers/${uid}/duelStory`,{etag:true}).catch(error=>{if(error.status===404)return {value:null,etag:null};throw error;}),firebase(`seedUsers/${uid}/bossMigration`)]);remote=save.value;remoteEtag=save.etag;rewards=result;storyBackup=normalizeDuelStory(story.value);storyEtag=story.etag;bossSeal=seal;}catch(error){if(error.status!==401&&error.status!==403&&(dirty||meta().localRevision>meta().syncedRevision))scheduleRetry();return {ok:false,reason:'offline',error,changed:false,rewards:[]};}
+  let remote=null,remoteEtag=null,rewards=null,storyBackup=null,storyV2Backup=null,storyV2Etag=null,bossSeal=null,bossPending=false;
+  // V2 is a separate authority: a deployed 36-stage client also writes the
+  // old /duelStory node and can otherwise truncate stages it does not know.
+  const storyRead=path=>firebase(path,{etag:true,expectedUid:uid}).catch(error=>{if(error.status===404)return {value:null,etag:null};throw error;});
+  try{const [save,result,story,storyV2,seal]=await Promise.all([firebase(`seedUsers/${uid}/save`,{etag:true,expectedUid:uid}),firebase(`seedUserRewards/${uid}`),storyRead(`seedUsers/${uid}/duelStory`),storyRead(`seedUsers/${uid}/duelStoryV2`),firebase(`seedUsers/${uid}/bossMigration`)]);remote=save.value;remoteEtag=save.etag;rewards=result;storyBackup=normalizeDuelStory(story.value);storyV2Backup=normalizeDuelStory(storyV2.value);storyV2Etag=storyV2.etag;bossSeal=seal;}catch(error){if(error.status!==401&&error.status!==403&&(dirty||meta().localRevision>meta().syncedRevision))scheduleRetry();return {ok:false,reason:runEpoch!==epoch||account.user()?.uid!==uid?'account-changed':'offline',error,changed:false,rewards:[]};}
   const accountChanged=()=>runEpoch!==epoch||account.user()?.uid!==uid;
   if(accountChanged())return {ok:false,reason:'account-changed',changed:false,rewards:[]};
   try{
@@ -64,8 +66,8 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   if(remote)merged=mergeCloudSnapshots(local,remote,{prefer:migrating||localDirty?'local':'remote'});
   else if(sameOwner||migrating)merged=local;
   else merged=normalizeCloudSnapshot({version:1,updatedAt:now()});
-  const story=mergeDuelStory(merged.garden?.duelStory,storyBackup);
-  const expandedStory=Object.keys(story.cleared).some(k=>Number(k.slice(1))>9)||!['pierce','burst','reflect','gravity','split','chain','recall','orbit','frost'].includes(story.hero);
+  const story=mergeDuelStory(mergeDuelStory(merged.garden?.duelStory,storyBackup),storyV2Backup);
+  const expandedStory=Object.keys(story.cleared).length>0||story.updatedAt>0||story.hero!=='pierce';
   if(expandedStory)merged.garden={...merged.garden,duelStory:story};
   const rewardResult=applyRewardGrants(merged,rewards,now());merged=rewardResult.snapshot;lastRewards=[...carriedRewards,...rewardResult.applied];
   if(bossSeal){
@@ -82,8 +84,14 @@ export function createCloudSync({storage,account,fetchImpl=globalThis.fetch,now=
   if(sameOwner)rememberReplacedRuns(raw,replacedRuns(local,merged),now());
   active=false;const changed=applyCloudSnapshot(raw,merged,{ownerUid:uid});active=true;
   try{
-   if(shouldUpload)await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged,ifMatch:remoteEtag});
-   if(expandedStory&&JSON.stringify(story)!==JSON.stringify(storyBackup))await firebase(`seedUsers/${uid}/duelStory`,{method:'PUT',body:story,ifMatch:storyEtag});
+   if(shouldUpload)await firebase(`seedUsers/${uid}/save`,{method:'PUT',body:merged,ifMatch:remoteEtag,expectedUid:uid});
+   if(accountChanged())return {ok:false,reason:'account-changed',changed,rewards:[]};
+   // The legacy node stays untouched; old clients retain their own 36-stage
+   // projection while new normal progress is protected in the V2 authority.
+   if(expandedStory&&JSON.stringify(story)!==JSON.stringify(storyV2Backup)){
+    if(!storyV2Etag)throw new Error('missing-duel-story-etag');
+    await firebase(`seedUsers/${uid}/duelStoryV2`,{method:'PUT',body:story,ifMatch:storyV2Etag,expectedUid:uid});
+   }
   }
   catch(error){
    if(accountChanged())return {ok:false,reason:'account-changed',changed,rewards:[]};

@@ -17,8 +17,19 @@ for(const hero of ['returnblade','frostguard','chainburst','collapse','thunderla
 // not a private free cast. Seed4 selects no guard/dodge from the shared reader.
 for(const hero of ['returnblade','frostguard','chainburst']){const s=createDuel({player:hero,enemy:'pierce',seed:4});s.phase='fight';const [f,o]=s.fighters;Object.assign(f,{x:15,y:10,fx:1,fy:0});Object.assign(o,{x:hero==='frostguard'?17.3:17.8,y:10,state:'heavy',t:.3,total:.6});s.ai[0].seen=1;if(hero==='returnblade')s.shots.push({kind:'returnSpear',owner:0,x:19,y:10,life:1,back:true,age:.7});const input=duelAi(s,0,1/60);assert.equal(input.skill2,true,'authored AI2 condition for '+hero);s.shots.length=0;stepDuel(s,1/60,input,{});assert.ok(f.cd[1]>0);assert.equal(f.inv,0);}
 const view=readFileSync(new URL('../src/seed-duel-view.js',import.meta.url),'utf8'),css=readFileSync(new URL('../src/seed-duel.css',import.meta.url),'utf8');assert.ok(!view.includes('data-chord="skill2"')&&view.includes('DUEL_INPUT_KEYS')&&view.includes("chords.clear()"));assert.ok(view.includes("b.dataset.chord==='skill1'&&blockHeld()?'skill2'"));assert.ok(!css.includes('sd-chord-skill2'));assert.ok(view.includes("name:'두 번째 기술'")&&view.includes('check:p=>p.cd[1]>0'));
-// Responsive math for the shipped CSS offsets; this is not measured browser UI.
-// Hint circles must not obscure each other, escape the screen or reach the stick.
-const hints=[{right:78,bottom:26},{right:30,bottom:80}];
-for(const [w,h,scale] of [[375,812,1],[512,320,1],[640,360,1],[844,390,1],[1024,768,1.3]]){const centers=hints.map(p=>({x:w-20-scale*(p.right+20),y:h-20-scale*(p.bottom+20),r:20*scale}));for(const p of centers){assert.ok(p.x-p.r>=0&&p.x+p.r<=w&&p.y-p.r>=0&&p.y+p.r<=h);assert.ok(p.x-p.r>26+130*(scale===1.3?1.2:1));}for(let a=0;a<hints.length;a++)for(let b=a+1;b<hints.length;b++)assert.ok(Math.hypot(centers[a].x-centers[b].x,centers[a].y-centers[b].y)>=centers[a].r+centers[b].r);}
-console.log('Duel PC/touch chord path passed: both orders, 70ms, held guard suppression, no accidental dodge, shared +/-guard hint and second technique, real engine access and CSS layout math. Physical mobile/browser layout remains unverified.');
+// Read the last shipped declarations so a layout change cannot leave this test
+// checking stale offsets. Geometry math complements, not replaces, browser QA.
+const rule=selector=>[...css.matchAll(/([^{}]+)\{([^{}]*)\}/g)].filter(m=>m[1].trim()===selector).map(m=>m[2]).join(';');
+const px=(selector,key)=>{const matches=[...rule(selector).matchAll(new RegExp('(?:^|;)\\s*'+key+':(\\d+)(?:px)?(?=;|$)','g'))];assert.ok(matches.length,selector+' '+key);return Number(matches.at(-1)[1]);};
+const hintSelector='#seed-duel .sd-buttons .sd-chord',hintSize=px(hintSelector,'width');
+assert.ok(hintSize>=44&&px(hintSelector,'height')>=44,'unscaled touch hint targets');
+const controls=['attack','block','dodge','ult','chord-heavy','chord-skill'].map(name=>{const selector='#seed-duel .sd-'+name;return {name,right:px(selector,'right'),bottom:px(selector,'bottom'),w:name.startsWith('chord-')?hintSize:px(selector,'width'),h:name.startsWith('chord-')?px(hintSelector,'height'):px(selector,'height')};});
+assert.ok(!css.includes('.sd-buttons{transform:scale(.85)'),'landscape preserves 44px targets');
+for(const [w,h,scale] of [[375,812,1],[512,320,1],[640,360,1],[844,390,1],[768,1024,1.3],[1024,768,1.3]]){
+ const rects=controls.map(p=>({...p,x:w-20-scale*(p.right+p.w),y:h-20-scale*(p.bottom+p.h),w:p.w*scale,h:p.h*scale}));
+ for(const p of rects){assert.ok(p.x>=0&&p.x+p.w<=w&&p.y>=0&&p.y+p.h<=h,p.name+' on screen');assert.ok(p.x>26+130*(scale===1.3?1.2:scale),p.name+' clear of stick');}
+ for(let a=0;a<rects.length;a++)for(let b=a+1;b<rects.length;b++){const p=rects[a],q=rects[b];assert.ok(p.x+p.w<=q.x||q.x+q.w<=p.x||p.y+p.h<=q.y||q.y+q.h<=p.y,p.name+' does not overlap '+q.name);}
+}
+assert.ok(view.includes('sd-drill-detail')&&view.includes('설명·연습 고르기'),'collapsible practice instructions');
+assert.ok(px('#seed-duel .sd-drill-list button','height')>=44&&px('#seed-duel .sd-drill-nav button','min-height')>=44,'practice touch targets');
+console.log('Duel PC/touch chord path passed: both orders, 70ms, held guard suppression, no accidental dodge, shared +/-guard hint, actual engine skill2, current CSS control separation and collapsible practice. Physical mobile remains unverified.');
