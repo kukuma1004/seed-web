@@ -63,7 +63,7 @@ console.log('PASS Frost rabbit eight native contacts, three claw impacts and col
  assert(enemyTurns>20);
  console.log(`PASS Snow trio finite pose mapping, measured frame normalization and status-only rules; nine simulated battles/${commands} commands/${enemyTurns} enemy turns with exact restore`);
 }
-assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,28);assert.equal(expeditionArtAudit().enemies.motionReady,0);
+assert.equal(art.facing,'left');assert.equal(art.ready,false);assert.equal(expeditionArtAudit().enemies.motionCandidate,56);assert.equal(expeditionArtAudit().enemies.motionReady,0);
 const unit={id:'e',speciesId:'meadow-normal-0',side:'enemy',hp:40},units=[unit,{id:'a',speciesId:'pierce',side:'ally',hp:40}];
 for(let seq=0;seq<8;seq++){
  const s=expeditionSpriteSequence(unit,units,[{type:'action',unitId:'e',kind:'attack',seq}],art);
