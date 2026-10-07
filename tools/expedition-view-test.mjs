@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {existsSync,readFileSync} from 'node:fs';
-import {createServer} from 'vite';
+import {build} from 'esbuild';
 import {createRoster,recruitInstance,setParty} from '../src/expedition/roster.js';
 import {newExpeditionRoute,advanceExpeditionRoute,EXPEDITION_GARDENS} from '../src/expedition/world.js';
 
@@ -26,17 +26,20 @@ const doc=new Element(),win=new Element(),host=new Element(),timers=new Map(),fr
 doc.hidden=false;doc.createElement=()=>new Element();globalThis.document=doc;globalThis.window=win;
 globalThis.Image=class{set src(value){this._src=value;}get src(){return this._src;}};
 globalThis.requestAnimationFrame=fn=>{frames.set(++rafId,fn);return rafId;};globalThis.cancelAnimationFrame=id=>{cancelledRaf++;frames.delete(id);};
-globalThis.setTimeout=(fn,delay)=>{timers.set(++timerId,{fn,delay});return timerId;};globalThis.clearTimeout=id=>timers.delete(id);
+
 
 let vite;
 try{
- vite=await createServer({server:{middlewareMode:true},appType:'custom',optimizeDeps:{noDiscovery:true,entries:[]}});
- const {mountExpedition}=await vite.ssrLoadModule('/src/expedition/view.js');
+ // Bundle the shipping module once; avoid the Windows Vite SSR dependency stall.
+ const compiled=await build({entryPoints:['src/expedition/view.js'],bundle:true,platform:'node',format:'esm',loader:{'.css':'empty'},define:{'import.meta.env':'{"BASE_URL":"/"}'},write:false});
+ const {mountExpedition}=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].text).toString('base64'));
+ // Vite SSR uses native timers; only the mounted game receives fake clocks.
+ globalThis.setTimeout=(fn,delay)=>{timers.set(++timerId,{fn,delay});return timerId;};globalThis.clearTimeout=id=>timers.delete(id);
  assert.equal(typeof mountExpedition,'function');
  const roster=createRoster({owner:'ui-owner',channel:'review'});
  const ids=['pierce','split','orbit','frost','burst','gravity','reflect','recall','chain'].map((speciesId,n)=>{const id=`unit-${n}`;assert.ok(recruitInstance(roster,{instanceId:id,speciesId}));return id;});
  assert.ok(setParty(roster,ids.slice(0,8)));
- const {emptyExpeditionNursery}=await vite.ssrLoadModule('/src/expedition/nursery.js');
+ const {emptyExpeditionNursery}=await import('../src/expedition/nursery.js');
  const model={screen:'home',roster,meta:{...emptyExpeditionNursery(),cores:{chain:0},awakenMaterials:0},route:null,battle:null,notice:'',saveState:'saved',events:[],lastResult:null};
  const calls=[],audioCalls=[],ticks=[];let ownerNow='ui-owner',nextEvents=[];
  const controller={state:()=>model,dispatch(intent){calls.push(intent);if(intent.type==='depart'){model.route=newExpeditionRoute({runId:'ui-run',gardenId:intent.gardenId,difficulty:intent.difficulty,partyIds:roster.party});advanceExpeditionRoute(model.route);model.screen='explore';}else if(intent.type==='move')model.route.position+=intent.dx*intent.dt*4;else if(intent.type==='interact'){model.screen='battle';model.battle={battleId:'ui-battle',phase:'fight',round:1,units:[{id:'unit-0',instanceId:'unit-0',speciesId:'pierce',side:'ally',slot:0,hp:92,maxHp:92,level:1,status:{}},{id:'enemy-0',instanceId:'enemy-0',speciesId:'meadow-normal-0',side:'enemy',slot:0,hp:40,maxHp:40,level:1,status:{}}],order:['unit-0','enemy-0'],acted:[],pending:[],warnings:[]};}return{ok:true,events:nextEvents,saveState:'saved'};},close(){this.closed=true;}};
@@ -60,7 +63,7 @@ try{
  for(let page=1;page<6;page++)root.emit('click',button('codexPage','next'));assert.match(codexBody.innerHTML,/72종 · 6\/6쪽/);assert.equal(calls.length,0);
  codex.open=false;root.emit('toggle',codex);assert.equal(codexBody.innerHTML,'');assert.equal(frames.size,0);
  // Choosing a form must never spend a core. A separate explicit click commits.
- const {EXPEDITION_SPECIES}=await vite.ssrLoadModule('/src/expedition/species.js');
+ const {EXPEDITION_SPECIES}=await import('../src/expedition/species.js');
  const chosen=Object.values(EXPEDITION_SPECIES).find(s=>s.kind==='solo'&&s.parents.includes('pierce'));
  const seed=roster.instances[ids[0]],previousLevel=seed.level;seed.level=5;model.meta.cores.pierce=1;
  const group=new Element(),select=group.querySelector('[data-evolve]');select.dataset.evolve=seed.instanceId;select.value=chosen.id;select.matches=q=>q==='[data-evolve]';select.closest=()=>group;
@@ -148,5 +151,5 @@ try{
  const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'utf8');assert.match(css,/min-height:44px/);assert.match(css,/max-width:850px/);assert.match(css,/max-width:500px/);
  console.log('expedition view contract PASS: eight gardens, 5+3, explore→battle, idle RAF0, foreground music, background stop, 20 mount/close mock cycles');
 }finally{
- await vite?.close();for(const [key,value]of Object.entries(original)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}
+ globalThis.setTimeout=original.setTimeout;globalThis.clearTimeout=original.clearTimeout;await vite?.close();for(const [key,value]of Object.entries(original)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}
 }

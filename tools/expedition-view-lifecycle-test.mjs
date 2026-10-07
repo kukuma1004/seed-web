@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {createServer} from 'vite';
+import {build} from 'esbuild';
 import {createRoster,recruitInstance,setParty} from '../src/expedition/roster.js';
 import {newExpeditionRoute,advanceExpeditionRoute} from '../src/expedition/world.js';
 import {emptyExpeditionNursery} from '../src/expedition/nursery.js';
@@ -24,13 +24,16 @@ const doc=new Element(),win=new Element(),host=new Element(),timers=new Map(),fr
 doc.hidden=false;doc.createElement=()=>new Element();globalThis.document=doc;globalThis.window=win;
 globalThis.Image=class{};
 globalThis.requestAnimationFrame=fn=>{frames.set(++nextId,fn);return nextId;};globalThis.cancelAnimationFrame=id=>frames.delete(id);
-globalThis.setTimeout=(fn,delay)=>{timers.set(++nextId,{fn,delay});return nextId;};globalThis.clearTimeout=id=>timers.delete(id);
+
 const settle=async()=>{for(let n=0;n<12;n++)await Promise.resolve();};
 const button=(key,value)=>Object.assign(new Element(),{dataset:{[key]:value}});
 let vite,groups=0;
 try{
- vite=await createServer({server:{middlewareMode:true},appType:'custom',optimizeDeps:{noDiscovery:true,entries:[]}});
- const {mountExpedition}=await vite.ssrLoadModule('/src/expedition/view.js');
+ // Bundle the shipping module once; avoid the Windows Vite SSR dependency stall.
+ const compiled=await build({entryPoints:['src/expedition/view.js'],bundle:true,platform:'node',format:'esm',loader:{'.css':'empty'},define:{'import.meta.env':'{"BASE_URL":"/"}'},write:false});
+ const {mountExpedition}=await import('data:text/javascript;base64,'+Buffer.from(compiled.outputFiles[0].text).toString('base64'));
+ // Vite SSR uses native timers; only the mounted game receives fake clocks.
+ globalThis.setTimeout=(fn,delay)=>{timers.set(++nextId,{fn,delay});return nextId;};globalThis.clearTimeout=id=>timers.delete(id);
  const timerBaseline=timers.size;
  function fixture(screen='explore',queuedMovement=false){
   doc.hidden=false;let owner='lifecycle-owner',resolveFlight,flight=null,delayedType='move',pauseFailure=false;
@@ -95,9 +98,40 @@ try{
  }
  {
   const f=fixture('explore',true),before=f.model.route.position;win.emit('keydown',{code:'KeyD'});assert.equal(f.calls.length,1);
-  let pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](100);pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](116);await settle();
+  let pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](100);pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](180);pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](220);await settle();
   assert.deepEqual(f.calls.map(x=>x.type),['move','move'],'animation-frame movement continues during movement-only upload');assert.equal(f.model.route.position,before+.4);win.emit('blur');assert.equal(frames.size,0);
   f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['move','move','pause']);assert.equal(f.model.paused,true);assert.equal(f.durable.position,before+.8);assert.equal(timers.size,timerBaseline);assert.equal(f.sounds.length,0);cleanup(f);groups++;
  }
+ {
+  const f=fixture('battle');f.delay('action');
+  assert.equal([...timers.values()].filter(t=>t.delay===380).length,0,'automation defaults off');
+  f.root.emit('click',button('autoBattle',''));assert.equal([...timers.values()].filter(t=>t.delay===380).length,1);
+  const [id,timer]=[...timers].find(([,t])=>t.delay===380);timers.delete(id);timer.fn();
+  assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'action');
+  doc.hidden=true;doc.emit('visibilitychange');f.resolve();await settle();
+  assert.deepEqual(f.calls.map(i=>i.type),['action','pause']);assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);assert.equal(f.sounds.length,0);cleanup(f);groups++;
+ }
+ {
+  const f=fixture('battle');f.root.emit('click',button('autoBattle',''));f.root.emit('click',button('autoBattle',''));
+  assert.equal([...timers.values()].filter(t=>t.delay===380).length,0,'turn automation cancels immediately');cleanup(f);groups++;
+ }
+ {
+  const f=fixture();f.delay('none');f.root.emit('click',button('travel',''));
+  for(let n=0;n<40&&frames.size;n++){const [id,fn]=frames.entries().next().value;frames.delete(id);await fn(100+n*16);await settle();}
+  assert.ok(f.model.route.position>=12.6);assert.ok(f.calls.length<=32,'travel is bounded to one landmark');
+  assert.ok(f.calls.every(i=>i.type==='move'&&i.dt===.1&&i.dx===1),'reuse audited movement receipts');
+  assert.equal(f.model.screen,'explore');assert.equal(frames.size,0,'travel never enters/chooses an encounter');cleanup(f);groups++;
+ }
+ {
+  const f=fixture();f.delay('none');win.emit('keydown',{code:'KeyD'});await settle();
+  for(let n=0;n<=240;n++){const [id,fn]=frames.entries().next().value;frames.delete(id);await fn(100+n*1000/60);await settle();}
+  const count=f.calls.filter(i=>i.type==='move').length;
+  assert.ok(count>=40&&count<=41,`4 seconds at 60Hz uses ~40 durable inputs, got ${count}`);
+  assert.equal(frames.size,1);win.emit('keyup',{code:'KeyD'});assert.equal(frames.size,0);cleanup(f);groups++;
+ }
+ {
+  const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');
+  assert.equal(frames.size,0);assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'pause');await settle();cleanup(f);groups++;
+ }
  console.log(`expedition delayed lifecycle PASS: ${groups} groups; queued pause/flush, hidden sound+enemy stop, UID/close/error boundaries (mock)`);
-}finally{await vite?.close();for(const [key,value]of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
+}finally{globalThis.setTimeout=originals.setTimeout;globalThis.clearTimeout=originals.clearTimeout;await vite?.close();for(const [key,value]of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}
