@@ -8,11 +8,12 @@ import {expeditionAllyArt,expeditionEnemyArt,expeditionGardenArt,expeditionAsset
 
 const file=path=>fileURLToPath(new URL(`../public/assets/${path}`,import.meta.url));
 const audit=expeditionArtAudit();
-assert.deepEqual(audit,{allies:{total:162,reusable:67,placeholder:95,ready:0},enemies:{total:56,placeholder:0,authoredCandidate:56,missing:0,motionCandidate:22,motionReady:0,ready:0},gardens:{total:8,reusable:8,threeLayerReady:0}});
+assert.deepEqual(audit,{allies:{total:162,reusable:162,placeholder:0,ready:0},enemies:{total:56,placeholder:0,authoredCandidate:56,missing:0,motionCandidate:22,motionReady:0,ready:0},gardens:{total:8,reusable:8,threeLayerReady:0}});
 for(const id of Object.keys(EXPEDITION_SPECIES)){
  const art=expeditionAllyArt(id);
  assert.equal(art.ready,false);
- if(art.status==='reusable'){assert.ok(existsSync(file(art.path)),`missing audited motion ${id}`);assert.equal(art.cols,4);assert.equal(art.rows,2);}
+ if(art.nativeMotionId){assert.equal(art.status,'reusable');assert.equal(art.cols,null);assert.equal(art.rows,null);assert.equal(art.path,null);assert.equal(art.reason,'existing_native_duel_motion_needs_expedition_qa');for(const path of art.nativeFiles)assert.ok(existsSync(file(path)),`missing native motion ${id}`);}
+ else if(art.status==='reusable'){assert.ok(existsSync(file(art.path)),`missing audited motion ${id}`);assert.equal(art.cols,4);assert.equal(art.rows,2);}
  else {assert.equal(art.status,'placeholder');assert.equal(art.path,null);assert.equal(art.cols,null);assert.equal(art.rows,null);assert.equal(art.placeholder,'formArt');assert.ok(formArt(id),`no card fallback ${id}`);}
 }
 for(const [id,enemy] of Object.entries(EXPEDITION_ENEMIES)){

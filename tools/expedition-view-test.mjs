@@ -109,6 +109,15 @@ try{
  assert.match(main.innerHTML,/exv-impact/);assert.match(main.innerHTML,/−16/);assert.match(main.innerHTML,/exv-pose-sequence/);assert.match(main.innerHTML,/--pose-preparation-x:0%/);assert.match(main.innerHTML,/--pose-impact-x:66.666/);assert.equal(frames.size,0,'sprite phase progression uses no RAF loop');
  const [feedbackId,feedback]=[...timers].find(([,timer])=>timer.delay===720);
  assert.ok(feedback,'one short feedback timer');timers.delete(feedbackId);feedback.fn();nextEvents=[];
+ // An already acquired advanced seed must use its measured native regions in
+ // the shipping view, without adding a render clock or changing commands.
+ model.battle.units[0].speciesId='final-refractlance-reflect';
+ root.emit('click',button('target','enemy-0'));assert.match(main.innerHTML,/data-native-species="final-refractlance-reflect"/);
+ nextEvents=[{type:'action',unitId:'unit-0',kind:'attack',seq:3}];
+ root.emit('click',button('action','attack'));await Promise.resolve();await Promise.resolve();
+ assert.match(main.innerHTML,/exv-native-sequence/);assert.match(main.innerHTML,/data-native-phase="impact"/);assert.equal(frames.size,0);
+ const [nativeFeedbackId,nativeFeedback]=[...timers].find(([,timer])=>timer.delay===720);
+ assert.ok(nativeFeedback);timers.delete(nativeFeedbackId);nativeFeedback.fn();nextEvents=[];
  root.emit('click',button('target','enemy-0'));assert.doesNotMatch(main.innerHTML,/class="exv-impact"/,'selection never replays expired damage');
  assert.equal(frames.size,0,'finite attack feedback never starts a render loop');
  model.battle.order=['enemy-0','unit-0'];root.emit('click',button('target','enemy-0'));

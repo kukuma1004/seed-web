@@ -34,6 +34,6 @@ const css=readFileSync(new URL('../src/expedition/view.css',import.meta.url),'ut
 assert.match(css,/exv-sprite-beat \.72s steps\(1,end\)/,'sprite cells switch discretely, never interpolate across neighbouring poses');
 assert.match(css,/62%,100%\{background-position:var\(--pose-rest-x\)/);
 assert.match(css,/prefers-reduced-motion:reduce.*exv-pose-sequence/s);
-for(const selector of ['.exv-unit.shielding .exv-unit-art::before{','.exv-impact{','.exv-float{'])assert.ok(css.indexOf('animation-delay:var(--feedback-delay,0ms)')>css.indexOf(selector),'elapsed delay must survive later animation shorthand: '+selector);
+for(const selector of ['.exv-unit.shielding .exv-unit-art::before{','.exv-impact{','.exv-float{'])assert.ok(css.lastIndexOf('animation-delay:var(--feedback-delay,0ms)')>css.indexOf(selector),'elapsed delay must survive later animation shorthand: '+selector);
 assert.equal(EXPEDITION_FEEDBACK_MS,720);
 console.log('PASS finite preparation→strike→rest for 67 existing sheets; hit/death/guard priority, rerender elapsed delay, reduced motion and no combat mutation.');

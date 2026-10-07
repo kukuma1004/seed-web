@@ -1,5 +1,6 @@
 import {EXPEDITION_SPECIES,getExpeditionSpecies} from './species.js';
 import {EXPEDITION_GARDENS,EXPEDITION_ENEMIES} from './world.js';
+import {expeditionNativeMotion} from './native-motion.js';
 
 // Audited files on 2026-10-06. These paths are candidates for reuse, not a
 // claim that every sheet has passed Expedition pose, framing or device QA.
@@ -142,6 +143,7 @@ const knownPaths=new Set([...Object.values(MOTION),...Object.values(ENEMY_SKELET
 const validBase=base=>typeof base==='string'&&(base==='./'||/^\/(?:[A-Za-z0-9._~!$&'()*+,;=:@%-]+\/)*$/.test(base)||/^https?:\/\/[A-Za-z0-9.-]+(?::\d+)?(?:\/[A-Za-z0-9._~!$&'()*+,;=:@%-]*)*\/?$/.test(base));
 for(const layers of Object.values(FIELD_LAYER_CANDIDATES))for(const path of Object.values(layers))knownPaths.add(path);
 for(const art of Object.values(ENEMY_MOTION_CANDIDATES))knownPaths.add(art.motionPath);
+for(const id of Object.keys(EXPEDITION_SPECIES))for(const path of expeditionNativeMotion(id)?.motion.files||[])knownPaths.add(path);
 
 export function expeditionAssetUrl(path,base=import.meta.env?.BASE_URL||'/'){
  if(!knownPaths.has(path)||!validBase(base))return null;
@@ -158,8 +160,11 @@ export function expeditionCssAssetUrl(path,base,documentBase){
 
 export function expeditionAllyArt(speciesId){
  const species=getExpeditionSpecies(speciesId);if(!species)return null;
- const path=MOTION[speciesId]||null;
- return Object.freeze({id:speciesId,kind:species.kind,status:path?'reusable':'placeholder',path,cols:path?4:null,rows:path?2:null,placeholder:path?null:'formArt',ready:false,reason:path?'existing_duel_motion_needs_expedition_qa':'authored_motion_missing'});
+ const path=MOTION[speciesId]||null,native=path?null:expeditionNativeMotion(speciesId);
+ return Object.freeze({id:speciesId,kind:species.kind,status:path||native?'reusable':'placeholder',path,
+  nativeMotionId:native?.id||null,nativeFiles:native?.motion.files||null,
+  cols:path?4:null,rows:path?2:null,placeholder:path||native?null:'formArt',ready:false,
+  reason:path?'existing_duel_motion_needs_expedition_qa':native?'existing_native_duel_motion_needs_expedition_qa':'authored_motion_missing'});
 }
 
 export function expeditionEnemyArt(enemyId){
@@ -178,17 +183,18 @@ export function expeditionGardenArt(gardenId){
  return Object.freeze({id:gardenId,status:layers?'layered_candidate':'reusable',path:g.homeArt,thumbPath:HOME_THUMBS[gardenId],layers,foregroundStart:FIELD_FOREGROUND_START[gardenId]??null,groundContact:FIELD_GROUND_CONTACT[gardenId]??null,farFraming:FIELD_FAR_FRAMING[gardenId]??null,ready:false,missingLayers:layers?Object.freeze([]):FIELD_LAYER_NAMES,reason:layers?'authored_three_layer_candidate_gameplay_device_qa_pending':'single_existing_plate_not_authored_three_layer_side_scroll'});
 }
 
-// Returns only the current garden and up to eight current party sheets. No
+// Returns only the current garden and up to eight current party entries
+// (one canonical or at most two native sheets each). No
 // browser request is made here, and no 162-species gallery is constructed.
 export function expeditionGardenAssetBatch(gardenId,{partySpeciesIds=[],includeEncounter=false,base=import.meta.env?.BASE_URL||'/'}={}){
  const field=expeditionGardenArt(gardenId);if(!field)return [];
  const paths=new Set(field.layers?Object.values(field.layers):[field.path]);
- for(const id of Array.isArray(partySpeciesIds)?partySpeciesIds.slice(0,8):[]){const art=expeditionAllyArt(id);if(art?.path)paths.add(art.path);}
+ for(const id of Array.isArray(partySpeciesIds)?partySpeciesIds.slice(0,8):[]){const art=expeditionAllyArt(id);if(art?.path)paths.add(art.path);else for(const path of art?.nativeFiles||[])paths.add(path);}
  if(includeEncounter)for(const enemy of Object.values(EXPEDITION_ENEMIES))if(enemy.gardenId===gardenId){const art=expeditionEnemyArt(enemy.id);if(art?.thumbPath||art?.path)paths.add(art.thumbPath||art.path);}
  return [...paths].map(path=>expeditionAssetUrl(path,base));
 }
 
 export function expeditionArtAudit(){
  const species=Object.keys(EXPEDITION_SPECIES),enemies=Object.keys(EXPEDITION_ENEMIES);
- return Object.freeze({allies:Object.freeze({total:species.length,reusable:species.filter(id=>MOTION[id]).length,placeholder:species.filter(id=>!MOTION[id]).length,ready:0}),enemies:Object.freeze({total:enemies.length,placeholder:enemies.filter(id=>expeditionEnemyArt(id).status==='placeholder').length,authoredCandidate:enemies.filter(id=>expeditionEnemyArt(id).status==='authored_candidate').length,missing:enemies.filter(id=>expeditionEnemyArt(id).status==='missing').length,motionCandidate:enemies.filter(id=>expeditionEnemyArt(id).motionPath).length,motionReady:0,ready:0}),gardens:Object.freeze({total:Object.keys(EXPEDITION_GARDENS).length,reusable:Object.keys(EXPEDITION_GARDENS).length,threeLayerReady:0})});
+ return Object.freeze({allies:Object.freeze({total:species.length,reusable:species.filter(id=>expeditionAllyArt(id).status==='reusable').length,placeholder:species.filter(id=>expeditionAllyArt(id).status==='placeholder').length,ready:0}),enemies:Object.freeze({total:enemies.length,placeholder:enemies.filter(id=>expeditionEnemyArt(id).status==='placeholder').length,authoredCandidate:enemies.filter(id=>expeditionEnemyArt(id).status==='authored_candidate').length,missing:enemies.filter(id=>expeditionEnemyArt(id).status==='missing').length,motionCandidate:enemies.filter(id=>expeditionEnemyArt(id).motionPath).length,motionReady:0,ready:0}),gardens:Object.freeze({total:Object.keys(EXPEDITION_GARDENS).length,reusable:Object.keys(EXPEDITION_GARDENS).length,threeLayerReady:0})});
 }

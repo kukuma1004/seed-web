@@ -51,6 +51,18 @@
 .exv-creature{width:100%;height:100%;object-fit:contain;display:block}
 .exv-creature.boss{width:130%;height:130%;margin:-15%}
 .exv-motion{display:block;width:100%;height:100%;background-repeat:no-repeat;background-size:400% 200%}
+.exv-native-motion{display:block;position:relative;width:100%;height:100%;pointer-events:none}
+.exv-native-motion>i{display:none;position:absolute;background-repeat:no-repeat}
+.exv-native-motion>[data-native-phase="rest"]{display:block}
+.exv-native-sequence>i{display:block;animation-duration:.72s;animation-timing-function:steps(1,end);animation-delay:var(--feedback-delay,0ms);animation-fill-mode:both;animation-iteration-count:1}
+.exv-native-sequence>[data-native-phase="preparation"]{animation-name:exv-native-preparation}
+.exv-native-sequence>[data-native-phase="impact"]{animation-name:exv-native-impact}
+.exv-native-sequence>[data-native-phase="rest"]{animation-name:exv-native-rest}
+@keyframes exv-native-preparation{0%,23.999%{visibility:visible}24%,100%{visibility:hidden}}
+@keyframes exv-native-impact{0%,23.999%{visibility:hidden}24%,61.999%{visibility:visible}62%,100%{visibility:hidden}}
+@keyframes exv-native-rest{0%,61.999%{visibility:hidden}62%,100%{visibility:visible}}
+.exv-codex-native{display:block;width:56px;height:56px;flex:none}
+@media(prefers-reduced-motion:reduce){.exv-native-sequence>i{animation:none;visibility:hidden}.exv-native-sequence>[data-native-phase="impact"]{visibility:visible}}
 .exv-motion.exv-enemy-sheet{position:absolute;width:var(--sheet-size,140%);height:var(--sheet-size,140%);left:calc((100% - var(--sheet-size,140%))/2);top:var(--sheet-top,-22.796%)}
 .exv-motion.exv-pose-sequence{animation:exv-sprite-beat .72s steps(1,end) var(--feedback-delay,0ms) 1 both}
 @keyframes exv-sprite-beat{0%{background-position:var(--pose-preparation-x) var(--pose-preparation-y);translate:0 var(--pose-preparation-offset,0%)}24%{background-position:var(--pose-impact-x) var(--pose-impact-y);translate:0 var(--pose-impact-offset,0%)}62%,100%{background-position:var(--pose-rest-x) var(--pose-rest-y);translate:0 var(--pose-rest-offset,0%)}}
