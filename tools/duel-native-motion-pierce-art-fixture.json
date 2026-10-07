@@ -1,0 +1,204 @@
+[
+  {
+    "path": "assets/duel/final-refractlance-pierce-strikes-v1.webp",
+    "native": "final-refractlance-pierce-strikes-native-v1.png",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 174840,
+    "sha256": "3df4a4363f524eb62c40c890585b52be9136e6e1d5ce6c63ee8dd3488f8d2ede",
+    "nativeSha256": "f8d4b2958976b126408a9b824b37494af409817e1bbd27f41da7421304d27f2a",
+    "alphaExact": true,
+    "quality": 92,
+    "poses": [
+      {
+        "pose": "idle",
+        "source": [
+          0,
+          0,
+          700,
+          675
+        ],
+        "bounds16": [
+          145,
+          218,
+          565,
+          549
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          303,
+          546
+        ],
+        "redFringeLowAlpha": 78,
+        "rgbaSha256": "17777ff71352c32f81abf998b005506913c5b60d4fdb07fe85f1dc58de882e7f"
+      },
+      {
+        "pose": "strike1",
+        "source": [
+          700,
+          0,
+          554,
+          675
+        ],
+        "bounds16": [
+          42,
+          238,
+          523,
+          545
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          234,
+          542
+        ],
+        "redFringeLowAlpha": 52,
+        "rgbaSha256": "7a6f9cce4029dcf3252433e760157ef33e8104fd5322e04786d60e7a93ca000a"
+      },
+      {
+        "pose": "strike2",
+        "source": [
+          0,
+          675,
+          700,
+          579
+        ],
+        "bounds16": [
+          94,
+          138,
+          649,
+          428
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          136,
+          426
+        ],
+        "redFringeLowAlpha": 66,
+        "rgbaSha256": "ef6af1613ddc8ab6b7c2fc8f77168c3fdae82722ca67e631537d45e26207ef7b"
+      },
+      {
+        "pose": "strike3",
+        "source": [
+          700,
+          675,
+          554,
+          579
+        ],
+        "bounds16": [
+          31,
+          100,
+          535,
+          424
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          249,
+          422
+        ],
+        "redFringeLowAlpha": 200,
+        "rgbaSha256": "6c92aba6b3d45d277e0c7625200795ebd0c1e0fc4b32b18b4ede3ade7cf2b9c1"
+      }
+    ]
+  },
+  {
+    "path": "assets/duel/final-refractlance-pierce-reactions-v1.webp",
+    "native": "final-refractlance-pierce-reactions-native-v1.png",
+    "width": 1254,
+    "height": 1254,
+    "bytes": 193500,
+    "sha256": "1c5109350e9bc06156cf9ae4532320bc56228b59261447e82c8c2917d9e7acba",
+    "nativeSha256": "b12b46e37c5e0c07741daa1550f091c0df916adaa5d8b149d0c764c194eb91e1",
+    "alphaExact": true,
+    "quality": 92,
+    "poses": [
+      {
+        "pose": "heavyCharge",
+        "source": [
+          0,
+          0,
+          625,
+          675
+        ],
+        "bounds16": [
+          96,
+          226,
+          582,
+          560
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          144,
+          559
+        ],
+        "redFringeLowAlpha": 70,
+        "rgbaSha256": "171b38eb8889bc98b69eea85458e8982ca2c289d10f1020d85d8fd882f219862"
+      },
+      {
+        "pose": "heavyHit",
+        "source": [
+          625,
+          0,
+          629,
+          675
+        ],
+        "bounds16": [
+          31,
+          241,
+          607,
+          559
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          278,
+          556
+        ],
+        "redFringeLowAlpha": 174,
+        "rgbaSha256": "b5cce3ac242b70afbc2c8c27d742b9a9cfa66e764b9e2e07200d3c71ea2f0fae"
+      },
+      {
+        "pose": "guard",
+        "source": [
+          0,
+          675,
+          625,
+          579
+        ],
+        "bounds16": [
+          125,
+          11,
+          513,
+          423
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          319,
+          421
+        ],
+        "redFringeLowAlpha": 91,
+        "rgbaSha256": "e4b1152a981d0db72deccede4318acd6c499dea300044521d3250b333e386690"
+      },
+      {
+        "pose": "hurt",
+        "source": [
+          625,
+          675,
+          629,
+          579
+        ],
+        "bounds16": [
+          18,
+          108,
+          607,
+          423
+        ],
+        "edge16": 0,
+        "anchorProxy": [
+          246,
+          419
+        ],
+        "redFringeLowAlpha": 172,
+        "rgbaSha256": "a9f5fc5b96ef1fa6c418b77bc12c924c1c4a0d49ed6997899d7a08a4c7ac0cbd"
+      }
+    ]
+  }
+]
