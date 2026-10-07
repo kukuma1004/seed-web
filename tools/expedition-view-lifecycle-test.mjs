@@ -48,6 +48,7 @@ try{
     durable.position=model.route.position;model.saveState='saved';model.paused=Boolean(intent.paused);
    }else if(intent.type==='move'){model.route.position+=.4;model.saveState='pending';}
    else if(intent.type==='depart')model.screen='explore';
+   else if(intent.type==='interact'){model.screen='battle';model.battle={battleId:'event-battle',units:[],order:[],acted:[]};}
    else if(intent.type==='action'){durable.actions++;model.battle.acted=['seed-0'];}
    return {ok:true,events:intent.type==='action'?[{type:'action',unitId:'seed-0',kind:'attack',seq:1},{type:'damage',unitId:'seed-0',targetId:'enemy',amount:10,seq:2}]:[]};
   };
@@ -64,7 +65,7 @@ try{
   f.root.emit('click',button('intent','resume'));await settle();assert.equal(f.model.paused,false);assert.equal(timers.size,timerBaseline+1);cleanup(f);groups++;
  }
  for(const trigger of ['visibilitychange','blur','pagehide']){
-  const f=fixture();const before=f.model.route.position;win.emit('keydown',{code:'KeyD'});assert.equal(f.calls.length,1);
+  const f=fixture();const before=f.model.route.position;f.root.emit('click',button('travel',''));assert.equal(f.calls.length,1);
   if(trigger==='visibilitychange'){doc.hidden=true;doc.emit(trigger);}else win.emit(trigger);
   assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);assert.equal(f.view.isActive(),false);assert.equal(f.calls.length,1,'pause waits for accepted command');
   assert.equal(f.root.querySelector('.exv-save').textContent,'서버 저장 확인 중');
@@ -88,19 +89,20 @@ try{
   assert.deepEqual(f.calls.map(x=>[x.type,x.paused]),[['pause',true],['pause',false],['pause',true]]);assert.equal(f.model.paused,true);assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(f.audioPause.at(-1),true,'resume ACK cannot restart suspended audio');cleanup(f);groups++;
  }
  {
-  const f=fixture();win.emit('keydown',{code:'KeyD'});win.emit('blur');f.owner('other-owner');f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'queued pause must not cross UID boundary');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);cleanup(f);groups++;
+  const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');f.owner('other-owner');f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'queued pause must not cross UID boundary');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(frames.size,0);cleanup(f);groups++;
  }
  {
-  const f=fixture();win.emit('keydown',{code:'KeyD'});doc.hidden=true;doc.emit('visibilitychange');const closing=f.view.close();f.resolve();await closing;await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'close owns its final flush, no late dispatch');assert.equal(f.root.removed,true);assert.equal(f.durable.position,f.model.route.position);assert.equal(timers.size,timerBaseline);assert.equal(doc.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(f.audioPause.at(-1),true,'late close completion must leave background audio suspended');doc.hidden=false;groups++;
+  const f=fixture();f.root.emit('click',button('travel',''));doc.hidden=true;doc.emit('visibilitychange');const closing=f.view.close();f.resolve();await closing;await settle();assert.deepEqual(f.calls.map(x=>x.type),['move'],'close owns its final flush, no late dispatch');assert.equal(f.root.removed,true);assert.equal(f.durable.position,f.model.route.position);assert.equal(timers.size,timerBaseline);assert.equal(doc.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(f.audioPause.at(-1),true,'late close completion must leave background audio suspended');doc.hidden=false;groups++;
  }
  {
-  const f=fixture();f.pauseFailure();win.emit('keydown',{code:'KeyD'});win.emit('blur');f.resolve();await settle();assert.equal(f.model.saveState,'error');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(f.root.querySelector('.exv-save').textContent,'저장 오류 · 진행 중단');assert.match(f.root.querySelector('.exv-notice').textContent,/durable original retained/);assert.equal(f.root.querySelector('.exv-pause-layer').querySelector('[data-intent="resume"]').disabled,true,'cannot resume before durable recovery');cleanup(f);groups++;
+  const f=fixture();f.pauseFailure();f.root.emit('click',button('travel',''));win.emit('blur');f.resolve();await settle();assert.equal(f.model.saveState,'error');assert.equal(f.view.isActive(),false);assert.equal(timers.size,timerBaseline);assert.equal(f.root.querySelector('.exv-save').textContent,'저장 오류 · 진행 중단');assert.match(f.root.querySelector('.exv-notice').textContent,/durable original retained/);assert.equal(f.root.querySelector('.exv-pause-layer').querySelector('[data-intent="resume"]').disabled,true,'cannot resume before durable recovery');cleanup(f);groups++;
  }
  {
-  const f=fixture('explore',true),before=f.model.route.position;win.emit('keydown',{code:'KeyD'});assert.equal(f.calls.length,1);
-  let pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](100);pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](180);pair=frames.entries().next().value;frames.delete(pair[0]);pair[1](220);await settle();
-  assert.deepEqual(f.calls.map(x=>x.type),['move','move'],'animation-frame movement continues during movement-only upload');assert.equal(f.model.route.position,before+.4);win.emit('blur');assert.equal(frames.size,0);
-  f.resolve();await settle();assert.deepEqual(f.calls.map(x=>x.type),['move','move','pause']);assert.equal(f.model.paused,true);assert.equal(f.durable.position,before+.8);assert.equal(timers.size,timerBaseline);assert.equal(f.sounds.length,0);cleanup(f);groups++;
+  const f=fixture(),before=f.model.route.position;
+  f.root.emit('click',button('travel',''));f.root.emit('click',button('travel',''));
+  assert.equal(f.calls.length,1,'duplicate event click cannot overlap accepted work');assert.equal(frames.size,0);
+  win.emit('blur');f.resolve();await settle();
+  assert.deepEqual(f.calls.map(x=>x.type),['move','pause']);assert.equal(f.durable.position,before+.4);cleanup(f);groups++;
  }
  {
   const f=fixture('battle');f.delay('action');
@@ -117,21 +119,26 @@ try{
  }
  {
   const f=fixture();f.delay('none');f.root.emit('click',button('travel',''));
-  for(let n=0;n<40&&frames.size;n++){const [id,fn]=frames.entries().next().value;frames.delete(id);await fn(100+n*16);await settle();}
-  assert.ok(f.model.route.position>=12.6);assert.ok(f.calls.length<=32,'travel is bounded to one landmark');
-  assert.ok(f.calls.every(i=>i.type==='move'&&i.dt===.1&&i.dx===1),'reuse audited movement receipts');
-  assert.equal(f.model.screen,'explore');assert.equal(frames.size,0,'travel never enters/chooses an encounter');cleanup(f);groups++;
+  for(let n=0;n<100;n++)await settle();
+  assert.equal(f.calls.filter(i=>i.type==='move').length,32,'bounded audited arrival');
+  assert.equal(f.calls.at(-1).type,'interact');assert.equal(f.calls.length,33);
+  assert.equal(f.model.screen,'battle');assert.equal(frames.size,0,'event starts without any RAF');cleanup(f);groups++;
  }
  {
-  const f=fixture();f.delay('none');win.emit('keydown',{code:'KeyD'});await settle();
-  for(let n=0;n<=240;n++){const [id,fn]=frames.entries().next().value;frames.delete(id);await fn(100+n*1000/60);await settle();}
-  const count=f.calls.filter(i=>i.type==='move').length;
-  assert.ok(count>=40&&count<=41,`4 seconds at 60Hz uses ~40 durable inputs, got ${count}`);
-  assert.equal(frames.size,1);win.emit('keyup',{code:'KeyD'});assert.equal(frames.size,0);cleanup(f);groups++;
+  const f=fixture();win.emit('keydown',{code:'KeyD'});win.emit('keydown',{code:'ArrowLeft'});await settle();
+  assert.equal(f.calls.length,0,'physical walking keys no longer change progress');assert.equal(frames.size,0);
+  assert.equal(f.root.querySelector('.exv-explore-controls').hidden,true);cleanup(f);groups++;
  }
  {
   const f=fixture();f.root.emit('click',button('travel',''));win.emit('blur');
-  assert.equal(frames.size,0);assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'pause');await settle();cleanup(f);groups++;
+  assert.equal(frames.size,0);assert.equal(f.calls.length,1);assert.equal(f.calls[0].type,'move');f.resolve();await settle();
+  assert.deepEqual(f.calls.map(i=>i.type),['move','pause'],'suspension blocks event transition after arrival receipt');cleanup(f);groups++;
+ }
+ {
+  const f=fixture();f.delay('none');f.model.route.step=3;f.root.emit('click',button('law','pierce'));
+  for(let n=0;n<100;n++)await settle();
+  assert.equal(f.calls.at(-1).type,'choice');assert.equal(f.calls.at(-1).lawId,'pierce');assert.equal(f.calls.filter(i=>i.type==='choice').length,1);
+  assert.equal(f.calls.filter(i=>i.type==='interact').length,0,'explicit discovery does not trigger a different event');cleanup(f);groups++;
  }
  console.log(`expedition delayed lifecycle PASS: ${groups} groups; queued pause/flush, hidden sound+enemy stop, UID/close/error boundaries (mock)`);
 }finally{globalThis.setTimeout=originals.setTimeout;globalThis.clearTimeout=originals.clearTimeout;await vite?.close();for(const [key,value]of Object.entries(originals)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}

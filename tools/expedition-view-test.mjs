@@ -82,11 +82,8 @@ try{
  const [musicId,music]=[...timers].find(([id,timer])=>!timerIdsBeforeMount.has(id)&&timer.delay===100);
  timers.delete(musicId);music.fn();
  assert.deepEqual(ticks,[.1]);assert.equal(frames.size,0);assert.equal(calls.filter(x=>x.type==='move').length,movementBefore,'music does not move or save the party');
- root.emit('pointerdown',button('hold','1'));await Promise.resolve();await Promise.resolve();
- assert.equal(frames.size,1,'holding move creates exactly one RAF');
- root.emit('pointerup',new Element());assert.equal(frames.size,0,'release cancels movement RAF');
- win.emit('keydown',{code:'KeyD'});await Promise.resolve();await Promise.resolve();assert.equal(frames.size,1);
- win.emit('keyup',{code:'KeyD'});assert.equal(frames.size,0,'keyboard release also stops rendering');
+ win.emit('keydown',{code:'KeyD'});root.emit('pointerdown',button('hold','1'));await Promise.resolve();
+ assert.equal(calls.filter(x=>x.type==='move').length,movementBefore,'walking inputs are removed');assert.equal(frames.size,0);assert.equal(root.querySelector('.exv-explore-controls').hidden,true);
  doc.hidden=true;doc.emit('visibilitychange');await Promise.resolve();await Promise.resolve();
  assert.equal(timers.size,timersBeforeMount,'background cancels music and enemy timers');assert.equal(frames.size,0);
  doc.hidden=false;doc.emit('visibilitychange');assert.equal(timers.size,timersBeforeMount,'a backgrounded run waits for explicit resume');
@@ -94,7 +91,7 @@ try{
  root.emit('click',button('intent','resume'));await Promise.resolve();await Promise.resolve();await Promise.resolve();
  assert.equal(root.querySelector('.exv-notice').textContent,'','successful resume clears the stale pause notice');
  assert.equal(timers.size,timersBeforeMount+1,'resuming restores one music clock');assert.equal(frames.size,0);
- root.emit('click',button('intent','interact'));await Promise.resolve();await Promise.resolve();
+ root.emit('click',button('intent','interact'));for(let n=0;n<150;n++)await Promise.resolve();
  assert.match(main.innerHTML,/기본공격/);assert.match(main.innerHTML,/기술 1/);assert.match(main.innerHTML,/각성기/);assert.match(main.innerHTML,/대기 3/);
  assert.match(main.innerHTML,/후열<\/span><span>전열 →/);assert.match(main.innerHTML,/← 전열/);
  assert.match(main.innerHTML,/관통 발현/);assert.match(main.innerHTML,/한 열 타격/);
@@ -119,7 +116,7 @@ try{
  const beforeOwnerChange=calls.length;ownerNow='different-owner';root.emit('click',button('action','guard'));
  assert.equal(calls.length,beforeOwnerChange,'changed owner cannot command a battle');
  assert.equal(timers.size,timersBeforeMount,'owner change cancels the pending enemy action');
- view.close();assert.equal(controller.closed,true);assert.equal(root.removed,true);assert.ok(cancelledRaf>=1);assert.equal(timers.size,timersBeforeMount);assert.equal(root.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(doc.handlers.size,0);
+ view.close();assert.equal(controller.closed,true);assert.equal(root.removed,true);assert.equal(cancelledRaf,0,'event navigation never creates RAF');assert.equal(timers.size,timersBeforeMount);assert.equal(root.handlers.size,0);assert.equal(win.handlers.size,0);assert.equal(doc.handlers.size,0);
  ownerNow='ui-owner';model.screen='home';model.battle=null;model.route=null;
  for(let n=0;n<20;n++){
   const cycle=mountExpedition({host,owner:'ui-owner',currentOwner:()=>ownerNow,createController:()=>controller,audio:sharedAudio});
@@ -142,7 +139,7 @@ try{
    const fieldView=mountExpedition({host,owner:'ui-owner',currentOwner:()=>ownerNow,createController:()=>controller}),fieldRoot=host.child,field=fieldRoot.querySelector('.exv-main').querySelector('.exv-explore'),observer=[...observers].at(-1);
    assert.equal(observer.target,field);assert.equal(field.style['--field-width'],'640px');assert.equal(frames.size,0,'a stationary layered field never starts RAF');
    observer.callback([{target:field,contentRect:{width:390,height:793}}]);assert.equal(field.style['--field-width'],'1189.5px');assert.equal(field.style['--field-height'],'793px');assert.equal(frames.size,0);
-   if(n===0){fieldRoot.emit('click',button('intent','interact'));await Promise.resolve();await Promise.resolve();assert.equal(observer.target,null,'exploration observer detaches on battle');model.screen='explore';model.battle=null;}
+   if(n===0){fieldRoot.emit('click',button('intent','interact'));for(let taskTurn=0;taskTurn<150;taskTurn++)await Promise.resolve();assert.equal(observer.target,null,'exploration observer detaches on battle');model.screen='explore';model.battle=null;}
    fieldView.close();assert.equal(observer.target,null,'close detaches the only field observer');assert.equal(frames.size,0);assert.equal(timers.size,timersBeforeMount);assert.equal(win.handlers.size,0);assert.equal(doc.handlers.size,0);
   }
  }finally{fieldDOM=false;if(oldResizeObserver===undefined)delete globalThis.ResizeObserver;else globalThis.ResizeObserver=oldResizeObserver;}
