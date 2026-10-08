@@ -72,13 +72,16 @@ export function createMirrorPanels(scene){
  const geometry=new RoundedBoxGeometry(1,1,1,1,.12),material=new THREE.MeshBasicMaterial({color:0x9cdef0,transparent:true,opacity:.47,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const trimGeometry=new THREE.BoxGeometry(1,1,1),trimMaterial=new THREE.MeshBasicMaterial({color:0xe9d5a8,toneMapped:false});
  const mesh=new THREE.InstancedMesh(geometry,material,MIRROR_PANELS.length),trim=new THREE.InstancedMesh(trimGeometry,trimMaterial,MIRROR_PANELS.length*2),matrix=new THREE.Matrix4(),quaternion=new THREE.Quaternion(),scale=new THREE.Vector3(),position=new THREE.Vector3();mesh.name='mirror-projectile-panels';mesh.castShadow=false;mesh.receiveShadow=false;trim.castShadow=false;trim.receiveShadow=false;
+ function setPanels(panels=MIRROR_PANELS){
  let index=0,trimIndex=0;
- for(const panel of MIRROR_PANELS){
+ for(const panel of panels.slice(0,MIRROR_PANELS.length)){
   quaternion.identity();position.set(panel.x,.78,panel.z);scale.set(panel.w+.12,1.55,panel.d+.12);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(index++,matrix);
   for(const y of [.08,1.48]){position.set(panel.x,y,panel.z);scale.set(panel.w+.18,.055,panel.d+.18);matrix.compose(position,quaternion,scale);trim.setMatrixAt(trimIndex++,matrix);}
  }
- mesh.instanceMatrix.needsUpdate=trim.instanceMatrix.needsUpdate=true;mesh.visible=trim.visible=false;scene.add(mesh,trim);
- return Object.freeze({mesh,trim,geometries:Object.freeze([geometry,trimGeometry]),materials:Object.freeze([material,trimMaterial]),setActive(active){mesh.visible=trim.visible=Boolean(active);}});
+ mesh.count=index;trim.count=trimIndex;mesh.instanceMatrix.needsUpdate=trim.instanceMatrix.needsUpdate=true;mesh.computeBoundingSphere();trim.computeBoundingSphere();
+ }
+ setPanels();mesh.visible=trim.visible=false;scene.add(mesh,trim);
+ return Object.freeze({mesh,trim,setPanels,geometries:Object.freeze([geometry,trimGeometry]),materials:Object.freeze([material,trimMaterial]),setActive(active){mesh.visible=trim.visible=Boolean(active);}});
 }
 
 // The clone is slower than the seed in open space, but it cuts toward the

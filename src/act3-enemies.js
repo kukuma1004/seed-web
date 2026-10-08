@@ -36,8 +36,8 @@ export const ACT3_MATERIALS=Object.freeze({
 });
 
 export const ACT3_MINIONS=Object.freeze({
- // 하늘길은 탄이 가장 많은 막이다. 화면이 탄으로 덮이면 길이 보이지 않으므로
- // 편대 수는 그대로 두고 쏘는 간격을 늘려 빈 줄이 눈에 들어오게 한다.
+ // HP and damage stay unchanged: pressure comes from a warned pass, close
+ // firing positions and stationary recovery rather than extra projectiles.
  'sky-scout':{kind:'scout',hp:54,speed:3.85,damage:11,cooldown:1.5},
  'sky-diver':{kind:'diver',hp:28,speed:5.3,damage:18,cooldown:1.9},
  'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.7},
@@ -57,7 +57,7 @@ function baseActor(scene,type,kind,hp){
  const g=new THREE.Group(),body=new THREE.Group(),fallback=new THREE.Mesh(ACT3_GEOMETRIES[kind],ACT3_MATERIALS.craft);fallback.castShadow=false;fallback.receiveShadow=false;body.add(fallback);g.add(body);
  const tell=new THREE.Mesh(ACT3_GEOMETRIES.tellRing,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);tell.rotation.x=-Math.PI/2;tell.position.y=.12;tell.visible=false;g.add(tell);
  const line=new THREE.Mesh(ACT3_GEOMETRIES.tellLine,kind==='warden'||kind==='boss'?ACT3_MATERIALS.bossWarning:ACT3_MATERIALS.warning);line.rotation.x=-Math.PI/2;line.position.set(0,.11,5);line.visible=false;g.add(line);scene.add(g);
- return {g,body,tell,line,type,hp,maxHp:hp,state:'stalk',timer:.7,phase:0,hit:0,dir:new V(0,0,1),before:new V(),target:new V(),home:new V(),formation:new V(),homeReady:false,artRoll:0,moveName:'',hint:'',attacks:0,pattern:0};
+ return {g,body,tell,line,type,hp,maxHp:hp,state:'stalk',timer:.7,phase:0,hit:0,dir:new V(0,0,1),before:new V(),target:new V(),home:new V(),formation:new V(),move:new V(),commitRemaining:0,homeReady:false,artRoll:0,moveName:'',hint:'',attacks:0,pattern:0};
 }
 
 export function createAct3Minion(scene,type,random=Math.random){
@@ -72,36 +72,62 @@ const face=(e,d)=>{if(d.lengthSq()>.001)e.g.rotation.y=Math.atan2(d.x,d.z);};
 const finishMotion=(e,dt,time)=>{const dx=e.g.position.x-e.before.x,dz=e.g.position.z-e.before.z;e.artRoll=THREE.MathUtils.damp(e.artRoll,THREE.MathUtils.clamp(-dx*2.4,-.24,.24),9,dt);e.body.rotation.z=THREE.MathUtils.damp(e.body.rotation.z,-dx*1.7,7,dt);e.body.rotation.x=THREE.MathUtils.damp(e.body.rotation.x,dz*.34,7,dt);e.body.position.y=Math.sin(time*5+e.phase)*.07;e.hit=Math.max(0,e.hit-dt);};
 const frozenShotScale=e=>e.slow>0?((e.type==='tempestcarrier'||e.type==='act3warden') ? 0.9 : 0.82):1;
 const shot=(ctx,e,dir,spec={})=>ctx.bolt(e.g.position,dir,{speed:(spec.speed||8.4)*frozenShotScale(e),damage:spec.damage||e.config?.damage||14,boss:Boolean(spec.boss),curve:spec.curve||0,life:spec.life||4.5});
-const formationMove=(e,dt,time,{x=1,z=.45,xf=1.15,zf=.72,speed=4}={})=>{
- if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;}
- e.formation.set(THREE.MathUtils.clamp(e.home.x+Math.sin(time*xf+e.phase)*x,-7.7,7.7),0,THREE.MathUtils.clamp(e.home.z+Math.cos(time*zf+e.phase)*z,-6.35,-2.65));
- e.g.position.x=THREE.MathUtils.damp(e.g.position.x,e.formation.x,speed,dt);e.g.position.z=THREE.MathUtils.damp(e.g.position.z,e.formation.z,speed,dt);
+const approach=(e,dt,speed)=>{
+ e.move.copy(e.formation).sub(e.g.position).setY(0);const distance=e.move.length();
+ if(distance>.001)e.g.position.addScaledVector(e.move,Math.min(distance,dt*speed)/distance);
 };
+const lockAim=(e,player)=>{e.dir.copy(player).sub(e.g.position).setY(0);if(e.dir.lengthSq()>.001)e.dir.normalize();else e.dir.copy(FORWARD);};
+// The line belongs to the facing actor: applying the aim yaw again would turn
+// a diagonal tell away from its actual path. Scale its existing geometry only.
+const passLine=e=>{e.line.visible=true;e.line.rotation.y=0;e.line.position.z=e.commitRemaining/2;e.line.scale.y=e.commitRemaining/11;};
+const passContact=(e,ctx,radius)=>{
+ if(e.chargeHit)return;
+ const dx=e.g.position.x-e.before.x,dz=e.g.position.z-e.before.z,length=dx*dx+dz*dz;
+ const t=length>.000001?THREE.MathUtils.clamp(((ctx.player.x-e.before.x)*dx+(ctx.player.z-e.before.z)*dz)/length,0,1):0;
+ if(Math.hypot(ctx.player.x-e.before.x-dx*t,ctx.player.z-e.before.z-dz*t)<radius){e.chargeHit=true;ctx.hit(e.config.damage);}
+};
+const committedMove=(e,dt,speed)=>{const step=Math.min(e.commitRemaining,dt*speed);e.g.position.addScaledVector(e.move,step);e.commitRemaining=Math.max(0,e.commitRemaining-step);};
 
 export function tickAct3Minion(e,dt,time,ctx){
  e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;
+ if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;if(Math.abs(e.home.x)>.5)e.lane=Math.sign(e.home.x);}
  if(e.state==='entry'){
-  if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;}e.g.position.x=THREE.MathUtils.damp(e.g.position.x,e.home.x,7,dt);e.g.position.z=THREE.MathUtils.damp(e.g.position.z,e.home.z,7,dt);face(e,FORWARD);
-  if(e.timer<=0){e.state='stalk';e.timer=.2+(e.phase%1)*.35;}
+  face(e,FORWARD);
+  if(e.timer<=0){e.state='stalk';e.timer=1.1+(e.phase%1)*.5;}
  }else if(e.type==='sky-scout'){
-  formationMove(e,dt,time,{x:1.35,z:.4,xf:1.65,zf:.82,speed:5});face(e,to);
-  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;shot(ctx,e,to,{speed:9.4});ctx.sound?.('bossAttack');}
+  if(e.state==='stalk'){
+   e.formation.set(THREE.MathUtils.clamp(ctx.player.x+e.lane*3,-7.4,7.4),0,THREE.MathUtils.clamp(ctx.player.z-2.6,-5.4,4.4));approach(e,dt,e.config.speed);face(e,to);
+   if(e.timer<=0&&e.g.position.distanceTo(ctx.player)<6){e.state='tell';e.timer=.5;lockAim(e,ctx.player);e.formation.set(THREE.MathUtils.clamp(ctx.player.x-e.lane*3.2,-7.4,7.4),0,THREE.MathUtils.clamp(ctx.player.z-.65,-6.5,6.6));ctx.sound?.('bossWarning');}
+  }else if(e.state==='tell'){
+   e.tell.visible=true;e.tell.scale.setScalar(1.05+(.5-e.timer)*.55);face(e,e.dir);
+   if(e.timer<=0){shot(ctx,e,e.dir,{speed:8.6});e.attacks++;e.move.copy(e.formation).sub(e.g.position).setY(0);e.commitRemaining=Math.min(8.8,e.move.length());e.move.normalize();e.state='sweep';e.chargeHit=false;ctx.sound?.('bossAttack');}
+  }else if(e.state==='sweep'){
+   face(e,e.move);committedMove(e,dt,4.8);passContact(e,ctx,.72);
+   if(e.commitRemaining<=.001){e.state='recover';e.timer=.75;}
+  }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;e.lane*=-1;}
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
-   formationMove(e,dt,time,{x:1.05,z:.72,xf:.82,zf:.6,speed:3.4});face(e,to);
-   if(e.timer<=0){e.state='tell';e.timer=.34;e.dir.copy(to);ctx.sound?.('bossWarning');}
+   e.formation.set(THREE.MathUtils.clamp(e.home.x,-6.6,6.6),0,THREE.MathUtils.clamp(ctx.player.z-5.2,-5.8,1.6));approach(e,dt,e.config.speed);face(e,to);
+   if(e.timer<=0){e.state='tell';e.timer=.65;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
-   e.tell.visible=true;e.tell.scale.setScalar(1+(.34-e.timer)*.8);face(e,e.dir);
-   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.3),{speed:6.5+Math.abs(i)*.35});e.state='stalk';e.timer=e.config.cooldown;ctx.sound?.('bossAttack');}
-  }
+   e.tell.visible=true;e.tell.scale.setScalar(1+(.65-e.timer)*.6);face(e,e.dir);
+   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.3),{speed:6.5+Math.abs(i)*.35});e.attacks++;e.state='recover';e.timer=1;ctx.sound?.('bossAttack');}
+  }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else if(e.type==='sky-diver'){
-  if(e.state==='stalk'){formationMove(e,dt,time,{x:1.55,z:.6,xf:1.35,zf:.8,speed:4.4});face(e,to);if(e.timer<=0){e.state='tell';e.timer=.28;e.dir.copy(to);ctx.sound?.('bossWarning');}}
-  else if(e.state==='tell'){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);face(e,e.dir);if(e.timer<=0){e.state='commit';e.timer=.46;e.chargeHit=false;}}
-  else if(e.state==='commit'){face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*15.5);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<.85){e.chargeHit=true;ctx.hit(e.config.damage);}if(e.timer<=0){e.state='recover';e.timer=.5;}}
+  if(e.state==='stalk'){
+   if(distance>7.2)e.g.position.addScaledVector(to,Math.min(dt*e.config.speed,distance-7.2));face(e,to);
+   if(e.timer<=0){e.state='tell';e.timer=.62;lockAim(e,ctx.player);e.move.copy(e.dir);e.commitRemaining=Math.min(12.8,e.g.position.distanceTo(ctx.player)+1.6);ctx.sound?.('bossWarning');}
+  }else if(e.state==='tell'){face(e,e.dir);passLine(e);if(e.timer<=0){e.state='commit';e.chargeHit=false;e.attacks++;}}
+  else if(e.state==='commit'){face(e,e.dir);committedMove(e,dt,12.2);passContact(e,ctx,.85);if(e.commitRemaining<=.001){e.state='recover';e.timer=1.1;}}
   else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else{
-  formationMove(e,dt,time,{x:.72,z:.34,xf:.58,zf:.45,speed:2.6});face(e,to);
-  if(e.timer<=0){e.timer=e.config.cooldown;e.attacks++;for(let i=-2;i<=2;i++)shot(ctx,e,to.clone().applyAxisAngle(AXIS_Y,i*.21),{speed:7.2+((i+2)%2)*1.3});ctx.sound?.('bossAttack');}
+  if(e.state==='stalk'){
+   e.formation.set(THREE.MathUtils.clamp(e.home.x,-5.5,5.5),0,THREE.MathUtils.clamp(ctx.player.z-4.6,-5.8,2.2));approach(e,dt,e.config.speed);face(e,to);
+   if(e.timer<=0){e.state='tell';e.timer=.8;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
+  }else if(e.state==='tell'){
+   e.tell.visible=true;e.tell.scale.setScalar(1.5+Math.sin(time*9)*.08);face(e,e.dir);
+   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.32),{speed:7.2});e.attacks++;e.state='recover';e.timer=1.25;ctx.sound?.('bossAttack');}
+  }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }
  ctx.collide(e.g.position,.52);finishMotion(e,dt,time);
 }

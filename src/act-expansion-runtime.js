@@ -69,12 +69,14 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  const index=s.spawnIndex++,formation=s.act==='crosswind'?crosswindFormation(index,s.room):{side:'front',lane:[-4.8,0,4.8][index%3],type:index%5===4?'charger':'shooter',shots:1,windup:.85};
  const count=Math.min(free,(close?index%2===1:s.room>=2&&index%4===3)?2:1,EXPANSION_RUNTIME_LIMITS.spawnsPerStep);
  for(let i=0;i<count;i++){
-  const side=s.act==='crystalGorge'&&close&&p.z<s.origin.z-1.4?'rear':formation.side,front=side==='front',cx=close?p.x:s.origin.x+s.distance;
-  const position=s.act==='crosswind'?{x:cx+(front?(close?6.8:12):(close?-6.4:-11)),z:s.origin.z+clamp(formation.lane+(i?1.6:0),close?-4.5:-6.4,close?4.5:6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:close?clamp(p.z+(front?-6:6),s.origin.z-7.8,s.origin.z+7.8):s.origin.z-9};
+  const actorFormation=s.act==='crosswind'&&close?crosswindFormation(index,s.room,i):formation;
+  const side=s.act==='crystalGorge'&&close&&p.z<s.origin.z-1.4?'rear':actorFormation.side,front=side==='front',cx=close?p.x:s.origin.x+s.distance;
+  const position=s.act==='crosswind'?{x:cx+(front?(close?6.8:12):(close?-6.4:-11)),z:s.origin.z+clamp(actorFormation.lane+(i&&(!close||s.room<2)?1.6:0),close?-4.5:-6.4,close?4.5:6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:close?clamp(p.z+(front?-6:6),s.origin.z-7.8,s.origin.z+7.8):s.origin.z-9};
   if(s.act==='crystalGorge'&&close)constrainCrystalActor(position,.65,s.walls);
-  const threat={id:`${s.act}-${s.room}-${index}-${i}`,type:formation.type,position,side,shots:formation.shots,windup:formation.windup,
+  const threat={id:`${s.act}-${s.room}-${index}-${i}`,type:formation.type,position,side,shots:formation.shots,windup:actorFormation.windup,
    hp:formation.type==='charger'?42+s.room*8:86+s.room*18,speed:formation.type==='charger'?4.1:2.1,cooldown:formation.type==='lobber'?2.1:1.7,bulletSpeed:5.2+s.room*.2,damage:12+s.room};
-  out.spawns.push(threat);out.telegraphs.push({kind:'entry',id:threat.id,position:{...position},duration:formation.windup,side});
+  if(s.act==='crosswind'&&close)Object.assign(threat,{behavior:'crosswind',role:actorFormation.role,laneCenter:position.z,laneMin:s.origin.z-4.5,laneMax:s.origin.z+4.5,weave:actorFormation.weave,shots:1,windup:Math.max(actorFormation.windup,formation.type==='lobber'?1.15:.7)});
+  out.spawns.push(threat);out.telegraphs.push({kind:'entry',id:threat.id,position:{...position},duration:threat.windup,side});
  }
  return out;
 }

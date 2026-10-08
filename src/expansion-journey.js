@@ -5,6 +5,7 @@ export {EXPANSION_OBJECTIVES,freshExpansionObjective,pinnedExpansionObjective} f
 import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,createExpansionBoss,stepExpansionBoss,checkpointExpansionBoss,restoreExpansionCourse,restoreExpansionBoss,EXPANSION_RUNTIME_LIMITS} from './act-expansion-runtime.js';
 export {createCrystalCombatBridge,traceCrystalProjectile} from './crystal-combat-bridge.js';
 export {EXPANSION_ACTS};
+export {crosswindReflectorPanels} from './act-expansion.js';
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const point=p=>({x:p.x,z:p.z});
@@ -43,23 +44,41 @@ export function stepExpansionJourney(s,dt,context){
  return null;
 }
 export function createExpansionThreat(spec){
- return {id:spec.id,type:spec.type,position:point(spec.position),hp:spec.hp,maxHp:spec.hp,side:spec.side,
+ const model={id:spec.id,type:spec.type,position:point(spec.position),hp:spec.hp,maxHp:spec.hp,side:spec.side,
   speed:spec.speed,cooldown:spec.cooldown,bulletSpeed:spec.bulletSpeed,damage:spec.damage,shots:clamp(spec.shots|0,1,2),windup:Math.max(.65,spec.windup),
   phase:'entry',timer:Math.max(.7,spec.windup),aim:{x:0,z:0},flight:0,contactHit:false,out:{bolts:[],tell:null,contact:null}};
+ // Only authored horizontal-course specs opt in. Crystal/siege and shared
+ // Survival/Defense actors keep their original approach and attack contract.
+ if(spec.behavior==='crosswind')Object.assign(model,{behavior:'crosswind',role:spec.role,laneCenter:spec.laneCenter,laneMin:spec.laneMin,laneMax:spec.laneMax,weave:spec.weave===-1?-1:1,elapsed:0,target:point(spec.position),repositionLane:spec.laneCenter});
+ if(spec.siegeGuard&&spec.approachPoint)model.bossApproachPoint=point(spec.approachPoint);
+ return model;
+}
+
+function moveCrosswindThreat(s,step,player,recover=false){
+ const sign=s.side==='rear'?-1:1,lobber=s.type==='lobber';
+ const spread=s.role==='warden'?3.7:s.role==='split-lanes'?.5:s.role==='rear'?1:1.6;
+ const centre=s.role==='warden'?(s.laneMin+s.laneMax)/2:s.laneCenter;
+ const z=clamp(lobber?s.repositionLane:centre+Math.sin(s.elapsed*1.25+s.weave*.8)*spread,s.laneMin,s.laneMax);
+ const x=player.x+sign*(recover?6.1:lobber?5.6:s.side==='rear'?3.8:4.4),dx=x-s.position.x,dz=z-s.position.z,n=Math.hypot(dx,dz);
+ if(n>.05){const travel=Math.min(n,s.speed*(recover?.85:1)*step);s.position.x+=dx/n*travel;s.position.z+=dz/n*travel;}
+ s.position.z=clamp(s.position.z,s.laneMin,s.laneMax);
 }
 // One entry warning, then approach -> locked aim -> shot/charge -> recovery.
 // No timer catch-up after backgrounding and no firing through a saturated cap.
 export function stepExpansionThreat(s,dt,{player,projectiles=0}={}){
  const out=s.out;out.bolts.length=0;out.tell=null;out.contact=null;const step=safeDt(dt);if(!step||s.hp<=0)return out;
+ if(s.behavior==='crosswind')s.elapsed+=step;
  s.timer-=step;
- if(s.phase==='entry'){out.tell={kind:'entry',position:point(s.position),remaining:Math.max(0,s.timer)};if(s.timer<=0){s.phase='approach';s.timer=.3;}return out;}
+ if(s.phase==='entry'){out.tell={kind:'entry',position:point(s.position),remaining:Math.max(0,s.timer)};if(s.timer<=0){s.phase='approach';s.timer=s.behavior==='crosswind'?.65:.3;}return out;}
  if(s.phase==='windup'){
-  out.tell={kind:s.type==='charger'?'charge':'shot',position:point(s.position),direction:point(s.aim),remaining:Math.max(0,s.timer)};
+  const lobber=s.behavior==='crosswind'&&s.type==='lobber',distance=lobber?Math.hypot(s.target.x-s.position.x,s.target.z-s.position.z):7;
+  out.tell={kind:s.type==='charger'?'charge':'shot',position:point(s.position),direction:point(s.aim),remaining:Math.max(0,s.timer),...(s.behavior==='crosswind'?{length:distance+(lobber?1.4:0),width:lobber?.5:.16}: {})};
   if(s.timer>0)return out;
   if(s.type==='charger'){s.phase='charge';s.timer=.65;s.flight++;s.contactHit=false;return out;}
   for(let k=0;k<s.shots&&projectiles+out.bolts.length<EXPANSION_RUNTIME_LIMITS.projectiles;k++){
    const a=s.shots===1?0:(k?1:-1)*.14,c=Math.cos(a),n=Math.sin(a);
-   out.bolts.push({position:point(s.position),dir:{x:s.aim.x*c-s.aim.z*n,z:s.aim.x*n+s.aim.z*c},spec:{speed:s.bulletSpeed,damage:s.damage,life:3,boss:false}});
+   const speed=lobber?s.bulletSpeed*.72:s.bulletSpeed;
+   out.bolts.push({position:point(s.position),dir:{x:s.aim.x*c-s.aim.z*n,z:s.aim.x*n+s.aim.z*c},spec:{speed,damage:s.damage,life:lobber?Math.max(.2,(distance+.35)/speed):3,boss:false,...(lobber?{committedLane:true}: {})}});
   }
   s.phase='recover';s.timer=s.cooldown;return out;
  }
@@ -68,11 +87,12 @@ export function stepExpansionThreat(s,dt,{player,projectiles=0}={}){
   out.contact={from,to:point(s.position),radius:.7,damage:s.damage,hitId:`${s.id}-${s.flight}`};
   if(s.timer<=0){s.phase='recover';s.timer=1;}return out;
  }
- if(s.phase==='recover'){if(s.timer<=0){s.phase='approach';s.timer=.35;}return out;}
+ if(s.phase==='recover'){if(s.behavior==='crosswind')moveCrosswindThreat(s,step,player,true);if(s.timer<=0){s.phase='approach';s.timer=.35;}return out;}
  const d=Math.hypot(player.x-s.position.x,player.z-s.position.z),aim=direction(s.position,player);
  const reach=s.type==='charger'?5:7.5;
- if(d>reach){s.position.x+=aim.x*s.speed*step;s.position.z+=aim.z*s.speed*step;}
- if(d<=reach&&s.timer<=0){s.phase='windup';s.timer=s.windup;s.aim=aim;}
+ if(s.behavior==='crosswind'&&s.type!=='charger')moveCrosswindThreat(s,step,player);
+ else if(d>reach){s.position.x+=aim.x*s.speed*step;s.position.z+=aim.z*s.speed*step;}
+ if(d<=reach&&s.timer<=0){s.phase='windup';s.timer=s.windup;s.aim=direction(s.position,player);if(s.behavior==='crosswind'){s.target=point(player);s.repositionLane=player.z>(s.laneMin+s.laneMax)/2?s.laneMin+.5:s.laneMax-.5;}}
  return out;
 }
 export function expansionContactHits(contact,p,radius=.4){

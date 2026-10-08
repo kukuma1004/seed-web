@@ -29,9 +29,10 @@ assert.ok(opening.projectileCapNormal<second.projectileCapNormal&&second.project
 assert.ok(Array.from({length:24},(_,i)=>act3CrowdType(i,0)).every(type=>type!=='sky-bomber'),'first-room reinforcements never add three-shot bombers');
 assert.equal(Array.from({length:12},(_,i)=>act3CrowdType(i,1)).filter(type=>type==='sky-bomber').length,1,'second room introduces one bomber per formation');
 const crowd=Array.from({length:12},(_,i)=>act3CrowdType(i,3));
-assert.equal(crowd.filter(type=>type==='sky-diver').length,1,'chargers are rare');
-assert.ok(crowd.filter(type=>type!=='sky-diver').length>=11,'shooters dominate the route');
-assert.ok(ACT3_MINIONS['sky-diver'].hp<ACT3_MINIONS['sky-scout'].hp,'the rare charger is fragile');
+assert.equal(crowd.filter(type=>type==='sky-diver').length,3,'late formations give three committed body threats per twelve actors');
+assert.equal(crowd.filter(type=>type!=='sky-diver').length,9,'shooting roles still leave room for fragile committed threats');
+assert.equal(Array.from({length:12},(_,i)=>act3CrowdType(i,0)).filter(type=>type==='sky-diver').length,2,'opening formations teach two divers before the late mix');
+assert.ok(ACT3_MINIONS['sky-diver'].hp<ACT3_MINIONS['sky-scout'].hp,'the committed charger remains a fragile priority target');
 for(let i=0;i<14;i++)assert.ok(insideArena(act3ReinforcementSpawn(i),.5,ACT3_ARENA),'reinforcement lane stays inside the route');
 assert.ok(act3ReinforcementSpawn(3).x-act3ReinforcementSpawn(2).x<2,'중앙 편대는 분열탄도 닿을 만큼 밀집한다');
 assert.equal(act3SupplyDrop('sky-carrier',2,false,{tonic:4}),'tonic','후반 방 보급 모함을 잡으면 물약을 얻는다');
@@ -71,25 +72,58 @@ for(const file of new Set(Object.values(ACT3_ART).map(art=>art.file))){
 }
 
 function world(player=new V(0,0,1)){
- const bolts=[],hits=[],summons=[];return {bolts,hits,summons,ctx:{player,collide:()=>{},hit:value=>{hits.push(value);return true;},bolt:(pos,dir,spec)=>bolts.push({pos:pos.clone(),dir:dir.clone(),spec}),sound:()=>{},summon:types=>summons.push(...types)}};
+ const bolts=[],hits=[],summons=[];return {bolts,hits,summons,time:0,ctx:{player,collide:()=>{},hit:value=>{hits.push(value);return true;},bolt:(pos,dir,spec)=>bolts.push({pos:pos.clone(),dir:dir.clone(),spec}),sound:()=>{},summon:types=>summons.push(...types)}};
+}
+function stepMinion(e,w,dt=.02){w.time+=dt;tickAct3Minion(e,dt,w.time,w.ctx);}
+function untilMinion(e,w,predicate,max=10){
+ const end=w.time+max;while(w.time<end&&!predicate())stepMinion(e,w);
+ assert.ok(predicate(),`${e.type} reaches the expected phase within ${max}s of real actor time`);
 }
 const scene=new THREE.Scene();
 {
- const w=world(),e=createAct3Minion(scene,'sky-scout',()=>.25);e.g.position.set(0,0,-5);e.state='stalk';
- for(let i=0;i<5;i++){e.timer=0;tickAct3Minion(e,.016,i*.016,w.ctx);}
- assert.equal(w.bolts.length,5,'scouts fire one aimed missile per attack, without a hidden three-shot volley');
+ const w=world(new V(0,0,5.5)),e=createAct3Minion(scene,'sky-scout',()=>.25);e.g.position.set(0,0,-5);
+ untilMinion(e,w,()=>e.state==='tell');const warningAt=w.time,lockedAim=e.dir.clone();
+ assert.equal(w.bolts.length,0,'scout enters and approaches without firing');
+ assert.ok(e.g.position.z>-3&&e.g.position.distanceTo(w.ctx.player)<6,'scout is a close priority before its warning');
+ w.ctx.player.x=6;for(let i=0;i<20;i++)stepMinion(e,w);
+ assert.equal(w.bolts.length,0,'the warning gives real movement time before the shot');
+ untilMinion(e,w,()=>w.bolts.length>0);
+ assert.ok(w.time-warningAt>=.5-1e-9,'the single aimed shot follows the full warning');
+ assert.equal(w.bolts.length,1,'one completed warning fires one missile, without a hidden volley');
+ assert.ok(w.bolts[0].dir.distanceTo(lockedAim)<1e-9,'moving after the warning locks does not retarget the shot');
+ untilMinion(e,w,()=>e.state==='recover');assert.equal(w.bolts.length,1,'crossing pass adds no extra missiles');
+ const resting=e.g.position.clone();for(let i=0;i<25;i++)stepMinion(e,w);
+ assert.ok(e.g.position.distanceTo(resting)<1e-9,'scout remains stationary through a genuine recovery window');
+ assert.equal(w.bolts.length,1,'recovery cannot shoot');
+ untilMinion(e,w,()=>w.bolts.length===2);assert.equal(e.attacks,2,'later shots require another complete attack cycle');
 }
 for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
- const w=world(),e=createAct3Minion(scene,type,()=>.25);e.g.position.set(0,0,-5);e.timer=0;const states=new Set();
- for(let time=0;time<5;time+=.04){tickAct3Minion(e,.04,time,w.ctx);states.add(e.state);}
+ const w=world(),e=createAct3Minion(scene,type,()=>.25);e.g.position.set(0,0,-5);const states=new Set();
+ while(w.time<5){stepMinion(e,w);states.add(e.state);}
  assert.equal(e.homeReady,true,`${type} owns a stable formation anchor`);assert.ok(Number.isFinite(e.artRoll),`${type} bank animation stays finite`);
+ assert.ok(states.has('entry')&&states.has('tell')&&states.has('recover'),`${type} progresses naturally through entry, warning and recovery`);
  assert.ok(w.bolts.length||states.has('commit'),`${type} produces a shot or a real charge`);
- if(type==='sky-bomber')assert.ok(w.bolts.length>=3,'bomber completes its warning and fan attack');
+ if(type==='sky-bomber'||type==='sky-carrier')assert.equal(w.bolts.length,e.attacks*3,`${type} completes bounded three-shot openings`);
+}
+{
+ const w=world(new V(0,0,5.5)),divers=crowd.filter(type=>type==='sky-diver').map((type,i)=>{
+  const e=createAct3Minion(scene,type,()=>.25);e.g.position.set((i-1)*4,0,-6.2);return e;
+ }),states=divers.map(()=>new Set());
+ while(w.time<6){w.time+=.02;divers.forEach((e,i)=>{tickAct3Minion(e,.02,w.time,w.ctx);states[i].add(e.state);});}
+ assert.equal(divers.length,3);
+ states.forEach(phases=>assert.ok(phases.has('tell')&&phases.has('commit')&&phases.has('recover'),'each late diver warns, commits and recovers in elapsed time'));
+ assert.ok(divers.every(e=>e.attacks===1&&e.g.position.z>5.5),'all three passes reach the lower player before restarting');
+ assert.equal(w.hits.length,3,'each committed body pass hits a stationary target at most once');
+ assert.equal(w.bolts.length,0,'the three-diver pressure creates no extra projectile hail');
 }
 {
  const normal=world(),frozen=world(),a=createAct3Minion(scene,'sky-scout',()=>.25),b=createAct3Minion(scene,'sky-scout',()=>.25);
- for(const enemy of [a,b]){enemy.g.position.set(0,0,-5);enemy.state='stalk';enemy.timer=0;}
- b.slow=1;tickAct3Minion(a,.016,0,normal.ctx);tickAct3Minion(b,.016,0,frozen.ctx);
+ for(const enemy of [a,b])enemy.g.position.set(0,0,-5);
+ b.slow=1;
+ untilMinion(a,normal,()=>a.state==='tell');untilMinion(b,frozen,()=>b.state==='tell');
+ assert.equal(normal.bolts.length,0);assert.equal(frozen.bolts.length,0,'freeze fixture also waits for the real warning');
+ untilMinion(a,normal,()=>normal.bolts.length>0);untilMinion(b,frozen,()=>frozen.bolts.length>0);
+ assert.equal(normal.bolts.length,1);assert.equal(frozen.bolts.length,1);
  assert.ok(frozen.bolts[0].spec.speed<normal.bolts[0].spec.speed*.85,'빙결은 새로 발사한 적탄 속도도 낮춘다');
 }
 {

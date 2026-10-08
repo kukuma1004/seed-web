@@ -49,8 +49,8 @@ export function buildCrystalSiege(s,padId,kind,player){
 export function startCrystalSiegeDefense(s){if(s.phase!=='prep'||s.core.hp<=0)return denied('phase');s.phase='defense';s.elapsed=0;return{ok:true};}
 function reset(s){for(const k of ['spawns','hits','snares','events'])s.out[k].length=0;s.out.phase=s.phase;s.out.clear=s.phase==='clear';s.out.bossReady=s.phase==='clear'&&s.room===4;return s.out;}
 function facilities(s,delta,live,o,{boss=false}={}){
- for(const pad of s.pads){const f=pad;if(!f.kind||f.hp<=0||f.kind==='wall'||boss&&f.kind==='snare')continue;f.cooldown=Math.max(0,f.cooldown-delta);if(f.cooldown>0)continue;
-  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5;let target=null,nearest=Infinity;for(const e of live){const d=distance(pad,e);if(d<=range&&d<nearest){nearest=d;target=e;}}
+ for(const pad of s.pads){const f=pad;if(!f.kind||f.hp<=0||f.kind==='wall')continue;f.cooldown=Math.max(0,f.cooldown-delta);if(f.cooldown>0)continue;
+  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5;let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e);if(d<=range&&d<nearest){nearest=d;target=e;}}
   if(!target)continue;f.cooldown=spec.period-(f.level-1)*.15;
   if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage+(f.level-1)*4});
   else o.snares.push({id:target.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});
@@ -101,9 +101,9 @@ export function applyCrystalSiegeSnare(model,effect){
  else{item.factor=effect.factor;item.remaining=Math.max(item.remaining,effect.duration);}
  let factor=1,remaining=0;for(const item of effects){factor=Math.min(factor,item.factor);remaining=Math.max(remaining,item.remaining);}model.slowFactor=factor;model.slowFor=remaining;return true;
 }
-export function stepCrystalSiegeThreat(model,dt,s,{player}={}){
+export function stepCrystalSiegeThreat(model,dt,s,{player,bossGuard=false}={}){
  if(!point(model?.position))throw new Error('Invalid crystal siege threat position');Object.assign(model.position,clampCrystalSiegePoint(model.position));
- const o={position:{...model.position},tell:null,coreHit:0,wallHit:null},delta=time(dt);if(!delta||s.phase!=='defense'||s.core.hp<=0||model.hp<=0)return o;
+ const o={position:{...model.position},tell:null,coreHit:0,wallHit:null},delta=time(dt);if(!delta||(s.phase!=='defense'&&!(bossGuard&&s.phase==='clear'&&s.room===4))||s.core.hp<=0||model.hp<=0)return o;
  const p=model.position;
  if(model.siegeSnares){const effects=model.siegeSnares;let factor=1,remaining=0;for(let i=effects.length-1;i>=0;i--){const item=effects[i];item.remaining=Math.max(0,item.remaining-delta);if(!item.remaining)effects.splice(i,1);else{factor=Math.min(factor,item.factor);remaining=Math.max(remaining,item.remaining);}}model.slowFactor=factor;model.slowFor=remaining;}
  else{model.slowFor=Math.max(0,(model.slowFor||0)-delta);if(!model.slowFor)model.slowFactor=1;}
@@ -115,6 +115,7 @@ export function stepCrystalSiegeThreat(model,dt,s,{player}={}){
    model.phase='recover';model.timer=1;model.target=null;if(s.core.hp<=0)s.phase='failed';
   }return o;
  }
+ if(bossGuard&&model.bossApproachPoint){const target=model.bossApproachPoint,d=distance(p,target);if(d>.06){const length=Math.min(d,model.speed*delta*clamp(model.slowFactor||1,.1,1));Object.assign(p,clampCrystalSiegePoint({x:p.x+(target.x-p.x)/d*length,z:p.z+(target.z-p.z)/d*length}));o.position={...p};return o;}model.bossApproachPoint=null;}
  let target=s.core;for(const pad of s.pads){if(pad.kind==='wall'&&pad.hp>0&&distance(p,pad)<=1.25){target=pad;break;}}
  const d=distance(p,target);
  if(d<=.85+1e-9){model.phase='windup';model.timer=.55;model.target={x:target.x,z:target.z,...(target.id?{id:target.id}:{})};model.aim=d>1e-9?{x:(target.x-p.x)/d,z:(target.z-p.z)/d}:{x:1,z:0};o.tell={kind:'siege-strike',position:{x:target.x,z:target.z},duration:.55,remaining:.55,target:target.id||'core'};return o;}

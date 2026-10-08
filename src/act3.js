@@ -15,7 +15,7 @@ export const ACT3_PRESSURE=Object.freeze({
  projectileCapLow:48,projectileCapNormal:64
 });
 
-// The opening teaches aimed shots before adding the bombers' warned fan.
+// Teach a close pass and its escape window before combining flankers with fans.
 // Later rooms restore density without changing the 14-actor ceiling.
 export const ACT3_ROOM_PRESSURE=Object.freeze([
  Object.freeze({crowdInitial:6,crowdInterval:.93,crowdExtra:0,projectile:1.08,projectileCapLow:24,projectileCapNormal:32}),
@@ -26,20 +26,22 @@ export const ACT3_ROOM_PRESSURE=Object.freeze([
 ]);
 export const act3RoomPressure=stage=>ACT3_ROOM_PRESSURE[Math.max(0,Math.min(4,stage|0))];
 
-// The sky route is a shooter stage first. Only one slot in twelve is a charger;
-// the rest keep pressure on the player with aimed fire and overlapping lanes.
+// Each formation has a fragile committed threat to intercept, plus scouts that
+// cross the front of the player. Later groups combine that pass with a bomber.
 export function act3CrowdType(index,stage=0){
  const slot=(index+stage*3)%12;
- if(slot===9)return 'sky-diver';
+ if(slot===2||slot===9||stage>=2&&slot===6)return 'sky-diver';
  if(stage>0&&(slot===4||stage>=2&&slot===10))return 'sky-bomber';
  if(stage>=2&&slot===7)return 'sky-carrier';
  return 'sky-scout';
 }
 export function act3ReinforcementSpawn(index){
- // The middle three briefly form a cluster that split builds can cut apart;
- // outer lanes stay open so chain and single-target builds still have routes.
+ // Alternate a readable bow formation with an open-centre flank group. Side
+ // entries stay away from the player's starting lane and have an entry pause.
  const lanes=[-7.6,-5.1,-1.8,0,1.8,5.1,7.6];
- return Object.freeze({x:lanes[index%lanes.length],z:-7.2+(Math.floor(index/lanes.length)%2)*.9});
+ const slot=index%lanes.length,flank=Math.floor(index/lanes.length)%2;
+ const sides=[[-7.6,-3.6],[-6.8,-1.3],[-7.4,1.1],[0,-7.2],[7.4,1.1],[6.8,-1.3],[7.6,-3.6]];
+ return Object.freeze(flank?{x:sides[slot][0],z:sides[slot][1]}:{x:lanes[slot],z:-7.2+Math.abs(lanes[slot])*.13});
 }
 
 // Two supply windows, one in each late formation room. The player must bring
@@ -50,12 +52,13 @@ export function act3SupplyDrop(type,stage,claimed,inventory){
 }
 
 export const SKYWAY_ROOMS=Object.freeze([
- Object.freeze({name:'상승 기류',hint:'전진하는 V자 편대의 날개 끝부터 끊고 중앙 탄선을 가르세요',covers:[],enemies:[['sky-scout',-5.6,-4.4],['sky-scout',-2.8,-5.3],['sky-scout',0,-6.2],['sky-scout',2.8,-5.3],['sky-scout',5.6,-4.4]]}),
- Object.freeze({name:'구름 협곡',hint:'폭격탄 사이를 옮겨 다니고 붉은 돌격기만 짧게 크게 피하세요',covers:[],enemies:[['sky-scout',-6,-5],['sky-scout',-2.5,-5.8],['sky-bomber',0,-6.5],['sky-scout',2.5,-5.8],['sky-diver',6,-5]]}),
- Object.freeze({name:'뇌운 회랑',hint:'빠른 탄을 먼저 넘고 느린 탄의 빈 줄로 두 번 나누어 이동하세요',covers:[],enemies:[['sky-bomber',-5,-6],['sky-scout',-2.5,-4.6],['sky-scout',0,-6.5],['sky-scout',2.5,-4.6],['sky-bomber',5,-6]]}),
- Object.freeze({name:'공중 함대',hint:'모함의 넓은 탄막을 읽으며 작은 편대부터 잘라 안전한 항로를 만드세요',covers:[],enemies:[['sky-carrier',0,-6.4],['sky-scout',-5.8,-5.4],['sky-bomber',-2.8,-4.6],['sky-scout',2.8,-4.6],['sky-scout',5.8,-5.4],['sky-diver',0,-3.6]]}),
- Object.freeze({name:'폭풍 관문',hint:'문지기의 교차 탄막을 따라 이동하며 양쪽 호위 편대를 먼저 끊으세요',covers:[],enemies:[['act3warden',0,-5.2],['sky-scout',-6,-6],['sky-scout',-3.3,-4.8],['sky-scout',3.3,-4.8],['sky-scout',6,-6]]})
+ Object.freeze({name:'상승 기류',hint:'붉은 돌격기의 조준이 멈추면 옆으로 피하고, 내려온 정찰기부터 끊으세요',covers:[],enemies:[['sky-scout',-5.6,-4.4],['sky-scout',-2.8,-5.3],['sky-diver',0,-6.2],['sky-scout',2.8,-5.3],['sky-scout',5.6,-4.4]]}),
+ Object.freeze({name:'구름 협곡',hint:'양옆 정찰기가 내려오면 열린 중앙으로 옮겨 폭격기의 조준을 빼세요',covers:[],enemies:[['sky-scout',-7,-1.8],['sky-scout',-3.6,-5.8],['sky-bomber',0,-6.5],['sky-scout',7,-1.8],['sky-diver',4.6,-5.4]]}),
+ Object.freeze({name:'뇌운 회랑',hint:'돌격선을 옆으로 넘긴 뒤 폭격기의 발사 후 빈 시간에 전진하세요',covers:[],enemies:[['sky-bomber',-5,-5.4],['sky-scout',-7,-1],['sky-diver',0,-6.5],['sky-scout',7,-1],['sky-bomber',5,-5.4]]}),
+ Object.freeze({name:'공중 함대',hint:'가까운 돌격기를 먼저 끊고, 모함이 포문을 쉬는 동안 접근해 보급을 얻으세요',covers:[],enemies:[['sky-carrier',0,-6.4],['sky-scout',-7,-1.4],['sky-bomber',-3.4,-4.6],['sky-scout',3.4,-4.6],['sky-scout',7,-1.4],['sky-diver',0,-3.6]]}),
+ Object.freeze({name:'폭풍 관문',hint:'측면 호위를 먼저 끊어 문지기의 돌격을 피할 옆 공간을 확보하세요',covers:[],enemies:[['act3warden',0,-5.2],['sky-scout',-7,-1.8],['sky-scout',-3.3,-4.8],['sky-scout',3.3,-4.8],['sky-scout',7,-1.8]]})
 ]);
+export const ACT3_ROOM_HINTS=Object.freeze(SKYWAY_ROOMS.map(room=>room.hint));
 
 export const ACT3_ARENA=Object.freeze({
  shape:'poly',id:'skyway',

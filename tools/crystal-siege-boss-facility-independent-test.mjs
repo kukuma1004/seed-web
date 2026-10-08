@@ -1,3 +1,4 @@
+import {expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen} from '../src/journey-purpose.js';
 import assert from 'node:assert/strict';
 import {CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from '../src/expansion-objective.js';
 import {readFileSync} from 'node:fs';
@@ -17,7 +18,7 @@ const source=(name,next)=>main.slice(main.indexOf('function '+name+'('),main.ind
 const updateSource=source('updateExpansionCourse','tickExpansionActor'),actorSource=source('tickExpansionActor','waveExpansionJourney');
 const hostSource=harness.slice(harness.indexOf('function host(j){'),harness.indexOf('// No enemy is removed'));
 const courseSource=harness.slice(harness.indexOf('function course({'),harness.indexOf("group('Actual host end-to-end")).replace(' return result;',' this.lastHost=h;this.lastJourney=j;return result;');
-const scope={THREE,journey,siege,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource,actorSource,copy,earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
+const scope={expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,journey,siege,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource,actorSource,copy,earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
 vm.createContext(scope);vm.runInContext(hostSource+'\n'+courseSource,scope);
 const passed=[],measurements=[];
 const group=(name,run)=>{run();passed.push(name);console.log('PASS',name);};
@@ -60,7 +61,7 @@ for(const hz of [20,60]){
   j.siege.pads[2].hp=0;invoke();assert(!occupied.broken&&occupied.hp>0,'A destroyed facility no longer permanently suppresses original regrowth');
  });
  group(`${hz}Hz original authored boss state, targeting, finite bolts and vulnerability are preserved`,()=>{
-  const{j,h,e}=actualHost(saved);e.g.position.set(5,0,0);h.player.position.set(-4,0,0);const baseline=journey.restoreExpansionJourney(copy(saved));baseline.siege=null;let bolts=0;
+  const{j,h,e}=actualHost(saved);e.g.position.set(5,0,0);h.player.position.set(-4,0,0);const baseline=journey.restoreExpansionJourney(copy(saved));keepCrystalBossApproachOpen(baseline.course.walls);baseline.siege=null;let bolts=0;
   for(let n=0;n<hz*18;n++){
    const o=journey.stepExpansionJourney(baseline,dt,{position:e.g.position,player:h.player.position,walls:baseline.course.walls,activeProjectiles:h.enemyShots.length,hpRatio:e.hp/e.maxHp});h.tickExpansionActor(e,dt);bolts+=o.bolts.length;
    assert.deepEqual(checkpointExpansionBoss(j.boss),checkpointExpansionBoss(baseline.boss));assert.equal(e.takenScale,journey.expansionBossDamageMultiplier(j.act,e.state,o.coreOpen));

@@ -4,11 +4,11 @@ export const EXPANSION_ACTS=Object.freeze({
  crosswind:Object.freeze({number:4,name:'횡풍의 항로',grammar:'B',released:true,
   camera:'horizontal',bossId:'crosswindKeeper',bossName:'횡풍의 수호자',
   rooms:Object.freeze([
-   {name:'잎배의 출항',role:'front',length:96,hint:'가까운 편대의 단발 사선을 피하며 전진하세요 · 위아래 가장자리로 반사 길을 만들 수 있어요'},
-   {name:'뒤따르는 그림자',role:'rear',length:112,hint:'귀환하는 탄과 뒤따르는 적의 위치를 함께 보세요'},
-   {name:'가지 사이의 교전',role:'split-lanes',length:120,hint:'위아래 가지 사이로 옮겨 사선을 바꾸세요'},
-   {name:'횡풍 함대',role:'pincer',length:128,hint:'양쪽에서 오는 편대 중 한쪽을 먼저 끊으세요'},
-   {name:'바람의 매듭',role:'warden',length:88,hint:'추격 뒤의 빈틈을 읽고 중앙에서 벗어나세요'}
+   {name:'잎배의 출항',role:'front',length:96,hint:'앞 편대가 다가와 조준하면 옆줄로 옮겨 전진하세요 · 가장자리 반사판도 활용해 보세요'},
+   {name:'뒤따르는 그림자',role:'rear',length:112,hint:'뒤 편대의 조준을 끌어낸 뒤 앞으로 빠지세요 · 회복 중인 편대를 먼저 끊어도 좋아요'},
+   {name:'가지 사이의 교전',role:'split-lanes',length:120,hint:'양쪽 가지의 사선이 잠기면 다른 줄로 옮기세요 · 투사수의 짧은 굵은 사선은 곧 사라져요'},
+   {name:'횡풍 함대',role:'pincer',length:128,hint:'앞뒤 편대가 조준하기 전에 한쪽으로 붙어 끊으세요 · 중앙에서 두 사선을 겹치지 마세요'},
+   {name:'바람의 매듭',role:'warden',length:88,hint:'가로질러 오는 편대의 조준을 한쪽에 남기고 반대 줄로 건너세요'}
   ].map(Object.freeze)),
   boss:Object.freeze({patterns:['locked-sweep','rear-salvo','crossing-flight'],windup:.75,recovery:1.1,maxProjectiles:48}),
   budget:Object.freeze({enemies:24,projectiles:48,props:16})}),
@@ -32,11 +32,22 @@ export function publicCircuitActCount(acts=EXPANSION_ACTS){return expansionCircu
 
 // Counter-spawns never surround the player immediately. The lead lane is read
 // first; rear threats begin only after the player has learned forward pressure.
-export function crosswindFormation(index,room=0){
+export function crosswindFormation(index,room=0,slot=null){
  const n=Math.max(0,Math.floor(index)),stage=Math.max(0,Math.min(4,room|0));
- const rear=stage>0&&n%6===5,lane=[-4.8,0,4.8][Math.floor(n/2)%3];
+ const following=stage>0&&n%6===5;
+ const rear=stage===3&&slot===1&&n%2===1?!following:following;
+ const lane=slot!==null&&(stage===2||stage===3)?(Math.floor(n/2)%2?1:-1)*(slot?-3.6:3.6):[-4.8,0,4.8][Math.floor(n/2)%3];
  return {side:rear?'rear':'front',lane,type:n%9===8?'charger':n%5===3&&stage>1?'lobber':'shooter',
-  shots:stage===0?1:stage>2&&n%5===3?2:1,windup:rear?1.1:.7};
+  shots:stage===0?1:stage>2&&n%5===3?2:1,windup:rear?1.1:.7,role:EXPANSION_ACTS.crosswind.rooms[stage].role,weave:slot?-1:1};
+}
+
+// Projectile-only branch mirrors use the existing mirror-panel slab contract.
+// World-fixed four-panel stretches prevent camera movement from carrying an
+// already flying shot or its reflector along. Actors can cross every pane.
+export function crosswindReflectorPanels(distance=0,origin={x:0,z:0}){
+ const start=Number.isFinite(origin?.x)?origin.x:0,z=Number.isFinite(origin?.z)?origin.z:0;
+ const section=Math.max(0,Math.floor((Number.isFinite(distance)?distance:0)/18));
+ return Array.from({length:4},(_,i)=>({id:`crosswind-pane-${section}-${i}`,x:start+section*18+4+i*4,z:z+(i%2?4.35:-4.35),w:3,d:.18}));
 }
 
 // Persistent IDs, not object indexes, allow a resumed run to preserve the exact
