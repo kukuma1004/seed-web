@@ -131,3 +131,39 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
 /* 2026-09-29 처음 화면: 판 내용을 상태 표시줄 아래에서 세로 가운데로(넘치면 위부터 — 자동 여백이라 잘리지 않는다) */
 .menu-panel.home-panel{padding-top:max(clamp(22px,4vh,46px),calc(env(safe-area-inset-top) + 18px))}
 .menu-panel.home-panel>:first-child{margin-top:auto}.menu-panel.home-panel>:last-child{margin-bottom:auto}
+
+/* Dedicated chapter paintings: one scene per card, no combat atlas pasted on a floor. */
+.journey-panel .journey-grid{max-width:1240px;grid-template-columns:repeat(5,minmax(0,1fr));gap:14px}
+.journey-panel .journey-card{aspect-ratio:.78;border-width:1px;text-align:left;isolation:isolate}
+.journey-panel .journey-art{display:block;width:100%;height:100%;object-fit:cover;object-position:center bottom;background:none;filter:none}
+.journey-panel .journey-card:after{background:linear-gradient(0deg,#04191df5 0%,#061c23de 22%,#061c2333 48%,transparent 70%)}
+.journey-panel .journey-caption{left:14px;right:12px;bottom:16px;gap:5px;max-width:none}
+.journey-panel .journey-caption strong{font-size:clamp(18px,1.8vw,25px);letter-spacing:0;line-height:1.25;word-break:keep-all}
+.journey-panel .journey-mechanic{color:#f1d99c;font-size:11px;line-height:1.4;letter-spacing:.3px}
+.journey-panel .journey-opponent{color:#e2eacb;font-size:12px;line-height:1.4}
+.journey-panel .journey-caption small{color:#b7cac2;font-size:11px;line-height:1.45}
+.journey-panel .act-card-5 .journey-caption strong{font-size:clamp(16px,1.45vw,20px)}
+.journey-panel .journey-act{top:12px;left:12px;background:#0b2524d9;border-color:#ecda9677}
+.journey-panel .journey-card:disabled .journey-art{filter:saturate(.3);opacity:.5}
+@media(min-width:601px) and (max-width:999px) and (min-height:501px){
+ .journey-panel .journey-grid{grid-template-columns:repeat(3,minmax(0,1fr));max-width:780px}
+ .journey-panel .journey-card{aspect-ratio:1}
+}
+@media(min-width:601px) and (max-height:500px){
+ .journey-panel .journey-grid{max-width:1100px;gap:8px}
+ .journey-panel .journey-card{aspect-ratio:.8}
+ .journey-panel .journey-caption{left:9px;right:7px;bottom:10px;gap:3px}
+ .journey-panel .journey-caption strong{font-size:16px}
+ .journey-panel .journey-mechanic,.journey-panel .journey-caption small{font-size:10px}
+ .journey-panel .journey-opponent{font-size:11px}
+ .journey-panel .journey-act{top:6px;left:7px;padding:3px 5px}
+}
+@media(max-width:600px){
+ .journey-panel .journey-grid{grid-template-columns:1fr;gap:12px}
+ .journey-panel .journey-card{aspect-ratio:1.85}
+ .journey-panel .journey-art{object-position:center 65%}
+ .journey-panel .journey-card:after{background:linear-gradient(90deg,#04191de0,#061c2366 62%,#061c2311),linear-gradient(0deg,#04191da6,transparent 80%)}
+ .journey-panel .journey-caption{left:14px;bottom:14px;gap:4px;max-width:75%}
+ .journey-panel .journey-caption strong{font-size:24px}
+ .journey-panel .journey-act{top:9px;left:12px}
+}
