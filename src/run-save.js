@@ -83,7 +83,7 @@ export function writeCheckpoint(storage,s,now=Date.now()){if(!validCheckpoint(s)
 export const checkpointTombstone=(now=Date.now())=>({version:1,cleared:true,savedAt:now});
 export const isCheckpointTombstone=v=>Boolean(v&&v.cleared===true&&Number.isFinite(v.savedAt));
 export const checkpointStamp=v=>Number.isFinite(v?.savedAt)&&v.savedAt>0?v.savedAt:0;
-export function clearCheckpoint(storage,now=Date.now()){try{storage.setItem(SAVE_KEY,JSON.stringify(checkpointTombstone(now)));return true;}catch{return false;}}
+export function clearCheckpoint(storage,now=Date.now()){try{const bytes=JSON.stringify(checkpointTombstone(now));storage.setItem(SAVE_KEY,bytes);return storage.getItem(SAVE_KEY)===bytes;}catch{return false;}}
 // A checkpoint represents the room entrance. Leaving halfway restarts the full
 // room, so gains made inside it must not survive while the enemies respawn.
 // Losses do survive: otherwise reloading heals damage and refunds drunk potions.

@@ -93,7 +93,18 @@ try{
  assert.equal(timers.size,timersBeforeMount+1,'resuming restores one music clock');assert.equal(frames.size,0);
  const beforeEvent=calls.length;root.emit('click',button('intent','interact'));for(let n=0;n<8;n++)await Promise.resolve();
  assert.deepEqual(calls.slice(beforeEvent),[{type:'interact'}],'one event choice, no simulated movement commands');
- assert.match(main.innerHTML,/기본공격/);assert.match(main.innerHTML,/기술 1/);assert.match(main.innerHTML,/각성기/);assert.match(main.innerHTML,/대기 3/);
+ assert.match(main.innerHTML,/기본공격/);assert.match(main.innerHTML,/기술 1/);assert.match(main.innerHTML,/다른 행동/);
+ assert.equal((main.innerHTML.match(/data-action=/g)||[]).length,2,'initial battle offers attack and one skill only');
+ assert.doesNotMatch(main.innerHTML,/data-reserve=/,'bench commands stay in the optional tray');
+ const beforeMore=calls.length;
+ root.emit('click',button('battleMore',''));
+ assert.equal(calls.length,beforeMore,'opening the action tray spends no turn');
+ assert.match(main.innerHTML,/data-action="awaken"/);
+ assert.match(main.innerHTML,/data-battle-more-close/);
+ root.emit('click',button('battleMoreClose',''));
+ assert.equal(calls.length,beforeMore,'closing the action tray spends no turn');
+ assert.doesNotMatch(main.innerHTML,/data-action="guard"/);
+ root.emit('click',button('battleMore',''));
  assert.match(main.innerHTML,/후열<\/span><span>전열 →/);assert.match(main.innerHTML,/← 전열/);
  assert.match(main.innerHTML,/관통 발현/);assert.match(main.innerHTML,/한 열 타격/);
  // A bench exists, but the user must choose its actual instance before the
@@ -105,16 +116,19 @@ try{
  const beforeReserve=calls.length;
  root.emit('click',button('reserve','unit-5'));
  assert.equal(calls.length,beforeReserve,'bench selection never spends a turn');
+ assert.match(main.innerHTML,/중력 교대/);
  assert.doesNotMatch(main.innerHTML,/data-action="switch"[^>]*disabled/);
  root.emit('click',button('action','switch'));await Promise.resolve();await Promise.resolve();
  assert.deepEqual(calls.at(-1),{type:'action',kind:'switch',targetId:undefined,reserveId:'unit-5'},'switch dispatches the selected live bench instance');
  model.battle.units=model.battle.units.filter(u=>u.id!=='unit-5');
  root.emit('click',button('target','enemy-0'));
+ root.emit('click',button('battleMore',''));
  assert.match(main.innerHTML,/data-action="switch"[^>]*disabled/,'a stale/dead bench selection cannot enable switching');
  model.battle.units[0].level=8;
  model.battle.units.splice(1,0,{id:'unit-1',instanceId:'unit-1',speciesId:'split',side:'ally',slot:1,hp:80,maxHp:80,level:8,status:{}});
  model.battle.resonances=[{id:'split-pierce:unit-0:unit-1',speciesId:'split-pierce',memberIds:['unit-0','unit-1'],actions:[],used:false}];
  root.emit('click',button('target','enemy-0'));
+ root.emit('click',button('battleMoreClose',''));root.emit('click',button('battleMore',''));
  assert.match(main.innerHTML,/data-resonance=/,'eligible pair adds a separate resonance button');
  root.emit('click',button('resonance','split-pierce:unit-0:unit-1'));await Promise.resolve();await Promise.resolve();
  assert.ok(calls.some(x=>x.type==='resonance'&&x.resonanceId==='split-pierce:unit-0:unit-1'&&x.targetId==='enemy-0'));
@@ -148,6 +162,25 @@ try{
   assert.equal(timers.size,timersBeforeMount+1);assert.equal(frames.size,0);cycle.close();
   assert.equal(timers.size,timersBeforeMount);assert.equal(frames.size,0);assert.equal(win.handlers.size,0);assert.equal(doc.handlers.size,0);
  }
+ // Shipping readiness previews must leave real combat receipts untouched.
+ const {createExpeditionCombat}=await import('../src/expedition/combat.js');
+ const {getExpeditionSpecies}=await import('../src/expedition/species.js');
+ model.screen='battle';model.route=newExpeditionRoute({runId:'preview-run',gardenId:'meadow',difficulty:1,partyIds:roster.party});
+ model.battle=createExpeditionCombat({battleId:'preview-battle',allies:[{id:'unit-0',instanceId:'unit-0',speciesId:'pierce',slot:0,hp:92,maxHp:92,level:5,speed:99,profile:getExpeditionSpecies('pierce')}],enemies:[{id:'enemy-0',instanceId:'enemy-0',speciesId:'meadow-normal-0',slot:0,hp:80,maxHp:80,level:1,speed:1}]});
+ const realBefore=JSON.stringify(model.battle),callsBeforePreview=calls.length;
+ const previewView=mountExpedition({host,owner:'ui-owner',currentOwner:()=>ownerNow,createController:()=>controller}),previewRoot=host.child,previewMain=previewRoot.querySelector('.exv-main');
+ assert.equal(JSON.stringify(model.battle),realBefore,'render previews cannot mutate HP, acted, pending, seen or receipts');
+ assert.equal((previewMain.innerHTML.match(/data-action=/g)||[]).length,2);
+ previewRoot.emit('click',button('target','unit-0'));
+ assert.match(previewMain.innerHTML,/data-action="attack"[^>]*disabled/,'canonical target-side rejection is visible before spending');
+ assert.match(previewMain.innerHTML,/적을 선택해 주세요/);
+ previewRoot.emit('click',button('target','enemy-0'));previewRoot.emit('click',button('battleMore',''));
+ assert.match(previewMain.innerHTML,/data-action="awaken"[^>]*disabled/,'canonical Lv8 lock remains in the advanced tray');
+ win.emit('keydown',{code:'Escape'});
+ assert.doesNotMatch(previewMain.innerHTML,/data-action="guard"/,'Escape closes the tray before pausing');
+ assert.equal(calls.length,callsBeforePreview,'all target/tray inputs and readiness previews are read-only');
+ assert.equal(JSON.stringify(model.battle),realBefore);previewView.close();
+ model.screen='home';model.battle=null;model.route=null;
  for(const outcome of [{ok:true},{ok:false,reason:'durable pending retained'}]){
   let resolveClose,exited=0,observed;model.review=false;model.saveState='pending';
   const asyncController={state:()=>model,dispatch:controller.dispatch,close:()=>new Promise(resolve=>{resolveClose=resolve;})};
