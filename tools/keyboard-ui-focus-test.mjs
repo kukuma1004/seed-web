@@ -12,9 +12,9 @@ const handlers={},context={window:{addEventListener:(event,fn)=>handlers[event]=
  mode:'playing',paused:false,keys:new Set(),keyboardDash:false,pauses:0,
  togglePause:()=>context.pauses++};
 vm.runInNewContext(main.slice(start,end),context);
-function send(code,tag=null){
+function send(code,tag=null,id=null){
  let cancelled=false;
- handlers.keydown({code,repeat:false,target:{closest:selector=>tag&&selector.split(',').includes(tag)?{}:null},preventDefault:()=>cancelled=true});
+ handlers.keydown({code,repeat:false,target:{closest:selector=>(tag&&selector.split(',').includes(tag))||(id&&selector==='#'+id)?{}:null},preventDefault:()=>cancelled=true});
  return cancelled;
 }
 for(const mode of ['ready','playing','evolving','developer-lab']){
@@ -26,6 +26,10 @@ for(const mode of ['ready','playing','evolving','developer-lab']){
  }
 }
 context.mode='playing';assert.equal(send('Space'),true);assert.equal(context.keyboardDash,true);assert(context.keys.has('Space'));
-context.keyboardDash=false;context.keys.clear();assert.equal(send('KeyP','button'),false);assert.equal(context.pauses,1);
+// Resuming focuses #pause. Its native Space activation must not pause the
+// fight again when the player is trying to dodge. Other controls keep native keys.
+context.keyboardDash=false;context.keys.clear();assert.equal(send('Space','button','pause'),true);assert.equal(context.keyboardDash,true);
+context.paused=true;context.keyboardDash=false;context.keys.clear();assert.equal(send('Space','button','pause'),false);assert.equal(context.keyboardDash,false);
+context.paused=false;context.keyboardDash=false;context.keys.clear();assert.equal(send('KeyP','button'),false);assert.equal(context.pauses,1);
 assert.equal(send('Space','input'),false);assert.equal(context.keyboardDash,false);
 console.log('Shipped keyboard handler: native focused-control activation, gameplay dodge, pause shortcut and text-input isolation passed.');
