@@ -30,3 +30,7 @@
 /* The old two-column landscape profile squeezed copy into a 108px strip and
    pushed the only way out below the fold on short Android screens. */
 @media(max-height:620px) and (orientation:landscape){.account-panel{display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start}.account-panel .account-back{align-self:flex-start}.account-panel .account-mark,.account-panel .eyebrow{display:none}.account-panel .account-copy{max-width:none;width:100%;font-size:11px!important}.account-panel .profile-collection{grid-template-columns:repeat(2,minmax(0,1fr))}}
+
+/* Profile controls retain a usable target even on short phones. */
+.account-panel{touch-action:pan-y;overscroll-behavior:contain}
+.account-panel :is(.account-button,.title-option,.profile-collection button,.pet-unequip){min-height:44px}

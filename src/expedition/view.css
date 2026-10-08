@@ -212,3 +212,106 @@
 .exv-travel{margin-top:8px;pointer-events:auto}.exv-auto[aria-pressed=true]{background:#52723f!important;box-shadow:inset 0 0 0 1px #d9e9a4}.exv-progress i{transition:width .1s linear}.exv-landmark{transition:left .1s linear}
 @media(max-width:600px){.exv-auto{font-size:11px!important;min-height:40px!important}.exv-travel{font-size:12px!important}}
 @media(prefers-reduced-motion:reduce){.exv-field-layer,.exv-progress i,.exv-landmark{transition:none}}
+
+/* Preparation first; collections remain below the actual departure controls. */
+#seed-expedition-v1 .exv-home-hero{margin:12px auto;padding:14px 20px;gap:16px}
+#seed-expedition-v1 .exv-home-hero h1{font-size:clamp(20px,2.1vw,28px);margin-bottom:5px}
+#seed-expedition-v1 .exv-home-count{min-width:92px;padding:6px 10px;border:0;border-left:1px solid #d6c38b66;border-radius:0}
+#seed-expedition-v1 .exv-home-count strong{font-size:28px}
+#seed-expedition-v1 .exv-codex{max-width:1300px;margin:12px auto}
+#seed-expedition-v1 .exv-party-slot select{min-height:44px!important}
+#seed-expedition-v1 .exv-garden{min-height:74px!important;padding:12px;background-image:linear-gradient(90deg,#091f25e8,#091f2566),var(--garden-image);background-size:cover;background-position:center;border-radius:8px;isolation:isolate}
+#seed-expedition-v1 .exv-garden.selected{background-image:linear-gradient(90deg,#16372ddd,#16372d33),var(--garden-image)!important;box-shadow:inset 0 0 0 1px #f4d78d66}
+#seed-expedition-v1 .exv-garden.selected::after{content:'✓';position:absolute;right:8px;top:6px;color:#ffdfa4;font-size:16px;line-height:1}
+#seed-expedition-v1 .exv-garden b{font-size:13px;margin-bottom:5px;padding-right:14px}
+#seed-expedition-v1 .exv-garden small{font-size:11px;line-height:1.4;color:#e0e8d3;max-width:90%;overflow-wrap:anywhere}
+#seed-expedition-v1 .exv-depart{border-top:1px solid #d2c18b40;padding-top:12px;margin-top:12px;flex-wrap:wrap}
+#seed-expedition-v1 .exv-depart select{min-height:44px!important}
+#seed-expedition-v1 .exv-depart .exv-primary{min-height:48px}
+#seed-expedition-v1 .exv-depart-party{margin:12px 0 0;padding:9px 0;border-top:1px solid #d2c18b40;line-height:1.5;font-size:11px;overflow-wrap:anywhere}
+#seed-expedition-v1 .exv-depart-party b,#seed-expedition-v1 .exv-depart-party span{display:block}
+#seed-expedition-v1 .exv-depart-party b{color:#e7dfb3;margin-bottom:2px}
+#seed-expedition-v1 .exv-depart-party span{color:#c1d1bc}
+#seed-expedition-v1 .exv-depart-party+.exv-depart{margin-top:0;padding-top:4px;border-top:0}
+#seed-expedition-v1 .exv-roster-management{margin-top:12px;border-top:1px solid #d2c18b40}
+#seed-expedition-v1 .exv-roster-management>summary{min-height:44px;cursor:pointer;padding:12px 0;font-size:13px;font-weight:600}
+#seed-expedition-v1 .exv-roster-management>summary small{font-size:10px;font-weight:400;color:#b9cbb5;margin-left:8px}
+#seed-expedition-v1 .exv-roster-list{max-height:none;overflow:visible;margin-top:0}
+#seed-expedition-v1 .exv-header-actions .exv-save{font-variant-numeric:tabular-nums}
+#seed-expedition-v1 .exv-explore-choices button{min-height:44px!important;font-size:12px;padding:8px!important}
+#seed-expedition-v1 .exv-explore-choices>b{font-size:15px;margin-bottom:10px}
+#seed-expedition-v1 .exv-explore-choices p{font-size:12px;color:#d5dec3}
+#seed-expedition-v1 .exv-travel{position:fixed;left:50%;bottom:max(24px,env(safe-area-inset-bottom));transform:translateX(-50%);min-height:48px!important;min-width:180px;max-width:calc(100vw - 32px);z-index:3;box-shadow:0 5px 14px #051c1855}
+
+/* Keep the battlefield open, with clear action and target markers. No idle animation. */
+#seed-expedition-v1 .exv-battle-top{display:grid;grid-template-columns:minmax(180px,1fr) auto minmax(0,1.4fr);align-items:start;gap:10px}
+#seed-expedition-v1 .exv-auto{min-height:44px!important;white-space:nowrap}
+#seed-expedition-v1 .exv-turn-order{max-width:none;display:flex;gap:4px;justify-content:flex-end;align-items:center;overflow-x:auto;min-width:0;padding:2px 0 4px}
+#seed-expedition-v1 .exv-turn-order>small{white-space:nowrap;font-size:10px;color:#d7ddc5;flex:none}
+#seed-expedition-v1 .exv-turn-order>span{flex:none;margin:0;padding:4px 6px;font-variant-numeric:tabular-nums}
+#seed-expedition-v1 .exv-turn-order>span:first-of-type{border-color:#f3d99b;color:#fff3ce}
+#seed-expedition-v1 .exv-unit-name{display:flex;align-items:center;justify-content:center;gap:3px;overflow:visible}
+#seed-expedition-v1 .exv-unit-label{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#seed-expedition-v1 .exv-unit-tag{flex:none;font-size:9px;font-weight:700;line-height:14px;white-space:nowrap;text-shadow:0 1px 3px #061b17;padding:0 3px;border:1px solid currentColor;border-radius:3px;background:#09231ed9;pointer-events:none}
+#seed-expedition-v1 .exv-unit-tag.actor{color:#c8f59c}
+#seed-expedition-v1 .exv-unit-tag.target{color:#ffe1a3}
+#seed-expedition-v1 .exv-unit.selected::after{content:none}
+#seed-expedition-v1 .exv-unit.turn::before{border-width:3px}
+#seed-expedition-v1 .exv-command-context{align-items:flex-start;min-height:26px;margin:0 0 7px}
+#seed-expedition-v1 .exv-context-label{display:block;color:#9cb8a5;font-size:9px;line-height:1.3;letter-spacing:.4px;margin-bottom:2px;font-weight:400}
+#seed-expedition-v1 .exv-command-context>span{text-align:right}
+#seed-expedition-v1 .exv-command{min-height:52px!important;padding:6px 8px;gap:7px;border-radius:6px 12px 6px 12px}
+#seed-expedition-v1 .exv-command-icon{width:28px;height:28px;font-size:22px}
+#seed-expedition-v1 .exv-command b{font-size:12px}
+#seed-expedition-v1 .exv-command small{font-size:10px;line-height:1.3;overflow-wrap:anywhere}
+#seed-expedition-v1 .exv-reserves{margin-top:6px;gap:6px}
+#seed-expedition-v1 .exv-reserves>small{font-size:10px;color:#bbcfb8}
+#seed-expedition-v1 .exv-reserves button[aria-pressed=true]{background:#385741!important;color:#fff0bc;box-shadow:inset 0 0 0 1px #e1ce86}
+#seed-expedition-v1 .exv-result{margin:clamp(20px,7dvh,70px) auto;padding:24px;width:min(600px,calc(100% - 24px));overflow-wrap:anywhere}
+#seed-expedition-v1 .exv-result-stats{gap:12px;margin:20px 0;display:grid;grid-template-columns:repeat(3,minmax(0,1fr))}
+#seed-expedition-v1 .exv-result-stats span{min-width:0;font-size:12px}
+#seed-expedition-v1 .exv-result-stats b{font-variant-numeric:tabular-nums;font-size:30px;margin-top:6px}
+#seed-expedition-v1 .exv-result>.exv-primary{min-width:180px;min-height:48px}
+@media(max-width:850px){
+ #seed-expedition-v1 .exv-home-hero{margin:8px;padding:12px}
+ #seed-expedition-v1 .exv-codex{margin:8px}
+ #seed-expedition-v1 .exv-preparation-garden{order:1}
+ #seed-expedition-v1 .exv-preparation-party{order:2}
+ #seed-expedition-v1 .exv-battle-top{grid-template-columns:minmax(0,1fr) auto;gap:5px}
+ #seed-expedition-v1 .exv-turn-order{grid-column:1/-1;justify-content:flex-start;max-width:100%;min-height:24px;font-size:10px}
+ #seed-expedition-v1 .exv-turn-order>span{max-width:95px;padding:2px 5px}
+ #seed-expedition-v1 .exv-command{min-height:52px!important;padding:5px 7px;gap:5px}
+ #seed-expedition-v1 .exv-command b{font-size:11px}
+ #seed-expedition-v1 .exv-command-icon{width:23px;height:23px;font-size:19px}
+}
+@media(max-width:500px){
+ #seed-expedition-v1 .exv-location{display:none}
+ #seed-expedition-v1 .exv-header-actions{margin-left:auto}
+ #seed-expedition-v1 .exv-header-actions .exv-save{display:block;font-size:9px;max-width:100px;white-space:normal;line-height:1.3}
+ #seed-expedition-v1 .exv-home-hero h1{font-size:19px}
+ #seed-expedition-v1 .exv-home-hero p:last-child{font-size:11px;line-height:1.6}
+ #seed-expedition-v1 .exv-home-count{min-width:66px;padding:4px 6px}
+ #seed-expedition-v1 .exv-garden{min-height:78px!important;padding:10px}
+ #seed-expedition-v1 .exv-garden small{font-size:10px;max-width:100%}
+ #seed-expedition-v1 .exv-explore-choices{left:50%;right:auto;transform:translateX(-50%);max-width:none;width:calc(100% - 24px);top:22%;max-height:57%}
+ #seed-expedition-v1 .exv-explore-choices button{font-size:11px;padding:6px!important}
+ #seed-expedition-v1 .exv-reserves>small{display:block;flex-basis:100%;font-size:9px}
+ #seed-expedition-v1 .exv-reserves{flex-wrap:wrap;overflow:visible}
+ #seed-expedition-v1 .exv-reserves button{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+ #seed-expedition-v1 .exv-unit-tag{font-size:8px;line-height:12px;padding:0 2px}
+}
+@media(max-height:500px) and (min-width:501px){
+ #seed-expedition-v1 .exv-unit{top:clamp(26px,var(--unit-y),calc(100% - 26px));gap:1px}
+ #seed-expedition-v1 .exv-unit-art{width:36px;height:36px}
+ #seed-expedition-v1 .exv-unit-name{font-size:8px;line-height:10px;gap:2px}
+ #seed-expedition-v1 .exv-unit-hp{height:3px}
+ #seed-expedition-v1 .exv-battle-top{grid-template-columns:minmax(140px,1fr) auto minmax(0,1.5fr);gap:6px}
+ #seed-expedition-v1 .exv-turn-order{grid-column:auto;justify-content:flex-end;min-height:0;padding:0;font-size:9px}
+ #seed-expedition-v1 .exv-turn-order>small{display:none}
+ #seed-expedition-v1 .exv-command{min-height:44px!important;padding:3px 5px;gap:4px}
+ #seed-expedition-v1 .exv-command b{font-size:10px}
+ #seed-expedition-v1 .exv-command small{font-size:9px;margin-top:1px}
+ #seed-expedition-v1 .exv-command-context{min-height:20px;margin-bottom:3px}
+ #seed-expedition-v1 .exv-context-label{display:inline;margin-right:5px;font-size:8px}
+ #seed-expedition-v1 .exv-unit-tag{font-size:8px;line-height:11px;padding:0 2px}
+}

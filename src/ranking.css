@@ -111,3 +111,9 @@ body.phone-landscape #boss-hud.austin-hud{top:max(8px,env(safe-area-inset-top));
 .legal-note{margin:10px 0 0;font-size:11px;color:#8fa79b;letter-spacing:.5px}
 .legal-note a{color:#9fc5b4}
 @media(max-height:480px){.legal-note{font-size:10px;margin-top:6px}}
+
+/* Keep the expanded set of mode tabs readable on short landscape screens. */
+.rank-tabs{flex-wrap:wrap}
+.rank-tabs button,.rank-tabs.secondary button{flex:0 0 auto;min-height:44px;max-width:100%;padding:7px 12px;font-size:13px;letter-spacing:0;white-space:nowrap}
+.ranking-panel{touch-action:pan-y;overscroll-behavior:contain}
+.ranking-overlay #close-ranking{min-height:44px}

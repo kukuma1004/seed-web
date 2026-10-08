@@ -172,3 +172,14 @@
 /* Keep the expanded opponent list compact and accessible on phones. */
 #seed-duel #sd-opponent{min-height:44px;max-width:100%;padding:8px 14px;border:1px solid #7b956c;border-radius:12px;background:#172a27;color:#eee9d4;font:inherit}
 #seed-duel #sd-opponent:focus-visible{outline:2px solid #d4de9c;outline-offset:3px}
+
+/* Menu scroll gestures must not be swallowed by the arena's touch surface. */
+#seed-duel .sd-modal,#seed-duel .sd-paper,#seed-duel .sd-roster-scroll,#seed-duel .sd-story-chapters,#seed-duel .sd-dialogue-scroll,#seed-duel .sd-drill{touch-action:pan-y;overscroll-behavior:contain}
+#seed-duel .sd-story-heroes{touch-action:pan-x}
+#seed-duel .sd-card>span:last-child,#seed-duel .sd-story-stage>span:last-child{min-width:0;overflow-wrap:anywhere}
+#seed-duel button:disabled{cursor:not-allowed}
+#seed-duel button:active:not(:disabled){border-color:#fce6af;background:#334639}
+#seed-duel .sd-chip{min-height:44px}
+@media(max-height:500px){
+ #seed-duel .sd-roster>.sd-story-open,#seed-duel .sd-roster>.sd-filters button,#seed-duel .sd-roster-footer button{min-height:44px!important}
+}

@@ -51,3 +51,10 @@ body.survival-mode #growth-progress div{border-color:#d4d9b396;background:#07130
 body.survival-mode #growth-progress i{background:linear-gradient(90deg,#6dba99,#d1d995)}
 .survival-mode #overhead .oh-hp{border-color:#e0edba;box-shadow:0 1px 4px #000,0 0 0 1px #10221dcc}
 body.phone-landscape.survival-mode #encounter{padding:3px 6px;background:#071713b8}
+
+/* Keep setup short; detailed instructions open on demand. */
+.survival-panel,.survival-rank-scroll{touch-action:pan-y;overscroll-behavior:contain}
+.survival-help{text-align:left;border-block:1px solid #abc18444;margin:12px 0}.survival-help summary{min-height:44px;display:flex;align-items:center;cursor:pointer;color:#e4dfb7;font-size:14px}.survival-help summary:after{content:'＋';margin-left:auto}.survival-help[open] summary:after{content:'−'}.survival-help p{font-size:13px;color:#c6d7c7}
+.survival-panel .survival-sync-button,#survival-cloud-conflict button,.survival-lab button{min-height:44px}
+.survival-actions{flex-wrap:wrap}.survival-actions button{min-width:100px}
+.survival-help summary:focus-visible,.survival-panel button:focus-visible{outline:2px solid #fff1b5;outline-offset:2px}

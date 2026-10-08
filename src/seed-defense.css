@@ -136,3 +136,10 @@ body.seed-defense-open>#game,body.seed-defense-open>#overlay,body.seed-defense-o
 #seed-defense .td-siege-crystal:hover,#seed-defense .td-siege-crystal:focus-visible{border-color:#f5e1a6;outline:2px solid #e4cc8588;outline-offset:2px}
 #seed-defense .td-siege-crystal:active{transform:translate(-50%,-50%) scale(.94)}
 #seed-defense .td-siege-crystal:disabled{opacity:.5;cursor:default}
+
+/* Result and pause sheets stay inside the safe area and scroll independently. */
+#seed-defense .td-dialog{padding:max(12px,env(safe-area-inset-top)) max(12px,env(safe-area-inset-right)) max(12px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left));touch-action:pan-y;overscroll-behavior:contain}
+#seed-defense .td-dialog>div:not(.td-book-sheet){width:min(390px,100%);max-height:100%;overflow-y:auto;touch-action:pan-y;overscroll-behavior:contain}
+#seed-defense .td-book-sheet nav{touch-action:pan-y}
+#seed-defense .td-panel h2,#seed-defense .td-book-grid b{overflow-wrap:anywhere}
+#seed-defense .td-panel footer button{white-space:normal;overflow-wrap:anywhere;min-height:44px}

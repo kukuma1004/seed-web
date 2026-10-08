@@ -96,6 +96,21 @@ try{
  assert.match(main.innerHTML,/기본공격/);assert.match(main.innerHTML,/기술 1/);assert.match(main.innerHTML,/각성기/);assert.match(main.innerHTML,/대기 3/);
  assert.match(main.innerHTML,/후열<\/span><span>전열 →/);assert.match(main.innerHTML,/← 전열/);
  assert.match(main.innerHTML,/관통 발현/);assert.match(main.innerHTML,/한 열 타격/);
+ // A bench exists, but the user must choose its actual instance before the
+ // paid switch command is offered. Merely rendering/selecting spends nothing.
+ model.battle.units.push({id:'unit-5',instanceId:'unit-5',speciesId:'gravity',side:'ally',slot:5,hp:80,maxHp:102,level:1,status:{}});
+ root.emit('click',button('target','enemy-0'));
+ assert.match(main.innerHTML,/data-action="switch"[^>]*disabled/);
+ assert.match(main.innerHTML,/아래 대기 씨앗 선택/);
+ const beforeReserve=calls.length;
+ root.emit('click',button('reserve','unit-5'));
+ assert.equal(calls.length,beforeReserve,'bench selection never spends a turn');
+ assert.doesNotMatch(main.innerHTML,/data-action="switch"[^>]*disabled/);
+ root.emit('click',button('action','switch'));await Promise.resolve();await Promise.resolve();
+ assert.deepEqual(calls.at(-1),{type:'action',kind:'switch',targetId:undefined,reserveId:'unit-5'},'switch dispatches the selected live bench instance');
+ model.battle.units=model.battle.units.filter(u=>u.id!=='unit-5');
+ root.emit('click',button('target','enemy-0'));
+ assert.match(main.innerHTML,/data-action="switch"[^>]*disabled/,'a stale/dead bench selection cannot enable switching');
  model.battle.units[0].level=8;
  model.battle.units.splice(1,0,{id:'unit-1',instanceId:'unit-1',speciesId:'split',side:'ally',slot:1,hp:80,maxHp:80,level:8,status:{}});
  model.battle.resonances=[{id:'split-pierce:unit-0:unit-1',speciesId:'split-pierce',memberIds:['unit-0','unit-1'],actions:[],used:false}];

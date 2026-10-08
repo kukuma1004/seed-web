@@ -1,4 +1,5 @@
 import {isDuelCandidateLab} from './duel-inspection-gate.js';
+import {showModeEntryLoading} from './mode-entry-ui.js';
 import {createModeBossOutbox} from './mode-boss-outbox.js';
 import {journeyRunId} from './journey-run-id.js';
 import {addJourneyBossReceipt} from './journey-boss-receipts.js';
@@ -1175,7 +1176,7 @@ function saveLeaveState(){
 // 저장하는 판인데 기록이 없으면(저장 공간 문제) 한 번 알려 주고, 한 번 더 누르면 저장하지 않고 나간다.
 let exitWithoutSaveArmed=false,saveExitBusy=false,cloudSaveFailed=false;
 bossPresentationReady=true;
-function saveExitLabel(){if(survivalSession?.siegeReview)return '로컬 거점 저장하고 나가기 · 계정 기록 제외';if(expansionJourney?.inspectionPreview)return '보스 시연 끝내기 · 기록 제외';if(expansionPendingBossCheckpoint)return '보스 격파 저장 다시 확인';return expansionJourney?(expansionChannel==='public'?'저장하고 나가기 · 계정 동기화 확인':'로컬 저장하고 나가기 · 방 입구부터 이어하기'):survivalSession?(survivalSession.lab?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
+function saveExitLabel(){if(survivalSession?.siegeReview)return '로컬 거점 저장하고 나가기 · 계정 기록 제외';if(expansionJourney?.inspectionPreview)return '보스 시연 끝내기 · 기록 제외';if(expansionPendingBossCheckpoint)return '보스 격파 저장 다시 확인';return expansionJourney?(expansionChannel==='public'?'저장하고 나가기 · 계정 동기화 확인':'로컬 저장하고 나가기 · 방 입구부터 이어하기'):survivalSession?(survivalSession.lab||localInspection?'연습 끝내기 · 기록 제외':'생존전 저장하고 나가기'):mirrorSession?'거울의 탑에서 나가기 · 10층 돌파마다 이어할 수 있어요':developerRun?'실험 끝내고 나가기 · 저장되지 않아요':exitWithoutSaveArmed?'저장하지 않고 나가기':'저장된 방 입구부터 나중에 이어하기';}
 function leavePausedRun(){exitWithoutSaveArmed=false;touch.reset();keys.clear();paused=false;$('#save-exit').hidden=true;pauseBuild.hide();showIntro();}
 $('#save-exit').onclick=async()=>{
  if(saveExitBusy)return;
@@ -1183,6 +1184,7 @@ $('#save-exit').onclick=async()=>{
  if(expansionJourney){if(!saveExpansionLeave()){pauseBuild.setSaveStatus('저장을 확인하지 못했어요. 계정이 바뀌었거나 다른 탭의 기록이 더 최신일 수 있어요.');return;}if(expansionChannel==='public'){saveExitBusy=true;$('#save-exit').disabled=true;try{const result=await syncPublicExpansion();if(result.kind!=='synced'){pauseBuild.setSaveStatus('기기에 저장했지만 계정 동기화가 완료되지 않았어요. 다시 확인하거나 이 기기에서 이어하세요.');return;}}finally{saveExitBusy=false;$('#save-exit').disabled=false;}}leavePausedRun();return;}
  if(survivalSession){
   if(survivalSession.siegeReview){if(!saveSurvival()){pauseBuild.setSaveStatus(survivalSaveMessage||'로컬 저장을 확인하지 못했어요.');return;}leavePausedRun();return;}
+  if(localInspection){leavePausedRun();showSurvivalSetup();return;}
   if(survivalSession.lab){finishSurvival(false,true);return;}
   if(!saveSurvival()){pauseBuild.setSaveStatus(survivalSaveMessage);return;}
   saveExitBusy=true;$('#save-exit').disabled=true;pauseBuild.setSaveStatus('기기에 저장했어요. 계정 저장을 확인하는 중…');
@@ -1256,6 +1258,7 @@ function captureSurvivalSnapshot(){
 }
 function saveSurvival(){
  if(survivalSession?.siegeReview)return saveSurvivalSiegeReview();
+ if(localInspection){survivalSaveMessage='개발용 플레이는 계정 기록에 저장하지 않아요.';return false;}
  if(!survivalSession||survivalSession.lab||survivalSession.finished||hp<=0||!survivalSaveToken)return false;
  if(survivalSaveToken.owner!==survivalOwner()){survivalSaveMessage='로그인 계정이 바뀌었어요. 원래 계정으로 돌아온 뒤 저장해 주세요.';return false;}
  settleSurvivalTitle();
@@ -1392,9 +1395,9 @@ async function showModeRanking(kind,back){
 }
 function showSurvivalSetup(refresh=true){
  $('#overlay').classList.add('survival-overlay');
- mode='ready';paused=false;touch.reset();keys.clear();retryStoredSurvivalTitles();const record=survivalPersonalRecord(),saved=survivalStore().read();
+ mode='ready';paused=false;touch.reset();keys.clear();retryStoredSurvivalTitles();const record=survivalPersonalRecord(),saved=survivalStore().read(),circuit=publicCircuitActCount();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','developer-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel survival-panel"><p class="eyebrow">SEED · 별도 도전</p><h2>밀려오는 숲</h2><p class="survival-lead">작은 씨앗 하나로, 끝없는 무리를 뚫으세요.</p><div class="survival-facts"><span><b>3분</b>각 막 생존 후 보스</span><span><b>자동 공격</b>이동과 회피에 집중</span><span><b>조합 성장</b>처치하면 법칙 선택</span></div><p>1막 오스틴 → 2막 항상초심 → 3막 요한. 조합을 유지하고 이어 싸워요. 2막은 베이스를 밟으면 다음 베이스까지 미끄러져요(무적 없음). 3막을 깨면 더 강한 다음 순환으로 넘어갑니다. 일반 몹은 몸으로 밀려오고 보스만 고유 공격을 사용해요. 한쪽 접근 → 양쪽 압박 → 사방 포위 뒤, 매분 마지막 6초는 작은 무리만 접근해요. 빠른 적이 몸을 낮추면 옆으로 피하세요.</p><p class="survival-note">회복 물약 2개로 출발 · 각 막 60·120초에 1개 보급(최대 5개) · 막 이동 시 체력 25 회복 + 물약 1개<br>별도 시험 모드예요. 여정 저장·조합 도감·창고는 별도예요. 보스 첫 격파·누적 10회·한 판 같은 보스 3회 완주 칭호는 여정과 함께 집계해요.<br>일시정지에서 저장하고 나가기 · 이 기기·브라우저에서 이어하기 가능<br>Google 계정 저장 완료 후 같은 계정으로 다른 기기에서 이어할 수 있어요.<br>기록을 합치지는 않아요 · 날아가던 내 탄과 순간 효과는 재개 시 정리됩니다.</p><p class="survival-record">최고 ${record.bestKills.toLocaleString()} 처치 · 최장 ${survivalClock(record.bestTime)} · ${survivalLocalClearHistory(record)} · 최고 ${record.bestBosses}보스</p><p class="survival-note" role="status">${saved?`저장된 도전 · ${saved.session.lap+1}순환 ${saved.session.act+1}막 · ${survivalClock(saved.session.time)} · ${saved.progress.kills}처치`:survivalSaveMessage}</p><p id="survival-cloud-status" class="survival-note" role="status"></p><button id="survival-cloud-retry" class="survival-sync-button">계정 저장 다시 확인</button><div id="survival-cloud-conflict"></div><div class="survival-actions">${saved?'<button id="resume-survival" class="primary">이어하기</button>':''}<button id="start-survival" class="primary">${saved?'새로 시작':'생존전 시작'}</button><button id="survival-back">돌아가기</button></div>${localInspection?'<details class="survival-lab"><summary>로컬 검증 · 기록 제외</summary><button id="survival-pierce">관통·연쇄 무리 시연</button><button id="survival-frost">빙결·연쇄 무리 시연</button><button id="survival-stress">후반 300마리 · 조합 부하</button><button id="survival-boss">최종 보스 전환</button><button id="survival-duel">1막 보스전 연습 · 피해 적용</button><button id="survival-stress2">2막 300마리 부하</button><button id="survival-stress3">3막 300마리 부하</button><button id="survival-base">2막 베이스 이동 검증 · 피해 적용</button><button id="survival-route">세 막 연결 검증 · 보스 체력 1</button><button id="survival-act2">2막 물량·항상초심 연습</button><button id="survival-act3">3막 물량·요한 연습</button><button id="survival-loop">3막 격파 → 다음 순환 검증</button><p>가속 자동 비교 · 처음부터 성장 · 실제 피해 · 지정 선택 · 기록 제외</p><button id="compare-still">정지 생존 비교 · 이동·회피 없음</button><button id="compare-area">광역형 3분 비교</button><button id="compare-frost">빙결형 3분 비교</button><button id="compare-orbit">공전형 3분 비교</button></details>':''}</div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel survival-panel survival-setup-panel"><p class="eyebrow">SEED · 물량생존전</p><h2>밀려오는 숲</h2><p class="survival-lead">작은 씨앗 하나로, 끝없는 무리를 뚫으세요.</p><div class="survival-facts"><span><b>3분</b>각 막 생존 후 보스</span><span><b>자동 공격</b>이동과 회피에 집중</span><span><b>조합 성장</b>처치하면 법칙 선택</span></div><details class="survival-help"><summary>진행 · 물약 · 저장 안내</summary><p>1막 오스틴 → 2막 항상초심 → 3막 요한${circuit===5?" → 4막 횡풍 → 5막 거점 방어":""}. 조합을 유지하고 이어 싸워요. 2막은 베이스를 밟으면 다음 베이스까지 미끄러져요(무적 없음). ${circuit===5?"5막":"3막"}을 깨면 더 강한 다음 순환으로 넘어갑니다. 일반 몹은 몸으로 밀려오고 보스만 고유 공격을 사용해요. 한쪽 접근 → 양쪽 압박 → 사방 포위 뒤, 매분 마지막 6초는 작은 무리만 접근해요. 빠른 적이 몸을 낮추면 옆으로 피하세요.</p><p class="survival-note">회복 물약 2개로 출발 · 각 막 60·120초에 1개 보급(최대 5개) · 막 이동 시 체력 25 회복 + 물약 1개<br>별도 시험 모드예요. 여정 저장·조합 도감·창고는 별도예요. 보스 첫 격파·누적 10회·한 판 같은 보스 3회 완주 칭호는 여정과 함께 집계해요.<br>일시정지에서 저장하고 나가기 · 이 기기·브라우저에서 이어하기 가능<br>Google 계정 저장 완료 후 같은 계정으로 다른 기기에서 이어할 수 있어요.<br>기록을 합치지는 않아요 · 날아가던 내 탄과 순간 효과는 재개 시 정리됩니다.</p></details><p class="survival-record">최고 ${record.bestKills.toLocaleString()} 처치 · 최장 ${survivalClock(record.bestTime)} · ${survivalLocalClearHistory(record)} · 최고 ${record.bestBosses}보스</p><p class="survival-note" role="status">${saved?`저장된 도전 · ${saved.session.lap+1}순환 ${saved.session.act+1}막 · ${survivalClock(saved.session.time)} · ${saved.progress.kills}처치`:survivalSaveMessage}</p><p id="survival-cloud-status" class="survival-note" role="status"></p><button id="survival-cloud-retry" class="survival-sync-button">계정 저장 다시 확인</button><div id="survival-cloud-conflict"></div><div class="survival-actions">${saved?'<button id="resume-survival" class="primary">이어하기</button>':''}<button id="start-survival" class="primary">${saved?'새로 시작':'생존전 시작'}</button><button id="survival-back">돌아가기</button></div>${localInspection?'<details class="survival-lab"><summary>로컬 검증 · 기록 제외</summary><button id="survival-pierce">관통·연쇄 무리 시연</button><button id="survival-frost">빙결·연쇄 무리 시연</button><button id="survival-stress">후반 300마리 · 조합 부하</button><button id="survival-boss">최종 보스 전환</button><button id="survival-duel">1막 보스전 연습 · 피해 적용</button><button id="survival-stress2">2막 300마리 부하</button><button id="survival-stress3">3막 300마리 부하</button><button id="survival-base">2막 베이스 이동 검증 · 피해 적용</button><button id="survival-route">세 막 연결 검증 · 보스 체력 1</button><button id="survival-act2">2막 물량·항상초심 연습</button><button id="survival-act3">3막 물량·요한 연습</button><button id="survival-loop">3막 격파 → 다음 순환 검증</button><p>가속 자동 비교 · 처음부터 성장 · 실제 피해 · 지정 선택 · 기록 제외</p><button id="compare-still">정지 생존 비교 · 이동·회피 없음</button><button id="compare-area">광역형 3분 비교</button><button id="compare-frost">빙결형 3분 비교</button><button id="compare-orbit">공전형 3분 비교</button></details>':''}</div>`;
  $('#start-survival').onclick=()=>{if(!saved){startSurvival();return;}$('#overlay').innerHTML='<div class="menu-panel survival-panel"><h2>새로 시작할까요?</h2><p>기존 생존전 이어하기가 새 도전으로 바뀝니다.</p><div class="survival-actions"><button id="survival-new-confirm">새 도전 시작</button><button id="survival-new-cancel">취소</button></div></div>';$('#survival-new-confirm').onclick=()=>startSurvival();$('#survival-new-cancel').onclick=showSurvivalSetup;};if($('#resume-survival'))$('#resume-survival').onclick=resumeSurvival;$('#survival-back').onclick=()=>{$('#overlay').classList.remove('survival-overlay');showDungeon();};
  $('#survival-cloud-status').textContent=survivalSyncLabel(survivalCloud.state());$('#survival-cloud-retry').onclick=()=>refreshSurvivalAccount();if(refresh!==false)void refreshSurvivalAccount();
  $('.survival-record').insertAdjacentHTML('afterend','<button id="survival-open-ranking" class="survival-sync-button">물량생존전 랭킹 보기</button>');$('#survival-open-ranking').onclick=()=>showSurvivalRanking();
@@ -2357,6 +2360,11 @@ function bindNameField(onSubmit=null){
 }
 // Existing two main modes stay prominent; the new defence slice is a separate trial.
 let defenseScreen=null,adventureScreen=null,expeditionScreen=null;
+let modeEntrySerial=0;
+function showModeLoading(title,onBack){
+ const serial=++modeEntrySerial,expected=mode,owner=account.user()?.uid||'guest';
+ return showModeEntryLoading({overlay:$('#overlay'),title,isCurrent:()=>serial===modeEntrySerial&&mode===expected&&owner===(account.user()?.uid||'guest'),onBack});
+}
 let expeditionLoadSerial=0;
 async function showSeedExpedition(){
  const review=Boolean(localInspection||developerRun);
@@ -2366,13 +2374,14 @@ async function showSeedExpedition(){
  mode='expedition';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  let accountController=null;
  const back=result=>{expeditionScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();if(result?.ok===false)$('#toast').textContent=result.saved===true?result.reason:'전송 대기 기록을 보존했어요. 같은 계정으로 다시 열어 주세요.';};
+ const entry=showModeLoading('씨앗 원정대',back);
  try{
   const {mountExpedition}=await import('./expedition/view.js');
-  if(serial!==expeditionLoadSerial||mode!=='expedition')return;
+  if(serial!==expeditionLoadSerial||mode!=='expedition'){entry.dispose();return;}
   if(owner!==(account.user()?.uid||'guest')){back();$('#toast').textContent='계정이 바뀌었어요. 원정을 다시 열어 주세요.';return;}
-  if(review){expeditionScreen=mountExpedition({audio,owner,practice:true,currentOwner:()=>account.user()?.uid||'guest',storage:rawStorage,onClose:back});return;}
+  if(review){if(!entry.finish())return;expeditionScreen=mountExpedition({audio,owner,practice:true,currentOwner:()=>account.user()?.uid||'guest',storage:rawStorage,onClose:back});return;}
   const {readExpeditionAccountReleaseStatus,expeditionAccountReleaseMessage,expeditionAccountDeviceId}=await import('./expedition/account-release.js');
-  const eligible=()=>serial===expeditionLoadSerial&&mode==='expedition'&&!localInspection&&!developerRun&&EXPEDITION_ACCOUNT_RELEASED&&account.user()?.uid===owner&&account.user()?.isAnonymous===false;
+  const eligible=()=>entry.current()&&serial===expeditionLoadSerial&&mode==='expedition'&&!localInspection&&!developerRun&&EXPEDITION_ACCOUNT_RELEASED&&account.user()?.uid===owner&&account.user()?.isAnonymous===false;
   const release=eligible()?await readExpeditionAccountReleaseStatus({account,databaseURL:FIREBASE_APP.databaseURL,clientEnabled:EXPEDITION_ACCOUNT_RELEASED}):{ok:false,reason:'closed'};
   if(!release.ok){if(serial===expeditionLoadSerial&&mode==='expedition'){back();$('#toast').textContent=expeditionAccountReleaseMessage(release);}return;}
   const {openExpeditionAccountController}=await import('./expedition/account-controller.js');
@@ -2381,15 +2390,20 @@ async function showSeedExpedition(){
   if(!eligible()){if(opened.controller)await opened.controller.close();if(serial===expeditionLoadSerial&&mode==='expedition')back();return;}
   if(!opened.ok){back();$('#toast').textContent=opened.reason||'계정 기록을 확인하지 못해 원본을 보존했어요.';return;}
   accountController=opened.controller;
+  if(!entry.finish()){await accountController.close();return;}
   expeditionScreen=mountExpedition({audio,owner,currentOwner:()=>account.user()?.uid||'guest',createController:()=>opened.controller,onClose:back});
  }catch(error){if(accountController)await accountController.close();console.error('씨앗 원정대 시작 실패',error);if(serial===expeditionLoadSerial&&mode==='expedition'){back();$('#toast').textContent='원정을 불러오지 못했어요. 다시 눌러 주세요.';}}
+ finally{entry.dispose();}
 }
 let defenseLoadSerial=0;
 async function showSeedAdventure(){
  if(!bossRecordReady())return;
  mode='adventure';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
+ const back=()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
+ const entry=showModeLoading('씨앗의 모험',back);
  try{
   const {mountSeedAdventure}=await import('./seed-adventure-view.js');
+  if(!entry.finish())return;
   // 2026-09-28: 모험도 계정과 잇는다. 문 앞 저장·도감·JP·보스 칭호 모두 계정 저장(클라우드 동기화)에. 연습은 보상 없음.
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
   // 2026-09-28 사용자: "펫은 모험에선 못 가져가나?" — 계정에서 고른 보스 동행이 모험에도 따라온다(본편처럼 꾸밈만).
@@ -2400,8 +2414,9 @@ async function showSeedAdventure(){
    onBossDefeated:event=>awardModeBoss('adventure',event.runId,event.boss,event.ordinal,practice||owner!==(account.user()?.uid||'guest'),event.bossEpoch??null),
    onResult:state=>submitExtraModeRanking('adventure',adventureRankEntry(state,{uid:owner,name:playerName}),practice),
    onRanking:()=>{adventureScreen?.close();showModeRanking('adventure',showDungeon);},
-   onClose:()=>{adventureScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();}});
- }catch(error){console.error('씨앗의 모험 시작 실패',error);showDungeon();last=performance.now();realLast=Date.now();startAnimation();$('#toast').textContent='모험을 불러오지 못했어요. 다시 눌러 주세요.';}
+   onClose:back});
+ }catch(error){console.error('씨앗의 모험 시작 실패',error);if(entry.current()){back();$('#toast').textContent='모험을 불러오지 못했어요. 다시 눌러 주세요.';}}
+ finally{entry.dispose();}
 }
 
 // 2026-09-28 사용자: 서바이벌 프로젝트처럼 막기가 있는 수 싸움 대전 → 씨앗 대전 1차(1:1 AI, 시험 모드).
@@ -2409,13 +2424,15 @@ let duelScreen=null;
 async function showSeedDuel(){
  mode='duel';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  const back=()=>{duelScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
- try{const {mountSeedDuel}=await import('./seed-duel-view.js');const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun),sameOwner=()=>owner===(account.user()?.uid||'guest');
+ const entry=showModeLoading('씨앗 대전',back);
+ try{const {mountSeedDuel}=await import('./seed-duel-view.js');if(!entry.finish())return;const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun),sameOwner=()=>owner===(account.user()?.uid||'guest');
   duelScreen=mountSeedDuel({audio,storage:runStorage,owner,practice,inspection:isDuelCandidateLab(location),initialCharacter:localInspection?new URLSearchParams(location.search).get('duelCharacter')||'pierce':'pierce',canSave:sameOwner,
    onProgress:p=>{if(!sameOwner())return;garden=readGarden(runStorage);garden.duelStory=p;writeGarden(runStorage,garden);},
    onSaveAccount:!practice&&account.user()&&!account.user().isAnonymous?async()=>{if(!sameOwner())return false;const r=await cloud.flush();return r.ok&&!cloud.isDirty();}:null,
    onResult:(state,meta)=>submitExtraModeRanking('duel',duelRankEntry(state,{uid:owner,name:playerName,storyStage:meta?.storyStage||0}),practice),
    onRanking:()=>{duelScreen?.close();showModeRanking('duel',showDungeon);},onClose:back});}
- catch(error){console.error('씨앗 대전 시작 실패',error);back();$('#toast').textContent='대전을 불러오지 못했어요. 다시 눌러 주세요.';}
+ catch(error){console.error('씨앗 대전 시작 실패',error);if(entry.current()){back();$('#toast').textContent='대전을 불러오지 못했어요. 다시 눌러 주세요.';}}
+ finally{entry.dispose();}
 }
 // 2026-09-28 사용자: "퍼즐게임 같은 거" → 씨앗 맞추기(3개 맞추기, PUZZLE_MATCH3_PLAN.md). 모험처럼 계정 저장소에 진행을 두고,
 // 첫 깨기·새 별 햇살(JP)과 조합 효과 도감 발견을 계정에 남긴다. 연습(로컬 검증·개발자 실험)은 보상 없음.
@@ -2423,8 +2440,10 @@ let puzzleScreen=null,gardenHubScreen=null;
 async function showSeedPuzzle(){
  mode='puzzle';touch.reset();keys.clear();stopAnimation();$('#overlay').hidden=true;
  const back=()=>{puzzleScreen=null;showDungeon();last=performance.now();realLast=Date.now();startAnimation();};
+ const entry=showModeLoading('씨앗 맞추기',back);
  try{
   const {mountSeedPuzzle}=await import('./seed-puzzle-view.js');
+  if(!entry.finish())return;
   const owner=account.user()?.uid||'guest',practice=Boolean(localInspection||developerRun);
   // 2026-09-28 로열 매치식: +5 이동·시작 전 부스터·판 안 도구를 햇살(JP)로 산다. 계정이 바뀌었으면 쓰지 않는다.
   const sameOwner=()=>owner===(account.user()?.uid||'guest');
@@ -2441,7 +2460,8 @@ async function showSeedPuzzle(){
    onResult:payload=>{const entry=puzzleRankEntry(payload?.progress,{uid:owner,name:playerName,stage:payload?.stage,stars:payload?.stars,score:payload?.score});return submitExtraModeRanking('puzzle',entry,practice);},
    onRanking:()=>{puzzleScreen?.close();showModeRanking('puzzle',showDungeon);},onClose:back});
   if(localInspection)window.seedPuzzle=puzzleScreen;
- }catch(error){console.error('씨앗 맞추기 시작 실패',error);back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}
+ }catch(error){console.error('씨앗 맞추기 시작 실패',error);if(entry.current()){back();$('#toast').textContent='씨앗 맞추기를 불러오지 못했어요. 다시 눌러 주세요.';}}
+ finally{entry.dispose();}
 }
 // 2026-09-28 사용자: "정원메뉴는 앞으로 빼야 … 정원에 들어가서 다시 테마로 들어가는건데 테마는 단계별로 잠궈놔야 … 일단 첫번째 온실만 열어 놓고
 // … 구성물을 배치할 때는 마음대로 배치할 수 있게 하고 구성물은 제이피 게임내 통화로 살 수 있게" — 처음 화면의 정원 → 허브 → 테마 정원.
@@ -2513,7 +2533,10 @@ function showDungeon(){
  retryModeBossRewards();
  mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode','survival-overlay');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-adventure-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>직접 베고 던지는 RPG · 시범 모험</small></span></button><button id="open-duel" class="dungeon-mode mode-duel"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-duel-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 대전</strong><small>막기·반격·강공격 수 싸움 · 시험 1:1</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>다섯 개의 막 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-puzzle" class="dungeon-mode mode-puzzle"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-puzzle-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 맞추기</strong><small>같은 법칙 셋을 한 줄로 · 3개 맞추기 퍼즐</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>피어나는 씨앗 · 끝까지 지켜내는 정원</small></span></button><button id="open-expedition" class="dungeon-mode mode-expedition"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-adventure-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 원정대</strong><small>대전 친구와 길을 열어요 · 첫 원정</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel dungeon-hub"><header class="dungeon-heading"><p class="eyebrow">SEED · PLAY</p><h2>어떤 도전을 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header><div class="dungeon-scroll"><div class="dungeon-modes"><button id="open-adventure" class="dungeon-mode mode-adventure"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-adventure-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗의 모험</strong><small>베기·던지기로 키우는 액션 RPG</small></span></button><button id="open-duel" class="dungeon-mode mode-duel"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-duel-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 대전</strong><small>막고 반격하는 1:1 승부</small></span></button><button id="open-journey" class="dungeon-mode mode-journey"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-journey-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>여정</strong><small>막마다 다른 전장 · 조합을 찾아 떠나는 모험</small></span></button><button id="open-survival" class="dungeon-mode mode-survival"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-survival-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>물량생존전</strong><small>밀려오는 숲 · 끝없이 몰려오는 무리</small></span></button><button id="open-puzzle" class="dungeon-mode mode-puzzle"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-puzzle-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 맞추기</strong><small>같은 씨앗 셋을 맞춰 연속 폭발</small></span></button><button id="open-defense" class="dungeon-mode mode-defense"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-defense-v1.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 수호전</strong><small>씨앗을 배치·강화해 정원 지키기</small></span></button><button id="open-expedition" class="dungeon-mode mode-expedition"><img class="mode-art" src="${import.meta.env.BASE_URL}assets/menu/mode-adventure-v2.webp" alt="" decoding="async"><span class="mode-caption"><strong>씨앗 원정대</strong><small>대전 친구와 길을 열어요 · 첫 원정</small></span></button></div></div><footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer></div>`;
+ for(const [id,label] of [['adventure','직접 조작'],['duel','1:1 대전'],['journey','자동 공격'],['survival','무리 생존'],['puzzle','3개 맞추기'],['defense','배치 · 강화'],['expedition','턴제 전투']]){
+  const tag=document.createElement('span');tag.className='mode-type';tag.textContent=label;$('#open-'+id).append(tag);
+ }
  $('#open-expedition').onclick=()=>void showSeedExpedition();$('#open-adventure').onclick=()=>void showSeedAdventure();$('#open-duel').onclick=()=>void showSeedDuel();$('#open-journey').onclick=showJourneys;$('#open-survival').onclick=showSurvivalSetup;$('#open-defense').onclick=()=>void showSeedDefense();$('#open-puzzle').onclick=()=>void showSeedPuzzle();$('#back-menu').onclick=showIntro;
  if(!localInspection&&!developerRun&&!EXPEDITION_ACCOUNT_RELEASED)$('#open-expedition').remove();
  else $('#open-expedition small').textContent=localInspection||developerRun?'5명 출전 · 3명 대기 · 턴제 원정 로컬 검토':'베타 · 5명 출전 · 3명 대기 · 계정 저장';

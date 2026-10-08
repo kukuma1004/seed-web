@@ -136,3 +136,20 @@
 /* 정원 가꾸기 중 알림: 세로 화면은 정원 그림 위, 가로 화면은 정원 그림 가운데 아래(목록을 가리지 않게). */
 #seed-puzzle.sp-gardening .sp-toast{bottom:auto;top:max(12px,env(safe-area-inset-top))}
 #seed-puzzle.sp-gardening.sp-wide .sp-toast{top:auto;bottom:max(12px,env(safe-area-inset-bottom));left:calc((100% - min(360px,42vw))/2)}
+
+/* Scroll the stage collection while its exit and account actions stay in reach. */
+#seed-puzzle .sp-paper.sp-menu{display:flex;flex-direction:column;height:min(820px,calc(100dvh - 24px));overflow:hidden}
+#seed-puzzle .sp-menu-scroll{flex:1;min-height:0;overflow-y:auto;overscroll-behavior:contain;touch-action:pan-y;padding:0 3px 10px}
+#seed-puzzle .sp-menu-actions{flex:none;border-top:1px solid #b9a97855;padding-top:10px;margin-top:0;gap:8px}
+#seed-puzzle .sp-menu-actions button{flex:1;min-width:100px;min-height:44px;margin:0;padding:8px 10px}
+#seed-puzzle .sp-next-stage{width:100%;margin:0 0 10px;min-height:48px;line-height:1.45}
+#seed-puzzle .sp-menu-note{display:block;font-size:11px;line-height:1.5;color:#b9c9bc;margin-top:12px}
+#seed-puzzle .sp-modal,#seed-puzzle .sp-paper,#seed-puzzle .sp-garden-panel{touch-action:pan-y;overscroll-behavior:contain}
+#seed-puzzle .sp-chapters{touch-action:pan-x}
+#seed-puzzle button:active:not(:disabled){border-color:#fce6af;background:#334639}
+#seed-puzzle .sp-garden-card>span:nth-child(2){min-width:0;overflow-wrap:anywhere}
+@media(max-height:500px){
+ #seed-puzzle .sp-stages{grid-template-columns:repeat(auto-fit,minmax(54px,1fr))}
+ #seed-puzzle .sp-stage,#seed-puzzle .sp-decor-list button{min-height:44px}
+ #seed-puzzle .sp-menu-actions{padding-top:6px;gap:6px}
+}

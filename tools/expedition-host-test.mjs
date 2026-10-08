@@ -4,7 +4,7 @@ const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const start=source.indexOf('async function showSeedExpedition(){'),end=source.indexOf('let defenseLoadSerial=',start),host=source.slice(start,end);
 assert(start>=0&&end>start);
 assert(host.includes("if(!review&&!EXPEDITION_ACCOUNT_RELEASED)return;"));
-assert(host.includes('if(review){expeditionScreen=mountExpedition'));
+assert(host.includes('if(review){if(!entry.finish())return;expeditionScreen=mountExpedition'));
 assert(host.includes("import('./expedition/account-controller.js')"));
 assert(host.includes('clientEnabled:EXPEDITION_ACCOUNT_RELEASED'));
 assert(host.includes('createController:()=>opened.controller'));

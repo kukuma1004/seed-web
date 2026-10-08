@@ -87,3 +87,13 @@
  #seed-adventure .sa-move{transform:scale(1.25);transform-origin:left bottom}
 }
 @media (any-pointer:coarse) and (max-height:550px){#seed-adventure .sa-actions{transform:scale(1.1);transform-origin:right bottom}}
+
+/* Preserve battle gestures; reward and route menus have their own scrolling. */
+#seed-adventure .sa-modal,#seed-adventure .sa-paper{touch-action:pan-y;overscroll-behavior:contain}
+#seed-adventure .sa-paper footer{position:sticky;bottom:-1px;background:#102126;padding:8px 0;border-top:1px solid #b9a97844;z-index:2;flex-wrap:wrap}
+#seed-adventure .sa-paper button:active:not(:disabled){border-color:#fce6af;background:#344238}
+#seed-adventure .sa-paper button:disabled{cursor:not-allowed;opacity:.55}
+#seed-adventure .sa-objective{white-space:normal;max-width:calc(100% - 28px);width:max-content;line-height:1.4}
+#seed-adventure .sa-route{min-width:0;max-width:45%}
+#seed-adventure .sa-route b,#seed-adventure .sa-route span{overflow-wrap:anywhere}
+#seed-adventure .sa-purse{font-variant-numeric:tabular-nums}
