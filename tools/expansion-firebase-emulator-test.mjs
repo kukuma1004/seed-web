@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createMockUserToken} from '@firebase/util';
 import {EXPANSION_ACTS} from '../src/act-expansion.js';
-import {EXPANSION_CIRCUIT_KILLS} from '../src/act-expansion-runtime.js';
+import {EXPANSION_CIRCUIT_KILLS,CROSSWIND_CIRCUIT_KILLS} from '../src/act-expansion-runtime.js';
 import {createExpansionJourney} from '../src/expansion-journey.js';
 import {createExpansionAccountEntry} from '../src/expansion-account-save.js';
 import {decodeExpansionAccountCloud} from '../src/expansion-account-sync.js';
@@ -46,7 +46,8 @@ for(const [act,n] of [['crosswind',4],['crystalGorge',5]]){
  await allow(path,{method:'PUT',value:{...value,revision:2},headers:{'If-Match':etag}});
  const stale=await request(path,{method:'PUT',value:{...value,revision:3},headers:{'If-Match':etag}});assert.equal(stale.status,412,'actual emulator ETag rejects a stale device');
  await allow(`seedRanking/season12/runs/accepted${n}`,{method:'PUT',value:rank(n)});
- const maximum={...rank(n),kills:EXPANSION_CIRCUIT_KILLS*3};await allow(`seedRanking/season12/runs/freshMax${n}`,{method:'PUT',value:maximum});await deny(`seedRanking/season12/runs/overFreshMax${n}`,{method:'PUT',value:{...maximum,kills:maximum.kills+1}});
+ const legacyMaximum={...rank(n),kills:EXPANSION_CIRCUIT_KILLS*3};await allow(`seedRanking/season12/runs/legacyMax${n}`,{method:'PUT',value:legacyMaximum});
+ const maximum={...rank(n),kills:(n===4?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*3};await allow(`seedRanking/season12/runs/freshMax${n}`,{method:'PUT',value:maximum});await deny(`seedRanking/season12/runs/overFreshMax${n}`,{method:'PUT',value:{...maximum,kills:maximum.kills+1}});
  for(const edit of [{cycle:3},{score:1e9},{kills:372.5},{stage:3},{time:1}])await deny(`seedRanking/season12/runs/bad${n}`,{method:'PUT',value:{...rank(n),...edit}});
  for(const auth of [null,anonymous,other])await deny(`seedRanking/season12/runs/wrong${n}`,{method:'PUT',value:rank(n),auth});
  for(const platform of ['web','android'])await allow(tpath(n,platform),{method:'PUT',value:telemetry(n)});
