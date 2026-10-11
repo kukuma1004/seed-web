@@ -12,7 +12,7 @@ export function playableAct3Region(region,where=globalThis.location,preview=fals
 export const ACT3_PRESSURE=Object.freeze({
  hp:1.22,speed:1.17,projectile:1.22,bossTempo:1.14,
  crowdInitial:11,crowdInterval:.64,crowdExtra:Object.freeze([0,3,7,11,0]),
- projectileCapLow:48,projectileCapNormal:64
+ projectileCapLow:38,projectileCapNormal:48
 });
 
 // Teach a close pass and its escape window before combining flankers with fans.
@@ -20,9 +20,9 @@ export const ACT3_PRESSURE=Object.freeze({
 export const ACT3_ROOM_PRESSURE=Object.freeze([
  Object.freeze({crowdInitial:6,crowdInterval:.93,crowdExtra:0,projectile:1.08,projectileCapLow:24,projectileCapNormal:32}),
  Object.freeze({crowdInitial:8,crowdInterval:.78,crowdExtra:3,projectile:1.12,projectileCapLow:32,projectileCapNormal:40}),
- Object.freeze({crowdInitial:10,crowdInterval:.70,crowdExtra:7,projectile:1.16,projectileCapLow:40,projectileCapNormal:52}),
- Object.freeze({crowdInitial:11,crowdInterval:.64,crowdExtra:11,projectile:1.16,projectileCapLow:48,projectileCapNormal:64}),
- Object.freeze({crowdInitial:0,crowdInterval:.64,crowdExtra:0,projectile:ACT3_PRESSURE.projectile,projectileCapLow:48,projectileCapNormal:64})
+ Object.freeze({crowdInitial:10,crowdInterval:.70,crowdExtra:7,projectile:1.16,projectileCapLow:30,projectileCapNormal:38}),
+ Object.freeze({crowdInitial:11,crowdInterval:.64,crowdExtra:11,projectile:1.16,projectileCapLow:34,projectileCapNormal:44}),
+ Object.freeze({crowdInitial:0,crowdInterval:.64,crowdExtra:0,projectile:ACT3_PRESSURE.projectile,projectileCapLow:36,projectileCapNormal:48})
 ]);
 export const act3RoomPressure=stage=>ACT3_ROOM_PRESSURE[Math.max(0,Math.min(4,stage|0))];
 
@@ -38,10 +38,10 @@ export function act3CrowdType(index,stage=0){
 export function act3ReinforcementSpawn(index){
  // Alternate a readable bow formation with an open-centre flank group. Side
  // entries stay away from the player's starting lane and have an entry pause.
- const lanes=[-7.6,-5.1,-1.8,0,1.8,5.1,7.6];
+ const lanes=[-6.6,-4.5,-1.8,0,1.8,4.5,6.6];
  const slot=index%lanes.length,flank=Math.floor(index/lanes.length)%2;
- const sides=[[-7.6,-3.6],[-6.8,-1.3],[-7.4,1.1],[0,-7.2],[7.4,1.1],[6.8,-1.3],[7.6,-3.6]];
- return Object.freeze(flank?{x:sides[slot][0],z:sides[slot][1]}:{x:lanes[slot],z:-7.2+Math.abs(lanes[slot])*.13});
+ const sides=[[-6.6,-3.3],[-6.2,-1.3],[-6.6,1.1],[0,-6.3],[6.6,1.1],[6.2,-1.3],[6.6,-3.3]];
+ return Object.freeze(flank?{x:sides[slot][0],z:sides[slot][1]}:{x:lanes[slot],z:-6.3+Math.abs(lanes[slot])*.13});
 }
 
 // Two supply windows, one in each late formation room. The player must bring
@@ -52,7 +52,7 @@ export function act3SupplyDrop(type,stage,claimed,inventory){
 }
 
 export const SKYWAY_ROOMS=Object.freeze([
- Object.freeze({name:'상승 기류',hint:'붉은 돌격기의 조준이 멈추면 옆으로 피하고, 내려온 정찰기부터 끊으세요',covers:[],enemies:[['sky-scout',-5.6,-4.4],['sky-scout',-2.8,-5.3],['sky-diver',0,-6.2],['sky-scout',2.8,-5.3],['sky-scout',5.6,-4.4]]}),
+ Object.freeze({name:'상승 기류',hint:'붉은 돌격기의 조준이 멈추면 옆으로 피하고, 내려온 정찰기부터 끊으세요',covers:[],enemies:[['sky-scout',-4.8,-3.9],['sky-scout',-2.5,-4.8],['sky-diver',0,-5.7],['sky-scout',2.5,-4.8],['sky-scout',4.8,-3.9]]}),
  Object.freeze({name:'구름 협곡',hint:'양옆 정찰기가 내려오면 열린 중앙으로 옮겨 폭격기의 조준을 빼세요',covers:[],enemies:[['sky-scout',-7,-1.8],['sky-scout',-3.6,-5.8],['sky-bomber',0,-6.5],['sky-scout',7,-1.8],['sky-diver',4.6,-5.4]]}),
  Object.freeze({name:'뇌운 회랑',hint:'돌격선을 옆으로 넘긴 뒤 폭격기의 발사 후 빈 시간에 전진하세요',covers:[],enemies:[['sky-bomber',-5,-5.4],['sky-scout',-7,-1],['sky-diver',0,-6.5],['sky-scout',7,-1],['sky-bomber',5,-5.4]]}),
  Object.freeze({name:'공중 함대',hint:'가까운 돌격기를 먼저 끊고, 모함이 포문을 쉬는 동안 접근해 보급을 얻으세요',covers:[],enemies:[['sky-carrier',0,-6.4],['sky-scout',-7,-1.4],['sky-bomber',-3.4,-4.6],['sky-scout',3.4,-4.6],['sky-scout',7,-1.4],['sky-diver',0,-3.6]]}),

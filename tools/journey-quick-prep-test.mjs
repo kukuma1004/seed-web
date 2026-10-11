@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {createCrystalSiege,checkpointCrystalSiege,restoreCrystalSiege,stepCrystalSiege,harvestCrystalSiege,buildCrystalSiege,startCrystalSiegeDefense} from '../src/crystal-siege-rules.js';
+import {createExpansionJourney,restoreExpansionJourney,checkpointExpansionJourney,advanceExpansionJourney} from '../src/expansion-journey.js';
+import {CRYSTAL_DEFENSE_OBJECTIVE} from '../src/expansion-objective.js';
+
+const old=createCrystalSiege(),raw=checkpointCrystalSiege(old);
+assert(!Object.hasOwn(raw,'prepDuration'));
+assert.equal(old.resources,3);
+assert.deepEqual(checkpointCrystalSiege(restoreCrystalSiege(raw)),raw,'old checkpoint bytes/shape remain unchanged');
+const fresh=createExpansionJourney('crystalGorge',0,413,{siege:true,objective:CRYSTAL_DEFENSE_OBJECTIVE});
+assert.equal(fresh.siege.resources,1);assert.equal(fresh.siege.prepDuration,12);
+assert(!buildCrystalSiege(fresh.siege,'pad-0','turret',fresh.siege.pads[0]).ok,'moving to harvest is necessary');
+const node=fresh.siege.nodes[0];assert(harvestCrystalSiege(fresh.siege,node.id,node).ok);
+assert(buildCrystalSiege(fresh.siege,'pad-0','turret',fresh.siege.pads[0]).ok);
+assert.equal(fresh.siege.resources,0);
+assert.deepEqual(checkpointExpansionJourney(restoreExpansionJourney(checkpointExpansionJourney(fresh))),checkpointExpansionJourney(fresh),'paid facility and shorter preparation survive restoration');
+for(let i=0;i<119;i++)stepCrystalSiege(fresh.siege,.1);
+assert.equal(fresh.siege.phase,'prep');stepCrystalSiege(fresh.siege,.1);stepCrystalSiege(fresh.siege,.1);assert.equal(fresh.siege.phase,'defense');
+for(let i=0;i<500&&fresh.siege.phase!=='clear';i++)stepCrystalSiege(fresh.siege,.1,{enemies:[]});
+assert.equal(fresh.siege.phase,'clear');assert(advanceExpansionJourney(fresh));
+assert.equal(fresh.siege.prepDuration,12);assert.equal(fresh.siege.pads[0].kind,'turret');assert.equal(fresh.siege.resources,0);
+const legacyJourney=createExpansionJourney('crystalGorge',0,413,{siege:true});assert(!Object.hasOwn(legacyJourney.siege,'prepDuration'));assert.equal(legacyJourney.siege.resources,3);
+for(const value of [9,21,NaN,12.5,'12'])assert.throws(()=>restoreCrystalSiege({...raw,prepDuration:value}));
+const wrong={...raw,prepDuration:12,elapsed:12};assert.throws(()=>restoreCrystalSiege(wrong),'expired preparation cannot resume as a preparation checkpoint');
+const skipped=createCrystalSiege(0,1,null,12,1);assert(startCrystalSiegeDefense(skipped).ok);assert.equal(skipped.resources,1,'early start never grants missing resources');
+console.log('Quick preparation: earned resources, paid builds, 12-second phase boundary, exact legacy restore, carry and corruption checks PASS.');

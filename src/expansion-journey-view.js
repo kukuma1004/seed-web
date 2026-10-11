@@ -4,7 +4,7 @@ import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
- const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null;
+ const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,reflectorsActive=false;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
@@ -13,6 +13,25 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const floorUvs=floorGeometry.getAttribute('uv');for(let i=0;i<floorUvs.count;i++)floorUvs.setXY(i,floorUvs.getX(i)*4,floorUvs.getY(i)*2);
  const floorMaterial=new THREE.MeshStandardMaterial({map:groundTexture,color:0x87a88e,roughness:1});
  const floor=new THREE.InstancedMesh(floorGeometry,floorMaterial,84),m=new THREE.Matrix4();root.add(floor);
+ // Borrow the image but own the sampling state. One repeated, world-sized
+ // stone tile replaces the enlarged illustration without touching shared art.
+ const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xb8c8bf});
+ const road=new THREE.Mesh(roadGeometry,roadMaterial);road.name='crosswind-painted-corridor-floor';road.position.set(EXPANSION_ENVIRONMENTS.crosswind.x,.037,0);road.visible=false;root.add(road);
+ const reflectorGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),reflectorMaterial=new THREE.MeshBasicMaterial({color:0xffdf97,depthWrite:false,toneMapped:false});
+ const reflectorMarks=new THREE.InstancedMesh(reflectorGeometry,reflectorMaterial,16);reflectorMarks.name='crosswind-reflector-contact-marks';reflectorMarks.count=0;reflectorMarks.visible=false;root.add(reflectorMarks);
+ function syncReflectors(panels=[]){
+  let count=0;if(course==='crosswind')for(const p of panels.slice(0,4)){
+   // Trace the actual bounce footprint; wider decorative fields would make
+   // players expect collisions where the projectile slab cannot reflect.
+   for(const side of [-1,1]){m.makeScale(.085,1,p.d+.2);m.setPosition(p.x+side*(p.w/2+.085),.065,p.z);reflectorMarks.setMatrixAt(count++,m);m.makeScale(p.w+.25,1,.085);m.setPosition(p.x,.065,p.z+side*(p.d/2+.085));reflectorMarks.setMatrixAt(count++,m);}
+  }
+  reflectorMarks.count=count;reflectorMarks.instanceMatrix.needsUpdate=true;reflectorMarks.computeBoundingSphere();reflectorMarks.visible=reflectorsActive&&count>0&&!terrainOnly;
+ }
+ function setCrosswindFloorTexture(texture){
+  if(disposed||texture===crosswindFloorSource)return;crosswindFloorSource=texture||null;crosswindFloorTexture?.dispose();crosswindFloorTexture=texture?texture.clone():null;
+  if(crosswindFloorTexture){crosswindFloorTexture.wrapS=crosswindFloorTexture.wrapT=THREE.RepeatWrapping;crosswindFloorTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/8,15/8);crosswindFloorTexture.offset.set(0,0);crosswindFloorTexture.needsUpdate=true;}
+  roadMaterial.map=crosswindFloorTexture;roadMaterial.needsUpdate=true;syncFloor();
+ }
  const laneGeometry=new THREE.PlaneGeometry(.16,1.1).rotateX(-Math.PI/2),laneMaterial=new THREE.MeshBasicMaterial({color:0xd7e8a5,transparent:true,opacity:.32,depthWrite:false});
  const lanes=new THREE.InstancedMesh(laneGeometry,laneMaterial,40);for(let i=0;i<40;i++){m.makeTranslation(i*3, .025,i%2?6.3:-6.3);lanes.setMatrixAt(i,m);}lanes.instanceMatrix.needsUpdate=true;root.add(lanes);
  // Crop the square cutout so its visible width matches the collision footprint.
@@ -43,12 +62,15 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   plate.visible=!terrainOnly&&Boolean(plateMaterial.map);
   // The panorama spans the whole journey. Its painted paving cannot supply
   // local floor detail at that scale: keep world-sized stones on the corridor.
-  floor.visible=!terrainOnly&&(course==='crosswind'||!plate.visible);
+  road.visible=!terrainOnly&&course==='crosswind'&&Boolean(crosswindFloorTexture);
+  floor.visible=!terrainOnly&&!road.visible&&(course==='crosswind'||!plate.visible);
+  reflectorMarks.visible=!terrainOnly&&course==='crosswind'&&reflectorsActive&&reflectorMarks.count>0;
   lanes.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||laneBound!==null);
  }
  function setPlate(act,texture){if(disposed)return;plates.set(act,texture);if(course===act)syncFloor();}
  function setCourse(act,{halfDepth=null,plateBounds=null}={}){
   course=act;siegePhase=null;plateMaterial.color.setHex(0xffffff);
+  reflectorMarks.count=0;reflectorMarks.visible=false;
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Never repeat the full illustration. The crosswind stone band (image
@@ -78,6 +100,6 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   else{o.rotation.set(-Math.PI/2,0,0);o.scale.set(round?1:1.3,round?1:1.3,1);}
  }
  setCourse(course);
- return {root,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xa1abd0:0xffedcb);},setPlate,setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
-  dispose:()=>{disposed=true;root.removeFromParent();plates.clear();for(const o of [floor,lanes,...coverStages,shadows])o.dispose();for(const o of [plateGeometry,plateMaterial,floorGeometry,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial])o.dispose();}};
+ return {root,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xa1abd0:0xffedcb);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
+  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();crosswindFloorTexture?.dispose();for(const o of [floor,lanes,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
 }

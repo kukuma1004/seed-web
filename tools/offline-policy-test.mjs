@@ -14,7 +14,7 @@ function worker(){
  function message(allowed,id='tab'){const waiting=[];handlers.message({data:{type:'SEED_OFFLINE_POLICY',allowed},source:{id},waitUntil:p=>waiting.push(p)});return Promise.all(waiting);}
  const self={location:root+'sw.js',addEventListener:(n,f)=>handlers[n]=f,skipWaiting:async()=>{},clients:{claim:async()=>{},matchAll:async()=>clients}};
  const caches={open:async n=>cache(n),keys:async()=>[...stores.keys()],delete:async n=>stores.delete(n),match:async u=>{for(const m of stores.values()){const hit=m.get(u.url||u);if(hit)return hit;}}};
- const fetch=async u=>{requests.push(u);if(u.endsWith('offline-manifest.json'))return {ok:true,json:async()=>({files:['index.html','a.js','b.webp']})};if(u.endsWith('a.js')&&pause){pause=false;void message(false);}return {ok:!(fail&&u.endsWith('b.webp'))};};
+ const fetch=async u=>{requests.push(typeof u==='string'?u:u.url);if(u.endsWith?.('offline-manifest.json'))return {ok:true,json:async()=>({files:['index.html','a.js','b.webp','assets/audio/music/act4-crosswind-loop.mp3']})};if(u.endsWith?.('a.js')&&pause){pause=false;void message(false);}return {ok:!(fail&&u.endsWith?.('b.webp')),clone(){return this;}};};
  runInNewContext(source,{self,caches,fetch,URL,Map,Set,Date,Promise});
  return {root,stores,requests,message,handlers,setFail:v=>fail=v,setPause:v=>pause=v,setClients:v=>clients=v};
 }
@@ -27,5 +27,14 @@ assert(w.stores.get('seed-play-v55').has(w.root+'a.js'));assert(!w.stores.get('s
 w.setFail(true);await w.message(true);assert(w.stores.has('seed-play-v54'),'failed download cannot purge backup');
 w.setFail(false);await w.message(true);assert(!w.stores.has('seed-play-v54'),'complete update retires old cache');
 assert(w.stores.get('seed-play-v55').has(w.root+'b.webp'));
+const musicUrl=w.root+'assets/audio/music/act4-crosswind-loop.mp3';
+assert(!w.requests.includes(musicUrl),'idle prefetch skips unused soundtrack');
+const playback=[];let musicResponse;
+w.handlers.fetch({request:{method:'GET',url:musicUrl,mode:'cors'},waitUntil:p=>playback.push(p),respondWith:p=>{musicResponse=p;}});
+assert((await musicResponse).ok);await Promise.all(playback);
+assert(w.stores.get('seed-play-v55').has(musicUrl),'first playback stores its loop for offline reuse');
+const before=w.requests.length;let replay;
+w.handlers.fetch({request:{method:'GET',url:musicUrl,mode:'cors'},waitUntil:p=>playback.push(p),respondWith:p=>{replay=p;}});
+assert((await replay).ok);assert.equal(w.requests.length,before,'cached playback makes no network request');
 const u=worker();u.setClients([{id:'tab'},{id:'old-tab'}]);await u.message(true);assert.equal(u.requests.length,0,'an old/unknown client prevents unsafe background cleanup');
 console.log('Offline worker: idle-only download, pause/resume, failed-update preservation and safe cleanup passed');

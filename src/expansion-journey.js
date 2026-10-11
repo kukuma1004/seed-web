@@ -19,10 +19,10 @@ function protectSiegeFacilities(s){
 // The existing journey owns the seed, attack/choice engine, damage and visuals.
 // This adapter owns world course progress and warned enemy intent only. It never
 // writes account, title or ranking data; preview checkpoints are kept separately.
-export function createExpansionJourney(act='crosswind',room=0,seed=1,{siege=false,objective=null}={}){
+export function createExpansionJourney(act='crosswind',room=0,seed=1,{siege=false,objective=null,quickPrep=false}={}){
  if(!Object.hasOwn(EXPANSION_ACTS,act))throw new Error('Unknown expansion journey');
  if(objective!==null&&(objective!==CRYSTAL_DEFENSE_OBJECTIVE||act!=='crystalGorge'||!siege))throw Error('Invalid expansion objective');
- const s={act,room:clamp(room|0,0,4),seed:seed>>>0||1,course:createExpansionCourse(act,{room,seed}),boss:null,phase:'course',bossId:EXPANSION_ACTS[act].bossId};if(objective)s.objective=objective;if(siege){if(act!=='crystalGorge')throw Error('Siege is Act5 only');s.siege=createCrystalSiege(s.room,s.seed);s.course.walls=[];}return s;
+ const s={act,room:clamp(room|0,0,4),seed:seed>>>0||1,course:createExpansionCourse(act,{room,seed}),boss:null,phase:'course',bossId:EXPANSION_ACTS[act].bossId};if(objective)s.objective=objective;if(siege){if(act!=='crystalGorge')throw Error('Siege is Act5 only');s.siege=createCrystalSiege(s.room,s.seed,null,objective||quickPrep?12:null,objective||quickPrep?1:3);s.course.walls=[];}return s;
 }
 export function advanceExpansionJourney(s){
  if(s.phase==='finished'||s.siege&&s.phase==='course'&&s.siege.phase!=='clear')return false;

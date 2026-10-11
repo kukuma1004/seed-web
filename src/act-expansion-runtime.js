@@ -6,6 +6,10 @@ import {EXPANSION_ACTS,crosswindFormation,createCrystalWalls,restoreCrystalWalls
 // Outputs are reused until the next step: consume/copy them before stepping again.
 export const EXPANSION_RUNTIME_VERSION=1;
 export const EXPANSION_COURSE_PACKETS=Object.freeze([18,20,22,24,26]);
+// Keep the finite scoring budget, but spend it along the route instead of
+// exhausting it near the entrance. A stopped player still faces pressure.
+// This changes no checkpoint fields, room lengths or legacy encounter rules.
+export const CROSSWIND_PACKET_PACING=Object.freeze({openingPackets:3,pressureEnd:.92,idleInterval:4.8});
 // New courses alternate one and two actors, with the same hard live caps. Include
 // exactly one true boss; broken scenery and missed packets are never kills.
 export const EXPANSION_CIRCUIT_KILLS=1+EXPANSION_COURSE_PACKETS.reduce((n,v)=>n+v+Math.floor(v/2),0);
@@ -61,6 +65,15 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  // Exhaustion does not complete the course: the player still crosses it.
  if(s.spawnIndex>=EXPANSION_COURSE_PACKETS[s.room])return out;
  s.spawnClock-=step;if(s.spawnClock>0)return out;
+ if(s.act==='crosswind'&&s.encounterVersion===2&&s.spawnIndex>=CROSSWIND_PACKET_PACING.openingPackets){
+  const packet=s.spawnIndex-CROSSWIND_PACKET_PACING.openingPackets+1;
+  const remainder=EXPANSION_COURSE_PACKETS[s.room]-CROSSWIND_PACKET_PACING.openingPackets;
+  const reached=s.distance>=room.length*CROSSWIND_PACKET_PACING.pressureEnd*packet/remainder;
+  const waited=s.time>=packet*CROSSWIND_PACKET_PACING.idleInterval;
+  // Either travel OR elapsed pressure time unlocks one packet. The timer
+  // never queues catch-up waves; the usual live cap still decides acceptance.
+  if(!reached&&!waited){s.spawnClock=0;return out;}
+ }
  // Re-arm even when saturated; capacity reopening cannot release queued waves.
  const close=s.encounterVersion===2;
  s.spawnClock=(close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);

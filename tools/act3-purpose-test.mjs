@@ -15,7 +15,7 @@ function fixture(type,{x=0,z=-6.2,player=new V(0,0,5.5),slow=0}={}){
 
 assert.deepEqual(ACT3_ROOM_HINTS,SKYWAY_ROOMS.map(room=>room.hint));
 assert.ok(ACT3_ROOM_HINTS.every(hint=>hint.length>20));
-assert.equal(ACT3_PRESSURE.projectileCapNormal,64,'existing phone ceiling stays intact');
+assert.ok(ACT3_PRESSURE.projectileCapNormal<=48,'late pressure keeps a readable phone projectile ceiling');
 assert.deepEqual(Object.values(ACT3_MINIONS).map(({hp,damage})=>[hp,damage]),[[54,11],[28,18],[90,13],[185,13]],'movement pressure adds neither HP nor damage');
 assert.equal(Object.keys(ACT3_ART).length,6,'existing enemy and boss art families stay intact');
 for(const stage of [0,1,2,3]){
@@ -25,8 +25,8 @@ for(const stage of [0,1,2,3]){
  assert.equal(types.filter(type=>type==='sky-carrier').length,stage>=2?1:0);
 }
 const bow=Array.from({length:7},(_,i)=>act3ReinforcementSpawn(i)),flank=Array.from({length:7},(_,i)=>act3ReinforcementSpawn(i+7));
-assert.ok(bow.every(p=>p.z<-6));
-assert.ok(flank.filter(p=>p.z>0).every(p=>Math.abs(p.x)>=7),'side entries leave starting centre open');
+assert.ok(bow.every(p=>p.z<-5.4),'closer bow enters from the upper edge rather than the starting centre');
+assert.ok(flank.filter(p=>p.z>0).every(p=>Math.abs(p.x)>=6.6),'side entries leave starting centre open');
 assert.ok(flank.some(p=>p.x<0&&p.z>-2)&&flank.some(p=>p.x>0&&p.z>-2),'second group changes pressure to both flanks');
 for(let i=0;i<84;i++)assert.ok(insideArena(act3ReinforcementSpawn(i),.52,ACT3_ARENA));
 assert.equal(act3SupplyDrop('sky-carrier',2,false,{tonic:4}),'tonic');
@@ -84,4 +84,4 @@ for(const type of Object.keys(ACT3_MINIONS)){
  assert.ok(w.e.attacks>=2,`${type} completes multiple bounded attack/recovery cycles`);
  assert.ok(w.shots.length<=18,`${type} pressure is not a hail of new shots`);
 }
-console.log('Act 3 purpose: flank formations, close targets, locked readable attacks, ordinary-movement escape, recovery, unchanged stats/art/caps/save supply passed.');
+console.log('Act 3 purpose: flank formations, close targets, locked readable attacks, ordinary-movement escape, recovery, unchanged stats/art/save supply and bounded pressure passed.');

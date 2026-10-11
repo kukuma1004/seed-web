@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {crosswindFormation,crosswindReflectorPanels} from '../src/act-expansion.js';
-import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,restoreExpansionCourse} from '../src/act-expansion-runtime.js';
+import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,restoreExpansionCourse,EXPANSION_COURSE_PACKETS} from '../src/act-expansion-runtime.js';
 import {createExpansionThreat,stepExpansionThreat} from '../src/expansion-journey.js';
 import {reflectMirrorPanels} from '../src/mirror-fighter.js';
 
@@ -16,7 +16,9 @@ function packets(room,version=2){
 // shots, and unchanged HP. No synthetic hit/death is needed to prove movement.
 const rooms=Array.from({length:5},(_,room)=>packets(room));
 for(const [room,{course,specs}] of rooms.entries()){
- assert(specs.length>15&&specs.length<=39);assert(!course.finishAnnounced,'standing still cannot complete the voyage');
+ assert(specs.length>=9&&specs.length<=15,'idle pressure remains active without spending the whole route at the entrance');
+ assert(course.spawnIndex<EXPANSION_COURSE_PACKETS[room],'later packets remain for the rest of the route');
+ assert(!course.finishAnnounced,'standing still cannot complete the voyage');
  assert(specs.every(s=>s.behavior==='crosswind'&&s.shots===1&&s.role===['front','rear','split-lanes','pincer','warden'][room]));
  for(const spec of specs){
   assert.equal(spec.hp,spec.type==='charger'?42+room*8:86+room*18);

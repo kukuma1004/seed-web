@@ -11,10 +11,10 @@ export function createExpansionEnvironmentArt({loader,baseUrl='',mobile=false}={
  const pending=new Map(),textures=new Map();let disposed=false;
  const prefix=baseUrl&&!baseUrl.endsWith('/')?baseUrl+'/':baseUrl;
  function load(act){
-  const definition=EXPANSION_ENVIRONMENTS[act]||(act==='cover'?{file:'crystal-cover'}:null);if(!definition||disposed)return Promise.resolve(null);
+  const definition=EXPANSION_ENVIRONMENTS[act]||(act==='cover'?{file:'crystal-cover'}:act==='crosswindFloor'?{file:'act4-crosswind-floor'}:null);if(!definition||disposed)return Promise.resolve(null);
   if(textures.has(act))return Promise.resolve(textures.get(act));
   if(pending.has(act))return pending.get(act);
-  const url=prefix+'assets/expansion/'+definition.file+(mobile&&act!=='cover'?'-mobile':'')+'-v1.webp';
+  const url=prefix+'assets/expansion/'+definition.file+(mobile&&act!=='cover'?'-mobile':'')+(act==='crosswindFloor'?'-v2.webp':'-v1.webp');
   const job=Promise.resolve().then(()=>loader.loadAsync(url)).then(texture=>{
    if(disposed){texture.dispose();return null;}
    texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;
@@ -22,5 +22,5 @@ export function createExpansionEnvironmentArt({loader,baseUrl='',mobile=false}={
    textures.set(act,texture);return texture;
   }).finally(()=>pending.delete(act));pending.set(act,job);return job;
  }
- return {load,loadCover:()=>load('cover'),dispose(){if(disposed)return;disposed=true;for(const texture of textures.values())texture.dispose();textures.clear();},get loaded(){return textures.size;}};
+ return {load,loadCover:()=>load('cover'),loadCrosswindFloor:()=>load('crosswindFloor'),dispose(){if(disposed)return;disposed=true;for(const texture of textures.values())texture.dispose();textures.clear();},get loaded(){return textures.size;}};
 }

@@ -43,6 +43,10 @@ export const ACT3_MINIONS=Object.freeze({
  'sky-bomber':{kind:'bomber',hp:90,speed:2.4,damage:13,cooldown:1.7},
  'sky-carrier':{name:'보급 모함',kind:'carrier',hp:185,speed:1.55,damage:13,cooldown:1.45}
 });
+// Close passes provide the pressure; missiles should leave enough visible
+// flight time to finish the sideways dodge prompted by their locked warning.
+// Boss/warden patterns and committed body speed keep their authored values.
+export const ACT3_MINION_MISSILE_SPEED=Object.freeze({scout:7.4,bomber:5.8,carrier:6.4});
 export const ACT3_ART=Object.freeze({
  'sky-scout':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:0,size:1.72,baseline:.08}),
  'sky-diver':Object.freeze({file:'enemy-act3-flight-atlas-v2.webp',frame:1,size:1.46,baseline:.08}),
@@ -100,7 +104,7 @@ export function tickAct3Minion(e,dt,time,ctx){
    if(e.timer<=0&&e.g.position.distanceTo(ctx.player)<6){e.state='tell';e.timer=.5;lockAim(e,ctx.player);e.formation.set(THREE.MathUtils.clamp(ctx.player.x-e.lane*3.2,-7.4,7.4),0,THREE.MathUtils.clamp(ctx.player.z-.65,-6.5,6.6));ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1.05+(.5-e.timer)*.55);face(e,e.dir);
-   if(e.timer<=0){shot(ctx,e,e.dir,{speed:8.6});e.attacks++;e.move.copy(e.formation).sub(e.g.position).setY(0);e.commitRemaining=Math.min(8.8,e.move.length());e.move.normalize();e.state='sweep';e.chargeHit=false;ctx.sound?.('bossAttack');}
+   if(e.timer<=0){shot(ctx,e,e.dir,{speed:ACT3_MINION_MISSILE_SPEED.scout});e.attacks++;e.move.copy(e.formation).sub(e.g.position).setY(0);e.commitRemaining=Math.min(8.8,e.move.length());e.move.normalize();e.state='sweep';e.chargeHit=false;ctx.sound?.('bossAttack');}
   }else if(e.state==='sweep'){
    face(e,e.move);committedMove(e,dt,4.8);passContact(e,ctx,.72);
    if(e.commitRemaining<=.001){e.state='recover';e.timer=.75;}
@@ -111,7 +115,7 @@ export function tickAct3Minion(e,dt,time,ctx){
    if(e.timer<=0){e.state='tell';e.timer=.65;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1+(.65-e.timer)*.6);face(e,e.dir);
-   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.3),{speed:6.5+Math.abs(i)*.35});e.attacks++;e.state='recover';e.timer=1;ctx.sound?.('bossAttack');}
+   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.3),{speed:ACT3_MINION_MISSILE_SPEED.bomber+Math.abs(i)*.35});e.attacks++;e.state='recover';e.timer=1;ctx.sound?.('bossAttack');}
   }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else if(e.type==='sky-diver'){
   if(e.state==='stalk'){
@@ -126,7 +130,7 @@ export function tickAct3Minion(e,dt,time,ctx){
    if(e.timer<=0){e.state='tell';e.timer=.8;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1.5+Math.sin(time*9)*.08);face(e,e.dir);
-   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.32),{speed:7.2});e.attacks++;e.state='recover';e.timer=1.25;ctx.sound?.('bossAttack');}
+   if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.32),{speed:ACT3_MINION_MISSILE_SPEED.carrier});e.attacks++;e.state='recover';e.timer=1.25;ctx.sound?.('bossAttack');}
   }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }
  ctx.collide(e.g.position,.52);finishMotion(e,dt,time);
