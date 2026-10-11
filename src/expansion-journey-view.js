@@ -4,7 +4,7 @@ import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
- const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,reflectorsActive=false;
+ const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,crosswindPanoramaTexture=null,crosswindPanoramaSource=null,reflectorsActive=false;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
@@ -17,6 +17,32 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  // stone tile replaces the enlarged illustration without touching shared art.
  const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xb8c8bf});
  const road=new THREE.Mesh(roadGeometry,roadMaterial);road.name='crosswind-painted-corridor-floor';road.position.set(EXPANSION_ENVIRONMENTS.crosswind.x,.037,0);road.visible=false;root.add(road);
+ // These low stone lips sit beyond the real movement limit. Bevels, inset
+ // copper seams and little ivy leaves give the corridor a visible scale;
+ // they are scenery only and never pretend to be extra projectile walls.
+ const curbShape=new THREE.Shape();curbShape.moveTo(-2.3,-.14);curbShape.lineTo(-2.13,-.27);curbShape.lineTo(2.13,-.27);curbShape.lineTo(2.3,-.14);curbShape.lineTo(2.3,.14);curbShape.lineTo(2.13,.27);curbShape.lineTo(-2.13,.27);curbShape.lineTo(-2.3,.14);curbShape.closePath();
+ const curbGeometry=new THREE.ExtrudeGeometry(curbShape,{depth:.18,steps:1,bevelEnabled:true,bevelThickness:.045,bevelSize:.04,bevelSegments:1}).rotateX(-Math.PI/2);
+ const curbMaterial=new THREE.MeshStandardMaterial({color:0x718e7d,roughness:1});
+ const curbs=new THREE.InstancedMesh(curbGeometry,curbMaterial,72);curbs.name='crosswind-beveled-boundary';root.add(curbs);
+ const seamGeometry=new THREE.PlaneGeometry(3.9,.055).rotateX(-Math.PI/2),seamMaterial=new THREE.MeshBasicMaterial({color:0x9e9a67,toneMapped:false});
+ const seams=new THREE.InstancedMesh(seamGeometry,seamMaterial,72);seams.name='crosswind-inset-copper-seams';root.add(seams);
+ const leafShape=new THREE.Shape();leafShape.moveTo(0,-.42);leafShape.quadraticCurveTo(.26,-.16,.15,.15);leafShape.quadraticCurveTo(.09,.36,0,.43);leafShape.quadraticCurveTo(-.28,.05,0,-.42);
+ const ivyGeometry=new THREE.ShapeGeometry(leafShape,5).rotateX(-Math.PI/2),ivyMaterial=new THREE.MeshBasicMaterial({color:0x59795e,toneMapped:false});
+ const ivy=new THREE.InstancedMesh(ivyGeometry,ivyMaterial,108);ivy.name='crosswind-boundary-ivy';root.add(ivy);
+ const borderPose=new THREE.Object3D();
+ function syncBoundary(){
+  let leaves=0;const edge=(laneBound===null?7:laneBound)+.26;
+  for(let i=0;i<72;i++){
+   const side=i%2?1:-1,x=Math.floor(i/2)*5-18,z=side*edge;
+   m.makeTranslation(x,.032,z);curbs.setMatrixAt(i,m);
+   m.makeTranslation(x,.262,z);seams.setMatrixAt(i,m);
+   // Stable authored placement at section entry; no random or frame work.
+   if(i%4!==0)for(let j=0;j<2;j++){
+    borderPose.position.set(x+(j?1.95:-1.9),.274,z+side*(j?.17:-.16));borderPose.rotation.set(0,side*(.4+j*.55+i*.07),0);borderPose.scale.set(j?.52:.7,1,j?.52:.7);borderPose.updateMatrix();ivy.setMatrixAt(leaves++,borderPose.matrix);
+   }
+  }
+  ivy.count=leaves;for(const batch of [curbs,seams,ivy]){batch.instanceMatrix.needsUpdate=true;batch.computeBoundingSphere();}
+ }
  const reflectorGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),reflectorMaterial=new THREE.MeshBasicMaterial({color:0xffdf97,depthWrite:false,toneMapped:false});
  const reflectorMarks=new THREE.InstancedMesh(reflectorGeometry,reflectorMaterial,16);reflectorMarks.name='crosswind-reflector-contact-marks';reflectorMarks.count=0;reflectorMarks.visible=false;root.add(reflectorMarks);
  function syncReflectors(panels=[]){
@@ -58,7 +84,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   coverAtlas=true;
  }
  function syncFloor(){
-  plateMaterial.map=plates.get(course)||null;plateMaterial.needsUpdate=true;
+  plateMaterial.map=course==='crosswind'?crosswindPanoramaTexture:plates.get(course)||null;plateMaterial.needsUpdate=true;
   plate.visible=!terrainOnly&&Boolean(plateMaterial.map);
   // The panorama spans the whole journey. Its painted paving cannot supply
   // local floor detail at that scale: keep world-sized stones on the corridor.
@@ -66,20 +92,37 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   floor.visible=!terrainOnly&&!road.visible&&(course==='crosswind'||!plate.visible);
   reflectorMarks.visible=!terrainOnly&&course==='crosswind'&&reflectorsActive&&reflectorMarks.count>0;
   lanes.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||laneBound!==null);
+  for(const batch of [curbs,seams,ivy])batch.visible=!terrainOnly&&course==='crosswind';
  }
- function setPlate(act,texture){if(disposed)return;plates.set(act,texture);if(course===act)syncFloor();}
+ function setPlate(act,texture){
+  if(disposed)return;plates.set(act,texture);
+  if(act==='crosswind'&&texture!==crosswindPanoramaSource){
+   crosswindPanoramaSource=texture||null;crosswindPanoramaTexture?.dispose();crosswindPanoramaTexture=texture?texture.clone():null;
+   if(crosswindPanoramaTexture){
+    // Mirrored edge joins repeat the illustration without hard seams. Each
+    // painted tree now keeps the source aspect instead of stretching across
+    // the entire 180-unit course. The borrowed cache texture stays untouched.
+    const image=texture.image,aspect=image?.width&&image?.height?image.width/image.height:16/9;
+    crosswindPanoramaTexture.wrapS=THREE.MirroredRepeatWrapping;crosswindPanoramaTexture.wrapT=THREE.ClampToEdgeWrapping;
+    crosswindPanoramaTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/(EXPANSION_ENVIRONMENTS.crosswind.depth*aspect),1);crosswindPanoramaTexture.offset.set(0,0);crosswindPanoramaTexture.needsUpdate=true;
+   }
+  }
+  if(course===act)syncFloor();
+ }
  function setCourse(act,{halfDepth=null,plateBounds=null}={}){
   course=act;siegePhase=null;plateMaterial.color.setHex(0xffffff);
   reflectorMarks.count=0;reflectorMarks.visible=false;
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
-  // Never repeat the full illustration. The crosswind stone band (image
-  // V=.29..63) spans +/-7.5 world units; the movable corridor stays on stone.
+  // Preserve the plate's vertical composition; only horizontal sampling is
+  // mirrored at the source aspect. The independent tiled road defines local
+  // paving scale, and boundary trim follows the canonical movement limit.
   const environment=EXPANSION_ENVIRONMENTS[act]||EXPANSION_ENVIRONMENTS.crosswind;
   const compact=plateBounds&&Number.isFinite(plateBounds.width)&&Number.isFinite(plateBounds.depth)&&plateBounds.width>0&&plateBounds.depth>0;
   plate.scale.set(compact?plateBounds.width:environment.width,compact?plateBounds.depth:environment.depth,1);plate.position.set(environment.x,.02,environment.z);
   for(let i=0;i<floor.count;i++){m.makeTranslation(canyon?(Math.floor(i/4)-1)*8:Math.floor(i/4)*8-16,.035,(i%4)*4-6);floor.setMatrixAt(i,m);}floor.instanceMatrix.needsUpdate=true;floor.computeBoundingSphere();
   for(let i=0;i<40;i++){m.makeTranslation(i*3,.045,(i%2?1:-1)*(laneBound===null?6.3:laneBound-.15));lanes.setMatrixAt(i,m);}lanes.instanceMatrix.needsUpdate=true;lanes.computeBoundingSphere();
+  syncBoundary();
   if(!canyon){for(const batch of coverStages)batch.count=0;shadows.count=0;}
   syncFloor();
  }
@@ -101,5 +144,5 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  }
  setCourse(course);
  return {root,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xa1abd0:0xffedcb);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
-  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();crosswindFloorTexture?.dispose();for(const o of [floor,lanes,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
+  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
 }

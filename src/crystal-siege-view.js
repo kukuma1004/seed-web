@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {SIEGE_ART_FILE,siegeArtTexture,siegeArtStyle,siegeArtAspect} from './siege-art.js';
 // Local siege review uses eleven persistent sprites and four build rings.
 // All combat ownership stays in crystal-siege-rules; no lights or per-frame DOM.
 export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
@@ -7,11 +8,13 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
  const facilityCodes=new Uint8Array(4),plantTime=new Float32Array(4);let facilitiesSeen=false;
  const facilityCode={turret:1,snare:3,wall:5};
  const load=path=>{const t=loader.load(base+'assets/'+path);t.colorSpace=THREE.SRGBColorSpace;textures.push(t);return t;};
- const crystal=load('mobile/mirror-crystal-v1.webp'),turret=load('cute/enemy-turret-v4.webp'),plants=load('garden-growth-atlas-v3.webp');
- const plantCell=cell=>{const t=plants.clone();t.repeat.set(.25,1/3);t.offset.set(cell%4/4,(2-Math.floor(cell/4))/3);t.needsUpdate=true;textures.push(t);return t;};
- const coreTexture=plantCell(4),snareTexture=plantCell(8),wallTexture=plantCell(2);
+ const crystal=load('mobile/mirror-crystal-v1.webp'),facilityAtlas=load(SIEGE_ART_FILE.slice(7));
+ const artCell=kind=>{const t=siegeArtTexture(facilityAtlas,kind);textures.push(t);return t;};
+ const turret=artCell('turret'),coreTexture=artCell('heart'),snareTexture=artCell('snare'),wallTexture=artCell('wall');
  const sprite=(texture,size)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:false,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
  const heart=sprite(coreTexture,3),nodes=Array.from({length:6},()=>sprite(crystal,1.15)),facilities=Array.from({length:4},()=>sprite(turret,1.55));
+ heart.name='crystal-siege-heart';heart.center.y=.07;heart.scale.y=3*siegeArtAspect('heart');
+ facilities.forEach(o=>{o.center.y=.07;});
  facilities.forEach((o,i)=>{o.name='crystal-siege-facility-'+i;});
  const geometry=new THREE.RingGeometry(.63,.72,32);owned.push(geometry);
  for(let i=0;i<4;i++){const material=new THREE.MeshBasicMaterial({color:0xe1d2a1,transparent:true,opacity:.65,depthWrite:false,side:THREE.DoubleSide});owned.push(material);const ring=new THREE.Mesh(geometry,material);ring.rotation.x=-Math.PI/2;world.add(ring);rings.push(ring);}
@@ -21,7 +24,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
  document.body.append(hud,menu);
  const buildButtons=[...menu.querySelectorAll('[data-kind]')],choices=menu.querySelector('[data-choices]'),contextButton=menu.querySelector('[data-context]'),startButton=menu.querySelector('[data-start]');
  const names={turret:'씨앗 포탑',snare:'덩굴 덫',wall:'잎 울타리'},costs={turret:3,snare:2,wall:2};
- for(const b of buildButtons){const kind=b.dataset.kind;b.setAttribute('aria-label',`${names[kind]} · 수정 ${costs[kind]}`);const icon=b.querySelector('i');icon.style.backgroundImage=`url("${base}assets/${kind==='turret'?'cute/enemy-turret-v4.webp':'garden-growth-atlas-v3.webp'}")`;b.onclick=()=>{if(interactiveNow&&menuOpen&&padId!==null&&!b.disabled){onBuild?.(padId,kind);menuOpen=false;choices.hidden=true;contextButton.setAttribute('aria-expanded','false');b.blur();}};}
+ for(const b of buildButtons){const kind=b.dataset.kind;b.setAttribute('aria-label',`${names[kind]} · 수정 ${costs[kind]}`);const icon=b.querySelector('i');icon.style.backgroundImage=`url("${base}${SIEGE_ART_FILE}")`;Object.assign(icon.style,siegeArtStyle(kind));b.onclick=()=>{if(interactiveNow&&menuOpen&&padId!==null&&!b.disabled){onBuild?.(padId,kind);menuOpen=false;choices.hidden=true;contextButton.setAttribute('aria-expanded','false');b.blur();}};}
  contextButton.onclick=()=>{if(!interactiveNow||!nearestPad||contextButton.disabled)return;if(nearestPad.kind){onBuild?.(padId,nearestPad.kind);}else{menuOpen=!menuOpen;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));}contextButton.blur();};
  menu.querySelector('[data-close]').onclick=()=>{menuOpen=false;choices.hidden=true;contextButton.setAttribute('aria-expanded','false');};
  startButton.onclick=()=>{if(interactiveNow){menuOpen=false;choices.hidden=true;onStart?.();startButton.blur();}};
@@ -38,7 +41,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
    if(facilitiesSeen&&code>0&&code!==facilityCodes[i])plantTime[i]=.24;
    facilityCodes[i]=code;plantTime[i]=Math.max(0,plantTime[i]-step);
    const bump=Math.sin(Math.PI*plantTime[i]/.24)*.16;
-   facilities[i].scale.set(1.55*(1+bump),1.55*(1+bump),1);
+   facilities[i].scale.set(1.55*(1+bump),1.55*(1+bump)*siegeArtAspect(p.kind||'turret'),1);
   }
   facilitiesSeen=true;
   const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}`;

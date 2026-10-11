@@ -14,6 +14,7 @@ import {createTitleCombatBinding} from './title-combat-bonuses.js';
 import {defensePreparationKey,readDefensePreparation,canWriteDefensePreparation} from './defense-save-route.js';
 import {createDefenseCombat,DEFENSE_COMBAT} from './seed-defense-combat.js';
 import {createCanvasVfx} from './canvas-vfx.js';
+import {SIEGE_ART_FILE,paintSiegeHeart} from './siege-art.js';
 import {actorArtFile,CUTE_ACTOR_BASELINE} from './actor-art.js';
 import {SEED_BODY_ART,SEED_SOLO_BODY_ART,SEED_FUSION_BODY_ART,SEED_AWAKEN_BODY_ART} from './seed-body.js';
 
@@ -70,6 +71,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  const setLabel=(selector,text)=>{const el=$(selector);if(el.textContent!==text)el.textContent=text;};
  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
  const load=(id,file)=>{const img=new Image();assets[id]=img;loads.push(new Promise(resolve=>{img.onload=()=>{dirty=true;resolve();};img.onerror=resolve;img.src=BASE+'assets/'+file;}));};
+ load('gardenHeart',SIEGE_ART_FILE.slice(7));
  load('rank','defense/rank-badges-v1.webp');load('combo','combo-projectiles-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('floor','seed-defense-garden-v1.webp');load('stone','garden-stone-v4.png');load('flagstones','seed-defense-stones-v1.webp');load('awaken',SEED_AWAKEN_BODY_ART);load('plants','garden-growth-atlas-v3.webp');load('solo',SEED_SOLO_BODY_ART);load('seed',SEED_BODY_ART);load('fusion',SEED_FUSION_BODY_ART);load('projectile','mobile/seed-projectile-dna-v1.png');
  // Canvas2D crops the same front/right/back/left cells as the 3D billboard rigs.
  load('hound',actorArtFile('enemy-hound-v4.png'));load('runner',actorArtFile('enemy-runner-v1.webp'));load('shield',actorArtFile('enemy-shield-v4.png'));load('boss','mobile/warden-memory-v4.webp');load('batter',actorArtFile('enemy-batter-v1.webp'));load('catcher',actorArtFile('enemy-catcher-v1.webp'));load('flight',actorArtFile('enemy-act3-flight-atlas-v2.webp'));load('stadiumWarden','mobile/warden-act2-ace-v1.webp');load('austin','mobile/boss-austin-v1.webp');load('alwaysbeginner','mobile/boss-always-beginner-v1.webp');load('tempestcarrier','mobile/boss-act3-johan-atlas-v2.webp');
@@ -215,7 +217,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   // 화단 칸 자체는 바닥에 구워 두었다. 심을 칸을 고르거나 씨앗을 끄는 동안에만 빈 칸을 흰 점선으로 밝힌다.
   const placingNow=root.classList.contains('td-placing')||moving||drag?.moved,hover=drag?.moved&&!drag.target?defenseCellAt(drag.x,drag.y):null,chosenPad=state.pads[selected];
   if(placingNow||state.phase==='build'&&!state.towers.length){ctx.save();ctx.setLineDash([.9,.7]);ctx.lineWidth=.22;for(const c of DEFENSE_CELLS){const used=state.towers.some(t=>t.x===c.x&&t.y===c.y&&(!drag||t.id!==drag.id));if(used)continue;const on=c===hover||(!drag?.moved&&chosenPad&&chosenPad.x===c.x&&chosenPad.y===c.y&&!tower());defenseBedPath(ctx,c.x,c.y,.35);ctx.fillStyle=on?'#fff1b92e':'#ffffff0f';ctx.fill();ctx.strokeStyle=on?'#fff1b9e0':'#ffffff8c';ctx.stroke();}ctx.restore();}
-  const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
+  const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();if(!paintSiegeHeart(ctx,assets.gardenHeart,end.x-1,end.y,12.4))sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
   const chosen=tower()||(['build','draft'].includes(state.phase)?{...state.pads[selected],laws:[],level:1}:null);if(chosen&&state.phase!=='wave'){ctx.beginPath();ctx.arc(chosen.x,chosen.y,defenseTowerStats(chosen).range,0,Math.PI*2);ctx.fillStyle=color(chosen.laws[0])+'0b';ctx.strokeStyle=color(chosen.laws[0])+'55';ctx.lineWidth=.16;ctx.fill();ctx.stroke();}
   for(const t of state.towers){
    const ink=color(t.laws[0]);ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,3.35,1.45,0,0,Math.PI*2);ctx.fill();

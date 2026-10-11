@@ -1,6 +1,6 @@
-import {createMusicBank} from './audio-assets.js';
-// Procedural combat cues share a voice budget. Authored music is loaded lazily
-// after a gesture; offline/decode failures retain the lightweight score.
+import {createMusicBank,createEffectBank,effectAtlasLayout} from './audio-assets.js';
+// Material SFX are authored offline into one lazy mono atlas. Their original
+// oscillator palette and lightweight score remain offline/decode fallbacks.
 export const AUDIO_EVENTS=Object.freeze({
  shot:{wave:'triangle',freq:690,end:420,duration:.055,gain:.022,cooldown:.085,priority:0,noise:.12},
  shotCrystal:{wave:'sine',freq:660,end:940,duration:.12,gain:.026,cooldown:.1,priority:0,notes:[1,1.5]},
@@ -96,7 +96,7 @@ export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
 }
 
 export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globalThis.webkitAudioContext,now=()=>performance.now(),baseUrl='./',fetcher=globalThis.fetch}={}){
- const limiter=createAudioLimiter({maxVoices:12,now}),unlockTargets=new Map();let ctx=null,master=null,sfxBus=null,musicBus=null,musicBank=null,noiseBuffer=null,muted=false,paused=false,unlocked=false,musicScene='garden',musicClock=0,musicStep=0;
+ const limiter=createAudioLimiter({maxVoices:12,now}),unlockTargets=new Map(),fallbackNodes=new Set();let ctx=null,master=null,sfxBus=null,musicBus=null,musicBank=null,effectBank=null,noiseBuffer=null,muted=false,paused=false,unlocked=false,musicScene='garden',musicClock=0,musicStep=0,duckUntil=0,variation=0;
  function ensure(){
   if(ctx||!AudioContextCtor)return Boolean(ctx);
   try{
@@ -105,16 +105,17 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
    sfxBus=ctx.createGain();sfxBus.gain.value=.9;sfxBus.connect(master);
    musicBus=ctx.createGain();musicBus.gain.value=MUSIC_SCENES.garden.gain;musicBus.connect(master);
    musicBank=createMusicBank({ctx,bus:musicBus,baseUrl,fetcher});
+   effectBank=createEffectBank({ctx,bus:sfxBus,cues:effectAtlasLayout(AUDIO_EVENTS).cues,baseUrl,fetcher});
    if(ctx.createBuffer){noiseBuffer=ctx.createBuffer(1,Math.ceil((ctx.sampleRate||44100)*.35),ctx.sampleRate||44100);const data=noiseBuffer.getChannelData(0);let seed=7819;for(let i=0;i<data.length;i++){seed=(seed*1664525+1013904223)>>>0;data[i]=(seed/2147483648-1);}}
    return true;
   }catch{return false;}
  }
  function noise(at,duration,volume,bus=sfxBus){
   if(!noiseBuffer||!ctx.createBufferSource||!ctx.createBiquadFilter)return;
-  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain();source.buffer=noiseBuffer;filter.type='highpass';filter.frequency.value=2200;gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(volume,at+.003);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);source.connect(filter).connect(gain).connect(bus);source.onended=()=>{source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+duration+.005);
+  const source=ctx.createBufferSource(),filter=ctx.createBiquadFilter(),gain=ctx.createGain(),item={oscillator:source,gain,filter};fallbackNodes.add(item);source.buffer=noiseBuffer;filter.type='highpass';filter.frequency.value=2200;gain.gain.setValueAtTime(.0001,at);gain.gain.linearRampToValueAtTime(volume,at+.003);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);source.connect(filter).connect(gain).connect(bus);source.onended=()=>{fallbackNodes.delete(item);source.disconnect();filter.disconnect();gain.disconnect();};source.start(at);source.stop(at+duration+.005);
  }
  function note(freq,at,duration,volume,wave='sine',bus=musicBus){
-  const osc=ctx.createOscillator(),gain=ctx.createGain();osc.type=wave;osc.frequency.setValueAtTime(Math.max(32,freq),at);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.006);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);osc.connect(gain).connect(bus);osc.onended=()=>{osc.disconnect();gain.disconnect();};osc.start(at);osc.stop(at+duration+.01);
+  const osc=ctx.createOscillator(),gain=ctx.createGain(),item={oscillator:osc,gain};fallbackNodes.add(item);osc.type=wave;osc.frequency.setValueAtTime(Math.max(32,freq),at);gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.006);gain.gain.exponentialRampToValueAtTime(.0001,at+duration);osc.connect(gain).connect(bus);osc.onended=()=>{fallbackNodes.delete(item);osc.disconnect();gain.disconnect();};osc.start(at);osc.stop(at+duration+.01);
  }
  function musicBeat(){
   const scene=MUSIC_SCENES[musicScene],step=musicStep++%16,chord=scene.chords[Math.floor(step/4)],at=ctx.currentTime;
@@ -132,7 +133,12 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
  function play(id,{intensity=1,pitch=1}={}){
   const spec=AUDIO_EVENTS[id];if(!spec||muted||paused||globalThis.document?.hidden||!unlocked||!ctx||ctx.state!=='running')return false;
   const token=limiter.begin(id,spec);if(token===null)return false;
-  const ratios=spec.notes||[1],start=ctx.currentTime,volume=Math.max(.1,Math.min(1.4,intensity))*spec.gain/Math.sqrt(ratios.length);let left=ratios.length;
+  const start=ctx.currentTime,level=Math.max(.1,Math.min(1.4,intensity))*spec.gain;
+  if(spec.priority>=3){duckUntil=Math.max(duckUntil,now()+Math.min(1000,spec.duration*1000+120));musicBus.gain.cancelScheduledValues?.(start);musicBus.gain.setTargetAtTime(MUSIC_SCENES[musicScene].gain*.56,start,.022);}
+  const variedPitch=Math.max(.5,Math.min(2,pitch))*(spec.priority<=1?1+([-1,0,1,0][variation++%4])*.018:1);
+  effectBank?.warm();
+  if(effectBank?.play(id,{at:start,volume:level*1.9,pitch:variedPitch,onended:()=>limiter.end(token)}))return true;
+  const ratios=spec.notes||[1],volume=level/Math.sqrt(ratios.length);let left=ratios.length;
   try{
    ratios.forEach((ratio,index)=>{
     const delay=index*(spec.priority>=3?.045:.018),duration=spec.duration*(1-index*.035),at=start+delay;
@@ -141,7 +147,7 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
     oscillator.frequency.exponentialRampToValueAtTime(Math.max(30,spec.end*ratio*pitch),at+duration);
     gain.gain.setValueAtTime(.0001,at);gain.gain.exponentialRampToValueAtTime(Math.max(.0002,volume),at+.008);
     gain.gain.exponentialRampToValueAtTime(.0001,at+duration);
-    oscillator.connect(gain).connect(sfxBus);oscillator.onended=()=>{oscillator.disconnect();gain.disconnect();if(--left===0)limiter.end(token);};
+    const item={oscillator,gain};fallbackNodes.add(item);oscillator.connect(gain).connect(sfxBus);oscillator.onended=()=>{fallbackNodes.delete(item);oscillator.disconnect();gain.disconnect();if(--left===0)limiter.end(token);};
     oscillator.start(at);oscillator.stop(at+duration+.015);
    });
    if(spec.noise)noise(start,Math.min(.14,spec.duration*.48),volume*spec.noise);
@@ -149,17 +155,19 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
   }catch{limiter.end(token);return false;}
   return true;
  }
+ function stopEffects(){effectBank?.stop();for(const {oscillator,gain,filter} of fallbackNodes){oscillator.onended=null;try{oscillator.stop();}catch{}oscillator.disconnect();gain.disconnect();filter?.disconnect();}fallbackNodes.clear();limiter.reset();duckUntil=0;if(musicBus&&ctx)musicBus.gain.setTargetAtTime(MUSIC_SCENES[musicScene].gain,ctx.currentTime,.06);}
  function installUnlock(target=document){
   if(unlockTargets.has(target))return unlockTargets.get(target).wake;
   const wake=()=>{void unlock();};
-  const visibility=()=>{if(target.hidden){musicBank?.update(musicScene,false);if(ctx)void ctx.suspend().catch(()=>{});}else if(unlocked&&!paused)void unlock();};
+  const visibility=()=>{if(target.hidden){stopEffects();musicBank?.update(musicScene,false);if(ctx)void ctx.suspend().catch(()=>{});}else if(unlocked&&!paused)void unlock();};
   target.addEventListener('pointerdown',wake,{capture:true,passive:true});target.addEventListener('keydown',wake,{capture:true,passive:true});target.addEventListener('visibilitychange',visibility);unlockTargets.set(target,{wake,visibility});return wake;
  }
  function setScene(id){const next=Object.hasOwn(MUSIC_SCENES,id)?id:'garden';if(next!==musicScene){musicScene=next;musicClock=0;musicStep=0;if(musicBus&&ctx)musicBus.gain.setTargetAtTime(MUSIC_SCENES[next].gain,ctx.currentTime,.16);}musicBank?.update(musicScene,unlocked&&!paused&&!muted&&!globalThis.document?.hidden);return musicScene;}
  function tick(dt){
+  if(duckUntil&&now()>=duckUntil){duckUntil=0;if(musicBus&&ctx)musicBus.gain.setTargetAtTime(MUSIC_SCENES[musicScene].gain,ctx.currentTime,.18);}
   if(!unlocked||paused||muted||globalThis.document?.hidden||!ctx||ctx.state!=='running'||musicBank?.playing())return;
   const scene=MUSIC_SCENES[musicScene];musicClock+=Math.max(0,Math.min(.1,dt));if(musicClock<scene.step)return;musicClock-=scene.step;musicBeat();
  }
- async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){musicBank?.update(musicScene,false);try{await ctx.suspend();}catch{}}else await unlock();}
- return {unlock,play,installUnlock,setPaused,setScene,tick,setMuted(value){muted=Boolean(value);if(master)master.gain.value=muted?0:.72;musicBank?.update(musicScene,unlocked&&!muted&&!paused&&!globalThis.document?.hidden);},reset(){limiter.reset();musicClock=0;musicBank?.reset();},dispose(){musicBank?.reset();for(const [target,{wake,visibility}] of unlockTargets){target.removeEventListener('pointerdown',wake,true);target.removeEventListener('keydown',wake,true);target.removeEventListener('visibilitychange',visibility);}unlockTargets.clear();limiter.reset();void ctx?.close?.();unlocked=false;},state:()=>({supported:Boolean(AudioContextCtor),unlocked,muted,paused,musicScene,musicStep,...(musicBank?.state()||{loadedMusic:null,loadingMusic:null,musicError:null,musicBuffers:0,musicSources:0,musicBytes:0}),...limiter.state()})};
+ async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){stopEffects();musicBank?.update(musicScene,false);try{await ctx.suspend();}catch{}}else await unlock();}
+ return {unlock,play,installUnlock,setPaused,setScene,tick,setMuted(value){muted=Boolean(value);if(muted)stopEffects();if(master)master.gain.value=muted?0:.72;musicBank?.update(musicScene,unlocked&&!muted&&!paused&&!globalThis.document?.hidden);},reset(){stopEffects();musicClock=0;musicBank?.reset();effectBank?.reset();},dispose(){stopEffects();musicBank?.reset();effectBank?.reset();for(const [target,{wake,visibility}] of unlockTargets){target.removeEventListener('pointerdown',wake,true);target.removeEventListener('keydown',wake,true);target.removeEventListener('visibilitychange',visibility);}unlockTargets.clear();limiter.reset();void ctx?.close?.();unlocked=false;},state:()=>({supported:Boolean(AudioContextCtor),contextState:ctx?.state||'uninitialized',unlocked,muted,paused,musicScene,musicStep,musicDucked:Boolean(duckUntil),...(effectBank?.state()||{sfxReady:false,sfxLoading:false,sfxError:null,sfxSources:0,sfxBytes:0}),...(musicBank?.state()||{loadedMusic:null,loadingMusic:null,musicError:null,musicBuffers:0,musicSources:0,musicBytes:0}),...limiter.state()})};
 }

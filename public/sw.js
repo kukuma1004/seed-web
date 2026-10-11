@@ -14,7 +14,7 @@ self.addEventListener('message',event=>{
 });
 
 // Download required code/art listed by the build that is not stored yet.
-// Soundtrack loops cache on first playback; do not download unused acts on idle.
+// Soundtrack and SFX banks cache on first playback; do not download audio on idle.
 // then forget files that belonged to older builds. Runs in the background and never blocks play.
 function syncOfflineCopy(){
  if(syncing||Date.now()-lastSync<5*60*1000)return syncing||Promise.resolve();
@@ -38,7 +38,7 @@ function syncOfflineCopy(){
     // Finish at most the in-flight file when play starts or the app is hidden.
     if(!downloadsAllowed()){complete=false;break;}
     if(url===ROOT)continue;
-    if(/^assets\/audio\/music\//.test(url.slice(ROOT.length)))continue;
+    if(/^assets\/audio\/(?:music|sfx)\//.test(url.slice(ROOT.length)))continue;
     const asset=url.slice(ROOT.length),revision=/^assets\/duel\/[a-z0-9-]+\.webp$/.test(asset)&&/^[a-f0-9]{64}$/.test(assetVersions?.[asset])?assetVersions[asset]:null;
     const cached=await cache.match(url,{ignoreVary:true});
     if(cached&&(!revision||revisions[asset]===revision))continue;

@@ -33,7 +33,7 @@ const scene=new THREE.Scene(),sharedFloor=new THREE.Texture(),plate4=new THREE.T
 const view=createExpansionJourneyView(scene,sharedFloor);view.setActive(true);const plate=view.root.getObjectByName('expansion-environment-plate');
 const floor=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===8),planeGeometry=plate.geometry,material=plate.material;
 assert.equal(plate.visible,false);assert.equal(floor.visible,true);
-view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,true,'long panorama keeps world-sized road detail');assert.equal(material.map,plate4);
+view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,true,'long panorama keeps world-sized road detail');const panoramaSampler=material.map;assert.notEqual(panoramaSampler,plate4);assert.equal(panoramaSampler.source,plate4.source,'owned sampling preserves original image');assert.equal(panoramaSampler.wrapS,THREE.MirroredRepeatWrapping);assert.deepEqual(plate4.repeat.toArray(),[1,1],'cache texture is untouched');
 const edgeMarks=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===.16);assert.equal(edgeMarks.visible,false,'old plate has no new edge markers');
 view.setCourse('crosswind',{halfDepth:5.4});assert.equal(edgeMarks.visible,true,'fresh closer ricochet boundaries are visible over the same plate');const edgeMatrix=new THREE.Matrix4();for(let i=0;i<edgeMarks.count;i++){edgeMarks.getMatrixAt(i,edgeMatrix);assert(Math.abs(Math.abs(edgeMatrix.elements[14])-5.25)<1e-6);}assert.equal(edgeMarks.count,40,'reuse the existing fixed marker pool');view.setCourse('crosswind');assert.equal(edgeMarks.visible,false,'legacy and other modes reset the optional marker layout');
 const roadMatrix=new THREE.Matrix4();floor.getMatrixAt(0,roadMatrix);assert(roadMatrix.elements[13]>plate.position.y,'road detail must be above the opaque panorama');
@@ -46,7 +46,7 @@ const definition=EXPANSION_ENVIRONMENTS.crosswind;
 const bandMin=definition.z+(.29-.5)*definition.depth,bandMax=definition.z+(.63-.5)*definition.depth;
 assert(bandMin<=-7&&bandMax>=7,'real movement stays on the painted stone band, not in clouds');
 view.setTerrainOnly(true);assert.equal(plate.visible,false);assert.equal(floor.visible,false,'survival keeps its existing ground');
-view.setPlate('crystalGorge',plate5);assert.equal(material.map,plate4,'a late inactive load cannot replace the current act');
+view.setPlate('crystalGorge',plate5);assert.equal(material.map,panoramaSampler,'a late inactive load cannot replace the current act');
 view.setCourse('crystalGorge');assert.equal(plate.visible,false);assert.equal(material.map,plate5);view.setTerrainOnly(false);assert.equal(plate.visible,true);
 assert.equal(plate.geometry,planeGeometry);assert.equal(plate.material,material);assert.equal(floor.count,12);
 view.setCourse('crystalGorge',{plateBounds:{width:20,depth:17}});assert.deepEqual(plate.scale.toArray(),[20,17,1]);assert.equal(plate.material.map,plate5);assert.equal(plate.geometry,planeGeometry);
@@ -54,7 +54,7 @@ view.setCourse('crystalGorge');assert.deepEqual(plate.scale.toArray(),[48,38,1],
 view.setCourse('crystalGorge',{plateBounds:{width:NaN,depth:17}});assert.deepEqual(plate.scale.toArray(),[48,38,1]);
 for(let i=0;i<60;i++){view.setCourse(i%2?'crosswind':'crystalGorge');view.beginFrame();view.tell({position:{x:0,z:0},dir:{x:1,z:0}});}
 assert.equal(view.root.children.filter(o=>o.name==='expansion-environment-plate').length,1,'one opaque plate draw, no tiled transparent layers');
-let sharedDisposed=0;for(const t of [sharedFloor,plate4,plate5])t.addEventListener('dispose',()=>sharedDisposed++);view.dispose();view.setPlate('crosswind',new THREE.Texture());assert.equal(sharedDisposed,0);assert.equal(scene.children.length,0);
+let sharedDisposed=0,panoramaDisposed=0;for(const t of [sharedFloor,plate4,plate5])t.addEventListener('dispose',()=>sharedDisposed++);panoramaSampler.addEventListener('dispose',()=>panoramaDisposed++);view.dispose();view.dispose();view.setPlate('crosswind',new THREE.Texture());assert.equal(sharedDisposed,0,'borrowed ground/art cache remains owned by loader');assert.equal(panoramaDisposed,1,'owned panorama sampler released once');assert.equal(scene.children.length,0);
 // Execute the production async launcher against delayed asset IO. A slow
 // image must not reopen a cancelled mode or restore another account's build.
 const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');

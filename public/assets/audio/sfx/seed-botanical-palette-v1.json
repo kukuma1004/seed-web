@@ -1,0 +1,306 @@
+{
+  "version": 1,
+  "provenance": "Locally authored deterministic material synthesis, not provider-generated audio",
+  "generator": "tools/audio-palette-render.mjs",
+  "channels": 1,
+  "sampleRate": 22050,
+  "format": "16-bit PCM WAV",
+  "bytes": 828556,
+  "seconds": 18.787120181405896,
+  "cues": {
+    "shot": {
+      "offset": 0,
+      "duration": 0.12,
+      "length": 2646,
+      "rms": 0.15707,
+      "peak": 0.76
+    },
+    "shotCrystal": {
+      "offset": 0.14503401360544219,
+      "duration": 0.18503401360544217,
+      "length": 4080,
+      "rms": 0.13272,
+      "peak": 0.76
+    },
+    "shotPetal": {
+      "offset": 0.3551020408163265,
+      "duration": 0.17501133786848072,
+      "length": 3859,
+      "rms": 0.14245,
+      "peak": 0.76
+    },
+    "shotArc": {
+      "offset": 0.5551473922902495,
+      "duration": 0.17002267573696145,
+      "length": 3749,
+      "rms": 0.12989,
+      "peak": 0.76
+    },
+    "shotOrbit": {
+      "offset": 0.7502040816326531,
+      "duration": 0.21501133786848073,
+      "length": 4741,
+      "rms": 0.13739,
+      "peak": 0.76
+    },
+    "shotPierce": {
+      "offset": 0.990249433106576,
+      "duration": 0.19501133786848074,
+      "length": 4300,
+      "rms": 0.12772,
+      "peak": 0.76
+    },
+    "shotBurst": {
+      "offset": 1.2102947845804988,
+      "duration": 0.20503401360544218,
+      "length": 4521,
+      "rms": 0.16007,
+      "peak": 0.76
+    },
+    "shotReturn": {
+      "offset": 1.4403628117913831,
+      "duration": 0.24503401360544216,
+      "length": 5403,
+      "rms": 0.12942,
+      "peak": 0.76
+    },
+    "shotGravity": {
+      "offset": 1.7104308390022676,
+      "duration": 0.2750113378684807,
+      "length": 6064,
+      "rms": 0.22226,
+      "peak": 0.76
+    },
+    "shotFrost": {
+      "offset": 2.0104761904761905,
+      "duration": 0.22503401360544217,
+      "length": 4962,
+      "rms": 0.12428,
+      "peak": 0.76
+    },
+    "shotPortal": {
+      "offset": 2.260544217687075,
+      "duration": 0.2950113378684807,
+      "length": 6505,
+      "rms": 0.21753,
+      "peak": 0.76
+    },
+    "hit": {
+      "offset": 2.5805895691609977,
+      "duration": 0.12,
+      "length": 2646,
+      "rms": 0.15238,
+      "peak": 0.76
+    },
+    "gravityHit": {
+      "offset": 2.72562358276644,
+      "duration": 0.22503401360544217,
+      "length": 4962,
+      "rms": 0.23993,
+      "peak": 0.76
+    },
+    "burstHit": {
+      "offset": 2.975691609977324,
+      "duration": 0.24503401360544216,
+      "length": 5403,
+      "rms": 0.14556,
+      "peak": 0.76
+    },
+    "pierceHit": {
+      "offset": 3.2457596371882085,
+      "duration": 0.15002267573696146,
+      "length": 3308,
+      "rms": 0.15146,
+      "peak": 0.76
+    },
+    "frostHit": {
+      "offset": 3.420816326530612,
+      "duration": 0.20503401360544218,
+      "length": 4521,
+      "rms": 0.12409,
+      "peak": 0.76
+    },
+    "split": {
+      "offset": 3.6508843537414966,
+      "duration": 0.18503401360544217,
+      "length": 4080,
+      "rms": 0.12302,
+      "peak": 0.76
+    },
+    "chain": {
+      "offset": 3.860952380952381,
+      "duration": 0.15501133786848073,
+      "length": 3418,
+      "rms": 0.15568,
+      "peak": 0.76
+    },
+    "reflect": {
+      "offset": 4.040997732426304,
+      "duration": 0.16503401360544218,
+      "length": 3639,
+      "rms": 0.15108,
+      "peak": 0.76
+    },
+    "portal": {
+      "offset": 4.231065759637188,
+      "duration": 0.28503401360544217,
+      "length": 6285,
+      "rms": 0.22194,
+      "peak": 0.76
+    },
+    "dash": {
+      "offset": 4.541133786848072,
+      "duration": 0.19501133786848074,
+      "length": 4300,
+      "rms": 0.14213,
+      "peak": 0.76
+    },
+    "select": {
+      "offset": 4.761179138321996,
+      "duration": 0.19501133786848074,
+      "length": 4300,
+      "rms": 0.1761,
+      "peak": 0.76
+    },
+    "harvest": {
+      "offset": 4.981224489795919,
+      "duration": 0.3050340136054422,
+      "length": 6726,
+      "rms": 0.1701,
+      "peak": 0.76
+    },
+    "build": {
+      "offset": 5.311292517006803,
+      "duration": 0.3650340136054422,
+      "length": 8049,
+      "rms": 0.13879,
+      "peak": 0.76
+    },
+    "repair": {
+      "offset": 5.701360544217687,
+      "duration": 0.40503401360544217,
+      "length": 8931,
+      "rms": 0.16187,
+      "peak": 0.76
+    },
+    "pickup": {
+      "offset": 6.131428571428572,
+      "duration": 0.24503401360544216,
+      "length": 5403,
+      "rms": 0.18922,
+      "peak": 0.76
+    },
+    "hurt": {
+      "offset": 6.401496598639456,
+      "duration": 0.28503401360544217,
+      "length": 6285,
+      "rms": 0.1273,
+      "peak": 0.76
+    },
+    "evolve": {
+      "offset": 6.7115646258503405,
+      "duration": 0.6,
+      "length": 13230,
+      "rms": 0.14887,
+      "peak": 0.76
+    },
+    "fusion": {
+      "offset": 7.336598639455782,
+      "duration": 0.7,
+      "length": 15435,
+      "rms": 0.12265,
+      "peak": 0.76
+    },
+    "ultimateReady": {
+      "offset": 8.061632653061224,
+      "duration": 0.5,
+      "length": 11025,
+      "rms": 0.15195,
+      "peak": 0.76
+    },
+    "ultimate": {
+      "offset": 8.586666666666666,
+      "duration": 0.84,
+      "length": 18522,
+      "rms": 0.10755,
+      "peak": 0.76
+    },
+    "ultimateBurst": {
+      "offset": 9.45170068027211,
+      "duration": 0.74,
+      "length": 16317,
+      "rms": 0.10306,
+      "peak": 0.76
+    },
+    "ultimateRain": {
+      "offset": 10.216734693877552,
+      "duration": 0.9,
+      "length": 19845,
+      "rms": 0.10503,
+      "peak": 0.76
+    },
+    "ultimateOrbit": {
+      "offset": 11.141768707482994,
+      "duration": 0.98,
+      "length": 21609,
+      "rms": 0.10642,
+      "peak": 0.76
+    },
+    "ultimateBeam": {
+      "offset": 12.146802721088436,
+      "duration": 0.86,
+      "length": 18963,
+      "rms": 0.1273,
+      "peak": 0.76
+    },
+    "ultimateDomain": {
+      "offset": 13.031836734693877,
+      "duration": 1.04,
+      "length": 22932,
+      "rms": 0.09969,
+      "peak": 0.76
+    },
+    "ultimateBlackhole": {
+      "offset": 14.09687074829932,
+      "duration": 1.1700226757369614,
+      "length": 25799,
+      "rms": 0.15654,
+      "peak": 0.76
+    },
+    "ultimateTimeStop": {
+      "offset": 15.291927437641723,
+      "duration": 0.7,
+      "length": 15435,
+      "rms": 0.10106,
+      "peak": 0.76
+    },
+    "finale": {
+      "offset": 16.016961451247166,
+      "duration": 0.8700226757369615,
+      "length": 19184,
+      "rms": 0.07607,
+      "peak": 0.76
+    },
+    "bossWarning": {
+      "offset": 16.91201814058957,
+      "duration": 0.4,
+      "length": 8820,
+      "rms": 0.10869,
+      "peak": 0.76
+    },
+    "bossAttack": {
+      "offset": 17.33705215419501,
+      "duration": 0.38,
+      "length": 8379,
+      "rms": 0.13321,
+      "peak": 0.76
+    },
+    "bossDefeat": {
+      "offset": 17.742086167800455,
+      "duration": 1.02,
+      "length": 22491,
+      "rms": 0.13907,
+      "peak": 0.76
+    }
+  }
+}
