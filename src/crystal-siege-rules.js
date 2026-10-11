@@ -54,7 +54,14 @@ export function startCrystalSiegeDefense(s){if(s.phase!=='prep'||s.core.hp<=0)re
 function reset(s){for(const k of ['spawns','hits','snares','events'])s.out[k].length=0;s.out.phase=s.phase;s.out.clear=s.phase==='clear';s.out.bossReady=s.phase==='clear'&&s.room===4;return s.out;}
 function facilities(s,delta,live,o,{boss=false}={}){
  for(const pad of s.pads){const f=pad;if(!f.kind||f.hp<=0||f.kind==='wall')continue;f.cooldown=Math.max(0,f.cooldown-delta);if(f.cooldown>0)continue;
-  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5;let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level===2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
+  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5+(f.kind==='snare'&&s.paceVersion===2?1.2:0);
+  // New defensive nights bind the nearby group, retaining one short-lived
+  // slot per paid pad. Existing checkpoints keep the original single target.
+  if(f.kind==='snare'&&s.paceVersion===2){
+   let caught=0;for(const e of live){if(caught>=24)break;if((!boss||e.siegeGuard===true)&&distance(pad,e)<=range){o.snares.push({id:e.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});caught++;}}
+   if(caught)f.cooldown=spec.period-(f.level-1)*.15;continue;
+  }
+  let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level===2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
   if(!target)continue;f.cooldown=spec.period-(f.level-1)*.15;
   if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage+(f.level-1)*16});
   else o.snares.push({id:target.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});
@@ -89,7 +96,7 @@ export function stepCrystalSiege(s,dt,{player,enemies=[]}={}){
   s.spawnClock=.6;const count=s.spawnIndex%2?2:1;
   if(live.length+count<=24){const index=s.spawnIndex++,side=Math.floor(rng(s)*4),offset=-4+rng(s)*8;
    for(let i=0;i<count;i++){const approachSide=s.paceVersion===2&&i&&s.room>=2?[1,0,3,2][side]:side,lane=s.paceVersion===2&&index%3===1?(index%2?-5.7:5.7):offset+i*.7;const p=clampCrystalSiegePoint(approachSide===0?{x:-7.3,z:lane}:approachSide===1?{x:7.3,z:lane}:approachSide===2?{x:lane,z:-6.3}:{x:lane,z:6.3});
-    o.spawns.push({id:`siege-${s.room}-${index}-${i}`,position:p,hp:90+s.room*20,type:index%5===4?'charger':'shooter',speed:2.05+s.room*.13,damage:7+s.room,shots:1,windup:.75,cooldown:1,bulletSpeed:5,side:'front'});s.spawned++;
+    o.spawns.push({id:`siege-${s.room}-${index}-${i}`,position:p,hp:70+s.room*16,type:index%5===4?'charger':'shooter',speed:2.05+s.room*.13,damage:7+s.room,shots:1,windup:.75,cooldown:1,bulletSpeed:5,side:'front'});s.spawned++;
    }
   }
  }
@@ -120,7 +127,11 @@ export function stepCrystalSiegeThreat(model,dt,s,{player,bossGuard=false}={}){
   }return o;
  }
  if(bossGuard&&model.bossApproachPoint){const target=model.bossApproachPoint,d=distance(p,target);if(d>.06){const length=Math.min(d,model.speed*delta*clamp(model.slowFactor||1,.1,1));Object.assign(p,clampCrystalSiegePoint({x:p.x+(target.x-p.x)/d*length,z:p.z+(target.z-p.z)/d*length}));o.position={...p};return o;}model.bossApproachPoint=null;}
- let target=s.core;for(const pad of s.pads){if(pad.kind==='wall'&&pad.hp>0&&distance(p,pad)<=1.25){target=pad;break;}}
+ // A living wall draws nearby approach lanes away from the heart. It does
+ // not intercept an already committed strike, teleport an actor, or become
+ // an invisible collider. Old nights retain their original close intercept.
+ let target=s.core,nearestWall=s.paceVersion===2?2.4:1.25;
+ for(const pad of s.pads){const d=distance(p,pad);if(pad.kind==='wall'&&pad.hp>0&&d<=nearestWall){target=pad;nearestWall=d;if(s.paceVersion!==2)break;}}
  const d=distance(p,target);
  if(d<=.85+1e-9){model.phase='windup';model.timer=.55;model.target={x:target.x,z:target.z,...(target.id?{id:target.id}:{})};model.aim=d>1e-9?{x:(target.x-p.x)/d,z:(target.z-p.z)/d}:{x:1,z:0};o.tell={kind:'siege-strike',position:{x:target.x,z:target.z},duration:.55,remaining:.55,target:target.id||'core'};return o;}
  const length=Math.min(d-.85,model.speed*delta*clamp(model.slowFactor||1,.1,1)),next=clampCrystalSiegePoint({x:p.x+(target.x-p.x)/d*length,z:p.z+(target.z-p.z)/d*length});Object.assign(p,next);o.position=next;return o;
