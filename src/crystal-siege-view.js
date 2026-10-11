@@ -46,7 +46,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
   if(!boss&&s.phase==='prep'&&interactive){
    interactiveNow=true;menu.hidden=false;const nextId=nearest?.id??null;if(nextId!==padId)menuOpen=false;padId=nextId;nearestPad=nearest;currentResources=s.resources;
    const key=padId+'|'+nearest?.kind+'|'+nearest?.level+'|'+(nearest?.hp>0)+'|'+currentResources;
-   if(key!==buildKey){buildKey=key;contextButton.hidden=!nearest;contextButton.disabled=Boolean(nearest?.kind&&(nearest.level>=2&&nearest.hp>0||s.resources<costs[nearest.kind]));contextButton.textContent=nearest?.kind?(nearest.level>=2&&nearest.hp>0?`${names[nearest.kind]} · 최대 강화`:`${names[nearest.kind]} ${nearest.hp>0?'강화':'다시 심기'} · ${costs[nearest.kind]}`):'이 화단에 심기';for(const b of buildButtons)b.disabled=!nearest||Boolean(nearest.kind)||s.resources<costs[b.dataset.kind];}
+   if(key!==buildKey){buildKey=key;contextButton.hidden=!nearest;contextButton.disabled=Boolean(nearest?.kind&&(nearest.level>=2&&nearest.hp>0||s.resources<costs[nearest.kind]));contextButton.textContent=nearest?.kind?(nearest.level>=2&&nearest.hp>0?`${names[nearest.kind]} · 최대 강화`:`${names[nearest.kind]} ${nearest.hp>0?'강화':'다시 심기'} · 수정 ${costs[nearest.kind]}${s.resources<costs[nearest.kind]?' 필요':''}`):'이 화단에 심기';for(const b of buildButtons)b.disabled=!nearest||Boolean(nearest.kind)||s.resources<costs[b.dataset.kind];}
    if(nearest?.kind)menuOpen=false;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));
   }else{menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;buildKey='';}
  }

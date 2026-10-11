@@ -573,8 +573,9 @@ async function prepareCrystalSiegeView(){
   const state=expansionJourney?.siege||(survivalSiegeActive()&&survivalSiegeApi.survivalSiegeState(survivalSiege));if(!state)return;
   const replacing=Boolean(state.pads.find(p=>p.id===pad)?.kind);
   const r=survivalSiegeActive()?survivalSiegeApi.buildSurvivalSiege(survivalSiege,pad,kind,player.position):expansionSiegeApi.buildCrystalSiege(state,pad,kind,player.position);$('#toast').textContent=r.ok?(r.rebuilt?'방어시설을 다시 심었습니다':replacing?'방어시설을 강화했습니다':'방어시설을 심었습니다')+' · 수정 '+state.resources:'시설을 심을 위치와 수정을 확인하세요';audio.play(r.ok?(replacing?'repair':'build'):'select');if(r.ok&&survivalSiegeActive())saveSurvival();
- },onStart:()=>{if((!localInspection&&!(expansionChannel==='public'&&expansionJourney?.objective&&canSaveExpansion())&&!canUseSurvivalSiege())||mode!=='playing'||paused)return;if(expansionJourney?.siege)expansionSiegeApi.startCrystalSiegeDefense(expansionJourney.siege);else if(survivalSiegeActive()&&survivalSiegeApi.startSurvivalSiege(survivalSiege))saveSurvival();}});
+ },onStart:()=>{if((!localInspection&&!(expansionChannel==='public'&&expansionJourney?.objective&&canSaveExpansion())&&!canUseSurvivalSiege())||mode!=='playing'||paused)return;if(expansionJourney?.siege){if(expansionSiegeApi.startCrystalSiegeDefense(expansionJourney.siege).ok)showCrystalSiegeDefenseHint();}else if(survivalSiegeActive()&&survivalSiegeApi.startSurvivalSiege(survivalSiege)){showCrystalSiegeDefenseHint();saveSurvival();}}});
 }
+function showCrystalSiegeDefenseHint(){$('#toast').textContent='습격 시작 · 정원의 심장을 지키세요';}
 async function expansionArtCache(){
  const art=await import('./expansion-environment-art.js');
  expansionEnvironmentArt??=art.createExpansionEnvironmentArt({loader:texloader,baseUrl:import.meta.env.BASE_URL,mobile:mobileDevice});
@@ -697,7 +698,9 @@ function updateExpansionCourse(dt){
   }return;
  }
   expansionSiegeInputs.length=0;if(expansionJourney.siege){for(const e of enemies)if(!e.dead&&!e.expansionBoss){const p=e.siegeSnapshot??={id:e.expansionThreat.id,x:0,z:0,hp:0};p.x=e.g.position.x;p.z=e.g.position.z;p.hp=e.hp;expansionSiegeInputs.push(p);}for(const n of expansionJourney.siege.nodes)if(!n.harvested&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<=1.3){const result=expansionSiegeApi.harvestCrystalSiege(expansionJourney.siege,n.id,player.position);if(result.ok){audio.play('harvest');$('#toast').textContent='수정 +2 · 화단에 다가가 방어시설을 심으세요';}break;}}
+ const siegePhaseBefore=expansionJourney.siege?.phase;
  const out=expansionApi.stepExpansionJourney(expansionJourney,dt,{player:player.position,enemies:expansionSiegeInputs,enemyCount:enemies.length,projectileCount:enemyShots.length});
+ if(siegePhaseBefore==='prep'&&expansionJourney.siege?.phase==='defense')showCrystalSiegeDefenseHint();
  if(expansionJourney.siege){expansionJourneyView.setSiegePhase(out.phase);for(const h of out.hits){const e=enemies.find(e=>!e.dead&&e.expansionThreat?.id===h.id);if(e){damageEnemy(e,h.damage,false,false,{kind:'siege-turret'});const p=expansionJourney.siege.pads.find(p=>p.id===h.facilityId);if(p)line(new V(p.x,.6,p.z),e.g.position);}}for(const h of out.snares){const e=enemies.find(e=>!e.dead&&e.expansionThreat?.id===h.id);if(e){expansionSiegeApi.applyCrystalSiegeSnare(e.expansionThreat,h);}}if(expansionJourney.siege.phase==='failed'){const ended=finishExpansionEntry();showExpansionResult(false,ended);return;}}
  for(const spec of out.spawns)spawnExpansionActor(spec);crowdLeft=out.finish?0:1;
 }
@@ -1570,7 +1573,7 @@ function updateSurvivalSiege(dt){
  for(const tell of out.tells)expansionJourneyView?.tell(tell);
  if(out.failed){finishSurvival(false);return;}
  if(out.bossReady&&!session.bossSpawned){session.bossSpawned=true;survivalExpansion=createSurvivalExpansion(session);survivalExpansion.lap=session.lap;const pads=survivalSiegeApi.survivalSiegeState(survivalSiege).pads;for(const wall of survivalExpansion.terrain)if(pads.some(p=>p.kind&&p.hp>0&&Math.abs(p.x-wall.x)<wall.w/2+.75&&Math.abs(p.z-wall.z)<wall.d/2+.75)){wall.hp=0;wall.broken=true;}expansionTerrain=expansionApi.createCrystalCombatBridge(survivalExpansion.terrain,{position:(x,z)=>new V(x,0,z)});syncExpansionCrystals();spawnSurvivalBoss();saveSurvival();}
- if(before!==survivalSiege.phase){if(survivalSiege.phase==='prep')$('#toast').textContent='습격을 막았어요 · 수정 채집과 시설 보강';saveSurvival();}
+ if(before!==survivalSiege.phase){if(survivalSiege.phase==='prep')$('#toast').textContent='습격을 막았어요 · 수정 채집과 시설 보강';else if(before==='prep'&&survivalSiege.phase==='defense')showCrystalSiegeDefenseHint();saveSurvival();}
  publishSurvivalSiegeInspection();
 }
 function moveSurvivalSiegeThreat(e,edt,dt){

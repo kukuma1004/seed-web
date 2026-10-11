@@ -23,7 +23,7 @@ const ctx=vm.createContext({THREE,V:THREE.Vector3,...survival,CRYSTAL_DEFENSE_OB
  syncExpansionCrystals(){},createSurvivalExpansion,expansionApi:{createCrystalCombatBridge:()=>({sweep:()=>({blocked:false,hits:[]})})},
  damageEnemy(e,n){e.hp-=n;if(e.hp<=0)e.dead=true;},spawnSurvivalBoss(){bosses++;ctx.enemies.push({g:new THREE.Object3D(),hp:6216,maxHp:6216,survivalBoss:true});},finishSurvival(){failed++;},publishSurvivalSiegeInspection(){}
 });
-for(const name of ['spawnSurvivalEnemy','captureSurvivalSnapshot','saveSurvival','saveSurvivalSiegeReview','updateSurvivalSiege','moveSurvivalSiegeThreat'])vm.runInContext(source(name),ctx);
+for(const name of ['showCrystalSiegeDefenseHint','spawnSurvivalEnemy','captureSurvivalSnapshot','saveSurvival','saveSurvivalSiegeReview','updateSurvivalSiege','moveSurvivalSiegeThreat'])vm.runInContext(source(name),ctx);
 assert(ctx.saveSurvival());const first=storage.getItem(adapter.survivalSiegeReviewKey('a'));assert(first);const envelope=JSON.parse(first);assert.equal(validSurvivalSave(envelope.world),false);assert.equal(createSurvivalSaveStore(storage,'a').write(envelope.world,{fresh:true}).ok,false);assert(!survivalExpansionRankProgress({...s,lab:null},{acts:Object.fromEntries(['crosswind','crystalGorge'].map(k=>[k,{released:true}]))}).eligible);assert.equal(normalWrites,0);assert.equal(cloudWrites,0);
 // Actual host proximity resource and spending/checkpoint, not a test-side resource grant.
 ctx.player.position.set(-5,0,-4.5);ctx.updateSurvivalSiege(.1);assert.equal(ctx.survivalSiege.crystal.resources,5);ctx.updateSurvivalSiege(.1);assert.equal(ctx.survivalSiege.crystal.resources,5);
@@ -33,8 +33,14 @@ assert(ctx.saveSurvival());const active=adapter.restoreSurvivalSiegeReview(stora
 const model=ctx.enemies[0],before=model.g.position.clone();for(let i=0;i<60;i++)ctx.moveSurvivalSiegeThreat(model,1/60,1/60);assert(model.g.position.distanceTo(before)>0);assert.equal(ctx.hp,100,'core threats do not become ranged/player damage');
 ctx.survivalSiege.crystal.core.hp=0;ctx.updateSurvivalSiege(.1);assert.equal(failed,1);assert.equal(normalWrites,0);assert.equal(cloudWrites,0);
 // Manual start routes to correct mode; Journey paid fifth-night hook still strict.
-assert.match(main,/if\(expansionJourney\?\.siege\)expansionSiegeApi.startCrystalSiegeDefense/);assert.match(main,/survivalSiegeApi\.startSurvivalSiege\(survivalSiege\)\)saveSurvival/);
+assert.match(main,/if\(expansionJourney\?\.siege\)\{if\(expansionSiegeApi\.startCrystalSiegeDefense\(expansionJourney\.siege\)\.ok\)showCrystalSiegeDefenseHint/);assert.match(main,/survivalSiegeApi\.startSurvivalSiege\(survivalSiege\)\)\{showCrystalSiegeDefenseHint\(\);saveSurvival/);
 assert.match(main,/if\(!survivalSiegeActive\(\)\)for\(let i=0;i<8;i\+\+\)spawnSurvivalEnemy/);
 assert.match(main,/survivalSession\.siegeReview\)\{if\(!saveSurvival\(\)\)/);
 const j=crystal.createCrystalSiege(0,1);assert(crystal.buildCrystalSiege(j,'pad-0','turret',j.pads[0]).ok);j.phase='clear';assert.equal(crystal.stepCrystalSiegeBossFacilities(j,.1,[{id:'boss',x:-3,z:-2,hp:100}]).hits.length,0);
+// The shipping host must replace the preparation instruction on automatic night.
+ctx.survivalSiege=adapter.createSurvivalSiege(s);ctx.enemies=[];ctx.player.position.set(0,0,0);
+dom.get('#toast').textContent='수정 +2 · 화단에 다가가 시설을 심으세요';
+for(let i=0;i<151;i++)ctx.updateSurvivalSiege(.1);
+assert.equal(ctx.survivalSiege.phase,'defense');assert.equal(dom.get('#toast').textContent,'습격 시작 · 정원의 심장을 지키세요');
+assert.equal(normalWrites,0);assert.equal(cloudWrites,0);
 console.log('Survival siege actual host: proximity harvest, paid facility, original instanced actor spawn, live-threat checkpoint, ownership/account/ranking guards, core failure and unchanged Journey boss gate PASS. Renderless VM; not browser/device or human balance approval.');
