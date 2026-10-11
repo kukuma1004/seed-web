@@ -344,3 +344,21 @@
  #seed-expedition-v1 .exv-more-heading h3{font-size:13px}
  #seed-expedition-v1 .exv-more-actions .exv-reserves{margin-top:5px}
 }
+
+/* Quiet default view: editing and collection tools are revealed on demand. */
+#seed-expedition-v1 .exv-party-preview{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px;margin:18px 0}
+#seed-expedition-v1 .exv-party-preview>div{display:flex;min-width:0;flex-direction:column;align-items:center;text-align:center;gap:5px}
+#seed-expedition-v1 .exv-party-preview .exv-portrait{width:clamp(48px,7vw,100px);height:clamp(48px,7vw,100px)}
+#seed-expedition-v1 .exv-party-preview b{max-width:100%;overflow-wrap:anywhere;font-size:12px}
+#seed-expedition-v1 .exv-party-preview small{color:#bdcbb4;font-size:10px}
+#seed-expedition-v1 .exv-party-edit,#seed-expedition-v1 .exv-garden-picker{border-top:1px solid #bed2b030;margin-top:12px}
+#seed-expedition-v1 .exv-party-edit>summary,#seed-expedition-v1 .exv-garden-picker>summary,#seed-expedition-v1 .exv-home-library>summary{min-height:44px;display:flex;align-items:center;gap:8px;cursor:pointer;color:#e5e4bb;list-style:none}
+#seed-expedition-v1 .exv-party-edit>summary::before,#seed-expedition-v1 .exv-garden-picker>summary::before,#seed-expedition-v1 .exv-home-library>summary::before{content:'+';font-size:20px;width:20px;text-align:center}
+#seed-expedition-v1 .exv-party-edit[open]>summary::before,#seed-expedition-v1 .exv-garden-picker[open]>summary::before,#seed-expedition-v1 .exv-home-library[open]>summary::before{content:'−'}
+#seed-expedition-v1 .exv-destination-preview{min-height:160px;border-radius:12px;display:flex;flex-direction:column;justify-content:flex-end;gap:5px;padding:18px;background:linear-gradient(0deg,#092421ee,#09242100 85%),var(--garden-image) center/cover;color:#fff2c4}
+#seed-expedition-v1 .exv-destination-preview b{font-size:22px}
+#seed-expedition-v1 .exv-home-library>summary small{color:#b7c5b1;font-size:11px}
+#seed-expedition-v1 .exv-turn-detail{position:relative;margin-left:auto;font-size:11px;max-width:48%}
+#seed-expedition-v1 .exv-turn-detail>summary{padding:8px;cursor:pointer}
+#seed-expedition-v1 .exv-turn-detail[open] .exv-turn-order{position:absolute;right:0;top:100%;z-index:8;min-width:240px;padding:10px;background:#092329f5;border:1px solid #81997b;border-radius:8px;display:flex;flex-wrap:wrap;gap:5px}
+@media(max-height:600px){#seed-expedition-v1 .exv-home-hero{padding:10px 14px}#seed-expedition-v1 .exv-home-hero h1{font-size:20px}#seed-expedition-v1 .exv-destination-preview{min-height:110px;padding:12px}#seed-expedition-v1 .exv-party-preview{margin:10px 0;gap:4px}#seed-expedition-v1 .exv-party-preview .exv-portrait{width:52px;height:52px}}
