@@ -35,7 +35,7 @@ const start=main.indexOf('function updateExpansionCourse(dt){'),end=main.indexOf
 assert(start>=0&&end>start);
 const j=createExpansionJourney('crystalGorge',0,413,{siege:true,objective:CRYSTAL_DEFENSE_OBJECTIVE});
 let selecting=true;
-const c=vm.createContext({expansionJourney:j,expansionApi:expansion,expansionSiegeApi:siege,expansionSiegeView:{preparationHeld:()=>selecting},expansionJourneyView:{beginFrame(){},setSiegePhase(){}},syncExpansionCrystals(){},roomCleared:false,expansionSiegeInputs:[],enemies:[],enemyShots:[],player:{position:{x:0,z:0}},audio:{play(){}},$:()=>({textContent:''}),showCrystalSiegeDefenseHint(){},spawnExpansionActor(){throw Error('Unexpected prep spawn');},crowdLeft:0});
+const c=vm.createContext({expansionJourney:j,expansionApi:expansion,expansionSiegeApi:siege,expansionSiegeView:{preparationHeld:()=>selecting},expansionJourneyView:{beginFrame(){},syncUndertow(fields){if(fields!==null)throw Error("Act5 undertow leak");},setSiegePhase(){}},syncExpansionCrystals(){},roomCleared:false,expansionSiegeInputs:[],enemies:[],enemyShots:[],player:{position:{x:0,z:0}},audio:{play(){}},$:()=>({textContent:''}),showCrystalSiegeDefenseHint(){},spawnExpansionActor(){throw Error('Unexpected prep spawn');},crowdLeft:0});
 vm.runInContext(main.slice(start,end),c);
 for(let i=0;i<200;i++)c.updateExpansionCourse(.1);
 assert.equal(j.siege.elapsed,0);assert.equal(j.siege.phase,'prep');
