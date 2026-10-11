@@ -36,7 +36,7 @@ export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,
  const ack=(uid,revision,record,modern)=>persist(metaKey(uid,modern),JSON.stringify({revision,writeId:identity(record),recordId:survivalRecordId(record)}));
  const unchanged=(uid,modern)=>{if(user()?.uid!==uid||!eligible(user())||currentOwner()!==uid||inspection()||modern&&!objectiveEnabled(objectives))throw Error('account');};
  async function perform({allowPull=false,choice=null,expected=null}={}){
-  const u=user();if(!eligible(u))return set('guest');const uid=u.uid,route=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection}),store=route.store,modern=Boolean(store?.key?.startsWith(SURVIVAL_OBJECTIVE_SAVE_KEY));if(route.kind==='objective-locked')return set('invalid');
+  const u=user();if(!eligible(u))return set('guest');const uid=u.uid;let route=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection}),store=route.store,modern=Boolean(store?.key?.startsWith(SURVIVAL_OBJECTIVE_SAVE_KEY));if(route.kind==='objective-locked')return set('invalid');
   set('checking');const controller=new AbortController(),alarm=setTimeout(()=>controller.abort(),timeout);
   try{
    // Token acquisition also has a deadline: an auth popup must not hang save/exit.
@@ -45,7 +45,17 @@ export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,
    const url=databaseURL.replace(/\/$/,'')+'/seedSurvivalSaves/'+encodeURIComponent(uid)+'.json?auth='+encodeURIComponent(session.idToken);
    const response=await fetchImpl(url,{headers:{'X-Firebase-ETag':'true'},signal:controller.signal,cache:'no-store'});
    if(!response.ok)throw Error(response.status===401||response.status===403?'permission':'offline');
-   const remote=decodeSurvivalCloud(await response.json(),{objectives:modern,owner:uid}),etag=response.headers.get('ETag');unchanged(uid,modern);
+   const payloadRead=await response.json(),etag=response.headers.get('ETag');let remote=decodeSurvivalCloud(payloadRead,{objectives:modern,owner:uid});unchanged(uid,modern);
+   if(modern&&remote.legacyRecord){
+    // Before the first v2 child exists, the cloud still owns the v1 timeline.
+    // Read/ack it through its own slot; an empty v2 slot cannot prove ancestry.
+    // Recheck after the GET so a concurrent child or invalid v2 is never hidden.
+    const latest=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection});
+    if(['objective-fresh','objective-after-legacy'].includes(latest.kind)){
+     route=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection});store=route.store;modern=false;
+     remote=decodeSurvivalCloud(payloadRead);unchanged(uid,false);
+    }
+   }
    const local=store.readRecord(),m=meta(uid,modern),localId=survivalRecordId(local);
    if(modern&&local&&remote.record&&local.id===remote.record.id&&survivalRecordId(local.parent)!==survivalRecordId(remote.record.parent))return set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
    if(modern&&!local&&remote.record?.parent){

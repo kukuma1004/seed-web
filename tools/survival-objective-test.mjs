@@ -79,6 +79,41 @@ assert.equal((await phoneSync.sync({allowPull:true})).kind,'conflict');assert.eq
 phoneStorage.setItem('seed-survival-sync-v1:p2',JSON.stringify({revision:3,writeId:oldRemoteRecord.writeId,recordId:JSON.stringify(oldRemoteRecord)}));
 assert.equal((await phoneSync.sync({allowPull:true})).kind,'synced');assert.equal(phonePuts,0);assert.equal(createSurvivalSaveStore(phoneStorage,'p2',{objectives:()=>enabled,currentOwner:()=> 'p2'}).read()?.id,'after-old');
 
+// A returning player has a completed v1 run but has not created a v2 child.
+// Checking that exact cloud terminal must acknowledge the old slot before the
+// player starts the new circuit. Previously both choices returned conflict
+// forever because the empty modern slot could never have a terminal parent.
+const returningData=new Map([['seed-survival-checkpoint-v1:p2',JSON.stringify(oldRemoteRecord)]]);
+const returningStorage={getItem:k=>returningData.get(k)||null,setItem:(k,v)=>returningData.set(k,v)};
+let returningPuts=0;
+const returningSync=createSurvivalSync({storage:returningStorage,account:{user:()=>({uid:'p2',isAnonymous:false}),tokenSession:async()=>({uid:'p2',idToken:'token'})},databaseURL:'https://example.test',currentOwner:()=> 'p2',objectives:()=>enabled,fetchImpl:async (_url,request={})=>{if(request.method==='PUT')returningPuts++;return{ok:true,status:200,headers:{get:()=> 'etag-terminal'},json:async()=>legacyRemote};}});
+assert.equal((await returningSync.sync({allowPull:true})).kind,'synced','completed legacy record must not permanently disable Start');
+assert.equal(returningPuts,0,'checking a completed run never overwrites the cloud');
+assert.equal(returningStorage.getItem('seed-survival-checkpoint-v1:p2'),JSON.stringify(oldRemoteRecord),'original terminal bytes remain unchanged');
+assert.equal(JSON.parse(returningStorage.getItem('seed-survival-sync-v1:p2')).revision,3,'receipt comes from the authenticated cloud read');
+assert.equal(createSurvivalSaveStore(returningStorage,'p2',{objectives:()=>enabled,currentOwner:()=> 'p2'}).write(newWorld,{fresh:true}).ok,true);
+assert.equal((await returningSync.sync()).kind,'synced','new child can use the checked terminal ancestry');
+assert.equal(returningPuts,1);
+
+// A fresh second device imports a live legacy run into v1, never the empty v2
+// slot. Differing old records still require a real choice and retain a backup.
+const deviceData=new Map(),deviceStorage={getItem:k=>deviceData.get(k)||null,setItem:(k,v)=>deviceData.set(k,v)};
+const liveStore=createSurvivalSaveStore(storage,'live-cloud'),liveWorld=world(createSurvivalSession(17),'live-cloud-run');assert(liveStore.write(liveWorld,{fresh:true}).ok);
+let deviceRemote={version:1,revision:4,checkpoint:JSON.stringify(liveStore.readRecord())},devicePuts=0;
+const deviceSync=createSurvivalSync({storage:deviceStorage,account:{user:()=>({uid:'p2',isAnonymous:false}),tokenSession:async()=>({uid:'p2',idToken:'token'})},databaseURL:'https://example.test',currentOwner:()=> 'p2',objectives:()=>enabled,fetchImpl:async (_url,request={})=>{if(request.method==='PUT')devicePuts++;return{ok:true,status:200,headers:{get:()=> 'etag-device'},json:async()=>deviceRemote};}});
+assert.equal((await deviceSync.sync({allowPull:true})).kind,'synced');
+assert.equal(routeSurvivalSaveStore(deviceStorage,'p2',{objectives:()=>enabled,currentOwner:()=> 'p2'}).kind,'legacy-live');
+assert.equal(devicePuts,0);assert.equal(deviceStorage.getItem('seed-survival-checkpoint-v2:p2'),null);
+const deviceLegacy=createSurvivalSaveStore(deviceStorage,'p2');assert(deviceLegacy.end('live-cloud-run',1));
+deviceRemote={...legacyRemote,revision:5};
+const oldConflict=await deviceSync.sync({allowPull:true});assert.equal(oldConflict.kind,'conflict');assert.equal(oldConflict.local.id,'live-cloud-run');
+assert.equal((await deviceSync.sync({allowPull:true,choice:'remote',expected:oldConflict.expected})).kind,'synced');
+assert.equal(JSON.parse(deviceStorage.getItem('seed-survival-checkpoint-v1:p2:previous')).id,'live-cloud-run');assert.equal(devicePuts,0);
+// Invalid modern bytes must remain blocked and must not be hidden by fallback.
+deviceStorage.setItem('seed-survival-checkpoint-v2:p2','{"version":2,"broken":true}');
+assert.equal((await deviceSync.sync({allowPull:true})).kind,'conflict');
+assert.equal(deviceStorage.getItem('seed-survival-checkpoint-v2:p2'),'{"version":2,"broken":true}');assert.equal(devicePuts,0);
+
 // A JS callback at the backup or clock boundary may switch account/gate.
 let gate=true,owner='p1';const raceStorage={getItem:k=>data.get(k)||null,setItem:(k,v)=>{if(k.endsWith(':previous'))gate=false;data.set(k,v);}};
 const racer=createSurvivalSaveStore(raceStorage,'p1',{objectives:()=>gate,currentOwner:()=>owner});const current=racer.readRecord();
