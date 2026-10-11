@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
+import {createMirrorPanels,MIRROR_PANELS} from '../src/mirror-fighter.js';
 import {createCrystalSiegeView} from '../src/crystal-siege-view.js';
 import {createExpansionJourneyView} from '../src/expansion-journey-view.js';
 import {createCrystalSiege,buildCrystalSiege,startCrystalSiegeDefense} from '../src/crystal-siege-rules.js';
@@ -47,3 +48,13 @@ const panels=[{x:1,z:2,w:.8,d:2.8},{x:8,z:-2,w:.8,d:2.8}],before=JSON.stringify(
 let samplerDisposed=0;sampler.addEventListener('dispose',()=>samplerDisposed++);view.dispose();view.dispose();assert.equal(borrowedDisposed,0);assert.equal(samplerDisposed,1);assert.equal(scene.children.length,0);
 const css=readFileSync(new URL('../src/journey.css',import.meta.url),'utf8');assert(css.includes('min-height:44px'));assert(css.includes('safe-area-inset-bottom'));assert(css.includes('button:focus-visible'));
 console.log('Contextual siege shipping views passed: normal paid build/upgrade/rebuild, disabled/paused/away controls, combat clearing, owned disposal; stone sampler ownership, terrain isolation, bounded collider-matching reflector marks. CPU DOM adapter checks, not live browser/device acceptance.');
+
+const mirrorScene=new THREE.Scene(),mirrors=createMirrorPanels(mirrorScene),pane=new THREE.Matrix4(),pBefore=JSON.stringify(panels),geometries=[...mirrors.geometries],materials=[...mirrors.materials];
+mirrors.setPanels(panels,{lowProfile:true});mirrors.mesh.getMatrixAt(0,pane);
+assert(Math.abs(new THREE.Vector3().setFromMatrixScale(pane).y-.7)<1e-6);
+assert.equal(mirrors.mesh.material.side,THREE.FrontSide);assert.equal(JSON.stringify(panels),pBefore);
+assert.equal(mirrorScene.children.length,2);assert.deepEqual(mirrors.geometries,geometries);assert.deepEqual(mirrors.materials,materials);
+mirrors.setPanels();mirrors.mesh.getMatrixAt(0,pane);
+assert(Math.abs(new THREE.Vector3().setFromMatrixScale(pane).y-1.55)<1e-6);assert.equal(mirrors.mesh.count,MIRROR_PANELS.length);assert.equal(mirrors.mesh.material.color.getHex(),0x9cdef0);assert.equal(mirrors.mesh.material.side,THREE.DoubleSide);
+for(const x of [...geometries,...materials])x.dispose();mirrorScene.clear();
+console.log('Crosswind short-pane presentation: fixed two batches, untouched colliders, Tower appearance restored PASS.');

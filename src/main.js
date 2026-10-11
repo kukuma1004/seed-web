@@ -686,7 +686,7 @@ function expansionBolt(q){if(enemyShots.length>=48)return;const factor=expansion
 function updateExpansionCourse(dt){
  if(!expansionJourney)return;
  expansionJourneyView.beginFrame();syncExpansionCrystals();
- if(expansionJourney.act==='crosswind'&&expansionJourney.phase==='course'&&expansionJourney.course.encounterVersion===2){const section=Math.floor(expansionJourney.course.distance/18);if(section!==expansionReflectorSection){expansionReflectorSection=section;expansionReflectors=expansionApi.crosswindReflectorPanels(expansionJourney.course.distance);mirrorPanels.setPanels(expansionReflectors);expansionJourneyView.syncReflectors(expansionReflectors);}mirrorPanelsActive=effectiveLaws().includes('reflect');mirrorPanels.setActive(mirrorPanelsActive);expansionJourneyView.setReflectorsActive(mirrorPanelsActive);}
+ if(expansionJourney.act==='crosswind'&&expansionJourney.phase==='course'&&expansionJourney.course.encounterVersion===2){const section=Math.floor(expansionJourney.course.distance/18);if(section!==expansionReflectorSection){expansionReflectorSection=section;expansionReflectors=expansionApi.crosswindReflectorPanels(expansionJourney.course.distance);mirrorPanels.setPanels(expansionReflectors,{lowProfile:true});expansionJourneyView.syncReflectors(expansionReflectors);}mirrorPanelsActive=effectiveLaws().includes('reflect');mirrorPanels.setActive(mirrorPanelsActive);expansionJourneyView.setReflectorsActive(mirrorPanelsActive);}
  if(roomCleared)return;
  if(expansionJourney.siege&&(expansionJourney.siege.phase==='failed'||expansionJourney.siege.core.hp<=0)){const ended=finishExpansionEntry();showExpansionResult(false,ended);return;}
  if(expansionJourney.phase!=='course'){
