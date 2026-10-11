@@ -58,3 +58,5 @@ body.phone-landscape.survival-mode #encounter{padding:3px 6px;background:#071713
 .survival-panel .survival-sync-button,#survival-cloud-conflict button,.survival-lab button{min-height:44px}
 .survival-actions{flex-wrap:wrap}.survival-actions button{min-width:100px}
 .survival-help summary:focus-visible,.survival-panel button:focus-visible{outline:2px solid #fff1b5;outline-offset:2px}
+.survival-actions button:disabled{opacity:.55;cursor:wait;filter:saturate(.45)}
+#survival-start-status[role="alert"]{color:#f4d5a0;padding:8px 10px;border:1px solid #dcb97966;border-radius:8px;background:#322918}

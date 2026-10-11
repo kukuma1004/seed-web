@@ -21,4 +21,28 @@ let mounted=0,cover=0,plate=0;const never=new Promise(()=>{});
 const prefix=source.slice(start,source.indexOf(' ++expansionLaunch;',start)).replace("import('./survival-crystal-siege.js')","Promise.resolve({})");
 const preflight=vm.createContext({Promise,survivalEntry:{valid:()=>true},bossRecordReady:()=>true,localInspection:false,survivalOwner:()=> 'owner-A',account:{user:()=>({isAnonymous:false})},survivalStore:()=>({readRecord:()=>null}),freshExpansionObjective:()=> 'crystal-defense-v1',CRYSTAL_DEFENSE_OBJECTIVE:'crystal-defense-v1',expansionObjectiveReleased:()=>true,survivalSiegeApi:null,expansionSiegeView:null,expansionJourneyView:null,prepareExpansionAssets:async act=>{assert.equal(act,undefined,'first act never waits for cover');preflight.expansionJourneyView={};},prepareCrystalSiegeView:async()=>{preflight.expansionSiegeView={};},prepareExpansionEnvironment:()=>{plate++;return never;},prepareExpansionCover:()=>{cover++;return never;},mount:()=>{mounted++;}});
 vm.runInContext(prefix+' mount();\n}',preflight);await preflight.startSurvival();assert.equal(mounted,1);assert.equal(cover,1);assert.equal(plate,1);
+
+// Execute the public-account guards that the inspection path skips. A blocked
+// account must keep its record and display the reason inside the visible menu.
+const elements=new Map();
+const element=id=>{if(!elements.has(id))elements.set(id,{textContent:'',dataset:{},disabled:false,children:[],setAttribute(k,v){this[k]=v;},replaceChildren(){this.children=[];},append(v){this.children.push(v);}});return elements.get(id);};
+const guard=vm.createContext({survivalEntry:{valid:()=>true},survivalSaveMessage:'',localInspection:false,$:element,bossRecordReady:()=>{element('#toast').textContent='보스 기록 확인 실패';return false;}});
+const blockedStart=source.indexOf('function survivalStartBlocked('),blockedEnd=source.indexOf('\nconst survivalEntry=',blockedStart);
+vm.runInContext(source.slice(blockedStart,blockedEnd)+source.slice(start,end),guard);
+assert.equal(guard.startSurvival(),undefined);assert.equal(element('#survival-start-status').textContent,'보스 기록 확인 실패');assert.equal(element('#survival-start-status').role,'alert');
+// A cloud check disables input deliberately. Expose that wait on the button,
+// then restore its real label on conflict/offline without enabling conflicts.
+let finishSync;
+const syncHost=vm.createContext({$:id=>elements.get(id)||null,mode:'ready',survivalSaveMessage:'',survivalCloud:{sync:()=>new Promise(resolve=>{finishSync=resolve;})},survivalSyncLabel:r=>r.kind,survivalStartBlocked:guard.survivalStartBlocked,survivalRecordSummary:()=> 'saved',document:{createElement:()=>({})}});
+for(const [id,label] of [['#start-survival','생존전 시작'],['#resume-survival','이어하기'],['#survival-cloud-retry','계정 저장 다시 확인'],['#survival-cloud-status',''],['#survival-cloud-conflict','']])element(id).textContent=label;
+const syncStart=source.indexOf('async function refreshSurvivalAccount('),syncEnd=source.indexOf('\nconst modeRankingAuth',syncStart);
+vm.runInContext(source.slice(syncStart,syncEnd),syncHost);
+const wait=syncHost.refreshSurvivalAccount();assert(element('#start-survival').disabled);assert.equal(element('#start-survival').textContent,'계정 저장 확인 중…');
+finishSync({kind:'conflict',local:{id:'device'},remote:{id:'cloud'},expected:{}});await wait;
+assert(element('#start-survival').disabled);assert.equal(element('#start-survival').textContent,'생존전 시작');assert.match(element('#survival-start-status').textContent,/이어갈 기록/);assert.equal(element('#survival-cloud-conflict').children.length,3,'existing choices remain the only conflict resolution');
+const retry=syncHost.refreshSurvivalAccount();finishSync({kind:'offline'});await retry;
+assert(!element('#start-survival').disabled);assert.equal(element('#resume-survival').textContent,'이어하기');
+assert.equal(element('#survival-start-status').textContent,'','a resolved conflict must not leave a stale blocking warning');
+console.log('Shipping public-account menu: visible boss guard, labelled cloud wait, strict conflict choices and offline retry PASS; no live account or device claim.');
+
 console.log('Survival entry: duplicate start, failure/retry, timeout, late callback, back and account boundary PASS');

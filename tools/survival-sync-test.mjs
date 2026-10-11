@@ -68,11 +68,13 @@ recovery.sync.stop();timeoutSync.stop();quota.stop();
 // Execute the actual menu controller: block stale start buttons while checking,
 // present both timelines, and wire the exact revision to the user's choice.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-const nodes=new Map(),element=()=>({disabled:false,children:[],append(v){this.children.push(v);},replaceChildren(){this.children=[];}});
-for(const id of ['survival-cloud-status','start-survival','resume-survival','survival-cloud-retry','survival-cloud-conflict'])nodes.set('#'+id,element());
-let complete,args,shown=0;const ctx=vm.createContext({mode:'ready',$:key=>nodes.get(key),document:{createElement:element},survivalClock:n=>String(n),survivalSyncLabel:s=>s.kind,survivalCloud:{sync:options=>{args=options;return new Promise(r=>{complete=r;});}},showSurvivalSetup:()=>shown++});
+const nodes=new Map(),element=()=>({disabled:false,textContent:'',dataset:{},children:[],setAttribute(k,v){this[k]=v;},append(v){this.children.push(v);},replaceChildren(){this.children=[];}});
+for(const id of ['survival-cloud-status','start-survival','resume-survival','survival-cloud-retry','survival-cloud-conflict','survival-start-status','toast'])nodes.set('#'+id,element());
+let complete,args,shown=0;const ctx=vm.createContext({mode:'ready',survivalSaveMessage:'',$:key=>nodes.get(key),document:{createElement:element},survivalClock:n=>String(n),survivalSyncLabel:s=>s.kind,survivalCloud:{sync:options=>{args=options;return new Promise(r=>{complete=r;});}},showSurvivalSetup:()=>shown++});
+vm.runInContext(main.slice(main.indexOf('function survivalStartBlocked('),main.indexOf('\nconst survivalEntry=')),ctx);
 vm.runInContext(main.slice(main.indexOf('function survivalRecordSummary('),main.indexOf('const survivalRanking=')),ctx);
 let task=ctx.refreshSurvivalAccount();assert(nodes.get('#resume-survival').disabled);complete({...conflict});await task;assert(nodes.get('#resume-survival').disabled);assert.equal(nodes.get('#survival-cloud-conflict').children.length,3);
+assert.equal(nodes.get('#survival-start-status').role,'alert');assert.match(nodes.get('#survival-start-status').textContent,/이어갈 기록/);
 task=nodes.get('#survival-cloud-conflict').children[1].onclick();assert.equal(args.choice,'remote');assert.equal(args.expected,conflict.expected);complete({kind:'synced',pulled:true});await task;assert.equal(shown,1);
 // Stale async responses must not reopen a menu after the user left it.
 task=ctx.refreshSurvivalAccount();ctx.mode='playing';complete({kind:'synced',pulled:true});await task;assert.equal(shown,1);

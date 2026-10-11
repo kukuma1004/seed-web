@@ -1229,6 +1229,13 @@ $('#save-exit').onclick=async()=>{
 // Separate challenge: shares the real combat engine, never a journey checkpoint.
 let survivalSaveToken=null,survivalSaveMessage='',survivalPendingChoice=null,survivalAutosaveAt=0,survivalTitleRetryAt=0,survivalPendingEnd=null;
 const survivalOwner=()=>account.user()?.uid||'guest';
+function survivalStartBlocked(message,kind='gate'){
+ survivalSaveMessage=message;
+ const status=$('#survival-start-status');
+ if(status){status.dataset.block=kind;status.setAttribute('role','alert');status.textContent=message;}
+ $('#toast').textContent=message;
+ return;
+}
 const survivalEntry=createSurvivalEntry({owner:survivalOwner,start:(...args)=>{const token=args.pop();return startSurvival(args[0]??null,args[1]??null,args[2]??null,token);},onBusy:busy=>{for(const id of ['start-survival','resume-survival','survival-new-confirm']){const button=$('#'+id);if(button)button.disabled=busy;}const status=$('#survival-start-status');if(status&&busy){status.setAttribute('role','status');status.textContent='생존전을 준비하고 있어요…';}},onError:error=>{console.error('Survival preparation failed',error);const status=$('#survival-start-status');if(status){status.setAttribute('role','alert');status.textContent='생존전을 준비하지 못했어요. 저장은 그대로 남아 있어요. 시작을 다시 눌러 주세요.';}}});
 const survivalSaveContext={objectives:()=>survivalOwner()!=='guest'&&!account.user()?.isAnonymous?EXPANSION_OBJECTIVES:false,currentOwner:survivalOwner,inspection:()=>localInspection};
 const survivalStore=()=>routeSurvivalSaveStore(rawStorage,survivalOwner(),survivalSaveContext).store;
@@ -1343,12 +1350,14 @@ function survivalClock(seconds){const n=Math.max(0,Math.floor(seconds));return `
 function survivalRecordSummary(record){return !record?'저장 없음':record.ended?'이 도전은 종료됐어요':`${record.session.lap+1}순환 ${record.session.act+1}막 · ${survivalClock(record.session.time)} · ${record.progress.kills}처치`;}
 async function refreshSurvivalAccount(choice=null,expected=null){
  const panel=$('#survival-cloud-status');if(!panel||mode!=='ready')return;
- for(const id of ['start-survival','resume-survival','survival-cloud-retry','survival-use-local','survival-use-cloud'])if($('#'+id))$('#'+id).disabled=true;
+ for(const id of ['start-survival','resume-survival','survival-cloud-retry','survival-use-local','survival-use-cloud']){const button=$('#'+id);if(button){button.disabled=true;if(id==='start-survival'||id==='resume-survival'){button.dataset.readyLabel??=button.textContent;button.textContent='계정 저장 확인 중…';}}}
  const result=await survivalCloud.sync({allowPull:true,choice,expected});
  if(mode!=='ready'||$('#survival-cloud-status')!==panel)return;
  if(result.pulled){showSurvivalSetup(false);return;}
  panel.textContent=survivalSyncLabel(result);
- for(const id of ['start-survival','resume-survival','survival-cloud-retry'])if($('#'+id))$('#'+id).disabled=result.kind==='conflict'&&id!=='survival-cloud-retry';
+ for(const id of ['start-survival','resume-survival','survival-cloud-retry']){const button=$('#'+id);if(button){button.disabled=result.kind==='conflict'&&id!=='survival-cloud-retry';if(button.dataset.readyLabel){button.textContent=button.dataset.readyLabel;delete button.dataset.readyLabel;}}}
+ if(result.kind==='conflict')survivalStartBlocked('두 기기의 진행이 달라요. 위에서 이어갈 기록을 선택하면 시작할 수 있어요. 기록은 지우지 않습니다.','cloud-conflict');
+ else {const status=$('#survival-start-status');if(status?.dataset.block==='cloud-conflict'){if(survivalSaveMessage===status.textContent)survivalSaveMessage='';status.textContent='';status.setAttribute('role','status');delete status.dataset.block;}}
  const conflict=$('#survival-cloud-conflict');conflict.replaceChildren();
  if(result.kind==='conflict'){
   const description=document.createElement('p');description.className='survival-note';description.textContent=`이 기기: ${survivalRecordSummary(result.local)} / 계정: ${survivalRecordSummary(result.remote)}. 한 기록만 이어집니다. 바뀌는 기록은 이 기기에 복사본을 남겨요.`;conflict.append(description);
@@ -1434,20 +1443,20 @@ function showSurvivalSetup(refresh=true){
 }
 function startSurvival(lab=null,saved=null,siegeRecord=null,entry=null){
  if(entry&&!survivalEntry.valid(entry))return;
- if(!lab&&!bossRecordReady())return;
+ if(!lab&&!bossRecordReady())return survivalStartBlocked($('#toast').textContent);
  const siegeLab=localInspection&&['siege','siege-resume'].includes(lab);
  const publicObjective=saved?.objective===CRYSTAL_DEFENSE_OBJECTIVE?saved.objective:!saved&&!lab&&!localInspection&&survivalOwner()!=='guest'&&!account.user()?.isAnonymous&&!(survivalStore().readRecord()?.version===1&&!survivalStore().readRecord()?.ended)?freshExpansionObjective('crystalGorge'):null;
- if(publicObjective&&!expansionObjectiveReleased('crystalGorge',publicObjective)){survivalSaveMessage='이 거점 저장은 아직 공개되지 않았어요. 기록을 보존했습니다.';return;}
+ if(publicObjective&&!expansionObjectiveReleased('crystalGorge',publicObjective))return survivalStartBlocked('이 거점 저장은 아직 공개되지 않았어요. 기록을 보존했습니다.');
  if((siegeLab||publicObjective)&&(!survivalSiegeApi||!expansionSiegeView||!expansionJourneyView)){const owner=survivalOwner();return Promise.all([import('./survival-crystal-siege.js'),prepareExpansionAssets(),prepareCrystalSiegeView()]).then(([api])=>{if(owner!==survivalOwner()||(entry&&!survivalEntry.valid(entry)))return;survivalSiegeApi=api;void prepareExpansionEnvironment('crystalGorge');void prepareExpansionCover();return startSurvival(lab,saved,siegeRecord,entry);});}
  if(siegeLab&&lab==='siege-resume'&&!siegeRecord){try{siegeRecord=survivalSiegeApi.restoreSurvivalSiegeReview(rawStorage.getItem(survivalSiegeApi.survivalSiegeReviewKey(survivalOwner())),survivalOwner());}catch{}if(!siegeRecord){$('#toast').textContent='같은 계정의 로컬 거점 저장이 없거나 검증되지 않은 기록이에요.';return;}saved=siegeRecord.world;}
  if(saved?.session?.siegeReview&&!siegeLab)return;
  ++expansionLaunch;void releaseExpansionSaveLease();
  const publicFive=publicCircuitActCount()===5,fiveActs=publicFive||localInspection&&(['act4','act5','five','siege','siege-resume'].includes(lab)||saved?.session?.actCount===5);
- if(!localInspection&&!publicFive&&saved?.session?.actCount===5){$('#toast').textContent='이 기록의 추가 막이 아직 공개되지 않았어요. 저장은 그대로 남겨 두었습니다.';return;}
+ if(!localInspection&&!publicFive&&saved?.session?.actCount===5)return survivalStartBlocked('이 기록의 추가 막이 아직 공개되지 않았어요. 저장은 그대로 남겨 두었습니다.');
  if(fiveActs&&!expansionJourneyView){const owner=survivalOwner();return prepareExpansionAssets(lab==='act5'||saved?.session?.act===4?'crystalGorge':null).then(()=>{if(owner!==survivalOwner()||(entry&&!survivalEntry.valid(entry))){$('#toast').textContent='준비 중 계정이 바뀌었어요. 원래 계정의 저장은 그대로 남아 있습니다.';return;}return startSurvival(lab,saved,siegeRecord,entry);});}
- if(publicFive&&saved&&saved.session?.actCount!==5){saved=migrateSurvivalToFiveActs(saved);if(!saved){$('#toast').textContent='저장된 진행을 확인하지 못했어요. 이전 기록을 보존했습니다.';return;}}
+ if(publicFive&&saved&&saved.session?.actCount!==5){saved=migrateSurvivalToFiveActs(saved);if(!saved)return survivalStartBlocked('저장된 진행을 확인하지 못했어요. 이전 기록을 보존했습니다.');}
  if(!localInspection&&!requireName()){$('#toast').textContent='시작하려면 별명을 먼저 정해주세요 · 타이틀 화면에서 입력할 수 있어요';return;}
- if(!saved&&!retryStoredSurvivalTitles()){survivalSaveMessage=survivalSaveMessage||'미지급 보스 보상을 보관하고 있어요. 계정과 저장 공간을 확인한 뒤 다시 시작해 주세요.';$('#toast').textContent=survivalSaveMessage;return;}
+ if(!saved&&!retryStoredSurvivalTitles())return survivalStartBlocked(survivalSaveMessage||'미지급 보스 보상을 보관하고 있어요. 계정과 저장 공간을 확인한 뒤 다시 시작해 주세요.');
  document.body.classList.remove('survival-result');
  $('#overlay').classList.remove('survival-overlay');
  if(gameplayPaused()||maintenanceOn){showIntro();return;}
@@ -1457,7 +1466,7 @@ function startSurvival(lab=null,saved=null,siegeRecord=null,entry=null){
  if(publicObjective)survivalSiegeOwner=survivalOwner();
  if(siegeLab){survivalSession.act=4;survivalSession.lab='siege';survivalSession.siegeReview=true;survivalSiegeOwner=survivalOwner();survivalSiege=siegeRecord?.siege||survivalSiegeApi.createSurvivalSiege(survivalSession);survivalSiegeInspectAt=-1;}
  document.body.classList.add('survival-mode');restart();
- if(mode!=='playing'){survivalSession=null;return;}
+ if(mode!=='playing'){survivalSession=null;document.body.classList.remove('survival-mode');return survivalStartBlocked($('#toast').textContent||'이전 전투의 보스 기록을 보관하지 못했어요. 프로필에서 계정과 저장 상태를 확인해 주세요.');}
  if(saved){restoreSurvivalWorld(saved,siegeRecord);return;}
  if(siegeLab){labSafe=false;levels.set('chain',3);levels.set('split',3);heldForms.set('prism',4);bankedUpgrades=12;syncLaws();syncForms(true);growth.select(effectiveLaws(),mutated);activeGauge.value=100;saveSurvival();$('#toast').textContent='5막 거점 로컬 시연 · 모의 조합 빌드 · 채집 → 건설 → 습격 · 계정/보상/랭킹 제외';return;}
  if(survivalSession.benchmark){choicesTaken=1;takeSurvivalBenchmarkPick();$('#toast').textContent='가속 자동 비교 · '+survivalSession.benchmark.label+' · 기록 제외';return;}
