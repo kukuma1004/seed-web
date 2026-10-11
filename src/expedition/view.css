@@ -362,3 +362,20 @@
 #seed-expedition-v1 .exv-turn-detail>summary{padding:8px;cursor:pointer}
 #seed-expedition-v1 .exv-turn-detail[open] .exv-turn-order{position:absolute;right:0;top:100%;z-index:8;min-width:240px;padding:10px;background:#092329f5;border:1px solid #81997b;border-radius:8px;display:flex;flex-wrap:wrap;gap:5px}
 @media(max-height:600px){#seed-expedition-v1 .exv-home-hero{padding:10px 14px}#seed-expedition-v1 .exv-home-hero h1{font-size:20px}#seed-expedition-v1 .exv-destination-preview{min-height:110px;padding:12px}#seed-expedition-v1 .exv-party-preview{margin:10px 0;gap:4px}#seed-expedition-v1 .exv-party-preview .exv-portrait{width:52px;height:52px}}
+
+@media(max-height:600px) and (min-width:600px){
+ #seed-expedition-v1 .exv-main{padding:6px;gap:6px}
+ #seed-expedition-v1 .exv-home-hero{padding:6px 12px;min-height:0}
+ #seed-expedition-v1 .exv-home-hero p:last-child,#seed-expedition-v1 .exv-home-count{display:none}
+ #seed-expedition-v1 .exv-home-hero h1{font-size:18px;margin:3px 0}
+ #seed-expedition-v1 .exv-two-col{grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:8px}
+ #seed-expedition-v1 .exv-preparation-party{order:0;padding:10px}
+ #seed-expedition-v1 .exv-preparation-garden{order:1;padding:10px}
+ #seed-expedition-v1 .exv-section-head{margin-bottom:8px}
+ #seed-expedition-v1 .exv-destination-preview{min-height:80px;padding:8px}
+ #seed-expedition-v1 .exv-destination-preview b{font-size:18px}
+ #seed-expedition-v1 .exv-depart-party,#seed-expedition-v1 .exv-preparation-garden>.exv-help{display:none}
+ #seed-expedition-v1 .exv-depart{margin-top:6px;padding-top:4px;gap:8px}
+ #seed-expedition-v1 .exv-roster-management{margin-top:0}
+ #seed-expedition-v1 .exv-home-library{padding:2px 12px}
+}
