@@ -14,8 +14,8 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const floorMaterial=new THREE.MeshStandardMaterial({map:groundTexture,color:0x87a88e,roughness:1});
  const floor=new THREE.InstancedMesh(floorGeometry,floorMaterial,84),m=new THREE.Matrix4();root.add(floor);
  // Borrow the image but own the sampling state. One repeated, world-sized
- // stone tile replaces the enlarged illustration without touching shared art.
- const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xb8c8bf});
+ // fossil-leaf tile replaces the enlarged illustration without touching shared art.
+ const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xc1bdae});
  const road=new THREE.Mesh(roadGeometry,roadMaterial);road.name='crosswind-painted-corridor-floor';road.position.set(EXPANSION_ENVIRONMENTS.crosswind.x,.037,0);road.visible=false;root.add(road);
  // These low stone lips sit beyond the real movement limit. Bevels, inset
  // copper seams and little ivy leaves give the corridor a visible scale;
@@ -112,6 +112,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  function setCourse(act,{halfDepth=null,plateBounds=null}={}){
   course=act;siegePhase=null;plateMaterial.color.setHex(0xffffff);
   reflectorMarks.count=0;reflectorMarks.visible=false;
+  syncUndertow(null);
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Preserve the plate's vertical composition; only horizontal sampling is
@@ -142,7 +143,20 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   if(d){o.scale.set(t.width||.16,length,1);o.rotation.set(-Math.PI/2,0,Math.atan2(d.x,d.z));o.position.x+=d.x*length/2;o.position.z+=d.z*length/2;}
   else{o.rotation.set(-Math.PI/2,0,0);o.scale.set(round?1:1.3,round?1:1.3,1);}
  }
+ // Two finite sand depressions: shared geometry/materials, no particles or
+ // per-frame objects. All three batches are hidden outside Journey Act4.
+ const undertowGeometry=[new THREE.CircleGeometry(1,32).rotateX(-Math.PI/2),new THREE.RingGeometry(.94,1,48).rotateX(-Math.PI/2),new THREE.RingGeometry(.35,.4,32).rotateX(-Math.PI/2)];
+ const undertowMaterials=[.12,.7,.55].map(opacity=>new THREE.MeshBasicMaterial({color:0xe4be73,transparent:true,opacity,depthWrite:false,toneMapped:false,side:THREE.DoubleSide}));
+ const undertowBatches=undertowGeometry.map((g,i)=>{const mesh=new THREE.InstancedMesh(g,undertowMaterials[i],2);mesh.name='crosswind-undertow-'+i;mesh.count=0;mesh.visible=false;mesh.frustumCulled=false;root.add(mesh);return mesh;});
+ const undertowEmpty=[];
+ function syncUndertow(fields){
+  let count=0;for(const f of fields||undertowEmpty){if(count>=2||f.phase==='off')continue;
+   color.setHex(f.phase==='warning'?0xffdc93:0xbe8d49);
+   for(let i=0;i<3;i++){const mesh=undertowBatches[i],radius=f.radius*(i===2?.4+.6*(1-f.progress):1);m.makeScale(radius,1,radius);m.setPosition(f.x,.056+i*.002,f.z);mesh.setMatrixAt(count,m);mesh.setColorAt(count,color);}count++;
+  }
+  for(const mesh of undertowBatches){mesh.count=count;mesh.visible=course==='crosswind'&&!terrainOnly&&count>0;if(count){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;}}
+ }
  setCourse(course);
- return {root,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xa1abd0:0xffedcb);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
-  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
+ return {root,syncUndertow,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xc3c6e4:0xeee6e0);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
+  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();for(const mesh of undertowBatches)mesh.dispose();for(const g of undertowGeometry)g.dispose();for(const mat of undertowMaterials)mat.dispose();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
 }

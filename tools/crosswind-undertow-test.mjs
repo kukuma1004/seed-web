@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import * as THREE from 'three';
+import {createExpansionJourney,checkpointExpansionJourney,restoreExpansionJourney} from '../src/expansion-journey.js';
+import {crosswindUndertowFields,applyCrosswindUndertow,CROSSWIND_UNDERTOW as C} from '../src/crosswind-undertow.js';
+import {createExpansionJourneyView} from '../src/expansion-journey-view.js';
+const run=createExpansionJourney('crosswind',0,42),s=run.course;
+const fields=crosswindUndertowFields(s);assert.equal(fields.length,2);assert.strictEqual(fields,crosswindUndertowFields(s));assert.equal(fields[0].phase,'warning');
+const first={x:fields[0].x-1,z:fields[0].z,hp:100};assert(!applyCrosswindUndertow(s,first,.05));assert.equal(first.x,fields[0].x-1);
+s.time=2.4;const raw=checkpointExpansionJourney(run),copy=JSON.stringify(raw),resumed=restoreExpansionJourney(raw);
+assert.deepEqual(crosswindUndertowFields(resumed.course),crosswindUndertowFields(s));
+assert(applyCrosswindUndertow(s,first,.05));assert(first.x<fields[0].x&&first.x>fields[0].x-1);assert.equal(first.hp,100);assert.equal(JSON.stringify(checkpointExpansionJourney(run)),copy);
+const far={x:fields[0].x-C.radius-1,z:fields[0].z};assert(!applyCrosswindUndertow(s,far,.1));
+const center={x:fields[0].x,z:fields[0].z};assert(!applyCrosswindUndertow(s,center,.1));assert.deepEqual(center,{x:fields[0].x,z:fields[0].z});
+const lag={x:fields[0].x-1,z:fields[0].z},frame={...lag};applyCrosswindUndertow(s,lag,60);applyCrosswindUndertow(s,frame,.1);assert.deepEqual(lag,frame);
+assert(!applyCrosswindUndertow(s,lag,0));assert(!applyCrosswindUndertow(s,lag,NaN));
+for(const version of [1,2])assert.equal(crosswindUndertowFields({...s,encounterVersion:version}),null);
+assert.equal(crosswindUndertowFields(createExpansionJourney('crystalGorge').course),null);
+assert.equal(crosswindUndertowFields({...s,finishAnnounced:true}),null);
+const positions=[];
+for(const hz of [20,60,120]){const state=restoreExpansionJourney(raw).course,p={x:6.5,z:1.8};for(let i=0;i<hz;i++){p.x+=6.09/hz;applyCrosswindUndertow(state,p,1/hz);state.time+=1/hz;}assert(p.x>12,'ordinary walking always escapes');positions.push(p.x);}
+assert(Math.max(...positions)-Math.min(...positions)<.07,'no frame-rate dependent trap');
+const scene=new THREE.Scene(),ground=new THREE.Texture(),v=createExpansionJourneyView(scene,ground);
+v.setActive(true);v.syncUndertow(crosswindUndertowFields(s));const batches=v.root.children.filter(o=>o.name.startsWith('crosswind-undertow-'));assert.equal(batches.length,3);assert(batches.every(o=>o.count<=2&&o.visible));
+const count=v.root.children.length;for(let i=0;i<600;i++)v.syncUndertow(crosswindUndertowFields(s));assert.equal(v.root.children.length,count,'no frame-created objects');
+v.setCourse('crystalGorge');assert(batches.every(o=>!o.visible&&o.count===0));v.setCourse('crosswind');v.syncUndertow(null);assert(batches.every(o=>!o.visible));
+let disposed=0;for(const b of batches){b.geometry.addEventListener('dispose',()=>disposed++);b.material.addEventListener('dispose',()=>disposed++);}v.dispose();v.dispose();assert.equal(disposed,6);assert(ground.image===null,'shared floor remains caller-owned');
+console.log('PASS Act4 undertow: warning/weak player-only pull, walking escape20/60/120Hz, old-save/boss/Act5 gates, deterministic resume, max2 fields/3 pooled draws and disposal. Physical play separate.');

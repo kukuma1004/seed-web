@@ -14,7 +14,8 @@ export function createExpansionEnvironmentArt({loader,baseUrl='',mobile=false}={
   const definition=EXPANSION_ENVIRONMENTS[act]||(act==='cover'?{file:'crystal-cover'}:act==='crosswindFloor'?{file:'act4-crosswind-floor'}:null);if(!definition||disposed)return Promise.resolve(null);
   if(textures.has(act))return Promise.resolve(textures.get(act));
   if(pending.has(act))return pending.get(act);
-  const url=prefix+'assets/expansion/'+definition.file+(mobile&&act!=='cover'?'-mobile':'')+(act==='crosswindFloor'?'-v2.webp':'-v1.webp');
+  const revision=act==='crosswindFloor'?3:act==='crystalGorge'?2:1;
+  const url=prefix+'assets/expansion/'+definition.file+(mobile&&act!=='cover'?'-mobile':'')+`-v${revision}.webp`;
   const job=Promise.resolve().then(()=>loader.loadAsync(url)).then(texture=>{
    if(disposed){texture.dispose();return null;}
    texture.colorSpace=THREE.SRGBColorSpace;texture.wrapS=texture.wrapT=THREE.ClampToEdgeWrapping;

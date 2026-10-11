@@ -11,6 +11,23 @@ for(const action of ['attack','dodge']){const t=setup();t.c.press(action);t.add(
 {const t=setup();t.c.press('dodge');t.add(90);assert.equal(t.c.read().dodge,true);t.block(true);t.c.press('block');t.add(71);assert.equal(t.c.read().block,true);assert.equal(t.c.read().skill2,undefined,'outside chord window stays separate');}
 for(const action of ['skill1','skill2','heavy']){const t=setup();t.c.press('attack');t.block(true);t.c.fire(action);assert.equal(t.c.read()[action],true);t.add(90);assert.equal(t.c.read().attack,undefined,'+ hint cancels pending basic attack');t.c.clear();assert.equal(t.c.read()[action],undefined);}
 assert.equal(DUEL_INPUT_KEYS.KeyI,undefined,'no new independent key');assert.equal(DUEL_INPUT_KEYS.KeyU,'skill1');
+// Direction can be released between DOM input and a paced simulation frame.
+// Queue the deliberate attack direction once; do not queue movement or leak it
+// into the next attack. This represents quick PC chords and released sticks.
+for(const action of ['attack','heavy','skill1','skill2','ult']){
+ let time=0,direction={x:-1,y:0};const c=createDuelChordInput({now:()=>time,aim:()=>direction});
+ c.press(action);direction=null;time=100;
+ const i=c.read();assert.equal(i[action],true);assert.equal(i.aimX,-1,action+' keeps direction until first frame');assert.equal(i.aimY,0);assert.equal(i.x,undefined,'movement is never queued');
+ assert.equal(c.read().aimX,undefined,'direction consumed once');c.fire(action);assert.equal(c.read().aimX,undefined,'no direction keeps normal opponent auto aim');
+}
+{let time=0,direction={x:-1,y:0};const c=createDuelChordInput({now:()=>time,aim:()=>direction});c.press('dodge');direction=null;time=100;const i=c.read();assert.equal(i.dodge,true);assert.equal(i.aimX,undefined,'basic dodge keeps its existing live-direction/backstep rule');}
+for(const [first,second,action] of [['attack','dodge','skill1'],['dodge','attack','skill1'],['block','dodge','skill2'],['attack','block','heavy']]){
+ let time=0,held=first==='block',direction={x:0,y:-1};const c=createDuelChordInput({now:()=>time,blockHeld:()=>held,aim:()=>direction});
+ c.press(first);direction=null;time=30;if(second==='block')held=true;c.press(second);time=90;
+ const i=c.read();assert.equal(i[action],true);assert.equal(i.aimX,0);assert.equal(i.aimY,-1,'chord keeps first deliberate direction');assert.equal(c.read().aimY,undefined);
+}
+{let direction={x:-1,y:0};const c=createDuelChordInput({aim:()=>direction});c.fire('skill1');direction={x:0,y:1};assert.equal(c.read().aimX,-1,'later stick motion cannot redirect an already queued action');c.fire('skill1');c.clear();assert.equal(c.read().aimY,undefined,'pause/cancel clears queued direction');}
+for(const direction of [null,{x:0,y:0},{x:NaN,y:1},{x:1,y:Infinity}]){const c=createDuelChordInput({aim:()=>direction});c.fire('skill1');assert.equal(c.read().aimX,undefined,'invalid or absent direction does not replace auto aim');}
 // Use output from the production input module in the actual game engine.
 for(const hero of ['returnblade','frostguard','chainburst','collapse','thunderlance','frostbloom','stormcrown','starring','glassspear','fullbloom','rewind']){const s=createDuel({player:hero,enemy:'pierce'});s.phase='fight';s.fighters[0].x=15;s.fighters[1].x=20;const t=setup();t.block(true);t.c.press('block');t.add(20);t.c.press('dodge');const i=t.c.read();stepDuel(s,1/60,i,{});assert.ok(s.fighters[0].cd[1]>0,'second technique reachable for '+hero);assert.equal(s.fighters[0].blocking,false);assert.equal(s.fighters[0].dodgeCd,0,'no accidental default dodge');if(['returnblade','collapse'].includes(hero))assert.equal(s.fighters[0].state,'dash');else assert.ok(s.hazards.length>0);}
 // AI waits for visible recovery/threat conditions and uses the same skill2 action,

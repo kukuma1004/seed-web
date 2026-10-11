@@ -1,4 +1,5 @@
 import {expeditionCombatTurn,performExpeditionCombatAction} from './combat.js';
+import {expeditionCompanionIntent} from './companion-identity.js';
 
 const active=u=>u.hp>0&&!u.dead&&u.slot<5;
 
@@ -55,6 +56,8 @@ export function expeditionAutoBattleIntent(battle,{targetId}={}){
  const target=pool.find(u=>u.id===targetId)||pool.reduce((best,u)=>u.hp<best.hp?u:best,pool[0]);
  const warned=battle.warnings?.some(w=>w.targetId===actor.id&&w.readyRound<=battle.round);
  if(warned&&actor.hp/actor.maxHp<.45)return {type:'action',kind:'guard'};
+ const tactic=expeditionCompanionIntent(battle,actor);
+ if(tactic)return tactic;
  let best={kind:'attack',score:-1};
  for(const kind of ['attack','skill1','skill2','awaken']){
   if(kind==='skill2'&&actor.level<5||kind==='awaken'&&(actor.level<8||actor.awakenUsed))continue;

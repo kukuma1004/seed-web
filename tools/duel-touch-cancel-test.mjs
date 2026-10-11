@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {createDuelChordInput} from '../src/seed-duel-input.js';
+import {createDuelPointerHolds} from '../src/duel-feel.js';
+let t=0;const holds=createDuelPointerHolds(),input=createDuelChordInput({now:()=>t,blockHeld:()=>holds.held('block')});
+input.press('attack');input.cancel('attack');t=100;assert.equal(input.read().attack,undefined,'OS cancellation cannot become delayed attack');
+input.press('dodge');input.cancel('dodge');t=200;assert.equal(input.read().dodge,undefined);
+holds.begin(1,'block');holds.begin(2,'attack');input.press('attack');holds.end(2);input.cancel('attack');assert.equal(input.read().heavy,undefined);assert.equal(holds.held('block'),true,'another finger still owns guard');
+holds.begin(3,'block');holds.end(1);input.cancel('block');assert.equal(holds.held('block'),true);
+holds.clear();input.clear();input.press('attack');t+=100;assert.equal(input.read().attack,true,'a normal short tap remains valid');
+input.fire('skill2');input.cancel('skill1');assert.equal(input.read().skill2,undefined,'cancelled + while guarding cannot leak skill2');
+console.log('Touch cancellation: no delayed attack/dodge/chord, independent guard preserved, valid tap retained. OS DOM handlers require browser/device validation.');
