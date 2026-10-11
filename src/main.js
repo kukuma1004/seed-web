@@ -699,7 +699,8 @@ function updateExpansionCourse(dt){
  }
   expansionSiegeInputs.length=0;if(expansionJourney.siege){for(const e of enemies)if(!e.dead&&!e.expansionBoss){const p=e.siegeSnapshot??={id:e.expansionThreat.id,x:0,z:0,hp:0};p.x=e.g.position.x;p.z=e.g.position.z;p.hp=e.hp;expansionSiegeInputs.push(p);}for(const n of expansionJourney.siege.nodes)if(!n.harvested&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<=1.3){const result=expansionSiegeApi.harvestCrystalSiege(expansionJourney.siege,n.id,player.position);if(result.ok){audio.play('harvest');$('#toast').textContent='수정 +2 · 화단에 다가가 방어시설을 심으세요';}break;}}
  const siegePhaseBefore=expansionJourney.siege?.phase;
- const out=expansionApi.stepExpansionJourney(expansionJourney,dt,{player:player.position,enemies:expansionSiegeInputs,enemyCount:enemies.length,projectileCount:enemyShots.length});
+ const siegeDt=siegePhaseBefore==='prep'&&expansionSiegeView?.preparationHeld?.()?0:dt;
+ const out=expansionApi.stepExpansionJourney(expansionJourney,siegeDt,{player:player.position,enemies:expansionSiegeInputs,enemyCount:enemies.length,projectileCount:enemyShots.length});
  if(siegePhaseBefore==='prep'&&expansionJourney.siege?.phase==='defense')showCrystalSiegeDefenseHint();
  if(expansionJourney.siege){expansionJourneyView.setSiegePhase(out.phase);for(const h of out.hits){const e=enemies.find(e=>!e.dead&&e.expansionThreat?.id===h.id);if(e){damageEnemy(e,h.damage,false,false,{kind:'siege-turret'});const p=expansionJourney.siege.pads.find(p=>p.id===h.facilityId);if(p)line(new V(p.x,.6,p.z),e.g.position);}}for(const h of out.snares){const e=enemies.find(e=>!e.dead&&e.expansionThreat?.id===h.id);if(e){expansionSiegeApi.applyCrystalSiegeSnare(e.expansionThreat,h);}}if(expansionJourney.siege.phase==='failed'){const ended=finishExpansionEntry();showExpansionResult(false,ended);return;}}
  for(const spec of out.spawns)spawnExpansionActor(spec);crowdLeft=out.finish?0:1;
@@ -1565,7 +1566,8 @@ function updateSurvivalSiege(dt){
  for(const e of enemies)if(!e.dead&&e.hp>0&&(e.survivalSiegeId||e.survivalBoss)){const item=e.siegeSnapshot??={id:e.survivalSiegeId||'survival-siege-boss',x:0,z:0,hp:0};item.x=e.g.position.x;item.z=e.g.position.z;item.hp=e.hp;expansionSiegeInputs.push(item);}
  const before=survivalSiege.phase,state=survivalSiegeApi.survivalSiegeState(survivalSiege);
  if(before==='prep')for(const n of state.nodes)if(!n.harvested&&Math.hypot(n.x-player.position.x,n.z-player.position.z)<=1.3){const result=survivalSiegeApi.harvestSurvivalSiege(survivalSiege,n.id,player.position);if(result.ok){audio.play('pickup');$('#toast').textContent='수정 +2 · 화단에 다가가 시설을 심으세요';saveSurvival();}break;}
- const out=survivalSiegeApi.stepSurvivalSiege(survivalSiege,dt,{player:player.position,enemies:expansionSiegeInputs,session});
+ const siegeDt=before==='prep'&&expansionSiegeView?.preparationHeld?.()?0:dt;
+ const out=survivalSiegeApi.stepSurvivalSiege(survivalSiege,siegeDt,{player:player.position,enemies:expansionSiegeInputs,session});
  expansionJourneyView?.setSiegePhase(survivalSiege.phase);
  for(const packet of out.spawns){const e=spawnSurvivalEnemy(packet);if(!e)continue;e.survivalSiegeId=packet.id;e.survivalSiegeThreat=survivalSiegeApi.createSurvivalSiegeThreat(packet);e.hp=e.maxHp=packet.spec.hp;e.speed=packet.spec.speed;e.damage=packet.spec.damage;}
  for(const h of out.hits){const e=enemies.find(e=>!e.dead&&(e.survivalSiegeId||'survival-siege-boss')===h.id),pad=survivalSiegeApi.survivalSiegeState(survivalSiege).pads.find(p=>p.id===h.facilityId);if(!e||!pad)continue;const trace=expansionTerrain?.sweep(pad,e.g.position,{damage:h.damage,radius:.1});if(trace?.hits.length)expansionTerrainDirty=true;if(trace?.blocked){line(new V(pad.x,.6,pad.z),new V(trace.point.x,.6,trace.point.z));continue;}damageEnemy(e,h.damage,false,false,{kind:'siege-turret'});line(new V(pad.x,.6,pad.z),e.g.position);}

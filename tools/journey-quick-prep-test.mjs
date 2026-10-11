@@ -1,4 +1,8 @@
 import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import * as expansion from '../src/expansion-journey.js';
+import * as siege from '../src/crystal-siege-rules.js';
 import {createCrystalSiege,checkpointCrystalSiege,restoreCrystalSiege,stepCrystalSiege,harvestCrystalSiege,buildCrystalSiege,startCrystalSiegeDefense} from '../src/crystal-siege-rules.js';
 import {createExpansionJourney,restoreExpansionJourney,checkpointExpansionJourney,advanceExpansionJourney} from '../src/expansion-journey.js';
 import {CRYSTAL_DEFENSE_OBJECTIVE} from '../src/expansion-objective.js';
@@ -24,3 +28,20 @@ for(const value of [9,21,NaN,12.5,'12'])assert.throws(()=>restoreCrystalSiege({.
 const wrong={...raw,prepDuration:12,elapsed:12};assert.throws(()=>restoreCrystalSiege(wrong),'expired preparation cannot resume as a preparation checkpoint');
 const skipped=createCrystalSiege(0,1,null,12,1);assert(startCrystalSiegeDefense(skipped).ok);assert.equal(skipped.resources,1,'early start never grants missing resources');
 console.log('Quick preparation: earned resources, paid builds, 12-second phase boundary, exact legacy restore, carry and corruption checks PASS.');
+
+// Run the shipping Journey host while its actual preparation clock is held.
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+const start=main.indexOf('function updateExpansionCourse(dt){'),end=main.indexOf('\nfunction tickExpansionActor',start);
+assert(start>=0&&end>start);
+const j=createExpansionJourney('crystalGorge',0,413,{siege:true,objective:CRYSTAL_DEFENSE_OBJECTIVE});
+let selecting=true;
+const c=vm.createContext({expansionJourney:j,expansionApi:expansion,expansionSiegeApi:siege,expansionSiegeView:{preparationHeld:()=>selecting},expansionJourneyView:{beginFrame(){},setSiegePhase(){}},syncExpansionCrystals(){},roomCleared:false,expansionSiegeInputs:[],enemies:[],enemyShots:[],player:{position:{x:0,z:0}},audio:{play(){}},$:()=>({textContent:''}),showCrystalSiegeDefenseHint(){},spawnExpansionActor(){throw Error('Unexpected prep spawn');},crowdLeft:0});
+vm.runInContext(main.slice(start,end),c);
+for(let i=0;i<200;i++)c.updateExpansionCourse(.1);
+assert.equal(j.siege.elapsed,0);assert.equal(j.siege.phase,'prep');
+assert.deepEqual(checkpointExpansionJourney(restoreExpansionJourney(checkpointExpansionJourney(j))),checkpointExpansionJourney(j));
+selecting=false;for(let i=0;i<121;i++)c.updateExpansionCourse(.1);
+assert.equal(j.siege.phase,'defense');
+selecting=true;const elapsed=j.siege.elapsed;c.updateExpansionCourse(.1);
+assert(j.siege.elapsed>elapsed,'stale selection flag cannot pause combat');
+console.log('Journey shipping host: facility selection holds only prep, valid checkpoint survives and combat remains live PASS.');

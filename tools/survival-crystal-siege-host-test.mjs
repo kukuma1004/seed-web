@@ -12,7 +12,7 @@ const dom=new Map(),data=new Map(),storage={getItem:k=>data.get(k)||null,setItem
 let normalWrites=0,cloudWrites=0,bosses=0,failed=0;
 // VM objects have a different Object.prototype; marshal only its captured world
 // across that realm like the JSON checkpoint boundary. Game state stays actual.
-const ctx=vm.createContext({THREE,V:THREE.Vector3,...survival,CRYSTAL_DEFENSE_OBJECTIVE,survivalSiegeActive:()=>true,survivalSession:s,survivalSiegeApi:{...adapter,checkpointSurvivalSiegeReview:(state,world,threats,owner)=>adapter.checkpointSurvivalSiegeReview(state,JSON.parse(JSON.stringify(world)),threats,owner)},expansionSiegeApi:crystal,survivalSiege:adapter.createSurvivalSiege(s),survivalSiegeOwner:'a',survivalOwner:()=> 'a',localInspection:true,
+const ctx=vm.createContext({THREE,V:THREE.Vector3,...survival,CRYSTAL_DEFENSE_OBJECTIVE,survivalSiegeActive:()=>true,survivalSession:s,survivalSiegeApi:{...adapter,checkpointSurvivalSiegeReview:(state,world,threats,owner)=>adapter.checkpointSurvivalSiegeReview(state,JSON.parse(JSON.stringify(world)),threats,owner)},expansionSiegeApi:crystal,expansionSiegeView:null,survivalSiege:adapter.createSurvivalSiege(s),survivalSiegeOwner:'a',survivalOwner:()=> 'a',localInspection:true,
  enemies:[],enemyShots:[],expansionSiegeInputs:[],expansionTerrain:null,arena:{shape:'rect',halfWidth:7.5,halfDepth:6.5},player:{position:new THREE.Vector3()},
  expansionJourneyView:{beginFrame(){},setSiegePhase(){},tell(){}},line(){},audio:{play(){}},$:id=>{if(!dom.has(id))dom.set(id,{textContent:''});return dom.get(id);},
  levels:new Map([['chain',3],['split',3]]),heldForms:new Map([['prism',4]]),survivalExpansion:createSurvivalExpansion(s),survivalSaveToken:{id:'review',revision:0,owner:'a'},
@@ -40,6 +40,10 @@ const j=crystal.createCrystalSiege(0,1);assert(crystal.buildCrystalSiege(j,'pad-
 // The shipping host must replace the preparation instruction on automatic night.
 ctx.survivalSiege=adapter.createSurvivalSiege(s);ctx.enemies=[];ctx.player.position.set(0,0,0);
 dom.get('#toast').textContent='수정 +2 · 화단에 다가가 시설을 심으세요';
+ctx.expansionSiegeView={preparationHeld:()=>true};
+for(let i=0;i<200;i++)ctx.updateSurvivalSiege(.1);
+assert.equal(ctx.survivalSiege.phase,'prep');assert.equal(ctx.survivalSiege.elapsed,0);assert(ctx.saveSurvival(),'held preparation remains a valid checkpoint');
+ctx.expansionSiegeView=null;
 for(let i=0;i<151;i++)ctx.updateSurvivalSiege(.1);
 assert.equal(ctx.survivalSiege.phase,'defense');assert.equal(dom.get('#toast').textContent,'습격 시작 · 정원의 심장을 지키세요');
 assert.equal(normalWrites,0);assert.equal(cloudWrites,0);

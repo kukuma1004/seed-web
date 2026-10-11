@@ -42,7 +42,8 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
   }
   facilitiesSeen=true;
   const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}`;
-  if(text!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?remaining+'초 뒤 습격':'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(!boss&&s.phase==='prep'?'빛나는 수정에 다가가 채집 · 원 안에서 시설 심기':'')+'</small>';uiKey=text;}
+  const choosing=menuOpen&&interactive&&s.phase==='prep'&&!boss;
+  if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(!boss&&s.phase==='prep'?'빛나는 수정에 다가가 채집 · 원 안에서 시설 심기':'')+'</small>';uiKey=text+'|'+choosing;}
   if(!boss&&s.phase==='prep'&&interactive){
    interactiveNow=true;menu.hidden=false;const nextId=nearest?.id??null;if(nextId!==padId)menuOpen=false;padId=nextId;nearestPad=nearest;currentResources=s.resources;
    const key=padId+'|'+nearest?.kind+'|'+nearest?.level+'|'+(nearest?.hp>0)+'|'+currentResources;
@@ -50,5 +51,5 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
    if(nearest?.kind)menuOpen=false;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));
   }else{menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;buildKey='';}
  }
- return {update,hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);},dispose(){if(disposed)return;disposed=true;world.removeFromParent();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
+ return {update,preparationHeld(){return !disposed&&interactiveNow&&menuOpen&&!menu.hidden&&!choices.hidden;},hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);},dispose(){if(disposed)return;disposed=true;world.removeFromParent();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
 }
