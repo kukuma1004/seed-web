@@ -6,10 +6,15 @@ import {EXPANSION_ACTS,crosswindFormation,createCrystalWalls,restoreCrystalWalls
 // Outputs are reused until the next step: consume/copy them before stepping again.
 export const EXPANSION_RUNTIME_VERSION=1;
 export const EXPANSION_COURSE_PACKETS=Object.freeze([18,20,22,24,26]);
-// Keep the finite scoring budget, but spend it along the route instead of
-// exhausting it near the entrance. A stopped player still faces pressure.
-// This changes no checkpoint fields, room lengths or legacy encounter rules.
-export const CROSSWIND_PACKET_PACING=Object.freeze({openingPackets:3,pressureEnd:.92,idleInterval:4.8});
+export const CROSSWIND_DENSE_PACKETS=Object.freeze([24,26,30,32,34]);
+export const CROSSWIND_CIRCUIT_KILLS=1+CROSSWIND_DENSE_PACKETS.reduce((n,v)=>n+v+Math.floor(v/2),0);
+export const expansionCoursePacketCount=s=>(s.act==='crosswind'&&s.encounterVersion===3?CROSSWIND_DENSE_PACKETS:EXPANSION_COURSE_PACKETS)[s.room];
+export const crosswindCourseLength=s=>s.encounterVersion===3?EXPANSION_ACTS.crosswind.rooms[s.room].length:[96,112,120,128,88][s.room];
+// Spend each finite encounter budget along the route instead of at the entrance.
+// New revision 3 compacts distances and raises the mob budget; legacy revisions
+// retain their original distances, pacing and checkpoint interpretation.
+const LEGACY_CROSSWIND_PACKET_PACING=Object.freeze({openingPackets:3,pressureEnd:.92,idleInterval:4.8});
+export const CROSSWIND_PACKET_PACING=Object.freeze({openingPackets:3,pressureEnd:.88,idleInterval:1.2});
 // New courses alternate one and two actors, with the same hard live caps. Include
 // exactly one true boss; broken scenery and missed packets are never kills.
 export const EXPANSION_CIRCUIT_KILLS=1+EXPANSION_COURSE_PACKETS.reduce((n,v)=>n+v+Math.floor(v/2),0);
@@ -37,10 +42,10 @@ export function createExpansionCrystalWalls(room=0,saved,{layout=1}={}){
  return walls;
 }
 
-export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0},encounterVersion=2}={}){
+export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0},encounterVersion=null}={}){
  const act=actId(id),stage=clamp(room|0,0,4),start=point(origin);
- const revision=encounterVersion===2?2:1,walls=act==='crystalGorge'?createExpansionCrystalWalls(stage,undefined,{layout:revision}):[];for(const w of walls){w.x+=start.x;w.z+=start.z;}
- return {version:EXPANSION_RUNTIME_VERSION,encounterVersion:revision,act,room:stage,seed:(seed>>>0)||1,origin:start,time:0,distance:0,spawnClock:revision===2?.45:.9,spawnIndex:0,finishAnnounced:false,walls,out:output()};
+ const revision=encounterVersion===null?(act==='crosswind'?3:2):encounterVersion===3&&act==='crosswind'?3:encounterVersion===2?2:1,walls=act==='crystalGorge'?createExpansionCrystalWalls(stage,undefined,{layout:revision}):[];for(const w of walls){w.x+=start.x;w.z+=start.z;}
+ return {version:EXPANSION_RUNTIME_VERSION,encounterVersion:revision,act,room:stage,seed:(seed>>>0)||1,origin:start,time:0,distance:0,spawnClock:revision>=2?.45:.9,spawnIndex:0,finishAnnounced:false,walls,out:output()};
 }
 
 // Act 4 is a horizontal course, never an enclosed arena. travel is positive
@@ -49,34 +54,35 @@ export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0},encount
 // move already spawned projectiles. No catch-up wave is emitted after a pause.
 export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileCount=0}={}){
  const out=resetOutput(s.out),step=dtOf(dt);if(!step)return out;
- const p=point(player||s.origin),definition=EXPANSION_ACTS[s.act],room=definition.rooms[s.room];s.time+=step;
- if(s.act==='crosswind')s.distance=clamp(Math.max(s.distance,p.x-s.origin.x)+(Number.isFinite(travel)?Math.max(0,travel):0),0,room.length);
+ const p=point(player||s.origin),definition=EXPANSION_ACTS[s.act],room=definition.rooms[s.room],length=s.act==='crosswind'?crosswindCourseLength(s):0,packets=expansionCoursePacketCount(s);s.time+=step;
+ if(s.act==='crosswind')s.distance=clamp(Math.max(s.distance,p.x-s.origin.x)+(Number.isFinite(travel)?Math.max(0,travel):0),0,length);
  out.camera.x=s.act==='crosswind'?s.origin.x+s.distance+2:s.origin.x;out.camera.z=s.origin.z;
  // The canyon is crossed from z+7 to z-7. Pressure stops after a deliberate
  // crossing AND its encounter window; standing still cannot clear a room.
  if(s.act==='crystalGorge')s.distance=clamp(Math.max(s.distance,s.origin.z+7-p.z),0,14);
  const pressureTime=22+s.room*2;
- out.progress=s.act==='crosswind'?s.distance/room.length:Math.min(s.distance/14,s.time/pressureTime,1);
- out.finish=s.finishAnnounced||(s.act==='crosswind'?s.distance>=room.length:s.time>=pressureTime&&p.z<=s.origin.z-7);
+ out.progress=s.act==='crosswind'?s.distance/length:Math.min(s.distance/14,s.time/pressureTime,1);
+ out.finish=s.finishAnnounced||(s.act==='crosswind'?s.distance>=length&&(s.encounterVersion!==3||s.spawnIndex>=packets):s.time>=pressureTime&&p.z<=s.origin.z-7);
  if(out.finish&&!s.finishAnnounced){s.finishAnnounced=true;out.events.push({type:'course-end',bossId:definition.bossId,room:s.room});}
  if(out.finish)return out;
  // Delaying the exit must not generate an unlimited scoring farm. This is an
  // accepted-packet budget, so crowded/projectile-capped frames spend nothing.
  // Exhaustion does not complete the course: the player still crosses it.
- if(s.spawnIndex>=EXPANSION_COURSE_PACKETS[s.room])return out;
+ if(s.spawnIndex>=packets)return out;
  s.spawnClock-=step;if(s.spawnClock>0)return out;
- if(s.act==='crosswind'&&s.encounterVersion===2&&s.spawnIndex>=CROSSWIND_PACKET_PACING.openingPackets){
-  const packet=s.spawnIndex-CROSSWIND_PACKET_PACING.openingPackets+1;
-  const remainder=EXPANSION_COURSE_PACKETS[s.room]-CROSSWIND_PACKET_PACING.openingPackets;
-  const reached=s.distance>=room.length*CROSSWIND_PACKET_PACING.pressureEnd*packet/remainder;
-  const waited=s.time>=packet*CROSSWIND_PACKET_PACING.idleInterval;
+ if(s.act==='crosswind'&&s.encounterVersion>=2&&s.spawnIndex>=CROSSWIND_PACKET_PACING.openingPackets){
+  const pacing=s.encounterVersion===3?CROSSWIND_PACKET_PACING:LEGACY_CROSSWIND_PACKET_PACING;
+  const packet=s.spawnIndex-pacing.openingPackets+1;
+  const remainder=packets-pacing.openingPackets;
+  const reached=s.distance>=length*pacing.pressureEnd*packet/remainder;
+  const waited=s.time>=packet*pacing.idleInterval;
   // Either travel OR elapsed pressure time unlocks one packet. The timer
   // never queues catch-up waves; the usual live cap still decides acceptance.
   if(!reached&&!waited){s.spawnClock=0;return out;}
  }
  // Re-arm even when saturated; capacity reopening cannot release queued waves.
- const close=s.encounterVersion===2;
- s.spawnClock=(close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);
+ const close=s.encounterVersion>=2;
+ s.spawnClock=(s.encounterVersion===3?Math.max(.48,.68-s.room*.04):close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);
  const free=EXPANSION_RUNTIME_LIMITS.enemies-Math.max(0,finite(enemyCount));
  if(free<1||projectileCount>=EXPANSION_RUNTIME_LIMITS.projectiles)return out;
  const index=s.spawnIndex++,formation=s.act==='crosswind'?crosswindFormation(index,s.room):{side:'front',lane:[-4.8,0,4.8][index%3],type:index%5===4?'charger':'shooter',shots:1,windup:.85};
@@ -94,10 +100,10 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  return out;
 }
 
-export function checkpointExpansionCourse(s){return {version:EXPANSION_RUNTIME_VERSION,...(s.encounterVersion===2?{encounterVersion:2}:{}),act:s.act,room:s.room,seed:s.seed,origin:{...s.origin},time:s.time,distance:s.distance,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,finishAnnounced:s.finishAnnounced,walls:s.walls.map(w=>({id:w.id,hp:w.hp}))};}
+export function checkpointExpansionCourse(s){return {version:EXPANSION_RUNTIME_VERSION,...(s.encounterVersion>=2?{encounterVersion:s.encounterVersion}:{}),act:s.act,room:s.room,seed:s.seed,origin:{...s.origin},time:s.time,distance:s.distance,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,finishAnnounced:s.finishAnnounced,walls:s.walls.map(w=>({id:w.id,hp:w.hp}))};}
 export function restoreExpansionCourse(saved,fallback={act:'crosswind',room:0}){
- const valid=saved?.version===EXPANSION_RUNTIME_VERSION&&acts.includes(saved.act),s=createExpansionCourse(valid?saved.act:actId(fallback.act),valid?{...saved,encounterVersion:saved.encounterVersion===2?2:1}:fallback);if(!valid)return s;
- s.time=clamp(finite(saved.time),0,1e6);s.distance=clamp(finite(saved.distance),0,s.act==='crystalGorge'?14:EXPANSION_ACTS[s.act].rooms[s.room].length);
+ const valid=saved?.version===EXPANSION_RUNTIME_VERSION&&acts.includes(saved.act),s=createExpansionCourse(valid?saved.act:actId(fallback.act),valid?{...saved,encounterVersion:saved.encounterVersion===3?3:saved.encounterVersion===2?2:1}:fallback);if(!valid)return s;
+ s.time=clamp(finite(saved.time),0,1e6);s.distance=clamp(finite(saved.distance),0,s.act==='crystalGorge'?14:crosswindCourseLength(s));
  s.spawnClock=clamp(finite(saved.spawnClock,.9),0,3);s.spawnIndex=clamp(Math.floor(finite(saved.spawnIndex)),0,1e7);s.finishAnnounced=Boolean(saved.finishAnnounced);
  if(s.act==='crystalGorge'){s.walls=createExpansionCrystalWalls(s.room,saved.walls,{layout:s.encounterVersion});for(const w of s.walls){w.x+=s.origin.x;w.z+=s.origin.z;}}return s;
 }

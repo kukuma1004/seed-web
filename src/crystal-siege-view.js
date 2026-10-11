@@ -12,7 +12,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
  const artCell=kind=>{const t=siegeArtTexture(facilityAtlas,kind);textures.push(t);return t;};
  const turret=artCell('turret'),coreTexture=artCell('heart'),snareTexture=artCell('snare'),wallTexture=artCell('wall');
  const sprite=(texture,size)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:false,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
- const heart=sprite(coreTexture,3),nodes=Array.from({length:6},()=>sprite(crystal,1.15)),facilities=Array.from({length:4},()=>sprite(turret,1.55));
+ const heart=sprite(coreTexture,3),nodes=Array.from({length:6},()=>sprite(crystal,1.15)),facilities=Array.from({length:4},()=>sprite(turret,2.05));
  heart.name='crystal-siege-heart';heart.center.y=.07;heart.scale.y=3*siegeArtAspect('heart');
  facilities.forEach(o=>{o.center.y=.07;});
  facilities.forEach((o,i)=>{o.name='crystal-siege-facility-'+i;});
@@ -41,7 +41,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
    if(facilitiesSeen&&code>0&&code!==facilityCodes[i])plantTime[i]=.24;
    facilityCodes[i]=code;plantTime[i]=Math.max(0,plantTime[i]-step);
    const bump=Math.sin(Math.PI*plantTime[i]/.24)*.16;
-   facilities[i].scale.set(1.55*(1+bump),1.55*(1+bump)*siegeArtAspect(p.kind||'turret'),1);
+   facilities[i].scale.set(2.05*(1+bump),2.05*(1+bump)*siegeArtAspect(p.kind||'turret'),1);
   }
   facilitiesSeen=true;
   const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}`;

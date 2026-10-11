@@ -9,7 +9,7 @@ assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
 
 // Horizontal movement and scroll are actual world progress, not camera-relative
 // projectile motion. Rear entries require a later room and a readable warning.
-const room=createExpansionCourse('crosswind',{seed:452,room:0,origin:{x:20,z:0}});
+const room=createExpansionCourse('crosswind',{encounterVersion:2,seed:452,room:0,origin:{x:20,z:0}});
 let front=0,rear=0,maxSpawns=0;
 for(let i=0;i<700;i++){
  const o=stepExpansionCourse(room,.05,{player:{x:20+i*.12,z:0}});
@@ -25,7 +25,7 @@ for(let i=0;i<400;i++)assert.equal(stepExpansionCourse(full,.05,{enemyCount:24})
 const resumedWave=stepExpansionCourse(full,15,{enemyCount:0});assert.ok(resumedWave.spawns.length<=2);assert.ok(full.time<21,'background dt cannot create catch-up minutes');
 const endpoint=createExpansionCourse('crosswind');let endEvents=0;
 for(let i=0;i<1500;i++)endEvents+=stepExpansionCourse(endpoint,.1,{travel:.1}).events.filter(e=>e.type==='course-end').length;
-assert.equal(endpoint.distance,96);assert.equal(endEvents,1);assert.equal(stepExpansionCourse(endpoint,.05).spawns.length,0);
+assert.equal(endpoint.distance,48);assert.equal(endEvents,1);assert.equal(stepExpansionCourse(endpoint,.05).spawns.length,0);
 
 // Canyon completion requires time under pressure AND physically crossing the
 // exit. Advancing its timer alone must never silently clear a stationary run.

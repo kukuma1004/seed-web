@@ -44,15 +44,15 @@ for(const hz of [20,60]){
   const ordinary=journey.createExpansionJourney('crystalGorge',4,413);journey.advanceExpansionJourney(ordinary);assert(ordinary.course.walls.every(w=>!w.broken),'Classic public boss retains all original walls');
  });
  group(`${hz}Hz real damageEnemy excludes generic recovery bonus; core-open multiplier applies once`,()=>{
-  for(const scale of [1,1.3]){const{j,h,e}=actualHost(saved);e.takenScale=scale;const before=siege.checkpointCrystalSiege(j.siege);h.updateExpansionCourse(0);assert.equal(e.hp,2400);
+  for(const scale of [1,1.3]){const{j,h,e}=actualHost(saved);e.takenScale=scale;for(const p of j.siege.pads){if(p.id!=='pad-1')p.hp=0;p.cooldown=0;}const before=siege.checkpointCrystalSiege(j.siege);h.updateExpansionCourse(0);assert.equal(e.hp,2400);
    for(let n=0;n<hz*3;n++)h.updateExpansionCourse(dt);
-   near(2400-e.hp,78*scale);near(h.applied,78*scale);assert.equal(j.siege.core.hp,before.core.hp);assert.equal(j.siege.resources,before.resources);assert.deepEqual(j.siege.nodes,before.nodes);assert.equal(j.siege.spawned,before.spawned);assert.equal(j.siege.out.snares.length,0);assert.equal(j.siege.out.spawns.length,0);
+   near(2400-e.hp,240*scale);near(h.applied,240*scale);assert.equal(j.siege.core.hp,before.core.hp);assert.equal(j.siege.resources,before.resources);assert.deepEqual(j.siege.nodes,before.nodes);assert.equal(j.siege.spawned,before.spawned);assert.equal(j.siege.out.snares.length,0);assert.equal(j.siege.out.spawns.length,0);
    measurements.push({hz,actualBossScale:scale,actualTurretDamage3s:+h.applied.toFixed(4),syntheticCourseKills:receipt.kills});}
  });
  group(`${hz}Hz canonical cover takes paid shot before boss and opens only after real destruction`,()=>{
   const{j,h,e}=actualHost(saved);for(const p of j.siege.pads)if(p.id!=='pad-1')p.hp=0;const pad=j.siege.pads[1];assert(pad.kind==='turret'&&pad.level===2);pad.cooldown=0;e.g.position.set(3,0,2);
-  const cover=j.course.walls.find(w=>w.id==='crystal-4-4');assert(cover&&!cover.broken);const before=cover.hp;h.updateExpansionCourse(dt);near(cover.hp,before-13);near(e.hp,2400);assert(h.expansionTerrainDirty);assert(h.lines.at(-1).b.z<cover.z&&h.lines.at(-1).b.z<e.g.position.z,'Blocked VFX ends on nearest free side of cover');
-  cover.hp=26;h.expansionTerrain.sync();for(let n=0;n<4*hz&&e.hp===2400;n++)h.updateExpansionCourse(dt);assert(cover.broken&&cover.hp===0);near(2400-e.hp,13);assert(!j.siege.out.snares.length);
+  const cover=j.course.walls.find(w=>w.id==='crystal-4-4');assert(cover&&!cover.broken);const before=cover.hp;h.updateExpansionCourse(dt);near(cover.hp,before-40);near(e.hp,2400);assert(h.expansionTerrainDirty);assert(h.lines.at(-1).b.z<cover.z&&h.lines.at(-1).b.z<e.g.position.z,'Blocked VFX ends on nearest free side of cover');
+  cover.hp=26;h.expansionTerrain.sync();for(let n=0;n<4*hz&&e.hp===2400;n++)h.updateExpansionCourse(dt);assert(cover.broken&&cover.hp===0);near(2400-e.hp,40);assert(!j.siege.out.snares.length);
   pad.hp=0;const hp=e.hp;for(let n=0;n<hz;n++)h.updateExpansionCourse(dt);near(e.hp,hp);
  });
  group(`${hz}Hz actual boss regrowth defers occupied facilities and returns after their destruction`,()=>{

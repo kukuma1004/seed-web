@@ -16,7 +16,7 @@ assert(contact);assert(expansionContactHits({from:{x:-3,z:0},to:{x:3,z:0},radius
 assert(!expansionContactHits(contact,{x:0,z:6}));
 const first=stepExpansionThreat(createExpansionThreat(spec),20,{player:{x:0,z:0}});assert.equal(first.bolts.length,0,'resume gap is clamped, not an instant catch-up volley');
 for(let room=0;room<5;room++){
- assert.equal(session.room,room);const end=stepExpansionJourney(session,.1,{player:{x:200,z:0},enemyCount:0,projectileCount:0});assert(end.finish);assert.equal(end.spawns.length,0);
+ assert.equal(session.room,room);let end;for(let frame=0;frame<1000;frame++){end=stepExpansionJourney(session,.1,{player:{x:200,z:0},enemyCount:0,projectileCount:0});if(end.finish)break;}assert(end.finish);assert.equal(end.spawns.length,0);
  const restored=restoreExpansionJourney(copy(checkpointExpansionJourney(session)));assert(restored);assert.deepEqual(checkpointExpansionJourney(restored),checkpointExpansionJourney(session));
  assert(advanceExpansionJourney(session));
 }

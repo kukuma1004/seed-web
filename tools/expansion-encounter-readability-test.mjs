@@ -5,11 +5,11 @@ for(const act of ['crosswind','crystalGorge']){
  const player={x:0,z:act==='crosswind'?0:7},fresh=createExpansionCourse(act),old=createExpansionCourse(act,{encounterVersion:1});
  const sample=s=>{let count=0,distances=[];for(let i=0;i<100;i++)for(const e of stepExpansionCourse(s,.1,{player}).spawns){count++;distances.push(Math.hypot(e.position.x-player.x,e.position.z-player.z));assert(e.windup>=.7);assert(e.shots<=2);}return{count,distances};};
  const a=sample(fresh),b=sample(old);
- if(act==='crosswind')assert(a.count>=5&&a.count<=8,'stationary opening stays active while reserving later route pressure');
+ if(act==='crosswind')assert(a.count>=14&&a.count<=18,'stationary opening stays active while reserving later route pressure');
  else assert(a.count>=b.count*1.8,`${act}: pressure arrives frequently without raising the live cap`);
  assert(Math.max(...a.distances)<9);assert(Math.min(...a.distances)>4.5);
  const raw=checkpointExpansionCourse(old);assert(!Object.hasOwn(raw,'encounterVersion'));const restored=restoreExpansionCourse(JSON.parse(JSON.stringify(raw)));assert.deepEqual(checkpointExpansionCourse(restored),raw,'old exact checkpoint remains valid without reinterpreting wall positions or spent packet IDs');
- const newRaw=checkpointExpansionCourse(fresh);assert.equal(newRaw.encounterVersion,2);assert.deepEqual(checkpointExpansionCourse(restoreExpansionCourse(JSON.parse(JSON.stringify(newRaw)))),newRaw);
+ const newRaw=checkpointExpansionCourse(fresh);assert.equal(newRaw.encounterVersion,act==='crosswind'?3:2);assert.deepEqual(checkpointExpansionCourse(restoreExpansionCourse(JSON.parse(JSON.stringify(newRaw)))),newRaw);
 }
 // Central crossings are obstructed; an outer route remains usable. Destroying
 // ONE central crystal immediately opens the short path instead of deleting scenery.

@@ -4,11 +4,11 @@ export const EXPANSION_ACTS=Object.freeze({
  crosswind:Object.freeze({number:4,name:'횡풍의 항로',grammar:'B',released:true,
   camera:'horizontal',bossId:'crosswindKeeper',bossName:'횡풍의 수호자',
   rooms:Object.freeze([
-   {name:'잎배의 출항',role:'front',length:96,hint:'앞 편대가 다가와 조준하면 옆줄로 옮겨 전진하세요 · 가장자리 반사판도 활용해 보세요'},
-   {name:'뒤따르는 그림자',role:'rear',length:112,hint:'뒤 편대의 조준을 끌어낸 뒤 앞으로 빠지세요 · 회복 중인 편대를 먼저 끊어도 좋아요'},
-   {name:'가지 사이의 교전',role:'split-lanes',length:120,hint:'양쪽 가지의 사선이 잠기면 다른 줄로 옮기세요 · 투사수의 짧은 굵은 사선은 곧 사라져요'},
-   {name:'횡풍 함대',role:'pincer',length:128,hint:'앞뒤 편대가 조준하기 전에 한쪽으로 붙어 끊으세요 · 중앙에서 두 사선을 겹치지 마세요'},
-   {name:'바람의 매듭',role:'warden',length:88,hint:'가로질러 오는 편대의 조준을 한쪽에 남기고 반대 줄로 건너세요'}
+   {name:'잎배의 출항',role:'front',length:48,hint:'앞 편대가 다가와 조준하면 옆줄로 옮겨 전진하세요 · 가장자리 반사판도 활용해 보세요'},
+   {name:'뒤따르는 그림자',role:'rear',length:56,hint:'뒤 편대의 조준을 끌어낸 뒤 앞으로 빠지세요 · 회복 중인 편대를 먼저 끊어도 좋아요'},
+   {name:'가지 사이의 교전',role:'split-lanes',length:60,hint:'양쪽 가지의 사선이 잠기면 다른 줄로 옮기세요 · 투사수의 짧은 굵은 사선은 곧 사라져요'},
+   {name:'횡풍 함대',role:'pincer',length:64,hint:'앞뒤 편대가 조준하기 전에 한쪽으로 붙어 끊으세요 · 중앙에서 두 사선을 겹치지 마세요'},
+   {name:'바람의 매듭',role:'warden',length:44,hint:'가로질러 오는 편대의 조준을 한쪽에 남기고 반대 줄로 건너세요'}
   ].map(Object.freeze)),
   boss:Object.freeze({patterns:['locked-sweep','rear-salvo','crossing-flight'],windup:.75,recovery:1.1,maxProjectiles:48}),
   budget:Object.freeze({enemies:24,projectiles:48,props:16})}),

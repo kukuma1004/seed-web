@@ -6,7 +6,7 @@ export const CRYSTAL_SIEGE_MOBS=165;
 export const CRYSTAL_SIEGE_LIMITS=Object.freeze({live:24,spawnsPerStep:2,maxStep:.1,prep:20,defense:25,minX:-7.5,maxX:7.5,minZ:-6.5,maxZ:6.5});
 const PADS=Object.freeze([[-3,-2.5],[3,-2.5],[-3,2.5],[3,2.5]].map(([x,z],i)=>Object.freeze({id:`pad-${i}`,x,z})));
 const NODE_POINTS=Object.freeze([[-5,-4.5],[0,-4.5],[5,-4.5],[-5,4.5],[0,4.5],[5,4.5]]);
-const SPEC=Object.freeze({turret:{cost:3,hp:45,range:4.2,period:.65,damage:9},snare:{cost:2,hp:40,range:3,period:1.1},wall:{cost:2,hp:75}});
+const SPEC=Object.freeze({turret:{cost:3,hp:45,range:5.4,period:.65,damage:24},snare:{cost:2,hp:40,range:3,period:1.1},wall:{cost:2,hp:75}});
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const time=dt=>Number.isFinite(dt)?clamp(dt,0,.1):0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -17,12 +17,16 @@ const keys=(o,allowed)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o
 const rng=s=>{let n=s.seed|0;n^=n<<13;n^=n>>>17;n^=n<<5;s.seed=n>>>0;return s.seed/4294967296;};
 const out=()=>({spawns:[],hits:[],snares:[],events:[],phase:'prep',clear:false,bossReady:false});
 const fail=()=>{throw new Error('Invalid or unsupported crystal siege checkpoint');};
+// Old saves retain their 25-second rule. New nights end once every finite
+// packet has arrived and every actual enemy is gone, never on a timer alone.
+export const earliestCrystalSiegeClear=room=>.35+(CRYSTAL_SIEGE_PACKETS[room]-1)*.6;
+const clearTime=s=>s.paceVersion===2?earliestCrystalSiegeClear(s.room):25;
 const maxHp=(kind,level)=>SPEC[kind].hp+(level-1)*(kind==='wall'?35:15);
 export function clampCrystalSiegePoint(p){if(!point(p))throw new Error('Invalid crystal siege point');return{x:clamp(p.x,-7.5,7.5),z:clamp(p.z,-6.5,6.5)};}
 
 export function createCrystalSiege(room=0,seed=1,carry=null,prepDuration=null,initialResources=3){
  if(!integer(room,0,4)||!integer(seed,0,4294967295)||prepDuration!==null&&!integer(prepDuration,10,20)||!integer(initialResources,0,3))throw new Error('Invalid crystal siege room or seed');
- const s={version:1,room,seed:seed||1,phase:'prep',elapsed:0,spawnClock:.35,spawnIndex:0,spawned:0,core:{x:0,z:0,hp:100},resources:initialResources,nodes:NODE_POINTS.map(([x,z],i)=>({id:`node-${room}-${i}`,x,z,harvested:false})),pads:PADS.map(p=>({...p,kind:null,level:0,hp:0,cooldown:0})),out:out()};if(prepDuration!==null)s.prepDuration=prepDuration;
+ const s={version:1,paceVersion:2,room,seed:seed||1,phase:'prep',elapsed:0,spawnClock:.35,spawnIndex:0,spawned:0,core:{x:0,z:0,hp:100},resources:initialResources,nodes:NODE_POINTS.map(([x,z],i)=>({id:`node-${room}-${i}`,x,z,harvested:false})),pads:PADS.map(p=>({...p,kind:null,level:0,hp:0,cooldown:0})),out:out()};if(prepDuration!==null)s.prepDuration=prepDuration;
  if(carry){const previous=restoreCrystalSiege(carry);if(previous.room!==room-1||previous.phase!=='clear'||previous.core.hp<=0)fail();if(s.prepDuration===undefined&&previous.prepDuration!==undefined)s.prepDuration=previous.prepDuration;s.core.hp=Math.min(100,previous.core.hp+15);s.resources=previous.resources;s.pads=previous.pads.map(p=>({...p,cooldown:0}));}
  return s;
 }
@@ -50,9 +54,9 @@ export function startCrystalSiegeDefense(s){if(s.phase!=='prep'||s.core.hp<=0)re
 function reset(s){for(const k of ['spawns','hits','snares','events'])s.out[k].length=0;s.out.phase=s.phase;s.out.clear=s.phase==='clear';s.out.bossReady=s.phase==='clear'&&s.room===4;return s.out;}
 function facilities(s,delta,live,o,{boss=false}={}){
  for(const pad of s.pads){const f=pad;if(!f.kind||f.hp<=0||f.kind==='wall')continue;f.cooldown=Math.max(0,f.cooldown-delta);if(f.cooldown>0)continue;
-  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5;let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e);if(d<=range&&d<nearest){nearest=d;target=e;}}
+  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5;let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level===2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
   if(!target)continue;f.cooldown=spec.period-(f.level-1)*.15;
-  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage+(f.level-1)*4});
+  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage+(f.level-1)*16});
   else o.snares.push({id:target.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});
  }
 }
@@ -84,12 +88,12 @@ export function stepCrystalSiege(s,dt,{player,enemies=[]}={}){
   // One packet only, including after pause/cap. Never partially consume a pair.
   s.spawnClock=.6;const count=s.spawnIndex%2?2:1;
   if(live.length+count<=24){const index=s.spawnIndex++,side=Math.floor(rng(s)*4),offset=-4+rng(s)*8;
-   for(let i=0;i<count;i++){const p=clampCrystalSiegePoint(side===0?{x:-7.3,z:offset+i*.7}:side===1?{x:7.3,z:offset+i*.7}:side===2?{x:offset+i*.7,z:-6.3}:{x:offset+i*.7,z:6.3});
-    o.spawns.push({id:`siege-${s.room}-${index}-${i}`,position:p,hp:48+s.room*12,type:index%5===4?'charger':'shooter',speed:1.7+s.room*.12,damage:5+s.room,shots:1,windup:.75,cooldown:1,bulletSpeed:5,side:'front'});s.spawned++;
+   for(let i=0;i<count;i++){const approachSide=s.paceVersion===2&&i&&s.room>=2?[1,0,3,2][side]:side,lane=s.paceVersion===2&&index%3===1?(index%2?-5.7:5.7):offset+i*.7;const p=clampCrystalSiegePoint(approachSide===0?{x:-7.3,z:lane}:approachSide===1?{x:7.3,z:lane}:approachSide===2?{x:lane,z:-6.3}:{x:lane,z:6.3});
+    o.spawns.push({id:`siege-${s.room}-${index}-${i}`,position:p,hp:90+s.room*20,type:index%5===4?'charger':'shooter',speed:2.05+s.room*.13,damage:7+s.room,shots:1,windup:.75,cooldown:1,bulletSpeed:5,side:'front'});s.spawned++;
    }
   }
  }
- if(s.elapsed>=25&&s.spawnIndex===CRYSTAL_SIEGE_PACKETS[s.room]&&!live.length&&!o.spawns.length){s.phase='clear';o.clear=true;o.bossReady=s.room===4;o.events.push({type:'round-clear',room:s.room});}
+ if(s.elapsed+1e-8>=clearTime(s)&&s.spawnIndex===CRYSTAL_SIEGE_PACKETS[s.room]&&!live.length&&!o.spawns.length){s.phase='clear';o.clear=true;o.bossReady=s.room===4;o.events.push({type:'round-clear',room:s.room});}
  o.phase=s.phase;return o;
 }
 
@@ -121,11 +125,11 @@ export function stepCrystalSiegeThreat(model,dt,s,{player,bossGuard=false}={}){
  if(d<=.85+1e-9){model.phase='windup';model.timer=.55;model.target={x:target.x,z:target.z,...(target.id?{id:target.id}:{})};model.aim=d>1e-9?{x:(target.x-p.x)/d,z:(target.z-p.z)/d}:{x:1,z:0};o.tell={kind:'siege-strike',position:{x:target.x,z:target.z},duration:.55,remaining:.55,target:target.id||'core'};return o;}
  const length=Math.min(d-.85,model.speed*delta*clamp(model.slowFactor||1,.1,1)),next=clampCrystalSiegePoint({x:p.x+(target.x-p.x)/d*length,z:p.z+(target.z-p.z)/d*length});Object.assign(p,next);o.position=next;return o;
 }
-export function checkpointCrystalSiege(s){return{version:1,room:s.room,seed:s.seed,phase:s.phase,elapsed:s.elapsed,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,spawned:s.spawned,core:{...s.core},resources:s.resources,nodes:s.nodes.map(n=>({...n})),pads:s.pads.map(p=>({...p})),...(s.prepDuration!==undefined?{prepDuration:s.prepDuration}:{})};}
+export function checkpointCrystalSiege(s){return{version:1,...(s.paceVersion===2?{paceVersion:2}:{}),room:s.room,seed:s.seed,phase:s.phase,elapsed:s.elapsed,spawnClock:s.spawnClock,spawnIndex:s.spawnIndex,spawned:s.spawned,core:{...s.core},resources:s.resources,nodes:s.nodes.map(n=>({...n})),pads:s.pads.map(p=>({...p})),...(s.prepDuration!==undefined?{prepDuration:s.prepDuration}:{})};}
 export function restoreCrystalSiege(saved){
- if(!keys(saved,['version','room','seed','phase','elapsed','spawnClock','spawnIndex','spawned','core','resources','nodes','pads','prepDuration'])||saved.prepDuration!==undefined&&!integer(saved.prepDuration,10,20)||saved.version!==1||!integer(saved.room,0,4)||!integer(saved.seed,1,4294967295)||!['prep','defense','clear','failed','boss'].includes(saved.phase)||!finite(saved.elapsed,0,1e6)||!finite(saved.spawnClock,-.1,.6)||!integer(saved.spawnIndex,0,CRYSTAL_SIEGE_PACKETS[saved.room])||saved.spawned!==saved.spawnIndex+Math.floor(saved.spawnIndex/2)||!integer(saved.resources,0,3+12*(saved.room+1))||!keys(saved.core,['x','z','hp'])||saved.core.x!==0||saved.core.z!==0||!finite(saved.core.hp,0,100)||!Array.isArray(saved.nodes)||saved.nodes.length!==6||!Array.isArray(saved.pads)||saved.pads.length!==4)fail();
- if(saved.phase==='prep'&&(saved.elapsed>=(saved.prepDuration??20)||saved.spawnIndex!==0)||['clear','boss'].includes(saved.phase)&&(saved.elapsed<25||saved.spawnIndex!==CRYSTAL_SIEGE_PACKETS[saved.room])||saved.phase==='boss'&&saved.room!==4||saved.core.hp===0&&saved.phase!=='failed'||saved.phase==='failed'&&saved.core.hp>0)fail();
- const s=createCrystalSiege(saved.room,saved.seed,null,saved.prepDuration??null);for(let i=0;i<6;i++){const n=saved.nodes[i],expected=s.nodes[i];if(!keys(n,['id','x','z','harvested'])||n.id!==expected.id||n.x!==expected.x||n.z!==expected.z||typeof n.harvested!=='boolean')fail();expected.harvested=n.harvested;}
+ if(!keys(saved,['version','paceVersion','room','seed','phase','elapsed','spawnClock','spawnIndex','spawned','core','resources','nodes','pads','prepDuration'])||saved.paceVersion!==undefined&&saved.paceVersion!==2||saved.prepDuration!==undefined&&!integer(saved.prepDuration,10,20)||saved.version!==1||!integer(saved.room,0,4)||!integer(saved.seed,1,4294967295)||!['prep','defense','clear','failed','boss'].includes(saved.phase)||!finite(saved.elapsed,0,1e6)||!finite(saved.spawnClock,-.1,.6)||!integer(saved.spawnIndex,0,CRYSTAL_SIEGE_PACKETS[saved.room])||saved.spawned!==saved.spawnIndex+Math.floor(saved.spawnIndex/2)||!integer(saved.resources,0,3+12*(saved.room+1))||!keys(saved.core,['x','z','hp'])||saved.core.x!==0||saved.core.z!==0||!finite(saved.core.hp,0,100)||!Array.isArray(saved.nodes)||saved.nodes.length!==6||!Array.isArray(saved.pads)||saved.pads.length!==4)fail();
+ if(saved.phase==='prep'&&(saved.elapsed>=(saved.prepDuration??20)||saved.spawnIndex!==0)||['clear','boss'].includes(saved.phase)&&(saved.elapsed+1e-8<clearTime(saved)||saved.spawnIndex!==CRYSTAL_SIEGE_PACKETS[saved.room])||saved.phase==='boss'&&saved.room!==4||saved.core.hp===0&&saved.phase!=='failed'||saved.phase==='failed'&&saved.core.hp>0)fail();
+ const s=createCrystalSiege(saved.room,saved.seed,null,saved.prepDuration??null);if(saved.paceVersion!==2)delete s.paceVersion;for(let i=0;i<6;i++){const n=saved.nodes[i],expected=s.nodes[i];if(!keys(n,['id','x','z','harvested'])||n.id!==expected.id||n.x!==expected.x||n.z!==expected.z||typeof n.harvested!=='boolean')fail();expected.harvested=n.harvested;}
  for(let i=0;i<4;i++){const p=saved.pads[i],expected=s.pads[i];if(!keys(p,['id','x','z','kind','level','hp','cooldown'])||p.id!==expected.id||p.x!==expected.x||p.z!==expected.z)fail();if(p.kind===null){if(p.level!==0||p.hp!==0||p.cooldown!==0)fail();}else if(!Object.hasOwn(SPEC,p.kind)||!integer(p.level,1,2)||!finite(p.hp,0,maxHp(p.kind,p.level))||!finite(p.cooldown,0,1.1))fail();Object.assign(expected,p);}
  Object.assign(s,{phase:saved.phase,elapsed:saved.elapsed,spawnClock:saved.spawnClock,spawnIndex:saved.spawnIndex,spawned:saved.spawned,core:{...saved.core},resources:saved.resources});return s;
 }

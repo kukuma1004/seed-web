@@ -16,10 +16,10 @@ for(const hz of [20,60]){
  // The inherited endurance callback models ordinary minion vulnerability.
  // Bosses use main's separate takenScale; generic recovery never adds 35%.
  h.damageEnemy=(enemy,n)=>{if(enemy.dead)return;enemy.hp-=n*(enemy.takenScale||1);if(enemy.hp<=0)enemy.dead=true;};
- const e={dead:false,expansionBoss:true,hp:2400,maxHp:2400,g:{position:new THREE.Vector3(3,0,-2.5),rotation:{}},state:'recover',takenScale:1,hit:0};h.enemies.push(e);
+ const e={dead:false,expansionBoss:true,hp:2400,maxHp:2400,g:{position:new THREE.Vector3(3,0,-2.5),rotation:{}},state:'recover',takenScale:1,hit:0};h.enemies.push(e);for(const p of s.siege.pads){if(p.id!=='pad-1')p.hp=0;p.cooldown=0;}
  const before=siege.checkpointCrystalSiege(s.siege),stats=siege.checkpointCrystalSiege(s.siege);h.updateExpansionCourse(0);assert.equal(e.hp,2400,'Paused boss update cannot fire');
  let total=0;for(let n=0;n<hz*3;n++){const hp=e.hp;h.updateExpansionCourse(dt);total+=hp-e.hp;assert(s.siege.out.snares.length===0,'Boss never slowed by retained snares');assert(s.siege.out.spawns.length===0);}
- assert(Math.abs(total-78)<1e-6,'Finite paid turrets use boss damage without generic recovery bonus');assert.equal(s.siege.core.hp,before.core.hp);assert.equal(s.siege.resources,before.resources);assert.deepEqual(s.siege.nodes,before.nodes);assert.equal(s.siege.spawned,before.spawned);
+ assert(Math.abs(total-240)<1e-6,'Finite paid turrets use boss damage without generic recovery bonus');assert.equal(s.siege.core.hp,before.core.hp);assert.equal(s.siege.resources,before.resources);assert.deepEqual(s.siege.nodes,before.nodes);assert.equal(s.siege.spawned,before.spawned);
  for(const p of s.siege.pads)p.hp=0;const hp=e.hp;for(let n=0;n<hz;n++)h.updateExpansionCourse(dt);assert.equal(e.hp,hp,'Destroyed turrets cannot fire');
  Object.assign(s.siege.pads[0],{kind:'snare',hp:40,level:1,cooldown:0});assert.equal(siege.stepCrystalSiegeBossFacilities(s.siege,dt,[{id:'boss',x:3,z:-2.5,hp:2400}]).snares.length,0);
  const entry=scope.earnedEntries.find(x=>x.journey.phase==='boss');assert(entry&&validExpansionEntry(entry));assert.deepEqual(journey.checkpointExpansionJourney(journey.restoreExpansionJourney(entry.journey)),entry.journey,'Boss entrance paid facilities remain restorable');

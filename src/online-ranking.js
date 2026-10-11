@@ -6,7 +6,7 @@ import {cleanName} from './score.js';
 import {isBadName} from './name-filter.js';
 import {validBuild} from './ranking-build.js';
 import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
-import {EXPANSION_CIRCUIT_KILLS} from './act-expansion-runtime.js';
+import {EXPANSION_CIRCUIT_KILLS,CROSSWIND_CIRCUIT_KILLS} from './act-expansion-runtime.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
@@ -35,7 +35,7 @@ export function validRun(e,{acts=EXPANSION_ACTS}={}){
  // Deliberate-crossing courses share the actual accepted-packet kill budget.
  // A campaign has 3 laps, with one true boss per completed lap.
  // Ordinary 1/2/3 validation below is unchanged.
- if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*EXPANSION_CIRCUIT_KILLS&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
+ if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*(e.act===4?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  const multiplier=1+e.cycle*.5;
  const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;
  return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=scoreCeiling&&e.time>=e.cycle*15&&e.time>=e.kills/6;
