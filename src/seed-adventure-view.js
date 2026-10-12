@@ -1,6 +1,7 @@
 import {adventureGrowthPreview,adventureGrowthPath} from './adventure-growth-preview.js';
 import {adventureActorOpacity} from './adventure-readability.js';
 import {adventureProjectileSight} from './adventure-projectile-sight.js';
+import {paintAdventureGimmicks} from './adventure-garden-gimmicks.js';
 import {adventureObjective,adventureBossAction,adventureDoorScene,adventureEventName,adventureEventReward} from './adventure-wayfinding.js';
 import {createAdventureGardenPainter} from './adventure-garden-renderer.js';
 import {getAdventureGuardian,adventureGuardianFrame,adventureGuardianMotionFrame} from './adventure-duel-guardians.js';
@@ -222,6 +223,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
   ctx.beginPath();ctx.moveTo(13,0);ctx.lineTo(-6,-8);ctx.lineTo(-2,0);ctx.lineTo(-6,8);ctx.closePath();ctx.fill();ctx.stroke();ctx.restore();
  }
  function paintRegionMarks(){const R=s.region,t=s.time;
+  paintAdventureGimmicks(s,ctx,point,circle,itemSprite,label,scale);
   for(const ev of R.events){
    const reward=adventureEventReward(s,ev);if(reward)label(reward.x,reward.y-1.7,'✦ 도전 보물 · 공격해서 열기');
    if(ev.type==='raid'){const active=ev.state==='active',done=ev.state==='done',trail=ev.variant==='flowertrail';
@@ -412,7 +414,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function paintUncoveredSeed(){const p=s.player,bob=moving?Math.abs(Math.sin(s.time*14))*3:Math.sin(s.time*3+p.x)*1.1;if(!paintSeedMotion(p,bob))sprite('seed',p.x,p.y,1.95,p.aimX,p.aimY,bob,p.inv>0&&Math.sin(s.time*35)>.5);}
  // Only a crowded seed gets this small foot marker; danger is drawn above it.
  function paintSeedLocator(){const p=point(s.player.x,s.player.y);ctx.save();ctx.globalAlpha=1;ctx.beginPath();ctx.ellipse(p.x,p.y+2,scale*.57,scale*.2,0,0,Math.PI*2);ctx.strokeStyle='#102921';ctx.lineWidth=4;ctx.stroke();ctx.strokeStyle='#d6ffe9';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#d6ffe9';ctx.beginPath();ctx.arc(p.x,p.y-3,2.5,0,Math.PI*2);ctx.fill();ctx.restore();}
- function paintEvolveCue(){if(!evolveCue||s.phase!=='playing'&&s.phase!=='doors')return;const t=(performance.now()-evolveCue.at)/1000;if(t>2.6){evolveCue=null;return;}const a=Math.min(1,t/.25,(2.6-t)/.5),kinds={solo:'단독 진화',fusion:'융합',final:'완성 진화',twin:'쌍둥이 각성'};ctx.save();ctx.globalAlpha=a;ctx.textAlign='center';const y=height*.32;ctx.fillStyle='#08161dcc';ctx.fillRect(0,y-46,width,78);ctx.font=`bold 13px 'Malgun Gothic'`;ctx.fillStyle='#f0c56f';ctx.fillText(kinds[evolveCue.kind]||'진화',width/2,y-18);ctx.font=`bold ${Math.min(40,width*.05)}px Georgia,'Batang',serif`;ctx.lineWidth=5;ctx.strokeStyle='#1b120a';ctx.strokeText(evolveCue.name,width/2,y+18);ctx.fillStyle='#fff1b9';ctx.fillText(evolveCue.name,width/2,y+18);ctx.restore();}
+ function paintEvolveCue(){if(!evolveCue||s.phase!=='playing'&&s.phase!=='doors')return;const t=(performance.now()-evolveCue.at)/1000;if(t>2.6){evolveCue=null;return;}const a=Math.min(1,t/.25,(2.6-t)/.5),kinds={solo:'단독 진화',fusion:'융합',final:'완성 진화',twin:'쌍둥이 각성'},compact=height<430,w=compact?Math.min(220,width*.42):width,y=compact?height-36:height*.32;ctx.save();ctx.globalAlpha=a;ctx.textAlign='center';ctx.fillStyle='#08161dcc';ctx.fillRect((width-w)/2,y-(compact?23:46),w,compact?46:78);ctx.font=`bold ${compact?10:13}px 'Malgun Gothic'`;ctx.fillStyle='#f0c56f';ctx.fillText(kinds[evolveCue.kind]||'진화',width/2,y-(compact?8:18));ctx.font=`bold ${compact?18:Math.min(40,width*.05)}px Georgia,'Batang',serif`;ctx.lineWidth=compact?3:5;ctx.strokeStyle='#1b120a';ctx.strokeText(evolveCue.name,width/2,y+(compact?14:18),w-16);ctx.fillStyle='#fff1b9';ctx.fillText(evolveCue.name,width/2,y+(compact?14:18),w-16);ctx.restore();}
  // 탄환 그림(오른쪽을 향하도록 그려진 칸)을 날아가는 방향으로 돌려 그린다. 그림이 아직 없으면 예전 잎 모양.
  function shotArt(b){if(b.art&&assets[b.art]?.naturalWidth){const im=assets[b.art],p=point(b.x,b.y),size=(b.art==='ball'?.8:1.1)*scale,ratio=im.naturalHeight/im.naturalWidth;ctx.save();ctx.translate(p.x,p.y-8);ctx.rotate(b.art==='ball'?s.time*9:Math.atan2(b.dy,b.dx));ctx.drawImage(im,-size/2,-size*ratio/2,size,size*ratio);ctx.restore();return true;}
   const combo=!b.hostile&&s.form,im=combo?ensureAsset('combo'):assets.projectile;if(!im?.complete||!im.naturalWidth)return false;

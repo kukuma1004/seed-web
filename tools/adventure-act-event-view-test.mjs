@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {adventureObjective,adventureEventName,adventureIngressLabel,adventureEventReward} from '../src/adventure-wayfinding.js';
 import {createAdventure,startAdventure} from '../src/seed-adventure-rules.js';
+import {paintAdventureGimmicks} from '../src/adventure-garden-gimmicks.js';
 
 for(const act of [0,1,2]){
  const s=createAdventure(13);s.room=act*4;startAdventure(s,'slash','recall');const ev=s.region.events[act===2?1:0];ev.state='active';s.player.x=ev.x;s.player.y=ev.y;
@@ -17,7 +18,7 @@ const labels=[],circles=[],items=[],ellipses=[],noop=()=>{};
 const ctx=new Proxy({ellipse:(...a)=>ellipses.push(a)},{get:(o,k)=>o[k]??noop,set:(o,k,v)=>(o[k]=v,true)});
 const ev={type:'raid',variant:'flowertrail',state:'active',time:4,duration:16,x:40,y:26,r:3.4,origin:{x:44,y:26},trailEnd:{x:34,y:29}};
 const s={time:5,props:[],region:{events:[ev],gate:{x:49,y:10,open:false}}};
-const c=vm.createContext({s,ctx,scale:20,assets:{},point:(x,y)=>({x:x*20,y:y*20}),circle:(...a)=>circles.push(a),label:(...a)=>labels.push(a),itemSprite:(...a)=>items.push(a),glow:noop,adventureEventName,adventureEventReward});vm.runInContext(source.slice(start,end),c);
+const c=vm.createContext({s,ctx,scale:20,assets:{},point:(x,y)=>({x:x*20,y:y*20}),circle:(...a)=>circles.push(a),label:(...a)=>labels.push(a),itemSprite:(...a)=>items.push(a),glow:noop,adventureEventName,adventureEventReward,paintAdventureGimmicks});vm.runInContext(source.slice(start,end),c);
 const before=JSON.stringify(s);c.paintRegionMarks();assert.equal(JSON.stringify(s),before);assert.ok(labels.some(a=>a[2]==='꽃등 따라가기 · 12초'));assert.ok(circles.some(a=>a[3]==='#b7f6d5bb'),'friendly moving zone is distinguished from red attack tells');assert.equal(items.length,1,'uses one existing item image, no new particle system');
 const portals=[{x:14,y:9},{x:40,y:9},{x:27,y:19}],guard={type:'guard',variant:'moonaltar',x:27,y:8,hp:90,maxHp:100,state:'active',wave:2,waves:3,spawned:0,portal:portals[1],nextPortal:portals[2],portals};
 assert.equal(adventureIngressLabel(guard),'아래 문 대기','offscreen entrance is also announced by direction in the HUD');

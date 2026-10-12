@@ -1,4 +1,5 @@
 import {makeAdventureGardenLayout} from './adventure-garden-layout.js';
+import {ROOT_BLOOM,makeAdventureGimmicks,stepAdventureGimmicks} from './adventure-garden-gimmicks.js';
 import {getAdventureGuardian} from './adventure-duel-guardians.js';
 import {titleCombatBonuses,titleCriticalMultiplier,TITLE_CRIT_DAMAGE,titleFormCriticalEligible,refreshAdventureTitleHp,checkpointAdventureTitleHp,validAdventureTitleHp,restoreAdventureTitleHp} from './title-combat-bonuses.js';
 import {LAWS} from './laws.js';
@@ -152,7 +153,7 @@ function buildRegion(s,info){
  // 숲 가장자리 나무(그림만, 충돌은 걸을 수 있는 땅 밖으로 못 나가는 규칙이 맡는다).
  const trees=[];for(let gx=1;gx<W;gx+=2.4)for(let gy=1.5;gy<H;gy+=2.2){const x=gx+(r()-.5)*1.2,y=gy+(r()-.5)*1.2,edge=walkDist({nodes,paths,pathWidth},x,y);if(edge>.3&&edge<2.4&&r()<.2&&trees.length<64)trees.push({x,y,cell:Math.floor(r()*4),size:1.5+r()*.7});}
  s.region={w:W,h:H,pathWidth,theme:layout.theme,landmarks:layout.landmarks,start,gate:{x:gateNode.x+1.8,y:gateNode.y,open:false,r:1.6},nodes:nodes.map(n=>({x:n.x,y:n.y,r:n.r,role:n.role})),paths,obstacles,decor,trees,events,explored:new Array(Math.ceil(W/REGION.cell)*Math.ceil(H/REGION.cell)).fill(false),message:''};
- p.x=start.x;p.y=start.y;
+ s.region.gimmicks=makeAdventureGimmicks(s.region);p.x=start.x;p.y=start.y;
  const roles=['melee','melee','ranged','tank','fast'];let pack=0;
  const placePack=(cx,cy,count,guard=false)=>{pack++;for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+r(),dd=.9+r()*1.4;spawnEnemy(s,guard&&i===0?'tank':roles[Math.floor(r()*roles.length)],cx+Math.cos(a)*dd,cy+Math.sin(a)*dd,{dormant:true,pack,guard});}};
  for(const n of nodes){if(n.role==='camp'){
@@ -488,6 +489,7 @@ function bossAct(s,e,p,dt){
  }
  return false;
 }
+function rootBloomBurst(s,g){fx(s,'buff',g.x,g.y,{buff:'guard',radius:ROOT_BLOOM.radius,life:.45,max:.45});event(s,'reflect');}
 export function stepAdventure(s,dt,input={},combat=null){
  refreshAdventureTitleHp(s);if(s.phase!=='playing'||!Number.isFinite(dt)||dt<=0)return;dt=clamp(dt,0,.05);const p=s.player,A=s.arena;
  s.shake=Math.max(0,s.shake-dt*2.2);
@@ -503,6 +505,7 @@ export function stepAdventure(s,dt,input={},combat=null){
  const lunge=Math.exp(-14*dt),px0=p.x,py0=p.y;p.x+=p.lx*dt;p.y+=p.ly*dt;p.lx*=lunge;p.ly*=lunge;
  p.x=clamp(p.x+(p.dashing>0?p.dx:moving?d.x:0)*speed*dt,A.minX,A.maxX);p.y=clamp(p.y+(p.dashing>0?p.dy:moving?d.y:0)*speed*dt,A.minY,A.maxY);
  blockCircle(s,p,.4);keepOnGround(s,p,.35);p.vx=(p.x-px0)/dt;p.vy=(p.y-py0)/dt;
+ stepAdventureGimmicks(s,dt,rootBloomBurst);
  if(s.region){const R=s.region,c=REGION.cell,cols=Math.ceil(R.w/c);for(let dx=-2;dx<=2;dx++)for(let dy=-2;dy<=2;dy++){const cx=Math.floor(p.x/c)+dx,cy=Math.floor(p.y/c)+dy;if(cx>=0&&cy>=0&&cx<cols&&cy<Math.ceil(R.h/c))R.explored[cy*cols+cx]=true;}}
  if(input.attack||p.buffer>0){if(attackAdventure(s))p.buffer=0;}
  for(const c of s.pendingCuts){c.delay-=dt;if(c.delay<=0)cut(s,c,c.seen);}s.pendingCuts=s.pendingCuts.filter(c=>c.delay>0);
