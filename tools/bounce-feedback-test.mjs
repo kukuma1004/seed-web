@@ -35,6 +35,20 @@ for(const law of ['burst','chain','frost','gravity','orbit','recall','split','pi
 for(const cue of cues)assert.ok(AUDIO_EVENTS[cue],`existing audio key ${cue}`);
 const silent=createBounceFeedback();silent.consume({laws:[],events:[{type:'hit'}]});
 
+const audioState={supported:true,muted:false,unlocked:false,contextState:'uninitialized'},pendingCues=[],pendingScenes=[];
+const pending=createBounceFeedback({state:()=>audioState,play:id=>pendingCues.push(id),setScene:id=>pendingScenes.push(id)},{now:()=>clock});
+const startup={laws:[],events:[{type:'launch'}]};assert.equal(pending.consume(startup),0);assert.equal(startup.events.length,1,'pending first gesture does not discard launch');
+audioState.contextState='suspended';pending.consume(startup);assert.equal(startup.events.length,1);
+audioState.contextState='running';audioState.unlocked=true;assert.equal(pending.consume(startup),1);assert.deepEqual(pendingCues,['shotPierce']);assert.equal(startup.events.length,0);
+audioState.muted=true;startup.events=[{type:'boss',state:'spawn'},{type:'launch'}];assert.equal(pending.consume(startup),0);assert.equal(startup.events.length,0,'muted queues drain without blocking play');assert.equal(pendingScenes.at(-1),'boss');
+audioState.muted=false;audioState.contextState='suspended';audioState.unlocked=false;
+const waiting=fixture('burst');for(let i=0;i<25&&waiting.phase==='flying';i++){stepBounce(waiting,.1);pending.consume(waiting);assert.ok(waiting.events.length<=24,'pending audio retains only the existing bounded event queue');}
+audioState.supported=false;startup.events=[{type:'boss',state:'defeat'}];pending.consume(startup);assert.equal(startup.events.length,0);assert.equal(pendingScenes.at(-1),'garden','unsupported audio still follows boss scene state');
+audioState.supported=true;audioState.contextState='running';audioState.unlocked=true;pending.reset();
+startup.events=[{type:'boss',state:'spawn'}];pending.consume(startup);const bossCueCount=pendingCues.length;
+startup.events=[{type:'boss',state:'defeat'}];pending.consume(startup);assert.equal(pendingScenes.at(-1),'garden');
+startup.events=[{type:'boss',state:'spawn'}];pending.consume(startup);assert.equal(pendingCues.length,bossCueCount+1,'same-time boss warning respects cooldown');assert.equal(pendingScenes.at(-1),'boss','scene changes remain independent of cue cooldown');
+
 const point=(x,y)=>({x:x*10,y:y*10}),paths={};
 for(const reducedMotion of [false,true])for(const type of Object.keys(BOUNCE_FEEDBACK_STYLES)){
  const log=[];const g=new Proxy({save(){log.push('save');},restore(){log.push('restore');}}, {get(target,key){return target[key]??((...a)=>{for(const n of a)if(typeof n==='number')assert.ok(Number.isFinite(n));log.push(key);});},set(target,key,value){target[key]=value;return true;}});

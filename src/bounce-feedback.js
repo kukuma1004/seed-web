@@ -9,19 +9,26 @@ export const BOUNCE_FEEDBACK_STYLES=Object.freeze({
 });
 
 // Call after launch, choose or each physics step, BEFORE showing a paused overlay.
-// Drains run.events only. Does not alter run.effects, RNG, combat or counters.
+// Drains run.events only (retains the bounded queue while real unlock is pending).
+// Does not alter run.effects, RNG, combat or counters.
 export function createBounceFeedback(audio,{now=()=>performance.now()}={}){
  const last=new Map();let lastOrdinary=-Infinity;
  function cue(event,run){if(event.type==='launch')return{id:SHOTS[run.laws[0]]||'shotPierce',gap:90,priority:1};
   if(event.type==='boss')return{id:event.state==='defeat'?'bossDefeat':'bossWarning',gap:800,priority:3};
   if(event.type==='bank'&&!event.reflect)return null;return CUES[event.type]||null;}
- return {consume(run){if(!run?.events)return 0;const time=now();let played=0;
+ return {consume(run){if(!run?.events)return 0;
+   // Music follows the boss state even when muted or its cue is rate-limited.
+   for(const event of run.events)if(event.type==='boss')audio?.setScene?.(event.state==='defeat'?'garden':'boss');
+   const state=audio?.state?.();
+   if(state?.muted||state?.supported===false){run.events.length=0;return 0;}
+   if(state?.supported===true&&(state.contextState==='suspended'||state.contextState==='uninitialized'||state.contextState==='running'&&state.unlocked===false))return 0;
+   const time=now();let played=0;
    // Two bounded scans choose important cues before ordinary impact spam.
-   for(let pass=0;pass<2;pass++){let selected=null,selectedEvent=null;
+   for(let pass=0;pass<2;pass++){let selected=null;
     for(const event of run.events){const c=cue(event,run);if(!c||time-(last.get(c.id)??-Infinity)<c.gap||c.priority<3&&time-lastOrdinary<60)continue;
-     if(!selected||c.priority>selected.priority){selected=c;selectedEvent=event;}}
+     if(!selected||c.priority>selected.priority)selected=c;}
     if(!selected)break;last.set(selected.id,time);if(selected.priority<3)lastOrdinary=time;
-    audio?.play?.(selected.id);played++;if(selectedEvent.type==='boss')audio?.setScene?.(selectedEvent.state==='defeat'?'garden':'boss');
+    audio?.play?.(selected.id);played++;
    }
    run.events.length=0;return played;
   },reset(){last.clear();lastOrdinary=-Infinity;}};
