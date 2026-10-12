@@ -152,7 +152,12 @@ function buildRegion(s,info){
  p.x=start.x;p.y=start.y;
  const roles=['melee','melee','ranged','tank','fast'];let pack=0;
  const placePack=(cx,cy,count,guard=false)=>{pack++;for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+r(),dd=.9+r()*1.4;spawnEnemy(s,guard&&i===0?'tank':roles[Math.floor(r()*roles.length)],cx+Math.cos(a)*dd,cy+Math.sin(a)*dd,{dormant:true,pack,guard});}};
- for(const n of nodes){if(n.role==='camp')placePack(n.x,n.y,3+Math.floor(r()*2)+(info.local>0?1:0)+(s.elite?1:0));if(n.role==='ruin'&&r()<.5)placePack(n.x+1.5,n.y,2+(info.local>0?1:0));if(n.role==='hoard')placePack(n.x-1.5,n.y,3+act);}
+ for(const n of nodes){if(n.role==='camp'){
+  // The first garden teaches fighting on the direct lawn path. Relocate one
+  // existing pack instead of adding enemies or forcing an optional event.
+  const opening=act===0&&info.local===0&&n===nodes.find(q=>q.role==='camp');
+  placePack(n.x,opening?start.y:n.y,3+Math.floor(r()*2)+(info.local>0?1:0)+(s.elite?1:0));
+ }if(n.role==='ruin'&&r()<.5)placePack(n.x+1.5,n.y,2+(info.local>0?1:0));if(n.role==='hoard')placePack(n.x-1.5,n.y,3+act);}
  placePack(gateNode.x-1.5,gateNode.y,5+act+(s.elite?2:0),true);
  // 항아리·상자: 폐허와 길가, 막다른 보물 공터에는 작은 보물 상자 둘.
  s.props.length=0;const putProp=(x,y,kind)=>s.props.push({id:++s.serial,kind,x,y,hp:kind==='pot'?1:2,maxHp:kind==='pot'?1:2,flash:0});

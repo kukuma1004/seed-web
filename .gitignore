@@ -260,3 +260,7 @@ art-refs/
 !tools/adventure-wayfinding-test.mjs
 !tools/adventure-growth-choice-test.mjs
 !tools/adventure-progression-audit.mjs
+
+!tools/adventure-tempo-test.mjs
+!tools/adventure-lazy-assets-test.mjs
+!tools/adventure-sleep-test.mjs

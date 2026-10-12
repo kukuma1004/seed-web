@@ -3,7 +3,7 @@
 const GARDENS = [
  {theme:'moss-courtyard',w:54,h:38,pathWidth:3.4,
   beds:[[8,19,6.5,'start'],[46,19,6.7,'gate'],[18,10,6.4,'camp'],[32,10,6.4,'ruin'],[27,19,7.6,'raid'],[18,28,6.4,'camp'],[32,28,6.4,'altar'],[44,29,5.8,'hoard'],[44,8,5.8,'ruin']],
-  edges:[[0,2],[0,5],[2,3],[3,8],[8,1],[1,7],[7,6],[6,5],[5,4],[4,2],[4,3],[4,6],[4,1]],
+  edges:[[0,2],[0,5],[0,4],[2,3],[3,8],[8,1],[1,7],[7,6],[6,5],[5,4],[4,2],[4,3],[4,6],[4,1]],
   landmarks:[{x:27,y:4,kind:'glasshouse',size:3.4},{x:27,y:19,kind:'courtyard-inlay',size:3},{x:8,y:32,kind:'fern-bed',size:2.2}]},
  {theme:'blossom-terrace',w:54,h:38,pathWidth:3.7,
   beds:[[8,28,6.5,'start'],[46,10,6.7,'gate'],[20,29,6.1,'camp'],[34,29,6.1,'ruin'],[44,26,7,'raid'],[8,10,6.2,'altar'],[21,9,6.1,'camp'],[34,9,6.1,'hoard'],[17,19,5.8,'ruin']],

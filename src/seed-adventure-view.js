@@ -24,6 +24,9 @@ const INK={burst:'#ffc07c',orbit:'#c6c4ff',reflect:'#9cecff',pierce:'#e4ffc1',gr
 const DETAIL={burst:'적중 주변에 40% 폭발 피해',orbit:'공격 후 공전 타격 · 일반 탄 방어',reflect:'날린 잎이 벽에서 두 번 반사',pierce:'날린 잎이 세 적을 관통',gravity:'적중점에 적을 모으는 소용돌이',chain:'가까운 두 적에게 50% 연쇄 피해',frost:'둔화 · 다섯 번 맞히면 32 추가 피해',split:'베기: 갈라지는 참격 · 던지기: 부채꼴 잎날',recall:'베기: 돌아오는 참격 · 던지기: 왕복 잎날'};
 const FORM_DETAIL={returnblade:'큰 잎 칼날이 여섯 적을 꿰뚫고 돌아옵니다.',thunderlance:'더 빠른 창이 관통한 자리에서 번개를 잇습니다.',collapse:'적을 끌어모은 소용돌이가 끝날 때 폭발합니다.'};
 const symbols={slash:'╱',throw:'➶',hybrid:'✣',dodge:'↝',ultimate:'✥'};
+// Optional sheets are requested only by the equipped body or a live attack.
+// Byte figures describe unchanged files, not observed network/cache transfers.
+const OPTIONAL_ART=Object.freeze({solo:['cute/seed-solo-v1.webp',271254],fusion:['cute/seed-fusion-v1.webp',298570],awaken:['cute/seed-awaken-v1.webp',343438],orbit:['seed-orbit-sprites-v1.webp',205304],orbitAdvanced:['seed-orbit-advanced-v1.webp',103410],comet:['seed-comethalo-sprite-v1.webp',50402],combo:['combo-projectiles-v1.webp',388708]});
 
 // 2026-09-28: 저장(문 앞)·도감·햇살(JP)·보스 칭호를 계정과 잇는다. 연습(로컬 검사·개발자 실험)은 보상 없음.
 export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},storage=null,owner='guest',bossEpoch=null,practice=false,currentOwner=()=>'',titleStats=()=>null,pet=null,onCredit=()=>'',onDiscover=()=>{},onBossDefeated=()=>{},onResult=()=>'',onRanking=()=>{}}={}){
@@ -47,7 +50,12 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  const move={x:0,y:0},aim={x:1,y:0},stickPointers=new Map();
  let cameraX=12,cameraY=9,cameraRoom=-1,reviewFrames=0,reviewAt=0,objective=null,guide=null;
  const listen=(target,name,fn,options)=>{target.addEventListener(name,fn,options);listeners.push(()=>target.removeEventListener(name,fn,options));};
- const load=(key,path)=>{const im=new Image();assets[key]=im;im.onload=()=>{if(!closed)draw();};im.src=BASE+'assets/'+path;};
+ const assetPaths={},ownedImages=new Set();let assetRequests=0,optionalBytes=0;
+ const assetReview=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
+ const assetMetrics=()=>{if(assetReview){root.dataset.assetRequestCount=String(assetRequests);root.dataset.assetOptionalBytes=String(optionalBytes);root.dataset.assetDeferredBytes=String(1661086-optionalBytes);}};
+ const releaseImage=im=>{if(!im)return;im.onload=im.onerror=null;im.src='';ownedImages.delete(im);};
+ const load=(key,path)=>{if(closed)return null;if(assets[key]&&assetPaths[key]===path)return assets[key];releaseImage(assets[key]);const im=new Image();assets[key]=im;assetPaths[key]=path;ownedImages.add(im);assetRequests++;if(OPTIONAL_ART[key])optionalBytes+=OPTIONAL_ART[key][1];assetMetrics();im.onload=()=>{if(!closed&&!document.hidden&&assets[key]===im)draw();};im.src=BASE+'assets/'+path;return im;};
+ const ensureAsset=key=>assets[key]||(OPTIONAL_ART[key]?load(key,OPTIONAL_ART[key][0]):null);
  load('arena','adventure/garden-arena-plate-v2.webp');load('seed','cute/seed-body-v1.webp');load('hound','cute/enemy-hound-v4.webp');load('caster','cute/enemy-caster-v4.webp');load('shield','cute/enemy-shield-v4.webp');load('boss','mobile/warden-memory-v4.webp');
  // ③ 막마다 본편의 적·보스·바닥 그림을 그대로 쓴다.
 
@@ -56,15 +64,15 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function ensureGardenAssets(act,boss){
   if(decorAct!==act){decorAct=act;load('gardenDecor',`garden/objects-${['greenhouse','blossom','moon'][act]}-v1.webp`);}
   const profile=boss&&getAdventureGuardian(boss.bossId),id=profile?.bossId||'';
-  if(guardianFor!==id){if(assets.guardian)assets.guardian.src='';delete assets.guardian;guardianFor=id;guardianPose=null;if(profile)load('guardian',profile.files[0]);}
+  if(guardianFor!==id){releaseImage(assets.guardian);delete assets.guardian;delete assetPaths.guardian;guardianFor=id;guardianPose=null;if(profile)load('guardian',profile.files[0]);}
  }
  const gardenPainter=createAdventureGardenPainter(ctx,assets,regionShape),floorView={act:0,width:1,height:1,dpr:1,scale:1,ox:0,oy:0,playerX:0,playerY:0};
  function gardenView(){Object.assign(floorView,{act:adventureRoomInfo(s.room).act,width,height,dpr,scale,ox,oy,playerX:s.player.x,playerY:s.player.y});return floorView;}
 
  // 162 조합 탄환·공전 그림(수호전과 같은 아틀라스)과 물약·버프 아이템 그림.
- if(pet?.file)load('pet',pet.file);load('combat','adventure/seed-combat-v1.webp');load('solo','cute/seed-solo-v1.webp');load('fusion','cute/seed-fusion-v1.webp');load('awaken','cute/seed-awaken-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('portal','seed-law-portal-v1.webp');load('orbit','seed-orbit-sprites-v1.webp');load('orbitAdvanced','seed-orbit-advanced-v1.webp');load('comet','seed-comethalo-sprite-v1.webp');load('items',ITEM_ATLAS);
+ if(pet?.file)load('pet',pet.file);load('combat','adventure/seed-combat-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('portal','seed-law-portal-v1.webp');load('items',ITEM_ATLAS);
  // 2026-09-28 사용자: 이미 있는 탄환 그림을 재활용. 법칙 탄은 본편 탄환 DNA 4×4, 융합 탄은 조합 카드 탄환 4×3.
- load('projectile','mobile/seed-projectile-dna-v1.png');load('combo','combo-projectiles-v1.webp');
+ load('projectile','mobile/seed-projectile-dna-v1.png');
  function resetInput(){keys.clear();move.x=move.y=0;pointerAttack=false;mouse=null;mouseHeld=false;aimDragged=false;stickPointers.clear();for(const e of root.querySelectorAll('.sa-stick i'))e.style.transform='';}
  // 클라우드 규칙이 게시되면 계정 저장 칸 하나(기기 사이 동기화), 그 전에는 계정별 이 기기 칸.
  const saveKey=ADVENTURE_CLOUD_READY?ADVENTURE_SAVE_KEY:ADVENTURE_SAVE_KEY+':'+encodeURIComponent(owner);let lastForm=null,creditNote='';
@@ -97,7 +105,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function stop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0;deadline=0;pacer=createFramePacer();}
  function start(){if(!closed&&s.phase==='playing'&&!paused&&!document.hidden&&!raf)raf=requestAnimationFrame(loop);}
  function pause(value){if(s.phase!=='playing')return;paused=value;resetInput();audio?.setPaused(value);syncModal();if(value){stop();draw();}else start();}
- function close(){if(closed)return;closed=true;resetBossAccount();combat?.dispose();gardenPainter.dispose();if(assets.guardian)assets.guardian.src='';stop();resetInput();for(const off of listeners)off();root.remove();document.body.classList.remove('seed-adventure-open');audio?.setPaused(false);onClose();}
+ function close(){if(closed)return;closed=true;resetBossAccount();combat?.dispose();gardenPainter.dispose();for(const im of ownedImages)releaseImage(im);stop();resetInput();for(const off of listeners)off();root.remove();document.body.classList.remove('seed-adventure-open');audio?.setPaused(false);onClose();}
  function restart(){shopUpgradeIndex=-1;resetBossAccount();lastForm=null;combat?.dispose();s=binding.attach(createAdventure(Date.now()));bindBossEpoch(s);refreshAdventureTitleHp(s,{fresh:true});rankNote='';combat=createAdventureCombat(s,{sound:id=>audio?.play(id)});paused=false;modalKey='';resetInput();syncModal();syncHud();draw();}
  function point(x,y){return {x:ox+x*scale,y:oy+y*scale};}
  function resize(){const r=root.getBoundingClientRect();width=r.width;height=r.height;dpr=Math.min(window.devicePixelRatio||1,1.5,Math.max(1,Math.sqrt(2.6e6/Math.max(1,width*height))));canvas.width=Math.round(width*dpr);canvas.height=Math.round(height*dpr);canvas.style.width=width+'px';canvas.style.height=height+'px';ctx.setTransform(dpr,0,0,dpr,0,0);scale=Math.max(width/28,height/20);camera();draw();}
@@ -134,11 +142,11 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function setText(sel,text){if(sel==='.sa-objective')paintMinimap();const e=$(sel);if(e.textContent!==text)e.textContent=text;}
  function syncHud(){const p=s.player;const info=adventureRoomInfo(s.room);setText('.sa-route b',`${info.actInfo.name} · ${ROOMS[s.room]}`);setText('.sa-route span',`${info.act+1}막 ${info.local+1}/${ROOMS_PER_ACT}${s.elite?' · 정예':''} · ${Math.floor(s.time/60)}:${String(Math.floor(s.time%60)).padStart(2,'0')}`);setText('.sa-level',`Lv.${s.level} 작은 씨앗`);$('.sa-health i').style.width=p.hp/p.maxHp*100+'%';setText('.sa-health span',`${Math.ceil(p.hp)} / ${p.maxHp}`);$('.sa-charge i').style.width=s.charge+'%';$('.sa-ultimate').classList.toggle('ready',s.charge>=100);$('.sa-ultimate small').textContent=s.charge>=100?'궁극기 · F':`궁극기 ${Math.floor(s.charge)}%`;$('.sa-dodge').classList.toggle('cooldown',p.dash>0);$('.sa-dodge small').textContent=p.dash>0?`${p.dash.toFixed(1)}초`:'회피 · Space';$('.sa-aim i').textContent=symbols[s.weapon];const modes=availableAttacks(s.shapes),next=modes[(modes.indexOf(s.weapon)+1)%modes.length];$('.sa-weapon').hidden=modes.length<2;$('.sa-weapon').firstChild.textContent=symbols[next]||'✣';$('.sa-weapon small').textContent=next?ATTACK_SHAPES[next].name+' · Q':'';
 
- const form=s.formId&&ADVENTURE_FORMS[s.formId],pips=n=>'●'.repeat(n)+'○'.repeat(3-n);
+ ensureEvolvedAssets();const form=s.formId&&ADVENTURE_FORMS[s.formId],pips=n=>'●'.repeat(n)+'○'.repeat(3-n);
  const mo=MOTIONS[s.laws[0]],fin=FINISHERS[s.laws[1]||s.laws[0]];const build=`<b>${form?form.name:mo?mo.name:s.shapes.length?ATTACK_SHAPES[s.weapon].name:'아직 정해지지 않은 씨앗'}${fin?` · 막타 ${fin}`:''}</b>`+s.laws.map(l=>`<span style="color:${INK[l]}" title="${LAWS[l].name} ${s.ranks[l]}단계">${lawArt(l,'sa-build-art')}<i>${pips(s.ranks[l]||1)}</i></span>`).join('');if($('.sa-build').innerHTML!==build)$('.sa-build').innerHTML=build;
  setText('.sa-coins',`● ${s.coins}`);const buffs=Object.entries(s.buffs).filter(([,v])=>v>0).map(([id,v])=>`${itemArt(BUFFS[id].icon)}${id==='guard'?'':Math.ceil(v)}`).join('');if($('.sa-buffs').innerHTML!==buffs)$('.sa-buffs').innerHTML=buffs;
  setText('.sa-potion span',String(s.potions));$('.sa-potion').classList.toggle('empty',!s.potions);
- objective=adventureObjective(s);guide=objective&&(objective.kind==='guards'||objective.kind==='exit')&&objective.distance>=(objective.kind==='exit'?3:7)&&!s.enemies.some(e=>!e.dormant&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<6)?adventureRoute(s,p,objective):null;
+ objective=adventureObjective(s);guide=objective&&(objective.kind==='guards'||objective.kind==='exit')&&objective.distance>=(objective.kind==='exit'?3:7)&&(objective.kind==='exit'||!s.enemies.some(e=>!e.dormant&&e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<6))?adventureRoute(s,p,objective):null;
  const boss=s.enemies.find(e=>e.type==='boss');ensureGardenAssets(info.act,boss);if(isolated()){root.dataset.terrainReady=String(Boolean(assets.garden?.complete&&assets.garden.naturalWidth));root.dataset.terrainSize=String(assets.garden?.naturalWidth||0);root.dataset.gardenPatterns=String(gardenPainter.patternCount());root.dataset.guardianReady=String(Boolean(assets.guardian?.complete&&assets.guardian.naturalWidth));root.dataset.guardianId=guardianFor;}$('.sa-boss').hidden=!boss;if(boss){$('.sa-boss i').style.width=boss.hp/boss.maxHp*100+'%';setText('.sa-boss span',getAdventureGuardian(boss.bossId)?.name||ADVENTURE_BOSSES[boss.bossId]?.name||'수호자');$('.sa-boss small').textContent=adventureBossAction(boss)?(BOSS_TELL[adventureBossAction(boss)]||'붉은 예고 밖으로 회피하세요'):boss.hp<boss.maxHp*.5?'성난 수호자 · 공격이 빨라졌어요':boss.pattern===0?(getAdventureGuardian(boss.bossId)?.opening||'틈을 노려 3단 콤보를 넣으세요'):'틈을 노려 3단 콤보를 넣으세요';}
  const combo=$('.sa-combo');combo.classList.toggle('on',s.hits>=3);if(s.hits>=3){setText('.sa-combo b',s.hits+' HIT');}setText('.sa-combo span',s.phase==='playing'?'●'.repeat(p.combo)+'○'.repeat(3-p.combo):'');setText('.sa-objective',s.phase==='playing'&&s.region?(objective?.label||'출구 수호 무리를 찾으세요'):s.phase==='playing'?(s.roomType==='treasure'?(s.props.some(o=>o.kind==='chest')?'보물 상자를 부수세요 · 항아리와 상자에도 햇살이 들어 있어요':'보물을 모으는 중'):s.enemies.length?`모든 적을 물리치세요 · ${s.enemies.length} 남음`:s.cleared?(adventureRoomInfo(s.room).boss?'수호자를 격파했어요 · 보상을 준비해요':'방을 지켰어요 · 떨어진 것을 모으는 중'):'다음 무리가 다가옵니다'):s.phase==='setup'?'잊힌 정원에 달빛이 스며듭니다':'');root.classList.toggle('sa-in-menu',s.phase!=='playing'||paused);}
  const BOSS_TELL={triple:'연속 돌진 · 계속 옆으로',curve:'휘는 꽃잎 · 계속 움직이며 사이로 회피하세요',beam:'번개 광선 · 휘두르는 방향 반대로',chase:'따라오는 낙뢰 · 멈추지 말고 달리세요',charge:'돌진 · 옆으로 비켜 서세요',slam:'내려찍기 · 붉은 원 밖으로 회피',punches:'압축 씨앗 · 부채꼴 사이로 빠져나가세요',pitch:'서리 꽃씨 · 날아오는 줄을 피하세요',swing:'꽃잎 휩쓸기 · 등 뒤나 멀리로',rain:'서리꽃 고리 · 수호자와 거리를 벌리세요',spiral:'폭풍 소용돌이 · 틈을 찾아 회피',strikes:'낙뢰 · 표시된 원 밖으로'};
@@ -205,7 +213,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function paintGuide(){
   if(!objective||!guide||s.phase!=='playing'||paused)return;
   if(objective.distance<(objective.kind==='exit'?3:7))return;
-  if(s.enemies.some(e=>!e.dormant&&e.hp>0&&Math.hypot(e.x-s.player.x,e.y-s.player.y)<6))return;
+  if(objective.kind!=='exit'&&s.enemies.some(e=>!e.dormant&&e.hp>0&&Math.hypot(e.x-s.player.x,e.y-s.player.y)<6))return;
   const p=s.player,dx=guide.x-p.x,dy=guide.y-p.y,d=Math.hypot(dx,dy);if(d<.1)return;
   const q=point(p.x+dx/d*2.7,p.y+dy/d*2.7),angle=Math.atan2(dy,dx);
   ctx.save();ctx.translate(q.x,q.y);ctx.rotate(angle);ctx.fillStyle='#f4db93';ctx.strokeStyle='#20362e';ctx.lineWidth=2;
@@ -226,7 +234,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
   if(assets.portal?.naturalWidth){ctx.save();ctx.globalAlpha=g.open?1:.45;ctx.translate(q.x,q.y-z*.45);ctx.rotate(g.open?t*.4:0);ctx.drawImage(assets.portal,-z/2,-z/2,z,z);ctx.restore();}
   label(g.x,g.y-3.4,g.open?'출구 · 다음 문':'출구 · 수호 무리를 물리치면 열려요');
  }
- function label(x,y,text){const q=point(x,y);ctx.font=`bold ${Math.max(12,scale*.34)}px 'Malgun Gothic',sans-serif`;ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#061014cc';ctx.strokeText(text,q.x,q.y);ctx.fillStyle='#fce6af';ctx.fillText(text,q.x,q.y);}
+ function label(x,y,text){const q=point(x,y);if(q.x<0||q.x>width||q.y<0||q.y>height)return;ctx.font=`bold ${Math.max(12,scale*.34)}px 'Malgun Gothic',sans-serif`;const available=Math.max(1,width-16),half=Math.min(available,ctx.measureText(text).width)/2+8,cx=Math.max(half,Math.min(width-half,q.x)),cy=Math.max(20,Math.min(height-8,q.y));ctx.textAlign='center';ctx.lineWidth=4;ctx.strokeStyle='#061014cc';ctx.strokeText(text,cx,cy,available);ctx.fillStyle='#fce6af';ctx.fillText(text,cx,cy,available);}
  // 작은 지도: 가 본 곳만 밝게, 장애물·깨어 있는 적·이벤트·출구·씨앗.
  function paintMinimap(){const c=$('.sa-minimap'),R=s.region;c.hidden=!R||s.phase!=='playing';if(c.hidden)return;const g=c.getContext('2d'),k=c.width/R.w,cell=REGION.cell,cols=Math.ceil(R.w/cell);g.clearRect(0,0,c.width,c.height);g.fillStyle='#050c10d8';g.fillRect(0,0,c.width,c.height);
   g.save();g.scale(k,k);g.fillStyle='#1d2d25';g.fill(regionShape(R));g.clip(regionShape(R));g.fillStyle='#4d7a5c';for(let i=0;i<R.explored.length;i++)if(R.explored[i])g.fillRect(i%cols*cell,Math.floor(i/cols)*cell,cell+.1,cell+.1);g.restore();
@@ -272,7 +280,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function paintPickups(){for(const item of s.pickups){const bob=Math.sin(s.time*6+item.id)*.08;if(item.kind==='coin'){const p=point(item.x,item.y-bob-.15),r=scale*.13;ctx.fillStyle='#f5c451';ctx.strokeStyle='#fff1b8';ctx.lineWidth=1.5;ctx.beginPath();ctx.ellipse(p.x,p.y,r*Math.abs(Math.cos(s.time*5+item.id))+1,r,0,0,Math.PI*2);ctx.fill();ctx.stroke();}else{glow(item.kind==='potion'?'warm':'spell',item.x,item.y-.3,.8,.7);itemSprite(item.kind==='potion'?'potion':BUFFS[item.buff]?.icon||'tonic',item.x,item.y-bob,.75);}}}
  // 본편 조합 엔진의 탄·공전체(수호전과 같은 아틀라스와 칸).
  const formBuffer=[];
- function paintFormVisuals(){if(!combat)return;for(const q of combat.visuals(formBuffer)){const key=q.spriteKey==='orbit'?'orbit':q.spriteKey==='advancedOrbit'?'orbitAdvanced':q.spriteKey==='comet'?'comet':'combo',im=assets[key];const p=point(q.x,q.y);if(!im?.naturalWidth){circle(q.x,q.y,.18,INK[q.law]||'#e2e9b5',1,true,1);continue;}const cols=key==='comet'?1:key==='combo'?4:2,rows=key==='comet'?1:key==='combo'?3:2,sw=im.naturalWidth/cols,sh=im.naturalHeight/rows,z=q.size*scale*1.6,cell=q.cell|0;ctx.save();ctx.translate(p.x,p.y-scale*.45);ctx.rotate(q.angle);if(!q.orbit){ctx.strokeStyle=(INK[q.law]||'#e2e9b5')+'80';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-z*.7,0);ctx.lineTo(0,0);ctx.stroke();}ctx.drawImage(im,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,-z/2,-z/2,z,z);ctx.restore();}}
+ function paintFormVisuals(){if(!combat)return;for(const q of combat.visuals(formBuffer)){const key=q.spriteKey==='orbit'?'orbit':q.spriteKey==='advancedOrbit'?'orbitAdvanced':q.spriteKey==='comet'?'comet':'combo',im=ensureAsset(key);const p=point(q.x,q.y);if(!im?.complete||!im.naturalWidth){circle(q.x,q.y,.18,INK[q.law]||'#e2e9b5',1,true,1);continue;}const cols=key==='comet'?1:key==='combo'?4:2,rows=key==='comet'?1:key==='combo'?3:2,sw=im.naturalWidth/cols,sh=im.naturalHeight/rows,z=q.size*scale*1.6,cell=q.cell|0;ctx.save();ctx.translate(p.x,p.y-scale*.45);ctx.rotate(q.angle);if(!q.orbit){ctx.strokeStyle=(INK[q.law]||'#e2e9b5')+'80';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(-z*.7,0);ctx.lineTo(0,0);ctx.stroke();}ctx.drawImage(im,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,-z/2,-z/2,z,z);ctx.restore();}}
  // ④ 사용자가 GPT로 받아 온 씨앗 전투 동작 시트(adventure/seed-combat-v1, 4×2칸, 오른쪽을 봄).
  // 0 준비 · 1 가로 베기 · 2 올려 베기 · 3 막타 도약 · 4 내려찍기 · 5 구르기 · 6 일어남 · 7 피격. 서 있거나 걸을 땐 기존 4방향 몸 그림.
  function paintGuardian(e,dx){const profile=getAdventureGuardian(e.bossId),im=assets.guardian;if(!profile||guardianFor!==e.bossId||!im?.complete||!im.naturalWidth)return false;
@@ -297,6 +305,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  // 2026-09-28 사용자: "강해진다는 느낌이 안 든다" — 진화하면 씨앗 몸이 본편 진화 몸(단독·융합·완성·쌍둥이)으로 바뀐다.
  // 수호전과 같은 몸 조합표(seed-defense-art defenseBodyParts)를 쓴다. 휘두를 때는 앞으로 기울고 눌렸다 펴진다.
  let evolvedParts=null,evolvedFor='';
+ function ensureEvolvedAssets(){if(!s.formId)return false;if(evolvedFor!==s.formId){evolvedFor=s.formId;evolvedParts=defenseBodyParts({formId:s.formId});}let ready=true;for(const part of evolvedParts){const im=ensureAsset(part.atlas);if(!im?.complete||!im.naturalWidth)ready=false;}return ready;}
  // 보스 동행: 씨앗 뒤쪽 옆에서 부드럽게 따라온다. 멀리 떨어지면(문·순간 이동) 곧바로 옆에 나타난다. 공격·충돌 없음.
  const petPos={x:0,y:0,ready:false,hx:1,hy:0,face:1,hop:0};
  function stepPet(dt){if(!pet||!assets.pet?.naturalWidth)return;const p=s.player,mx=moving?(p.aimX||0):0,my=moving?(p.aimY||0):0,m=Math.hypot(mx,my);if(m>.1){petPos.hx=mx/m;petPos.hy=my/m;}
@@ -312,7 +321,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  // 구르기는 잔상, 맞으면 하얗게 번쩍. 손에는 첫 법칙 색의 빛나는 잎 칼을 들고 휘두른다.
  function evolvedParts2(ctx2,alpha=1,flash=0){for(const part of evolvedParts){const im=assets[part.atlas==='seed'?'seed':part.atlas];if(!im?.naturalWidth)continue;const cols=part.cols||4,rows=part.rows||3,sw=im.naturalWidth/cols,sh=im.naturalHeight/rows,z=part.size*.34*scale,dx=part.dx*.34*scale,src=[part.cell%cols*sw,Math.floor(part.cell/cols)*sh,sw,sh];ctx2.globalAlpha=alpha;ctx2.drawImage(im,...src,dx-z/2,-z*.9,z,z);if(flash>0){ctx2.save();ctx2.globalCompositeOperation='lighter';ctx2.globalAlpha=alpha*flash;ctx2.drawImage(im,...src,dx-z/2,-z*.9,z,z);ctx2.restore();}}ctx2.globalAlpha=1;}
  function paintEvolvedBody(e,bob){
-  if(!s.formId)return false;if(evolvedFor!==s.formId){evolvedFor=s.formId;evolvedParts=defenseBodyParts({formId:s.formId});}
+  if(!ensureEvolvedAssets())return false;
   if(s.phase==='playing')seedMotionFrame(e);
   const p=point(e.x,e.y),left=e.aimX<-.05,face=left?-1:1,dash=e.dashing>0,ink=INK[s.laws[0]]||'#d8ffe9',aim=Math.atan2(e.aimY||0,e.aimX||1);
   let sx=1,sy=1,rot=0,lx=0,lift=0,swingA=null;
@@ -376,7 +385,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function paintEvolveCue(){if(!evolveCue||s.phase!=='playing'&&s.phase!=='doors')return;const t=(performance.now()-evolveCue.at)/1000;if(t>2.6){evolveCue=null;return;}const a=Math.min(1,t/.25,(2.6-t)/.5),kinds={solo:'단독 진화',fusion:'융합',final:'완성 진화',twin:'쌍둥이 각성'};ctx.save();ctx.globalAlpha=a;ctx.textAlign='center';const y=height*.32;ctx.fillStyle='#08161dcc';ctx.fillRect(0,y-46,width,78);ctx.font=`bold 13px 'Malgun Gothic'`;ctx.fillStyle='#f0c56f';ctx.fillText(kinds[evolveCue.kind]||'진화',width/2,y-18);ctx.font=`bold ${Math.min(40,width*.05)}px Georgia,'Batang',serif`;ctx.lineWidth=5;ctx.strokeStyle='#1b120a';ctx.strokeText(evolveCue.name,width/2,y+18);ctx.fillStyle='#fff1b9';ctx.fillText(evolveCue.name,width/2,y+18);ctx.restore();}
  // 탄환 그림(오른쪽을 향하도록 그려진 칸)을 날아가는 방향으로 돌려 그린다. 그림이 아직 없으면 예전 잎 모양.
  function shotArt(b){if(b.art&&assets[b.art]?.naturalWidth){const im=assets[b.art],p=point(b.x,b.y),size=(b.art==='ball'?.8:1.1)*scale,ratio=im.naturalHeight/im.naturalWidth;ctx.save();ctx.translate(p.x,p.y-8);ctx.rotate(b.art==='ball'?s.time*9:Math.atan2(b.dy,b.dx));ctx.drawImage(im,-size/2,-size*ratio/2,size,size*ratio);ctx.restore();return true;}
-  const combo=!b.hostile&&s.form,im=assets[combo?'combo':'projectile'];if(!im?.complete||!im.naturalWidth)return false;
+  const combo=!b.hostile&&s.form,im=combo?ensureAsset('combo'):assets.projectile;if(!im?.complete||!im.naturalWidth)return false;
   const cols=4,rows=combo?3:4,cell=combo?projectileAtlasTile(ADVENTURE_FORMS[s.form]):b.hostile?(b.guardianLaw?PROJECTILE_DNA_CELLS[b.guardianLaw]:b.boss?PROJECTILE_DNA_CELLS.boss:PROJECTILE_DNA_CELLS.hostile):PROJECTILE_DNA_CELLS[s.laws.at(-1)]??PROJECTILE_DNA_CELLS.seed;
   const sw=im.naturalWidth/cols,sh=im.naturalHeight/rows,p=point(b.x,b.y),size=(combo?1.9:b.hostile?.9:1.25)*scale;ctx.save();ctx.translate(p.x,p.y-8);ctx.rotate(Math.atan2(b.dy,b.dx));ctx.drawImage(im,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,-size/2,-size/2,size,size);ctx.restore();return true;}
  function leaf(x,y,a,size,color,shape='leaf'){const p=point(x,y);ctx.save();ctx.translate(p.x,p.y-8);ctx.rotate(a);ctx.fillStyle=color;ctx.strokeStyle='#f0fff3';ctx.lineWidth=.8;const z=size*scale;ctx.beginPath();if(shape==='ember'){ctx.moveTo(z*1.25,0);ctx.lineTo(0,-z*.62);ctx.lineTo(-z*.9,0);ctx.lineTo(0,z*.62);ctx.closePath();}else if(shape==='lance'){ctx.moveTo(z*2.1,0);ctx.lineTo(-z*.65,-z*.28);ctx.lineTo(-z*.25,0);ctx.lineTo(-z*.65,z*.28);ctx.closePath();}else if(shape==='returnblade'){ctx.moveTo(z*1.65,0);ctx.quadraticCurveTo(z*.3,-z*.85,-z*1.3,-z*.12);ctx.quadraticCurveTo(-z*.2,-z*.22,z*.3,0);ctx.quadraticCurveTo(-z*.3,z*.85,-z*1.65,0);ctx.quadraticCurveTo(-z*.15,z*.36,z*1.65,0);}else{ctx.moveTo(z*1.25,0);ctx.quadraticCurveTo(z*.12,-z*.64,-z,0);ctx.quadraticCurveTo(-z*.12,z*.32,z*1.25,0);}ctx.fill();ctx.stroke();ctx.strokeStyle='#f5fff0b0';ctx.lineWidth=.9;ctx.beginPath();ctx.moveTo(-z*.82,0);ctx.lineTo(z*.98,0);ctx.stroke();ctx.restore();}
