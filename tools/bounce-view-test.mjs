@@ -27,7 +27,7 @@ function environment(){
   setAttribute(){}focus(){}setPointerCapture(){}remove(){this.removed=true;}
  }
  const window=new Target();window.matchMedia=()=>({matches:false});const document=new Target();document.hidden=false;document.createElement=tag=>new Node(tag);document.body=new Node();
- const callbacks=new Map(),images=[];let next=0,captured=null;const audio={count:0,play(){this.count++;},setPaused(){},unlock(){},setScene(){}};
+ const callbacks=new Map(),images=[];let next=0,captured=null;const audio={count:0,play(){this.count++;},setPaused(){},unlock(){},musicScene:'garden',setScene(id){this.musicScene=id;},state(){return {musicScene:this.musicScene,contextState:'running',muted:false,supported:true};}};
  class Image{constructor(){this.naturalWidth=0;this.naturalHeight=0;images.push(this);}set src(value){this.path=value;}}
  const context={...rules,createFramePacer,createBounceFeedback,drawBounceEffect,window,document,Image,devicePixelRatio:1,Date:{now:()=>67},console,requestAnimationFrame:fn=>{callbacks.set(++next,fn);return next;},cancelAnimationFrame:id=>callbacks.delete(id),createBounce:seed=>(captured=rules.createBounce(seed))};
  let source=readFileSync(new URL('../src/seed-bounce-view.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/import\.meta\.env\.BASE_URL/g,"'./'").replace('export function mountSeedBounce','function mountSeedBounce');
@@ -49,7 +49,7 @@ function environment(){
  e.root.querySelector('.sb-fire').onclick();for(let n=0;n<500&&e.run.phase==='flying';n++)e.frame(20000+n*20);
  assert.equal(e.run.phase,'choice');assert.equal(e.callbacks.size,0,'earned growth sleeps');assert.ok(modal.querySelectorAll('[data-growth]').length>=2);
  modal.querySelectorAll('[data-growth]')[0].onclick();assert.equal(e.run.phase,'aim');assert.ok(e.run.laws.length>0||e.run.damage>2||e.run.volleySize>12);
- e.view.close();e.view.close();assert.equal(e.closed,1);assert.equal(e.callbacks.size,0);assert.equal(e.window.events.get('keydown').size,0,'close releases input');assert.ok(e.images.every(im=>im.onload===null&&im.onerror===null));
+ e.audio.setScene('boss');e.view.close();e.view.close();assert.equal(e.audio.musicScene,'garden','child exit restores parent music');assert.equal(e.closed,1);assert.equal(e.callbacks.size,0);assert.equal(e.window.events.get('keydown').size,0,'close releases input');assert.ok(e.images.every(im=>im.onload===null&&im.onerror===null));
 }
 {
  const e=environment();e.root.querySelector('.sb-modal').querySelector('.sb-start').onclick();e.canvas.emit('pointerdown',{pointerId:3,clientX:320,clientY:200});e.canvas.emit('pointerup',{pointerId:4,clientX:320,clientY:200});assert.equal(e.run.phase,'aim','other finger cannot release owned shot');e.canvas.emit('pointercancel',{pointerId:4});e.canvas.emit('pointerup',{pointerId:3,clientX:320,clientY:200});assert.equal(e.run.phase,'flying','ignored second finger cancellation preserves first shot');e.document.hidden=true;e.document.emit('visibilitychange');assert.equal(e.callbacks.size,0);e.document.hidden=false;e.document.emit('visibilitychange');assert.equal(e.callbacks.size,0,'visibility does not silently resume');
@@ -67,8 +67,23 @@ const parent=readFileSync(new URL('../src/seed-puzzle-view.js',import.meta.url),
  modal.querySelectorAll('[data-growth]')[0].onclick();assert.equal(e.run.phase,'lost');assert.equal(e.callbacks.size,0);assert.ok(modal.querySelector('.sb-retry'),'loss caused by growth renders retry immediately');
  modal.querySelector('.sb-retry').onclick();assert.equal(e.run.phase,'aim');assert.equal(e.run.turn,1);assert.equal(e.run.score,0);e.view.close();
 }
+// A real AudioContext resumes asynchronously after growth. Cues must wait,
+// and closing during that wait must not resurrect audio/scene work.
+for(const exitDuringResume of [false,true]){
+ const e=environment(),modal=e.root.querySelector('.sb-modal');modal.querySelector('.sb-start').onclick();
+ for(let v=0;v<2;v++){e.root.querySelector('.sb-fire').onclick();for(let n=0;n<500&&e.run.phase==='flying';n++)e.frame(v*20000+n*20);}
+ assert.equal(e.run.phase,'choice');let finish;const count=e.audio.count;
+ e.audio.setPaused=value=>value===false?new Promise(resolve=>{finish=resolve;}):undefined;
+ const pending=modal.querySelectorAll('[data-growth]')[0].onclick();
+ assert.equal(e.audio.count,count,'growth cue waits for actual resume');
+ const resume=finish;if(exitDuringResume)e.view.close();resume();await pending;
+ if(exitDuringResume)assert.equal(e.audio.count,count,'closing while resuming cannot emit stale cue');
+ else assert.ok(e.audio.count>count,'cue follows completed resume');
+ e.view.close();
+}
 assert.match(parent,/if\(bounceChild\|\|bounceLoading\|\|root.hidden\)return/,'parent cannot steal child Escape/Space');
 assert.match(parent,/if\(closed\|\|document.hidden\|\|bounceChild\|\|bounceLoading\|\|root.hidden\)return/,'parent painter dormant during child');
 assert.match(parent,/bounceChild\?\.close\(\)/,'closing parent disposes child');
 assert.match(parent,/await import\('\.\/seed-bounce-view.js'\)/,'new mode is lazy-loaded');
 console.log('PASS actual bounce controller: pointer ownership/cancel, keyboard, launch/return, earned choice, blur/explicit resume, one RAF, idle/close cleanup and parent input/RAF gating. DOM mock, not physical device proof.');
+
