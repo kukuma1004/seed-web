@@ -125,7 +125,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  }
  // 콤보 단계마다 음높이를 올리고, 막타·회피 베기는 두 겹으로 친다.
  const SOUND={combo1:['hit',{pitch:1}],combo2:['hit',{pitch:1.12}],combo3:['burstHit',{pitch:.85,intensity:1.2}],dashStrike:['pierceHit',{intensity:1.2}],finisher:['burstHit',{pitch:.8,intensity:1.3}]};
- function sound(){for(const event of s.events){if(event==='hurt')motion.hurtAt=s.time;const [id,opt]=SOUND[event]||[event];audio?.play(id,opt);}s.events.length=0;}
+ function sound(){syncSeedMotion();for(const event of s.events){if(event==='hurt')motion.hurtAt=s.time;if(event==='combo1'||event==='combo2'||event==='combo3'||event==='dashStrike')beginSeedSwing(s.player);const [id,opt]=SOUND[event]||[event];audio?.play(id,opt);}s.events.length=0;}
  function loop(now){raf=0;if(closed||document.hidden||paused)return;raf=requestAnimationFrame(loop);if(!pacer(now,60))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;if(s.phase==='playing'){
  let x=move.x+(keys.has('KeyD')||keys.has('ArrowRight')?1:0)-(keys.has('KeyA')||keys.has('ArrowLeft')?1:0),y=move.y+(keys.has('KeyS')||keys.has('ArrowDown')?1:0)-(keys.has('KeyW')||keys.has('ArrowUp')?1:0);moving=Boolean(x||y);
  // 2026-09-28 사용자: "공격이 한 방향으로 고정돼 있어 · 움직인 방향대로 공격돼야 하지 않아?"
@@ -293,13 +293,18 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
   ctx.save();ctx.translate(p.x,p.y);if(dx<0)ctx.scale(-1,1);const [x,y,w,h]=f.dst;ctx.drawImage(im,...f.src,x*z,y*z,w*z,h*z);
   if(e.flash>0){ctx.globalCompositeOperation='lighter';ctx.globalAlpha=.35;ctx.drawImage(im,...f.src,x*z,y*z,w*z,h*z);}ctx.restore();return true;
  }
- const motion={frame:-1,lastAttack:0,swingStart:-9,swingDur:.4,swing:0,dashEnd:-9,hurtAt:-9};
+ const motion={runId:null,room:-1,frame:-1,lastAttack:0,swingStart:-9,swingDur:.4,swing:0,swingX:1,swingY:0,dashEnd:-9,hurtAt:-9};
+ function syncSeedMotion(){if(motion.runId===s.runId&&motion.room===s.room)return;motion.runId=s.runId;motion.room=s.room;motion.lastAttack=s.player.attack;motion.swingStart=motion.dashEnd=motion.hurtAt=-9;motion.swing=0;motion.swingX=s.player.aimX;motion.swingY=s.player.aimY;}
+ function beginSeedSwing(p){syncSeedMotion();motion.swingStart=s.time;motion.swingDur=Math.max(.15,p.attack);motion.swing=Math.max(0,p.swing);motion.swingX=p.aimX;motion.swingY=p.aimY;motion.lastAttack=p.attack;}
+ function seedFacing(e){const striking=s.phase==='playing'&&e.attack>0&&motion.swingStart>=0&&e.dashing<=0&&s.time-motion.hurtAt>=.26;return striking?Math.atan2(motion.swingY,motion.swingX):Math.atan2(e.aimY||0,e.aimX??1);}
  function seedMotionFrame(p){
-  if(p.attack>motion.lastAttack+.01){motion.swingStart=s.time;motion.swingDur=Math.max(.15,p.attack);motion.swing=Math.max(0,p.swing);}motion.lastAttack=p.attack;
+  syncSeedMotion();
+  if(p.attack>motion.lastAttack+.01)beginSeedSwing(p);motion.lastAttack=p.attack;
   if(p.dashing>0){motion.dashEnd=s.time;return 5;}
-  if(s.time-motion.dashEnd<.14)return 6;
+  if(p.attack<=0&&s.time-motion.dashEnd<.14)return 6;
   if(s.time-motion.hurtAt<.26)return 7;
-  if(p.attack>0){const t=(s.time-motion.swingStart)/motion.swingDur;return motion.swing===2?(t<.32?3:4):motion.swing===1?2:(t<.28?0:1);}
+  // Rules hit immediately: show contact even while hitstop freezes game time.
+  if(p.attack>0&&motion.swingStart>=0){const t=(s.time-motion.swingStart)/motion.swingDur;return motion.swing===2?(t<.68?4:0):motion.swing===1?2:(t<.72?1:0);}
   return -1;
  }
  // 2026-09-28 사용자: "강해진다는 느낌이 안 든다" — 진화하면 씨앗 몸이 본편 진화 몸(단독·융합·완성·쌍둥이)으로 바뀐다.
@@ -322,15 +327,14 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  function evolvedParts2(ctx2,alpha=1,flash=0){for(const part of evolvedParts){const im=assets[part.atlas==='seed'?'seed':part.atlas];if(!im?.naturalWidth)continue;const cols=part.cols||4,rows=part.rows||3,sw=im.naturalWidth/cols,sh=im.naturalHeight/rows,z=part.size*.34*scale,dx=part.dx*.34*scale,src=[part.cell%cols*sw,Math.floor(part.cell/cols)*sh,sw,sh];ctx2.globalAlpha=alpha;ctx2.drawImage(im,...src,dx-z/2,-z*.9,z,z);if(flash>0){ctx2.save();ctx2.globalCompositeOperation='lighter';ctx2.globalAlpha=alpha*flash;ctx2.drawImage(im,...src,dx-z/2,-z*.9,z,z);ctx2.restore();}}ctx2.globalAlpha=1;}
  function paintEvolvedBody(e,bob){
   if(!ensureEvolvedAssets())return false;
-  if(s.phase==='playing')seedMotionFrame(e);
-  const p=point(e.x,e.y),left=e.aimX<-.05,face=left?-1:1,dash=e.dashing>0,ink=INK[s.laws[0]]||'#d8ffe9',aim=Math.atan2(e.aimY||0,e.aimX||1);
+  const p=point(e.x,e.y),aim=seedFacing(e),left=Math.cos(aim)<-.05,face=left?-1:1,dash=e.dashing>0,ink=INK[s.laws[0]]||'#d8ffe9';
   let sx=1,sy=1,rot=0,lx=0,lift=0,swingA=null;
   const t=(s.time-motion.swingStart)/motion.swingDur;
-  if(e.attack>0&&t>=0&&t<=1.05){const step=motion.swing,wind=step===2?.3:.26;
-   if(t<wind){const k=t/wind;sx=1+.12*k;sy=1-.1*k;rot=(step===1?.16:-.16)*k;swingA=aim+(step===1?1.4:-1.4)*face*(.6+.4*k);}
-   else{const k=Math.min(1,(t-wind)/(1-wind)),ease=1-(1-k)*(1-k);sx=1-.12*(1-k);sy=1+.14*(1-k);lx=.38*(1-k*.6);
+  if(e.attack>0&&motion.swingStart>=0&&!dash&&s.time-motion.hurtAt>=.26&&t>=0&&t<=1.05){const step=motion.swing,strike=step===2?.3:.26;
+   if(t<strike){const k=t/strike,ease=1-(1-k)*(1-k);sx=1-.1*(1-k);sy=1+.12*(1-k);lx=.38*(1-k*.6);
     if(step===2){rot=ease*Math.PI*2*face;swingA=aim+ease*Math.PI*2*face;lift=Math.sin(k*Math.PI)*.25;}
-    else{rot=(step===1?-.24:.24)*(1-k);swingA=aim+(step===1?1.4:-1.4)*face*(1-ease*2);}}}
+    else{rot=(step===1?-.24:.24)*(1-k);swingA=aim+(step===1?-.85:.85)*face*ease;}}
+   else{const k=Math.min(1,(t-strike)/(1-strike));sx=1+.025*Math.sin(k*Math.PI);sy=1-.025*Math.sin(k*Math.PI);lx=.15*(1-k);swingA=aim+(step===1?-.85:.85)*face;}}
   else if(dash){sx=1.2;sy=.84;rot=.2*face;}
   else if(moving&&s.phase==='playing'){rot=.08*face;lift=Math.abs(Math.sin(s.time*13))*.1;}
   else{sy=1+.03*Math.sin(s.time*3.6);sx=1-.02*Math.sin(s.time*3.6);}
@@ -340,14 +344,14 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
   if(dash)for(let i=3;i>0;i--){const q=point(e.x-(e.dx||0)*i*.35,e.y-(e.dy||0)*i*.35);ctx.save();ctx.translate(q.x,q.y-bob);if(left)ctx.scale(-1,1);ctx.scale(1.15,.88);evolvedParts2(ctx,.14/i*2.2,.6);ctx.restore();}
   const bx=p.x+Math.cos(aim)*lx*scale,by=p.y-bob-lift*scale+Math.sin(aim)*lx*scale*.6;
   const blade=()=>{if(swingA===null&&!(s.phase==='playing'))return;const a=swingA??(aim+(left?-2.2:2.2)*.45),hx=e.x+(bx-p.x)/scale+Math.cos(a)*.55,hy=e.y+(by-p.y)/scale-.55+Math.sin(a)*.4;leaf(hx,hy,a,swingA!==null?.62:.42,ink);if(swingA!==null&&vfx.ready()){ctx.save();ctx.translate(ox,oy);ctx.scale(scale,scale);vfx.fx(ctx,'crescent',hx+Math.cos(a)*.35,hy-.2+Math.sin(a)*.3,1.5,{color:ink,alpha:.55,rotation:a});ctx.restore();}};
-  const behind=(e.aimY||0)<-.35;if(behind)blade();
+  const behind=Math.sin(aim)<-.35;if(behind)blade();
   ctx.save();ctx.translate(bx,by);ctx.rotate(rot);if(left)ctx.scale(-1,1);ctx.scale(sx,sy);if(e.inv>0&&!dash&&Math.sin(s.time*35)>.5)ctx.globalAlpha=.65;
   evolvedParts2(ctx,ctx.globalAlpha,flash*.8);
   ctx.restore();if(!behind)blade();return true;
  }
- function paintSeedMotion(e,bob){if(paintEvolvedBody(e,bob)){motion.frame=0;return true;}
-  const im=assets.combat;motion.frame=s.phase==='playing'&&im?.naturalWidth?seedMotionFrame(s.player):-1;if(motion.frame<0)return false;
-  const f=motion.frame,p=point(e.x,e.y),sz=2.85*scale,sw=im.naturalWidth/4,sh=im.naturalHeight/2,left=e.aimX<-.05;
+ function paintSeedMotion(e,bob){motion.frame=s.phase==='playing'?seedMotionFrame(e):-1;if(paintEvolvedBody(e,bob)){motion.frame=0;return true;}
+  const im=assets.combat;if(motion.frame<0||!im?.naturalWidth)return false;
+  const f=motion.frame,p=point(e.x,e.y),sz=2.85*scale,sw=im.naturalWidth/4,sh=im.naturalHeight/2,left=Math.cos(seedFacing(e))<-.05;
   ctx.fillStyle='#02090a60';ctx.beginPath();ctx.ellipse(p.x,p.y+2,sz*.18,sz*.06,0,0,Math.PI*2);ctx.fill();
   ctx.save();ctx.translate(p.x,p.y-(f===3?scale*.35:0));if(left)ctx.scale(-1,1);if(e.inv>0&&f!==5&&f!==6&&Math.sin(s.time*35)>.5)ctx.globalAlpha=.65;
   ctx.drawImage(im,f%4*sw,Math.floor(f/4)*sh,sw,sh,-sz*.5,-sz*.919,sz,sz);ctx.restore();return true;
