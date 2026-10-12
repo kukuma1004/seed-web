@@ -1,0 +1,28 @@
+import assert from 'node:assert/strict';
+import {createAdventureGardenPainter} from '../src/adventure-garden-renderer.js';
+// CPU Canvas spies test readiness/lifetime contracts; real pixels are checked in-browser.
+let tiles=0, draws=0;
+globalThis.Path2D=class {addPath(){} moveTo(){} quadraticCurveTo(){} arc(){} ellipse(){} lineTo(){} closePath(){}};
+globalThis.DOMMatrix=class {constructor(v){this.values=v;}};
+const noop=()=>{};
+globalThis.document={createElement(type){assert.equal(type,'canvas');tiles++;return {getContext:()=>({drawImage(){draws++;}})};}};
+const ctx=new Proxy({createPattern:()=>({setTransform:noop}),drawImage(){draws++;}}, {get:(o,k)=>o[k]??noop});
+const assets={garden:{complete:false,naturalWidth:1254},arena:{complete:false,naturalWidth:1536}};
+const p=createAdventureGardenPainter(ctx,assets,()=>new Path2D());
+const R={nodes:[{x:8,y:19,role:'start'}],paths:[],landmarks:[]};
+const v={act:0,scale:50,dpr:1,ox:0,oy:0,width:1280,height:720};
+p.region(R,v);p.arena(v);
+assert.equal(tiles,0,'dimensions alone cannot bake an incompletely decoded image');
+assert.equal(p.patternCount(),0,'no permanent blank floor cache');
+assets.garden.complete=true;
+p.region(R,v);assert.equal(p.patternCount(),2);assert.equal(tiles,2);
+for(let i=0;i<100;i++)p.region(R,{...v,ox:i});
+assert.equal(tiles,2,'camera movement updates transform, without new surfaces');
+for(let i=0;i<20;i++)p.region(R,{...v,scale:50+i});
+assert.equal(p.patternCount(),2,'resize replaces the old surface per atlas cell');
+p.region({...R,landmarks:[{kind:'pond',x:25,y:19,size:2.2}]},{...v,act:1});
+assert.equal(p.patternCount(),3);p.region(R,{...v,act:2});
+assert.equal(p.patternCount(),2,'act transition releases previous patterns');
+assets.arena.complete=true;const before=draws;p.arena(v);assert.equal(draws,before+1,'ready court plate is one image draw');
+p.dispose();assert.equal(p.patternCount(),0);
+console.log('PASS Adventure floor decode race, bounded pattern lifetime and arena fallback/plate');

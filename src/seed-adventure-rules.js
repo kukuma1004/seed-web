@@ -1,3 +1,5 @@
+import {makeAdventureGardenLayout} from './adventure-garden-layout.js';
+import {getAdventureGuardian} from './adventure-duel-guardians.js';
 import {titleCombatBonuses,titleCriticalMultiplier,TITLE_CRIT_DAMAGE,titleFormCriticalEligible,refreshAdventureTitleHp,checkpointAdventureTitleHp,validAdventureTitleHp,restoreAdventureTitleHp} from './title-combat-bonuses.js';
 import {LAWS} from './laws.js';
 import {DEFENSE_FORMS,defenseFusionOf,getDefenseEvolutionOptions,validDefenseForm} from './seed-defense-catalog.js';
@@ -10,19 +12,20 @@ export const ADVENTURE_LAWS=LAWS;
 // 법칙은 두 개까지, 법칙마다 1~3단계. 두 법칙 = 융합, 한 법칙 3단계 = 단독 진화, 융합 + 한쪽 3단계 = 완성 진화, 양쪽 3단계 = 쌍둥이.
 export const ADVENTURE_FORMS=DEFENSE_FORMS;
 export const ADVENTURE={width:24,height:16,maxShots:72,maxEffects:140,maxEnemies:64,maxPickups:48,maxPotions:3};
+export const ADVENTURE_BOSS_HEAL=.4;
 // 보스 방·보물 방은 한 화면짜리 작은 방, 전투·정예는 넓은 지역(아래 REGION).
 export const ADVENTURE_ARENA=Object.freeze({minX:1.4,maxX:22.6,minY:2,maxY:14.4});
 // 2026-09-28 사용자: "디아블로같이 광활한 맵" → B안(넓은 지역을 자유롭게 돌아다니고, 지역 끝 출구에서 다음 문을 고른다).
-// 지역 하나는 화면 서너 장 크기. 적 무리는 가까이 가야 깨어나고, 습격지·수호 제단은 원하면 들르는 이벤트다.
+// 지역 하나는 넓은 마당과 둘러갈 꽃길 크기. 적 무리는 가까이 가야 깨어나고, 습격지·수호 제단은 원하면 들르는 이벤트다.
 // 출구는 그 앞을 지키는 무리를 물리치면 열린다.
-export const REGION=Object.freeze({w:76,h:50,cell:4,path:1.9});
+export const REGION=Object.freeze({w:54,h:38,cell:4,path:1.9});
 
 // 한 판 = 세 막 × (방 다섯 + 보스 방). 방을 깨면 들어가기 전에 고른 문의 보상을 받고 다음 문을 고른다(하데스식).
 // 2026-09-28 사용자: "방이 많아야" · "물약 얻는 상자·부서지는 것·버프" — 보물 방·상점·샘물, 항아리·나무 상자, 버프 구슬.
 export const ADVENTURE_ACTS=Object.freeze([
- Object.freeze({id:'garden',name:'잊힌 정원',boss:'austin',bossName:'오스틴',rooms:Object.freeze(['이끼 낀 들판','무너진 온실','시계탑 광장'])}),
- Object.freeze({id:'stadium',name:'별빛 야구장',boss:'alwaysbeginner',bossName:'항상초심',rooms:Object.freeze(['외야 잔디밭','관중석 아래','투수 마운드'])}),
- Object.freeze({id:'skyway',name:'폭풍 항로',boss:'tempestcarrier',bossName:'요한',rooms:Object.freeze(['구름 선착장','뇌운 갑판','폭풍의 눈'])})
+ Object.freeze({id:'garden',name:'이끼 온실 정원',boss:'austin',bossName:'오스틴',rooms:Object.freeze(['새싹의 마당','유리 온실 뜰','생명의 나무 광장'])}),
+ Object.freeze({id:'stadium',name:'꽃물결 정원',boss:'alwaysbeginner',bossName:'항상초심',rooms:Object.freeze(['벚꽃 테라스','수련 연못길','꽃잎의 회랑'])}),
+ Object.freeze({id:'skyway',name:'달빛 뿌리 성소',boss:'tempestcarrier',bossName:'요한',rooms:Object.freeze(['은빛 나무뜰','달샘의 정원','왕관의 꽃마당'])})
 ]);
 export const ROOMS_PER_ACT=4;
 export const ROOMS=Object.freeze(ADVENTURE_ACTS.flatMap(a=>[...a.rooms,a.bossName+'의 방']));
@@ -59,9 +62,9 @@ export const SHOP_WARES=Object.freeze({
  potion:Object.freeze({name:'회복 물약',desc:'체력 35% 회복 · 최대 3개',price:25,icon:'potion'}),
  power:Object.freeze({name:'분노의 새싹',desc:BUFFS.power.desc,price:30,icon:'sprout'}),
  guard:Object.freeze({name:'단단한 껍질',desc:BUFFS.guard.desc,price:25,icon:'shell'}),
- upgrade:Object.freeze({name:'법칙 강화',desc:'가진 법칙 하나를 한 단계 올려요',price:70,icon:'tonic'}),
+ upgrade:Object.freeze({name:'법칙 강화',desc:'강화할 법칙을 골라 한 단계 올려요',price:70,icon:'tonic'}),
  vitality:Object.freeze({name:'튼튼한 뿌리',desc:'최대 체력 +15',price:45,icon:'sprout'}),
- grow:Object.freeze({name:'성장의 비료',desc:'Lv +1',price:80,icon:'wind'})
+ grow:Object.freeze({name:'성장의 비료',desc:'Lv +1 · 최대 체력 +10',price:80,icon:'wind'})
 });
 
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
@@ -73,7 +76,7 @@ export function createAdventure(seed=1){return {runId:globalThis.crypto?.randomU
 function event(s,type){s.events.push(type);if(s.events.length>16)s.events.shift();}
 function fx(s,type,x,y,extra={}){if(s.effects.length>=ADVENTURE.maxEffects)s.effects.shift();s.effects.push({type,x,y,life:.35,max:.35,...extra});}
 export function adventureEffect(s,type,x,y,extra={}){fx(s,type,x,y,extra);}
-function shot(s,x,y,dx,dy,extra={}){if(s.shots.length>=ADVENTURE.maxShots)return;const critical=!extra.hostile&&titleCriticalMultiplier(s,s.formId?titleFormCriticalEligible(s.formId):s.laws.includes('pierce'),()=>random(s))>1;s.shots.push({critical,x,y,px:x,py:y,dx,dy,speed:12,life:1.15,age:0,damage:17+s.level*2,hit:new Set(),bounces:0,remaining:s.laws.includes('pierce')?3:1,...extra});}
+function shot(s,x,y,dx,dy,extra={}){if(s.shots.length>=ADVENTURE.maxShots)return;const critical=!extra.hostile&&titleCriticalMultiplier(s,s.formId?titleFormCriticalEligible(s.formId):s.laws.includes('pierce'),()=>random(s))>1;if(extra.boss){extra.art='';extra.guardianLaw=['gravity','frost','chain'][adventureRoomInfo(s.room).act];}s.shots.push({critical,x,y,px:x,py:y,dx,dy,speed:12,life:1.15,age:0,damage:17+s.level*2,hit:new Set(),bounces:0,remaining:s.laws.includes('pierce')?3:1,...extra});}
 const rank=(s,id)=>s.ranks[id]||0;
 const power=s=>s.buffs.power>0?1.3:1;
 export function adventureForm(s){return s.formId?DEFENSE_FORMS[s.formId]:null;}
@@ -94,7 +97,7 @@ export function chooseAttackShape(s,id){
 export function cycleAdventureAttack(s){if(s.phase!=='playing')return false;const modes=availableAttacks(s.shapes);if(modes.length<2)return false;s.weapon=modes[(modes.indexOf(s.weapon)+1)%modes.length];return true;}
 
 // 막마다 같은 역할, 다른 그림. art는 화면이 고르는 그림 이름이다.
-const ROLE_ART=[{melee:'hound',ranged:'caster',tank:'shield',fast:'runner'},{melee:'batter',ranged:'pitcher',tank:'catcher',fast:'runner'},{melee:'glider',ranged:'gunner',tank:'hull',fast:'dart'}];
+const ROLE_ART=Array.from({length:3},()=>({melee:'hound',ranged:'caster',tank:'shield',fast:'hound'}));
 const ROLE={melee:{hp:44,speed:1.65,r:.42},ranged:{hp:36,speed:1.05,r:.42},tank:{hp:78,speed:.95,r:.5},fast:{hp:28,speed:2.55,r:.38}};
 // 부서지는 물건은 방 가장자리 자리 중에서 고른다(가운데 전투를 막지 않게).
 const PROP_SPOTS=[[3,3.4],[21,3.4],[3,13.2],[21,13.2],[7.5,2.8],[16.5,2.8],[2.6,8.2],[21.4,8.2],[7.5,13.6],[16.5,13.6],[12,2.6],[12,13.8]];
@@ -116,7 +119,10 @@ function spawnRoom(s){
 function spawnEnemy(s,role,x,y,extra={}){
  const info=adventureRoomInfo(s.room),base=ROLE[role]||ROLE.melee,scale=(1.1+info.act*1.95+info.local*.35)*(s.elite?1.45:1);
  const hp=Math.round(base.hp*scale+(s.elite&&role==='tank'?20:0));
- s.enemies.push({id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*1.3*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.45+info.local*.08,...extra});
+ const enemy={id:++s.serial,type:role==='ranged'?'caster':role==='tank'?'shield':'hound',role,art:ROLE_ART[info.act][role],act:info.act,x,y,hp,maxHp:hp,r:base.r,speed:base.speed*1.3*(1+info.act*.08),cd:1.3+random(s),tell:0,tx:0,ty:0,slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.45+info.local*.08,...extra};
+ // Cover is placed before packs/events: never start a sleeping enemy inside it.
+ if(s.region)for(let i=0;i<2;i++){blockCircle(s,enemy,enemy.r+.05);keepOnGround(s,enemy,enemy.r+.05);}
+ s.enemies.push(enemy);
 }
 function spawnWave(s){
  s.wave++;const info=adventureRoomInfo(s.room),count=Math.min(ADVENTURE.maxEnemies,4+info.local+info.act*2+s.wave+(s.elite?2:0));
@@ -124,38 +130,25 @@ function spawnWave(s){
  for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+.5*s.wave;spawnEnemy(s,roles[(i+s.wave)%roles.length],clamp(12+Math.cos(a)*8,2,22),clamp(7.5+Math.sin(a)*5,2.5,13.5));}
  s.spawn=0;
 }
-// 넓은 지역 만들기. 같은 씨앗(판 번호)이면 같은 지역이 나온다.
+// 손으로 설계한 세 정원: 같은 판 번호에서 같은 심기 배치가 나온다.
 // 2026-09-28 사용자: "맵이 넓은데 넓은 느낌이 아니다 · 단조롭다" → 숲으로 막힌 공터들이 오솔길로 이어진 지형.
 // 공터마다 역할: 적 야영지·폐허(상자)·습격지·수호 제단·막다른 길 끝 보물·출구. 숲 속으로는 들어갈 수 없다.
 function buildRegion(s,info){
- const W=REGION.w,H=REGION.h,p=s.player,r=()=>random(s),act=info.act;
+ const p=s.player,r=()=>random(s),act=info.act;
+ const layout=makeAdventureGardenLayout(act,r),{w:W,h:H,start,gateNode,nodes,edges,pathWidth}=layout;
  s.arena={minX:1.4,maxX:W-1.4,minY:2,maxY:H-1.6};s.wave=2;s.spawn=Infinity;
- const start={x:5,y:H/2+(r()-.5)*10,r:4.2,role:'start'},gateNode={x:W-6,y:H/2+(r()-.5)*10,r:5.2,role:'gate'};
- const nodes=[start,gateNode];
- for(let tries=0;nodes.length<10&&tries<900;tries++){const n={x:9+r()*(W-18),y:7+r()*(H-14),r:4+r()*2.6};if(nodes.every(m=>Math.hypot(m.x-n.x,m.y-n.y)>m.r+n.r+5.5))nodes.push(n);}
- // 길: 가까운 것부터 잇는 나무(MST) + 짧은 고리 두 개.
- const d=(a,b)=>Math.hypot(nodes[a].x-nodes[b].x,nodes[a].y-nodes[b].y),edges=[],inTree=new Set([0]);
- while(inTree.size<nodes.length){let best=null;for(const a of inTree)for(let b=0;b<nodes.length;b++)if(!inTree.has(b)&&(!best||d(a,b)<best[2]))best=[a,b,d(a,b)];edges.push([best[0],best[1]]);inTree.add(best[1]);}
- const extra=[];for(let a=0;a<nodes.length;a++)for(let b=a+1;b<nodes.length;b++)if(!edges.some(([x,y])=>x===a&&y===b||x===b&&y===a))extra.push([a,b,d(a,b)]);extra.sort((x,y)=>x[2]-y[2]);for(const [a,b] of extra.slice(0,2))edges.push([a,b]);
- const degree=nodes.map((_,i)=>edges.filter(e=>e.includes(i)).length);
- // 역할: 막다른 공터(길이 하나)는 보물, 나머지에 습격지·제단·야영지·폐허.
- const free=nodes.map((n,i)=>i).filter(i=>i>1);free.sort((a,b)=>degree[a]-degree[b]||nodes[a].x-nodes[b].x);
- for(const i of free){const n=nodes[i];if(!n.role&&degree[i]===1&&!nodes.some(m=>m.role==='hoard'))n.role='hoard';}
- const pickRole=role=>{const i=free.find(i=>!nodes[i].role&&nodes[i].r>=4.6)??free.find(i=>!nodes[i].role);if(i!==undefined){nodes[i].role=role;if(role==='raid')nodes[i].r=Math.max(nodes[i].r,5.8);}};
- pickRole('raid');pickRole('altar');
- for(const i of free)if(!nodes[i].role)nodes[i].role=r()<.62?'camp':'ruin';
  // 제단: 적은 제단과 이어진 공터 중 하나(문)에서 길을 따라 온다.
  const altarIndex=nodes.findIndex(n=>n.role==='altar'),altar=nodes[altarIndex],portalEdge=edges.find(e=>e.includes(altarIndex)),portalNode=nodes[portalEdge[0]===altarIndex?portalEdge[1]:portalEdge[0]];
  const raid=nodes.find(n=>n.role==='raid');
  const events=[{type:'raid',x:raid.x,y:raid.y,r:3.4,state:'idle',time:0,duration:32+act*4,spawnAt:0},{type:'guard',x:altar.x,y:altar.y,portal:{x:portalNode.x,y:portalNode.y},hp:100,maxHp:100,state:'idle',wave:0,spawned:0,next:0,waves:3,perWave:4+act}];
  const paths=edges.map(([a,b])=>({ax:nodes[a].x,ay:nodes[a].y,bx:nodes[b].x,by:nodes[b].y}));
  // 공터 안의 엄폐물(바위·나무)은 가운데를 비우고 가장자리에만.
- const obstacles=[];for(const n of nodes){if(n.role==='start'||n.role==='raid')continue;const k=n.role==='gate'?1:2+Math.floor(r()*2);for(let t=0;t<k*6&&obstacles.filter(o=>o.node===n).length<k;t++){const a=r()*Math.PI*2,dd=n.r*(.55+r()*.3),x=n.x+Math.cos(a)*dd,y=n.y+Math.sin(a)*dd,rad=.8+r()*.6;if(paths.some(q=>segD(x,y,q)<REGION.path+rad+.4))continue;if(Math.hypot(x-(gateNode.x+1.8),y-gateNode.y)<rad+2.6)continue;if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+rad+1.4))continue;obstacles.push({x,y,r:rad,cell:Math.floor(r()*4),node:n});}}
+ const obstacles=[];for(const n of nodes){if(n.role==='start'||n.role==='raid')continue;const k=n.role==='gate'?1:2+Math.floor(r()*2);for(let t=0;t<k*6&&obstacles.filter(o=>o.node===n).length<k;t++){const a=r()*Math.PI*2,dd=n.r*(.55+r()*.3),x=n.x+Math.cos(a)*dd,y=n.y+Math.sin(a)*dd,rad=.8+r()*.6;if(paths.some(q=>segD(x,y,q)<1.1+rad+.4))continue;if(Math.hypot(x-(gateNode.x+1.8),y-gateNode.y)<rad+2.6)continue;if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+rad+1.4))continue;obstacles.push({x,y,r:rad,cell:Math.floor(r()*4),node:n});}}
  for(const o of obstacles)delete o.node;
- const decor=[];for(let i=0;i<70;i++){const n=nodes[Math.floor(r()*nodes.length)],a=r()*Math.PI*2,dd=r()*n.r,x=n.x+Math.cos(a)*dd,y=n.y+Math.sin(a)*dd;decor.push({x,y,cell:Math.floor(r()*12),size:.6+r()*.5});}
+ const decor=[];for(let i=0;i<70;i++){const n=nodes[Math.floor(r()*nodes.length)],a=r()*Math.PI*2,dd=n.r*(.7+r()*.25),x=n.x+Math.cos(a)*dd,y=n.y+Math.sin(a)*dd;if(paths.some(q=>segD(x,y,q)<1.6))continue;decor.push({x,y,cell:Math.floor(r()*12),size:.6+r()*.5});}
  // 숲 가장자리 나무(그림만, 충돌은 걸을 수 있는 땅 밖으로 못 나가는 규칙이 맡는다).
- const trees=[];for(let gx=1;gx<W;gx+=2.4)for(let gy=1.5;gy<H;gy+=2.2){const x=gx+(r()-.5)*1.2,y=gy+(r()-.5)*1.2,edge=walkDist({nodes,paths},x,y);if(edge>.3&&edge<3.2)trees.push({x,y,cell:Math.floor(r()*4),size:1.8+r()*1.3});}
- s.region={w:W,h:H,start,gate:{x:gateNode.x+1.8,y:gateNode.y,open:false,r:1.6},nodes:nodes.map(n=>({x:n.x,y:n.y,r:n.r,role:n.role})),paths,obstacles,decor,trees,events,explored:new Array(Math.ceil(W/REGION.cell)*Math.ceil(H/REGION.cell)).fill(false),message:''};
+ const trees=[];for(let gx=1;gx<W;gx+=2.4)for(let gy=1.5;gy<H;gy+=2.2){const x=gx+(r()-.5)*1.2,y=gy+(r()-.5)*1.2,edge=walkDist({nodes,paths,pathWidth},x,y);if(edge>.3&&edge<2.4&&r()<.2&&trees.length<64)trees.push({x,y,cell:Math.floor(r()*4),size:1.5+r()*.7});}
+ s.region={w:W,h:H,pathWidth,theme:layout.theme,landmarks:layout.landmarks,start,gate:{x:gateNode.x+1.8,y:gateNode.y,open:false,r:1.6},nodes:nodes.map(n=>({x:n.x,y:n.y,r:n.r,role:n.role})),paths,obstacles,decor,trees,events,explored:new Array(Math.ceil(W/REGION.cell)*Math.ceil(H/REGION.cell)).fill(false),message:''};
  p.x=start.x;p.y=start.y;
  const roles=['melee','melee','ranged','tank','fast'];let pack=0;
  const placePack=(cx,cy,count,guard=false)=>{pack++;for(let i=0;i<count&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=i/count*Math.PI*2+r(),dd=.9+r()*1.4;spawnEnemy(s,guard&&i===0?'tank':roles[Math.floor(r()*roles.length)],cx+Math.cos(a)*dd,cy+Math.sin(a)*dd,{dormant:true,pack,guard});}};
@@ -166,17 +159,17 @@ function buildRegion(s,info){
  for(const n of nodes){const k=n.role==='ruin'?4:n.role==='hoard'?2:n.role==='camp'?1:0;for(let i=0;i<k;i++){const a=r()*Math.PI*2,dd=n.r*(.3+r()*.5);putProp(n.x+Math.cos(a)*dd,n.y+Math.sin(a)*dd,n.role==='hoard'?'cache':r()<.35?'crate':'pot');}}
  if(!s.props.some(o=>o.kind==='cache')){const n=nodes.find(n=>n.role==='ruin')||gateNode;putProp(n.x,n.y+1.5,'cache');}
  for(const q of paths)if(r()<.5){const t=.3+r()*.4;putProp(q.ax+(q.bx-q.ax)*t,q.ay+(q.by-q.ay)*t,'pot');}
- s.message=info.name+' · 길을 따라 공터를 돌며 출구를 지키는 무리를 찾으세요';
+ s.message=info.name+' · 넓은 마당을 둘러보고 꽃길 끝의 수호 무리를 찾으세요';
 }
 const segD=(x,y,q)=>{const dx=q.bx-q.ax,dy=q.by-q.ay,t=clamp(((x-q.ax)*dx+(y-q.ay)*dy)/((dx*dx+dy*dy)||1),0,1);return Math.hypot(x-q.ax-dx*t,y-q.ay-dy*t);};
 // 걸을 수 있는 땅(공터·길)까지의 거리(안쪽이면 0 이하).
-function walkDist(R,x,y){let best=Infinity;for(const n of R.nodes)best=Math.min(best,Math.hypot(x-n.x,y-n.y)-n.r);for(const q of R.paths)best=Math.min(best,segD(x,y,q)-REGION.path);return best;}
+function walkDist(R,x,y){let best=Infinity;for(const n of R.nodes)best=Math.min(best,Math.hypot(x-n.x,y-n.y)-n.r);for(const q of R.paths)best=Math.min(best,segD(x,y,q)-(R.pathWidth??REGION.path));return best;}
 export function adventureWalkable(s,x,y,pad=0){return !s.region||walkDist(s.region,x,y)<=-pad;}
 // 숲에 들어가면 가장 가까운 공터·길 가장자리로 되돌린다.
 function keepOnGround(s,o,pad=.3){
  const R=s.region;if(!R||walkDist(R,o.x,o.y)<=-pad)return false;let best=null,bestD=Infinity;
  for(const n of R.nodes){const dx=o.x-n.x,dy=o.y-n.y,dd=Math.hypot(dx,dy)||1,rr=n.r-pad,x=n.x+dx/dd*Math.min(dd,rr),y=n.y+dy/dd*Math.min(dd,rr),g=Math.hypot(o.x-x,o.y-y);if(g<bestD){bestD=g;best={x,y};}}
- for(const q of R.paths){const dx=q.bx-q.ax,dy=q.by-q.ay,t=clamp(((o.x-q.ax)*dx+(o.y-q.ay)*dy)/((dx*dx+dy*dy)||1),0,1),cx=q.ax+dx*t,cy=q.ay+dy*t,ox=o.x-cx,oy=o.y-cy,dd=Math.hypot(ox,oy)||1,rr=REGION.path-pad,x=cx+ox/dd*Math.min(dd,rr),y=cy+oy/dd*Math.min(dd,rr),g=Math.hypot(o.x-x,o.y-y);if(g<bestD){bestD=g;best={x,y};}}
+ for(const q of R.paths){const dx=q.bx-q.ax,dy=q.by-q.ay,t=clamp(((o.x-q.ax)*dx+(o.y-q.ay)*dy)/((dx*dx+dy*dy)||1),0,1),cx=q.ax+dx*t,cy=q.ay+dy*t,ox=o.x-cx,oy=o.y-cy,dd=Math.hypot(ox,oy)||1,rr=(R.pathWidth??REGION.path)-pad,x=cx+ox/dd*Math.min(dd,rr),y=cy+oy/dd*Math.min(dd,rr),g=Math.hypot(o.x-x,o.y-y);if(g<bestD){bestD=g;best={x,y};}}
  if(best){o.x=best.x;o.y=best.y;}return true;
 }
 // 길찾기: 1칸 격자에서 목표까지의 거리 지도(흐름장)를 만들어 두고, 먼 목표로 갈 때 다음 칸 방향을 준다.
@@ -227,7 +220,7 @@ function wakePack(s,e){if(!e.dormant)return;for(const n of s.enemies)if(n.pack==
 // ③ 막의 수호자. 막마다 다른 공격 세 가지를 돌려 쓴다. 체력 절반에서 부하를 부르고(한 번) 조금 빨라진다.
 export const ADVENTURE_BOSSES=Object.freeze({
  austin:Object.freeze({name:'오스틴',hp:3500,patterns:Object.freeze(['charge','slam','punches','triple']),combo:{slam:'punches'}}),
- alwaysbeginner:Object.freeze({name:'항상초심',hp:5600,patterns:Object.freeze(['pitch','swing','curve','rain','swing']),combo:{swing:'pitch',curve:'swing'}}),
+ alwaysbeginner:Object.freeze({name:'항상초심',hp:5600,patterns:getAdventureGuardian('alwaysbeginner').patterns,combo:getAdventureGuardian('alwaysbeginner').combo}),
  tempestcarrier:Object.freeze({name:'요한',hp:14000,patterns:Object.freeze(['strikes','beam','spiral','chase','slam']),combo:{beam:'strikes',chase:'spiral'}})
 });
 function spawnBoss(s,info){const b=ADVENTURE_BOSSES[info.actInfo.boss],hp=b.hp*(1+(s.level-1)*.04);s.enemies.push({id:++s.serial,type:'boss',role:'boss',bossId:info.actInfo.boss,art:info.actInfo.boss,act:info.act,x:12,y:6,hp,maxHp:hp,r:1.1,speed:1.5+info.act*.18,cd:1.2,tell:0,tellKind:'',tx:0,ty:0,marks:[],slow:0,frost:0,flash:0,pattern:0,kx:0,ky:0,stun:0,power:1+info.act*.25,charging:0,cx:0,cy:0});}
@@ -240,7 +233,7 @@ export function adventureOffers(s){
  const laws=lawy?(s.offerLaws||[]):[],upgrades=lawy?upgradeChoices(s):[],evolutions=['law','evolve','grow','boss'].includes(kind)?adventureEvolutions(s):[];
  return {kind,laws,upgrades,evolutions,forms:evolutions,
   shapes:kind==='shape'?['slash','throw'].filter(id=>!s.shapes.includes(id)):[],
-  canGrow:kind==='grow'||treasure||(lawy&&!laws.length&&!upgrades.length)||(kind==='evolve'&&!evolutions.length),
+  canGrow:kind==='grow'||treasure||(lawy&&(s.laws.length>0||!laws.length&&!upgrades.length))||(kind==='evolve'&&!evolutions.length),
   heal:kind==='fountain',potion:kind==='fountain'&&s.potions<ADVENTURE.maxPotions};
 }
 function openReward(s){
@@ -267,7 +260,7 @@ export function chooseAdventure(s,kind,id){
  else if(kind==='heal'&&offers.heal){p.maxHp+=5;p.hp+=p.maxHp*.6;note='체력 회복';}
  else if(kind==='potion'&&offers.potion){s.potions++;note='물약 +1';}
  else return false;
- p.hp=Math.min(p.maxHp,p.hp+(s.choiceKind==='boss'?p.maxHp*.4:s.phase==='choice'?5:0));
+ p.hp=Math.min(p.maxHp,p.hp+(s.choiceKind==='boss'?p.maxHp*ADVENTURE_BOSS_HEAL:s.phase==='choice'?5:0));
  finishReward(s,note);return true;
 }
 function finishReward(s,note=''){
@@ -311,12 +304,22 @@ export function chooseAdventureDoor(s,index){
  spawnRoom(s);return true;
 }
 // 상점: 햇살로 산다. 떠나면 다음 문.
-export function buyAdventure(s,index){
- if(s.phase!=='shop')return false;const ware=s.shop[index],p=s.player;if(!ware||ware.sold||s.coins<ware.price)return false;
+export function adventureShopStatus(s,index){
+ const ware=s.shop[index];let reason='';
+ if(s.phase!=='shop'||!ware)reason='상점에 없어요';
+ else if(ware.sold)reason='판매 완료';
+ else if(ware.id==='potion'&&s.potions>=ADVENTURE.maxPotions)reason='물약이 가득해요';
+ else if(ware.id==='guard'&&s.buffs.guard>0)reason='껍질을 이미 가지고 있어요';
+ else if(ware.id==='upgrade'&&!upgradeChoices(s).length)reason=s.laws.length?'모든 법칙이 3단계예요':'먼저 법칙을 얻으세요';
+ else if(s.coins<ware.price)reason='햇살이 부족해요';
+ return {available:!reason,reason,upgrades:ware?.id==='upgrade'?upgradeChoices(s):[]};
+}
+export function buyAdventure(s,index,lawId=null){
+ const status=adventureShopStatus(s,index);if(!status.available)return false;const ware=s.shop[index],p=s.player;
  const id=ware.id;
  if(id==='potion'){if(s.potions>=ADVENTURE.maxPotions)return false;s.potions++;}
  else if(id==='power'||id==='guard')applyBuff(s,id);
- else if(id==='upgrade'){const up=upgradeChoices(s);if(!up.length)return false;learn(s,pick(s,up));}
+ else if(id==='upgrade'){const up=status.upgrades;if(lawId!==null&&!up.includes(lawId))return false;learn(s,lawId===null?pick(s,up):lawId);}
  else if(id==='vitality'){p.maxHp+=15;p.hp+=15;}
  else if(id==='grow'){s.level++;p.maxHp+=10;}
  s.coins-=ware.price;ware.sold=true;event(s,'pickup');return true;
@@ -449,28 +452,28 @@ function lawMotion(s,step,angle,meta){
 export function ultimateAdventure(s,combat=null){if(s.phase!=='playing'||s.charge<100)return false;s.charge=0;s.player.inv=1;event(s,'ultimate');fx(s,'ultimate',s.player.x,s.player.y,{radius:7,life:.9,max:.9});s.hitstop=.08;s.shake=.35;for(const e of s.enemies)if(dist(e,s.player)<7)hit(s,e,95+s.level*12,false,{knock:2.5,stun:.6,angle:Math.atan2(e.y-s.player.y,e.x-s.player.x)});for(const prop of s.props)if(prop.hp>0&&dist(prop,s.player)<7)breakProp(s,prop);s.shots=s.shots.filter(b=>!b.hostile);s.charge=0;combat?.surge?.();return true;}
 
 function bossAct(s,e,p,dt){
- const b=ADVENTURE_BOSSES[e.bossId],enraged=e.hp<e.maxHp*.5;
+ const b=ADVENTURE_BOSSES[e.bossId],guardian=getAdventureGuardian(e.bossId),enraged=e.hp<e.maxHp*.5;
  if(enraged&&!s.summoned){s.summoned=true;event(s,'bossWarning');for(const [x,y] of [[4,8],[20,8]])spawnEnemy(s,e.bossId==='tempestcarrier'?'fast':'melee',x,y);}
  if(e.beam){const bm=e.beam;bm.t-=dt;const a=bm.a+bm.sweep*(1-bm.t/bm.max),rel=Math.atan2(p.y-e.y,p.x-e.x)-a,d=dist(p,e);if(!bm.hit&&d<9&&Math.abs(Math.sin(rel))*d<.6&&Math.cos(rel)>0){bm.hit=true;hurt(s,Math.round(30*e.power));}bm.angle=a;if(bm.t<=0)e.beam=null;else return true;}
  if(e.charging>0){e.charging-=dt;e.x=clamp(e.x+e.cx*13*dt,2,22);e.y=clamp(e.y+e.cy*13*dt,2.5,14);if(dist(e,p)<1.4)hurt(s,Math.round(24*e.power));if(e.charging<=0)fx(s,'enemyRing',e.x,e.y,{radius:1.4});return true;}
  if(e.tell>0){e.tell-=dt;if(e.tell>0)return true;
   const kind=e.tellKind,dmg=n=>Math.round(n*e.power);event(s,'bossAttack');
   if(kind==='charge'||kind==='triple'){e.charging=.5;const v=direction(e.tx-e.x,e.ty-e.y);e.cx=v.x;e.cy=v.y;if(kind==='triple'&&--e.charges>0){e.nextKind='triple';}}
-  else if(kind==='curve'){const base=Math.atan2(p.y-e.y,p.x-e.x);for(let i=0;i<(enraged?4:3);i++){const a=base+(i-1)*.7;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:'ball',damage:dmg(13),speed:6.2,life:3.2,homing:1.4});}}
-  else if(kind==='beam'){e.beam={a:Math.atan2(p.y-e.y,p.x-e.x)-1.3,sweep:2.6,t:1.3,max:1.3,hit:false};}
+  else if(kind==='curve'){const base=Math.atan2(e.ty-e.y,e.tx-e.x);for(let i=0;i<(enraged?4:3);i++){const a=base+(i-1)*.7;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:'ball',damage:dmg(13),speed:6.2,life:3.2,homing:1.4});}}
+  else if(kind==='beam'){e.beam={a:Math.atan2(e.ty-e.y,e.tx-e.x)-1.3,sweep:2.6,t:1.3,max:1.3,hit:false};}
   else if(kind==='chase'){fx(s,'bolt',e.tx,e.ty,{radius:1.3,life:.35,max:.35});if(Math.hypot(p.x-e.tx,p.y-e.ty)<1.3)hurt(s,dmg(20));if(--e.chases>0)e.nextKind='chase';}
   else if(kind==='slam'){fx(s,'enemyRing',e.tx,e.ty,{radius:2.1});if(Math.hypot(p.x-e.tx,p.y-e.ty)<2.1)hurt(s,dmg(30));e.x=e.tx;e.y=e.ty;s.shake=Math.max(s.shake,.3);}
-  else if(kind==='punches'||kind==='pitch'){const base=Math.atan2(p.y-e.y,p.x-e.x),n=kind==='pitch'?3:5,spread=kind==='pitch'?.16:.28;for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*spread;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:kind==='pitch'?'ball':'glove',damage:dmg(kind==='pitch'?20:18),speed:kind==='pitch'?8.5:5.8,life:4});}}
+  else if(kind==='punches'||kind==='pitch'){const base=Math.atan2(e.ty-e.y,e.tx-e.x),n=kind==='pitch'?3:5,spread=kind==='pitch'?.16:.28;for(let i=0;i<n;i++){const a=base+(i-(n-1)/2)*spread;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:kind==='pitch'?'ball':'glove',damage:dmg(kind==='pitch'?20:18),speed:kind==='pitch'?8.5:5.8,life:4});}}
   else if(kind==='swing'){const a=Math.atan2(e.ty-e.y,e.tx-e.x);fx(s,'enemyArc',e.x,e.y,{angle:a,radius:3.4,life:.3,max:.3});const pa=Math.atan2(p.y-e.y,p.x-e.x)-a;if(dist(p,e)<3.4+.3&&Math.cos(pa)>.35)hurt(s,dmg(32));}
   else if(kind==='rain'||kind==='spiral'){const rings=kind==='spiral'?2:1;for(let r=0;r<rings;r++)for(let i=0;i<12;i++){const a=i/12*Math.PI*2+r*.26;shot(s,e.x,e.y,Math.cos(a),Math.sin(a),{hostile:true,boss:true,art:e.bossId==='alwaysbeginner'?'ball':'',damage:dmg(19),speed:4.2-r*.9,life:4.5});}fx(s,'enemyRing',e.x,e.y,{radius:3});if(dist(p,e)<3)hurt(s,dmg(25));}
   else if(kind==='strikes'){for(const m of e.marks){fx(s,'bolt',m.x,m.y,{radius:m.r,life:.35,max:.35});if(Math.hypot(p.x-m.x,p.y-m.y)<m.r)hurt(s,dmg(25));}s.shake=Math.max(s.shake,.25);}
-  const follow=e.nextKind||(b.combo&&b.combo[kind]);e.nextKind='';e.cd=follow?.08:(enraged?.72:1.0);e.queued=follow||'';e.tellKind='';e.marks=[];return true;
+  const follow=e.nextKind||(b.combo&&b.combo[kind]);e.nextKind='';e.cd=follow?(guardian?.recovery.follow??.08):(enraged?(guardian?.recovery.enraged??.72):(guardian?.recovery.normal??1.0));e.queued=follow||'';e.tellKind='';e.marks=[];return true;
  }
  const range=5;if(dist(e,p)>range){const v=direction(p.x-e.x,p.y-e.y);e.x+=v.x*e.speed*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*(e.slow>0?.5:1)*dt;}
  if(e.cd<=0){
   const kind=e.queued||b.patterns[e.pattern%b.patterns.length];if(!e.queued)e.pattern++;e.queued='';e.tellKind=kind;e.tx=p.x;e.ty=p.y;e.marks=[];
   const speed=enraged?.85:1;
-  e.tell={charge:.72,slam:.85,punches:.62,pitch:.52,swing:.62,rain:.85,spiral:.9,strikes:.95,triple:.62,curve:.7,beam:.9,chase:.5}[kind]*speed;if(kind==='triple')e.charges=enraged?3:2;if(kind==='chase')e.chases=enraged?7:5;
+  e.tell=(guardian?.tellSeconds[kind]??{charge:.72,slam:.85,punches:.62,pitch:.52,swing:.62,rain:.85,spiral:.9,strikes:.95,triple:.62,curve:.7,beam:.9,chase:.5}[kind])*speed;e.tellTotal=e.tell;if(kind==='triple')e.charges=enraged?3:2;if(kind==='chase')e.chases=enraged?7:5;
   if(kind==='strikes'){e.marks.push({x:p.x,y:p.y,r:1.4});for(let i=0;i<(enraged?4:3);i++)e.marks.push({x:clamp(p.x+(random(s)-.5)*9,2,22),y:clamp(p.y+(random(s)-.5)*6,2.5,14),r:1.4});}
  }
  return false;
@@ -540,6 +543,13 @@ export function stepAdventure(s,dt,input={},combat=null){
  if(s.phase!=='playing')return;
  // 방을 다 깨면 떨어진 물건을 모으는 짧은 틈을 두고 보상으로 넘어간다.
  const info=adventureRoomInfo(s.room);
+ // A recorded boss death ends its encounter. Dismissed summons earn no kills
+ // or loot; the actual boss drops and receipt still follow the normal path.
+ if(info.boss&&s.bossesDefeated>info.act&&!s.enemies.some(e=>e.type==='boss')&&!s.cleared){
+  s.enemies.length=0;s.shots.length=0;s.fields.length=0;s.pendingCuts.length=0;
+  s.player.inv=Math.max(s.player.inv,1.2);s.cleared=true;s.clearTimer=1.1;
+  s.message=info.actInfo.bossName+'를 격파했어요';
+ }
  if(s.roomType==='treasure'&&!info.boss){if(!s.props.some(prop=>prop.kind==='chest')){if(!s.cleared){s.cleared=true;s.clearTimer=Math.max(s.clearTimer,1.4);}s.clearTimer-=dt;if(s.clearTimer<=0){for(const item of s.pickups)collect(s,item);s.pickups.length=0;s.cleared=false;openReward(s);}}return;}
  if(s.region){updateEvents(s,dt);const R=s.region;
   if(!R.gate.open&&!s.enemies.some(e=>e.guard&&e.hp>0)){R.gate.open=true;R.message='출구가 열렸어요 · 빛나는 문으로 가세요';event(s,'pickup');}

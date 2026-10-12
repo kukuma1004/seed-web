@@ -113,7 +113,7 @@ assert.equal(Object.keys(ADVENTURE_FORMS).length+9,DEFENSE_CATALOG_COUNTS.total,
  for(const room of [3,7,11]){const b=begin();b.room=room-1;b.phase='doors';b.doors=[{room:'boss',reward:'boss'}];chooseAdventureDoor(b,0);b.player.inv=1e9;const e=b.enemies[0];const seen=new Set();for(let i=0;i<60*30;i++){if(e.tellKind)seen.add(e.tellKind);stepAdventure(b,1/60,{});if(b.phase!=='playing')break;}assert.ok(seen.size>=3,e.bossId+' uses several patterns: '+[...seen]);}
  const e=begin();e.phase='doors';e.doors=[{room:'elite',reward:'law'}];chooseAdventureDoor(e,0);const strong=e.enemies[0].maxHp;const n=begin();n.phase='doors';n.doors=[{room:'combat',reward:'law'}];chooseAdventureDoor(n,0);assert.ok(strong>n.enemies[0].maxHp);
  clearRoom(e);const lv=e.level;chooseAdventure(e,'law',adventureOffers(e).laws[0]);assert.equal(e.level,lv+1,'elite bonus growth');
- const m=begin();m.phase='doors';m.room=ROOMS_PER_ACT-1;m.doors=[{room:'combat',reward:'law'}];chooseAdventureDoor(m,0);assert.ok(m.enemies.every(x=>['batter','pitcher','catcher','runner'].includes(x.art)));
+ const m=begin();m.phase='doors';m.room=ROOMS_PER_ACT-1;m.doors=[{room:'combat',reward:'law'}];chooseAdventureDoor(m,0);assert.ok(m.enemies.every(x=>['hound','caster','shield'].includes(x.art)));
  // 문 목록은 여러 판에서 보물·상점·샘물·정예가 모두 나온다.
  const seenRooms=new Set();for(let seed=1;seed<80;seed++){const r=createAdventure(seed);startAdventure(r,'slash','burst');for(let room=0;room<4;room++){r.room=room;r.player.hp=r.player.maxHp*(seed%2?.5:1);r.phase='choice';r.choiceKind='grow';chooseAdventure(r,'grow');r.doors.forEach(d=>seenRooms.add(d.room));r.room=room;}}
  for(const room of ['combat','elite','treasure','shop','fountain'])assert.ok(seenRooms.has(room),'door kind '+room);

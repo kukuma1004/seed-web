@@ -97,3 +97,55 @@
 #seed-adventure .sa-route{min-width:0;max-width:45%}
 #seed-adventure .sa-route b,#seed-adventure .sa-route span{overflow-wrap:anywhere}
 #seed-adventure .sa-purse{font-variant-numeric:tabular-nums}
+
+/* Readable on the new pale garden court without covering more of the fight. */
+.sa-boss{padding:8px 14px;border-radius:12px;background:#092126ed;border:1px solid #bdd4ae66;text-shadow:0 1px 3px #000;box-sizing:border-box;max-width:calc(100% - 32px)}
+.sa-boss>span{color:#f4eed0;font-size:16px;font-weight:700}.sa-boss small{color:#d4e2c8;font-size:12px;line-height:1.5}
+.sa-boss:not([hidden])~.sa-objective{display:none}
+/* Short landscape screens keep guardian faces clear; use the gap between sticks. */
+@media(max-height:550px) and (min-width:601px){
+ .sa-boss{top:auto;bottom:12px;left:calc(50% - 60px);width:300px;max-width:calc(100% - 400px);padding:6px 10px}
+ .sa-boss>span{font-size:13px}.sa-boss small{font-size:10px}
+}
+
+.sa-vignette{opacity:.4}
+.sa-growth-preview{display:block;margin-top:4px;color:#f1d994;font-style:normal;font-size:10px;line-height:1.4}
+.sa-upgrade-target{padding:10px;border:1px solid #b6cb9d77;border-radius:9px;margin:10px 0;text-align:left;background:#21372d}
+.sa-upgrade-target>small{color:#e6d9a9}.sa-upgrade-target>div{display:flex;gap:8px;margin-top:7px}
+.sa-upgrade-target button{display:flex;align-items:center;gap:8px;flex:1;text-align:left}
+.sa-upgrade-target b,.sa-upgrade-target button small{display:block;font-size:12px}
+.sa-upgrade-target button small{font-size:10px;color:#d2ddc9;margin-top:4px}
+.sa-upgrade-target .sa-build-art{display:block;flex-shrink:0;width:30px;height:30px;border-radius:6px;background-size:400% 300%}
+/* Keep route rewards above the sticky return button on short landscape screens. */
+@media(max-height:550px) and (min-width:601px){
+ .sa-route-choice{padding:10px 18px}
+ .sa-route-choice>.sa-eyebrow{margin:0}
+ .sa-route-choice h1{font-size:21px;margin:2px 0 4px}
+ .sa-route-choice>p{font-size:11px;line-height:1.4;margin:5px 0}
+ .sa-route-choice .sa-doors{margin:8px 0 0;gap:8px}
+ #seed-adventure .sa-route-choice .sa-door{min-height:150px}
+ #seed-adventure .sa-route-choice .sa-door-art{width:42px;height:42px}
+ .sa-route-choice .sa-door-plate{padding:6px 7px;gap:2px}
+ .sa-route-choice .sa-door-plate>b{font-size:13px}
+ .sa-route-choice .sa-door-plate>small{font-size:10px}
+ .sa-route-choice footer{margin-top:8px;padding:4px 0}
+}
+
+@media(max-height:550px) and (min-width:601px){
+ .sa-shop-menu{padding:10px 18px}
+ .sa-shop-menu h1{font-size:21px;margin:2px 0 4px}
+ .sa-shop-menu>p{margin:4px 0;font-size:11px;line-height:1.4}
+ .sa-shop-menu .sa-shop{margin:8px 0;gap:6px}
+ #seed-adventure .sa-shop-menu .sa-shop button{padding:7px 9px}
+ .sa-shop-menu .sa-upgrade-target{padding:6px 8px;margin:7px 0}
+ .sa-shop-menu .sa-upgrade-target>div{margin-top:4px}
+ #seed-adventure .sa-shop-menu .sa-upgrade-target button{padding:6px 8px}
+}
+
+@media(max-height:550px) and (min-width:601px){
+ .sa-reward-menu{padding:10px 18px}
+ .sa-reward-menu h1{font-size:21px;margin:2px 0 4px}
+ .sa-reward-menu>p{margin:5px 0;font-size:11px;line-height:1.4}
+ #seed-adventure .sa-reward-menu .sa-grow{padding:7px 10px;margin-top:7px}
+ .sa-reward-menu footer{margin-top:8px;padding:4px 0}
+}

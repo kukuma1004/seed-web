@@ -254,3 +254,9 @@ art-refs/
 !tools/linked-objective-firebase-emulator-test.mjs
 
 !tools/account-login-flow-test.mjs
+
+!tools/adventure-garden-*-test.mjs
+!tools/adventure-duel-guardians-test.mjs
+!tools/adventure-wayfinding-test.mjs
+!tools/adventure-growth-choice-test.mjs
+!tools/adventure-progression-audit.mjs

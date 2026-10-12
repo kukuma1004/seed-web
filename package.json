@@ -3,9 +3,11 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
+    "test:adventure-growth": "node tools/adventure-growth-choice-test.mjs",
+    "test:adventure-garden": "node tools/adventure-garden-layout-test.mjs && node tools/adventure-garden-host-test.mjs && node tools/adventure-garden-renderer-test.mjs && node tools/adventure-duel-guardians-test.mjs && node tools/adventure-wayfinding-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test:adventure": "node tools/seed-adventure-test.mjs && node tools/seed-adventure-simulation.mjs",
+    "test:adventure": "node tools/seed-adventure-test.mjs && node tools/seed-adventure-simulation.mjs && npm run test:adventure-garden && npm run test:adventure-growth",
     "test:duel": "node tools/seed-duel-test.mjs --mechanics && node tools/seed-duel-story-test.mjs && node tools/duel-fusion-02-test.mjs && node tools/duel-fusion-02-art-test.mjs && node tools/duel-fusion-03-test.mjs && node tools/duel-fusion-03-art-test.mjs && node tools/duel-input-test.mjs && node tools/duel-fusion-04-test.mjs && node tools/duel-fusion-04-art-test.mjs && node tools/duel-fusion-05-test.mjs && node tools/duel-fusion-05-art-test.mjs && node tools/duel-solo-06-test.mjs && node tools/duel-solo-06-art-test.mjs && node tools/duel-solo-07-test.mjs && node tools/duel-solo-07-art-test.mjs && node tools/duel-solo-07-timing-test.mjs && node tools/duel-catalog-coverage.mjs && node tools/duel-ranking-rules.mjs",
     "test:identities": "node tools/identity-coverage-test.mjs && node tools/final-identity-art-test.mjs && node tools/twin-interactions-test.mjs && node tools/final-branch-combat-test.mjs && node tools/final-branch-distinctness-test.mjs && node tools/final-branch-balance-test.mjs",
     "test:web-telemetry": "node tools/web-telemetry-test.mjs",
