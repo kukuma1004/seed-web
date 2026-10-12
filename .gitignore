@@ -278,3 +278,5 @@ art-refs/
 !tools/seed-bounce-test.mjs
 !tools/bounce-view-test.mjs
 !tools/breakthrough-growth-test.mjs
+
+!tools/bounce-feedback-test.mjs
