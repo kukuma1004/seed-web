@@ -14,7 +14,11 @@ function event(s,type,x,y,extra){const priority=type==='boss'?3:['shatter','chai
  s.events.push({type,x,y,time:s.time,priority,...extra});}
 function fx(s,type,x,y,r=.5,x2,y2){const e=s.effects.find(e=>!e.active);if(e)Object.assign(e,{active:true,type,x,y,r,x2,y2,ttl:.32,maxTtl:.32});}
 function spawn(s,x,y,hp,type='sprout'){const e=s.enemies.find(e=>!e.active);if(!e)return;Object.assign(e,{active:true,alive:true,id:++s.nextId,x,y,w:type==='boss'?2.5:.92,h:type==='boss'?1.3:.92,r:.43,hp,maxHp:hp,type,frost:0,flash:0,slow:false,orbitAt:-100});}
-function row(s){const n=s.turn>=6?4:3,skip=Math.floor(rand(s)*6);for(let i=0,placed=0;i<6&&placed<n;i++){if(i===skip)continue;if(rand(s)<.24&&i<4)continue;spawn(s,.9+i*1.62,1.05,Math.round(7+s.turn*2.1),rand(s)<.28?'shield':'sprout');placed++;}}
+function row(s){const n=s.turn>=6?4:3,skip=Math.floor(rand(s)*6),boss=s.enemies.find(e=>e.active&&e.type==='boss');for(let i=0,placed=0;i<6&&placed<n;i++){if(i===skip)continue;if(rand(s)<.24&&i<4)continue;const x=.9+i*1.62;
+ // Reserve the guardian's arrival corridor two turns ahead (including frost-slowed rows), then keep newly
+ // spawned bodies out of its real rectangle. Existing enemies are not moved.
+ if(s.turn>=5&&s.turn<=6&&Math.abs(x-5)<1.8||boss&&Math.abs(x-boss.x)<boss.w/2+.46&&Math.abs(1.05-boss.y)<boss.h/2+.46)continue;
+ spawn(s,x,1.05,Math.round(7+s.turn*2.1),rand(s)<.28?'shield':'sprout');placed++;}}
 export function createBounce(seed=1){
  const s={phase:'aim',rng:(Number(seed)>>>0)||1,seed:(Number(seed)>>>0)||1,time:0,turn:1,stage:1,score:0,combo:0,bestCombo:0,kills:0,cleared:0,nextId:0,player:{x:5,y:LINE},laws:[],offers:[],fusion:null,boss:false,bossDefeated:false,damage:2,volleySize:12,launched:0,spawnClock:0,volleyTime:0,aimX:0,aimY:-1,events:[],balls:Array.from({length:32},()=>({active:false})),enemies:Array.from({length:32},()=>({active:false,alive:false})),effects:Array.from({length:48},()=>({active:false}))};
  row(s);for(const e of s.enemies)if(e.active)e.y=2.15;row(s);return s;

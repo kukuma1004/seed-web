@@ -27,6 +27,15 @@ const choiceIdle=createBounce();choiceIdle.phase='choice';const choiceBefore=JSO
 function play(seed,smart,acquire=false){const s=createBounce(seed);let safety=0;while(!['won','lost'].includes(s.phase)&&safety++<80){if(s.phase==='choice'){chooseBounce(s,acquire&&s.offers.some(o=>o.law)?s.offers.find(o=>o.law).id:'power');continue;}if(s.phase==='aim'){let x=0,y=-1;if(smart){const targets=s.enemies.filter(e=>e.active).sort((a,b)=>b.y-a.y||a.hp-b.hp);const e=targets[0];if(e){x=e.x-5;y=e.y-7.4;}}assert.ok(launchBounce(s,x,y));}finish(s);assert.equal(s.balls.length,32);assert.equal(s.enemies.length,32);assert.equal(s.effects.length,48);for(const b of s.balls)if(b.active)assert.ok(Number.isFinite(b.x+b.y+b.vx+b.vy));}assert.ok(['won','lost'].includes(s.phase));if(s.phase==='won')assert.ok(s.boss&&s.bossDefeated);return{seed,phase:s.phase,turn:s.turn,kills:s.kills,score:s.score,laws:s.laws,fusion:s.fusion?.name};}
 const straight=Array.from({length:6},(_,i)=>play(i+1,false)),aimed=Array.from({length:6},(_,i)=>play(i+1,true)),lawBuilds=Array.from({length:12},(_,i)=>play(i+1,true,true));console.log(JSON.stringify({note:'Actual launch/choice input CPU simulation; not human/device proof.',straight,aimed,lawBuilds},null,2));
 assert.ok(straight.some(x=>x.phase==='lost'),'straight firing is not an automatic win');
-assert.ok(aimed.some(x=>x.phase==='won'),'legal skilled aim wins at least some seeds');assert.ok(aimed.some(x=>x.phase==='lost'),'aim-only performance still has consequences');
+assert.ok(aimed.some(x=>x.phase==='won'),'legal skilled aim wins at least some seeds');assert.ok(aimed.filter(x=>x.phase==='won').length>straight.filter(x=>x.phase==='won').length,'changing aim must outperform repeated straight shots with the same power choices');
 assert.ok(lawBuilds.some(x=>x.phase==='won'&&x.laws.length===2&&x.fusion),'input-earned two-law/fusion builds can defeat the final boss');
 console.log('PASS seed-bounce: deterministic physics, all nine adapters, bounds, meaningful upgrades, idle no-progress and straight-aim failure.');
+
+// Boss entry spacing fixture: regular new rows must not hide its collider.
+for(let seed=1;seed<=60;seed++){
+ const s=createBounce(seed);s.enemies.forEach(e=>e.active=false);s.turn=6;s.phase='choice';s.offers=[{id:'power'}];chooseBounce(s,'power');
+ const boss=s.enemies.find(e=>e.active&&e.type==='boss');assert.ok(boss);
+ for(const e of s.enemies)if(e.active&&e!==boss)assert.ok(Math.abs(e.x-boss.x)>=boss.w/2+e.w/2||Math.abs(e.y-boss.y)>=boss.h/2+e.h/2,'guardian remains separated from new rows');
+}
+
+for(const before of [4,5]){const s=createBounce(7);s.enemies.forEach(e=>e.active=false);s.turn=before;s.phase='choice';s.offers=[{id:'power'}];chooseBounce(s,'power');for(const e of s.enemies)if(e.active)assert.ok(Math.abs(e.x-5)>=1.8,'frost-slowed arrival lanes remain free');}
