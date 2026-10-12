@@ -1,4 +1,9 @@
 /* 씨앗 맞추기 — 씨앗 대전·수호전과 같은 종이 패널 · 금빛 테두리 말투. 세로 화면은 위에, 가로 화면은 왼쪽에 상황판. */
+#seed-puzzle .sp-bounce-open{flex:none;display:flex;gap:12px;align-items:center;justify-content:center;padding:9px 12px;margin-top:6px;border-color:#d2c18188;background:#274337;min-height:44px}
+#seed-puzzle .sp-bounce-open b{font-size:13px;color:#e8d49a}#seed-puzzle .sp-bounce-open small{font-size:11px;color:#c8d6bb}
+#seed-puzzle .sp-stage-catalog{border-top:1px solid #b9a97844;margin-top:12px}#seed-puzzle .sp-stage-catalog summary{min-height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:13px;color:#c6d1bb}#seed-puzzle .sp-stage-catalog summary:before{content:'＋';margin-right:9px;color:#e3d093}#seed-puzzle .sp-stage-catalog[open] summary:before{content:'−'}
+#seed-puzzle .sp-modal .sp-paper.sp-menu{height:auto;max-height:calc(100dvh - 24px)}
+@media(max-height:500px){#seed-puzzle .sp-bounce-open{padding:5px 10px;margin-top:3px}}
 #seed-puzzle{position:fixed;inset:0;z-index:150;background:#071215;color:#f2e9cf;font-family:'Malgun Gothic',sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
 #seed-puzzle *{box-sizing:border-box}#seed-puzzle canvas{position:absolute;inset:0;width:100%;height:100%}
 #seed-puzzle button{font:inherit;color:inherit;border:1px solid #b9a97866;background:#15282be8;border-radius:8px;cursor:pointer;min-height:44px;padding:8px 14px}

@@ -2,3 +2,5 @@
 
 #seed-breakthrough canvas.bt-map{inset:auto;top:80px;right:16px;width:115px;height:80px;border:1px solid #afbd8a66;border-radius:12px;pointer-events:none}.bt-menu .bt-map{visibility:hidden}@media(max-height:430px){#seed-breakthrough canvas.bt-map{top:82px;right:12px;width:86px;height:60px}}
 .bt-roster i{width:95px;margin-inline:auto}@media(max-height:430px){.bt-roster i{width:50px}.bt-modal article{gap:5px;padding:10px}.bt-modal article>small:first-child{display:none}.bt-modal h1{font-size:23px}}
+.bt-growth-offers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.bt-growth-offers button{padding:15px 12px;display:grid;gap:10px;text-align:left;min-height:130px}.bt-growth-offers button b{color:#edda9b;font-size:17px}.bt-growth-offers button small{line-height:1.6;font-size:12px}.bt-growth-offers button:hover,.bt-growth-offers button:focus-visible{background:#315340;outline:2px solid #d9cb7a;outline-offset:2px}
+@media(max-height:430px){.bt-growth-offers button{min-height:100px;padding:10px}.bt-growth-offers button b{font-size:14px}.bt-growth-offers button small{font-size:11px}}

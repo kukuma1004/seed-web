@@ -2,13 +2,13 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {DUEL_BASE_CHARACTERS} from '../src/duel-base-characters.js';
-import {BREAKTHROUGH_ROSTER,createBreakthrough,stepBreakthrough,breakthroughObjective,skillBreakthrough,ultimateBreakthrough,dodgeBreakthrough} from '../src/seed-breakthrough-rules.js';
-// Frozen original nine profiles, independent of checkout depth and private work commits.
+import {BREAKTHROUGH_ROSTER,createBreakthrough,stepBreakthrough,breakthroughObjective,skillBreakthrough,ultimateBreakthrough,dodgeBreakthrough,chooseBreakthrough} from '../src/seed-breakthrough-rules.js';
 const previous=JSON.parse(readFileSync(new URL('./duel-base-characters-baseline.json',import.meta.url),'utf8'));
 assert.deepEqual(JSON.parse(JSON.stringify(DUEL_BASE_CHARACTERS)),JSON.parse(JSON.stringify(previous)),'shared Duel base catalog remains byte-value equivalent');
 const results=[];
 for(const char of BREAKTHROUGH_ROSTER){
- const s=createBreakthrough(char,73);assert.equal(s.player.char,char);let peak=0;for(let n=0;n<60*240&&s.phase==='playing';n++){
+ const s=createBreakthrough(char,73);assert.equal(s.player.char,char);let peak=0;for(let n=0;n<60*240&&['playing','choice'].includes(s.phase);n++){
+  if(s.phase==='choice'){assert.ok(chooseBreakthrough(s,s.offers[0].id));continue;}
   const p=s.player,g=breakthroughObjective(s),near=s.units.filter(u=>u.active&&Math.hypot(u.x-p.x,u.y-p.y)<7).sort((a,b)=>Number(b.leader)-Number(a.leader)||Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
   const goal=near?.leader?near:g,dx=goal.x-p.x,dy=goal.y-p.y,d=Math.hypot(dx,dy),ax=near?near.x-p.x:dx,ay=near?near.y-p.y:dy;
   if(near&&Math.hypot(ax,ay)<5){skillBreakthrough(s);ultimateBreakthrough(s);}if(s.units.some(u=>u.active&&u.tell>0&&u.leader&&Math.hypot(p.x-u.tx,p.y-u.ty)<3))dodgeBreakthrough(s,-ay,ax);

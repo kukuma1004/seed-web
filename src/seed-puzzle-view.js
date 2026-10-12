@@ -73,13 +73,14 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const ready=k=>images[k]?.complete&&images[k].naturalWidth>0;
  load('stone','assets/garden-stone-v4.png');load('back','assets/garden-sanctuary-v2.webp');
  load('pieces',PIECE_ART);
+ let bounceChild=null,bounceLoading=false;
  let progress=readPuzzleProgress(storage,owner),def=null,s=null,closed=false,raf=0,last=0,clock=0,width=1,height=1,dpr=1,bx=0,by=0,cs=40,backdrop=null,stoneMax=1;
  // 화면 쪽 판: 칸마다 보이는 씨앗 id. 규칙의 판은 한 수에 끝까지 가 있고, 화면은 steps 를 따라 뒤따라간다.
  let vb=[],vmoss=[],vstone=[],vvine=[],visibleScore=0,visibleMoves=0;
  const sprites=new Map(),effects=[],floaters=[],tiles=new Map();
- const STAGE_PAGE=50;let stagePage=null;
+ const STAGE_PAGE=50;let stagePage=null,catalogOpen=false;
  let queue=[],cur=null,curT=0,selected=-1,cursor=-1,drag=null,idleAt=0,hint=null,shake=0,announced=new Set(),resultTimer=0,keyboard=false,armed=null,picks=new Set();
- function close(){if(closed)return;quitRun();closed=true;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
+ function close(){if(closed)return;quitRun();closed=true;bounceChild?.close();bounceChild=null;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
 
  // ── 정원 · 도전 씨앗
  // 정원 저장은 본편(main)이 가진 것을 쓴다. 따로 붙지 않은 화면(시험)에서는 이 화면 안에서만 기억한다.
@@ -193,6 +194,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  listen(canvas,'pointercancel',()=>{drag=null;});
  const KEYS={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};
  listen(window,'keydown',e=>{
+  if(bounceChild||bounceLoading||root.hidden)return;
   if(e.target?.closest?.('input,textarea'))return;
   if(['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,select,[role="button"],[role="checkbox"]'))return;
   if(e.code==='Escape'&&gardenMode&&modal.hidden){e.preventDefault();leaveGarden();return;}
@@ -368,8 +370,8 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   for(const sp of sprites.values())if(sp.tw||sp.dying||sp.pop>0||sp.y!==sp.ty)return 60;
   return 24;
  }
- function loop(now){raf=0;if(closed||document.hidden)return;raf=requestAnimationFrame(loop);if(!pacer(now,renderRate()))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;update(dt);draw(now);}
- listen(document,'visibilitychange',()=>{last=0;if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(!closed&&!raf)raf=requestAnimationFrame(loop);});
+ function loop(now){raf=0;if(closed||document.hidden||bounceChild||bounceLoading||root.hidden)return;raf=requestAnimationFrame(loop);if(!pacer(now,renderRate()))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;update(dt);draw(now);}
+ listen(document,'visibilitychange',()=>{last=0;if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(!closed&&!bounceChild&&!bounceLoading&&!raf)raf=requestAnimationFrame(loop);});
 
  // ── HUD
  let bannerTimer=0;
@@ -407,10 +409,12 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
    <button class="sp-garden-card${stars&&area>=0?' ready':''}" data-garden><span class="sp-garden-thumb" aria-hidden="true" style="background-image:url('${BASE}assets/garden-sanctuary-v2.webp')"></span><span><small>정원 가꾸기 · ${area<0?'모두 꾸몄어요':`${DECOR_AREAS[area].name} ${doneHere}/6`}</small><b>${area<0?'SEED 정원을 끝까지 꾸몄어요':stars?`별 ★${stars}개로 정원을 꾸밀 수 있어요`:'단계에서 별을 모아 정원을 꾸며요'}</b></span><i aria-hidden="true">›</i></button>
    <div class="sp-status"><span class="sp-lives" title="도전 씨앗 · 지면 하나 줄고, 10분마다 하나씩 돋아요">🌱 <span data-lives>${livesLine()}</span></span><span>별 ${total}/${PUZZLE_STAGES.length*3}</span><span class="${progress.streak?'hot':''}">🔥 ${progress.streak}연승${progress.streak?` · 다음 선물 ${puzzleStreakGift(progress.streak).map(id=>PUZZLE_POWERS[id].name).join('·')}`:''}</span>${practice?'':`<span>햇살 ${jpText(wallet())}</span>`}</div>
    <button class="sp-daily" data-daily="${day}"><span><small>오늘의 단계 · ${dayLabel(day)}</small><b>이동 ${daily.moves}번 점수 도전</b></span><span class="sp-stars">${starText(dp?.stars||0)}</span><small>${dp?.best?`오늘 최고 ${dp.best.toLocaleString()}`:'오늘 누구나 같은 판'}</small></button>
-   <div class="sp-chapters" role="tablist" aria-label="단계 묶음">${chapters}</div>
-   <div class="sp-stages">${pageStages.map(card).join('')}</div>
+   <details class="sp-stage-catalog" ${catalogOpen?'open':''}><summary>다른 단계 고르기</summary><div class="sp-chapters" role="tablist" aria-label="단계 묶음">${chapters}</div>
+   <div class="sp-stages">${pageStages.map(card).join('')}</div></details>
    <small class="sp-menu-note">${practice?'연습 모드 · 햇살(JP)을 쓰지도 받지도 않고, 도감에도 남지 않아요.':`첫 깨기 햇살 ${PUZZLE_JP.firstClear(1)}~${PUZZLE_JP.firstClear(PUZZLE_STAGES.length)} JP · 별은 점수로(남은 이동은 햇살 타임 점수) · 새 별마다 ${PUZZLE_JP.newStar} JP · 오늘의 단계 첫 별 ${PUZZLE_JP.daily} JP · 조합 효과를 처음 쓰면 도감에 남아요.`}</small></div>
-   <footer class="sp-row sp-menu-actions"><button class="sp-help-open">도움말</button><button class="sp-rank-open">랭킹</button>${onSaveAccount&&!practice?'<button class="sp-account-save">계정 저장 확인</button>':''}<button class="sp-exit">돌아가기</button></footer>`);
+   <button class="sp-bounce-open"><b>↗ 씨앗 바운스 · NEW</b><small>각도를 잡고 튕기기 · 짧은 조준 로그라이크</small></button><footer class="sp-row sp-menu-actions"><button class="sp-help-open">도움말</button><button class="sp-rank-open">랭킹</button>${onSaveAccount&&!practice?'<button class="sp-account-save">계정 저장 확인</button>':''}<button class="sp-exit">돌아가기</button></footer>`);
+  modal.querySelector('.sp-stage-catalog').ontoggle=e=>{catalogOpen=e.currentTarget.open;};
+  modal.querySelector('.sp-bounce-open').onclick=openBounce;
   modal.querySelector('[data-next-stage]')?.addEventListener('click',()=>intro(next));
   modal.querySelectorAll('[data-stage]').forEach(b=>b.onclick=()=>intro(PUZZLE_STAGE_BY_ID[b.dataset.stage]));
   modal.querySelector('[data-daily]').onclick=()=>intro(daily);modal.querySelector('.sp-help-open').onclick=()=>help();modal.querySelector('.sp-rank-open').onclick=onRanking;modal.querySelector('.sp-exit').onclick=close;modal.querySelector('[data-garden]').onclick=gardenScreen;
@@ -418,6 +422,14 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   const saveButton=modal.querySelector('.sp-account-save');if(saveButton)saveButton.onclick=async()=>{saveButton.disabled=true;saveButton.textContent='저장 확인 중…';try{const ok=await onSaveAccount();saveButton.textContent=ok?'계정에 저장됐어요':'연결 확인 후 다시 시도';if(ok&&!closed){menu();modal.querySelector('.sp-account-save').textContent='계정에 저장됐어요';toast('단계·별·연승을 계정에 저장했어요');}}catch{saveButton.textContent='연결 확인 후 다시 시도';}finally{saveButton.disabled=false;}};
   modal.querySelector('.sp-chapter.on')?.scrollIntoView?.({block:'nearest',inline:'center'});
   modal.querySelector(`[data-stage="${next?.id}"]`)?.scrollIntoView?.({block:'nearest'});
+ }
+ async function openBounce(){
+  if(closed||bounceChild||bounceLoading)return;
+  bounceLoading=true;cancelAnimationFrame(raf);raf=0;root.hidden=true;
+  try{const {mountSeedBounce}=await import('./seed-bounce-view.js');if(closed)return;
+   bounceChild=mountSeedBounce({host,audio,onClose:()=>{bounceChild=null;if(closed)return;root.hidden=false;last=0;menu();if(!document.hidden&&!raf)raf=requestAnimationFrame(loop);}});
+  }catch{if(!closed){root.hidden=false;toast('새 놀이를 준비하지 못했어요. 다시 눌러 주세요.');if(!document.hidden&&!raf)raf=requestAnimationFrame(loop);}}
+  finally{bounceLoading=false;}
  }
  function goalLines(d){const g=d.goal,out=[];if(d.attack)out.push(`이동 ${d.moves}번 안에 최고 점수 · 별 ${d.stars.map(v=>v.toLocaleString()).join(' / ')}점`);
   for(const c of g.collect||[])out.push(`${goalIcon({kind:'collect',law:c.law})} ${LAWS[c.law].name} ${c.count}개 모으기`);

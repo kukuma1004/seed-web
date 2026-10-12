@@ -274,3 +274,7 @@ art-refs/
 !tools/seed-breakthrough-test.mjs
 !tools/breakthrough-presentation-test.mjs
 !tools/duel-base-characters-baseline.json
+
+!tools/seed-bounce-test.mjs
+!tools/bounce-view-test.mjs
+!tools/breakthrough-growth-test.mjs

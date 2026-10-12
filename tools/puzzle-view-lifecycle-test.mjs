@@ -8,7 +8,7 @@ const start=source.indexOf(' function renderRate(){'),end=source.indexOf(' // â”
 assert(start>=0&&end>start);
 const callbacks=new Map(),events=new Map(),draws=[],updates=[];
 let serial=0;
-const scope={document:{hidden:false},modal:{hidden:true},sprites:new Map(),effects:[],floaters:[],pacer:createFramePacer(),
+const scope={bounceChild:null,bounceLoading:false,root:{hidden:false},document:{hidden:false},modal:{hidden:true},sprites:new Map(),effects:[],floaters:[],pacer:createFramePacer(),
  requestAnimationFrame:fn=>{callbacks.set(++serial,fn);return serial;},cancelAnimationFrame:id=>callbacks.delete(id),
  listen:(_target,event,fn)=>events.set(event,fn),busy:()=>scope.busyValue,update:dt=>updates.push(dt),draw:now=>draws.push(now)};
 vm.createContext(scope);
@@ -34,12 +34,13 @@ scope.document.hidden=true;events.get('visibilitychange')();assert.equal(callbac
 scope.loop(60000);assert.equal(callbacks.size,0);assert.equal(draws.length,before,'hidden stale callback performs no update or draw');
 scope.document.hidden=false;events.get('visibilitychange')();events.get('visibilitychange')();assert.equal(callbacks.size,1,'visible events cannot multiply RAF loops');
 frame(60001);assert.equal(updates.at(-1),0,'returning from background never catches up hidden time');
+scope.bounceChild={};frame(60010);assert.equal(callbacks.size,0,'child mode takes sole RAF ownership');events.get('visibilitychange')();assert.equal(callbacks.size,0,'child mode blocks parent visibility resume');scope.bounceChild=null;events.get('visibilitychange')();
 scope.set('closed',true);frame(60020);assert.equal(callbacks.size,0);events.get('visibilitychange')();assert.equal(callbacks.size,0);
 
 // Execute the shipping key handler, with a canvas cursor already selected.
 // Native toolbar Enter/Space must neither spend a tool nor swap the board.
 const keyStart=source.indexOf(' const KEYS={ArrowLeft:'),keyEnd=source.indexOf(" $('.sp-pause').onclick",keyStart);
-const actions=[],keyScope={window:{},modal:{hidden:true},gardenMode:false,armed:'row',cursor:27,selected:28,N:9,keyboard:false,clock:0,
+const actions=[],keyScope={bounceChild:null,bounceLoading:false,root:{hidden:false},window:{},modal:{hidden:true},gardenMode:false,armed:'row',cursor:27,selected:28,N:9,keyboard:false,clock:0,
  canAct:()=>true,snap:()=>actions.push('snap'),tryTool:()=>actions.push('tool'),tryMove:()=>actions.push('move'),canTap:()=>false,neighbor:()=>true,
  toolbarUpdate:()=>{},listen:(_target,_event,fn)=>{keyScope.handler=fn;}};
 vm.createContext(keyScope);vm.runInContext(source.slice(keyStart,keyEnd),keyScope);
