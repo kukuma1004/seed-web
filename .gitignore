@@ -271,3 +271,4 @@ art-refs/
 !tools/adventure-act-event-view-test.mjs
 !tools/adventure-earned-events-audit.mjs
 !tools/adventure-garden-gimmicks-test.mjs
+!tools/seed-breakthrough-test.mjs

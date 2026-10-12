@@ -37,7 +37,8 @@
     "test:journey-polish": "node tools/journey-short-round-test.mjs && node tools/journey-quick-prep-test.mjs && node tools/journey-contextual-view-test.mjs && node tools/audio-test.mjs && node tools/audio-bank-test.mjs && node tools/offline-policy-test.mjs && node tools/main-frame-ownership-test.mjs",
     "test:av-polish": "node tools/audio-palette-test.mjs && node tools/canvas-vfx-readability-test.mjs && node tools/crosswind-world-presentation-test.mjs && node tools/siege-botanical-art-test.mjs",
     "test:latest-ui": "node tools/journey-floor-refresh-test.mjs && node tools/duel-feel-test.mjs && node tools/duel-relay-test.mjs && node tools/duel-touch-cancel-test.mjs && node tools/expedition-companion-identity-test.mjs && node tools/crosswind-undertow-test.mjs && node tools/duel-practice-preparation-test.mjs && node tools/duel-input-test.mjs && node tools/duel-asset-cache-test.mjs",
-    "test:adventure-earned-events": "node tools/adventure-earned-events-audit.mjs && node tools/adventure-garden-gimmicks-test.mjs"
+    "test:adventure-earned-events": "node tools/adventure-earned-events-audit.mjs && node tools/adventure-garden-gimmicks-test.mjs",
+    "test:breakthrough": "node tools/seed-breakthrough-test.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.2",
