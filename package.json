@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "type": "module",
   "scripts": {
-    "test:adventure-growth": "node tools/adventure-growth-choice-test.mjs && node tools/adventure-tempo-test.mjs && node tools/adventure-lazy-assets-test.mjs && node tools/adventure-sleep-test.mjs && node tools/adventure-contact-motion-test.mjs",
+    "test:adventure-growth": "node tools/adventure-growth-choice-test.mjs && node tools/adventure-tempo-test.mjs && node tools/adventure-lazy-assets-test.mjs && node tools/adventure-sleep-test.mjs && node tools/adventure-contact-motion-test.mjs && node tools/adventure-projectile-sight-test.mjs && node tools/adventure-readability-test.mjs",
     "test:adventure-garden": "node tools/adventure-garden-layout-test.mjs && node tools/adventure-garden-host-test.mjs && node tools/adventure-garden-renderer-test.mjs && node tools/adventure-duel-guardians-test.mjs && node tools/adventure-wayfinding-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",

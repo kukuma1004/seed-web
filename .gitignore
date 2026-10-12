@@ -265,3 +265,5 @@ art-refs/
 !tools/adventure-lazy-assets-test.mjs
 !tools/adventure-sleep-test.mjs
 !tools/adventure-contact-motion-test.mjs
+!tools/adventure-projectile-sight-test.mjs
+!tools/adventure-readability-test.mjs
