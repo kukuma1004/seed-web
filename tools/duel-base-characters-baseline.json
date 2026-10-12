@@ -1,0 +1,363 @@
+{
+  "pierce": {
+    "id": "pierce",
+    "name": "창 씨앗",
+    "role": "긴 사거리 · 찌르기",
+    "hp": 182,
+    "speed": 4.5,
+    "reach": 2.5,
+    "arc": 0.62,
+    "damage": [
+      11,
+      11,
+      17
+    ],
+    "cadence": 0.34,
+    "heavy": {
+      "damage": 22,
+      "reach": 2.6
+    },
+    "parry": 1,
+    "tile": 4,
+    "ink": "#dbf6b1",
+    "skills": [
+      {
+        "name": "돌진 찌르기",
+        "cooldown": 4.5,
+        "desc": "앞으로 달려가며 꿰뚫어요"
+      },
+      {
+        "name": "관통 투창",
+        "cooldown": 3.5,
+        "desc": "멀리 날아가 둘을 꿰뚫는 창"
+      }
+    ],
+    "ult": {
+      "name": "천 개의 창",
+      "cooldown": 0,
+      "desc": "세 줄의 창이 앞을 쓸어요"
+    },
+    "blurb": "가장 멀리서 찌르지만, 붙으면 약해요."
+  },
+  "burst": {
+    "id": "burst",
+    "name": "불꽃 씨앗",
+    "role": "한 방 · 막기 파괴",
+    "hp": 142,
+    "speed": 3.8,
+    "reach": 1.6,
+    "arc": 1.1,
+    "damage": [
+      11,
+      11,
+      16
+    ],
+    "cadence": 0.48,
+    "heavy": {
+      "damage": 26,
+      "reach": 1.9,
+      "breaker": 1.25
+    },
+    "parry": 1,
+    "tile": 5,
+    "ink": "#ffaa65",
+    "skills": [
+      {
+        "name": "불씨 심기",
+        "cooldown": 5,
+        "desc": "잠시 뒤 터지는 불씨를 발밑에"
+      },
+      {
+        "name": "화염 도약",
+        "cooldown": 6,
+        "desc": "뛰어올라 내려찍어요 · 막기를 부숴요"
+      }
+    ],
+    "ult": {
+      "name": "대폭발",
+      "cooldown": 0,
+      "desc": "둘레를 크게 터뜨려요"
+    },
+    "blurb": "느리지만 세고, 막고 있는 상대를 잘 부숴요."
+  },
+  "reflect": {
+    "id": "reflect",
+    "name": "거울 씨앗",
+    "role": "막기 전문 · 반격",
+    "hp": 175,
+    "speed": 4.3,
+    "reach": 1.75,
+    "arc": 0.9,
+    "damage": [
+      10,
+      10,
+      15
+    ],
+    "cadence": 0.34,
+    "heavy": {
+      "damage": 21,
+      "reach": 1.9
+    },
+    "parry": 1.9,
+    "tile": 0,
+    "ink": "#91e4ff",
+    "skills": [
+      {
+        "name": "거울 방패",
+        "cooldown": 6,
+        "desc": "잠깐 모든 공격을 막고 탄을 되돌려요"
+      },
+      {
+        "name": "수정 탄",
+        "cooldown": 3,
+        "desc": "벽에 두 번 튕기는 수정"
+      }
+    ],
+    "ult": {
+      "name": "거울 감옥",
+      "cooldown": 0,
+      "desc": "상대를 거울에 가둬 묶어요"
+    },
+    "blurb": "반격 막기 판정이 넓고, 날아오는 탄을 되돌려요."
+  },
+  "gravity": {
+    "id": "gravity",
+    "name": "중력 씨앗",
+    "role": "잡기 · 제어",
+    "hp": 124,
+    "speed": 3.9,
+    "reach": 1.7,
+    "arc": 0.9,
+    "damage": [
+      9,
+      9,
+      12
+    ],
+    "cadence": 0.38,
+    "heavy": {
+      "damage": 21,
+      "reach": 2
+    },
+    "parry": 1,
+    "tile": 7,
+    "ink": "#d2a0ff",
+    "skills": [
+      {
+        "name": "끌어당기기",
+        "cooldown": 6.5,
+        "desc": "앞의 상대를 끌어와 묶어요 · 막기 무시"
+      },
+      {
+        "name": "중력장",
+        "cooldown": 7,
+        "desc": "둘레의 상대를 느리게"
+      }
+    ],
+    "ult": {
+      "name": "블랙홀",
+      "cooldown": 0,
+      "desc": "상대를 빨아들이며 계속 때려요"
+    },
+    "blurb": "막고 있는 상대도 끌어와 무너뜨려요."
+  },
+  "split": {
+    "id": "split",
+    "name": "분열 씨앗",
+    "role": "빠른 연타 · 꽃잎",
+    "hp": 196,
+    "speed": 4.9,
+    "reach": 1.55,
+    "arc": 1,
+    "damage": [
+      9,
+      9,
+      13
+    ],
+    "cadence": 0.27,
+    "heavy": {
+      "damage": 21,
+      "reach": 1.7
+    },
+    "parry": 1,
+    "tile": 1,
+    "ink": "#b5ec83",
+    "skills": [
+      {
+        "name": "꽃잎 부채",
+        "cooldown": 2.8,
+        "desc": "꽃잎 세 장을 부채꼴로 흩뿌려요"
+      },
+      {
+        "name": "꽃잎 부채",
+        "cooldown": 3.2,
+        "desc": ""
+      }
+    ],
+    "ult": {
+      "name": "꽃잎 폭풍",
+      "cooldown": 0,
+      "desc": "사방으로 꽃잎을 두 번 터뜨려요"
+    },
+    "blurb": "가장 빠르게 휘두르고 가볍게 뛰어요. 한 방은 약해요."
+  },
+  "chain": {
+    "id": "chain",
+    "name": "연쇄 씨앗",
+    "role": "중거리 번개 · 기절",
+    "hp": 129,
+    "speed": 4.2,
+    "reach": 1.7,
+    "arc": 0.95,
+    "damage": [
+      9,
+      9,
+      13
+    ],
+    "cadence": 0.36,
+    "heavy": {
+      "damage": 21,
+      "reach": 1.9
+    },
+    "parry": 1,
+    "tile": 2,
+    "ink": "#ffdd78",
+    "skills": [
+      {
+        "name": "번개 사슬",
+        "cooldown": 5.5,
+        "desc": "앞의 상대에게 번개를 꽂아 잠깐 기절시켜요"
+      },
+      {
+        "name": "번개 사슬",
+        "cooldown": 4.5,
+        "desc": ""
+      }
+    ],
+    "ult": {
+      "name": "낙뢰",
+      "cooldown": 0,
+      "desc": "상대 자리에 번개가 다섯 번 떨어져요"
+    },
+    "blurb": "거리를 두고 번개로 끊어 들어가요."
+  },
+  "recall": {
+    "id": "recall",
+    "name": "귀환 씨앗",
+    "role": "부메랑 · 두 번 베기",
+    "hp": 218,
+    "speed": 4.5,
+    "reach": 1.7,
+    "arc": 0.95,
+    "damage": [
+      11,
+      11,
+      16
+    ],
+    "cadence": 0.34,
+    "heavy": {
+      "damage": 21,
+      "reach": 1.8
+    },
+    "parry": 1,
+    "tile": 6,
+    "ink": "#9cf0ba",
+    "skills": [
+      {
+        "name": "귀환 칼날",
+        "cooldown": 3.8,
+        "desc": "던진 칼날이 갔다가 돌아오며 두 번 베어요"
+      },
+      {
+        "name": "귀환 칼날",
+        "cooldown": 3.8,
+        "desc": ""
+      }
+    ],
+    "ult": {
+      "name": "칼날 회오리",
+      "cooldown": 0,
+      "desc": "칼날 넷이 사방으로 날아갔다 돌아와요"
+    },
+    "blurb": "던지고 받으며 앞뒤로 두 번 벨 수 있어요."
+  },
+  "orbit": {
+    "id": "orbit",
+    "name": "공전 씨앗",
+    "role": "붙어서 싸우기 · 고리",
+    "hp": 139,
+    "speed": 4,
+    "reach": 1.4,
+    "arc": 1.2,
+    "damage": [
+      10,
+      10,
+      14
+    ],
+    "cadence": 0.4,
+    "heavy": {
+      "damage": 22,
+      "reach": 1.7
+    },
+    "parry": 1,
+    "tile": 3,
+    "ink": "#ffeaa0",
+    "skills": [
+      {
+        "name": "공전 고리",
+        "cooldown": 7.5,
+        "desc": "몸 주위를 도는 구슬이 가까운 상대를 계속 때려요"
+      },
+      {
+        "name": "공전 고리",
+        "cooldown": 6,
+        "desc": ""
+      }
+    ],
+    "ult": {
+      "name": "큰 고리",
+      "cooldown": 0,
+      "desc": "더 크고 오래 도는 고리"
+    },
+    "blurb": "튼튼하고, 붙어 있을수록 강해요."
+  },
+  "frost": {
+    "id": "frost",
+    "name": "빙결 씨앗",
+    "role": "느리게 묶기 · 제어",
+    "hp": 167,
+    "speed": 4.1,
+    "reach": 1.6,
+    "arc": 1,
+    "damage": [
+      9,
+      9,
+      13
+    ],
+    "cadence": 0.38,
+    "heavy": {
+      "damage": 21,
+      "reach": 1.8
+    },
+    "parry": 1.2,
+    "tile": 8,
+    "ink": "#8ce9ff",
+    "skills": [
+      {
+        "name": "서리 숨결",
+        "cooldown": 5,
+        "desc": "앞쪽 부채꼴에 서리를 뿜어 느리게 해요"
+      },
+      {
+        "name": "서리 숨결",
+        "cooldown": 5,
+        "desc": ""
+      }
+    ],
+    "ult": {
+      "name": "눈보라",
+      "cooldown": 0,
+      "desc": "주위를 느리게 하다 끝에 얼려요"
+    },
+    "blurb": "상대를 느리게 만들어 거리를 지배해요."
+  }
+}

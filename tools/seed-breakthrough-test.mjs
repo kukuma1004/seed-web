@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
-import {execFileSync} from 'node:child_process';
+import {readFileSync} from 'node:fs';
 import {DUEL_BASE_CHARACTERS} from '../src/duel-base-characters.js';
 import {BREAKTHROUGH_ROSTER,createBreakthrough,stepBreakthrough,breakthroughObjective,skillBreakthrough,ultimateBreakthrough,dodgeBreakthrough} from '../src/seed-breakthrough-rules.js';
-const old=execFileSync('git',['show','c5ce4d1:src/seed-duel-rules.js'],{encoding:'utf8'}),a=old.indexOf(' pierce:Object.freeze('),b=old.indexOf(' ,thorn:Object.freeze(',a),previous=vm.runInNewContext('({'+old.slice(a,b)+'})',{skill:(name,cooldown,desc)=>({name,cooldown,desc})});
+// Frozen original nine profiles, independent of checkout depth and private work commits.
+const previous=JSON.parse(readFileSync(new URL('./duel-base-characters-baseline.json',import.meta.url),'utf8'));
 assert.deepEqual(JSON.parse(JSON.stringify(DUEL_BASE_CHARACTERS)),JSON.parse(JSON.stringify(previous)),'shared Duel base catalog remains byte-value equivalent');
 const results=[];
 for(const char of BREAKTHROUGH_ROSTER){
