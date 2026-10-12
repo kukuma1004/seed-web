@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import {readFileSync,writeFileSync} from 'node:fs';
+import {readFileSync,writeFileSync,mkdirSync} from 'node:fs';
 import {createHash} from 'node:crypto';
 import {createAdventure,startAdventure,chooseAttackShape,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,adventureRoute,adventureCheckpoint,restoreAdventure} from '../src/seed-adventure-rules.js';
 import {createAdventureCombat} from '../src/seed-adventure-combat.js';
@@ -50,6 +50,7 @@ for(const [shape,initial,seed] of builds){
 }
 report.summary={builds:builds.length,earnedAct2:report.progressions.filter(p=>p.checkpoints.some(c=>c.room===3)).length,earnedAct3:report.progressions.filter(p=>p.checkpoints.some(c=>c.room===7)).length,defendedSuccesses:report.events.filter(e=>e.strategy==='defend'&&e.eventState==='done').length,abandonedFailures:report.events.filter(e=>e.strategy==='abandon'&&e.eventState==='failed').length,normalGateAndRestores:report.events.filter(e=>e.normalGate&&e.checkpointRestored).length,assertionFailures:report.defects.length};
 report.difficultyNotes=['Five of six main-route builds earned the second boss checkpoint; slash/orbit seed69 lost at second boss.','Initial throw/recall seed70 stalled at a completed Act1 cache because the generic bot aimed a distant dormant enemy. Explicit cache aim fixes this controller limitation; no runtime change made.','All eleven defended event attempts succeeded with naturally earned fusion/final builds; novice uncombined balance remains untested.','Ignoring the activated moon altar naturally fails it but leaves normal gate and checkpoint progression available.'];
+mkdirSync('artifacts',{recursive:true});
 writeFileSync('artifacts/adventure-earned-events-audit-20261012.json',JSON.stringify(report,null,2));
 assert.equal(report.defects.length,0,'event audit assertions must pass');
 for(const result of report.events){assert.ok(result.normalGate&&result.checkpointRestored,'every attempted event returns to valid normal progression');assert.equal(result.eventState,result.strategy==='abandon'?'failed':'done','legal earned event completion or natural failure');}
