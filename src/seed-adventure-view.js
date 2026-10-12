@@ -1,7 +1,7 @@
 import {adventureGrowthPreview,adventureGrowthPath} from './adventure-growth-preview.js';
 import {adventureActorOpacity} from './adventure-readability.js';
 import {adventureProjectileSight} from './adventure-projectile-sight.js';
-import {adventureObjective,adventureBossAction,adventureDoorScene,adventureEventName} from './adventure-wayfinding.js';
+import {adventureObjective,adventureBossAction,adventureDoorScene,adventureEventName,adventureEventReward} from './adventure-wayfinding.js';
 import {createAdventureGardenPainter} from './adventure-garden-renderer.js';
 import {getAdventureGuardian,adventureGuardianFrame,adventureGuardianMotionFrame} from './adventure-duel-guardians.js';
 import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSS_HEAL,adventureShopStatus,ADVENTURE_BOSSES,REGION,adventureRoomInfo,adventureRoute,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,MOTIONS,FINISHERS,adventureEvolutions,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_SAVE_KEY,ADVENTURE_CLOUD_READY,adventureTombstone,adventureBossReceipt} from './seed-adventure-rules.js';
@@ -223,6 +223,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  }
  function paintRegionMarks(){const R=s.region,t=s.time;
   for(const ev of R.events){
+   const reward=adventureEventReward(s,ev);if(reward)label(reward.x,reward.y-1.7,'✦ 도전 보물 · 공격해서 열기');
    if(ev.type==='raid'){const active=ev.state==='active',done=ev.state==='done',trail=ev.variant==='flowertrail';
     if(trail&&ev.origin&&ev.trailEnd&&!done){const a=point(ev.origin.x,ev.origin.y),b=point(ev.trailEnd.x,ev.trailEnd.y);ctx.save();ctx.setLineDash([6,10]);ctx.strokeStyle='#c3f0d555';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();glow('warm',ev.x,ev.y-.3,1.1,.55);itemSprite('tonic',ev.x,ev.y-.15-Math.sin(t*3)*.06,1.05);}
     ctx.save();ctx.setLineDash([10,8]);circle(ev.x,ev.y,ev.r,done?'#9ec49a55':trail?'#b7f6d5bb':active?'#ff9b75cc':'#f0c56faa',3,false,1);ctx.restore();circle(ev.x,ev.y,ev.r,trail?'#8bd7b312':active?'#ff6b4a1c':'#f0c56f10',1,true,1);

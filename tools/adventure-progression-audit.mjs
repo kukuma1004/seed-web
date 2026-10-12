@@ -22,8 +22,9 @@ for(const shape of ['slash','throw'])for(const initial of ['recall','split','orb
    const best=s.doors.map((d,i)=>[rank(d)-(d.room==='elite'&&s.player.hp<s.player.maxHp*.7?5:0),i]).sort((a,b)=>b[0]-a[0])[0];chooseAdventureDoor(s,best[1]);continue;
   }
   const p=s.player,nearest=list=>list.sort((a,b)=>Math.hypot(a.x-p.x,a.y-p.y)-Math.hypot(b.x-p.x,b.y-p.y))[0];
-  const awake=nearest(s.enemies.filter(e=>e.hp>0&&!e.dormant&&Math.hypot(e.x-p.x,e.y-p.y)<7));const near=awake||nearest(s.enemies.filter(e=>e.hp>0))||s.props[0]||s.pickups[0];let tx=p.x,ty=p.y;
-  if(s.region){const goal=awake||adventureObjective(s)||s.region.gate;const d=Math.hypot(goal.x-p.x,goal.y-p.y),reach=awake&&s.weapon!=='slash'?4:1.4;if(d>reach){const route=d>3?adventureRoute(s,p,goal):goal;tx=route.x;ty=route.y;}}
+  const awake=nearest(s.enemies.filter(e=>e.hp>0&&!e.dormant&&Math.hypot(e.x-p.x,e.y-p.y)<7)),objective=s.region?adventureObjective(s):null;
+  const near=awake||(objective?.kind==='cache'?objective:null)||nearest(s.enemies.filter(e=>e.hp>0))||s.props[0]||s.pickups[0];let tx=p.x,ty=p.y;
+  if(s.region){const goal=awake||objective||s.region.gate;const d=Math.hypot(goal.x-p.x,goal.y-p.y),reach=awake&&s.weapon!=='slash'?4:goal.kind==='cache'?.8:1.4;if(d>reach){const route=d>3?adventureRoute(s,p,goal):goal;tx=route.x;ty=route.y;}}
   else{const a=s.time*.38,close=near&&(s.weapon==='slash'||!s.enemies.length)&&Math.hypot(near.x-p.x,near.y-p.y)>1.6;tx=close?near.x:12+Math.cos(a)*6.3;ty=close?near.y:8+Math.sin(a)*4.1;}
   const dx=tx-p.x,dy=ty-p.y;if(s.enemies.some(e=>e.tell>0&&Math.hypot(e.tx-p.x,e.ty-p.y)<2.2))dodgeAdventure(s,dx,dy);
   if(p.hp<p.maxHp*.4)usePotionAdventure(s);if(s.charge>=100&&near&&Math.hypot(near.x-p.x,near.y-p.y)<6)ultimateAdventure(s,combat);

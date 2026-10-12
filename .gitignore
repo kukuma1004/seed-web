@@ -269,3 +269,4 @@ art-refs/
 !tools/adventure-readability-test.mjs
 !tools/adventure-act-events-test.mjs
 !tools/adventure-act-event-view-test.mjs
+!tools/adventure-earned-events-audit.mjs

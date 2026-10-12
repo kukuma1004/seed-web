@@ -7,7 +7,7 @@
     "test:adventure-garden": "node tools/adventure-garden-layout-test.mjs && node tools/adventure-garden-host-test.mjs && node tools/adventure-garden-renderer-test.mjs && node tools/adventure-duel-guardians-test.mjs && node tools/adventure-wayfinding-test.mjs",
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
-    "test:adventure": "node tools/seed-adventure-test.mjs && node tools/seed-adventure-simulation.mjs && npm run test:adventure-garden && npm run test:adventure-growth",
+    "test:adventure": "node tools/seed-adventure-test.mjs && node tools/seed-adventure-simulation.mjs && npm run test:adventure-garden && npm run test:adventure-growth && npm run test:adventure-earned-events",
     "test:duel": "node tools/seed-duel-test.mjs --mechanics && node tools/seed-duel-story-test.mjs && node tools/duel-fusion-02-test.mjs && node tools/duel-fusion-02-art-test.mjs && node tools/duel-fusion-03-test.mjs && node tools/duel-fusion-03-art-test.mjs && node tools/duel-input-test.mjs && node tools/duel-fusion-04-test.mjs && node tools/duel-fusion-04-art-test.mjs && node tools/duel-fusion-05-test.mjs && node tools/duel-fusion-05-art-test.mjs && node tools/duel-solo-06-test.mjs && node tools/duel-solo-06-art-test.mjs && node tools/duel-solo-07-test.mjs && node tools/duel-solo-07-art-test.mjs && node tools/duel-solo-07-timing-test.mjs && node tools/duel-catalog-coverage.mjs && node tools/duel-ranking-rules.mjs",
     "test:identities": "node tools/identity-coverage-test.mjs && node tools/final-identity-art-test.mjs && node tools/twin-interactions-test.mjs && node tools/final-branch-combat-test.mjs && node tools/final-branch-distinctness-test.mjs && node tools/final-branch-balance-test.mjs",
     "test:web-telemetry": "node tools/web-telemetry-test.mjs",
@@ -36,7 +36,8 @@
     "test:journey-purpose": "node tools/act3-purpose-test.mjs && node tools/act4-purpose-test.mjs && node tools/journey-purpose-test.mjs && node tools/journey-purpose-host-test.mjs",
     "test:journey-polish": "node tools/journey-short-round-test.mjs && node tools/journey-quick-prep-test.mjs && node tools/journey-contextual-view-test.mjs && node tools/audio-test.mjs && node tools/audio-bank-test.mjs && node tools/offline-policy-test.mjs && node tools/main-frame-ownership-test.mjs",
     "test:av-polish": "node tools/audio-palette-test.mjs && node tools/canvas-vfx-readability-test.mjs && node tools/crosswind-world-presentation-test.mjs && node tools/siege-botanical-art-test.mjs",
-    "test:latest-ui": "node tools/journey-floor-refresh-test.mjs && node tools/duel-feel-test.mjs && node tools/duel-relay-test.mjs && node tools/duel-touch-cancel-test.mjs && node tools/expedition-companion-identity-test.mjs && node tools/crosswind-undertow-test.mjs && node tools/duel-practice-preparation-test.mjs && node tools/duel-input-test.mjs && node tools/duel-asset-cache-test.mjs"
+    "test:latest-ui": "node tools/journey-floor-refresh-test.mjs && node tools/duel-feel-test.mjs && node tools/duel-relay-test.mjs && node tools/duel-touch-cancel-test.mjs && node tools/expedition-companion-identity-test.mjs && node tools/crosswind-undertow-test.mjs && node tools/duel-practice-preparation-test.mjs && node tools/duel-input-test.mjs && node tools/duel-asset-cache-test.mjs",
+    "test:adventure-earned-events": "node tools/adventure-earned-events-audit.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.2",

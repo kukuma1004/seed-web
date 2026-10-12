@@ -200,7 +200,7 @@ export function adventureRoute(s,from,to){
 }
 // 지역 이벤트. 습격지: 원 안에 서 있는 동안 시간이 흐르고, 사방에서 적이 몰려온다. 끝까지 버티면 보물 상자.
 // 수호 제단: 가까이 가면 문에서 적이 줄지어 나와 제단으로 걸어간다. 씨앗이 움직이는 포탑이 되어 막는다.
-function eventLoot(s,ev,big=false){if(ev.lootGiven)return;ev.lootGiven=true;s.props.push({id:++s.serial,kind:'cache',x:ev.x,y:ev.y,hp:1,maxHp:1,flash:0,big});event(s,'evolve');fx(s,'buff',ev.x,ev.y,{buff:'focus',radius:2,life:.8,max:.8});}
+function eventLoot(s,ev,big=false){if(ev.lootGiven)return;ev.lootGiven=true;ev.cacheId=++s.serial;s.props.push({id:ev.cacheId,kind:'cache',x:ev.x,y:ev.y,hp:1,maxHp:1,flash:0,big});event(s,'evolve');fx(s,'buff',ev.x,ev.y,{buff:'focus',radius:2,life:.8,max:.8});}
 function updateEvents(s,dt){
  const R=s.region,p=s.player,info=adventureRoomInfo(s.room);if(!R)return;
  for(const ev of R.events){
