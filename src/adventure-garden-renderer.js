@@ -16,9 +16,9 @@ export function createAdventureGardenPainter(ctx,assets,shapeOf){
    for(const old of patterns.keys())if(old.startsWith(cell+':'))patterns.delete(old);
    patterns.set(key,p);
   }
-  p?.setTransform?.(new DOMMatrix([1,0,0,1,Math.round(v.ox*v.dpr),Math.round(v.oy*v.dpr)]));return p;
+  p?.setTransform?.(new DOMMatrix([1,0,0,v.depthScale??1,Math.round(v.ox*v.dpr),Math.round(v.oy*v.dpr)]));return p;
  }
- function worldShape(shape,v){const out=new Path2D();out.addPath(shape,new DOMMatrix([v.scale*v.dpr,0,0,v.scale*v.dpr,Math.round(v.ox*v.dpr),Math.round(v.oy*v.dpr)]));return out;}
+ function worldShape(shape,v){const out=new Path2D();out.addPath(shape,new DOMMatrix([v.scale*v.dpr,0,0,v.scale*v.dpr*(v.depthScale??1),Math.round(v.ox*v.dpr),Math.round(v.oy*v.dpr)]));return out;}
  function promenades(R){if(R._gardenPaths)return R._gardenPaths;const lines=new Path2D(),courts=new Path2D();
   for(const q of R.paths){const dx=q.bx-q.ax,dy=q.by-q.ay,l=Math.hypot(dx,dy)||1;lines.moveTo(q.ax,q.ay);lines.quadraticCurveTo((q.ax+q.bx)/2-dy/l*.45,(q.ay+q.by)/2+dx/l*.45,q.bx,q.by);}
   for(const n of R.nodes)if(['start','gate','raid','altar'].includes(n.role)){courts.moveTo(n.x+2.5,n.y);courts.arc(n.x,n.y,2.5,0,Math.PI*2);}
@@ -43,7 +43,7 @@ export function createAdventureGardenPainter(ctx,assets,shapeOf){
   ctx.restore();
  }
  function landmarks(R,v){const im=assets.gardenDecor,meta=GARDEN_OBJECT_ART[SETS[v.act]];if(!im?.complete||!im.naturalWidth||!meta)return;
-  const paint=(item,x,y,size,alpha=1)=>{if(!item||Math.abs(x-v.playerX)>18||Math.abs(y-v.playerY)>13)return;const [, ,sx,sy,sw,sh]=item,z=size*v.scale,h=z*sh/sw;ctx.globalAlpha=alpha;ctx.drawImage(im,sx,sy,sw,sh,v.ox+x*v.scale-z/2,v.oy+y*v.scale-h*.88,z,h);};
+  const paint=(item,x,y,size,alpha=1)=>{if(!item||Math.abs(x-v.playerX)>18||Math.abs(y-v.playerY)>13)return;const [, ,sx,sy,sw,sh]=item,z=size*v.scale,h=z*sh/sw;ctx.globalAlpha=alpha;ctx.drawImage(im,sx,sy,sw,sh,v.ox+x*v.scale-z/2,v.oy+y*v.scale*(v.depthScale??1)-h*.88,z,h);};
   const trees=v.act===0?[0,2,9]:v.act===1?[0,1,3,4]:[0,1,3,4],flowers=v.act===0?[3,8,11,18]:v.act===1?[7,11,12,15]:[6,7,9,10];
   for(const t of R.trees||[])paint(meta.items[trees[t.cell%trees.length]],t.x,t.y,t.size,.9);
   for(const d of R.decor||[])paint(meta.items[flowers[d.cell%flowers.length]],d.x,d.y,d.size*.85,.82);

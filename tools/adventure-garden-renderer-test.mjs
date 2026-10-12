@@ -1,9 +1,9 @@
 import assert from 'node:assert/strict';
 import {createAdventureGardenPainter} from '../src/adventure-garden-renderer.js';
 // CPU Canvas spies test readiness/lifetime contracts; real pixels are checked in-browser.
-let tiles=0, draws=0;
+let tiles=0, draws=0,matrices=[];
 globalThis.Path2D=class {addPath(){} moveTo(){} quadraticCurveTo(){} arc(){} ellipse(){} lineTo(){} closePath(){}};
-globalThis.DOMMatrix=class {constructor(v){this.values=v;}};
+globalThis.DOMMatrix=class {constructor(v){this.values=v;matrices.push(v);}};
 const noop=()=>{};
 globalThis.document={createElement(type){assert.equal(type,'canvas');tiles++;return {getContext:()=>({drawImage(){draws++;}})};}};
 const ctx=new Proxy({createPattern:()=>({setTransform:noop}),drawImage(){draws++;}}, {get:(o,k)=>o[k]??noop});
@@ -24,5 +24,7 @@ p.region({...R,landmarks:[{kind:'pond',x:25,y:19,size:2.2}]},{...v,act:1});
 assert.equal(p.patternCount(),3);p.region(R,{...v,act:2});
 assert.equal(p.patternCount(),2,'act transition releases previous patterns');
 assets.arena.complete=true;const before=draws;p.arena(v);assert.equal(draws,before+1,'ready court plate is one image draw');
+matrices=[];p.region(R,v);assert.ok(matrices.some(m=>m[0]===50&&m[3]===50),'default Adventure ground remains uncompressed');
+const beforeTilt=tiles;matrices=[];p.region(R,{...v,depthScale:.68});assert.ok(matrices.some(m=>m[0]===50&&m[3]===34),'opt-in oblique ground follows sprite projection');assert.equal(tiles,beforeTilt,'tilting cached floor does not allocate another texture surface');
 p.dispose();assert.equal(p.patternCount(),0);
 console.log('PASS Adventure floor decode race, bounded pattern lifetime and arena fallback/plate');
