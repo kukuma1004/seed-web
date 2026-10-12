@@ -267,3 +267,5 @@ art-refs/
 !tools/adventure-contact-motion-test.mjs
 !tools/adventure-projectile-sight-test.mjs
 !tools/adventure-readability-test.mjs
+!tools/adventure-act-events-test.mjs
+!tools/adventure-act-event-view-test.mjs

@@ -1,7 +1,7 @@
 import {adventureGrowthPreview,adventureGrowthPath} from './adventure-growth-preview.js';
 import {adventureActorOpacity} from './adventure-readability.js';
 import {adventureProjectileSight} from './adventure-projectile-sight.js';
-import {adventureObjective,adventureBossAction,adventureDoorScene} from './adventure-wayfinding.js';
+import {adventureObjective,adventureBossAction,adventureDoorScene,adventureEventName} from './adventure-wayfinding.js';
 import {createAdventureGardenPainter} from './adventure-garden-renderer.js';
 import {getAdventureGuardian,adventureGuardianFrame,adventureGuardianMotionFrame} from './adventure-duel-guardians.js';
 import {ADVENTURE_LAWS as LAWS,ADVENTURE_FORMS,ROOMS,ROOMS_PER_ACT,REWARDS,ROOM_TYPES,BUFFS,SHOP_WARES,ADVENTURE,ADVENTURE_BOSS_HEAL,adventureShopStatus,ADVENTURE_BOSSES,REGION,adventureRoomInfo,adventureRoute,createAdventure,startAdventure,stepAdventure,chooseAdventure,adventureOffers,dodgeAdventure,ultimateAdventure,chooseAttackShape,cycleAdventureAttack,chooseAdventureDoor,buyAdventure,leaveAdventureShop,usePotionAdventure,MOTIONS,FINISHERS,adventureEvolutions,adventureCheckpoint,restoreAdventure,adventureCredit,ADVENTURE_SAVE_KEY,ADVENTURE_CLOUD_READY,adventureTombstone,adventureBossReceipt} from './seed-adventure-rules.js';
@@ -223,14 +223,17 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  }
  function paintRegionMarks(){const R=s.region,t=s.time;
   for(const ev of R.events){
-   if(ev.type==='raid'){const active=ev.state==='active',done=ev.state==='done';ctx.save();ctx.setLineDash([10,8]);circle(ev.x,ev.y,ev.r,done?'#9ec49a55':active?'#ff9b75cc':'#f0c56faa',3,false,1);ctx.restore();circle(ev.x,ev.y,ev.r,active?'#ff6b4a1c':'#f0c56f10',1,true,1);
+   if(ev.type==='raid'){const active=ev.state==='active',done=ev.state==='done',trail=ev.variant==='flowertrail';
+    if(trail&&ev.origin&&ev.trailEnd&&!done){const a=point(ev.origin.x,ev.origin.y),b=point(ev.trailEnd.x,ev.trailEnd.y);ctx.save();ctx.setLineDash([6,10]);ctx.strokeStyle='#c3f0d555';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();glow('warm',ev.x,ev.y-.3,1.1,.55);itemSprite('tonic',ev.x,ev.y-.15-Math.sin(t*3)*.06,1.05);}
+    ctx.save();ctx.setLineDash([10,8]);circle(ev.x,ev.y,ev.r,done?'#9ec49a55':trail?'#b7f6d5bb':active?'#ff9b75cc':'#f0c56faa',3,false,1);ctx.restore();circle(ev.x,ev.y,ev.r,trail?'#8bd7b312':active?'#ff6b4a1c':'#f0c56f10',1,true,1);
     if(active){const c=point(ev.x,ev.y);ctx.strokeStyle='#ffd36b';ctx.lineWidth=6;ctx.beginPath();ctx.ellipse(c.x,c.y,ev.r*scale,ev.r*scale*.72,0,-Math.PI/2,-Math.PI/2+Math.PI*2*Math.min(1,ev.time/ev.duration));ctx.stroke();}
-    if(!done)label(ev.x,ev.y-ev.r-.4,active?`습격지 · ${Math.max(0,Math.ceil(ev.duration-ev.time))}초`:'⚔ 습격지 · 원 안에서 버티기');}
+    if(!done)label(ev.x,ev.y-ev.r-.4,active?`${adventureEventName(ev)} · ${Math.max(0,Math.ceil(ev.duration-ev.time))}초`:trail?'✦ 꽃등 따라가기 · 빛 안에서 이동':'⚔ 습격지 · 원 안에서 버티기');}
    else if(ev.type==='guard'){const active=ev.state==='active',a=point(ev.portal.x,ev.portal.y),b=point(ev.x,ev.y);if(ev.state!=='done'&&ev.state!=='failed'){ctx.save();ctx.setLineDash([12,10]);ctx.lineDashOffset=-t*40;ctx.strokeStyle=active?'#ff9b75aa':'#e8d9aa55';ctx.lineWidth=4;ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}
     if(assets.portal?.naturalWidth&&ev.state!=='done'){const z=2.4*scale;ctx.save();ctx.globalAlpha=active?1:.7;ctx.translate(a.x,a.y-z*.45);ctx.rotate(Math.sin(t)*.05);ctx.drawImage(assets.portal,-z/2,-z/2,z,z);ctx.restore();}
     const plant=assets.plants;if(plant?.naturalWidth){const cw=plant.naturalWidth/4,ch=plant.naturalHeight/3,cell=ev.state==='failed'?0:5,z=2.3*scale;glow('warm',ev.x,ev.y-.6,2.2,ev.state==='failed'?.2:.7);ctx.drawImage(plant,cell%4*cw,Math.floor(cell/4)*ch,cw,ch,b.x-z/2,b.y-z*.9,z,z);}
     if(active||ev.hp<ev.maxHp){const w=2.6*scale;ctx.fillStyle='#101414';ctx.fillRect(b.x-w/2,b.y-scale*2.4,w,6);ctx.fillStyle=ev.hp>40?'#9ee08a':'#ef8b7c';ctx.fillRect(b.x-w/2,b.y-scale*2.4,w*ev.hp/ev.maxHp,6);}
-    if(ev.state==='idle')label(ev.x,ev.y-2.8,'✦ 수호 제단 · 다가가면 시작');else if(active)label(ev.x,ev.y-2.8,`수호 제단 · ${Math.min(ev.waves,ev.wave+1)}/${ev.waves}번째 무리`);}
+    if(ev.variant==='moonaltar'&&ev.nextPortal&&active&&ev.wave<ev.waves&&(ev.wave<ev.waves-1||ev.spawned===0)){const next=ev.spawned===0&&ev.wave>0?ev.portals[ev.wave%ev.portals.length]:ev.nextPortal,q=point(next.x,next.y);ctx.save();ctx.strokeStyle='#c9deff99';ctx.lineWidth=2;ctx.beginPath();ctx.ellipse(q.x,q.y,scale*.7,scale*.3,0,0,Math.PI*2);ctx.stroke();ctx.restore();label(next.x,next.y-1.1,'다음 무리');}
+    if(ev.state==='idle')label(ev.x,ev.y-2.8,ev.variant==='moonaltar'?'✦ 달꽃 제단 · 세 방향 침입 막기':'✦ 수호 제단 · 다가가면 시작');else if(active)label(ev.x,ev.y-2.8,`${adventureEventName(ev)} · ${Math.min(ev.waves,ev.wave+1)}/${ev.waves}번째 무리`);}
   }
   const g=R.gate,q=point(g.x,g.y),z=3.2*scale;glow(g.open?'spell':'moon',g.x,g.y-.8,g.open?3:2,g.open?.9+Math.sin(t*3)*.1:.35);
   if(assets.portal?.naturalWidth){ctx.save();ctx.globalAlpha=g.open?1:.45;ctx.translate(q.x,q.y-z*.45);ctx.rotate(g.open?t*.4:0);ctx.drawImage(assets.portal,-z/2,-z/2,z,z);ctx.restore();}

@@ -141,6 +141,9 @@ function buildRegion(s,info){
  const altarIndex=nodes.findIndex(n=>n.role==='altar'),altar=nodes[altarIndex],portalEdge=edges.find(e=>e.includes(altarIndex)),portalNode=nodes[portalEdge[0]===altarIndex?portalEdge[1]:portalEdge[0]];
  const raid=nodes.find(n=>n.role==='raid');
  const events=[{type:'raid',x:raid.x,y:raid.y,r:3.4,state:'idle',time:0,duration:32+act*4,spawnAt:0},{type:'guard',x:altar.x,y:altar.y,portal:{x:portalNode.x,y:portalNode.y},hp:100,maxHp:100,state:'idle',wave:0,spawned:0,next:0,waves:3,perWave:4+act}];
+ // Event variants derive only from authored links; no RNG draw or extra pack.
+ if(act===1){const raidIndex=nodes.indexOf(raid),end=edges.filter(e=>e.includes(raidIndex)).map(e=>nodes[e[0]===raidIndex?e[1]:e[0]]).sort((a,b)=>dist(raid,a)-dist(raid,b))[0];Object.assign(events[0],{variant:'flowertrail',duration:16,origin:{x:raid.x,y:raid.y},trailEnd:{x:end.x,y:end.y}});}
+ if(act===2){const portals=edges.filter(e=>e.includes(altarIndex)).map(e=>nodes[e[0]===altarIndex?e[1]:e[0]]).map(n=>({x:n.x,y:n.y}));Object.assign(events[1],{variant:'moonaltar',portals,nextPortal:portals[1%portals.length]});}
  const paths=edges.map(([a,b])=>({ax:nodes[a].x,ay:nodes[a].y,bx:nodes[b].x,by:nodes[b].y}));
  // 공터 안의 엄폐물(바위·나무)은 가운데를 비우고 가장자리에만.
  const obstacles=[];for(const n of nodes){if(n.role==='start'||n.role==='raid')continue;const k=n.role==='gate'?1:2+Math.floor(r()*2);for(let t=0;t<k*6&&obstacles.filter(o=>o.node===n).length<k;t++){const a=r()*Math.PI*2,dd=n.r*(.55+r()*.3),x=n.x+Math.cos(a)*dd,y=n.y+Math.sin(a)*dd,rad=.8+r()*.6;if(paths.some(q=>segD(x,y,q)<1.1+rad+.4))continue;if(Math.hypot(x-(gateNode.x+1.8),y-gateNode.y)<rad+2.6)continue;if(obstacles.some(o=>Math.hypot(o.x-x,o.y-y)<o.r+rad+1.4))continue;obstacles.push({x,y,r:rad,cell:Math.floor(r()*4),node:n});}}
@@ -197,22 +200,24 @@ export function adventureRoute(s,from,to){
 }
 // 지역 이벤트. 습격지: 원 안에 서 있는 동안 시간이 흐르고, 사방에서 적이 몰려온다. 끝까지 버티면 보물 상자.
 // 수호 제단: 가까이 가면 문에서 적이 줄지어 나와 제단으로 걸어간다. 씨앗이 움직이는 포탑이 되어 막는다.
-function eventLoot(s,ev,big=false){s.props.push({id:++s.serial,kind:'cache',x:ev.x,y:ev.y,hp:1,maxHp:1,flash:0,big});event(s,'evolve');fx(s,'buff',ev.x,ev.y,{buff:'focus',radius:2,life:.8,max:.8});}
+function eventLoot(s,ev,big=false){if(ev.lootGiven)return;ev.lootGiven=true;s.props.push({id:++s.serial,kind:'cache',x:ev.x,y:ev.y,hp:1,maxHp:1,flash:0,big});event(s,'evolve');fx(s,'buff',ev.x,ev.y,{buff:'focus',radius:2,life:.8,max:.8});}
 function updateEvents(s,dt){
  const R=s.region,p=s.player,info=adventureRoomInfo(s.room);if(!R)return;
  for(const ev of R.events){
   if(ev.type==='raid'){
    const inside=Math.hypot(p.x-ev.x,p.y-ev.y)<ev.r;
-   if(ev.state==='idle'&&inside){ev.state='active';R.message='습격지 · 원 안에서 버티세요';event(s,'bossWarning');}
+   if(ev.state==='idle'&&inside){ev.state='active';R.message=ev.variant==='flowertrail'?'꽃물결 길 · 움직이는 꽃빛을 따라가세요':'습격지 · 원 안에서 버티세요';event(s,'bossWarning');}
    if(ev.state!=='active')continue;
-   if(inside)ev.time+=dt;ev.spawnAt-=dt;
+   if(inside)ev.time+=dt;
+   if(ev.variant==='flowertrail'){const t=clamp(ev.time/ev.duration,0,1);ev.x=ev.origin.x+(ev.trailEnd.x-ev.origin.x)*t;ev.y=ev.origin.y+(ev.trailEnd.y-ev.origin.y)*t;}
+   ev.spawnAt-=dt;
    if(ev.spawnAt<=0){ev.spawnAt=2.3;const n=2+(info.act>0?1:0);for(let i=0;i<n&&s.enemies.length<ADVENTURE.maxEnemies;i++){const a=random(s)*Math.PI*2;const node=R.nodes.find(n=>n.role==='raid')||{r:6},rr=Math.max(4,node.r-.6);spawnEnemy(s,random(s)<.25?'ranged':random(s)<.5?'fast':'melee',ev.x+Math.cos(a)*rr,ev.y+Math.sin(a)*rr,{raid:true});}}
-   if(ev.time>=ev.duration){ev.state='done';R.message='습격지를 지켜 냈어요 · 보물 상자';for(const e of s.enemies)if(e.raid)e.hp=Math.min(e.hp,1);eventLoot(s,ev);}
+   if(ev.time>=ev.duration){ev.state='done';R.message=ev.variant==='flowertrail'?'꽃물결 길을 이었어요 · 보물 상자':'습격지를 지켜 냈어요 · 보물 상자';for(const e of s.enemies)if(e.raid)e.hp=Math.min(e.hp,1);eventLoot(s,ev);}
   }else if(ev.type==='guard'){
    if(ev.state==='idle'&&Math.hypot(p.x-ev.x,p.y-ev.y)<6){ev.state='active';ev.next=1.2;R.message='수호 제단 · 줄지어 오는 적을 막으세요';event(s,'bossWarning');}
    if(ev.state!=='active')continue;
    ev.next-=dt;
-   if(ev.next<=0&&ev.wave<ev.waves){if(ev.spawned<ev.perWave){ev.spawned++;ev.next=.75;spawnEnemy(s,ev.spawned%3===0?'tank':'melee',ev.portal.x,ev.portal.y,{march:true,target:{x:ev.x,y:ev.y}});fx(s,'enemyRing',ev.portal.x,ev.portal.y,{radius:1});}else{ev.wave++;ev.spawned=0;ev.next=ev.wave<ev.waves?6:0;}}
+   if(ev.next<=0&&ev.wave<ev.waves){if(ev.spawned<ev.perWave){if(s.enemies.length<ADVENTURE.maxEnemies){if(ev.variant==='moonaltar'&&ev.spawned===0){ev.portal=ev.portals[ev.wave%ev.portals.length];ev.nextPortal=ev.portals[(ev.wave+1)%ev.portals.length];}ev.spawned++;ev.next=.75;spawnEnemy(s,ev.spawned%3===0?'tank':'melee',ev.portal.x,ev.portal.y,{march:true,target:{x:ev.x,y:ev.y}});fx(s,'enemyRing',ev.portal.x,ev.portal.y,{radius:1});}}else{ev.wave++;ev.spawned=0;ev.next=ev.wave<ev.waves?(ev.variant==='moonaltar'?2:6):0;}}
    const marching=s.enemies.some(e=>e.march&&e.hp>0);
    if(ev.hp<=0){ev.state='failed';R.message='제단이 무너졌어요';for(const e of s.enemies)if(e.march){e.march=false;e.dormant=false;}}
    else if(ev.wave>=ev.waves&&!marching){ev.state='done';R.message='제단을 지켜 냈어요 · 보물 상자';eventLoot(s,ev,true);}
@@ -510,7 +515,7 @@ export function stepAdventure(s,dt,input={},combat=null){
   // 자는 무리: 가까이 오면 무리 전체가 깨어난다. 멀리 있는 자는 적은 계산하지 않는다.
   if(e.dormant){if(dist(e,p)<8.5)wakePack(s,e);else continue;}
   // 수호 제단으로 행진하는 적: 씨앗은 보지 않고 제단으로만 간다. 닿으면 제단이 깎이고 사라진다.
-  if(e.march){if(e.stun>0)continue;const t=e.target,v=direction(t.x-e.x,t.y-e.y);e.x+=v.x*e.speed*.85*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*.85*(e.slow>0?.5:1)*dt;if(Math.hypot(t.x-e.x,t.y-e.y)<1.2){const ev=s.region?.events.find(ev=>ev.type==='guard');if(ev){ev.hp=Math.max(0,ev.hp-Math.round(10*e.power));fx(s,'hurt',t.x,t.y,{radius:1.4});event(s,'hurt');}e.hp=0;e.noDrop=true;}continue;}
+  if(e.march){if(e.stun>0)continue;const t=e.target,way=s.region&&dist(e,t)>1.2?adventureRoute(s,e,t):t,v=direction(way.x-e.x,way.y-e.y);e.x+=v.x*e.speed*.85*(e.slow>0?.5:1)*dt;e.y+=v.y*e.speed*.85*(e.slow>0?.5:1)*dt;blockCircle(s,e,e.r);keepOnGround(s,e,e.r*.8);if(Math.hypot(t.x-e.x,t.y-e.y)<1.2){const ev=s.region?.events.find(ev=>ev.type==='guard');if(ev){ev.hp=Math.max(0,ev.hp-Math.round(10*e.power));fx(s,'hurt',t.x,t.y,{radius:1.4});event(s,'hurt');}e.hp=0;e.noDrop=true;}continue;}
   // 2026-09-28 사용자: "적 체력만 올려서는 안 된다 · 속도와 공격 패턴을 바꿔야" — 역할마다 다른 공격.
   if(e.dashing>0){e.dashing-=dt;const step=16*dt;e.x=clamp(e.x+e.dx*step,A.minX,A.maxX);e.y=clamp(e.y+e.dy*step,A.minY,A.maxY);if(!e.dashHit&&dist(e,p)<.8){e.dashHit=true;hurt(s,Math.round(20*e.power));}keepOnGround(s,e,e.r*.8);continue;}
   if(e.tell>0){e.tell-=dt;if(e.tell<=0)enemyStrike(s,e,p);continue;}
