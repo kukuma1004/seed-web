@@ -81,3 +81,12 @@ task=ctx.refreshSurvivalAccount();ctx.mode='playing';complete({kind:'synced',pul
 const rules=JSON.parse(readFileSync(new URL('../docs/firebase-rules-with-seed.json',import.meta.url),'utf8')).rules;
 assert.equal(rules['.read'],false);assert.equal(rules['.write'],false);const privateRule=rules.seedSurvivalSaves.$uid;assert(privateRule['.read'].includes('auth.uid == $uid'));assert(privateRule['.write'].includes('newData.exists()'));assert.equal(privateRule.$other['.validate'],false);
 console.log('Survival cloud: two-device round trip, choice/items, offline, conflict choices, death, concurrent writes, account change and guest isolation passed.');
+
+const rampPc=device(),rampPhone=device();remote=null;rev=0;mode='ok';
+const rampSave=snapshot('entry-ramp');rampSave.session.time=915;rampSave.session.legStartedAt=900;rampSave.progress.elapsed=915;rampSave.progress.levels.frost=214;
+Object.assign(rampSave.session,{buildLevel:214,pressureBuildLevel:214,pressureLegStartedAt:900,pressureFromBuildLevel:174,pressureFromLegStartedAt:900});
+assert(rampPc.store.write(rampSave,{fresh:true}).ok);assert.equal((await rampPc.sync.flush()).kind,'synced');
+assert.equal((await rampPhone.sync.sync({allowPull:true})).pulled,true);
+for(const key of ['time','legStartedAt','pressureBuildLevel','pressureLegStartedAt','pressureFromBuildLevel','pressureFromLegStartedAt'])assert.equal(rampPhone.store.read().session[key],rampSave.session[key],'conditional cloud round-trip retains entry clock and both marked anchors');
+rampPc.sync.stop();rampPhone.sync.stop();
+console.log('Survival easing fields: actual two-device conditional cloud adapter preserves mid-entry time and both independently marked anchors. Mock network, not physical devices/Firebase.');

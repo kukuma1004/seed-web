@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import {spawnSync} from 'node:child_process';
+import {fileURLToPath} from 'node:url';
+import {duelCatalogCoverage,duelCatalogReleaseReport,DUEL_CATALOG_COUNT_CONTRACT} from './duel-catalog-coverage.mjs';
+import {DUEL_RELEASE_CHARACTERS,DUEL_RELEASE_ORDER} from '../src/seed-duel-rules.js';
+import {DUEL_RELEASE_STORY_STAGES} from '../src/seed-duel-story.js';
+
+const legacy=duelCatalogCoverage(),report=duelCatalogReleaseReport();
+assert.equal(legacy.roster,36,'existing default fixture checker remains compatible');
+assert.equal(legacy.connected,23);
+assert.equal(report.scope,'release-runtime');
+assert.equal(report.legacy.scope,'legacy-export');
+assert.equal(report.roster,DUEL_RELEASE_ORDER.length);
+assert.equal(report.roster,DUEL_CATALOG_COUNT_CONTRACT.publicRoster);
+assert.equal(report.connected,162);assert.equal(report.unconnected,0);
+assert.equal(report.independent.length,13);
+assert.deepEqual(report.legacy.rows,legacy.rows);
+assert.equal(report.fullyVerified,null);assert.equal(report.legacy.fullyVerified,null);
+assert(report.rows.every(r=>r.status==='connected-candidate'),'runtime mapping is not a completion certificate');
+
+const id=DUEL_RELEASE_ORDER.find(id=>DUEL_RELEASE_CHARACTERS[id].comboId);
+const duplicate={...DUEL_RELEASE_CHARACTERS,duplicate:{...DUEL_RELEASE_CHARACTERS[id],id:'duplicate'}};
+assert.throws(()=>duelCatalogCoverage(duplicate,[...DUEL_RELEASE_ORDER,'duplicate'],DUEL_RELEASE_STORY_STAGES),/duplicate fighter mappings/);
+assert.throws(()=>duelCatalogCoverage(DUEL_RELEASE_CHARACTERS,DUEL_RELEASE_ORDER,DUEL_RELEASE_STORY_STAGES.filter(s=>s.enemy!==id)),/missing its story encounter/);
+const cli=spawnSync(process.execPath,[fileURLToPath(new URL('./duel-catalog-coverage.mjs',import.meta.url))],{encoding:'utf8'});
+assert.equal(cli.status,0,cli.stderr);
+const output=JSON.parse(cli.stdout);
+assert.equal(output.scope,'release-runtime');assert.equal(output.roster,175);assert.equal(output.connected,162);
+assert.equal(output.legacy.scope,'legacy-export');assert.equal(output.legacy.roster,36);assert.equal(output.legacy.connected,23);
+assert.equal(output.fullyVerified,null);assert.equal(output.legacy.fullyVerified,null);
+assert.equal(output.rows,undefined);assert.equal(output.legacy.rows,undefined,'CLI summary does not flood logs with catalogue rows');
+console.log('Duel catalogue report PASS: current release175/runtime162 and legacy36/23 separately scoped; verification unknown, legacy API compatible, duplicate/story-gap controls. Source linkage only.');

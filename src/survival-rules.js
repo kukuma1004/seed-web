@@ -3,7 +3,7 @@
 import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
 import {EXPANSION_OBJECTIVES,CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from './expansion-objective.js';
 export const SURVIVAL=Object.freeze({
- duration:180,supplyInterval:60,
+ duration:180,supplyInterval:60,entryPressureSeconds:30,
  arena:Object.freeze({shape:'rect',halfWidth:24,halfDepth:20,start:Object.freeze({x:0,z:0})}),
  maxEnemies:300,maxBossAdds:60,spawnBatch:6,minSpawnDistance:10,arrivalDistance:11,spawnInset:1.2,killChargeScale:.18,
  bossSpawnInterval:2.4,reliefDuration:6,recordKey:'seed-survival-record-v3'
@@ -18,6 +18,7 @@ export const SURVIVAL_SLIDE=Object.freeze({speed:18,cooldown:1.8});
 
 const bounded=(value,limit,fallback=0)=>Number.isFinite(value)?Math.max(0,Math.min(limit,value)):fallback;
 const count=(value,limit=1000000)=>Math.floor(bounded(value,limit));
+const buildHealth=level=>Math.min(24,Math.pow(1+Math.max(0,count(level)-30)/60,1.5));
 
 export const survivalActCount=session=>session?.actCount===5?5:3;
 export function createSurvivalSession(seed=1,{actCount=3,objective=null}={}){
@@ -34,12 +35,35 @@ export const SURVIVAL_ACTS=Object.freeze([
 ]);
 export const survivalAct=session=>SURVIVAL_ACTS[count(session?.act,survivalActCount(session)-1)];
 export const survivalActTime=session=>Math.max(0,(session?.time||0)-(session?.legStartedAt||0));
+// Set challenge at the entrance, not after every earned upgrade. The timestamp
+// also detects a leg advanced by an older client that preserves unknown fields.
+export function lockSurvivalBuildPressure(session,level,previousLevel){
+ session.buildLevel=count(level);
+ if(!Number.isInteger(session.pressureBuildLevel)||session.pressureBuildLevel<0||session.pressureBuildLevel>1000000||session.pressureLegStartedAt!==session.legStartedAt){
+  session.pressureBuildLevel=session.buildLevel;session.pressureLegStartedAt=session.legStartedAt;
+  // Only an explicit new-leg transition creates easing. A stale old-client
+  // stamp or first/legacy entrance must not invent a fresh grace period.
+  delete session.pressureFromBuildLevel;delete session.pressureFromLegStartedAt;
+  if(Number.isInteger(previousLevel)&&previousLevel>=0&&previousLevel<session.pressureBuildLevel&&buildHealth(previousLevel)<buildHealth(session.pressureBuildLevel)){session.pressureFromBuildLevel=previousLevel;session.pressureFromLegStartedAt=session.legStartedAt;}
+ }
+ // Older clients may update the known pressure pair yet preserve unknown ramp
+ // fields. Their own leg marker must agree before the from-value is usable.
+ if(session.pressureFromBuildLevel!==undefined||session.pressureFromLegStartedAt!==undefined){
+  if(session.pressureFromLegStartedAt!==session.legStartedAt||!Number.isInteger(session.pressureFromBuildLevel)||session.pressureFromBuildLevel<0||session.pressureFromBuildLevel>session.pressureBuildLevel){delete session.pressureFromBuildLevel;delete session.pressureFromLegStartedAt;}
+ }
+}
 export function survivalScaling(session){
  const act=count(session?.act,survivalActCount(session)-1),lap=count(session?.lap,1000);
- // First 30 levels are unscaled. Health follows held levels, never measured DPS
- // or kills. Boss growth is gentler; speed/damage retain circuit-only bounds.
- const excess=Math.max(0,count(session?.buildLevel)-30);
- const buildHp=Math.min(24,Math.pow(1+excess/60,1.5)),bossBuildHp=Math.min(4,1+excess*.006);
+ // First 30 entrance levels are unscaled. Legacy/unanchored sessions fall back
+ // to held levels; live callers anchor before spawning. Never measure DPS/kills.
+ const anchored=Number.isInteger(session?.pressureBuildLevel)&&session.pressureBuildLevel>=0&&session.pressureBuildLevel<=1000000&&session.pressureLegStartedAt===session.legStartedAt;
+ const excess=Math.max(0,count(anchored?session.pressureBuildLevel:session?.buildLevel)-30);
+ let buildHp=buildHealth(anchored?session.pressureBuildLevel:session?.buildLevel);
+ const bossBuildHp=Math.min(4,1+excess*.006),from=session?.pressureFromBuildLevel;
+ if(anchored&&session.pressureFromLegStartedAt===session.legStartedAt&&Number.isInteger(from)&&from>=0&&from<session.pressureBuildLevel&&survivalActTime(session)<SURVIVAL.entryPressureSeconds){
+  const fromHp=buildHealth(from),fraction=survivalActTime(session)/SURVIVAL.entryPressureSeconds;
+  buildHp=fromHp+(buildHp-fromHp)*fraction*fraction*(3-2*fraction);
+ }
  return {hp:Math.min(60,(1+act*.18)*Math.pow(1.9,Math.min(lap,10)))*buildHp,speed:Math.min(1.3,1+act*.025+lap*.065),damage:Math.min(2,1+act*.08+lap*.18),bossHp:Math.min(12,(1+act*.12)*Math.pow(1.35,Math.min(lap,20)))*bossBuildHp,tempo:Math.min(1.4,1+lap*.05),projectile:Math.min(1.3,1+lap*.04)};
 }
 // An act clear is a transition, never a restart: the caller retains the build,
@@ -49,6 +73,7 @@ export function advanceSurvivalAct(session){
  session.act=(count(session.act,survivalActCount(session)-1)+1)%survivalActCount(session);
  if(session.act===0){session.lap=count(session.lap)+1;session.lapStartedAt=session.time;}
  session.legStartedAt=session.time;session.bossSpawned=false;session.won=false;
+ delete session.pressureBuildLevel;delete session.pressureLegStartedAt;delete session.pressureFromBuildLevel;delete session.pressureFromLegStartedAt;
  session.transitionTime=0;session.spawnTimer=2;session.supplyInterval=SURVIVAL.supplyInterval;session.nextSupply=session.time+SURVIVAL.supplyInterval;
  return true;
 }

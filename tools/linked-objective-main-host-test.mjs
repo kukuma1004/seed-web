@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import * as THREE from 'three';
 import * as survival from '../src/survival-rules.js';
 import * as siege from '../src/survival-crystal-siege.js';
+import {buildLevel} from '../src/progression.js';
 import {createSurvivalExpansion} from '../src/survival-expansion.js';
 import {captureCombatFields,restoreCombatFields,captureSurvivalSession,createSurvivalSaveStore,validSurvivalSave,SURVIVAL_SAVE_KEY,survivalTitleEvents,queueSurvivalTitle,SURVIVAL_TITLE_LIMIT} from '../src/survival-save.js';
 import {captureSurvivalObjectiveSnapshot,validSurvivalObjectiveSave,survivalObjectiveParent} from '../src/survival-objective-save.js';
@@ -81,7 +82,7 @@ console.log('PASS actual siege packets round-trip through main actor capture/res
 console.log('PASS actual main save inherits immutable store-made parent across revision2 without changing legacy terminal; review rejected');
 {
  const {c,storage}=host(4,{withParent:false});storage.setItem(SURVIVAL_SAVE_KEY+':owner',JSON.stringify(terminal));c.survivalSaveToken.revision=0;delete c.survivalSaveToken.writeId;assert(c.saveSurvival());
- const callbacks=[];Object.assign(c,{survivalTitleEvents,SURVIVAL_TITLE_LIMIT,cancelActive,addItem,queueMicrotask:fn=>callbacks.push(fn),fallen:[],shots:[],effects:[],release(){},clearForms(){},activeVfx:{clear(){}},finaleEchoes:[],wells:[],pulls:[],orbitHits:new Map(),vfx:{clear(){}},clearEscorts(){},touch:{reset(){}},keys:new Set(),maxPlayerHp:()=>100});
+ const callbacks=[];Object.assign(c,{buildLevel,survivalTitleEvents,SURVIVAL_TITLE_LIMIT,cancelActive,addItem,queueMicrotask:fn=>callbacks.push(fn),fallen:[],shots:[],effects:[],release(){},clearForms(){},activeVfx:{clear(){}},finaleEchoes:[],wells:[],pulls:[],orbitHits:new Map(),vfx:{clear(){}},clearEscorts(){},touch:{reset(){}},keys:new Set(),maxPlayerHp:()=>100});
  c.player.userData={};vm.runInContext(source('continueSurvival'),c);c.survivalSession.bossSpawned=true;survival.settleSurvivalKill(c.survivalSession,{boss:true});const bossCount=c.survivalSession.bossesDefeated;
  survival.settleSurvivalKill(c.survivalSession,{boss:true});assert.equal(c.survivalSession.bossesDefeated,bossCount);const ordinal=survival.survivalBossOrdinal(c.survivalSession,'crystalGardener');assert.equal(ordinal,1);assert(queueSurvivalTitle(c.survivalSession,'crystalGardener',ordinal,'epoch-source-host'));assert(queueSurvivalTitle(c.survivalSession,'crystalGardener',ordinal,'epoch-source-host'));assert.equal(survivalTitleEvents(c.survivalSession).length,1);
  const levels=clone(Object.fromEntries(c.levels)),forms=clone(Object.fromEntries(c.heldForms));c.continueSurvival();assert.equal(c.survivalSession.act,0);assert.equal(c.survivalSession.lap,1);assert.equal(c.survivalSession.objective,objective);assert.equal(c.survivalSiege,null);assert.equal(c.survivalSession.bossSpawned,false);assert.equal(c.survivalSession.won,false);assert.equal(c.hp,100);assert.equal(c.inventory.tonic,3);assert.deepEqual(Object.fromEntries(c.levels),levels);assert.deepEqual(Object.fromEntries(c.heldForms),forms);assert.equal(callbacks.length,1);callbacks[0]();

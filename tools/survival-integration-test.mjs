@@ -4,7 +4,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {survivalTitleEvents,SURVIVAL_TITLE_LIMIT} from '../src/survival-save.js';
 import * as THREE from 'three';
-import {survivalAct,survivalActTime,survivalScaling,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,createSurvivalSession,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
+import {survivalAct,survivalActTime,survivalScaling,lockSurvivalBuildPressure,advanceSurvivalAct,tickSurvivalRush,SURVIVAL,SURVIVAL_BASES,SURVIVAL_SLIDE,createSurvivalSession,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,survivalOutcome,readSurvivalRecord,recordSurvivalResult} from '../src/survival-rules.js';
 import {createSpatialIndex} from '../src/spatial-index.js';
 import {constrainToArena} from '../src/arena.js';
 import {baseSlideFor,stadiumBaseAt,BASE_SLIDE} from '../src/stadium.js';
@@ -18,7 +18,7 @@ function between(start,end){const i=main.indexOf(start),j=main.indexOf(end,i+sta
 const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:''});return dom.get(id);};
 let bossSpawns=0,hits=0;
 const session=createSurvivalSession(4123);session.nextSupply=60;
-const ctx=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSiegeActive:()=>false,THREE,SURVIVAL,buildLevel,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
+const ctx=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSiegeActive:()=>false,THREE,SURVIVAL,buildLevel,lockSurvivalBuildPressure,survivalAct,survivalActTime,survivalScaling,tickSurvivalRush,vfx:{pulse(){}},survivalSession:session,survivalEnemySpec,survivalSpawn,survivalChoiceKills,takeSurvivalSupply,tickSurvival,constrainToArena,addItem,
  levels:new Map(),heldForms:new Map(),enemies:[],expansionTerrain:null,player:{position:new THREE.Vector3()},arena:SURVIVAL.arena,inventory:emptyInventory(),itemBarKey:'old',audio:{play(){}},$,
  spawnSurvivalBoss(){bossSpawns++;},enemyIndex:createSpatialIndex(2.5),separationEnemies:[],hitPlayer(a){hits+=a;}});
 vm.runInContext(between('function spawnSurvivalEnemy(', 'function spawnSurvivalBoss(')+between('function updateSurvival(', 'function finishSurvival('),ctx);
@@ -36,8 +36,23 @@ const existing=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'swarm'}),existingHp=existin
 ctx.levels.set('frost',39);ctx.heldForms.set('meteorspear',36);ctx.heldForms.set('burstpetals',33);ctx.heldForms.set('glassmaze',18);ctx.heldForms.set('spearthunder',38);ctx.heldForms.set('mirrorguard',10);
 ctx.updateSurvival(.01);assert.equal(ctx.survivalSession.buildLevel,174);
 assert.equal(existing.hp,existingHp,'level changes do not refill enemy health');
-assert(ctx.enemies.some(e=>e!==existing&&e.hp>existingHp*6),'new enemies use the current build level');
+assert(ctx.enemies.some(e=>e!==existing&&e.hp>existingHp*6),'new act anchors the entrance build level');
+const entryHp=survivalEnemySpec('brute',ctx.survivalSession).hp;
+ctx.levels.set('frost',40);ctx.updateSurvival(.01);
+assert.equal(ctx.survivalSession.buildLevel,175);assert.equal(ctx.survivalSession.pressureBuildLevel,174);
+assert.equal(survivalEnemySpec('brute',ctx.survivalSession).hp,entryHp,'earned utility pick cannot increase newly spawned HP mid-act');
 ctx.levels.clear();ctx.heldForms.clear();
+// Actual spawned actors retain their born hp/maxHp while the new act's build
+// pressure eases. The final newcomers use the original full target stats.
+ctx.enemies=[];ctx.survivalSession={...createSurvivalSession(2),act:0,lap:2,time:400,legStartedAt:400};
+ctx.levels.set('frost',214);lockSurvivalBuildPressure(ctx.survivalSession,214,174);
+const earlyActor=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'brute'}),bornHp=earlyActor.hp,bornMax=earlyActor.maxHp;
+ctx.survivalSession.time+=SURVIVAL.entryPressureSeconds;ctx.updateSurvival(.01);
+assert.equal(earlyActor.hp,bornHp);assert.equal(earlyActor.maxHp,bornMax,'ramp never heals actors already born');
+const fullActor=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'brute'});assert(fullActor.hp>bornHp);
+assert.equal(fullActor.hp,survivalEnemySpec('brute',ctx.survivalSession).hp);
+ctx.levels.clear();ctx.heldForms.clear();
+
 
 ctx.enemies=[];ctx.survivalSession=createSurvivalSession(2);
 const enemy=ctx.spawnSurvivalEnemy({x:5,z:0,kind:'runner'});ctx.enemyIndex.rebuild(ctx.enemies);
@@ -136,7 +151,7 @@ let nextWorld=0,released=0;
 const travel=vm.createContext({survivalSiegeApi:null,survivalSiege:null,queueMicrotask:()=>{},survivalTitleEvents,SURVIVAL_TITLE_LIMIT,
  survivalSession:{...createSurvivalSession(9),act:1,won:true,time:600,bossesDefeated:2},advanceSurvivalAct,
  enemies:[{id:1}],fallen:[{e:{id:2}}],shots:[{ob:{id:3}}],enemyShots:[{ob:{id:4}}],effects:[{ob:{id:5}}],releaseEnemy(){released++;},release(){released++;},
- heldForms:new Map([['prism',4]]),levels:new Map([['chain',3]]),bankedUpgrades:12,choiceKills:123,choicesTaken:25,score:54321,
+ buildLevel,lockSurvivalBuildPressure,heldForms:new Map([['prism',4]]),levels:new Map([['chain',3]]),bankedUpgrades:12,choiceKills:123,choicesTaken:25,score:54321,
  clearForms(){},cancelActive(){},activeGauge:{value:42},activeVfx:{clear(){}},finaleEchoes:[1],wells:[1],pulls:[1],orbitHits:new Map(),vfx:{clear(){}},clearEscorts(){},
  cachedTarget:{},targetTimer:1,player:{position:new THREE.Vector3(11,0,0),userData:{dashTime:.1}},playerMotion:{reset(){}},shootCD:2,playerSlow:2,baseSlideTime:1,baseSlideCooldown:1,baseSlideLock:1,
  touch:{reset(){}},keys:new Set(['KeyD']),keyboardDash:true,invuln:0,hp:60,maxPlayerHp:()=>100,inventory:{tonic:4},addItem,itemBarKey:'old',
@@ -144,6 +159,8 @@ const travel=vm.createContext({survivalSiegeApi:null,survivalSiege:null,queueMic
 });
 vm.runInContext(between('function continueSurvival(', 'function updateSurvival('),travel);
 travel.continueSurvival();assert.equal(nextWorld,1);assert.equal(released,5);
+assert.equal(travel.survivalSession.pressureBuildLevel,7,'transition anchors retained build before queued save');
+assert.equal(travel.survivalSession.pressureLegStartedAt,600);
 assert.equal(travel.survivalSession.act,2);assert.equal(travel.survivalSession.bossSpawned,false);
 assert.equal(travel.hp,85);assert.equal(travel.inventory.tonic,5);assert.equal(travel.choiceKills,123);assert.equal(travel.choicesTaken,25);
 assert.equal(travel.heldForms.get('prism'),4);assert.equal(travel.levels.get('chain'),3);assert.equal(travel.bankedUpgrades,12);assert.equal(travel.score,54321);

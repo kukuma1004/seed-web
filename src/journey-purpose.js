@@ -14,7 +14,7 @@ export function expansionPurposeText(journey,campaign=null){
 }
 export function expansionPurposeHint(journey,roomHint=''){
  if(journey?.phase==='boss')return journey.siege?'수정의 정원사와 결전 · 새로 자라는 습격대를 먼저 끊어 심장을 지키세요':'최종 보스의 준비 동작을 피하고 회복할 때 반격하세요';
- return journey?.siege?'수정을 채집해 시설을 심으세요 · 준비되면 밤 시작 · 다섯 습격 뒤 최종 보스':journey?.act==='crystalGorge'?`이전 협곡 저장을 이어갑니다 · ${roomHint}`:roomHint;
+ return journey?.siege?'수정을 채집해 시설을 심으세요 · 준비되면 밤 시작 · 다섯 습격 뒤 최종 보스':journey?.act==='crystalGorge'?`이전 협곡 저장을 이어갑니다 · ${roomHint}`:journey?.act==='crosswind'&&journey.course?.encounterVersion===3?`전진하면 다음 편대가 옵니다 · ${roomHint}`:roomHint;
 }
 export function expansionExitText(journey,campaign=null){
  if(journey.phase==='course')return journey.room===4?'최종 보스에게 · E':'다음 전장으로 · E';

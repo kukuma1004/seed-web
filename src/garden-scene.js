@@ -6,6 +6,8 @@ import * as THREE from 'three';
 import {LAWS} from './laws.js';
 import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN,bossGardenMilestones} from './garden.js';
 import {decorScene} from './garden-decor.js';
+import {decorLayoutKey,normalizeDecorPlacements} from './garden-decor-placement.js';
+import {DECOR_PROP_ART,DECOR_PROP_COLUMNS,DECOR_PROP_ROWS,DECOR_PROP_CELLS,DECOR_PROP_REGIONS} from './garden-decor-art.js';
 
 const V=THREE.Vector3;
 // The painted terrace has two beds in each of three depth rows. These fallback
@@ -139,7 +141,7 @@ export function buildCenter(index,artKit=null){
  if(index>=1){
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:sleepingSeedMap(),transparent:true,alphaTest:.05,opacity:.5+Math.min(index,5)*.09,depthWrite:false,toneMapped:false}));
   const size=.72+Math.min(index,5)*.12;sprite.scale.set(size,size,1);sprite.position.set(0,.45+size*.42,0);group.add(sprite);
-  const halo=add(new THREE.RingGeometry(.34+index*.08,.38+index*.09,32),new THREE.MeshBasicMaterial({color:index>=4?0xffd979:0xa9dfbd,transparent:true,opacity:.24+index*.045,side:THREE.DoubleSide,depthWrite:false,toneMapped:false}),0,.04,0);
+  const halo=add(new THREE.RingGeometry(.34+index*.08,.38+index*.09,32),new THREE.MeshBasicMaterial({color:index>=4?0xffd979:0xa9dfbd,transparent:true,opacity:.24+index*.045,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,forceSinglePass:true}),0,.04,0);
   halo.rotation.x=-Math.PI/2;
   if(index>=3)for(let i=0;i<Math.min(7,index+1);i++){
    const a=i/Math.min(7,index+1)*Math.PI*2;
@@ -177,7 +179,7 @@ export function createGardenScene({mobile=false}={}){
  camera.position.set(0,6.2,9.2);camera.lookAt(0,1.5,.2);
  const growthTexture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+GARDEN_GROWTH_ART);
  growthTexture.colorSpace=THREE.SRGBColorSpace;growthTexture.minFilter=THREE.LinearMipmapLinearFilter;growthTexture.magFilter=THREE.LinearFilter;
- const growthMaterial=new THREE.MeshBasicMaterial({map:growthTexture,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const growthMaterial=new THREE.MeshBasicMaterial({map:growthTexture,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const growthGeometries=Array.from({length:12},(_,tile)=>{
    const geometry=new THREE.PlaneGeometry(1,1);geometry.translate(0,.5,0);
    const uv=geometry.attributes.uv,col=tile%4,row=Math.floor(tile/4);
@@ -185,6 +187,18 @@ export function createGardenScene({mobile=false}={}){
   uv.needsUpdate=true;return geometry;
  });
  const artKit={material:growthMaterial,geometries:growthGeometries};
+ // Authored furniture shares one texture and twelve root-pivoted cell geometries.
+ // Transparent texels keep the terrace visible; objects never control picking.
+ const propTexture=new THREE.TextureLoader().load(import.meta.env.BASE_URL+DECOR_PROP_ART);
+ propTexture.colorSpace=THREE.SRGBColorSpace;propTexture.minFilter=THREE.LinearMipmapLinearFilter;propTexture.magFilter=THREE.LinearFilter;
+ const propMaterial=new THREE.MeshBasicMaterial({map:propTexture,transparent:true,alphaTest:.025,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const propGeometries=Array.from({length:DECOR_PROP_CELLS,DECOR_PROP_REGIONS},(_,tile)=>{
+  const [x0,y0,x1,y1]=DECOR_PROP_REGIONS[tile],aspect=(x1-x0)/(y1-y0);
+  const geometry=new THREE.PlaneGeometry(aspect,1);geometry.translate(0,.5,0);
+  const uv=geometry.attributes.uv,col=tile%DECOR_PROP_COLUMNS,row=Math.floor(tile/DECOR_PROP_COLUMNS);
+  for(let i=0;i<uv.count;i++)uv.setXY(i,(col+x0+uv.getX(i)*(x1-x0))/DECOR_PROP_COLUMNS,1-(row+y1-uv.getY(i)*(y1-y0))/DECOR_PROP_ROWS);
+  uv.needsUpdate=true;return geometry;
+ });
  scene.add(new THREE.HemisphereLight(0xcde4de,0x243832,1.32));
  const moon=new THREE.DirectionalLight(0xffe9c4,1.35);moon.position.set(-6,11,7);scene.add(moon);
  const warm=new THREE.PointLight(0xffc98a,12,12,2);warm.position.set(0,3.4,-3.4);scene.add(warm);
@@ -194,8 +208,8 @@ export function createGardenScene({mobile=false}={}){
  // of tiny triangles and keeps the title screen light on older phones.
  const matrix=new THREE.Matrix4();
  const fireflyGeo=new THREE.SphereGeometry(.05,6,4),fireflyMat=new THREE.MeshBasicMaterial({color:0xffe9a8,transparent:true,opacity:.8,toneMapped:false});
- // 반딧불이는 기본 10마리 + 정원 가꾸기로 부른 만큼(최대 28마리 더). 인스턴스 한 묶음이라 드로우콜은 그대로.
- const FLY_BASE=10,FLY_MAX=38;
+ // 반딧불이는 기본 10마리 + 정원 가꾸기로 부른 만큼(최대 36마리 더). 인스턴스 한 묶음이라 드로우콜은 그대로.
+ const FLY_BASE=10,FLY_MAX=46;
  const fireflies=new THREE.InstancedMesh(fireflyGeo,fireflyMat,FLY_MAX);fireflies.count=FLY_BASE;
  const flies=Array.from({length:FLY_MAX},()=>({a:Math.random()*6.28,r:1.6+Math.random()*4.2,y:.7+Math.random()*2,speed:.1+Math.random()*.2,phase:Math.random()*6.28}));
  scene.add(fireflies);
@@ -205,13 +219,13 @@ export function createGardenScene({mobile=false}={}){
  // 꽃/열매 두 인스턴스 묶음으로 그려 드로우콜은 그대로 유지한다.
  const blossomShape=new THREE.Shape();
  for(let i=0;i<12;i++){const a=i/12*Math.PI*2,r=i%2===0?.15:.07,x=Math.cos(a)*r,y=Math.sin(a)*r;i?blossomShape.lineTo(x,y):blossomShape.moveTo(x,y);}blossomShape.closePath();
- const blossomGeo=new THREE.ShapeGeometry(blossomShape),blossomMat=new THREE.MeshBasicMaterial({color:0xffdc79,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const blossomGeo=new THREE.ShapeGeometry(blossomShape),blossomMat=new THREE.MeshBasicMaterial({color:0xffdc79,transparent:true,opacity:.92,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,forceSinglePass:true});
  const fruitGeo=new THREE.IcosahedronGeometry(.14,1),fruitMat=new THREE.MeshStandardMaterial({color:0xffc857,emissive:0xffa21a,emissiveIntensity:.6,roughness:.38,metalness:.08});
  const bossBlossoms=new THREE.InstancedMesh(blossomGeo,blossomMat,50),bossFruits=new THREE.InstancedMesh(fruitGeo,fruitMat,13);
  bossBlossoms.count=0;bossFruits.count=0;bossBlossoms.renderOrder=4;bossFruits.renderOrder=4;scene.add(bossBlossoms,bossFruits);
  // 정원 가꾸기(씨앗 맞추기 별로 꾸민 것, garden-decor.js): 식물은 성장 아틀라스를 물들인 그림, 등불은 돌기둥 + 빛, 꽃비는 떨어지는 꽃잎.
- const decorGroup=new THREE.Group();scene.add(decorGroup);let decorItems=[];
- const petalMat=new THREE.MeshBasicMaterial({color:0xffc6dc,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const decorGroup=new THREE.Group();scene.add(decorGroup);let decorItems=[],decorKey=null;
+ const petalMat=new THREE.MeshBasicMaterial({color:0xffc6dc,transparent:true,opacity:.85,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,forceSinglePass:true});
  const PETALS=36,petals=new THREE.InstancedMesh(blossomGeo,petalMat,PETALS);petals.count=0;petals.renderOrder=5;scene.add(petals);
  const petalState=Array.from({length:PETALS},()=>({x:(Math.random()-.5)*9,y:Math.random()*5,z:-7+Math.random()*9,spin:Math.random()*6.28,speed:.35+Math.random()*.35}));
  const lanternPost=new THREE.CylinderGeometry(.05,.08,.55,6),lanternHead=new THREE.BoxGeometry(.16,.2,.16);
@@ -223,14 +237,19 @@ export function createGardenScene({mobile=false}={}){
   glowTexture=new THREE.CanvasTexture(c);glowTexture.colorSpace=THREE.SRGBColorSpace;return glowTexture;
  };
  function buildDecor(garden){
+  const key=decorLayoutKey(garden.decor,garden.decorPositions);if(key===decorKey)return;decorKey=key;
   clearGroup(decorGroup);decorItems=[];
-  const d=decorScene(garden.decor);
+  const d=decorScene(garden.decor,normalizeDecorPlacements(garden.decorPositions,garden.decor));
   for(const item of d.items){
    const group=new THREE.Group();
-   if(item.kind==='plant'){
-    const tinted=growthMaterial.clone();tinted.color.set(item.tint);
-    const plane=new THREE.Mesh(growthGeometries[item.tile],tinted);plane.scale.set(item.size,item.size,1);plane.position.y=.02;plane.renderOrder=3;plane.userData.sharedGardenArt=true;plane.userData.gardenTint=true;
-    group.add(plane);group.userData={art:true,sway:Math.random()*6.28};
+   if(item.kind==='plant'||item.kind==='prop'){
+    const prop=item.kind==='prop',source=prop?propMaterial:growthMaterial;
+    // Furniture uses the untouched painterly palette. Only actual tinted items
+    // own a disposable clone; the atlas material and UV geometry stay shared.
+    const tint=item.tint??0xffffff,local=tint!==0xffffff;
+    const tinted=local?source.clone():source;if(local)tinted.color.set(tint);
+    const plane=new THREE.Mesh((prop?propGeometries:growthGeometries)[item.tile],tinted);plane.scale.set(item.size,item.size,1);plane.position.y=.02;plane.renderOrder=3;plane.userData.sharedGardenArt=true;plane.userData.gardenTint=local;
+    group.add(plane);group.userData={art:true,rigid:prop,sway:Math.random()*6.28};
    }else{
     const post=new THREE.Mesh(lanternPost,lanternStone);post.position.y=.28*item.size;post.scale.setScalar(item.size);post.userData.sharedGardenArt=true;
     const head=new THREE.Mesh(lanternHead,lanternFlame);head.position.y=.62*item.size;head.scale.setScalar(item.size);head.userData.sharedGardenArt=true;
@@ -244,7 +263,7 @@ export function createGardenScene({mobile=false}={}){
  }
  // The painted beds already show every empty slot. The raycast meshes stay
  // present for tapping, but draw nothing until one slot is actually selected.
- const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false});
+ const markerMat=new THREE.MeshBasicMaterial({color:0xffd77a,transparent:true,opacity:0,side:THREE.DoubleSide,depthWrite:false,toneMapped:false,forceSinglePass:true});
  const markers=plotSpots.map(spot=>{
   const m=new THREE.Mesh(new THREE.RingGeometry(.49,.535,40),markerMat.clone());
   m.rotation.x=-Math.PI/2;m.position.set(spot.x,.03,spot.z);scene.add(m);return m;
@@ -267,6 +286,7 @@ export function createGardenScene({mobile=false}={}){
   anchorNdc.set(u*2-1,1-v*2);anchorRay.setFromCamera(anchorNdc,camera);
   if(anchorRay.ray.intersectPlane(groundPlane,anchorPoint))target.set(anchorPoint.x,0,anchorPoint.z);
  };
+ const petalEuler=new THREE.Euler();
  const milestoneMatrix=new THREE.Matrix4(),milestonePosition=new THREE.Vector3(),milestoneScale=new THREE.Vector3(),milestoneRotation=new THREE.Quaternion();
  function syncMilestones(){
   let flower=0,fruit=0;
@@ -342,21 +362,21 @@ export function createGardenScene({mobile=false}={}){
   if(center?.userData.art)center.children[0]?.quaternion.copy(camera.quaternion);
   else if(center)center.rotation.y=Math.sin(time*.18)*.06;
   for(const item of decorItems){
-   if(item.userData.art){const art=item.children[0];art.quaternion.copy(camera.quaternion);art.rotateZ(Math.sin(time*1.2+item.userData.sway)*.03);}
+   if(item.userData.art){const art=item.children[0];art.quaternion.copy(camera.quaternion);if(!item.userData.rigid)art.rotateZ(Math.sin(time*1.2+item.userData.sway)*.03);}
    else{const k=item.userData.base*(1+Math.sin(time*5+item.userData.phase)*.06+Math.sin(time*11.3+item.userData.phase)*.03);item.userData.glow.scale.set(k,k,1);}
   }
   for(let i=0;i<petals.count;i++){
    const p=petalState[i];p.y-=dt*p.speed;p.x+=Math.sin(time*.8+p.spin)*dt*.35;p.spin+=dt*1.6;if(p.y<0){p.y=4.5+Math.random();p.x=(Math.random()-.5)*9;p.z=-7+Math.random()*9;}
-   milestonePosition.set(p.x,p.y,p.z);milestoneRotation.setFromEuler(new THREE.Euler(p.spin,p.spin*.7,0));milestoneScale.setScalar(.55);
+   milestonePosition.set(p.x,p.y,p.z);milestoneRotation.setFromEuler(petalEuler.set(p.spin,p.spin*.7,0));milestoneScale.setScalar(.55);
    milestoneMatrix.compose(milestonePosition,milestoneRotation,milestoneScale);petals.setMatrixAt(i,milestoneMatrix);
   }
   if(petals.count)petals.instanceMatrix.needsUpdate=true;
-  flies.forEach((f,i)=>{
+  for(let i=0;i<fireflies.count;i++){const f=flies[i];
    f.a+=dt*f.speed;
    const y=f.y+Math.sin(time*1.2+f.phase)*.35;
    matrix.makeTranslation(Math.cos(f.a)*f.r,y,Math.sin(f.a)*f.r+.4);
    fireflies.setMatrixAt(i,matrix);
-  });
+  }
   fireflies.instanceMatrix.needsUpdate=true;
   fireflyMat.opacity=.55+Math.sin(time*2.2)*.25;
   blossomMat.opacity=.82+Math.sin(time*1.7)*.1;

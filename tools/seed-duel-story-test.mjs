@@ -131,7 +131,7 @@ console.log(`Duel story: ${DUEL_STORY_CHAPTERS.length} chapters / ${DUEL_STORY_S
  const stage=DUEL_STORY_STAGES[1],before=normalizeDuelStory({cleared:{s1:{losses:0,at:1}}});
  const match=createDuel({player:'pierce',enemy:'burst'});Object.assign(match,{phase:'over',winner:0,wins:[2,0]});
  for(const [canSave,storage] of [[()=>false,memory()],[()=>true,{setItem(){throw Error('quota');},getItem:()=>null}],[()=>true,memory()]]){
-  const ctx=vm.createContext({storyStage:stage,storySaved:false,s:match,saveNote:'',inspection:false,practice:false,refreshStory(){},completeStoryMatch,storyProgress:before,canSave,writeDuelStory,storage,owner:'same',onProgress(){},onSaveAccount:null});
+  const ctx=vm.createContext({trial:{active:false},closed:false,storyStage:stage,storySaved:false,s:match,saveNote:'',inspection:false,practice:false,refreshStory(){},completeStoryMatch,storyProgress:before,canSave,writeDuelStory,storage,owner:'same',onProgress(){},onSaveAccount:null});
   vm.runInContext(source.slice(start,end),ctx);ctx.recordStoryWin();
   assert.equal(availableDuelCharacters(ctx.storyProgress).includes('burst'),Boolean(storage.getItem('seed-duel-story-v1:same')));
  }

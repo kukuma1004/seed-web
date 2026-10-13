@@ -4,22 +4,23 @@ import {writeFileSync} from 'node:fs';
 import {pathToFileURL} from 'node:url';
 import {LAWS} from '../src/laws.js';
 import {DISCOVERY_FORMS} from '../src/forms.js';
-import {DUEL_CHARACTERS,DUEL_ORDER} from '../src/seed-duel-rules.js';
-import {DUEL_STORY_STAGES} from '../src/seed-duel-story.js';
+import {DUEL_CHARACTERS,DUEL_ORDER,DUEL_RELEASE_CHARACTERS,DUEL_RELEASE_ORDER} from '../src/seed-duel-rules.js';
+import {DUEL_STORY_STAGES,DUEL_RELEASE_STORY_STAGES} from '../src/seed-duel-story.js';
 
 const originals=[...Object.entries(LAWS).map(([id,f])=>({id,name:f.name,kind:'base',laws:[id]})),
  ...Object.values(DISCOVERY_FORMS).map(f=>({id:f.id,name:f.name,kind:f.twin?'twin':f.awakened?'final':f.solo?'solo':'fusion',laws:[...f.requires]}))];
 const originalById=new Map(originals.map(f=>[f.id,f]));
 
-// Current private connection contract. Recipe totals come from the ORIGINAL
-// book, never from the roster being asserted. Thirteen independent fighters
-// remain a separate explicit boundary; public36 and completion remain gated.
+// Recipe totals come from the ORIGINAL book, never from the asserted roster.
+// Preserve the legacy36 export boundary separately from the current release.
+// Runtime connection never establishes completed art, balance or human QA.
 export const DUEL_CATALOG_COUNT_CONTRACT=Object.freeze({
  sourceTotal:originalById.size,
  twinTotal:originals.filter(f=>f.kind==='twin').length,
  independentExtras:13,
  privateRoster:originalById.size+13,
- publicRoster:36,
+ legacyRoster:36,
+ publicRoster:originalById.size+13,
  unconnected:0,
  completedArt:null,
  completedBalance:null,
@@ -48,8 +49,22 @@ export function duelCatalogCoverage(characters=DUEL_CHARACTERS,order=DUEL_ORDER,
   verification:'Completion requires separate art, human play, device, audio, save and balance evidence; connection is not completion.',independent,byKind,rows};
 }
 
+// Keep the checker's legacy defaults for existing focused fixture callers.
+// The executable report must describe the roster actually used by the view.
+export function duelCatalogReleaseReport(){
+ return {...duelCatalogCoverage(DUEL_RELEASE_CHARACTERS,DUEL_RELEASE_ORDER,DUEL_RELEASE_STORY_STAGES),scope:'release-runtime',
+  legacy:{...duelCatalogCoverage(),scope:'legacy-export'}};
+}
+
 if(process.argv[1]&&pathToFileURL(process.argv[1]).href===import.meta.url){
- const result=duelCatalogCoverage();
+ const result=duelCatalogReleaseReport();
+ assert.equal(result.roster,DUEL_CATALOG_COUNT_CONTRACT.publicRoster);
+ assert.equal(result.connected,DUEL_CATALOG_COUNT_CONTRACT.sourceTotal);
+ assert.equal(result.unconnected,0);
+ assert.equal(result.independent.length,DUEL_CATALOG_COUNT_CONTRACT.independentExtras);
+ assert.equal(result.legacy.roster,DUEL_CATALOG_COUNT_CONTRACT.legacyRoster);
+ assert.equal(result.fullyVerified,null,'runtime wiring cannot award verification');
+ assert.equal(result.legacy.fullyVerified,null);
  // The old independently authored prism happens to share a recipe ID. That
  // name alone cannot turn it into a verified reflect+split adaptation.
  if(!DUEL_CHARACTERS.prism.comboId)assert(result.independent.includes('prism'),'matching an old name is not original-recipe coverage');
@@ -59,5 +74,6 @@ if(process.argv[1]&&pathToFileURL(process.argv[1]).href===import.meta.url){
  assert.throws(()=>duelCatalogCoverage(invalid),/unknown original recipe/);
  const index=process.argv.indexOf('--output');
  if(index>=0){assert(process.argv[index+1],'--output requires a file path');writeFileSync(process.argv[index+1],JSON.stringify(result,null,2)+'\n');}
- const {rows,...summary}=result;console.log(JSON.stringify(summary));
+ const {rows,legacy,...summary}=result;const {rows:legacyRows,...legacySummary}=legacy;
+ console.log(JSON.stringify({...summary,legacy:legacySummary}));
 }

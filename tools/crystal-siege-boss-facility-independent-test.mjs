@@ -19,7 +19,7 @@ const updateSource=source('updateExpansionCourse','tickExpansionActor'),actorSou
 const hostSource=harness.slice(harness.indexOf('function host(j){'),harness.indexOf('// No enemy is removed'));
 const courseSource=harness.slice(harness.indexOf('function course({'),harness.indexOf("group('Actual host end-to-end")).replace(' return result;',' this.lastHost=h;this.lastJourney=j;return result;');
 const scope={expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,journey,siege,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource,actorSource,copy,earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
-vm.createContext(scope);vm.runInContext(hostSource+'\n'+courseSource,scope);
+scope.expansionSiegeView=null;vm.createContext(scope);vm.runInContext(hostSource+'\n'+courseSource,scope);
 const passed=[],measurements=[];
 const group=(name,run)=>{run();passed.push(name);console.log('PASS',name);};
 

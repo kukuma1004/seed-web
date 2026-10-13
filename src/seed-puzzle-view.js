@@ -1,7 +1,9 @@
-import {PUZZLE,PUZZLE_STAGES,PUZZLE_STAGE_BY_ID,PUZZLE_POWERS,PUZZLE_TOOLS,PUZZLE_SHOP,PUZZLE_JP,createPuzzle,playPuzzleMove,tapPuzzle,usePuzzleTool,continuePuzzle,giveUpPuzzle,canTap,findHint,
+import {PUZZLE,PUZZLE_STAGES,PUZZLE_STAGE_BY_ID,PUZZLE_POWERS,PUZZLE_TOOLS,PUZZLE_SHOP,PUZZLE_JP,createPuzzle,playPuzzleMove,tapPuzzle,usePuzzleTool,puzzleToolReason,continuePuzzle,giveUpPuzzle,canTap,findHint,
  puzzleGoalState,puzzleStreakGift,puzzleStreakCounts,dailyPuzzleStage,seoulDay,puzzleSaveKey,readPuzzleProgress,writePuzzleProgress,recordPuzzleResult,puzzleUnlocked,breakPuzzleStreak,
  PUZZLE_LIVES,puzzleLives,takePuzzleLife,refundPuzzleLife,refillPuzzleLives,puzzleStarsEarned} from './seed-puzzle-rules.js';
 import {DECOR,DECOR_AREAS,decorAreaIndex,decorTasks,decorStars,canDecorate,decorate} from './garden-decor.js';
+import {DECOR_PROP_ART,DECOR_PROP_COLUMNS,DECOR_PROP_ROWS} from './garden-decor-art.js';
+import {movableDecor,createDecorDrag,resetDecorPlacements} from './garden-decor-placement.js';
 import {createPuzzleGarden} from './seed-puzzle-garden.js';
 import {LAWS} from './laws.js';
 import {ALL_FORMS} from './forms.js';
@@ -80,7 +82,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const sprites=new Map(),effects=[],floaters=[],tiles=new Map();
  const STAGE_PAGE=50;let stagePage=null,catalogOpen=false;
  let queue=[],cur=null,curT=0,selected=-1,cursor=-1,drag=null,idleAt=0,hint=null,shake=0,announced=new Set(),resultTimer=0,keyboard=false,armed=null,picks=new Set();
- function close(){if(closed)return;quitRun();closed=true;bounceChild?.close();bounceChild=null;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
+ function close(){if(closed)return;cancelGardenDrag();quitRun();closed=true;vfx.dispose();painter.dispose();bounceChild?.close();bounceChild=null;cancelAnimationFrame(raf);clearTimeout(resultTimer);clearInterval(ticker);for(const off of listeners)off();root.remove();document.body.classList.remove('seed-puzzle-open');onClose();}
 
  // ── 정원 · 도전 씨앗
  // 정원 저장은 본편(main)이 가진 것을 쓴다. 따로 붙지 않은 화면(시험)에서는 이 화면 안에서만 기억한다.
@@ -88,6 +90,12 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  const getGarden=()=>garden?.get?.()||localGarden;
  const setGarden=next=>{if(garden?.set)garden.set(next);else localGarden=next;};
  const painter=createPuzzleGarden({base:BASE});
+ let arranging=false;
+ const gardenDrag=createDecorDrag({getGarden,getRect:gardenRect,getLayout:()=>painter.layout(gardenRect()),onCommit:next=>{setGarden(next);toast('꾸미기 자리를 저장했어요');}});
+ const pointerXY=e=>{const r=canvas.getBoundingClientRect();return [e.clientX-r.left,e.clientY-r.top];};
+ function cancelGardenDrag(){const id=gardenDrag.active?.pointerId;gardenDrag.cancel();if(id!==undefined&&canvas.hasPointerCapture?.(id))canvas.releasePointerCapture?.(id);}
+ function endGardenDrag(e,cancel=false){if(gardenDrag.active?.pointerId!==e.pointerId)return;const id=e.pointerId;if(cancel)gardenDrag.cancel();else{gardenDrag.move(id,...pointerXY(e));if(!gardenDrag.finish(id))toast('화단과 다른 가구를 비워 둔 자리에 놓아요');}if(canvas.hasPointerCapture?.(id))canvas.releasePointerCapture?.(id);}
+
  const earnedStars=()=>Math.max(puzzleStarsEarned(progress),getGarden().puzzleStars||0);
  const starWallet=()=>decorStars(earnedStars(),getGarden().decor);
  // 모은 별을 정원 저장에도 남긴다(다른 기기에서 꾸밀 때 같은 별을 쓰도록 · 큰 쪽).
@@ -110,7 +118,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   else{const top=h.bottom+10,avail=height-top-(height-t.top)-12;size=Math.min(width-20,avail);bx=(width-size)/2;by=top+Math.max(0,(avail-size)/2);}
   size=Math.max(160,size);cs=size/N;tiles.clear();backdrop=null;
  }
- listen(window,'resize',()=>resize());
+ listen(window,'resize',()=>{cancelGardenDrag();resize();});
  const cx=i=>bx+(i%N+.5)*cs,cy=i=>by+(Math.floor(i/N)+.5)*cs;
  const cellAt=(x,y)=>{const c=Math.floor((x-bx)/cs),r=Math.floor((y-by)/cs);return c>=0&&c<N&&r>=0&&r<N?r*N+c:-1;};
 
@@ -179,25 +187,27 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function run(res){if(!res.ok){if(res.reason)toast(res.reason);audio?.play('shotArc',{pitch:.6});}visibleMoves=s.phase==='won'?s.leftAtWin:s.movesLeft;queue.push(...res.steps);selected=-1;hint=null;idleAt=clock;hudUpdate();}
  function tryMove(a,b){if(!canAct()||a<0||b<0)return;snap();run(playPuzzleMove(s,a,b));}
  function tryTap(i){if(!canAct())return;snap();if(!canTap(s,i))return;run(tapPuzzle(s,i));}
- function tryTool(tool,i){if(!canAct())return;snap();if(!pay(PUZZLE_SHOP.tools[tool],PUZZLE_TOOLS[tool].name))return;armed=null;toolbarUpdate();run(usePuzzleTool(s,tool,i));audio?.play('pickup');}
+ function tryTool(tool,i){if(!canAct())return;snap();if(!canAct())return;const reason=puzzleToolReason(s,tool,i);if(reason){toast(reason);return;}if(!pay(PUZZLE_SHOP.tools[tool],PUZZLE_TOOLS[tool].name))return;armed=null;toolbarUpdate();run(usePuzzleTool(s,tool,i));audio?.play('pickup');}
  function arm(tool){if(!canAct())return;if(tool==='shuffle'){tryTool('shuffle',0);return;}armed=armed===tool?null:tool;selected=-1;toolbarUpdate();if(armed)toast(`${PUZZLE_TOOLS[armed].name} · 쓸 칸을 눌러요`);}
  function toolbarUpdate(){toolbar.querySelectorAll('[data-tool]').forEach(b=>{const active=b.dataset.tool===armed;b.classList.toggle('armed',active);b.setAttribute('aria-pressed',String(active));});root.classList.toggle('sp-armed',!!armed);}
  toolbar.querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>arm(b.dataset.tool));
  const neighbor=(a,b)=>a>=0&&b>=0&&Math.abs(a%N-b%N)+Math.abs(Math.floor(a/N)-Math.floor(b/N))===1;
- listen(canvas,'pointerdown',e=>{if(!canAct())return;audio?.unlock?.();keyboard=false;const i=cellAt(e.offsetX,e.offsetY);if(i<0)return;e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
+ listen(canvas,'pointerdown',e=>{if(gardenMode){if(arranging&&painter.ready()&&gardenDrag.start(e.pointerId,...pointerXY(e))){e.preventDefault();canvas.setPointerCapture?.(e.pointerId);}return;}if(drag&&drag.id!==e.pointerId)return;if(!canAct())return;audio?.unlock?.();keyboard=false;const i=cellAt(e.offsetX,e.offsetY);if(i<0)return;e.preventDefault();canvas.setPointerCapture?.(e.pointerId);
   if(armed){tryTool(armed,i);return;}
   if(selected>=0&&neighbor(selected,i)){tryMove(selected,i);return;}drag={i,x:e.offsetX,y:e.offsetY,id:e.pointerId};});
- listen(canvas,'pointermove',e=>{if(!drag||e.pointerId!==drag.id)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.hypot(dx,dy)<cs*.35)return;
+ listen(canvas,'pointermove',e=>{if(gardenMode){if(gardenDrag.move(e.pointerId,...pointerXY(e)))e.preventDefault();return;}if(!drag||e.pointerId!==drag.id)return;const dx=e.offsetX-drag.x,dy=e.offsetY-drag.y;if(Math.hypot(dx,dy)<cs*.35)return;
   const c=drag.i%N,r=Math.floor(drag.i/N),to=Math.abs(dx)>Math.abs(dy)?(dx>0?(c<N-1?drag.i+1:-1):(c>0?drag.i-1:-1)):(dy>0?(r<N-1?drag.i+N:-1):(r>0?drag.i-N:-1));const from=drag.i;drag=null;if(to>=0)tryMove(from,to);});
  // 끌지 않고 뗐으면: 특수 씨앗은 터뜨리고, 보통 씨앗은 고르기(다음에 이웃을 누르면 바꾼다).
- listen(canvas,'pointerup',e=>{if(!drag||e.pointerId!==drag.id)return;const i=drag.i;drag=null;if(s&&canTap(s,i)){tryTap(i);return;}selected=selected===i?-1:(spriteAt(i)?i:-1);});
- listen(canvas,'pointercancel',()=>{drag=null;});
+ listen(canvas,'pointerup',e=>{if(gardenMode){endGardenDrag(e);return;}if(!drag||e.pointerId!==drag.id)return;const i=drag.i;drag=null;if(s&&canTap(s,i)){tryTap(i);return;}selected=selected===i?-1:(spriteAt(i)?i:-1);});
+ listen(canvas,'pointercancel',e=>{endGardenDrag(e,true);if(drag?.id===e.pointerId)drag=null;});
+ listen(canvas,'lostpointercapture',e=>{endGardenDrag(e,true);if(drag?.id===e.pointerId)drag=null;});
+ listen(window,'blur',()=>{cancelGardenDrag();drag=null;});
  const KEYS={ArrowLeft:-1,ArrowRight:1,ArrowUp:-N,ArrowDown:N};
  listen(window,'keydown',e=>{
   if(bounceChild||bounceLoading||root.hidden)return;
   if(e.target?.closest?.('input,textarea'))return;
   if(['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,select,[role="button"],[role="checkbox"]'))return;
-  if(e.code==='Escape'&&gardenMode&&modal.hidden){e.preventDefault();leaveGarden();return;}
+  if(e.code==='Escape'&&gardenMode&&modal.hidden){e.preventDefault();if(arranging){cancelGardenDrag();arranging=false;root.classList.remove('sp-arranging');paintGardenPanel();}else leaveGarden();return;}
   if(e.code==='Escape'){e.preventDefault();if(armed){armed=null;toolbarUpdate();return;}const k=modal.hidden?null:modal.dataset.kind;if(k==='pause'){resume();return;}if(k==='menu'){close();return;}if(k==='out')return;if(k){menu();return;}pause();return;}
   if(!canAct())return;
   if(e.code==='KeyH'){snap();hint=findHint(s);idleAt=clock-99;return;}
@@ -342,7 +352,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  function gardenRect(){const p=$('.sp-garden-panel').getBoundingClientRect(),wide=root.classList.contains('sp-wide');return wide?{x:0,y:0,w:Math.max(160,p.left-8),h:height}:{x:0,y:0,w:width,h:Math.max(160,p.top-8)};}
  function draw(now){
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  if(gardenMode){ctx.fillStyle='#071215';ctx.fillRect(0,0,width,height);painter.draw(ctx,gardenRect(),getGarden(),clock,{fresh});return;}
+  if(gardenMode){ctx.fillStyle='#071215';ctx.fillRect(0,0,width,height);painter.draw(ctx,gardenRect(),getGarden(),clock,{fresh,editing:arranging,placement:gardenDrag.active});return;}
   drawBackdrop();
   if(!s)return;
   const sh=shake>0?Math.sin(now*.09)*shake*cs*.12:0;ctx.save();ctx.translate(sh,0);
@@ -371,7 +381,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   return 24;
  }
  function loop(now){raf=0;if(closed||document.hidden||bounceChild||bounceLoading||root.hidden)return;raf=requestAnimationFrame(loop);if(!pacer(now,renderRate()))return;const dt=last?Math.min(.05,(now-last)/1000):0;last=now;clock+=dt;update(dt);draw(now);}
- listen(document,'visibilitychange',()=>{last=0;if(document.hidden){cancelAnimationFrame(raf);raf=0;}else if(!closed&&!bounceChild&&!bounceLoading&&!raf)raf=requestAnimationFrame(loop);});
+ listen(document,'visibilitychange',()=>{last=0;if(document.hidden){cancelGardenDrag();drag=null;cancelAnimationFrame(raf);raf=0;}else if(!closed&&!bounceChild&&!bounceLoading&&!raf)raf=requestAnimationFrame(loop);});
 
  // ── HUD
  let bannerTimer=0;
@@ -470,19 +480,23 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
  }
  // ── 정원 가꾸기(로열 매치의 성 꾸미기 → SEED 정원). 별로 꽃·등불·반딧불이를 들이고, 한 구역을 다 꾸미면 햇살 보상.
  function gardenScreen(){
-  quitRun();s=null;queue=[];cur=null;modal.hidden=true;root.classList.remove('sp-playing');root.classList.add('sp-gardening');gardenMode=true;syncGardenStars();
+  cancelGardenDrag();arranging=false;root.classList.remove('sp-arranging');quitRun();s=null;queue=[];cur=null;modal.hidden=true;root.classList.remove('sp-playing');root.classList.add('sp-gardening');gardenMode=true;syncGardenStars();
   const panel=$('.sp-garden-panel');panel.hidden=false;paintGardenPanel();resize();
  }
- function leaveGarden(){gardenMode=false;fresh={};$('.sp-garden-panel').hidden=true;root.classList.remove('sp-gardening');resize();menu();}
+ function leaveGarden(){cancelGardenDrag();arranging=false;root.classList.remove('sp-arranging');gardenMode=false;fresh={};$('.sp-garden-panel').hidden=true;root.classList.remove('sp-gardening');resize();menu();}
  function paintGardenPanel(){
   const panel=$('.sp-garden-panel'),g=getGarden(),area=decorAreaIndex(g.decor),stars=starWallet(),tasks=decorTasks(g.decor);
   const a=area<0?null:DECOR_AREAS[area],done=tasks.filter(t=>t.done).length;
-  panel.innerHTML=`<header><p class="sp-eyebrow">SEED · 정원 가꾸기</p><h2>${a?escape(a.name):'다 꾸민 정원'}</h2><p>${a?escape(a.line):'꽃비가 내리는 SEED 정원을 끝까지 꾸몄어요.'}</p><strong class="sp-star-wallet" title="단계와 오늘의 단계에서 모은 별">★ ${stars}</strong></header>
+  panel.innerHTML=`<header><button class="sp-garden-back" aria-label="돌아가기">‹</button><p class="sp-eyebrow">SEED · 정원 가꾸기</p><h2>${a?escape(a.name):'다 꾸민 정원'}</h2><p>${a?escape(a.line):'꽃비가 내리는 SEED 정원을 끝까지 꾸몄어요.'}</p><strong class="sp-star-wallet" title="단계와 오늘의 단계에서 모은 별">★ ${stars}</strong></header>
    ${a?`<div class="sp-area-progress"><i style="width:${done/6*100}%"></i><span>구역 ${area+1}/${DECOR_AREAS.length} · ${done}/6 · 다 꾸미면 햇살 ${jpText(a.reward)}</span></div>
-   <ul class="sp-decor-list">${tasks.map(t=>`<li><button data-decor="${t.id}" class="${t.done?'done':stars>=t.cost?'afford':''}" ${t.done?'disabled':''}><b>${escape(t.name)}</b><span>${t.done?'✓ 꾸몄어요':`★${t.cost}`}</span></button></li>`).join('')}</ul>`:''}
-   <div class="sp-row"><button class="sp-primary sp-play">단계 하러 가기</button>${onOpenGarden?'<button class="sp-open-garden">정원에서 보기</button>':''}<button class="sp-garden-back">돌아가기</button></div>
+   <ul class="sp-decor-list">${tasks.map(t=>{const p=t.items.find(i=>i.kind==='prop'),art=p?`style="background-image:url(${BASE}${DECOR_PROP_ART});background-size:${DECOR_PROP_COLUMNS*100}% ${DECOR_PROP_ROWS*100}%;background-position:${p.tile%DECOR_PROP_COLUMNS/(DECOR_PROP_COLUMNS-1)*100}% ${Math.floor(p.tile/DECOR_PROP_COLUMNS)/(DECOR_PROP_ROWS-1)*100}%"`:'';return `<li><button data-decor="${t.id}" class="${t.done?'done':stars>=t.cost?'afford':''}" ${t.done?'disabled':''}><i class="sp-decor-preview" aria-hidden="true" ${art}>${p?'':t.petals?'❀':t.fireflies?'✦':t.items[0]?.kind==='lantern'?'☼':'❧'}</i><b>${escape(t.name)}</b><span>${t.done?'✓ 꾸몄어요':`★${t.cost}`}</span></button></li>`;}).join('')}</ul>`:''}
+   <div class="sp-arrange-tools"><button class="sp-arrange" title="이미 들인 가구의 자리를 바꿔요" aria-pressed="${arranging}" ${movableDecor(g.decor).length?'':'disabled'}>${arranging?'배치 끝내기':'배치 바꾸기'}</button>${arranging?'<button class="sp-arrange-reset">원래 자리</button>':''}</div>
+   ${arranging?'<small class="sp-arrange-help">가구를 끌어서 놓아요 · 화단과 다른 가구는 비워 둬요</small>':''}
+   <div class="sp-row sp-garden-actions"><button class="sp-primary sp-play">단계 하러 가기</button>${onOpenGarden?'<button class="sp-open-garden">정원에서 보기</button>':''}</div>
    <small>별은 단계(★ 최대 3개)와 오늘의 단계에서 모여요. 꾸민 것은 SEED 정원에 그대로 남고 계정과 함께 옮겨 가요.</small>`;
-  panel.querySelectorAll('[data-decor]').forEach(b=>b.onclick=()=>buyDecor(b.dataset.decor));
+  panel.querySelectorAll('[data-decor]').forEach(b=>{b.disabled=arranging||b.disabled;b.onclick=()=>buyDecor(b.dataset.decor);});
+  panel.querySelector('.sp-arrange').onclick=()=>{cancelGardenDrag();arranging=!arranging;root.classList.toggle('sp-arranging',arranging);paintGardenPanel();resize();};
+  panel.querySelector('.sp-arrange-reset')?.addEventListener('click',()=>{cancelGardenDrag();const current=getGarden();setGarden({...current,decorPositions:resetDecorPlacements(current.decor)});toast('원래 자리로 되돌렸어요');});
   panel.querySelector('.sp-play').onclick=leaveGarden;panel.querySelector('.sp-garden-back').onclick=leaveGarden;
   panel.querySelector('.sp-open-garden')?.addEventListener('click',()=>{gardenMode=false;close();onOpenGarden();});
  }
@@ -536,7 +550,7 @@ export function mountSeedPuzzle({host=document.body,audio,storage=null,owner='gu
   const combos=s.combos.map(id=>ALL_FORMS[id]?.name).filter(Boolean),made=Object.entries(s.created).filter(([,n])=>n).map(([id,n])=>`${PUZZLE_POWERS[id].name} ${n}`).join(' · ');
   show('result',`<p class="sp-eyebrow">${won?(def.attack?'FINISH':'CLEAR'):'MOVES OUT'}</p><h1>${won?(def.attack?'도전 끝!':'단계 성공!'):'아쉬워요'}</h1>
    <p class="sp-result-stars" aria-label="별 ${record.stars}개">${[0,1,2].map(k=>`<span class="${k<record.stars?'on':''}" style="animation-delay:${.15+k*.22}s">★</span>`).join('')}</p>
-   <p class="sp-result-score">${s.score.toLocaleString()}점${won&&s.bonus?` <small>(햇살 타임 +${s.bonus.toLocaleString()} · 남은 이동 ${s.leftAtWin}번)</small>`:''}${won&&!def.attack?`<br><small>${s.continues?'이어하기로 깬 판은 ★ 하나':`★★ ${def.stars[0].toLocaleString()} · ★★★ ${def.stars[1].toLocaleString()}점`}</small>`:''}</p>
+   <p class="sp-result-score">${s.score.toLocaleString()}점${won&&s.bonus?`<br><small class="sp-score-breakdown">플레이 ${(s.score-s.bonus).toLocaleString()} · 마지막 연쇄 ${(s.bonus-s.leftAtWin*PUZZLE.moveBonus).toLocaleString()} · 남은 이동 ${s.leftAtWin}번 ${(s.leftAtWin*PUZZLE.moveBonus).toLocaleString()}점</small>`:''}${won&&!def.attack?`<br><small>${s.continues?'이어하기로 깬 판은 ★ 하나':`★★ ${def.stars[0].toLocaleString()} · ★★★ ${def.stars[1].toLocaleString()}점`}</small>`:''}</p>
    ${won?'':`<ul class="sp-goal-list">${puzzleGoalState(s).filter(p=>p.have<p.need).map(p=>`<li>${goalIcon(p)} ${goalName(p)} ${p.kind==='score'?(p.need-p.have).toLocaleString()+'점':p.need-p.have+'개'} 모자랐어요</li>`).join('')}</ul>`}
    ${record.notes.length||jpNote?`<p class="sp-reward">${escape([...record.notes,jpNote].filter(Boolean).join(' · '))}</p>`:''}
    ${!won&&counted&&prevStreak>0?`<p class="sp-meta">${prevStreak}연승이 끊겼어요 · 최고 ${record.progress.bestStreak}연승</p>`:''}

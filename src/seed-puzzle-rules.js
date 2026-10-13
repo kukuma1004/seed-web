@@ -410,10 +410,14 @@ export function tapPuzzle(s,i){
  s.log.push(['t',i]);s.movesLeft--;const steps=[];cascade(s,steps,{forced:[i]});settle(s,steps);return {ok:true,kind:'tap',steps};
 }
 // 판 안 도구(이동을 쓰지 않는다). 값은 화면이 햇살로 받고 부른다.
+export function puzzleToolReason(s,tool,i=0){
+ const stop=blocked(s);if(stop)return stop.reason;
+ if(!PUZZLE_TOOLS[tool])return '없는 도구예요';
+ if(tool!=='shuffle'&&(!Number.isInteger(i)||i<0||i>=ALL||s.hole[i]))return '판 안의 칸을 골라요';
+ return null;
+}
 export function usePuzzleTool(s,tool,i=0){
- const stop=blocked(s);if(stop)return stop;
- if(!PUZZLE_TOOLS[tool])return {ok:false,reason:'없는 도구예요',steps:[]};
- if(tool!=='shuffle'&&(!Number.isInteger(i)||i<0||i>=ALL||s.hole[i]))return {ok:false,reason:'판 안의 칸을 골라요',steps:[]};
+ const reason=puzzleToolReason(s,tool,i);if(reason)return {ok:false,reason,steps:[]};
  s.log.push(['k',tool,i]);s.tools++;const steps=[];
  if(tool==='shuffle'){shuffle(s);steps.push({type:'shuffle',cells:s.cells.map(copyCell)});cascade(s,steps,{});}
  else{const cells=tool==='hammer'?[i]:line(i,tool==='row'?'h':'v');cascade(s,steps,{forced:cells,effects:[{kind:'tool',tool,i,cells,dir:tool==='col'?'v':'h',flights:[]}],label:PUZZLE_TOOLS[tool].name});}

@@ -6,7 +6,7 @@ import {SHOT_CELLS} from './shot-auras.js';
 
 const BASE=import.meta.env?.BASE_URL||'/';
 const TRAIL_OF={seed:'leafTrail',reflect:'sparkTrail',split:'sparkTrail',chain:'crackleTrail',orbit:'trail',pierce:'trail',burst:'sparkTrail',recall:'trail',gravity:'trail',frost:'mistTrail'};
-const TINT_LIMIT=24;
+export const VFX_TINT_LIMIT=128;
 
 // Compact botanical silhouettes remain readable on light paving. The original
 // painted projectile is drawn above these by the mode, and keeps its identity.
@@ -28,27 +28,27 @@ function corePath(p,law){
 }
 
 export function createCanvasVfx({onReady=()=>{}}={}){
- const atlases={},tinted=new Map(),corePaths={};
+ const atlases={},tinted=new Map(),corePaths={};let disposed=false;
  if(typeof Path2D==='function')for(const law of Object.keys(TRAIL_OF)){const path=new Path2D();corePath(path,law);corePaths[law]=path;}
  function clearTints(){for(const c of tinted.values())c.width=c.height=0;tinted.clear();}
- for(const [key,file] of [['fx','vfx-atlas-v1.webp'],['shot','shot-atlas-v1.webp']]){const img=new Image();img.onload=()=>{clearTints();onReady();};img.src=BASE+'assets/'+file;atlases[key]=img;}
- const ready=key=>atlases[key]?.complete&&atlases[key].naturalWidth>0;
+ for(const [key,file] of [['fx','vfx-atlas-v1.webp'],['shot','shot-atlas-v1.webp']]){const img=new Image();img.onload=()=>{if(disposed)return;clearTints();onReady();};img.src=BASE+'assets/'+file;atlases[key]=img;}
+ const ready=key=>!disposed&&atlases[key]?.complete&&atlases[key].naturalWidth>0;
  // 흑백 소재 × 색 = 물든 소재. 검정 바탕은 더하기에서 사라진다. 색마다 한 번만 만든다.
- function tint(key,color){
-  const id=key+color;let c=tinted.get(id);if(c)return c;const img=atlases[key];
-  c=document.createElement('canvas');c.width=img.naturalWidth;c.height=img.naturalHeight;const g=c.getContext('2d');
-  g.drawImage(img,0,0);g.globalCompositeOperation='multiply';g.fillStyle=color;g.fillRect(0,0,c.width,c.height);
+ function tint(key,index,color){
+  const id=key+':'+index+':'+color;let c=tinted.get(id);if(c)return c;const img=atlases[key],w=img.naturalWidth/4,h=img.naturalHeight/4,x=index%4*w,y=Math.floor(index/4)*h;
+  c=document.createElement('canvas');c.width=w;c.height=h;const g=c.getContext('2d');
+  g.drawImage(img,x,y,w,h,0,0,w,h);g.globalCompositeOperation='multiply';g.fillStyle=color;g.fillRect(0,0,c.width,c.height);
   // 흰 심지를 조금 남겨 빛나 보이게.
-  g.globalCompositeOperation='lighter';g.globalAlpha=.08;g.drawImage(img,0,0);
+  g.globalCompositeOperation='lighter';g.globalAlpha=.08;g.drawImage(img,x,y,w,h,0,0,w,h);
   // Normal law palettes fit in this small cache. A mode-specific or changing
   // colour cannot retain an unbounded number of full atlas canvases.
-  if(tinted.size>=TINT_LIMIT){const oldest=tinted.keys().next().value,old=tinted.get(oldest);old.width=old.height=0;tinted.delete(oldest);}
+  if(tinted.size>=VFX_TINT_LIMIT){const oldest=tinted.keys().next().value,old=tinted.get(oldest);old.width=old.height=0;tinted.delete(oldest);}
   tinted.set(id,c);return c;
  }
  function cell(ctx,key,index,x,y,size,{rotation=0,color='#ffffff',alpha=1,stretch=1}={}){
-  if(!ready(key)||!(size>0)||alpha<=0)return false;const img=tint(key,color),w=img.width/4,h=img.height/4;
+  if(!ready(key)||!Number.isInteger(index)||index<0||index>=16||!Number.isFinite(size)||!(size>0)||alpha<=0)return false;const img=tint(key,index,color),w=img.width,h=img.height;
   ctx.save();ctx.globalCompositeOperation='lighter';ctx.globalAlpha=Math.min(1,alpha);ctx.translate(x,y);if(rotation)ctx.rotate(rotation);
-  ctx.drawImage(img,(index%4)*w,Math.floor(index/4)*h,w,h,-size*stretch/2,-size/2,size*stretch,size);ctx.restore();return true;
+  ctx.drawImage(img,0,0,w,h,-size*stretch/2,-size/2,size*stretch,size);ctx.restore();return true;
  }
  // Area radii remain truthful, but many simultaneous additive impacts must not
  // wash out the path and actors. Keep a small highlight rather than white fog.
@@ -115,5 +115,8 @@ export function createCanvasVfx({onReady=()=>{}}={}){
   if(f.kind==='web'){fx(ctx,'shard',f.x,f.y,f.radius*1.2,{color,alpha:alpha*.55,rotation:now*.0003});shot(ctx,'frost',f.x,f.y,f.radius*1.9,{color,alpha:alpha*.3,rotation:now*.0004});return;}
   shot(ctx,'gravity',f.x,f.y,f.radius*2.3,{color,alpha:alpha*.33,rotation:-now*.003});fx(ctx,'mist',f.x,f.y,f.radius*2.4,{color,alpha:alpha*.3});
  }
- return {ready:()=>ready('fx')&&ready('shot'),effect,projectile,field,fx,shot,beam};
+ return {ready:()=>ready('fx')&&ready('shot'),effect,projectile,field,fx,shot,beam,
+  stats:()=>({tiles:tinted.size,bytes:[...tinted.values()].reduce((n,c)=>n+c.width*c.height*4,0),limit:VFX_TINT_LIMIT,disposed}),
+  dispose(){if(disposed)return;disposed=true;clearTints();for(const img of Object.values(atlases))img.onload=null;}
+ };
 }

@@ -18,7 +18,7 @@ for(let i=0;i<700;i++){
 }
 assert.ok(front>10);assert.equal(rear,0);assert.equal(room.distance,699*.12);assert.ok(maxSpawns<=LIMIT.spawnsPerStep);
 const sequel=createExpansionCourse('crosswind',{room:2,seed:452});
-for(let i=0;i<750;i++)for(const e of stepExpansionCourse(sequel,.05,{player:{x:0,z:0}}).spawns)if(e.side==='rear'){rear++;assert.ok(e.windup>=1);assert.ok(e.position.x<-6&&e.position.x>-7);}
+for(let i=0;i<750;i++){const player={x:Math.min(60,i*.08),z:0};for(const e of stepExpansionCourse(sequel,.05,{player}).spawns)if(e.side==='rear'){rear++;assert.ok(e.windup>=1);assert.ok(e.position.x-player.x<-6&&e.position.x-player.x>-7);}}
 assert.ok(rear>0);
 const full=createExpansionCourse('crosswind',{room:4});
 for(let i=0;i<400;i++)assert.equal(stepExpansionCourse(full,.05,{enemyCount:24}).spawns.length,0);

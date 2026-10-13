@@ -19,7 +19,7 @@ function host(j){
   spawnExpansionActor(spec){const e={dead:false,hp:spec.hp,maxHp:spec.hp,type:spec.type,expansionActor:true,siegeGuard:spec.siegeGuard===true,hit:0,g:{position:new THREE.Vector3(spec.position.x,0,spec.position.z),rotation:{}},expansionThreat:journey.createExpansionThreat(spec)};ctx.enemies.push(e);return e;},
   damageEnemy(e,n,_chain,_critical,meta){if(e.dead)return;const before=e.hp;e.hp-=n*(e.state==='recover'?1.35:1);ctx[meta?.kind==='siege-turret'?'turretDamage':'playerDamage']+=Math.min(before,Math.max(0,before-e.hp));if(e.hp<=0){e.dead=true;ctx.kills++;}},
   line(){},V:THREE.Vector3,audio:{play(){}},$:()=>({textContent:''}),finishExpansionEntry:()=>true,showExpansionResult:(won,ended)=>{ctx.failure={won,ended};},collide:p=>constrainToArena(p,.65,{shape:'rect',halfWidth:7.5,halfDepth:6.5}),expansionBolt:()=>assert.fail('Siege minions must not use classic ranged bolts'),releaseEnemy(){}};
- vm.createContext(ctx);vm.runInContext(updateSource+'\n'+actorSource,ctx);return ctx;
+ ctx.expansionSiegeView={recordSupport(actual,id){if(!Number.isFinite(actual)||actual<0||!/^pad-[0-3]$/.test(id))throw Error("Invalid actual support receipt");}};vm.createContext(ctx);vm.runInContext(updateSource+'\n'+actorSource,ctx);return ctx;
 }
 // No enemy is removed without paid facility damage or the explicitly described
 // bounded synthetic player hits. This exercises actual host closures and real

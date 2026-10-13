@@ -32,6 +32,7 @@ export const ACT3_GEOMETRIES=Object.freeze({
 export const ACT3_MATERIALS=Object.freeze({
  craft:new THREE.MeshStandardMaterial({vertexColors:true,roughness:.46,metalness:.18,emissive:0x132e38,emissiveIntensity:.38}),
  warning:new THREE.MeshBasicMaterial({color:0xffa65c,transparent:true,opacity:.48,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
+ opening:new THREE.MeshBasicMaterial({color:0xa9f7c0,transparent:true,opacity:.65,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true}),
  bossWarning:new THREE.MeshBasicMaterial({color:0xe175ff,transparent:true,opacity:.72,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,forceSinglePass:true})
 });
 
@@ -93,7 +94,7 @@ const passContact=(e,ctx,radius)=>{
 const committedMove=(e,dt,speed)=>{const step=Math.min(e.commitRemaining,dt*speed);e.g.position.addScaledVector(e.move,step);e.commitRemaining=Math.max(0,e.commitRemaining-step);};
 
 export function tickAct3Minion(e,dt,time,ctx){
- e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;
+ e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;e.tell.material=ACT3_MATERIALS.warning;
  if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;if(Math.abs(e.home.x)>.5)e.lane=Math.sign(e.home.x);}
  if(e.state==='entry'){
   face(e,FORWARD);
@@ -133,6 +134,7 @@ export function tickAct3Minion(e,dt,time,ctx){
    if(e.timer<=0){for(let i=-1;i<=1;i++)shot(ctx,e,e.dir.clone().applyAxisAngle(AXIS_Y,i*.32),{speed:ACT3_MINION_MISSILE_SPEED.carrier});e.attacks++;e.state='recover';e.timer=1.25;ctx.sound?.('bossAttack');}
   }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }
+ if(e.state==='recover'&&e.timer>0){e.tell.visible=true;e.tell.material=ACT3_MATERIALS.opening;e.tell.scale.setScalar(e.type==='sky-carrier'?1.35:1.05);}
  ctx.collide(e.g.position,.52);finishMotion(e,dt,time);
 }
 

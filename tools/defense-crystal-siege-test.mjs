@@ -57,7 +57,8 @@ assert.notEqual(defenseSiegeReviewKey(owner),key);assert.notEqual(defenseSiegeRe
 const view=readFileSync('src/seed-defense-view.js','utf8');
 const timerStart=view.indexOf("const inspecting=root.classList.contains('td-inspecting'),waiting="),timerEnd=view.indexOf('if(!paused&&!confirming){const phase=',timerStart);
 assert(timerStart>=0&&timerEnd>timerStart);
-const classes=new Set(),events=[],ctx=vm.createContext({root:{classList:{contains:c=>classes.has(c)}},ended:false,paused:true,confirming:false,bookOpen:false,state:s,wasInspecting:false,autoWait:20,localSiege:true,raw:1,DEFENSE_AUTO_INSPECT:6,DEFENSE_AUTO_START:3,prepareDefenseSiege,$:()=>({hidden:true,click:()=>events.push('start')})});
+const classes=new Set(),events=[],ctx=vm.createContext({root:{classList:{contains:c=>classes.has(c)}},moving:false,drag:null,ended:false,paused:true,confirming:false,bookOpen:false,state:s,wasInspecting:false,autoWait:20,localSiege:true,raw:1,DEFENSE_AUTO_INSPECT:6,DEFENSE_AUTO_START:3,prepareDefenseSiege,$:()=>({hidden:true,click:()=>events.push('start')})});
+vm.runInContext(view.match(/function planningHeld\(\)\{[^\n]+\}/)[0],ctx);
 ctx.publicSiegeAllowed=()=>false;vm.runInContext(view.match(/const siegeActive=([^;]+);/)[0],ctx);
 const tick=()=>vm.runInContext('{'+view.slice(timerStart,timerEnd)+'}',ctx);
 tick();assert.equal(ctx.autoWait,20);ctx.paused=false;ctx.bookOpen=true;tick();assert.equal(ctx.autoWait,20);
@@ -66,7 +67,7 @@ ctx.localSiege=false;ctx.paused=true;tick();assert.equal(ctx.autoWait,3);
 // Manual start checkpoints before the first authored wave, even if no crystal
 // or tower button was pressed. A paused start only resumes and does not save.
 const handler=view.match(/\$\('#td-start'\)\.onclick=(\(\)=>\{[^\n]+\});/)[1],order=[];
-const startCtx=vm.createContext({paused:false,localSiege:true,state:{phase:'build'},save:()=>order.push('save'),startDefenseWave:()=>{order.push('start');return false;},togglePause:()=>order.push('resume')});
-startCtx.publicSiegeAllowed=()=>false;vm.runInContext(view.match(/const siegeActive=([^;]+);/)[0],startCtx);vm.runInContext('handler='+handler,startCtx);startCtx.handler();assert.deepEqual(order,['save','start']);order.length=0;startCtx.paused=true;startCtx.handler();assert.deepEqual(order,['resume']);
+const startCtx=vm.createContext({confirming:false,starterPad:null,paused:false,localSiege:true,state:{phase:'build'},save:()=>order.push('save'),startDefenseWave:()=>{order.push('start');return false;},togglePause:()=>order.push('resume')});
+startCtx.publicSiegeAllowed=()=>false;vm.runInContext(view.match(/const siegeActive=([^;]+);/)[0],startCtx);vm.runInContext('handler='+handler,startCtx);startCtx.handler();assert.deepEqual(order,['save','start']);order.length=0;startCtx.paused=true;startCtx.handler();assert.deepEqual(order,['resume']);order.length=0;startCtx.paused=false;startCtx.confirming=true;startCtx.starterPad=0;startCtx.handler();assert.deepEqual(order,[],'starter dialog blocks start');
 assert.equal(DEFENSE_SIEGE_NODES.length,6);assert(DEFENSE_SIEGE_NODES.every(n=>Object.isFrozen(n)));
 console.log('TD crystal siege: original paid economy/combat, duplicate harvest, strict local resume, extracted-state account/rank rejection, manual-start checkpoint and pause/book/placement grace passed. Supplied Node-grown wave48 fixture is not human/account progress; Node verification is not device QA.');

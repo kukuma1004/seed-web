@@ -44,6 +44,18 @@ export function act3ReinforcementSpawn(index){
  return Object.freeze(flank?{x:sides[slot][0],z:sides[slot][1]}:{x:lanes[slot],z:-6.3+Math.abs(lanes[slot])*.13});
 }
 
+// Preserve the authored near/side formations. A late arrival never appears
+// directly on the player; its existing entry pause still precedes an attack.
+export function act3EntryPoint(x,z,player){
+ const p={x:Math.max(-8,Math.min(8,Number.isFinite(x)?x:0)),z:Math.max(-6.15,Math.min(5.7,Number.isFinite(z)?z:-6.15))};
+ if(!Number.isFinite(player?.x)||!Number.isFinite(player?.z)||Math.hypot(p.x-player.x,p.z-player.z)>=3.4)return p;
+ let nearest=null,best=Infinity;
+ for(const [sx,sz] of [[-8,-6.15],[0,-6.15],[8,-6.15],[-8,0],[8,0],[-7.6,5.7],[7.6,5.7]]){
+  if(Math.hypot(sx-player.x,sz-player.z)<3.4)continue;const d=(sx-p.x)**2+(sz-p.z)**2;if(d<best){best=d;nearest={x:sx,z:sz};}
+ }
+ return nearest||p;
+}
+
 // Two supply windows, one in each late formation room. The player must bring
 // down a carrier; the item goes straight to the capped run bag and cannot be
 // farmed by leaving and re-entering a cleared room.
@@ -52,7 +64,7 @@ export function act3SupplyDrop(type,stage,claimed,inventory){
 }
 
 export const SKYWAY_ROOMS=Object.freeze([
- Object.freeze({name:'상승 기류',hint:'붉은 돌격기의 조준이 멈추면 옆으로 피하고, 내려온 정찰기부터 끊으세요',covers:[],enemies:[['sky-scout',-4.8,-3.9],['sky-scout',-2.5,-4.8],['sky-diver',0,-5.7],['sky-scout',2.5,-4.8],['sky-scout',4.8,-3.9]]}),
+ Object.freeze({name:'상승 기류',hint:'조준이 멈추면 옆으로 피하세요 · 공격 후 초록 고리가 뜬 편대에 반격하면 피해 +35%',covers:[],enemies:[['sky-scout',-4.8,-3.9],['sky-scout',-2.5,-4.8],['sky-diver',0,-5.7],['sky-scout',2.5,-4.8],['sky-scout',4.8,-3.9]]}),
  Object.freeze({name:'구름 협곡',hint:'양옆 정찰기가 내려오면 열린 중앙으로 옮겨 폭격기의 조준을 빼세요',covers:[],enemies:[['sky-scout',-7,-1.8],['sky-scout',-3.6,-5.8],['sky-bomber',0,-6.5],['sky-scout',7,-1.8],['sky-diver',4.6,-5.4]]}),
  Object.freeze({name:'뇌운 회랑',hint:'돌격선을 옆으로 넘긴 뒤 폭격기의 발사 후 빈 시간에 전진하세요',covers:[],enemies:[['sky-bomber',-5,-5.4],['sky-scout',-7,-1],['sky-diver',0,-6.5],['sky-scout',7,-1],['sky-bomber',5,-5.4]]}),
  Object.freeze({name:'공중 함대',hint:'가까운 돌격기를 먼저 끊고, 모함이 포문을 쉬는 동안 접근해 보급을 얻으세요',covers:[],enemies:[['sky-carrier',0,-6.4],['sky-scout',-7,-1.4],['sky-bomber',-3.4,-4.6],['sky-scout',3.4,-4.6],['sky-scout',7,-1.4],['sky-diver',0,-3.6]]}),

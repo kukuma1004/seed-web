@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import {DECOR,decorScene,decorStars} from '../src/garden-decor.js';
+import {movableDecor,normalizeDecorPlacements,decorPlacementAllowed,moveDecor,resetDecorPlacements,decorLayoutKey,gardenDecorLayout,hitDecor,createDecorDrag} from '../src/garden-decor-placement.js';
+import {emptyGarden,normalizeGarden,writeGarden,readGarden} from '../src/garden.js';
+import {mergeGardenProgress,collectCloudSnapshot,applyCloudSnapshot} from '../src/cloud-save.js';
+const all=DECOR.map(d=>d.id),owned=['restBench','watersideBirdbath'];
+assert.equal(movableDecor(all).length,12);
+assert.deepEqual(emptyGarden().decorPositions,{});
+assert.deepEqual(normalizeGarden({decor:['gateBush'],decorPositions:{restBench:{u:.8,v:.6}}}).decorPositions,{},'unknown/unowned/non-furniture cannot receive positions');
+assert.deepEqual(normalizeDecorPlacements({restBench:{u:NaN,v:.6},other:{u:.8,v:.6}},owned),{});
+const defaults=resetDecorPlacements(all);assert.deepEqual(normalizeDecorPlacements(defaults,all),defaults,'every legacy default remains legal');
+for(const invalid of [{u:.5,v:453/900},{u:621/1600,v:331/900},{u:1,v:.8},{u:.15,v:.7},{u:.8,v:.3},{u:.5,v:.25},{u:.29,v:.46}])assert.equal(moveDecor(owned,{},'restBench',invalid).ok,false,'beds/tree/stairs/forest/occupied roots protected');
+const moved=moveDecor(owned,{},'restBench',{u:.8,v:.6});assert.ok(moved.ok);
+const vacated=moveDecor(owned,moved.positions,'watersideBirdbath',{u:.77,v:.46});assert.ok(vacated.ok);assert.deepEqual(normalizeDecorPlacements(vacated.positions,owned),vacated.positions,'moving to a vacated default survives normalization');
+assert.equal(decorScene(['restBench'],{restBench:{u:.8,v:.6,kind:'plant',tile:99}}).items[0].kind,'prop','position payload cannot change catalog kind/tile');
+assert.equal(decorScene(owned,vacated.positions).items.find(i=>i.id==='watersideBirdbath').u,.77);
+assert.notEqual(decorLayoutKey(owned,{}),decorLayoutKey(owned,moved.positions),'3D/render cache rebuilds on position change');
+const memory=()=>{const data=new Map();return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
+const storage=memory(),g=normalizeGarden({decor:owned,decorPositions:vacated.positions,puzzleStars:80,fragments:9});
+assert.ok(writeGarden(storage,g));assert.deepEqual(readGarden(storage).decorPositions,vacated.positions);assert.equal(readGarden(storage).fragments,9);
+const phone=memory();applyCloudSnapshot(phone,collectCloudSnapshot(storage));assert.deepEqual(readGarden(phone).decorPositions,vacated.positions,'actual account snapshot collect/apply retains arrangement');
+const remote={...g,decorPositions:{restBench:{u:.73,v:.4}}};
+assert.deepEqual(mergeGardenProgress(g,remote,{prefer:'remote'}).decorPositions.restBench,remote.decorPositions.restBench);
+assert.deepEqual(mergeGardenProgress(g,remote,{prefer:'local'}).decorPositions.restBench,g.decorPositions.restBench);
+const conflictLocal={...g,decorPositions:{restBench:{u:.8,v:.6}}},conflictRemote={...g,decorPositions:{watersideBirdbath:{u:.8,v:.6}}};
+assert.deepEqual(mergeGardenProgress(conflictLocal,conflictRemote,{prefer:'local'}).decorPositions,{restBench:{u:.8,v:.6}},'conflicting other-device furniture cannot displace preferred furniture');
+assert.deepEqual(mergeGardenProgress(conflictLocal,conflictRemote,{prefer:'remote'}).decorPositions,{watersideBirdbath:{u:.8,v:.6}},'prefer remote preserves its placement on collision');
+const reset={...g,decorPositions:resetDecorPlacements(g.decor)};
+assert.deepEqual(mergeGardenProgress(remote,reset,{prefer:'remote'}).decorPositions,reset.decorPositions,'reset is explicit defaults, so stale cloud cannot resurrect removed overrides');
+assert.equal(decorStars(reset.puzzleStars,reset.decor),decorStars(g.puzzleStars,g.decor),'arranging/resetting cannot spend or grant stars');
+const malformed=normalizeGarden({...g,decorPositions:{restBench:{u:.8,v:.6},watersideBirdbath:{u:.8,v:.6}}});assert.deepEqual(malformed.decorPositions,{},'overlapping imported furniture falls back to safe defaults');
+for(const rect of [{x:0,y:0,w:850,h:720},{x:7,y:4,w:320,h:360},{x:0,y:0,w:720,h:240}]){
+ const L=gardenDecorLayout(rect);for(const [u,v] of [[.8,.6],[.14,.22],[.86,.96]]){const point=L.from(...L.at(u,v));assert.ok(Math.abs(point.u-u)<1e-10&&Math.abs(point.v-v)<1e-10,'crop inverse roundtrip');}
+ const [x,y]=L.at(.77,.46);assert.equal(hitDecor(owned,{},L,x,y-L.unit*.2,rect)?.id,'restBench');assert.equal(hitDecor(owned,{},L,-10,-10,rect),null,'clipped/off-canvas art does not steal taps');
+}
+let current=normalizeGarden({decor:owned,puzzleStars:80}),writes=0;
+const rect={x:0,y:0,w:850,h:720},L=gardenDecorLayout(rect),drag=createDecorDrag({getGarden:()=>current,getLayout:()=>L,getRect:()=>rect,onCommit:next=>{current=next;writes++;}});
+const [sx,sy]=L.at(.77,.46),[tx,ty]=L.at(.8,.6),dy=L.unit*.2;
+assert.equal(drag.start(7,sx,sy-dy),true);assert.equal(drag.start(8,sx,sy-dy),false,'second touch cannot replace active drag');assert.equal(drag.move(8,tx,ty-dy),false);assert.equal(drag.finish(8),false);
+assert.equal(drag.move(7,tx,ty-dy),true);assert.equal(writes,0,'preview is not saved');drag.cancel();assert.equal(drag.finish(7),false);assert.equal(writes,0,'pointercancel/lostcapture/hidden/close cancel primitive never saves');
+assert.ok(drag.start(9,sx,sy-dy));drag.move(9,tx,ty-dy);assert.equal(drag.finish(9),true);assert.equal(writes,1);assert.deepEqual(current.decorPositions.restBench,{u:.8,v:.6});
+const start=L.at(.8,.6),bad=L.at(.5,453/900);assert.ok(drag.start(10,start[0],start[1]-dy));drag.move(10,bad[0],bad[1]-dy);assert.equal(drag.active.valid,false);assert.equal(drag.finish(10),false);assert.equal(writes,1,'invalid drop preserves existing save');assert.equal(current.puzzleStars,80);
+console.log('Garden placement: ownership, safe roots, crop hit/inverse, drag cancel, local/account roundtrip, preference merge/reset passed.');

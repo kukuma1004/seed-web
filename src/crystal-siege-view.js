@@ -1,11 +1,14 @@
 import * as THREE from 'three';
 import {SIEGE_ART_FILE,siegeArtTexture,siegeArtStyle,siegeArtAspect} from './siege-art.js';
+import {CRYSTAL_SIEGE_PACKETS} from './crystal-siege-rules.js';
 // Local siege review uses eleven persistent sprites and four build rings.
 // All combat ownership stays in crystal-siege-rules; no lights or per-frame DOM.
 export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
  const world=new THREE.Group();world.name='crystal-siege-review';world.visible=false;scene.add(world);
  const owned=[],textures=[],rings=[];let disposed=false,uiKey='',buildKey='',padId=null,menuOpen=false,interactiveNow=false,nearestPad=null,currentResources=0;
  const facilityCodes=new Uint8Array(4),plantTime=new Float32Array(4);let facilitiesSeen=false;
+ const padPreviousHp=new Float32Array(4),padHitTime=new Float32Array(4),supportTime=new Float32Array(4);
+ let feedbackState=null,corePreviousHp=NaN,coreHitTime=0,receipt='',receiptTime=0;
  const facilityCode={turret:1,snare:3,wall:5};
  const load=path=>{const t=loader.load(base+'assets/'+path);t.colorSpace=THREE.SRGBColorSpace;textures.push(t);return t;};
  const crystal=load('mobile/mirror-crystal-v1.webp'),facilityAtlas=load(SIEGE_ART_FILE.slice(7));
@@ -28,31 +31,54 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart}={}){
  contextButton.onclick=()=>{if(!interactiveNow||!nearestPad||contextButton.disabled)return;if(nearestPad.kind){onBuild?.(padId,nearestPad.kind);}else{menuOpen=!menuOpen;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));}contextButton.blur();};
  menu.querySelector('[data-close]').onclick=()=>{menuOpen=false;choices.hidden=true;contextButton.setAttribute('aria-expanded','false');};
  startButton.onclick=()=>{if(interactiveNow){menuOpen=false;choices.hidden=true;onStart?.();startButton.blur();}};
- function update(s,player,{visible=false,interactive=false,boss=false,bossCleared=false,coreDefense=false,roundCount=5,prepDuration=20,prepRemaining=null,dt=0}={}){
-  if(disposed)return;world.visible=visible&&!!s;hud.hidden=!world.visible;menu.hidden=true;interactiveNow=false;if(!world.visible){menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;facilitiesSeen=false;plantTime.fill(0);return;}
+ function resetFeedback(next=null){feedbackState=next;corePreviousHp=NaN;coreHitTime=0;padPreviousHp.fill(NaN);padHitTime.fill(0);supportTime.fill(0);receipt='';receiptTime=0;heart.material.color.setHex(0xffffff);for(const o of facilities)o.material.color.setHex(0xffffff);}
+ function recordSupport(appliedDamage,facilityId){
+  if(disposed||!world.visible||!feedbackState||!['defense','clear','boss'].includes(feedbackState.phase)||!Number.isFinite(appliedDamage)||appliedDamage<=0||appliedDamage>1e6)return false;
+  const index=feedbackState.pads.findIndex(p=>p.id===facilityId),pad=feedbackState.pads[index];
+  if(index<0||index>=4||pad.kind!=='turret'||pad.hp<=0)return false;
+  supportTime[index]=.24;receipt=`포탑 적중 · 피해 ${Math.round(appliedDamage*10)/10}`;receiptTime=1.2;return true;
+ }
+ function update(s,player,{visible=false,interactive=false,boss=false,bossCleared=false,coreDefense=false,roundCount=5,prepDuration=20,prepRemaining=null,liveEnemies=null,dt=0}={}){
+  if(disposed)return;world.visible=visible&&!!s;hud.hidden=!world.visible;menu.hidden=true;interactiveNow=false;if(!world.visible){menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;facilitiesSeen=false;plantTime.fill(0);resetFeedback();return;}
+  if(feedbackState!==s){resetFeedback(s);facilitiesSeen=false;plantTime.fill(0);}
   heart.position.set(s.core.x,.04,s.core.z);
   for(let i=0;i<nodes.length;i++){const n=s.nodes[i];nodes[i].visible=!boss&&s.phase==='prep'&&!!n&&!n.harvested; if(n)nodes[i].position.set(n.x,.02,n.z);}
   let nearest=null,best=Infinity;for(let i=0;i<rings.length;i++){const p=s.pads[i];rings[i].position.set(p.x,.05,p.z);facilities[i].visible=!!p.kind&&p.hp>0;facilities[i].position.set(p.x,.04,p.z);facilities[i].material.map=p.kind==='snare'?snareTexture:p.kind==='wall'?wallTexture:turret;const d=Math.hypot(player.x-p.x,player.z-p.z);rings[i].material.opacity=d<=1.7?.95:.4;rings[i].material.color.setHex(d<=1.7?0xffe7a8:0xb7c6a1);if(d<=1.7&&d<best){best=d;nearest=p;}}
   // Four existing sprites settle briefly after a paid build/upgrade. No new
   // particles, lights, geometry or combat hitboxes are created for this cue.
   const step=Number.isFinite(dt)?Math.max(0,Math.min(.1,dt)):0;
+  coreHitTime=Math.max(0,coreHitTime-step);if(Number.isFinite(corePreviousHp)&&s.core.hp<corePreviousHp){coreHitTime=.3;receipt='심장이 공격받고 있어요 · 가까운 습격대부터 끊으세요';receiptTime=1.2;}corePreviousHp=s.core.hp;
+  heart.material.color.setHex(coreHitTime>0?0xff8777:0xffffff);
+  receiptTime=Math.max(0,receiptTime-step);if(!receiptTime)receipt='';
   for(let i=0;i<4;i++){
    const p=s.pads[i],code=p.kind&&p.hp>0?(facilityCode[p.kind]||0)+p.level:0;
+   padHitTime[i]=Math.max(0,padHitTime[i]-step);supportTime[i]=Math.max(0,supportTime[i]-step);
+   if(Number.isFinite(padPreviousHp[i])&&p.hp<padPreviousHp[i])padHitTime[i]=.3;padPreviousHp[i]=p.hp;
+   facilities[i].material.color.setHex(padHitTime[i]>0?0xff8777:supportTime[i]>0?0xb5ffd7:0xffffff);
+   if(padHitTime[i]>0)rings[i].material.color.setHex(0xff8777);
    if(facilitiesSeen&&code>0&&code!==facilityCodes[i])plantTime[i]=.24;
    facilityCodes[i]=code;plantTime[i]=Math.max(0,plantTime[i]-step);
    const bump=Math.sin(Math.PI*plantTime[i]/.24)*.16;
    facilities[i].scale.set(2.05*(1+bump),2.05*(1+bump)*siegeArtAspect(p.kind||'turret'),1);
   }
   facilitiesSeen=true;
-  const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}`;
+  const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));
+  const liveText=Number.isInteger(liveEnemies)&&liveEnemies>=0?`남은 적 ${liveEnemies}`:'';
+  // Survival owns a different wave ledger. Only the five-night Journey uses
+  // this finite packet count; an empty arena never invents a clear receipt.
+  const packetTotal=CRYSTAL_SIEGE_PACKETS[s.room],packetRemaining=roundCount===5&&Number.isInteger(s.spawnIndex)&&Number.isInteger(packetTotal)?Math.max(0,packetTotal-s.spawnIndex):null;
+  const pressure=!boss&&s.phase==='defense'?(packetRemaining!==null?`남은 습격 ${packetRemaining}${liveText?' · '+liveText:''}`:liveText):'';
+  const defenseHint=packetRemaining===0?(liveText?(liveEnemies>0?'마지막 적을 처치하면 다음 전장이 열려요':'습격 정산 중'):'남은 적을 확인하세요'):packetRemaining!==null?'다가오는 습격대를 심장 전에 끊으세요':'';
+  const detail=!boss&&s.phase==='prep'?'빛나는 수정에 다가가 채집 · 원 안에서 시설 심기':!boss&&s.phase==='defense'?defenseHint:'';
+  const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}|${pressure}|${detail}|${receipt}`;
   const choosing=menuOpen&&interactive&&s.phase==='prep'&&!boss;
-  if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(!boss&&s.phase==='prep'?'빛나는 수정에 다가가 채집 · 원 안에서 시설 심기':'')+'</small>';uiKey=text+'|'+choosing;}
+  if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):pressure||'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(receipt||detail)+'</small>';uiKey=text+'|'+choosing;}
   if(!boss&&s.phase==='prep'&&interactive){
    interactiveNow=true;menu.hidden=false;const nextId=nearest?.id??null;if(nextId!==padId)menuOpen=false;padId=nextId;nearestPad=nearest;currentResources=s.resources;
    const key=padId+'|'+nearest?.kind+'|'+nearest?.level+'|'+(nearest?.hp>0)+'|'+currentResources;
-   if(key!==buildKey){buildKey=key;contextButton.hidden=!nearest;contextButton.disabled=Boolean(nearest?.kind&&(nearest.level>=2&&nearest.hp>0||s.resources<costs[nearest.kind]));contextButton.textContent=nearest?.kind?(nearest.level>=2&&nearest.hp>0?`${names[nearest.kind]} · 최대 강화`:`${names[nearest.kind]} ${nearest.hp>0?'강화':'다시 심기'} · 수정 ${costs[nearest.kind]}${s.resources<costs[nearest.kind]?' 필요':''}`):'이 화단에 심기';for(const b of buildButtons)b.disabled=!nearest||Boolean(nearest.kind)||s.resources<costs[b.dataset.kind];}
+   if(key!==buildKey){buildKey=key;contextButton.hidden=!nearest;contextButton.disabled=Boolean(nearest?.kind&&(nearest.level>=2&&nearest.hp>0||s.resources<costs[nearest.kind]));contextButton.textContent=nearest?.kind?(nearest.level>=2&&nearest.hp>0?`${names[nearest.kind]} · ${nearest.kind==='turret'?'심장 우선 공격':'최대 강화'}`:`${names[nearest.kind]} ${nearest.hp>0?'강화':'다시 심기'}${nearest.kind==='turret'&&(nearest.hp>0||nearest.level===2)?' · 심장 우선':''} · 수정 ${costs[nearest.kind]}${s.resources<costs[nearest.kind]?' 필요':''}`):'이 화단에 심기';for(const b of buildButtons)b.disabled=!nearest||Boolean(nearest.kind)||s.resources<costs[b.dataset.kind];}
    if(nearest?.kind)menuOpen=false;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));
   }else{menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;buildKey='';}
  }
- return {update,preparationHeld(){return !disposed&&interactiveNow&&menuOpen&&!menu.hidden&&!choices.hidden;},hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);},dispose(){if(disposed)return;disposed=true;world.removeFromParent();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
+ return {update,recordSupport,preparationHeld(){return !disposed&&interactiveNow&&menuOpen&&!menu.hidden&&!choices.hidden;},hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);resetFeedback();},dispose(){if(disposed)return;disposed=true;resetFeedback();world.removeFromParent();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
 }

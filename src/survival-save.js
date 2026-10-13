@@ -80,6 +80,15 @@ export function validSurvivalSave(s){
  if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
  if(t.act>=3&&!validSurvivalExpansionCheckpoint(s.expansion,t.act,t.lap))return false;
  if(!finite(t.time)||t.time<0||!finite(t.legStartedAt)||t.legStartedAt>t.time||!finite(t.rngState))return false;
+ if(t.pressureBuildLevel!==undefined||t.pressureLegStartedAt!==undefined){
+  if(!Number.isInteger(t.pressureBuildLevel)||t.pressureBuildLevel<0||t.pressureBuildLevel>1000000||!finite(t.pressureLegStartedAt)||t.pressureLegStartedAt<0||t.pressureLegStartedAt>t.time)return false;
+ }
+ if(t.pressureFromBuildLevel!==undefined||t.pressureFromLegStartedAt!==undefined){
+  if(!Number.isInteger(t.pressureBuildLevel)||!finite(t.pressureLegStartedAt)||!Number.isInteger(t.pressureFromBuildLevel)||t.pressureFromBuildLevel<0||t.pressureFromBuildLevel>1000000||!finite(t.pressureFromLegStartedAt)||t.pressureFromLegStartedAt<0||t.pressureFromLegStartedAt>t.time)return false;
+  // A well-formed unknown pair may survive an older client's advance/relock.
+  // Stale source markers are ignored by rules, then cleared on the next lock.
+  if(t.pressureFromLegStartedAt===t.pressureLegStartedAt&&t.pressureFromBuildLevel>t.pressureBuildLevel)return false;
+ }
  if(!Array.isArray(s.enemies)||s.enemies.length>301||!Array.isArray(s.hostiles)||s.hostiles.length>192)return false;
  if(!s.player?.position?.every(finite)||s.player.position.length!==3)return false;
  for(const key of ['kills','score','choicesTaken','choiceKills','bankedUpgrades','elapsed'])if(!finite(p[key])||p[key]<0)return false;

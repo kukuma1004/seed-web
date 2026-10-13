@@ -49,7 +49,7 @@ export function renderGardenPanel(root,{garden,selection,onChange,onSelect,onClo
  }else{
   const recent=garden.records?.[0],memory=recent?`<h3>최근 여정의 흔적</h3><p class="plot-effect garden-memory">${escape(gardenRecordLine(recent))}</p>`:'';
   // 정원 가꾸기(씨앗 맞추기 별로 꾸미기)가 어디까지 왔는지.
-  const decorDone=(garden.decor||[]).length,area=decorAreaIndex(garden.decor),decorLine=`<h3>정원 가꾸기 ${decorDone}/${DECOR.length}</h3><p class="plot-effect">${area<0?'정원을 끝까지 꾸몄어요.':`지금 꾸미는 곳 · ${escape(DECOR_AREAS[area].name)}`} 씨앗 맞추기에서 모은 별로 꽃·등불·반딧불이를 들여요.</p>`;
+  const decorDone=(garden.decor||[]).length,area=decorAreaIndex(garden.decor),decorLine=`<h3>정원 가꾸기 ${decorDone}/${DECOR.length}</h3><p class="plot-effect">${area<0?'정원을 끝까지 꾸몄어요.':`지금 꾸미는 곳 · ${escape(DECOR_AREAS[area].name)}`} 씨앗 맞추기에서 모은 별로 연못·벤치·쉼터와 꽃길을 만들어요.</p>`;
   body=`<div class="panel-plant"><p class="panel-ask">정원의 식물을 눌러 지난 플레이의 흔적을 살펴보세요.</p>
    ${memory}<h3>자동으로 자라는 정원</h3><p class="plot-effect">여정을 마치면 씨앗은 빈 화단에 저절로 심기고, 이미 자라는 식물은 다음 여정마다 성장합니다.</p>${fragmentLine}${decorLine}</div>`;
  }

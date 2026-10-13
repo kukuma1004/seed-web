@@ -1,6 +1,8 @@
 // Presentation only: no damage, cooldown, AI, save or random-state mutations.
 const STOP_SECONDS=.045,STOP_SCALE=.2,STOP_GAP=.12,LABEL_SECONDS=.55;
 const SIGNALS=Object.freeze({
+ pierceTip:Object.freeze({label:'창끝 적중',color:'#dbf6b1',priority:0,stop:false}),
+ gravityPull:Object.freeze({label:'끌어오기!',color:'#d2a0ff',priority:0,stop:false}),
  heavyHit:Object.freeze({label:'강타!',color:'#ffd36b',priority:1,stop:true}),
  parry:Object.freeze({label:'반격 막기!',color:'#fff1b9',priority:2,stop:true}),
  guardBreak:Object.freeze({label:'막기 파괴!',color:'#ff947c',priority:3,stop:true}),

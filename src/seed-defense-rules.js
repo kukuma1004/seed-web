@@ -83,9 +83,12 @@ export function placeDefensePad(s,pad,x,y){
  if(!canAct(s)||!Number.isInteger(pad)||pad<0||pad>=s.pads.length||defensePlacement(s,x,y,pad))return false;
  s.pads[pad]={x,y};const t=s.towers.find(t=>t.pad===pad);if(t){t.x=x;t.y=y;}s.selectedPad=pad;return true;
 }
-export function plantDefense(s,padIndex){
+export const DEFENSE_STARTER_LAWS=Object.freeze(['pierce','frost','burst']);
+export function defenseStarterLaws(s){return s?.phase==='build'&&s.wave===0&&s.nextId===1&&s.towers?.length===0&&s.currency>=DEFENSE.plantCost?DEFENSE_STARTER_LAWS:[];}
+export function plantDefense(s,padIndex,starterLaw=null){
+ if(starterLaw!==null&&!defenseStarterLaws(s).includes(starterLaw))return false;
  const p=s.pads?.[padIndex];if(s.towers.length>=defenseSeedCap(s)){s.lastEvent=`씨앗은 지금 ${defenseSeedCap(s)}개까지예요 · 순환을 넘기면 늘어나요`;return false;}if(!canAct(s)||!Number.isInteger(padIndex)||!p||s.currency<DEFENSE.plantCost||s.towers.some(t=>t.pad===padIndex)||defensePlacement(s,p.x,p.y,padIndex))return false;
- s.currency-=DEFENSE.plantCost;const law=IDS[Math.floor(random(s)*IDS.length)];s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,line:law,tier:1,merit:0,stars:0,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
+ s.currency-=DEFENSE.plantCost;const rolled=IDS[Math.floor(random(s)*IDS.length)],law=starterLaw??rolled;s.towers.push({id:s.nextId++,pad:padIndex,x:p.x,y:p.y,level:1,line:law,tier:1,merit:0,stars:0,laws:[law],lawRanks:{[law]:1},formId:null,fusion:null,reinforce:0,ultimateCharge:0,angle:0,shotTime:0,mirrorTime:0});s.selectedPad=padIndex;s.offers=[];s.lastEvent=`${DEFENSE_LAWS[law].name} 씨앗이 싹텄어요`;return true;
 }
 export function upgradeDefense(s,id){const t=s.towers.find(t=>t.id===id),cost=defenseUpgradeCost(t);if(!canAct(s)||!t||s.currency<cost||!Number.isFinite(cost))return false;s.currency-=cost;t.level++;return true;}
 export function chooseDefenseLaw(s,towerId,id){
@@ -214,8 +217,9 @@ function moveShots(s,dt){const count=s.shots.length;for(let i=0;i<count;i++){con
  }
  if(q.x<-15||q.x>115||q.y<-15||q.y>75)q.life=0;
 }compact(s.shots,q=>q.life>0);}
+export function defenseSpawnKind(wave,index,info){return info.boss&&index===info.count-1?'boss':wave>=3&&index%5===3?'shield':wave>=2&&index%4===1?'fast':wave>=6&&index%7===0?'resilient':'normal';}
 function spawn(s,info){
- const index=s.spawned++,boss=info.boss&&index===info.count-1,r=random(s),kind=boss?'boss':s.wave>=3&&index%5===3?'shield':s.wave>=2&&index%4===1?'fast':s.wave>=6&&index%7===0?'resilient':'normal';
+ const index=s.spawned++,boss=info.boss&&index===info.count-1,r=random(s),kind=defenseSpawnKind(s.wave,index,info);
  const flank=info.act===3&&!boss&&index%6===5;
  const hp=(boss?info.bossHp:info.hp)*(boss?1:kind==='shield'?1.5:kind==='resilient'?2:kind==='fast'?.65:1)*(flank?.7:1);
  // The horizontal bank is a shorter road, not a hidden reduction in the time

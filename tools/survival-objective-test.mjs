@@ -1,8 +1,8 @@
 import assert from 'node:assert/strict';
-import {createSurvivalSession,advanceSurvivalAct} from '../src/survival-rules.js';
+import {createSurvivalSession,advanceSurvivalAct,lockSurvivalBuildPressure,survivalScaling} from '../src/survival-rules.js';
 import {createSurvivalExpansion} from '../src/survival-expansion.js';
 import {createSurvivalSiege,checkpointSurvivalSiege,survivalSiegeActive,SURVIVAL_OBJECTIVE} from '../src/survival-crystal-siege.js';
-import {captureSurvivalObjectiveSnapshot,validSurvivalObjectiveSave,validSurvivalObjectiveRecord} from '../src/survival-objective-save.js';
+import {captureSurvivalObjectiveSnapshot,validSurvivalObjectiveSave,validSurvivalObjectiveRecord,survivalObjectiveLegacyProjection} from '../src/survival-objective-save.js';
 import {createSurvivalSaveStore,routeSurvivalSaveStore,validSurvivalSave} from '../src/survival-save.js';
 import {decodeSurvivalCloud,createSurvivalSync} from '../src/survival-sync.js';
 import {survivalExpansionRankProgress} from '../src/survival-ranking.js';
@@ -120,3 +120,13 @@ const racer=createSurvivalSaveStore(raceStorage,'p1',{objectives:()=>gate,curren
 assert.equal(racer.replace(current,{...current,revision:current.revision+1}).ok,false);assert.equal(racer.readRecord(),null);
 owner='p2';assert.equal(racer.end(current.id,current.revision),false);
 console.log('PASS Survival public objective: distinct v2 owner/gate route, live fifth-act siege/resource validation, completed lap, exact v1 terminal parent, old-client cloud fail-closed, review exclusion and account-race guard');
+
+const rampSession={...createSurvivalSession(11,{actCount:5,objective:SURVIVAL_OBJECTIVE}),act:0,lap:1,time:915,legStartedAt:900};
+lockSurvivalBuildPressure(rampSession,214,174);
+const rampObjective=captureSurvivalObjectiveSnapshot(world(rampSession,'entry-objective'),{owner:'p1'});rampObjective.revision=1;
+assert(validSurvivalObjectiveSave(rampObjective,{owner:'p1',enabled}));
+const rampProjection=survivalObjectiveLegacyProjection(rampObjective);assert(validSurvivalSave(rampProjection));
+assert.deepEqual(survivalScaling(rampProjection.session),survivalScaling(rampSession));
+assert.equal(rampProjection.session.pressureFromBuildLevel,174);assert.equal(rampProjection.session.pressureFromLegStartedAt,900);
+const badRamp=structuredClone(rampObjective);delete badRamp.session.pressureFromLegStartedAt;assert.equal(validSurvivalObjectiveSave(badRamp,{owner:'p1',enabled}),false);
+console.log('Survival objective projection preserves independent entry anchors/clock and enforces partial-pair rejection. CPU only.');

@@ -4,3 +4,5 @@
 .bt-roster i{width:95px;margin-inline:auto}@media(max-height:430px){.bt-roster i{width:50px}.bt-modal article{gap:5px;padding:10px}.bt-modal article>small:first-child{display:none}.bt-modal h1{font-size:23px}}
 .bt-growth-offers{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.bt-growth-offers button{padding:15px 12px;display:grid;gap:10px;text-align:left;min-height:130px}.bt-growth-offers button b{color:#edda9b;font-size:17px}.bt-growth-offers button small{line-height:1.6;font-size:12px}.bt-growth-offers button:hover,.bt-growth-offers button:focus-visible{background:#315340;outline:2px solid #d9cb7a;outline-offset:2px}
 @media(max-height:430px){.bt-growth-offers button{min-height:100px;padding:10px}.bt-growth-offers button b{font-size:14px}.bt-growth-offers button small{font-size:11px}}
+
+.bt-earned{display:grid;gap:7px;text-align:left;padding:12px;background:#091c18;border-radius:12px}.bt-earned>div{display:grid;gap:3px}.bt-earned strong{color:#ead79a;font-size:13px}.bt-next{background:#9cac79!important;color:#10251b!important;font-weight:bold!important}@media(max-height:430px){.bt-earned{padding:8px;gap:5px}}

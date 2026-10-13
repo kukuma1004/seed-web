@@ -1,3 +1,4 @@
+import {mergeDecorPlacements} from './garden-decor-placement.js';
 import {DUEL_STORY_SAVE_KEY,duelStorySaveKey,mergeDuelStory} from './seed-duel-story-progress.js';
 import {PUZZLE_SAVE_KEY,puzzleSaveKey,mergePuzzleProgress} from './seed-puzzle-progress.js';
 import {mergeBossRuns} from './boss-title-ledger.js';
@@ -108,7 +109,7 @@ export function mergeGardenProgress(localValue,remoteValue,{prefer='remote'}={})
  return normalizeGarden({...winner,mastery,records,plots,
   bossWins:Math.max(local.bossWins,remote.bossWins),
   harvests:Math.max(local.harvests,remote.harvests),
-  decor:[...winner.decor,...other.decor],puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
+  decor:[...winner.decor,...other.decor],decorPositions:mergeDecorPlacements([...winner.decor,...other.decor],winner.decorPositions,other.decorPositions),puzzleStars:Math.max(local.puzzleStars,remote.puzzleStars),
   duelStory:local.duelStory||remote.duelStory?mergeDuelStory(local.duelStory,remote.duelStory,{prefer}):null,
   puzzle:local.puzzle||remote.puzzle?mergePuzzleProgress(local.puzzle,remote.puzzle,{prefer}):null,
   ...mergeThemeProgress(local,remote,prefer),tree:mergeTree(local.tree,remote.tree,{prefer})});

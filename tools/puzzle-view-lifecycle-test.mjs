@@ -7,8 +7,8 @@ const source=readFileSync(new URL('../src/seed-puzzle-view.js',import.meta.url),
 const start=source.indexOf(' function renderRate(){'),end=source.indexOf(' // ── HUD',start);
 assert(start>=0&&end>start);
 const callbacks=new Map(),events=new Map(),draws=[],updates=[];
-let serial=0;
-const scope={bounceChild:null,bounceLoading:false,root:{hidden:false},document:{hidden:false},modal:{hidden:true},sprites:new Map(),effects:[],floaters:[],pacer:createFramePacer(),
+let serial=0,gardenCancels=0;
+const scope={cancelGardenDrag:()=>gardenCancels++,bounceChild:null,bounceLoading:false,root:{hidden:false},document:{hidden:false},modal:{hidden:true},sprites:new Map(),effects:[],floaters:[],pacer:createFramePacer(),
  requestAnimationFrame:fn=>{callbacks.set(++serial,fn);return serial;},cancelAnimationFrame:id=>callbacks.delete(id),
  listen:(_target,event,fn)=>events.set(event,fn),busy:()=>scope.busyValue,update:dt=>updates.push(dt),draw:now=>draws.push(now)};
 vm.createContext(scope);
@@ -30,7 +30,7 @@ const frame=now=>{const [id,fn]=callbacks.entries().next().value;callbacks.delet
 for(let n=1;n<=120;n++)frame(1+n*1000/120);
 assert(draws.length>=23&&draws.length<=26,'real pacer bounds settled 120Hz input to about24 redraws');
 const before=draws.length;
-scope.document.hidden=true;events.get('visibilitychange')();assert.equal(callbacks.size,0);assert.equal(scope.status().raf,0);
+scope.document.hidden=true;events.get('visibilitychange')();assert.equal(gardenCancels,1,'background clears any unsaved placement gesture');assert.equal(callbacks.size,0);assert.equal(scope.status().raf,0);
 scope.loop(60000);assert.equal(callbacks.size,0);assert.equal(draws.length,before,'hidden stale callback performs no update or draw');
 scope.document.hidden=false;events.get('visibilitychange')();events.get('visibilitychange')();assert.equal(callbacks.size,1,'visible events cannot multiply RAF loops');
 frame(60001);assert.equal(updates.at(-1),0,'returning from background never catches up hidden time');

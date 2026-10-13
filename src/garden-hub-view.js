@@ -6,6 +6,7 @@ import {GARDEN_OBJECT_ART,GARDEN_THEME_ART} from './garden-theme-art.js';
 import {SPOT_STYLE_IDS,spotScene,hasSpotScene,spotEntry,spotsFilled,spotPrice,spotArt,spotBase,chooseSpotStyle,clearSpot} from './garden-spots.js';
 import './garden-hub.css';
 import {createTreeView} from './tree-of-life-view.js';
+import {DECOR} from './garden-decor.js';
 
 const BASE=import.meta.env.BASE_URL,ART=BASE+'assets/garden/';
 const HUB=[1281,778];
@@ -43,10 +44,11 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
    <button class="gh-tree" style="left:${TREE[0]/HUB[0]*100}%;top:${TREE[1]/HUB[1]*100}%"><b>생명의 나무</b><small>씨앗이 자라는 곳</small></button>
    ${Object.entries(SIGNS).map(([id,[x,y]])=>sign(G,id,x,y)).join('')}
   </div></div>
-  <nav class="gh-extra">${['shadow','dream'].map(id=>card(G,id)).join('')}
+  <nav class="gh-extra">${onOpenSanctuary?`<button class="gh-card gh-sanctuary" style="background-image:url(${BASE}assets/garden-sanctuary-v2.webp)"><b>돌길의 정원</b><small>꾸미기 ${(G.decor||[]).length}/${DECOR.length}</small></button>`:''}${['shadow','dream'].map(id=>card(G,id)).join('')}
    <p class="gh-hint">${info?`다음: <b>${esc(nextLocked.name)}</b> · ${esc(info.prevName)}에 구성물 ${Math.min(info.have,info.need)}/${info.need}`:'모든 테마 정원이 열렸어요'}</p></nav>
   <p class="gh-toast" role="status" aria-live="polite"></p>`;
   $('.gh-back').onclick=close;
+  $('.gh-sanctuary')?.addEventListener('click',()=>{close();onOpenSanctuary();});
   $('.gh-tree').onclick=()=>{view='tree';treeView.show();};
   root.querySelectorAll('[data-theme]').forEach(b=>b.onclick=()=>enter(b.dataset.theme));
   layoutHub();observe($('.gh-scroll'));if(ro&&$('.gh-extra'))ro.observe($('.gh-extra'));// 아래 줄이 접혀 높이가 바뀌어도 다시 맞춘다
@@ -133,8 +135,10 @@ export function mountGardenHub({host=document.body,audio=null,garden,wallet=()=>
   const G=g(),id=theme.id,scene=spotScene(id),[W,H]=scene.size;
   const pct=(v,t)=>`${v/t*100}%`;
   // 뒤(자리 아래 끝이 위쪽)부터 그린다.
-  $('.gh-layers').innerHTML=[...scene.spots].sort((a,b)=>a.box[3]-b.box[3]).map(sp=>{const on=spotEntry(G,id,sp.id).on;if(!on)return '';const [x0,y0,x1,y1]=sp.box;
-   return `<img class="gh-layer${fresh===sp.id?' pop':''}" alt="" decoding="async" src="${BASE}${spotArt(id,sp.id,on)}" style="left:${pct(x0,W)};top:${pct(y0,H)};width:${pct(x1-x0,W)};height:${pct(y1-y0,H)}">`;}).join('');
+  const layers=$('.gh-layers'),layerKey=id+':'+scene.spots.map(sp=>spotEntry(G,id,sp.id).on||'').join('|');
+  // Changing selection should not discard and decode all already placed art.
+  if(layers.dataset.artKey!==layerKey){layers.dataset.artKey=layerKey;layers.innerHTML=[...scene.spots].sort((a,b)=>a.box[3]-b.box[3]).map(sp=>{const on=spotEntry(G,id,sp.id).on;if(!on)return '';const [x0,y0,x1,y1]=sp.box;
+   return `<img class="gh-layer${fresh===sp.id?' pop':''}" alt="" decoding="async" src="${BASE}${spotArt(id,sp.id,on)}" style="left:${pct(x0,W)};top:${pct(y0,H)};width:${pct(x1-x0,W)};height:${pct(y1-y0,H)}">`;}).join('');}
   $('.gh-marks').innerHTML=scene.spots.map(sp=>{const e=spotEntry(G,id,sp.id);return `<button class="gh-mark${spot===sp.id?' on':''}${e.on?' filled':''}" data-spot="${sp.id}" aria-label="${esc(sp.name)}${e.on?` · ${esc(sp.styles[e.on])}`:' · 비어 있음'}" style="left:${pct(sp.at[0],W)};top:${pct(sp.at[1],H)}"><span aria-hidden="true">${e.on?'✎':'＋'}</span></button>`;}).join('');
   root.querySelectorAll('[data-spot]').forEach(b=>b.onclick=e=>{e.stopPropagation();spot=spot===b.dataset.spot?null:b.dataset.spot;paintSpots();});
   fresh=null;

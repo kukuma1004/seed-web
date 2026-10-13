@@ -158,3 +158,25 @@
  #seed-puzzle .sp-stage,#seed-puzzle .sp-decor-list button{min-height:44px}
  #seed-puzzle .sp-menu-actions{padding-top:6px;gap:6px}
 }
+
+/* Same prop art in the purchase list and planted garden. */
+.sp-decor-preview{flex:none;width:38px;height:38px;background-repeat:no-repeat;font-style:normal;font-size:26px;display:grid;place-items:center;color:#d5d6ad}
+.sp-decor-list b{flex:1;min-width:0;line-height:1.35}
+@media(max-height:500px){.sp-decor-preview{width:32px;height:32px}}
+.sp-garden-panel{display:flex;flex-direction:column;overflow:hidden;max-height:66dvh;gap:4px}
+.sp-garden-panel header,.sp-area-progress,.sp-garden-actions,.sp-garden-panel>small{flex:none}
+.sp-garden-panel header h2,.sp-garden-panel header .sp-eyebrow{padding-left:44px;padding-right:44px}
+#seed-puzzle .sp-garden-panel .sp-garden-back{position:absolute;left:0;top:0;width:44px;height:44px;padding:0;font-size:28px}
+.sp-garden-panel .sp-decor-list{min-height:0;overflow:auto;align-content:start;flex:1;touch-action:pan-y}
+.sp-garden-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px;margin-top:6px}
+#seed-puzzle .sp-garden-actions button{min-width:0;padding:6px;font-size:12px;min-height:44px}
+@media(max-height:500px){.sp-garden-panel header p{font-size:11px;margin-bottom:4px}.sp-garden-panel .sp-eyebrow{visibility:hidden;height:10px}.sp-garden-panel>small{font-size:10px;line-height:1.3;margin-top:2px}}
+
+/* Arrangement is a secondary, explicit mode. Only the garden surface captures drags. */
+.sp-arrange-tools{display:flex;gap:8px;justify-content:center;flex:none}
+#seed-puzzle .sp-arrange-tools button{min-height:44px;padding:7px 11px;font-size:13px}
+#seed-puzzle .sp-arrange[aria-pressed="true"]{border-color:#d5e6a0;background:#35452d}
+#seed-puzzle .sp-arrange:disabled{opacity:.5;cursor:default}
+#seed-puzzle.sp-arranging canvas{touch-action:none;cursor:grab}
+#seed-puzzle.sp-arranging canvas:active{cursor:grabbing}
+.sp-arrange-help{color:#dfebbd!important;margin:0;flex:none}
