@@ -11,7 +11,7 @@ const noop=()=>{};
 function harness(s){
  const blades=[],scales=[];
  const ctx=new Proxy({scale:(...args)=>scales.push(args)},{get:(o,k)=>o[k]??noop,set:(o,k,v)=>(o[k]=v,true)});
- const c=vm.createContext({s,ctx,point:(x,y)=>({x,y}),scale:20,ox:0,oy:0,assets:{combat:{naturalWidth:1024,naturalHeight:512}},INK:{},moving:false,ready:false,
+ const c=vm.createContext({s,ctx,visual25d:null,depthScale:1,point:(x,y)=>({x,y}),scale:20,ox:0,oy:0,assets:{combat:{naturalWidth:1024,naturalHeight:512}},INK:{},moving:false,ready:false,
   ensureEvolvedAssets:()=>c.ready,evolvedParts2:noop,glow:noop,leaf:(x,y,angle)=>blades.push(angle),vfx:{ready:()=>false},audio:{play:noop}});
  vm.runInContext(span(' const SOUND=',' function loop(')+span(' const motion=',' // 2026-09-28 사용자: "강해진다는 느낌')+span(' function paintEvolvedBody(',' function draw(')+"\nglobalThis.probe={sound,beginSeedSwing,seedMotionFrame,seedFacing,paintSeedMotion,motion};",c);
  return {c,p:c.probe,blades,scales};

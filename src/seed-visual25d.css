@@ -1,0 +1,47 @@
+/* Approved painterly 2.5D treatment. Original art and gameplay bounds stay intact. */
+body.seed-visual25d{--seed-ivory:#f2edce;--seed-jade:#b4dbc2;--seed-ink:#142a24;--seed-gold:#edd18a;--seed-line:#c1caaa66;--seed-panel:#142a24f2;--seed-button:linear-gradient(155deg,#45614a,#253e35 78%)}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub){color:var(--seed-ivory)}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub) button{border-color:var(--seed-line);background:var(--seed-button);box-shadow:inset 0 1px 0 #f4edce21,0 2px 0 #0e251c80;transition:background .12s,border-color .12s}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub) button:focus-visible{outline-color:var(--seed-gold)}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub) button:hover:not(:disabled){border-color:#ddd7a3;background:linear-gradient(155deg,#526f51,#2c483b 78%)}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub) button:active:not(:disabled){box-shadow:inset 0 2px 3px #10271d65}
+body.seed-visual25d :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,#seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub) button:is(.on,.selected,[aria-pressed='true']){border-color:var(--seed-gold);box-shadow:inset 0 0 0 1px #edd18a45,0 2px 0 #10271d80}
+body.seed-visual25d :is(.exv-panel,.gc-paper,.sd-paper,.duel-panel,.sp-paper,#seed-bounce article,.bt-modal article){background:linear-gradient(135deg,#314738fa,#172e27fa);border-color:var(--seed-line);box-shadow:inset 0 1px 0 #f4edce18,0 8px 24px #0a211948}
+body.seed-visual25d :is(.gc-modal,.bt-modal){backdrop-filter:none}
+body.seed-visual25d :is(.gh-top,.gh-extra,.gh-tray,#seed-bounce header,#seed-bounce footer,.exv-header,.gc-hud){background:linear-gradient(115deg,#1e352bf5,#142a24ee);border-color:var(--seed-line)}
+/* Reuse the authored home illustration. Quiet matte inlays leave its depth
+   and characters readable, and preserve all control bounds and hit targets. */
+body.seed-visual25d .menu-panel.home-panel{background:linear-gradient(90deg,#142a24f5,#142a24e8 78%,#142a2466);border-color:#c1caaa55}
+body.seed-visual25d .home-panel .menu-item{background:var(--seed-button);border-color:var(--seed-line);box-shadow:inset 0 1px 0 #f4edce1c,0 3px 0 #10271d75}
+body.seed-visual25d .home-panel .menu-item.primary{background:linear-gradient(135deg,#697b52,#344f3d);border-color:#ddce91a8}
+body.seed-visual25d .home-panel :is(h2,.menu-item strong),body.seed-visual25d .dungeon-heading h2{color:var(--seed-ivory)}
+body.seed-visual25d .home-panel :is(.eyebrow,.menu-ornament),body.seed-visual25d .dungeon-heading .eyebrow{color:var(--seed-gold)}
+body.seed-visual25d .home-panel .menu-item small{color:#c4d4bf}
+body.seed-visual25d .home-panel .name-field input{background:#11281fe0;border-color:var(--seed-line);color:var(--seed-ivory)}
+body.seed-visual25d .menu-panel.dungeon-panel{background:linear-gradient(180deg,#142a24c4,#142a2455)}
+body.seed-visual25d :is(.dungeon-mode,.journey-card){border-color:#d2c58b99;box-shadow:inset 0 1px 0 #f4edce30,0 5px 0 #10271d70,0 10px 16px #0b211f55}
+body.seed-visual25d .dungeon-mode:after{background:linear-gradient(0deg,#122a24f9 0%,#122a24e8 12%,#122a2440 36%,transparent 58%)}
+body.seed-visual25d .journey-card:after{background:linear-gradient(0deg,#122a24f9,#122a24bd 26%,transparent 66%)}
+body.seed-visual25d .dungeon-footer button{background:var(--seed-button);border-color:var(--seed-line);box-shadow:inset 0 1px 0 #f4edce21,0 3px 0 #0e251c80}
+body.seed-visual25d :is(.mode-caption,.journey-caption){text-shadow:0 2px 3px #102419}
+body.seed-visual25d #overlay.menu-screen:before,body.seed-visual25d #overlay.menu-screen:after{display:none}
+body.seed-visual25d .seed-victory-title{background:linear-gradient(#3b5038f2,#172e27ed);border-color:#dacb93aa;box-shadow:inset 0 1px #f3efd324,0 2px 4px #10241975;text-shadow:0 1px 2px #102419;color:var(--seed-ivory)}
+/* Garden scenes keep each saved ground anchor. Contact silhouettes sit below
+   objects rather than applying an animated full-image drop-shadow filter. */
+body.seed-visual25d #garden-hub :is(.gh-sign,.gh-tree){animation:none;background:linear-gradient(#576344f5,#2a4031f5);border-color:#d2c58b99;box-shadow:inset 0 1px #f5edd12b,0 3px 0 #132a1b99,0 6px 8px #10241955}
+body.seed-visual25d #garden-hub .gh-sign.locked{background:linear-gradient(#3d453a,#242f29);border-color:#92968080}
+body.seed-visual25d #garden-hub .gh-obj{filter:none}
+body.seed-visual25d #garden-hub .gh-obj:before{content:'';position:absolute;pointer-events:none;left:20%;right:14%;bottom:-2%;height:12%;border-radius:50%;background:#10241938;box-shadow:inset 0 -2px 0 #1024191c}
+body.seed-visual25d #garden-hub .gh-obj i{position:relative;z-index:1;transform-origin:50% 100%}
+body.seed-visual25d #garden-hub .gh-obj.sel{outline:1px solid #edd18a80;outline-offset:5px;border-radius:24%;filter:none}
+body.seed-visual25d #garden-hub :is(.gh-stage,.gh-spotstage){box-shadow:0 5px 0 #122a1d99,0 12px 22px #10241955,inset 0 1px #f4edce18}
+body.seed-visual25d #garden-hub .gh-mark{animation:none;box-shadow:0 2px 0 #122a1d99}
+body.seed-visual25d #garden-hub .gh-mark.on{box-shadow:0 0 0 2px #edd18aaa,0 2px 0 #122a1d99}
+body.seed-visual25d #garden-hub .gh-layer.pop{transform-origin:50% 100%}
+/* Expedition's authored sprite sheets and poses remain untouched. Two small
+   silhouettes seat every fighter on the same shallow stone stage. */
+body.seed-visual25d [data-seed-visual='garden-depth-v1'] .exv-unit-art{isolation:isolate;filter:none}
+body.seed-visual25d [data-seed-visual='garden-depth-v1'] .exv-unit-ground{position:absolute;pointer-events:none;left:15%;right:9%;bottom:10%;height:12%;background:#10241940;border-radius:50%;z-index:-1;transform:rotate(-6deg)}
+body.seed-visual25d [data-seed-visual='garden-depth-v1'] .exv-unit-ground:after{content:'';position:absolute;left:22%;right:27%;top:27%;height:42%;background:#10241955;border-radius:50%}
+body.seed-visual25d [data-seed-visual='garden-depth-v1'] .exv-battle-stage{box-shadow:inset 0 -7px 0 #18332750,inset 0 1px 0 #f1edcc3b;border-color:#b7c2a776;background-color:#c7cbb010}
+@media(prefers-reduced-motion:reduce){body.seed-visual25d :is(button,.gh-obj.pop i){transition:none;animation:none}}

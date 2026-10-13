@@ -5,11 +5,12 @@ import {centerStage} from './garden.js';
 import {decorScene} from './garden-decor.js';
 import {decorLayoutKey,normalizeDecorPlacements,gardenDecorLayout,GARDEN_DECOR_VIEW} from './garden-decor-placement.js';
 import {DECOR_PROP_ART,DECOR_PROP_COLUMNS,DECOR_PROP_ROWS,DECOR_PROP_REGIONS} from './garden-decor-art.js';
+import {seedVisualEnabled,paintSeedContact} from './seed-visual-language.js';
 
 // 보이게 할 그림 범위(가장자리 숲은 조금 잘라도 되고, 꾸미는 자리는 다 들어오게).
 const VIEW=GARDEN_DECOR_VIEW;
 const POP=.9;
-export function createPuzzleGarden({base='/'}={}){
+export function createPuzzleGarden({base='/',visualReview=seedVisualEnabled(globalThis.location)}={}){
  const images={},tinted=new Map();let disposed=false;
  const clearTiles=()=>{for(const c of tinted.values())c.width=c.height=0;tinted.clear();};
  const load=(k,f)=>{const im=new Image();im.onload=()=>{if(!disposed)clearTiles();};im.src=base+f;images[k]=im;};
@@ -31,7 +32,9 @@ export function createPuzzleGarden({base='/'}={}){
  // 식물 한 그루: 뿌리가 자리에 닿게(그림 아래 가운데가 u,v). 멀리 있는 자리는 조금 작게.
  function drawPlant(ctx,L,index,tint,u,v,size,scale=1,alpha=1,source='growth'){
   const img=tile(index,tint,source);if(!img)return;const [x,y]=L.at(u,v),d=size*L.unit*(.72+.5*v)*scale;
-  const prop=source==='props',w=prop?d*img.width/img.height:d,h=prop?d:d*img.height/img.width;ctx.globalAlpha=alpha;ctx.drawImage(img,x-w/2,y-(prop?h:d*.94),w,h);ctx.globalAlpha=1;
+  const prop=source==='props',w=prop?d*img.width/img.height:d,h=prop?d:d*img.height/img.width;
+  if(visualReview)paintSeedContact(ctx,x,y,Math.min(w,d)*.64,{alpha});
+  ctx.globalAlpha=alpha;ctx.drawImage(img,x-w/2,y-(prop?h:d*.94),w,h);ctx.globalAlpha=1;
  }
  // The light stamps and seeded ambient paths are created once, not once per
  // firefly/lantern per frame. Opacity and size animate without new gradients.

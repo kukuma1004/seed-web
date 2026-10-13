@@ -1,12 +1,22 @@
 import * as THREE from 'three';
+import {seedVisualEnabled} from './seed-visual-language.js';
 
 export const CONTACT_SHADOW_CAPACITY=192;
 const RADII=Object.freeze({player:.46,swarm:.3,hound:.52,caster:.56,shield:.72,turret:.68,relaymachine:.8,relaymitt:.58,warden:1.18,act2warden:1.12,act3warden:1.26,austin:1.35,alwaysbeginner:1.42,tempestcarrier:1.75,catcher:.72,pitcher:.56,runner:.45,batter:.7,'sky-scout':.46,'sky-diver':.48,'sky-bomber':.62,'sky-carrier':.9});
 export const contactShadowRadius=type=>RADII[type]||.5;
 
 export function createContactShadows(scene,capacity=CONTACT_SHADOW_CAPACITY){
- const geometry=new THREE.CircleGeometry(1,20);
+ const depthReview=seedVisualEnabled(typeof location==='undefined'?null:location);
+ const geometry=depthReview?new THREE.PlaneGeometry(2,2):new THREE.CircleGeometry(1,20);
  const material=new THREE.MeshBasicMaterial({color:0x071713,transparent:true,opacity:.23,depthWrite:false,toneMapped:false,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1});
+ if(depthReview){
+  material.opacity=.42;
+  material.onBeforeCompile=shader=>{
+   shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec2 seedContactUv;').replace('#include <uv_vertex>','#include <uv_vertex>\nseedContactUv=uv;');
+   shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec2 seedContactUv;').replace('#include <color_fragment>','#include <color_fragment>\nfloat seedContactR=length((seedContactUv-vec2(.5))*2.);\ndiffuseColor.a*=1.-smoothstep(.12,1.,seedContactR);');
+  };
+  material.customProgramCacheKey=()=> 'seed-contact-garden-depth-v1';
+ }
  const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.name='actor-contact-shadows';mesh.frustumCulled=false;mesh.renderOrder=-1;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(mesh);
  const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),quaternion=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0));
  const add=(actor,type)=>{

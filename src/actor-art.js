@@ -122,7 +122,7 @@ export function attachActorArt(e,camera,release,{file,size,directional=false,ord
  const grid={columns:atlasColumns,rows:atlasRows};
  const texture=atlas(file),firstFrame=typeof atlasFrame==='function'?atlasFrame(e):atlasFrame,geometry=Number.isFinite(firstFrame)?actorFrameGeometry(firstFrame,grid):directional?actorFrameGeometry(0):ACTOR_ART_GEOMETRIES.full;
  const baseMaterial=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,depthWrite:true,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
- const mat=lighting?applySpriteLighting(baseMaterial,{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065}):baseMaterial;
+ const mat=lighting?applySpriteLighting(baseMaterial,{shadow:.74,highlight:1.07,rim:0xffb474,rimStrength:.065,atlasGrid:atlasFrame!==null?[atlasColumns,atlasRows]:directional?[2,2]:[1,1]}):baseMaterial;
  const sprite=new THREE.Mesh(geometry,mat);sprite.scale.set(size,size,1);billboard(sprite,camera,size,baseline);body.add(sprite);
  const ghostMat=new THREE.MeshBasicMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.26,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xffad7a,side:THREE.DoubleSide,forceSinglePass:true});
  const ghost=new THREE.Mesh(geometry,ghostMat);ghost.name='quality-occlusion-ghost';ghost.visible=occlusion;ghost.scale.set(size,size,1);ghost.renderOrder=2;billboard(ghost,camera,size,baseline);body.add(ghost);

@@ -3,6 +3,8 @@
 // Canvas2D에서 법칙 색으로 물들여 더하기(lighter)로 그린다. 새 그림은 없다. 좌표·크기는 호출하는 쪽의 단위 그대로.
 import {VFX_CELLS} from './vfx.js';
 import {SHOT_CELLS} from './shot-auras.js';
+import {SEED_VISUAL_LANGUAGE,seedVisualReviewEnabled} from './seed-visual-language.js';
+import {createSeedCanvasPaint} from './seed-canvas-presentation.js';
 
 const BASE=import.meta.env?.BASE_URL||'/';
 const TRAIL_OF={seed:'leafTrail',reflect:'sparkTrail',split:'sparkTrail',chain:'crackleTrail',orbit:'trail',pierce:'trail',burst:'sparkTrail',recall:'trail',gravity:'trail',frost:'mistTrail'};
@@ -27,7 +29,8 @@ function corePath(p,law){
  p.closePath();
 }
 
-export function createCanvasVfx({onReady=()=>{}}={}){
+export function createCanvasVfx({onReady=()=>{},visualReview=seedVisualReviewEnabled(globalThis.location)}={}){
+ const spritePaint=createSeedCanvasPaint({review:visualReview});
  const atlases={},tinted=new Map(),corePaths={};let disposed=false;
  if(typeof Path2D==='function')for(const law of Object.keys(TRAIL_OF)){const path=new Path2D();corePath(path,law);corePaths[law]=path;}
  function clearTints(){for(const c of tinted.values())c.width=c.height=0;tinted.clear();}
@@ -52,7 +55,7 @@ export function createCanvasVfx({onReady=()=>{}}={}){
  }
  // Area radii remain truthful, but many simultaneous additive impacts must not
  // wash out the path and actors. Keep a small highlight rather than white fog.
- const fx=(ctx,name,x,y,size,o={})=>cell(ctx,'fx',VFX_CELLS[name],x,y,size,{...o,alpha:(o.alpha??1)*.5});
+ const fx=(ctx,name,x,y,size,o={})=>cell(ctx,'fx',VFX_CELLS[name],x,y,size,{...o,alpha:(o.alpha??1)*(visualReview?.34:.5)});
  const shot=(ctx,name,x,y,size,o)=>cell(ctx,'shot',SHOT_CELLS[name],x,y,size,o);
  // 두 점 사이를 번개·빛줄기 칸으로 잇는다(칸은 세로로 그려져 있어 90° 돌린다).
  function beam(ctx,name,x,y,tx,ty,width,o={}){const dx=tx-x,dy=ty-y,len=Math.hypot(dx,dy);if(len<.01)return;const key=Object.hasOwn(VFX_CELLS,name)?'fx':'shot';cell(ctx,key,key==='fx'?VFX_CELLS[name]:SHOT_CELLS[name],(x+tx)/2,(y+ty)/2,len,{...o,rotation:Math.atan2(dy,dx)+Math.PI/2,stretch:width/len});}
@@ -68,13 +71,16 @@ export function createCanvasVfx({onReady=()=>{}}={}){
  function projectile(ctx,law,x,y,angle,size,color,now=0){
   const key=TRAIL_OF[law]?law:'seed';
   if(!(size>0)||!Number.isFinite(size))return;
+  if(visualReview)color=SEED_VISUAL_LANGUAGE.laws[key]||color;
   shot(ctx,TRAIL_OF[key],x-Math.cos(angle)*size*.58,y-Math.sin(angle)*size*.58,size*1.25,{rotation:angle+Math.PI/2,color,alpha:.42,stretch:.4});
   shot(ctx,key,x,y,size*1.04,{rotation:key==='pierce'?angle+Math.PI/2:now*.004*(key==='chain'?2.4:1.4),color,alpha:.4});
   core(ctx,key,x,y,angle,size,color);
+  if(visualReview){ctx.save();ctx.globalAlpha=.72;ctx.strokeStyle=SEED_VISUAL_LANGUAGE.colors.ivory;ctx.lineWidth=size*.045;ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*size*.28,y+Math.sin(angle)*size*.28-size*.045);ctx.lineTo(x-Math.cos(angle)*size*.08,y-Math.sin(angle)*size*.08-size*.045);ctx.stroke();ctx.restore();}
  }
 
  // 효과 하나. e: {kind,x,y,tx,ty,radius,law}, t: 0(시작)→1(끝), size: 기본 크기 단위.
  function effect(ctx,e,t,color,unit=1){
+  if(visualReview){color=SEED_VISUAL_LANGUAGE.laws[e.law]||color;if(['hit','impact','muzzle','reflect','death'].includes(e.kind))spritePaint.impact(ctx,e.x,e.y,unit*1.3,t,color);}
   const a=Math.max(0,1-t),grow=.45+t*.75,r=(e.radius||1.3*unit),k=e.kind,x=e.x,y=e.y,tx=e.tx??x,ty=e.ty??y,seed=(e.x*7.13+e.y*3.7)%6.28;
   switch(k){
    case 'chain':case 'line':case 'arc':case 'beam':case 'lance':case 'frostWeb':case 'rewindTrace':
@@ -117,6 +123,6 @@ export function createCanvasVfx({onReady=()=>{}}={}){
  }
  return {ready:()=>ready('fx')&&ready('shot'),effect,projectile,field,fx,shot,beam,
   stats:()=>({tiles:tinted.size,bytes:[...tinted.values()].reduce((n,c)=>n+c.width*c.height*4,0),limit:VFX_TINT_LIMIT,disposed}),
-  dispose(){if(disposed)return;disposed=true;clearTints();for(const img of Object.values(atlases))img.onload=null;}
+  dispose(){if(disposed)return;disposed=true;spritePaint.dispose();clearTints();for(const img of Object.values(atlases))img.onload=null;}
  };
 }

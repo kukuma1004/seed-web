@@ -1,3 +1,4 @@
+import {createSeedCanvasPaint,paintSeedRaisedPath} from './seed-canvas-presentation.js';
 import {createDefenseRangeGuide,defenseUpgradePreview,defenseTacticalVisible} from './defense-tactical-guide.js';
 import {defenseWavePreview} from './defense-wave-preview.js';
 import {defenseObjectiveEligible,CRYSTAL_DEFENSE_OBJECTIVE} from './defense-objective.js';
@@ -70,6 +71,8 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
  binding.attach(state);
  const assets={},loads=[],listeners=[],framePacer=createFramePacer();
  // 2026-09-28 사용자: 타워 공격이 허접해 보인다 → 본편 이펙트·탄 빛 소재를 법칙 색으로 물들여 쓴다(canvas-vfx.js).
+ const spritePaint=createSeedCanvasPaint({onCacheChange:metrics=>{root.dataset.visualCanvasMetrics=JSON.stringify(metrics);}});
+ if(spritePaint.review)root.seedVisualCanvasStats=()=>spritePaint.stats();
  const vfx=createCanvasVfx({onReady:()=>{dirty=true;}});
  const setLabel=(selector,text)=>{const el=$(selector);if(el.textContent!==text)el.textContent=text;};
  const listen=(target,event,fn)=>{target.addEventListener(event,fn);listeners.push(()=>target.removeEventListener(event,fn));};
@@ -163,7 +166,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   $('#td-book-prev').onclick=()=>{bookPage--;showBook();};$('#td-book-next').onclick=()=>{bookPage++;showBook();};
  }
  $('#td-book').onclick=showBook;
- function close(){if(ended)return;cancelDrag();save();combat.dispose();vfx.dispose();ended=true;cancelAnimationFrame(frame);observer.disconnect();listeners.forEach(fn=>fn());root.remove();document.body.classList.remove('seed-defense-open');audio?.setPaused(false);onClose();}
+ function close(){if(ended)return;cancelDrag();save();combat.dispose();vfx.dispose();spritePaint.dispose();ended=true;cancelAnimationFrame(frame);observer.disconnect();listeners.forEach(fn=>fn());root.remove();document.body.classList.remove('seed-defense-open');audio?.setPaused(false);onClose();}
  $('#td-leave').onclick=()=>{if(state.phase!=='wave')return close();paused=true;confirming=true;audio?.setPaused(true);dialog('<div><h2>이번 습격을 나갈까요?</h2><p>마지막 준비 상태가 남아 있어요.<br>이번 습격의 처치와 햇살은 저장되지 않아요.<br>이미 얻은 보스 칭호는 유지돼요.</p><button id="td-quit-yes">준비 상태로 저장하고 나가기</button><button id="td-quit-no">계속 방어하기</button></div>');$('#td-quit-yes').onclick=close;$('#td-quit-no').onclick=()=>{confirming=false;paused=false;$('.td-dialog').hidden=true;audio?.setPaused(false);$('#td-pause').textContent='Ⅱ';$('#td-pause').setAttribute('aria-label','일시정지');last=performance.now();uiKey='';updateUI();};};
  $('.td-panel-close').onclick=closeSelection;
  $('#td-start').onclick=()=>{if(confirming||starterPad!==null)return;if(paused){togglePause();return;}if(siegeActive()&&state.phase==='build')save();if(startDefenseWave(state)){dirty=true;closeSelection();moving=false;hint(state.lastEvent);sound('evolve');uiKey='';updateUI();}};
@@ -240,9 +243,10 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   if(assets.floor?.naturalWidth){const img=assets.floor,s=Math.max(width/img.width,height/img.height);bg.save();bg.globalAlpha=.6;bg.drawImage(img,(width-img.width*s)/2,(height-img.height*s)/2,img.width*s,img.height*s);bg.restore();}
   bg.save();bg.translate(ox,oy);bg.scale(scale,scale);
   paintDefenseGround(bg,assets,defensePath(state),state);
+  if(spritePaint.review)paintSeedRaisedPath(bg,defensePath(state),assets);
   bg.restore();dirty=false;
  }
- function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;ctx.drawImage(img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
+ function sprite(id,x,y,size,cell=0,cols=2,rows=2,anchor=.82){const img=assets[id];if(!img?.complete||!img.naturalWidth)return false;const sw=img.width/cols,sh=img.height/rows;spritePaint.draw(ctx,img,cell%cols*sw,Math.floor(cell/cols)*sh,sw,sh,x-size/2,y-size*anchor,size,size);return true;}
  let expansionVisualWave=-1,expansionVisualTitle='';
  function updateExpansionVisuals(){const displayWave=siegeActive()&&state.phase==='build'?state.wave+1:Math.max(1,state.wave);if(expansionVisualWave===displayWave)return;expansionVisualWave=displayWave;if(state.actCount!==5)return;const info=defenseWaveInfo(displayWave,state),act=info.act;expansionVisualTitle=info.title;resize();if(act===4&&!assets.crystalCover)load('crystalCover','expansion/crystal-cover-v1.webp');const id=act===3?'crosswindKeeper':act===4?'crystalGardener':null;if(id&&!assets[id])load(id,actorArtFile(EXPANSION_BOSS_ART[id].file,{reducedTextures:true}));const field=act===3?'crosswind':act===4?'crystalGorge':null;if(field&&!assets[field])load(field,actorArtFile(EXPANSION_ENEMY_ART[field].file,{reducedTextures:true}));}
  const rangeGuide=createDefenseRangeGuide(),rangeDash=[.8,.7],solidDash=[];
@@ -265,7 +269,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   const end=PATH.at(-1);ctx.fillStyle='#d9e9ae18';ctx.beginPath();ctx.ellipse(end.x,end.y,5.2,3.8,0,0,Math.PI*2);ctx.fill();if(!paintSiegeHeart(ctx,assets.gardenHeart,end.x-1,end.y,12.4))sprite('plants',end.x-1,end.y,14.8,state.coreHp>10?5:3,4,3);
   drawTacticalGuide(hover);
   for(const t of state.towers){
-   const ink=color(t.laws[0]);ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,3.35,1.45,0,0,Math.PI*2);ctx.fill();
+   const ink=spritePaint.law(t.laws[0],color(t.laws[0]));if(!spritePaint.contact(ctx,t.x,t.y+1,8.4)){ctx.fillStyle='#030d1299';ctx.beginPath();ctx.ellipse(t.x,t.y+1,3.35,1.45,0,0,Math.PI*2);ctx.fill();}
    const bob=reducedMotion?0:Math.sin(now*.002+t.id)*.15;
    const cue=evolutionCues.find(c=>c.id===t.id),age=cue?visualClock-cue.start:99;
    const changing=cue&&!reducedMotion&&age<.5,bodyScale=reducedMotion?1:changing?1-.55*Math.min(1,age/.5):age<1?1+.18*Math.sin((age-.5)*Math.PI*2):1;
@@ -286,7 +290,7 @@ export function mountSeedDefense({host=document.body,storage=localStorage,owner=
   for(const e of state.enemies){
    const prev=defensePoint(Math.max(0,e.progress-.1)),dx=e.x-prev.x,dy=e.y-prev.y,face=Math.abs(dx)>Math.abs(dy)?(dx>0?1:3):(dy<0?2:0);
    const boss=e.kind==='boss',expansionBoss=boss&&Boolean(EXPANSION_BOSS_ART[e.bossId]),sz=boss?(expansionBoss?12.8:8.8):e.kind==='shield'||e.kind==='resilient'?6.1:4.7;
-   ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();const sky=e.act===2,heavy=e.kind==='shield'||e.kind==='resilient';
+   if(!spritePaint.contact(ctx,e.x,e.y+.8,sz)){ctx.fillStyle='#030b1088';ctx.beginPath();ctx.ellipse(e.x,e.y+.8,sz*.28,.8,0,0,Math.PI*2);ctx.fill();}const sky=e.act===2,heavy=e.kind==='shield'||e.kind==='resilient';
    const atlas=boss?(e.bossId==='crosswindKeeper'?'tempestcarrier':e.bossId==='crystalGardener'?'boss':e.bossId||(sky?'tempestcarrier':e.act===1?'stadiumWarden':'boss')):sky?'flight':e.kind==='fast'?'runner':e.act===1?(heavy?'catcher':'batter'):heavy?'shield':'hound';
    const cell=sky?(boss?(e.bossId?1+Number(e.hp<e.maxHp*.66)+Number(e.hp<e.maxHp*.33):0):e.kind==='fast'?1:heavy?2:0):face;
    const painted=boss?EXPANSION_BOSS_ART[e.bossId]&&paintExpansionBoss(ctx,e,assets[e.bossId],sz):e.act>=3&&paintExpansionEnemy(ctx,e,assets[e.act===3?'crosswind':'crystalGorge'],sz);if(!painted)sprite(atlas,e.x,e.y+(boss?0:.8)+Math.sin(now*.012+e.id)*.14,sz,cell,2,2,boss?.82:1-CUTE_ACTOR_BASELINE);

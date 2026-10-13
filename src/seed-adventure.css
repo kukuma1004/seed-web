@@ -159,3 +159,8 @@
  .sa-beginning>button{margin-top:4px}
  .sa-beginning>small{margin-top:5px}
 }
+
+/* Local 2.5D study: leave production contrast and touch layout unchanged. */
+#seed-adventure.sa-visual25d .sa-vignette{background:radial-gradient(ellipse at 48% 44%,transparent 35%,rgba(7,22,17,.15) 74%,rgba(5,18,15,.48) 100%)}
+#seed-adventure.sa-visual25d .sa-brand{filter:drop-shadow(0 2px 3px #132115)}
+#seed-adventure.sa-visual25d .sa-objective{background:rgba(12,30,22,.76);border-bottom:1px solid #d9d8a52b}

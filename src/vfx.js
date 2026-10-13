@@ -3,8 +3,12 @@ import {LAWS} from './laws.js';
 import {mergeGeometries} from 'three/addons/utils/BufferGeometryUtils.js';
 import {THEMES,normalizeTheme,themeColor} from './themes.js';
 import {MIRROR_SHOT_COLOR} from './projectile-sprites.js';
+import {SEED_VISUAL_LANGUAGE,seedVisualEnabled} from './seed-visual-language.js';
+
+const depthVisualReview=seedVisualEnabled(typeof location==='undefined'?null:location);
 
 export const FX_COLORS={...Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.color])),seed:0x76ffd0,jade:0x76ffd0,reflect:0x73dfff,split:0xff947b,chain:0xffdc73,amber:0xffaa52,awaken:0xffd36a,mirrorHostile:MIRROR_SHOT_COLOR};
+if(depthVisualReview){for(const [law,color] of Object.entries(SEED_VISUAL_LANGUAGE.laws))FX_COLORS[law]=Number.parseInt(color.slice(1),16);FX_COLORS.seed=FX_COLORS.jade=0xb4dbc2;FX_COLORS.awaken=0xedd18a;}
 const LANCE_ACCENTS=Object.freeze({icicle:'frost',shower:'split',spearring:'pierce',refractlance:'reflect',thunderlance:'chain',blastlance:'burst',gravitystake:'gravity'});
 
 // The flat shock crown that spread across the floor was removed (2026-09-15): it covered the arena,
@@ -30,7 +34,7 @@ export const VFX_CELLS=Object.freeze({orb:0,star:1,flecks:2,ring:3,flame:4,trail
 // 불꽃 조각·불꽃 혀를 소재 그림을 입힌 판으로 그린다. 판은 늘 카메라를 보고, 인스턴스마다 칸(fxSprite.x)과 화면 회전(fxSprite.y)을 고른다.
 // 묶음 수(드로콜)는 그대로이고 셰이더만 한 종류 바뀐다(판 시작 전 미리 준비됨).
 export function vfxSpriteMaterial(atlas){
- const material=new THREE.MeshBasicMaterial({map:atlas,transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+ const material=new THREE.MeshBasicMaterial({map:atlas,transparent:true,opacity:depthVisualReview?.64:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  material.onBeforeCompile=shader=>{
   shader.vertexShader=shader.vertexShader
    .replace('#include <common>','#include <common>\nattribute vec2 fxSprite;')
@@ -58,7 +62,7 @@ export function createVFX(scene,{mobile=false,random=Math.random,theme='botanica
   const counters={pulse:0,burst:0,flame:0,explosion:0,impact:0,reflect:0,split:0,chain:0,portal:0,dash:0,evolution:0,trail:0,lance:0,frostWeb:0,rewindTrace:0,mirrorArc:0,gardenVortex:0,sunburst:0,bossPitch:0,bossRush:0,bossSwing:0,bossWave:0,bossPhase:0};let themeId=normalizeTheme(theme),qualityLevel=Math.max(0,Math.min(2,quality|0)),viewCamera=null;
   const density=()=>[.42,.68,1][qualityLevel]*(mobile?.68:1);
   function batch(geometry,capacity,sprite=null){
-    const material=sprite?vfxSpriteMaterial(atlas):new THREE.MeshBasicMaterial({transparent:true,opacity:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
+    const material=sprite?vfxSpriteMaterial(atlas):new THREE.MeshBasicMaterial({transparent:true,opacity:depthVisualReview?.64:.8,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
     if(sprite){geometry.name='seed-vfx-sprite';const cells=new THREE.InstancedBufferAttribute(new Float32Array(capacity*2),2);cells.setUsage(THREE.DynamicDrawUsage);geometry.setAttribute('fxSprite',cells);}
     const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
     // 색 버퍼를 처음부터 둔다. 첫 setColorAt 때 생기면 셰이더 종류가 바뀌어 전투 중에 다시 컴파일된다.

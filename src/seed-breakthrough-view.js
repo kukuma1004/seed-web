@@ -1,3 +1,4 @@
+import {createSeedCanvasPaint} from './seed-canvas-presentation.js';
 import './seed-breakthrough.css';
 import {breakthroughRunSummary} from './breakthrough-run-summary.js';
 import {DUEL_BASE_CHARACTERS} from './duel-base-characters.js';
@@ -13,6 +14,8 @@ export function mountBreakthrough({host=document.body,audio,onClose=()=>{}}={}){
  root.innerHTML='<canvas aria-label="돌파전 전장"></canvas><header><strong>씨앗 돌파전</strong><span class="bt-status"></span><button class="bt-pause" aria-label="일시정지">Ⅱ</button></header><div class="bt-vitals"><b></b><meter min="0"></meter><small></small></div><div class="bt-goal"></div><canvas class="bt-map" width="180" height="126" aria-label="거점 전술 지도"></canvas><div class="bt-controls"><div class="bt-stick" role="button" aria-label="이동 조이스틱"><i></i></div><nav><button data-action="skill" aria-label="캐릭터 기술">✦<small>기술 · K</small></button><button data-action="ult" aria-label="필살기">✺<small>필살 · O</small></button><button data-action="dodge" aria-label="회피">↝<small>회피</small></button><button data-action="attack" aria-label="공격">╱<small>공격 · J</small></button></nav></div><div class="bt-modal"></div>';
  const $=q=>root.querySelector(q),canvas=$('canvas'),ctx=canvas.getContext('2d',{alpha:false}),images={},listeners=[],keys=new Set(),attacks=new Set(),move={x:0,y:0};let run=null,closed=false,paused=false,raf=0,last=0,hudAt=0,width=1,height=1,dpr=1,scale=1,ox=0,oy=0,stickId=null,picked='pierce',loadFailed=false;
  const returnScene=audio?.state?.().musicScene||'garden';
+ const spritePaint=createSeedCanvasPaint({onCacheChange:metrics=>{root.dataset.visualCanvasMetrics=JSON.stringify(metrics);}});
+ if(spritePaint.review)root.seedVisualCanvasStats=()=>spritePaint.stats();
  const presentation=createBreakthroughPresentation(window.matchMedia?.('(prefers-reduced-motion: reduce)').matches),drawOrder=[];
  const pacer=createFramePacer(),world={w:54,h:38,pathWidth:2.8,nodes:[{x:6,y:20,r:6.8,role:'start'},{x:18,y:11,r:7,role:'camp'},{x:33,y:28,r:7,role:'camp'},{x:47,y:18,r:7,role:'gate'}],paths:[{ax:6,ay:20,bx:18,by:11},{ax:18,ay:11,bx:33,by:28},{ax:33,ay:28,bx:47,by:18},{ax:18,ay:11,bx:47,by:18}],decor:[],trees:[],landmarks:[]};
  for(let i=0;i<35;i++)world.trees.push({x:2+(i*7.3)%51,y:i%2?3:36,cell:i%3,size:2});
@@ -23,7 +26,7 @@ export function mountBreakthrough({host=document.body,audio,onClose=()=>{}}={}){
  function selectReady(){const start=$('.bt-start');if(start){start.disabled=!BREAKTHROUGH_ROSTER.every(id=>images[id]?.naturalWidth)||!images.garden?.naturalWidth||!images.soldier?.naturalWidth;$('.bt-loading').textContent=loadFailed?'그림을 불러오지 못했어요 · 돌아갔다 다시 열어 주세요':start.disabled?'전장을 준비하고 있어요…':'이야기 클리어 없이 바로 출전할 수 있어요';}}
  function stop(){if(raf)cancelAnimationFrame(raf);raf=0;last=0;}
  function resetInput(){keys.clear();attacks.clear();move.x=move.y=0;stickId=null;$('.bt-stick i').style.transform='';}
- function close(){if(closed)return;closed=true;stop();resetInput();for(const off of listeners)off();for(const im of Object.values(images)){im.onload=im.onerror=null;}painter.dispose();root.remove();audio?.setScene?.(returnScene);audio?.setPaused(false);onClose();}
+ function close(){if(closed)return;closed=true;stop();spritePaint.dispose();resetInput();for(const off of listeners)off();for(const im of Object.values(images)){im.onload=im.onerror=null;}painter.dispose();root.remove();audio?.setScene?.(returnScene);audio?.setPaused(false);onClose();}
  function select(){stop();resetInput();run=null;resetBreakthroughPresentation(presentation,null);paused=false;$('.bt-modal').hidden=false;root.classList.add('bt-menu');$('.bt-modal').innerHTML=`<article><small>SEED · 전장 원형</small><h1>씨앗 돌파전</h1><p>잡몹보다 거점 대장을 먼저 잡고, 깃발 안에 3초 머무르세요.<br>거점마다 싸움법 선택 → 마지막 장수 격파!</p><div class="bt-roster">${BREAKTHROUGH_ROSTER.map(id=>`<button data-hero="${id}" class="${id===picked?'on':''}"><i style="background-image:url('${BASE}assets/duel/${id}-motion-v1.webp')"></i><b>${DUEL_BASE_CHARACTERS[id].name}</b><small>${id==='pierce'?'관통 돌진 · 긴 3타':id==='burst'?'불씨 폭발 · 무리 몰이':'서리 숨결 · 무리 제어'}</small></button>`).join('')}</div><p class="bt-loading" role="status"></p><button class="bt-start" disabled>전장으로 출전</button><button class="bt-back">대전 메뉴로</button><small>WASD 이동 · J 공격 · K 기술 · O 필살 · Space 회피<br>전투 4분 제한 · 선택·일시정지는 시간에서 제외<br>원형 전투는 계정·랭킹에 저장되지 않아요.</small></article>`;root.querySelectorAll('[data-hero]').forEach(b=>b.onclick=()=>{picked=b.dataset.hero;root.querySelectorAll('[data-hero]').forEach(x=>x.classList.toggle('on',x===b));});$('.bt-start').onclick=start;$('.bt-back').onclick=close;selectReady();draw();}
  function start(){if(!BREAKTHROUGH_ROSTER.every(id=>images[id]?.naturalWidth)||!images.garden?.naturalWidth||!images.soldier?.naturalWidth)return;run=createBreakthrough(picked,Date.now());resetBreakthroughPresentation(presentation,run);resetInput();paused=false;$('.bt-modal').hidden=true;root.classList.remove('bt-menu');audio?.unlock?.();audio?.setScene?.('garden');audio?.setPaused(false);hud();last=0;raf=requestAnimationFrame(loop);}
  function pause(){if(!run||run.phase!=='playing')return;paused=!paused;resetInput();audio?.setPaused(paused);if(paused){stop();$('.bt-modal').hidden=false;root.classList.add('bt-menu');$('.bt-modal').innerHTML='<article><h2>잠시 쉬어 가요</h2><p>WASD 이동 · J 공격 · K 기술 · O 필살 · Space 회피</p><button class="bt-resume">계속하기</button><button class="bt-select">씨앗 다시 고르기</button><button class="bt-back">대전 메뉴로</button></article>';$('.bt-resume').onclick=pause;$('.bt-select').onclick=select;$('.bt-back').onclick=close;draw();}else{$('.bt-modal').hidden=true;root.classList.remove('bt-menu');last=0;raf=requestAnimationFrame(loop);}}
@@ -40,22 +43,22 @@ export function mountBreakthrough({host=document.body,audio,onClose=()=>{}}={}){
  function ring(x,y,r,color,fill=false){const q=point(x,y);ctx.beginPath();ctx.ellipse(q.x,q.y,r*scale,r*scale*BREAKTHROUGH_CAMERA.depth,0,0,Math.PI*2);ctx.fillStyle=color;ctx.strokeStyle=color;ctx.lineWidth=2;fill?ctx.fill():ctx.stroke();}
  function sprite(id,x,y,frame,size,face=1,flash=0,alpha=1,shadow=true){
   const im=images[id];if(!im?.naturalWidth)return;const q=point(x,y),cols=id==='soldier'?2:4,w=im.naturalWidth/cols,h=im.naturalHeight/2,z=size*scale;
-  ctx.save();ctx.globalAlpha*=alpha;if(shadow){ctx.fillStyle='#08161065';ctx.beginPath();ctx.ellipse(q.x,q.y+3,z*.24,z*.075*BREAKTHROUGH_CAMERA.depth,0,0,Math.PI*2);ctx.fill();}
+  ctx.save();ctx.globalAlpha*=alpha;if(shadow&&!spritePaint.contact(ctx,q.x,q.y+3,z)){ctx.fillStyle='#08161065';ctx.beginPath();ctx.ellipse(q.x,q.y+3,z*.24,z*.075*BREAKTHROUGH_CAMERA.depth,0,0,Math.PI*2);ctx.fill();}
   ctx.translate(q.x,q.y);if(face<0)ctx.scale(-1,1);if(flash>0)ctx.scale(1+flash*.5,1-flash*.6);
-  ctx.drawImage(im,frame%cols*w,Math.floor(frame/cols)*h,w,h,-z/2,-z*.86,z,z);ctx.restore();
+  spritePaint.draw(ctx,im,frame%cols*w,Math.floor(frame/cols)*h,w,h,-z/2,-z*.86,z,z);ctx.restore();
  }
  function hero(shadow=true){const p=run.player;sprite(p.char,p.x,p.y,p.dashing>0?3:p.motion>0?5:p.attack>0?p.step+1:0,BREAKTHROUGH_CAMERA.hero,p.aimX,p.inv>0&&p.inv<.55?.1:0,1,shadow);ring(p.x,p.y,.48,'#d4f6ca');}
  function warning(u,fill){if(!fill&&!u.leader)return;ring(u.leader?u.tx:u.x,u.leader?u.ty:u.y,u.leader?(u.boss?3.2:2.3):1.5,fill?(u.leader?'#ef69492e':'#ef694914'):'#ffbc88cc',fill);}
  function slash(f){
   const q=point(f.x,f.y),angle=Math.atan2(f.ay??0,f.ax??1),arc=DUEL_BASE_CHARACTERS[run.player.char].arc*1.15;
   const r=f.r*scale,depth=BREAKTHROUGH_CAMERA.depth;
-  ctx.save();ctx.globalAlpha=Math.min(.85,f.life/f.max);ctx.fillStyle=f.color||'#dff6b7';ctx.beginPath();
+  ctx.save();ctx.globalAlpha=Math.min(.85,f.life/f.max);ctx.fillStyle=spritePaint.law(run.player.char,f.color||'#dff6b7');ctx.beginPath();
   ctx.ellipse(q.x,q.y,r,r*depth,0,angle-arc,angle+arc);ctx.ellipse(q.x,q.y,r*.86,r*.86*depth,0,angle+arc,angle-arc,true);ctx.closePath();ctx.fill();
   ctx.globalAlpha=Math.min(1,f.life/f.max);ctx.strokeStyle='#fff5d4';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(q.x,q.y,r*.95,r*.95*depth,0,angle-arc,angle+arc);ctx.stroke();ctx.restore();
  }
  function lance(f){const q=point(f.x,f.y),t=point(f.x+(f.ax??1)*f.r,f.y+(f.ay??0)*f.r);ctx.lineCap='round';ctx.strokeStyle='#d2efb7';ctx.lineWidth=f.wide?14:8;ctx.beginPath();ctx.moveTo(q.x,q.y-12);ctx.lineTo(t.x,t.y-12);ctx.stroke();ctx.strokeStyle='#fff6d3';ctx.lineWidth=3;ctx.stroke();}
  function impact(u){
-  if(u.flash<=0)return;const q=point(u.x,u.y);ctx.save();ctx.globalAlpha=Math.min(1,u.flash/.15);ctx.strokeStyle='#ffe9ae';ctx.lineWidth=3;const z=scale*.4;
+  if(u.flash<=0)return;const q=point(u.x,u.y);if(spritePaint.impact(ctx,q.x,q.y-scale,scale*1.5,1-Math.min(1,u.flash/.15)))return;ctx.save();ctx.globalAlpha=Math.min(1,u.flash/.15);ctx.strokeStyle='#ffe9ae';ctx.lineWidth=3;const z=scale*.4;
   for(let i=0;i<3;i++){const a=i*Math.PI/3+u.id*.2;ctx.beginPath();ctx.moveTo(q.x-Math.cos(a)*z,q.y-scale*.8-Math.sin(a)*z);ctx.lineTo(q.x+Math.cos(a)*z,q.y-scale*.8+Math.sin(a)*z);ctx.stroke();}ctx.restore();
  }
  function draw(realDt=0){

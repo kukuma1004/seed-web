@@ -6,6 +6,7 @@ import * as records from '../src/garden-challenge-records.js';
 import {LAWS} from '../src/laws.js';
 import {GARDEN_OBJECT_ART} from '../src/garden-theme-art.js';
 import {advanceFrame,createFramePacer} from '../src/frame-time.js';
+import {createSeedCanvasPaint} from '../src/seed-canvas-presentation.js';
 class Target{constructor(){this.events=new Map();}addEventListener(k,f){if(!this.events.has(k))this.events.set(k,new Set());this.events.get(k).add(f);}removeEventListener(k,f){this.events.get(k)?.delete(f);}emit(k,e={}){for(const f of this.events.get(k)||[])f({preventDefault(){},stopImmediatePropagation(){},target:{closest:()=>null},detail:0,...e});}}
 function environment({fail=false,reduced=false}={}){
  let viewport={width:1280,height:720,left:0,top:0},draws=0,captured=null;
@@ -28,7 +29,7 @@ function environment({fail=false,reduced=false}={}){
  class Image{constructor(){this.naturalWidth=0;this.naturalHeight=0;images.push(this);}set src(v){this.path=v;}}
  const audio={play:(id,o)=>audioCalls.push([id,o]),unlock(){},setScene:v=>{audio.scene=v;},setPaused:v=>{audio.paused=v;},setMuted:v=>{audio.muted=v;},tick(){},state:()=>({musicScene:'garden',paused:false,muted:false})};
  const storage={getItem:k=>values.get(k)??null,setItem:(k,v)=>{writes.push(k);values.set(k,v);}};
- const scope={...rules,...records,LAWS,GARDEN_OBJECT_ART,advanceFrame,createFramePacer,window,document,Image,console,Date:{now:()=>33},requestAnimationFrame:f=>{queue.set(++serial,f);return serial;},cancelAnimationFrame:id=>queue.delete(id),createGardenChallenge:(...args)=>(captured=rules.createGardenChallenge(...args))};
+ const scope={...rules,...records,createSeedCanvasPaint,LAWS,GARDEN_OBJECT_ART,advanceFrame,createFramePacer,window,document,Image,console,Date:{now:()=>33},requestAnimationFrame:f=>{queue.set(++serial,f);return serial;},cancelAnimationFrame:id=>queue.delete(id),createGardenChallenge:(...args)=>(captured=rules.createGardenChallenge(...args))};
  let source=fs.readFileSync(new URL('../src/garden-challenge-view.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replaceAll('import.meta.env.BASE_URL',"'./'").replace('export function mountGardenChallenge','function mountGardenChallenge');
  vm.runInNewContext(source+'\nthis.mount=mountGardenChallenge;',scope);const view=scope.mount({audio,storage,onClose:()=>closed++}),root=document.body.children[0];
  for(const im of images){if(fail)im.onerror?.();else{im.naturalWidth=768;im.naturalHeight=512;im.onload?.();}}

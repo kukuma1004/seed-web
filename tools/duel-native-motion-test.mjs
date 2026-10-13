@@ -1,3 +1,4 @@
+import {duelNativeRenderBindings} from './duel-native-render-bindings.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import {createHash} from 'node:crypto';
@@ -35,7 +36,7 @@ const previous=baseline.body+'\n function fighterDraw(';
 const body=source=>source.slice(source.indexOf(' function body('),source.indexOf(' function fighterDraw('));
 const tables=current.split('\n').filter(l=>/^const (FINAL\d+_(HEIGHT|FEET)|SOLO\d+_FEET|FUSION\d+_(HEIGHT|FEET)|FUSION_POSES|FROST_POSES)=/.test(l)).join('\n');
 const modules={};for(let i=8;i<=59;i++){const key='DUEL_BATCH'+String(i).padStart(2,'0');modules[key]=(await import('../src/seed-duel-batch'+String(i).padStart(2,'0')+'.js'))[key];}
-function renderer(source,inspection,images,authoredTables=tables){const calls=[],ctx=new Proxy({}, {get:(_,name)=>(...args)=>calls.push([name,...args]),set:(_,name,value)=>(calls.push(['set',name,value]),true)}),scope={...modules,ctx,inspection,released:false,DUEL_NATIVE_MOTION,assets:images,s:{boss:false},characters:{...DUEL_CHARACTERS,[id]:modules.DUEL_BATCH31[id]},nativeMotionFrame,nativeMotionReady,nativeActionFrame};vm.createContext(scope);vm.runInContext(authoredTables+'\n'+body(source)+'\nthis.paint=body;',scope);return{scope,calls};}
+function renderer(source,inspection,images,authoredTables=tables){const calls=[],ctx=new Proxy({}, {get:(_,name)=>(...args)=>calls.push([name,...args]),set:(_,name,value)=>(calls.push(['set',name,value]),true)}),scope={...duelNativeRenderBindings(DUEL_NATIVE_MOTION,nativeMotionReady),...modules,ctx,inspection,released:false,DUEL_NATIVE_MOTION,assets:images,s:{boss:false},characters:{...DUEL_CHARACTERS,[id]:modules.DUEL_BATCH31[id]},nativeMotionFrame,nativeMotionReady,nativeActionFrame};vm.createContext(scope);vm.runInContext(authoredTables+'\n'+body(source)+'\nthis.paint=body;',scope);return{scope,calls};}
 const native=renderer(current,true,assets);
 for(let i=0;i<8;i++)for(const fx of [-1,1]){native.calls.length=0;native.scope.paint({char:id,fx,team:0},10,12,{frame:i,flash:.4});assert.equal(native.calls.filter(c=>c[0]==='drawImage').length,2);assert(native.calls.some(c=>c[0]==='scale'&&c[1]===fx));assert(!native.calls.some(c=>c[0]==='ellipse'),'actual native body must replace placeholder');}
 const combat=createDuel({player:id,enemy:'burst',inspection:true,practice:true});combat.phase='fight';Object.assign(combat.fighters[0],{x:15,y:10,fx:1,fy:0});Object.assign(combat.fighters[1],{x:16.4,y:10});

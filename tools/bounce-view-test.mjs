@@ -4,6 +4,7 @@ import vm from 'node:vm';
 import {createFramePacer} from '../src/frame-time.js';
 import * as rules from '../src/seed-bounce-rules.js';
 import {createBounceFeedback,drawBounceEffect} from '../src/bounce-feedback.js';
+import {createSeedCanvasPaint} from '../src/seed-canvas-presentation.js';
 
 // Execute the shipping view/controller with real rules and a bounded DOM/Canvas mock.
 // This verifies ownership and intents, not live visual quality or physical touch.
@@ -29,7 +30,7 @@ function environment(){
  const window=new Target();window.matchMedia=()=>({matches:false});const document=new Target();document.hidden=false;document.createElement=tag=>new Node(tag);document.body=new Node();
  const callbacks=new Map(),images=[];let next=0,captured=null;const audio={count:0,play(){this.count++;},setPaused(){},unlock(){},musicScene:'garden',setScene(id){this.musicScene=id;},state(){return {musicScene:this.musicScene,contextState:'running',muted:false,supported:true};}};
  class Image{constructor(){this.naturalWidth=0;this.naturalHeight=0;images.push(this);}set src(value){this.path=value;}}
- const context={...rules,createFramePacer,createBounceFeedback,drawBounceEffect,window,document,Image,devicePixelRatio:1,Date:{now:()=>67},console,requestAnimationFrame:fn=>{callbacks.set(++next,fn);return next;},cancelAnimationFrame:id=>callbacks.delete(id),createBounce:seed=>(captured=rules.createBounce(seed))};
+ const context={...rules,createSeedCanvasPaint,createFramePacer,createBounceFeedback,drawBounceEffect,window,document,Image,devicePixelRatio:1,Date:{now:()=>67},console,requestAnimationFrame:fn=>{callbacks.set(++next,fn);return next;},cancelAnimationFrame:id=>callbacks.delete(id),createBounce:seed=>(captured=rules.createBounce(seed))};
  let source=readFileSync(new URL('../src/seed-bounce-view.js',import.meta.url),'utf8').replace(/^import .*;\r?\n/gm,'').replace(/import\.meta\.env\.BASE_URL/g,"'./'").replace('export function mountSeedBounce','function mountSeedBounce');
  vm.runInNewContext(source+'\nthis.mount=mountSeedBounce;',context);
  let closed=0;const view=context.mount({audio,onClose:()=>closed++}),root=document.body.last,canvas=root.querySelector('canvas');

@@ -1,3 +1,4 @@
+import {SEED_VISUAL_LANGUAGE} from './seed-visual-language.js';
 import {GARDEN_OBJECT_ART} from './garden-theme-art.js';
 
 const SETS=['greenhouse','blossom','moon'];
@@ -5,7 +6,7 @@ const BEDS=['#263e25','#324933','#202d3d'];
 const LANDMARK={glasshouse:'유리 온실 화단','fern-bed':'몬스테라','flower-bed':'벚꽃 화단','cherry-grove':'벚나무(대)','root-arch':'달의 아치','silver-grove':'달빛 나무(대)'};
 // One atlas, device-sized cached patterns, no animated water or shadow filters.
 export function createAdventureGardenPainter(ctx,assets,shapeOf){
- const patterns=new Map();let actCache=-1;
+ const patterns=new Map(),reliefCache=new WeakMap();let actCache=-1;
  function pattern(cell,tile,v){
   const im=assets.garden;if(!im?.complete||!im.naturalWidth)return null;
   if(actCache!==v.act){patterns.clear();actCache=v.act;}
@@ -24,11 +25,37 @@ export function createAdventureGardenPainter(ctx,assets,shapeOf){
   for(const n of R.nodes)if(['start','gate','raid','altar'].includes(n.role)){courts.moveTo(n.x+2.5,n.y);courts.arc(n.x,n.y,2.5,0,Math.PI*2);}
   return R._gardenPaths={lines,courts};
  }
+ // Authored stone edge geometry is cached per room, independent of camera and combat.
+ function relief(R){
+  if(reliefCache.has(R))return reliefCache.get(R);
+  const path=new Path2D();
+  for(const q of R.paths.slice(0,64)){
+   const dx=q.bx-q.ax,dy=q.by-q.ay,len=Math.hypot(dx,dy)||1,steps=Math.min(48,Math.max(4,Math.ceil(len/.65))),nx=-dy/len,ny=dx/len;
+   const a=[],b=[];
+   for(let i=0;i<=steps;i++){const t=i/steps,w=1.08+Math.sin(i*7.1+q.ax)*.055,curve=2*(1-t)*t*.45,x=q.ax+dx*t+nx*curve,y=q.ay+dy*t+ny*curve;
+    a.push([x-nx*w,y-ny*w]);b.push([x+nx*w,y+ny*w]);}
+   const points=[...a,...b.reverse()];path.moveTo(...points[0]);for(const p of points.slice(1))path.lineTo(...p);path.closePath();
+  }
+  for(const n of R.nodes.slice(0,32))if(['start','gate','raid','altar'].includes(n.role)){
+   for(let i=0;i<40;i++){const a=i/40*Math.PI*2,r=2.5+Math.sin(i*13.2+n.x)*.055,x=n.x+Math.cos(a)*r,y=n.y+Math.sin(a)*r;i?path.lineTo(x,y):path.moveTo(x,y);}path.closePath();
+  }
+  reliefCache.set(R,path);return path;
+ }
  function region(R,v){
   const outline=worldShape(shapeOf(R),v),road=promenades(R);
   ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=BEDS[v.act];ctx.fillRect(0,0,v.width*v.dpr,v.height*v.dpr);
   const grass=pattern(0,10,v);if(grass){ctx.fillStyle=grass;ctx.globalAlpha=.42;ctx.fillRect(0,0,v.width*v.dpr,v.height*v.dpr);ctx.globalAlpha=1;ctx.fill(outline);}
-  ctx.fillStyle=pattern(v.act===2?2:1,7,v)||'#aeb8a0';ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2.2*v.scale*v.dpr;ctx.lineCap='round';ctx.lineJoin='round';ctx.stroke(worldShape(road.lines,v));ctx.fill(worldShape(road.courts,v));
+  ctx.lineWidth=2.2*v.scale*v.dpr;ctx.lineCap='round';ctx.lineJoin='round';
+  const lines=worldShape(road.lines,v),courts=worldShape(road.courts,v);
+  if(v.visual25d){
+   const stone=worldShape(relief(R),v),tile=pattern(v.act===2?2:1,5,v)||SEED_VISUAL_LANGUAGE.colors.stone;
+   // The front face shares the irregular upper silhouette and painted texture.
+   ctx.save();ctx.translate(.10*v.scale*v.dpr,.34*v.scale*v.dpr);ctx.fillStyle='#14211680';ctx.fill(stone);ctx.restore();
+   ctx.save();ctx.translate(0,.23*v.scale*v.dpr);ctx.fillStyle=tile;ctx.fill(stone);ctx.fillStyle='#28382b88';ctx.fill(stone);ctx.restore();
+   ctx.fillStyle=tile;ctx.fill(stone);ctx.strokeStyle='#e2dbb368';ctx.lineWidth=.035*v.scale*v.dpr;ctx.stroke(stone);
+  }else{
+   ctx.fillStyle=pattern(v.act===2?2:1,7,v)||'#aeb8a0';ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=2.2*v.scale*v.dpr;ctx.stroke(lines);ctx.fill(courts);
+  }
   for(const m of R.landmarks||[])if(m.kind==='pond'){
    const pond=new Path2D();pond.ellipse(m.x,m.y,m.size,m.size*.8,0,0,Math.PI*2);const p=worldShape(pond,v);
    ctx.fillStyle=pattern(3,5,v)||'#2c6670';ctx.fill(p);ctx.strokeStyle='#b8bb8c';ctx.lineWidth=.15*v.scale*v.dpr;ctx.stroke(p);
@@ -36,7 +63,7 @@ export function createAdventureGardenPainter(ctx,assets,shapeOf){
   ctx.restore();
  }
  function arena(v){
-  const im=assets.arena;if(im?.complete&&im.naturalWidth){ctx.drawImage(im,v.ox-3*v.scale,v.oy-3*v.scale,30*v.scale,21*v.scale);return;}
+  const im=assets.arena;if(im?.complete&&im.naturalWidth){ctx.drawImage(im,v.ox-3*v.scale,v.oy-3*v.scale*(v.depthScale??1),30*v.scale,21*v.scale*(v.depthScale??1));return;}
   ctx.save();ctx.setTransform(1,0,0,1,0,0);ctx.fillStyle=pattern(0,10,v)||BEDS[v.act];ctx.fillRect(0,0,v.width*v.dpr,v.height*v.dpr);
   const court=new Path2D();court.moveTo(4.4,1.9);court.lineTo(19.6,1.9);court.quadraticCurveTo(22.7,1.9,22.7,5);court.lineTo(22.7,11.4);court.quadraticCurveTo(22.7,14.5,19.6,14.5);court.lineTo(4.4,14.5);court.quadraticCurveTo(1.3,14.5,1.3,11.4);court.lineTo(1.3,5);court.quadraticCurveTo(1.3,1.9,4.4,1.9);court.closePath();const p=worldShape(court,v);
   ctx.fillStyle=pattern(v.act===2?2:1,7,v)||'#aeb8a0';ctx.fill(p);ctx.strokeStyle='#bfc6a280';ctx.lineWidth=.14*v.scale*v.dpr;ctx.stroke(p);
@@ -45,14 +72,14 @@ export function createAdventureGardenPainter(ctx,assets,shapeOf){
  function landmarks(R,v){const im=assets.gardenDecor,meta=GARDEN_OBJECT_ART[SETS[v.act]];if(!im?.complete||!im.naturalWidth||!meta)return;
   const paint=(item,x,y,size,alpha=1)=>{if(!item||Math.abs(x-v.playerX)>18||Math.abs(y-v.playerY)>13)return;const [, ,sx,sy,sw,sh]=item,z=size*v.scale,h=z*sh/sw;ctx.globalAlpha=alpha;ctx.drawImage(im,sx,sy,sw,sh,v.ox+x*v.scale-z/2,v.oy+y*v.scale*(v.depthScale??1)-h*.88,z,h);};
   const trees=v.act===0?[0,2,9]:v.act===1?[0,1,3,4]:[0,1,3,4],flowers=v.act===0?[3,8,11,18]:v.act===1?[7,11,12,15]:[6,7,9,10];
-  for(const t of R.trees||[])paint(meta.items[trees[t.cell%trees.length]],t.x,t.y,t.size,.9);
+  for(const t of v.visual25d?[]:R.trees||[])paint(meta.items[trees[t.cell%trees.length]],t.x,t.y,t.size,.9);
   for(const d of R.decor||[])paint(meta.items[flowers[d.cell%flowers.length]],d.x,d.y,d.size*.85,.82);
   for(const m of R.landmarks||[]){const name=LANDMARK[m.kind],item=name&&meta.items.find(q=>q[0]===name);paint(item,m.x,m.y,m.size);}
   ctx.globalAlpha=1;
  }
  function obstacle(o,v){const im=assets.gardenDecor,meta=GARDEN_OBJECT_ART[SETS[v.act]];if(!im?.complete||!im.naturalWidth)return false;
   const choices=v.act===0?[2,9,0]:v.act===1?[0,4,16]:[0,3,4],item=meta.items[choices[o.cell%3]],[, ,x,y,w,h]=item,z=o.r*2.2*v.scale;
-  ctx.drawImage(im,x,y,w,h,v.ox+o.x*v.scale-z/2,v.oy+o.y*v.scale-z*h/w*.86,z,z*h/w);return true;
+  ctx.drawImage(im,x,y,w,h,v.ox+o.x*v.scale-z/2,v.oy+o.y*v.scale*(v.depthScale??1)-z*h/w*.86,z,z*h/w);return true;
  }
  // Called in the prop's translated local context. Reuse current garden art.
  function prop(o,v){const im=assets.gardenDecor,meta=GARDEN_OBJECT_ART[SETS[v.act]];if(o.kind!=='pot'||!im?.complete||!im.naturalWidth)return false;

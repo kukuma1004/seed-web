@@ -8,6 +8,7 @@ import {SEEDS,PLOTS,STAGES,stageOf,centerStage,CENTER,plantName,GUARDIAN,bossGar
 import {decorScene} from './garden-decor.js';
 import {decorLayoutKey,normalizeDecorPlacements} from './garden-decor-placement.js';
 import {DECOR_PROP_ART,DECOR_PROP_COLUMNS,DECOR_PROP_ROWS,DECOR_PROP_CELLS,DECOR_PROP_REGIONS} from './garden-decor-art.js';
+import {seedVisualEnabled} from './seed-visual-language.js';
 
 const V=THREE.Vector3;
 // The painted terrace has two beds in each of three depth rows. These fallback
@@ -152,7 +153,7 @@ export function buildCenter(index,artKit=null){
  return group;
 }
 
-export function createGardenScene({mobile=false}={}){
+export function createGardenScene({mobile=false,visualReview=seedVisualEnabled(globalThis.location)}={}){
  const scene=new THREE.Scene();
  scene.background=new THREE.Color('#0d2429');
  const plotSpots=PLOT_SPOTS.map(spot=>({...spot})),centerSpot={...CENTER_SPOT};
@@ -215,6 +216,12 @@ export function createGardenScene({mobile=false}={}){
  scene.add(fireflies);
 
  const plantGroup=new THREE.Group(),centerGroup=new THREE.Group();scene.add(plantGroup,centerGroup);
+ // Two shared, unlit ground passes replace expensive real-time shadow maps.
+ // Their transforms change only when a saved arrangement or viewport changes.
+ const contactLayers=visualReview?[.18,.3].map((opacity,index)=>{
+  const mesh=new THREE.InstancedMesh(new THREE.CircleGeometry(1,24),new THREE.MeshBasicMaterial({color:0x102019,transparent:true,opacity,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}),96);
+  mesh.count=0;mesh.renderOrder=1;mesh.frustumCulled=false;mesh.userData.gardenContactLayer=index;scene.add(mesh);return mesh;
+ }):[];
  // 찐보스 5회마다 생기는 기념 식물. 능력별 5%까지 얻는 최대 50개를
  // 꽃/열매 두 인스턴스 묶음으로 그려 드로우콜은 그대로 유지한다.
  const blossomShape=new THREE.Shape();
@@ -288,6 +295,27 @@ export function createGardenScene({mobile=false}={}){
  };
  const petalEuler=new THREE.Euler();
  const milestoneMatrix=new THREE.Matrix4(),milestonePosition=new THREE.Vector3(),milestoneScale=new THREE.Vector3(),milestoneRotation=new THREE.Quaternion();
+ const contactMatrix=new THREE.Matrix4(),contactRotation=new THREE.Quaternion().setFromAxisAngle(new V(1,0,0),-Math.PI/2),contactScale=new V(),contactPosition=new V();
+ function syncVisualDepth(){
+  if(!visualReview)return;
+  let count=0;
+  const seat=(group,anchor)=>{
+   const art=group.children[0];if(!art)return;
+   // Saved image-space roots remain authoritative for occlusion and picking.
+   art.renderOrder=20+Math.round(anchor.v*400);
+   const size=Math.max(.3,art.scale.x),width=Math.min(.72,size*.23);
+   for(let i=0;i<contactLayers.length;i++){
+    contactPosition.set(group.position.x+(i===0?width*.25:0),.012+i*.003,group.position.z+.015);
+    contactScale.set(width*(i===0?1.35:.72),width*(i===0?.7:.34),1);
+    contactMatrix.compose(contactPosition,contactRotation,contactScale);contactLayers[i].setMatrixAt(count,contactMatrix);
+   }
+   count++;
+  };
+  for(const plant of plants)seat(plant,PLOT_ANCHORS[plant.userData.plot]);
+  if(center?.userData.art)seat(center,CENTER_ANCHOR);
+  for(const item of decorItems)if(item.userData.art&&count<96)seat(item,item.userData.anchor);
+  for(const layer of contactLayers){layer.count=count;layer.instanceMatrix.needsUpdate=true;}
+ }
  function syncMilestones(){
   let flower=0,fruit=0;
   for(let i=0;i<milestoneCount;i++){
@@ -314,6 +342,7 @@ export function createGardenScene({mobile=false}={}){
   for(const plant of plants){const spot=plotSpots[plant.userData.plot];if(spot)plant.position.set(spot.x,0,spot.z);}
   if(center)center.position.set(centerSpot.x,0,centerSpot.z);
   for(const item of decorItems){anchorWorld(item.userData.anchor,anchorPoint);item.position.set(anchorPoint.x,0,anchorPoint.z);}
+  syncVisualDepth();
   syncMilestones();
  };
 
