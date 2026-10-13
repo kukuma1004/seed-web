@@ -43,7 +43,7 @@
     "test:garden-challenge": "node tools/garden-challenge-rules-test.mjs && node tools/garden-challenge-view-test.mjs && node tools/garden-challenge-records-test.mjs && node tools/garden-challenge-host-test.mjs",
     "test:mode-inputs": "node tools/modes-defense-duel-input-test.mjs && node tools/modes-puzzle-bounce-input-test.mjs",
     "test:garden-polish": "node tools/garden-decor-art-test.mjs && node tools/garden-render-cache-test.mjs && node tools/garden-placement-test.mjs",
-    "test:population-regression": "node tools/population-action-duel-terminal-test.mjs"
+    "test:population-regression": "node tools/population-action-duel-terminal-test.mjs && node tools/population-action-duel-cross-roster-test.mjs && node tools/population-action-duel-ai-stall-test.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.2",

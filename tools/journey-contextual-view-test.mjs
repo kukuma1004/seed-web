@@ -32,7 +32,7 @@ try{
  const facility=scene.getObjectByName('crystal-siege-facility-0'),worldCount=scene.children[0].children.length,paidState=JSON.stringify(state.pads);
  update({dt:.08});assert(facility.scale.x>2.05,'paid planting produces a short sprite settle cue');
  for(let i=0;i<5;i++)update({dt:.1});assert.equal(facility.scale.x,2.05);assert.equal(scene.children[0].children.length,worldCount);assert.equal(JSON.stringify(state.pads),paidState,'presentation changes neither facility combat nor object budget');
- state.resources=3;update();context.onclick();update();assert.equal(state.pads[0].level,2);assert(context.textContent.includes('최대 강화'));assert.equal(context.disabled,true);
+ state.resources=3;update();context.onclick();update();assert.equal(state.pads[0].level,2);assert(context.textContent.includes('심장 우선'));assert.equal(context.disabled,true);
  state.pads[0].hp=0;state.resources=3;update();assert(context.textContent.includes('다시 심기'));context.onclick();update();assert.equal(state.pads[0].level,2);assert(state.pads[0].hp>0,'normal rule retains paid level on rebuild');
  Object.assign(player,{x:3,z:2.5});state.resources=2;update();context.onclick();assert.equal(buttons[0].disabled,true);assert.equal(buttons[1].disabled,false);const count=calls.length;buttons[0].onclick();assert.equal(calls.length,count,'disabled actions emit no build intent');
  update({interactive:false});assert.equal(menu.hidden,true);assert.equal(choices.hidden,true);assert.equal(view.preparationHeld(),false);context.onclick();start.onclick();assert.equal(calls.length,count,'stale paused controls emit no intent');

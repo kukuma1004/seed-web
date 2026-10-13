@@ -91,6 +91,8 @@ function bankPosition(f,o,ctx){
   const other=axis==='x'?'y':'x',lo=other==='x'?A.minX:A.minY,hi=other==='x'?A.maxX:A.maxY;
   for(const side of [-1,0,1]){
    const goal=point(o);goal[axis]=wall+sign*.28;goal[other]=Math.max(lo+.6,Math.min(hi-.6,o[other]+side*1.2));
+   // Approach only a bank inside the authored mirror cast range; a distant wall otherwise loops forever.
+   const reach=dist(goal,o);if(reach<=1.2||reach>=5.5)continue;
    const route=bankAim(goal,o,ctx);if(!route)continue;
    const score=dist(f,goal)+route.length*.25;
    if(!best||score<best.score)best={...goal,score};
