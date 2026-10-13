@@ -1,0 +1,26 @@
+import assert from 'node:assert/strict';
+import {readFileSync} from 'node:fs';
+import vm from 'node:vm';
+import {BOUNCE_CONFIG} from '../src/seed-bounce-rules.js';
+const source=readFileSync(new URL('../src/seed-bounce-view.js',import.meta.url),'utf8');
+const slice=source.slice(source.indexOf('function bounceObjectiveHint'),source.indexOf('// Independent scene;'));
+assert(slice.includes('function bounceEndExplanation'));
+const api=vm.runInNewContext(slice+';({hint:bounceObjectiveHint,end:bounceEndExplanation})',{BOUNCE_CONFIG});
+const state={phase:'aim',turn:11,boss:true,bossDefeated:true,enemies:[{active:true,y:2,h:1},{active:true,y:3,h:1},{active:false,y:99,h:1}]};
+assert.match(api.hint(state),/남은 적 2마리 · 4번/);
+assert.match(api.hint({...state,turn:14}),/1번 안에/);
+const danger={...state,enemies:[{active:true,y:BOUNCE_CONFIG.heartLine-1.5,h:1}]};
+assert.match(api.hint(danger),/심장 가까이/,'immediate low row keeps priority over objective');
+assert.equal(api.hint(danger,true),'일시정지');
+assert.match(api.hint({...state,bossDefeated:false}),/수호자와 남은 적/);
+assert.match(api.hint({...state,turn:1,boss:false,bossDefeated:false}),/최대 14발/);
+assert.match(api.end({...state,phase:'lost',turn:14}),/14번의 발사를 모두 썼어요/);
+assert.doesNotMatch(api.end({...state,phase:'lost',turn:14}),/심장에 닿았/,'turn limit is not falsely described as breach');
+assert.match(api.end({...danger,phase:'lost',enemies:[{active:true,y:BOUNCE_CONFIG.heartLine,h:1}]}),/수호자는 격파했지만 남은 적/);
+assert.match(api.end({...state,phase:'won'}),/모두 정리/);
+assert.match(source,/goal\.textContent=bounceObjectiveHint\(run,paused\)/,'real HUD consumes tested helper');
+assert.match(source,/<p>\$\{bounceEndExplanation\(run\)\}<\/p>/,'real result consumes cause helper');
+// A removed priority guard must fail the same danger requirement.
+const changed=slice.replace(/if\(enemies\.some\(e=>e\.y\+e\.h\/2>BOUNCE_CONFIG\.heartLine-1\.1\)\)return '[^']*';/,'');
+assert.notEqual(changed,slice);const broken=vm.runInNewContext(changed+';bounceObjectiveHint',{BOUNCE_CONFIG});assert.doesNotMatch(broken(danger),/심장 가까이/);
+console.log('PASS Bounce actual-source late-boss objective, remaining-shot count, urgent priority, turn-limit versus breach result and removed-guard negative control. CPU/view-source only.');

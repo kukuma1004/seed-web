@@ -9,6 +9,26 @@ const escape=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&g
 const law=id=>BOUNCE_LAWS.find(x=>x.id===id);
 const tint=id=>'#'+(law(id)?.color??0xd6f29b).toString(16).padStart(6,'0');
 
+function bounceObjectiveHint(run,paused=false){
+ if(paused)return '일시정지';
+ if(run.phase==='aim'){
+  const enemies=run.enemies.filter(e=>e.active);
+  if(enemies.some(e=>e.y+e.h/2>BOUNCE_CONFIG.heartLine-1.1))return '심장 가까이에 적이 있어요 · 가장 아래 적부터 노리세요';
+  if(run.bossDefeated)return `수호자 격파 · 남은 적 ${enemies.length}마리 · ${BOUNCE_CONFIG.maxTurns-run.turn+1}번 안에 모두 정리하세요`;
+  if(run.boss)return `수호자와 남은 적을 모두 정리하세요 · ${BOUNCE_CONFIG.maxTurns-run.turn+1}발 남음`;
+  return run.turn>1?'적이 내려왔어요 · 아래쪽 적을 다시 조준하세요':'최대 14발 · 수호자와 남은 적을 모두 정리하세요';
+ }
+ if(run.phase==='flying')return `연속 타격 ${run.combo} · 씨앗이 돌아오면 적이 다가와요`;
+ if(run.phase==='choice')return '새 법칙을 골라 다음 발사를 바꾸세요';
+ return run.phase==='won'?'수호자와 남은 적을 모두 막았어요':'아래쪽 적부터 먼저 노려보세요';
+}
+function bounceEndExplanation(run){
+ if(run.phase==='won')return '수호자와 남은 적을 모두 정리해 정원을 지켰어요.';
+ const reached=run.enemies.some(e=>e.active&&e.y+e.h/2>=BOUNCE_CONFIG.heartLine);
+ if(!reached&&run.turn>=BOUNCE_CONFIG.maxTurns)return `14번의 발사를 모두 썼어요. ${run.bossDefeated?'수호자는 격파했지만 남은 적을 모두 정리하지 못했어요.':'수호자와 남은 적을 모두 정리해야 정원을 지킬 수 있어요.'}`;
+ return run.bossDefeated?'수호자는 격파했지만 남은 적이 정원의 심장에 닿았어요. 아래쪽 적부터 정리해 보세요.':'정원의 심장까지 적이 다가왔어요. 아래쪽 적부터 정리하고, 벽을 이용해 여러 번 맞혀 보세요.';
+}
+
 // Independent scene; no normal account progress, currencies or story unlock writes.
 export function mountSeedBounce({host=document.body,audio,onClose=()=>{}}={}){
  const root=document.createElement('section');root.id='seed-bounce';root.setAttribute('aria-label','씨앗 바운스');
@@ -26,7 +46,7 @@ export function mountSeedBounce({host=document.body,audio,onClose=()=>{}}={}){
  load('garden','assets/garden-sanctuary-v2.webp');load('terrain','assets/adventure/garden-terrain-atlas-v2.webp');load('seed','assets/adventure/seed-combat-v1.webp');load('enemy','assets/cute/enemy-hound-v4.webp');load('boss','assets/duel/gravity-motion-v1.webp');
  function ready(){const start=$('.sb-start');if(!start)return;start.disabled=error||!Object.values(images).every(im=>im.naturalWidth);$('.sb-loading').textContent=error?'그림을 불러오지 못했어요. 돌아가서 다시 열어 주세요.':start.disabled?'정원 그림을 준비하고 있어요…':'한 번의 조준이 다음 전장을 바꿔요';}
  function close(){if(closed)return;closed=true;resuming=false;stop();pointer=null;for(const off of listeners)off();for(const image of Object.values(images))image.onload=image.onerror=null;back=null;root.remove();audio?.setScene?.(returnScene);audio?.setPaused(false);onClose();}
- function menu(){stop();paused=false;run=null;shown='';root.classList.add('sb-overlay');modal.hidden=false;modal.innerHTML=`<article><small>SEED · 새로운 놀이</small><h1>씨앗 바운스</h1><p>각도를 잡아 씨앗을 튕기세요.<br>다가오는 적을 막고 마지막 정원 수호자를 깨우세요.</p><div class="sb-promise"><span>↗ 벽을 이용한 연속 타격</span><span>✦ 9속성 · 두 법칙의 융합</span><span>♧ 짧은 성장 선택 · 보스</span></div><p class="sb-loading" role="status"></p><button class="sb-start" disabled>정원 지키기</button><button class="sb-close">씨앗 맞추기로 돌아가기</button><small>끌어 조준하고 놓으면 발사 · ← → 조준 / Space 발사<br>시험 모드 · 계정·랭킹·햇살에 반영되지 않아요.</small></article>`;$('.sb-start').onclick=start;$('.sb-close').onclick=close;ready();hud();draw();}
+ function menu(){stop();paused=false;run=null;shown='';root.classList.add('sb-overlay');modal.hidden=false;modal.innerHTML=`<article><small>SEED · 새로운 놀이</small><h1>씨앗 바운스</h1><p>각도를 잡아 씨앗을 튕기세요.<br>최대 14번의 발사로 수호자와 남은 적을 모두 정리하세요.</p><div class="sb-promise"><span>↗ 벽을 이용한 연속 타격</span><span>✦ 9속성 · 두 법칙의 융합</span><span>♧ 짧은 성장 선택 · 보스</span></div><p class="sb-loading" role="status"></p><button class="sb-start" disabled>정원 지키기</button><button class="sb-close">씨앗 맞추기로 돌아가기</button><small>끌어 조준하고 놓으면 발사 · ← → 조준 / Space 발사<br>시험 모드 · 계정·랭킹·햇살에 반영되지 않아요.</small></article>`;$('.sb-start').onclick=start;$('.sb-close').onclick=close;ready();hud();draw();}
  function start(){if(error||!Object.values(images).every(im=>im.naturalWidth))return;stop();pointer=null;resuming=false;run=createBounce(Date.now());feedback.reset();const nearest=run.enemies.filter(e=>e.active).sort((a,b)=>Math.hypot(a.x-run.player.x,a.y-run.player.y)-Math.hypot(b.x-run.player.x,b.y-run.player.y))[0];const angle=nearest?Math.atan2(nearest.y-run.player.y,nearest.x-run.player.x):-Math.PI/2;aim={x:Math.cos(angle),y:Math.sin(angle)};paused=false;shown='';modal.hidden=true;root.classList.remove('sb-overlay');audio?.unlock?.();audio?.setScene?.('garden');audio?.setPaused(false);hud();draw();canvas.focus();}
  function shoot(){if(paused||resuming||run?.phase!=='aim'||!launchBounce(run,aim.x,aim.y))return false;pointer=null;audio?.unlock?.();feedback.consume(run);last=0;hud();draw();canvas.focus();wake();return true;}
  function overlay(){if(!run||paused||closed)return;
@@ -37,7 +57,7 @@ export function mountSeedBounce({host=document.body,audio,onClose=()=>{}}={}){
    root.querySelectorAll('[data-growth]').forEach(button=>button.onclick=async()=>{if(!chooseBounce(run,button.dataset.growth))return;const chosen=run;resuming=true;root.querySelectorAll('[data-growth]').forEach(b=>b.disabled=true);hud();let audioReady=true;try{const resumed=audio?.setPaused(false);if(resumed?.then)await resumed;}catch{audioReady=false;}if(closed||run!==chosen)return;resuming=false;shown='';if(paused){hud();draw();return;}root.classList.remove('sb-overlay');modal.hidden=true;feedback.consume(run);if(audioReady)audio?.play?.('evolve');hud();draw();overlay();canvas.focus();wake();});
   }else if(['won','lost'].includes(run.phase)&&shown!==run.phase){
    shown=run.phase;stop();pointer=null;audio?.setPaused(false);audio?.play?.(run.phase==='won'?'bossDefeat':'hurt');root.classList.add('sb-overlay');modal.hidden=false;
-   modal.innerHTML=`<article><small>SEED · 씨앗 바운스</small><h1>${run.phase==='won'?'정원을 지켰어요!':'다음 각도로 다시 도전'}</h1><p>${run.score.toLocaleString()}점 · ${run.turn}번째 발사<br>${run.kills||0}마리 격파 · 최고 연속 타격 ${run.bestCombo||run.combo}</p><p>${run.phase==='won'?'벽 너머의 각도와 법칙을 하나의 빌드로 만들었어요.':'정원의 심장까지 적이 다가왔어요. 아래쪽 적부터 정리하고, 벽을 이용해 여러 번 맞혀 보세요.'}</p><button class="sb-retry">바로 다시 도전</button><button class="sb-close">씨앗 맞추기로</button><small>시험 모드 · 기록과 보상은 계정에 남지 않아요.</small></article>`;$('.sb-retry').onclick=start;$('.sb-close').onclick=close;
+   modal.innerHTML=`<article><small>SEED · 씨앗 바운스</small><h1>${run.phase==='won'?'정원을 지켰어요!':'다음 각도로 다시 도전'}</h1><p>${run.score.toLocaleString()}점 · ${run.turn}번째 발사<br>${run.kills||0}마리 격파 · 최고 연속 타격 ${run.bestCombo||run.combo}</p><p>${bounceEndExplanation(run)}</p><button class="sb-retry">바로 다시 도전</button><button class="sb-close">씨앗 맞추기로</button><small>시험 모드 · 기록과 보상은 계정에 남지 않아요.</small></article>`;$('.sb-retry').onclick=start;$('.sb-close').onclick=close;
   }
  }
  function pause(){if(!run||!['aim','flying'].includes(run.phase))return;paused=!paused;pointer=null;audio?.setPaused(paused);stop();root.classList.toggle('sb-overlay',paused);modal.hidden=!paused;
@@ -47,7 +67,7 @@ export function mountSeedBounce({host=document.body,audio,onClose=()=>{}}={}){
  function hud(){const status=$('.sb-status'),goal=$('.sb-goal'),build=$('.sb-build'),fire=$('.sb-fire');
   if(!run){status.textContent='';goal.textContent='';build.textContent='';fire.disabled=true;return;}
   status.textContent=`${run.turn}/${BOUNCE_CONFIG.maxTurns} 발사 · ${run.score.toLocaleString()}점`;
-  goal.textContent=paused?'일시정지':run.phase==='aim'?(run.enemies.some(e=>e.active&&e.y+e.h/2>BOUNCE_CONFIG.heartLine-1.1)?'심장 가까이에 적이 있어요 · 가장 아래 적부터 노리세요':run.turn>1?'적이 내려왔어요 · 아래쪽 적을 다시 조준하세요':'적이 아래 금빛 선에 닿기 전에 막으세요 · 끌어 조준하고 놓기'):run.phase==='flying'?`연속 타격 ${run.combo} · 씨앗이 돌아오면 적이 다가와요`:run.phase==='choice'?'새 법칙을 골라 다음 발사를 바꾸세요':run.phase==='won'?'정원의 심장을 지켰어요':'아래쪽 적부터 먼저 노려보세요';
+  goal.textContent=bounceObjectiveHint(run,paused);
   build.textContent=`${run.laws.map(id=>law(id)?.name||id).join(' + ')||'기본 씨앗'}${run.fusion?' · '+run.fusion.name:''} · ${run.volleySize}발`;fire.disabled=paused||resuming||run.phase!=='aim';
  }
  function backdrop(){if(back)return;back=document.createElement('canvas');back.width=width;back.height=height;const c=back.getContext('2d');c.fillStyle='#102f2b';c.fillRect(0,0,width,height);const image=images.garden;if(image?.naturalWidth){const z=Math.max(width/image.naturalWidth,height/image.naturalHeight);c.drawImage(image,(width-image.naturalWidth*z)/2,(height-image.naturalHeight*z)/2,image.naturalWidth*z,image.naturalHeight*z);c.fillStyle='#0b201dc4';c.fillRect(0,0,width,height);}
