@@ -9,7 +9,7 @@ export const SPRITE_LIGHTING_VERSION='painted-dome-v2';
 const fixed=n=>Number(Number(n).toFixed(4));
 // Give painted billboards a stable top-left key light and a cool edge light.
 // It keeps the one-quad sprite path while adding shape cues that survive at mobile size.
-export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8fffd4,rimStrength=.08,atlasGrid=null}={}){
+export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8fffd4,rimStrength=.08,atlasGrid=null,cropUV=null}={}){
  const depthReview=seedVisualEnabled(typeof location==='undefined'?null:location);
  if(depthReview){shadow=.72;highlight=1.12;rim=0xffedc4;rimStrength=.035;}
  const color=new THREE.Color(rim);
@@ -24,12 +24,13 @@ export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8f
   shader.uniforms.seedLightRimColor={value:values.rim};
   shader.uniforms.seedLightRimStrength={value:values.strength};
   if(depthReview)shader.uniforms.seedLightGrid={value:grid};
+  if(cropUV)shader.uniforms.seedLightCrop={value:cropUV};
   const declare='uniform float seedLightShadow;\nuniform float seedLightHighlight;\nuniform vec3 seedLightRimColor;\nuniform float seedLightRimStrength;\n';
-  const declarations=declare+(depthReview?'uniform vec2 seedLightGrid;\n':'');
+  const declarations=declare+(depthReview?'uniform vec2 seedLightGrid;\n':'')+(cropUV?'uniform vec4 seedLightCrop;\n':'');
   shader.fragmentShader=shader.fragmentShader.includes('#include <common>')?shader.fragmentShader.replace('#include <common>',`#include <common>\n${declarations}`):declarations+shader.fragmentShader;
   shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
 #ifdef USE_MAP
- vec2 seedLightP=(${depthReview?'fract(vMapUv*seedLightGrid)':'vMapUv'}-vec2(.5))*2.;
+ vec2 seedLightP=(${cropUV?'(vMapUv-seedLightCrop.xy)/seedLightCrop.zw':depthReview?'fract(vMapUv*seedLightGrid)':'vMapUv'}-vec2(.5))*2.;
  float seedLightDome=sqrt(max(.08,1.-min(1.,dot(seedLightP,seedLightP))*.72));
  vec3 seedLightN=normalize(vec3(-seedLightP.x*.55,seedLightP.y*.38,seedLightDome));
  float seedLightKey=clamp(dot(seedLightN,normalize(vec3(.45,.75,1.))) * .5 + .5,0.,1.);
@@ -39,7 +40,7 @@ export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8f
 #endif`);
  };
  // 값이 셰이더 밖(유니폼)에 있으니 모든 그림이 같은 키를 쓴다.
- material.customProgramCacheKey=()=>SPRITE_LIGHTING_VERSION+(depthReview?':garden-depth-v1':'');
+ material.customProgramCacheKey=()=>SPRITE_LIGHTING_VERSION+(depthReview?':garden-depth-v1':'')+(cropUV?':crop-local-v1':'');
  material.needsUpdate=true;
  return material;
 }

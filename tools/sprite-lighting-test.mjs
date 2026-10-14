@@ -17,3 +17,11 @@ assert.equal(s2.uniforms.seedLightShadow.value,.74);assert.equal(s2.uniforms.see
 assert.deepEqual(s2.uniforms.seedLightRimColor.value.toArray(),[1,1,1]);
 assert.equal(shader.fragmentShader.replace(/\s+/g,' ').includes('seedLightRimColor*seedLightRimStrength'),true);
 console.log('Painted sprites share one dome-light shader; per-art values are uniforms.');
+const crop=new THREE.Vector4(.4,.2,.1,.3),local=applySpriteLighting(new THREE.SpriteMaterial(),{cropUV:crop});
+const s3={fragmentShader:'#include <map_fragment>'};local.onBeforeCompile(s3);
+assert.equal(s3.uniforms.seedLightCrop.value,crop);
+assert(s3.fragmentShader.includes('(vMapUv-seedLightCrop.xy)/seedLightCrop.zw'));
+assert.notEqual(local.customProgramCacheKey(),material.customProgramCacheKey());
+const local2=applySpriteLighting(new THREE.SpriteMaterial(),{cropUV:new THREE.Vector4(.8,.1,-.2,.4)});
+assert.equal(local.customProgramCacheKey(),local2.customProgramCacheKey(),'All crop sizes/flips share the same shader');
+crop.set(.8,.1,-.2,.4);assert.equal(s3.uniforms.seedLightCrop.value.z,-.2,'New action/flip updates uniforms without compiling');

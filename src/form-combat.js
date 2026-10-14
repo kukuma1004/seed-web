@@ -86,7 +86,7 @@ const immovable=e=>e.immovable===true||FORM_BOSSES.has(e.type)||e.type==='turret
 // renderless skips GPU resources; maxBolts bounds the parent's projectile pool
 // (24 by default when renderless). Final-branch shots/fields retain their own
 // authored 20/8 limits. motionSpeed() optionally supplies rooted comet windup.
-export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,traceTerrain=null,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null,comboTexture=null,renderless=false,maxBolts=renderless?24:Infinity,motionSpeed=null}){
+export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,reflector=()=>false,boundary,traceTerrain=null,constrain,vfx,sound=()=>{},enemyShots=()=>[],theme='botanical',camera=null,comboTexture=null,renderless=false,maxBolts=renderless?24:Infinity,motionSpeed=null,onCast=null}){
  const boltLimit=Number.isFinite(maxBolts)?Math.max(1,Math.min(128,Math.floor(maxBolts))):renderless?24:Infinity;
  const fx=Object.fromEntries(['muzzle','pulse','burst','flame','explosion','trail','lance','frostWeb','rewindTrace','mirrorArc','gardenVortex','sunburst','arc','reflect','split','portal'].map(name=>[name,(...args)=>vfx?.[name]?.(...args)]));
  const group=new THREE.Group();scene.add(group);
@@ -179,7 +179,11 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // Hitscan damage stays immediate. These short-lived, mesh-free render bodies
  // let its painted lance actually travel along the already visible hit line.
  const lancePictures=[];
+ // A scalar presentation receipt, separate from cadence, damage and RNG.
+ // Finite fire intervals can also mean a capped or out-of-range no-op.
+ let castReceipt=0;
  function showLance(from,to,scale=1){
+  if(flat(from,to)>.15)castReceipt++;
   if((!renderless&&(!camera||!comboTexture))||lancePictures.length>=Math.min(16,boltLimit))return;
   const delta=to.clone().sub(from).setY(0),length=delta.length();if(length<.15)return;
   const start=from.clone().setY(.92),end=to.clone().setY(.92),dir=delta.multiplyScalar(1/length);
@@ -241,7 +245,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // Every authored spawn path (including splits, openings and parries) uses this
  // common insertion point. Rejected bodies remain valid objects for the caller
  // but are detached immediately, avoiding nullable projectile failure paths.
- function addBolt(b){if(bolts.length>=boltLimit){remove(b);return false;}bolts.push(b);return true;}
+ function addBolt(b){if(bolts.length>=boltLimit){remove(b);return false;}bolts.push(b);castReceipt++;return true;}
  function rebuildOrbit(){
   for(const child of [...orbit.children])child.removeFromParent();
   const count=active==='frostguard'?S.satellites:active==='stormcrown'?S.orbs:active==='mirrorguard'?S.mirrors:active==='starring'?S.petals:active==='comethalo'?S.comets:active==='halobloom'?S.petals:active==='ebbring'?S.blades:active==='spearring'?S.spears:active==='accretiondisk'?S.vortices:0;
@@ -494,8 +498,10 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
   return Infinity;
  }
  function fire(pos,dir,target=null,force=false){
+  const before=castReceipt;
   const interval=fireBase(pos,dir,target,force);
   if(!force&&Number.isFinite(interval)&&AWAKEN_FORMS[statId]?.finalCandidate)finalLayer.onFire(pos,dir,target);
+  if(castReceipt!==before)onCast?.(ownerId||statId,active);
   return interval;
  }
 
@@ -574,6 +580,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // Guardians and bosses take the line's damage but never its hard freeze.
  function frostNet(pos,first=null){
   let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
+  castReceipt++;
   const touched=new Set([from]),route=[from.g.position.clone().setY(0)];let damage=S.damage;
   fx.arc(pos.clone().setY(.9),from.g.position);
   support(from,damage,{kind:'frostnet',indirect:true,direction:from.g.position.clone().sub(pos).setY(0).normalize()});
@@ -631,6 +638,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // Chain + recall: the route is remembered, and moving far enough plays it back.
  function rewindNet(pos,first=null,instant=false){
   let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
+  castReceipt++;
   const touched=new Set([from]),route=[pos.clone().setY(.9),from.g.position.clone().setY(0)];let damage=S.damage;
   fx.arc(route[0],from.g.position);
   support(from,damage,{kind:'rewindbolt',indirect:true,direction:from.g.position.clone().sub(pos).setY(0).normalize()});
@@ -721,6 +729,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // With only one target the wall answers once instead.
  function thunderMirror(pos,first=null){
   const a=first||nearestEnemy(pos,S.reach,new Set(),true);if(!a)return;
+  castReceipt++;
   const b=nearestEnemy(a.g.position,S.range,new Set([a]),true);
   fx.mirrorArc(pos,a.g.position);fx.burst(a.g.position,'reflect',4,.35);
   let damage=S.damage;support(a,damage,{kind:'thundermirror',indirect:true,direction:a.g.position.clone().sub(pos).setY(0).normalize()});
@@ -875,6 +884,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // Chain lightning that starts at the nearest visible enemy and hops, weaker with every hop.
  function web(pos,first=null){
   let from=first||nearestEnemy(pos,S.reach,new Set(),true);if(!from)return;
+  castReceipt++;
   const touched=new Set([from]);let damage=S.damage;
   fx.arc(pos.clone().setY(.9),from.g.position);
   support(from,damage,{kind:'thunderweb',indirect:true,direction:from.g.position.clone().sub(pos).setY(0).normalize()});
@@ -922,6 +932,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // only the final node explodes. Spacing therefore changes the best target.
  function chainBurst(pos,first=null){
   let target=first||nearestEnemy(pos,S.reach,new Set(),true);if(!target)return;
+  castReceipt++;
   const touched=new Set();let from={g:{position:pos}},damage=S.damage,last=null;
   for(let jump=0;target&&jump<=S.jumps;jump++){
    touched.add(target);fx.arc(from.g.position,target.g.position);support(target,damage,{kind:'chainburst',indirect:true,direction:target.g.position.clone().sub(from.g.position).setY(0).normalize()});
@@ -935,6 +946,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  // attack into the gathered pack without adding an unbounded physics field.
  function stormAnchor(pos,first=null,force=false){
   let target=first||nearestEnemy(pos,S.reach,new Set(),true);if(!target)return;
+  castReceipt++;
   const touched=new Set();let from={g:{position:pos}},damage=S.damage;
   for(let jump=0;target&&jump<=S.jumps;jump++){
    touched.add(target);fx.arc(from.g.position,target.g.position);support(target,damage,{kind:'stormanchor',phase:'chain',indirect:true,direction:target.g.position.clone().sub(from.g.position).setY(0).normalize()});
@@ -1008,6 +1020,7 @@ export function createFormCombat(scene,{player,enemies,nearby=null,hit,blocked,r
  }
  // Frost in a cone in front of the seed (cone = half angle; PI is all around). Slowed enemies take more.
  function breath(pos,dir,cone){
+  castReceipt++;
   const origin=pos.clone().setY(0),spread=Math.min(cone,Math.PI);
   for(let i=0;i<7;i++){const d=dir.clone().applyAxisAngle(Y,(i/6-.5)*2*spread);fx.trail(origin.clone().setY(.6),origin.clone().addScaledVector(d,S.range*.85).setY(.6),'frost',true);}
   fx.burst(origin.clone().addScaledVector(dir,1.1),'frost',12,1.1);

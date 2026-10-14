@@ -38,9 +38,11 @@ export const rankedEvolutionForms=(forms,limit=2)=>rankedEvolutions(bodyForms(fo
 export const dominantSoloForm=forms=>rankedEvolutions(forms,SOLO_BODY_TILES,1)[0]?.id||null;
 // Rank the actual build first, including forms with no dedicated body tile.
 // A lower supported fusion must never impersonate a stronger unsupported one.
-export function dominantJourneyBodyForm(forms){
+export function dominantJourneyBodyForm(forms,levels){
  const id=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id;
- return id&&!TWIN_FORMS[id]?(Object.hasOwn(AWAKEN_BODY_TILES,id)?id:baseFormOf(id)):null;
+ // Keep the original owner, including twins/completions. Unsupported legacy
+ // second fusions keep their existing fallback, never a weaker fighter.
+ return id||rankedEvolutions(levels,LAWS,1)[0]?.id||null;
 }
 
 // The atlas is painted from front, right, back, left; direction is camera-relative.
@@ -115,16 +117,17 @@ export function createSeedBody(scene,{occlusion=true}={}){
  };
  // Preserve the visual rig interface used by evolution and combat.
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null,theme:themeId,themeCrest:0};
- root.userData.pulseShot=shotPresentation.pulse;root.userData.pulseHurt=amount=>{hurtPresentation.pulse(amount);journeyBody.hurt();};root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);journeyBody.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();journeyBody.reset();};
- root.userData.setJourneyActive=journeyBody.setEnabled;root.userData.pulseJourneyForm=journeyBody.fire;root.userData.pulseJourneyHit=journeyBody.hit;root.userData.pulseJourneyActive=ids=>journeyBody.active(ids.map(baseFormOf));root.userData.journeyIdentityState=journeyBody.state;root.userData.disposeJourneyIdentity=journeyBody.dispose;
+ root.userData.pulseShot=(strength=1)=>{shotPresentation.pulse(strength);journeyBody.basic();};root.userData.pulseHurt=amount=>{hurtPresentation.pulse(amount);journeyBody.hurt();};root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);journeyBody.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();journeyBody.reset();};
+ root.userData.setJourneyBuild=(forms,levels)=>journeyBody.select(dominantJourneyBodyForm(forms,levels));
+ root.userData.setJourneyActive=journeyBody.setEnabled;root.userData.pulseJourneyForm=journeyBody.fire;root.userData.pulseJourneyHit=(owner,part)=>journeyBody.hit(owner,Boolean(ALL_FORMS[part]?.passive));root.userData.pulseJourneyActive=journeyBody.active;root.userData.journeyIdentityState=journeyBody.state;root.userData.disposeJourneyIdentity=journeyBody.dispose;
  root.userData.setTheme=id=>{themeId=normalizeTheme(id);root.userData.theme=themeId;root.userData.themeCrest=THEMES[themeId].crest;ensureThemeCrest();applyThemeCrest();return themeId;};
- root.userData.setEvolution=forms=>{
+ root.userData.setEvolution=(forms,levels)=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
   // Catalogue fusions deliberately share lightweight combat geometry instead
   // of loading 35 more body textures. A rotating two-law aura still makes the
   // evolution visible immediately in play.
   if(!currentEvolution)secondaryEvolution=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id||null;
-  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;journeyBody.select(dominantJourneyBodyForm(forms));ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
+  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;journeyBody.select(dominantJourneyBodyForm(forms,levels));ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
  root.userData.setQuality=level=>{occlusion=level>0;journeyBody.setOcclusion(occlusion);applyEvolution();};
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
