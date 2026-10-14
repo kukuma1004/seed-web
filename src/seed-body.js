@@ -5,6 +5,7 @@ import {LAWS} from './laws.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 import {THEMES,normalizeTheme} from './themes.js';
 import {seedVisualEnabled,createSeedShotPresentation,createSeedHurtPresentation} from './seed-visual-language.js';
+import {createJourneyDuelBody} from './journey-duel-body.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
 export const SEED_BODY_ART='cute/seed-body-v1.webp';
@@ -35,6 +36,12 @@ const bodyForms=forms=>{const out=new Map();for(const [id,level] of forms instan
  }return out;};
 export const rankedEvolutionForms=(forms,limit=2)=>rankedEvolutions(bodyForms(forms),ALL_BODY_TILES,limit).map(entry=>entry.id);
 export const dominantSoloForm=forms=>rankedEvolutions(forms,SOLO_BODY_TILES,1)[0]?.id||null;
+// Rank the actual build first, including forms with no dedicated body tile.
+// A lower supported fusion must never impersonate a stronger unsupported one.
+export function dominantJourneyBodyForm(forms){
+ const id=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id;
+ return id&&!TWIN_FORMS[id]?(Object.hasOwn(AWAKEN_BODY_TILES,id)?id:baseFormOf(id)):null;
+}
 
 // The atlas is painted from front, right, back, left; direction is camera-relative.
 export function seedFrame(facing,cameraYaw){
@@ -91,6 +98,8 @@ export function createSeedBody(scene,{occlusion=true}={}){
  const secondaryAura=new THREE.Mesh(new THREE.TorusGeometry(.48,.025,5,36),secondaryMaterial);secondaryAura.rotation.x=Math.PI/2;secondaryAura.position.y=.12;secondaryAura.visible=false;root.add(secondaryAura);
 
  let currentEvolution=null,secondaryEvolution=null;
+ const journeyBody=createJourneyDuelBody(root,{baseURL:import.meta.env.BASE_URL,loader,onChange:()=>applyEvolution(),reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
+ journeyBody.setOcclusion(occlusion);
  const sourceFor=id=>Object.values(sources).find(source=>Object.hasOwn(source.tiles,id));
  const ensureSource=source=>{
   if(!source||source.loading||source.ready)return;
@@ -99,14 +108,15 @@ export function createSeedBody(scene,{occlusion=true}={}){
   source.texture.colorSpace=THREE.SRGBColorSpace;source.texture.repeat.set(.25,1/3);
  };
  applyEvolution=()=>{
-  const source=sourceFor(currentEvolution),active=Boolean(source?.ready);
+  const source=sourceFor(currentEvolution),duel=journeyBody.ready(),active=Boolean(source?.ready)&&!duel;
   if(active){const tile=source.tiles[currentEvolution];source.texture.offset.set((tile%4)/4,1-(Math.floor(tile/4)+1)/3);evolutionMaterial.map=evolutionGhostMaterial.map=source.texture;evolutionMaterial.needsUpdate=evolutionGhostMaterial.needsUpdate=true;}
-  sprite.visible=!active;ghost.visible=!active&&occlusion;evolutionSprite.visible=active;evolutionGhost.visible=active&&occlusion;
+  sprite.visible=!active&&!duel;ghost.visible=!active&&!duel&&occlusion;evolutionSprite.visible=active;evolutionGhost.visible=active&&occlusion;
   secondaryAura.visible=Boolean(secondaryEvolution);if(secondaryEvolution)secondaryMaterial.color.setHex(evolutionColor(secondaryEvolution));
  };
  // Preserve the visual rig interface used by evolution and combat.
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null,theme:themeId,themeCrest:0};
- root.userData.pulseShot=shotPresentation.pulse;root.userData.pulseHurt=hurtPresentation.pulse;root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();};
+ root.userData.pulseShot=shotPresentation.pulse;root.userData.pulseHurt=amount=>{hurtPresentation.pulse(amount);journeyBody.hurt();};root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);journeyBody.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();journeyBody.reset();};
+ root.userData.setJourneyActive=journeyBody.setEnabled;root.userData.pulseJourneyForm=journeyBody.fire;root.userData.pulseJourneyHit=journeyBody.hit;root.userData.pulseJourneyActive=ids=>journeyBody.active(ids.map(baseFormOf));root.userData.journeyIdentityState=journeyBody.state;root.userData.disposeJourneyIdentity=journeyBody.dispose;
  root.userData.setTheme=id=>{themeId=normalizeTheme(id);root.userData.theme=themeId;root.userData.themeCrest=THEMES[themeId].crest;ensureThemeCrest();applyThemeCrest();return themeId;};
  root.userData.setEvolution=forms=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
@@ -114,9 +124,9 @@ export function createSeedBody(scene,{occlusion=true}={}){
   // of loading 35 more body textures. A rotating two-law aura still makes the
   // evolution visible immediately in play.
   if(!currentEvolution)secondaryEvolution=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id||null;
-  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
+  root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;journeyBody.select(dominantJourneyBodyForm(forms));ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
- root.userData.setQuality=level=>{occlusion=level>0;applyEvolution();};
+ root.userData.setQuality=level=>{occlusion=level>0;journeyBody.setOcclusion(occlusion);applyEvolution();};
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
   if(!secondaryAura.visible)return;const pulse=1+Math.sin(time*4)*.055+(overdrive?.12:0);secondaryAura.scale.setScalar(pulse);secondaryAura.rotation.z=time*(overdrive?2.2:.8);secondaryMaterial.opacity=overdrive?.92:.68;
  };
@@ -134,6 +144,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
   const bob=Math.max(0,step)*.01;
   sprite.position.set(0,bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018+kick*.035+contact*.04),BODY_SIZE*(1-step*.011-kick*.02-contact*.025),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
   evolutionSprite.position.set(0,bob,0);evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.018+kick*.035+contact*.04),EVOLUTION_SIZE*(1-step*.011-kick*.02-contact*.025),1);evolutionGhost.position.copy(evolutionSprite.position);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
+  journeyBody.update(cameraYaw,journeyBody.attacking()?root.rotation.y:facing,root.userData.motion,contact);
  };
  return root;
 }
