@@ -3,6 +3,7 @@ import {readFileSync,writeFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
 import {journeyTravelScale,journeyReinforcementScale} from '../src/journey-tempo.js';
+import {journeySignatureMoveScale} from '../src/journey-act-signatures.js';
 import {act3RoomPressure,isAct3} from '../src/act3.js';
 import {crowdInterval} from '../src/crowd.js';
 import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,restoreExpansionCourse,crosswindCourseLength,CROSSWIND_DENSE_PACKETS} from '../src/act-expansion-runtime.js';
@@ -27,7 +28,7 @@ const cases=[
 for(const hz of [20,60])for(const [region,act,survival,mirror,training,ratio] of cases){
  const scope={dt:1/hz,PLAYER_SPEED:6.09,ACT3_PLAYER_SPEED:1.16,isAct3,region,
   expansionJourney:act?{act}:null,survivalSession:survival?{}:null,mirrorSession:mirror?{}:null,trainingSession:training?{}:null,
-  journeyTravelScale,runMoveScale:()=>1.07,runBonuses:{},masteryRate:()=>.04,titleState:{moveSpeed:1.05},playerSlow:0,hasteTime:0,ITEMS:{wind:{speed:1.3}}};
+  journeyTravelScale,journeySignatureMoveScale,journeySignature:null,runMoveScale:()=>1.07,runBonuses:{},masteryRate:()=>.04,titleState:{moveSpeed:1.05},playerSlow:0,hasteTime:0,ITEMS:{wind:{speed:1.3}}};
  vm.createContext(scope);
  const move=new THREE.Vector3(1,0,1).normalize(),now=new THREE.Vector3(),before=new THREE.Vector3();
  for(let i=0;i<hz*2;i++){now.addScaledVector(move,vm.runInContext(movement,scope));before.addScaledVector(move,vm.runInContext(oldMovement,scope));}

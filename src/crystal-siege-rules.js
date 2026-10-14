@@ -22,6 +22,7 @@ const fail=()=>{throw new Error('Invalid or unsupported crystal siege checkpoint
 export const earliestCrystalSiegeClear=room=>.35+(CRYSTAL_SIEGE_PACKETS[room]-1)*.6;
 const clearTime=s=>s.paceVersion===2?earliestCrystalSiegeClear(s.room):25;
 const maxHp=(kind,level)=>SPEC[kind].hp+(level-1)*(kind==='wall'?35:15);
+export const crystalSiegeFacilityMaxHp=pad=>pad&&Object.hasOwn(SPEC,pad.kind)&&integer(pad.level,1,2)?maxHp(pad.kind,pad.level):0;
 export function clampCrystalSiegePoint(p){if(!point(p))throw new Error('Invalid crystal siege point');return{x:clamp(p.x,-7.5,7.5),z:clamp(p.z,-6.5,6.5)};}
 
 export function createCrystalSiege(room=0,seed=1,carry=null,prepDuration=null,initialResources=3){
@@ -63,7 +64,9 @@ function facilities(s,delta,live,o,{boss=false}={}){
   }
   let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level===2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
   if(!target)continue;f.cooldown=spec.period-(f.level-1)*.15;
-  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage+(f.level-1)*16});
+  // Ephemeral Journey command radius. Shared modes never set this field;
+  // checkpoints deliberately contain only paid HP/resources, never the aura.
+  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:(spec.damage+(f.level-1)*16)*(s.journeyRallyPad===pad.id?1.5:1)});
   else o.snares.push({id:target.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});
  }
 }
@@ -122,7 +125,7 @@ export function stepCrystalSiegeThreat(model,dt,s,{player,bossGuard=false}={}){
  if(model.phase==='windup'){
   const t=model.target;o.tell={kind:'siege-strike',position:{x:t.x,z:t.z},duration:.55,remaining:model.timer,target:t.id||'core'};model.timer=Math.max(0,model.timer-delta);
   if(!model.timer){if(!t.id){if(distance(p,t)<=.95){o.coreHit=Math.min(s.core.hp,model.damage);s.core.hp-=o.coreHit;}}
-   else{const pad=s.pads.find(p=>p.id===t.id);if(pad&&pad.kind==='wall'&&pad.hp>0&&distance(p,t)<=.95){const damage=Math.min(pad.hp,model.damage);pad.hp-=damage;o.wallHit={id:pad.id,damage};}}
+   else{const pad=s.pads.find(p=>p.id===t.id);if(pad&&(pad.kind==='wall'||s.journeyCommand===true&&model.type==='charger')&&pad.hp>0&&distance(p,t)<=.95){const damage=Math.min(pad.hp,model.damage);pad.hp-=damage;o.wallHit={id:pad.id,damage};}}
    model.phase='recover';model.timer=1;model.target=null;if(s.core.hp<=0)s.phase='failed';
   }return o;
  }
@@ -132,6 +135,9 @@ export function stepCrystalSiegeThreat(model,dt,s,{player,bossGuard=false}={}){
  // an invisible collider. Old nights retain their original close intercept.
  let target=s.core,nearestWall=s.paceVersion===2?2.4:1.25;
  for(const pad of s.pads){const d=distance(p,pad);if(pad.kind==='wall'&&pad.hp>0&&d<=nearestWall){target=pad;nearestWall=d;if(s.paceVersion!==2)break;}}
+ // Only the Journey's commanded defense opts in: warned chargers can attack
+ // a nearby turret/snare. The player can intercept them or pay to repair.
+ if(s.journeyCommand===true&&model.type==='charger')for(const pad of s.pads){const d=distance(p,pad);if(pad.kind&&pad.hp>0&&d<=Math.min(3.4,target===s.core?3.4:nearestWall)){target=pad;nearestWall=d;}}
  const d=distance(p,target);
  if(d<=.85+1e-9){model.phase='windup';model.timer=.55;model.target={x:target.x,z:target.z,...(target.id?{id:target.id}:{})};model.aim=d>1e-9?{x:(target.x-p.x)/d,z:(target.z-p.z)/d}:{x:1,z:0};o.tell={kind:'siege-strike',position:{x:target.x,z:target.z},duration:.55,remaining:.55,target:target.id||'core'};return o;}
  const length=Math.min(d-.85,model.speed*delta*clamp(model.slowFactor||1,.1,1)),next=clampCrystalSiegePoint({x:p.x+(target.x-p.x)/d*length,z:p.z+(target.z-p.z)/d*length});Object.assign(p,next);o.position=next;return o;
