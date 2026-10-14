@@ -27,6 +27,9 @@ for(const mode of ['playing','cards','forms','evolving','dash-evolution']){
 }
 
 assert.equal(JOURNEY_DUEL_ORDER.length,162);assert.deepEqual(new Set(JOURNEY_DUEL_ORDER),new Set([...Object.keys(LAWS),...Object.keys(DISCOVERY_FORMS)]));
+assert.equal(journeyDuelIdentity('collapse'),journeyDuelIdentity('collapse'),'Repeated frame/shot identity queries reuse one immutable metadata object');
+assert(Object.isFrozen(journeyDuelIdentity('collapse')));
+for(const invalid of ['constructor','toString',null,'not-a-seed'])assert.equal(journeyDuelIdentity(invalid),null);
 let maxDecoded=0;
 for(const id of JOURNEY_DUEL_ORDER){
  const {art}=journeyDuelIdentity(id);assert.equal(art.frames.length,8);assert.equal(dominantJourneyBodyForm(art.kind==='base'?new Map():new Map([[id,9]]),new Map([[id,9]])),id);

@@ -6,9 +6,12 @@ import {applySpriteLighting} from './sprite-lighting.js';
 const DISPLAY_SCALE=.6;
 const JOURNEY_PHASES=new Set(['playing','cards','forms','evolving','dash-evolution']);
 export const JOURNEY_DUEL_BODY_BUDGET=Object.freeze({active:1,pending:1,sheets:2,pendingRequests:1,decodedSheetBytes:12585608,mipmaps:false});
+const identityCache=new Map(),cropCache=new WeakMap();
 export function journeyDuelIdentity(bodyId){
  const art=Object.hasOwn(JOURNEY_DUEL_ART,bodyId)?JOURNEY_DUEL_ART[bodyId]:null;
- return art?{bodyId,fighterId:art.fighterId,art}:null;
+ if(!art)return null;
+ if(!identityCache.has(bodyId))identityCache.set(bodyId,Object.freeze({bodyId,fighterId:art.fighterId,art}));
+ return identityCache.get(bodyId);
 }
 export function journeyDuelContext(mode,survival=false,mirror=false,training=false){
  return !survival&&!mirror&&!training&&JOURNEY_PHASES.has(mode);
@@ -22,6 +25,12 @@ export function journeyDuelCrop(art,frame=0,flipped=false){
   offsetX:(flipped?x+w:x)/sw,offsetY:1-(y+h)/sh,
   width:dw*DISPLAY_SCALE,height:dh*DISPLAY_SCALE,
   centerX:flipped?1-anchorX:anchorX,foot:1+dy/dh};
+}
+// Sixteen immutable UV/pivot records per used identity. No new crop objects
+// when an action or facing changes; this cache contains metadata, never images.
+function cachedCrop(art,frame,flipped){
+ if(!cropCache.has(art))cropCache.set(art,art.frames.flatMap((_,i)=>[Object.freeze(journeyDuelCrop(art,i)),Object.freeze(journeyDuelCrop(art,i,true))]));
+ return cropCache.get(art)[frame*2+(flipped?1:0)];
 }
 const CONTACT_FIRST=new Set(['final-refractlance-reflect','final-gravitymirror-reflect','final-thundermirror-reflect']);
 const CONTACT_SECOND=new Set(['final-echolane-reflect','final-echolane-recall']);
@@ -66,7 +75,7 @@ export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new T
  const failed=new Set(),released=new WeakSet();
  const release=textures=>{for(const texture of textures)if(texture&&!released.has(texture)){released.add(texture);texture.dispose();}};
  function applyCrop(next,flip){
-  const crop=journeyDuelCrop(active.identity.art,next,flip),texture=active.textures[crop.file];
+  const crop=cachedCrop(active.identity.art,next,flip),texture=active.textures[crop.file];
   texture.repeat.set(crop.repeatX,crop.repeatY);texture.offset.set(crop.offsetX,crop.offsetY);
   cropUV.set(crop.offsetX,crop.offsetY,crop.repeatX,crop.repeatY);
   if(material.map!==texture){material.map=ghostMaterial.map=texture;material.needsUpdate=ghostMaterial.needsUpdate=true;}
