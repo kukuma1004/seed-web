@@ -79,7 +79,11 @@ ctx.enemyIndex.rebuild(crowd);const neighbours=[];ctx.enemyIndex.queryInto({x:0,
 for(let i=0;i<1000;i++)ctx.enemyIndex.rebuild(i%2?crowd:[]);ctx.enemyIndex.rebuild(crowd);assert.equal(ctx.enemyIndex.queryInto({x:0,z:0},1,[]).length,120,'bucket reuse never retains stale actors');
 
 // Boundaries that must remain explicit while the existing journey is reused.
-assert.match(main,/if\(!expansion&&!restore&&!developerRun&&!survivalSession&&protectJourneyBossReceipts\(\)\)clearCheckpoint/);
+const restartBody=between('function restart(', 'function update(');
+assert.match(restartBody,/if\(!protectJourneyBossReceipts\(\)/,'receipt persistence is checked before fresh run state');
+assert.match(restartBody,/if\(!expansion&&!restore&&!developerRun&&!survivalSession\)\{[\s\S]*?const ended=clearCheckpoint\(actStore\(\)\)[\s\S]*?if\(ended===false\)[\s\S]*?return;/,'only fresh normal Journey is ended; failed storage retains the result');
+assert(restartBody.indexOf('const ended=clearCheckpoint')<restartBody.indexOf('currentJourneyRunId=journeyRunId'),'end old checkpoint before replacing identity');
+assert(restartBody.indexOf('const ended=clearCheckpoint')<restartBody.indexOf('heldForms.clear()'),'end old checkpoint before resetting the build');
 assert.match(main,/if\(!expansion&&!restore&&!developerRun&&!survivalSession\)for\(const \[id,n\] of Object.entries\(claimCarry/);
 assert.match(between('function saveBoundary(', '// After a warden'),/if\(survivalSession\)return true/);
 assert.match(between('function saveLeaveState(', '// 일시정지'),/if\(survivalSession\)return saveSurvival\(\)/);

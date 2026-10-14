@@ -1,0 +1,25 @@
+/* A clear ending and one useful next action; the same quiet garden materials. */
+#overlay .run-result-panel{width:min(820px,100%);max-height:calc(100dvh - 32px);padding:0;overflow:hidden;display:flex;flex-direction:column;text-align:left}
+#overlay>.run-result-layout{width:min(820px,100%);max-height:calc(100dvh - 32px)}
+.run-result-layout{display:flex;flex-direction:column;min-height:0;width:100%;overflow:hidden;border:1px solid #a7b89566;border-radius:18px;background:linear-gradient(135deg,#19352ef5,#0c211cf5);box-shadow:0 18px 60px #06140b88}
+.run-result-content{min-height:0;overflow-y:auto;overscroll-behavior:contain;padding:22px 26px 12px;scrollbar-width:thin;scrollbar-color:#829d78 #142a24;}
+#overlay .run-result-layout h2{font-size:clamp(24px,4vw,34px);letter-spacing:1px;margin:3px 0 12px}
+#overlay .run-result-layout .final-score{margin:8px 0 14px;padding:12px 0;max-width:100%}
+#overlay .run-result-layout .final-score strong{font-size:clamp(34px,5vw,52px)}
+.run-reflection{border-top:1px solid #a2b99d44;padding:14px 0 10px}
+.run-reflection>small{color:#ebcf96;letter-spacing:.08em;font-size:12px}
+#overlay .run-reflection p{color:#eef0d9;margin:4px 0;font-size:15px;line-height:1.6}
+.run-reflection-facts{color:#aac5b0;font-size:12px;line-height:1.6;display:block}
+.run-next{display:flex;gap:12px;align-items:flex-start;margin-top:12px;padding:12px 14px;border-radius:10px;background:#b7d49412;border-left:3px solid #b7d494}
+.run-next b{white-space:nowrap;color:#d9e8b4;font-size:12px;padding-top:2px}.run-next span{color:#d8e7d4;font-size:14px;line-height:1.6}
+.run-result-actions{display:flex;flex-wrap:wrap;gap:8px;padding:12px 22px max(12px,env(safe-area-inset-bottom));border-top:1px solid #8b9f7b44;background:#102a23;flex-shrink:0}
+#overlay .run-retry-status{flex-basis:100%;margin:0;color:#efd0aa;font-size:12px;line-height:1.5}.run-retry-status:empty{display:none}
+#overlay .run-result-actions button{min-height:44px;padding:9px 16px;margin:0;font-size:14px;border:1px solid #849a7966;border-radius:9px;background:#19372f;color:#e6eed4}
+#overlay .run-result-actions .run-result-primary{background:#cfdea8;color:#183027;border-color:#edf3ce;flex:1;min-width:150px;font-weight:700}
+.run-result-details{margin:10px 0;border-top:1px solid #8b9f7b33}.run-result-details summary,.survival-short-fold summary{padding:10px 2px;min-height:44px;cursor:pointer;color:#bbd1b6;font-size:13px}
+.run-result-details .death-combat-analysis{margin:0;width:100%}
+#overlay .run-harvest{font-size:13px;line-height:1.6;color:#d9ddb5;border-top:1px solid #87996a44;padding-top:12px}
+.survival-short-fold{text-align:left;margin:6px 0}.survival-short-fold button{margin:0!important}
+.run-result-actions button:focus-visible,.run-result-details summary:focus-visible,.survival-short-fold summary:focus-visible{outline:3px solid #e6d79d;outline-offset:3px}
+@media(max-height:450px){#overlay .run-result-panel,#overlay>.run-result-layout{max-height:calc(100dvh - 16px)}.run-result-content{padding:12px 18px 8px}.run-result-actions{padding-top:8px;padding-bottom:max(8px,env(safe-area-inset-bottom))}.run-reflection{padding-top:9px}.run-next{margin-top:7px;padding:8px 10px}#overlay .run-result-layout .final-score{margin:4px 0;padding:5px 0}}
+@media(max-width:650px){.run-result-content{padding-left:16px;padding-right:16px}.run-result-actions{padding-left:12px;padding-right:12px}.run-next{gap:8px}.run-next span{font-size:13px}}

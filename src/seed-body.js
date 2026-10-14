@@ -4,7 +4,7 @@ import {ALL_FORMS,baseFormOf,TWIN_FORMS} from './forms.js';
 import {LAWS} from './laws.js';
 import {applySpriteLighting} from './sprite-lighting.js';
 import {THEMES,normalizeTheme} from './themes.js';
-import {seedVisualEnabled,createSeedShotPresentation} from './seed-visual-language.js';
+import {seedVisualEnabled,createSeedShotPresentation,createSeedHurtPresentation} from './seed-visual-language.js';
 
 // Artwork only: keep movement, collision and evolution reach unchanged.
 export const SEED_BODY_ART='cute/seed-body-v1.webp';
@@ -56,6 +56,7 @@ export function stableSeedFrame(facing,cameraYaw,current=0,margin=.13){
 export function createSeedBody(scene,{occlusion=true}={}){
  const visualReview=seedVisualEnabled(typeof location==='undefined'?null:location);
  const shotPresentation=createSeedShotPresentation({enabled:visualReview,reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
+ const hurtPresentation=createSeedHurtPresentation({enabled:visualReview,reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
  const root=new THREE.Group();scene.add(root);
  const loader=new THREE.TextureLoader();
  const texture=loader.load(import.meta.env.BASE_URL+'assets/'+SEED_BODY_ART);
@@ -105,7 +106,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
  };
  // Preserve the visual rig interface used by evolution and combat.
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null,theme:themeId,themeCrest:0};
- root.userData.pulseShot=shotPresentation.pulse;root.userData.stepShot=shotPresentation.step;root.userData.resetShot=shotPresentation.reset;
+ root.userData.pulseShot=shotPresentation.pulse;root.userData.pulseHurt=hurtPresentation.pulse;root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();};
  root.userData.setTheme=id=>{themeId=normalizeTheme(id);root.userData.theme=themeId;root.userData.themeCrest=THEMES[themeId].crest;ensureThemeCrest();applyThemeCrest();return themeId;};
  root.userData.setEvolution=forms=>{
   [currentEvolution=null,secondaryEvolution=null]=rankedEvolutionForms(forms,2);
@@ -127,11 +128,12 @@ export function createSeedBody(scene,{occlusion=true}={}){
   texture.offset.set((frame%2)*.5,frame<2?.5:0);root.userData.artFrame=frame;
   const {phase=0,pace=0}=root.userData.motion||{},step=Math.sin(phase)*pace;
   const crestPulse=1+Math.sin(phase*.55)*.025+pace*.018;themeCrest.scale.setScalar(1.62*crestPulse);themeMaterial.opacity=.54+pace*.12;
-  const kick=shotPresentation.value();
-  material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.032+kick*.055*(frame===3?-1:1);
+  const kick=shotPresentation.value(),contact=hurtPresentation.value();
+  material.color.setRGB(1,1-contact*.16,1-contact*.28);evolutionMaterial.color.copy(material.color);
+  material.rotation=evolutionMaterial.rotation=Math.sin(phase)*pace*.032+(kick*.055+contact*.045)*(frame===3?-1:1);
   const bob=Math.max(0,step)*.01;
-  sprite.position.set(0,bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018+kick*.035),BODY_SIZE*(1-step*.011-kick*.02),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
-  evolutionSprite.position.set(0,bob,0);evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.018+kick*.035),EVOLUTION_SIZE*(1-step*.011-kick*.02),1);evolutionGhost.position.copy(evolutionSprite.position);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
+  sprite.position.set(0,bob,0);sprite.scale.set(BODY_SIZE*(1+step*.018+kick*.035+contact*.04),BODY_SIZE*(1-step*.011-kick*.02-contact*.025),1);ghost.position.copy(sprite.position);ghost.scale.copy(sprite.scale);ghostMaterial.rotation=material.rotation;
+  evolutionSprite.position.set(0,bob,0);evolutionSprite.scale.set(EVOLUTION_SIZE*(1+step*.018+kick*.035+contact*.04),EVOLUTION_SIZE*(1-step*.011-kick*.02-contact*.025),1);evolutionGhost.position.copy(evolutionSprite.position);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhostMaterial.rotation=evolutionMaterial.rotation;
  };
  return root;
 }

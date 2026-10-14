@@ -41,3 +41,14 @@ export function createSeedShotPresentation({enabled=false,reducedMotion=false}={
   reset(){remaining=power=0;}
  };
 }
+// A contact response from an accepted hit, driven by the existing frame dt.
+// It only changes the authored sprite's presentation, never the root/collider.
+export function createSeedHurtPresentation({enabled=false,reducedMotion=false}={}){
+ const duration=SEED_VISUAL_LANGUAGE.motion.impactSeconds;let remaining=0,strength=0;
+ return {
+  pulse(amount=1){if(enabled&&Number.isFinite(amount)&&amount>0){remaining=duration;strength=Math.max(.3,Math.min(1,amount));}},
+  step(dt){if(enabled&&Number.isFinite(dt)&&dt>0)remaining=Math.max(0,remaining-dt);},
+  value(){return remaining/duration*strength*(reducedMotion?.3:1);},
+  reset(){remaining=strength=0;}
+ };
+}

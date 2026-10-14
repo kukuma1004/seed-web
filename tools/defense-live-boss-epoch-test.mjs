@@ -2,11 +2,14 @@ import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
 import {createDefense,setDefenseBossEpoch,defenseHurt,checkpointDefense,restoreDefense,stepDefense,defenseWaveInfo} from '../src/seed-defense-rules.js';
+import {createDefenseLossObserver} from '../src/defense-learning-guide.js';
 const view=readFileSync(new URL('../src/seed-defense-view.js',import.meta.url),'utf8'),epoch='migration-02',nextEpoch='migration-03';
 const copy=v=>JSON.parse(JSON.stringify(v));
 const refresh=view.slice(view.indexOf('function refreshBossEpoch(){'),view.indexOf(' binding.attach(state);'));
 const auto=view.slice(view.indexOf('function autoUltimates(){'),view.indexOf(" $('#td-speed').onclick"));
 const step=view.slice(view.indexOf('for(let left=Math.min(.05,raw)*speed;'),view.indexOf('autoUltimates();if(!paused'));
+const observedStep=view.slice(view.indexOf(' function stepLearningDefense(dt){'),view.indexOf(' function loop(now){'));
+assert(observedStep.includes('lossObserver.before(state);stepDefense(state,dt,combat);lossObserver.after(state);'),'use the shipping observer wrapper, not a bare step alias');
 const manual=view.split('\n').find(line=>line.includes("if($('#td-ultimate'))"));
 const retry=view.slice(view.indexOf("$('#td-retry').onclick="),view.indexOf("$('#td-home').onclick"));
 assert(refresh.includes('setDefenseBossEpoch'));assert(step.includes('refreshBossEpoch()'));assert(auto.includes('refreshBossEpoch()'));assert(manual.includes('refreshBossEpoch()'));assert(retry.indexOf('refreshBossEpoch()')<retry.indexOf('combat.dispose()'));
@@ -16,7 +19,7 @@ assert(view.includes('hint(bossEpochBlocked?saveNote:'));
 function restored(){const s=createDefense(4);s.wave=12;const enemy={hp:1,kind:'boss',bossId:'austin',x:10,y:10};defenseHurt(s,enemy,10);const cp=checkpointDefense(s);assert(cp);const r=restoreDefense(cp);assert(r);return r;}
 function context(state=restored()){
  const nodes=new Map(),messages=[],audio=[],data={state,paused:false,bossEpochBlocked:false,saveNote:'',uiKey:'cached',bossEpoch:()=>epoch,isolated:()=>false,setDefenseBossEpoch,stepDefense,audio:{setPaused:v=>audio.push(v)},$:key=>{if(!nodes.has(key))nodes.set(key,{textContent:'',hidden:true,setAttribute(){}});return nodes.get(key);},hint:m=>messages.push(m)};
- const ctx=vm.createContext({freshObjective:()=>null,localSiege:false,...data});vm.runInContext(refresh,ctx);return {ctx,nodes,messages,audio};
+ const ctx=vm.createContext({freshObjective:()=>null,localSiege:false,lossObserver:createDefenseLossObserver(),...data});vm.runInContext(refresh+'\n'+observedStep,ctx);return {ctx,nodes,messages,audio};
 }
 {
  const original=restored(),pending=copy(original.pendingBosses),{ctx}=context(original);

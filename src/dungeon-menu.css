@@ -185,3 +185,70 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
 @media(min-width:601px) and (max-width:999px) and (min-height:501px){.dungeon-hub .dungeon-modes:has(.mode-adventure){grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-height:500px){.dungeon-hub .dungeon-modes:has(.mode-adventure){grid-auto-rows:135px;gap:10px}.dungeon-hub .dungeon-mode{min-height:135px}.dungeon-hub .mode-caption{padding:42px 12px 10px}.dungeon-hub .mode-caption strong{font-size:19px}.dungeon-hub .mode-caption small{font-size:11px}.mode-type{top:8px;left:9px;font-size:10px;padding:4px 7px}}
 @media(max-width:600px){.dungeon-hub .dungeon-modes:has(.mode-adventure){grid-template-columns:1fr;grid-template-rows:none;grid-auto-rows:170px;min-height:0}.dungeon-hub .dungeon-mode{min-height:170px}.dungeon-hub .mode-caption strong{font-size:25px}.dungeon-hub .mode-caption{padding:50px 16px 16px}.dungeon-hub .mode-art{object-position:center 58%}}
+
+/* Lead with the two core loops. Other destinations remain native, collapsible
+   buttons. Only the content lane scrolls, so return never leaves the viewport. */
+.dungeon-hub.dungeon-focus{width:min(1120px,94vw);padding-top:max(20px,env(safe-area-inset-top));padding-bottom:max(12px,env(safe-area-inset-bottom))}
+.dungeon-focus .dungeon-scroll{display:flex;flex-direction:column;gap:14px;scroll-padding:12px;touch-action:pan-y}
+.dungeon-focus .dungeon-scroll>*{flex-shrink:0}
+.dungeon-first-hint{margin:0!important;color:#d5dfc9;font-size:13px!important;line-height:1.5!important;word-break:keep-all;overflow-wrap:anywhere}
+.dungeon-featured{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;min-width:0}
+.dungeon-focus .dungeon-featured .dungeon-mode{min-height:240px;aspect-ratio:1.75;border-color:#eed797}
+.dungeon-focus .dungeon-featured .mode-caption{padding:96px 20px 20px}
+.dungeon-focus .dungeon-featured .mode-caption strong{font-size:clamp(25px,3.2vw,38px)}
+.dungeon-focus .dungeon-mode .mode-caption{min-width:0;overflow-wrap:anywhere}
+.dungeon-focus .dungeon-mode .mode-caption strong,.dungeon-focus .dungeon-mode .mode-caption small{white-space:normal;word-break:keep-all;overflow-wrap:anywhere}
+.dungeon-focus .dungeon-mode.mode-strategy{min-height:90px;aspect-ratio:auto;display:flex;justify-content:center;border-color:#a9ba85}
+.dungeon-focus .mode-strategy .mode-art{object-position:center 56%;opacity:.65}
+.dungeon-hub.dungeon-focus .mode-strategy:after{background:linear-gradient(90deg,#122a24f5,#122a24b8 62%,#142a242b)}
+.dungeon-focus .mode-strategy .mode-caption{padding:36px 18px 14px;gap:3px}
+.dungeon-focus .mode-strategy .mode-caption strong{font-size:23px}
+.dungeon-focus .mode-strategy .mode-type{top:10px;left:18px}
+.dungeon-other{margin:0;border-top:1px solid #d8c4874d;color:#e4e7d0}
+.dungeon-other-toggle{display:flex;align-items:center;gap:14px;list-style:none;cursor:pointer;min-height:48px;padding:4px 12px;box-sizing:border-box;overflow-wrap:anywhere;border-radius:8px;background:#0a211e9e}
+.dungeon-other-toggle::-webkit-details-marker{display:none}
+.dungeon-other-toggle strong{font-size:16px;white-space:nowrap}
+.dungeon-other-hint{color:#aec3b7;font-size:12px;line-height:1.5;min-width:0;word-break:keep-all}
+.dungeon-other-toggle:after{content:'＋';margin-left:auto;flex-shrink:0;font-size:20px;color:#e8d398}
+.dungeon-other[open]>.dungeon-other-toggle:after{content:'−'}
+.dungeon-other-toggle:hover{background:#183a30d4}
+.dungeon-other-toggle:active{background:#24483bd4}
+.dungeon-other-toggle:focus-visible{outline:3px solid #fff1b5;outline-offset:-3px}
+.dungeon-other-modes{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;padding-top:12px}
+.dungeon-focus .dungeon-other-modes .dungeon-mode{min-height:154px}
+.dungeon-focus .dungeon-other-modes .mode-caption{padding:58px 16px 14px}
+.dungeon-focus .dungeon-other-modes .mode-caption strong{font-size:23px}
+.dungeon-focus .dungeon-footer{padding-top:0}
+@media(max-height:500px){
+ .dungeon-hub.dungeon-focus{width:96vw;height:96dvh;max-height:96dvh;gap:6px;padding:8px max(12px,env(safe-area-inset-right)) max(8px,env(safe-area-inset-bottom)) max(12px,env(safe-area-inset-left))}
+ .dungeon-focus .dungeon-heading{padding-right:112px}
+ .dungeon-focus .dungeon-heading h2{font-size:22px!important;line-height:1.25!important;margin:0!important}
+ .dungeon-focus .dungeon-heading .menu-ornament,.dungeon-focus .dungeon-heading .eyebrow{display:none}
+ .dungeon-focus .dungeon-scroll{gap:8px;padding:1px 2px 5px}
+ .dungeon-focus .dungeon-first-hint{font-size:11px!important}
+ .dungeon-featured{gap:10px}
+ .dungeon-focus .dungeon-featured .dungeon-mode{aspect-ratio:auto;min-height:106px}
+ .dungeon-focus .dungeon-featured .mode-caption{padding:34px 12px 10px;gap:3px}
+ .dungeon-focus .dungeon-featured .mode-caption strong{font-size:22px}
+ .dungeon-focus .dungeon-featured .mode-caption small{font-size:11px}
+ .dungeon-focus .dungeon-mode.mode-strategy{min-height:74px}
+ .dungeon-focus .mode-strategy .mode-caption{padding:26px 12px 7px;gap:2px}
+ .dungeon-focus .mode-strategy .mode-caption strong{font-size:18px}
+ .dungeon-focus .mode-strategy .mode-caption small{font-size:11px}
+ .dungeon-focus .mode-strategy .mode-type{top:6px;left:12px;padding:2px 7px}
+ .dungeon-other-toggle{min-height:44px;padding:3px 10px}
+ .dungeon-focus .dungeon-other-modes .dungeon-mode{min-height:118px}
+ .dungeon-focus .dungeon-other-modes .mode-caption{padding:37px 12px 10px}
+ .dungeon-focus .dungeon-other-modes .mode-caption strong{font-size:19px}
+}
+@media(max-width:600px) and (min-height:501px){
+ .dungeon-hub.dungeon-focus{padding-top:max(56px,calc(env(safe-area-inset-top) + 46px));width:96vw;height:98dvh;max-height:98dvh}
+ .dungeon-featured{grid-template-columns:1fr;gap:10px}
+ .dungeon-focus .dungeon-featured .dungeon-mode{min-height:156px;aspect-ratio:auto}
+ .dungeon-focus .dungeon-featured .mode-caption{padding:52px 16px 16px}
+ .dungeon-focus .dungeon-featured .mode-caption strong{font-size:28px}
+ .dungeon-focus .dungeon-mode.mode-strategy{min-height:100px}
+ .dungeon-other-modes{grid-template-columns:1fr}
+ .dungeon-other-toggle{gap:10px}
+ .dungeon-other-hint{font-size:11px}
+}
