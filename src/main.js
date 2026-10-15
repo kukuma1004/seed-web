@@ -1861,7 +1861,19 @@ function damageEnemy(e,amount,chaining=true,critical=false,meta=null){
  if(e.hp<=0&&!e.dead){e.dead=true;if(!e.siegeGuard){kills++;choiceKills++;}combatAnalysis.kill();chargeActive(activeGauge,killCharge(e)*(survivalSession?SURVIVAL.killChargeScale:1));if(!e.survivalKind)vfx.impact(e.g.position,'amber',true);enemyDown(e);}
 }
 function enemyDown(e){perf.event(PE.enemyDeath);
- if(e.expansionActor){if(e.expansionSettled||!e.dead||e.hp>0)return;e.expansionSettled=true;e.onJourneyDefeat?.(e);if(!e.siegeGuard)score+=e.expansionBoss&&expansionChannel==='public'?6000:20;if(e.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory()){paused=true;touch.reset();keys.clear();pauseBuild.show(levels,heldForms);pauseBuild.setSaveStatus('보스 격파를 저장하지 못했어요. 저장을 다시 확인할 때까지 다음 전장을 열지 않습니다.');}else if(e.expansionBoss&&typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.defeat(e,e.config.name,expansionChannel==='public'?expansionPublicEntry.campaign.bossWins[expansionCampaignBoss(expansionJourney.act)]:null);releaseEnemy(e);return;}
+ if(e.expansionActor){
+  if(e.expansionSettled||!e.dead||e.hp>0)return;
+  e.expansionSettled=true;e.onJourneyDefeat?.(e);if(!e.siegeGuard)score+=e.expansionBoss&&expansionChannel==='public'?6000:20;
+  if(e.expansionBoss&&e.expansionMotion&&Number.isFinite(e.hp)&&e.hp<=0&&expansionJourney?.phase==='boss'&&e.expansionMotion===expansionJourney.boss){
+   // The genuine final boss ends the encounter. Retire its leftover guards
+   // without calling damageEnemy/enemyDown: no extra kills, charge or loot.
+   for(const guard of enemies)if(guard!==e&&guard.expansionActor&&guard.siegeGuard&&!guard.dead){guard.dead=true;guard.hp=0;guard.expansionSettled=true;releaseEnemy(guard);}
+   for(const shot of enemyShots)release(shot.ob);enemyShots=[];invuln=Math.max(invuln,1.6);audio.play('bossDefeat');
+  }
+  if(e.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory()){paused=true;touch.reset();keys.clear();audio.setPaused(true);pauseBuild.show(levels,heldForms);pauseBuild.setSaveStatus('보스 격파를 저장하지 못했어요. 저장을 다시 확인할 때까지 다음 전장을 열지 않습니다.');}
+  else if(e.expansionBoss&&typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.defeat(e,e.config.name,expansionChannel==='public'?expansionPublicEntry.campaign.bossWins[expansionCampaignBoss(expansionJourney.act)]:null);
+  releaseEnemy(e);return;
+ }
  if(survivalSession){
   score+=e.survivalScore||500;settleSurvivalKill(survivalSession,{boss:Boolean(e.survivalBoss)});
   if(e.survivalBoss){if(!localInspection&&!survivalSession.lab&&!survivalSession.benchmark&&!developerRun&&!queueSurvivalTitle(survivalSession,e.type,survivalBossOrdinal(survivalSession,e.type),currentBossEpoch()))throw Error('survival-title-queue-full');settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}
@@ -2923,12 +2935,15 @@ function restart(saved=null,{expansion=false}={}){if(!bossRecordReady())return;i
 
 function togglePause(){
  if(journeyCompletionPending){completeRun();return;}if(saveExitBusy||mode!=='playing'&&mode!=='evolving')return;
+ if(paused&&expansionJourney?.phase==='boss'&&expansionChannel==='public'&&(expansionPendingBossCheckpoint||roomCleared&&!exitOpen)&&!expansionPublicEntry?.campaign?.bossCleared){
+  if(!expansionPendingBossCheckpoint||!persistExpansionBossVictory()){pauseBuild.setSaveStatus('보스 격파 저장을 확인하지 못했어요. 계정과 저장 공간을 확인한 뒤 다시 눌러 주세요.');return;}
+ }
  paused=!paused;touch.reset();keys.clear();keyboardDash=false;if(paused)player.visible=true;
  $('#pause').textContent=paused?'▶':'Ⅱ';audio.setPaused(paused);
  // Keep visible account/save warnings through the pause menu. Only an empty
  // normal Journey room may recover its current tactical hint on resume.
  if(paused){void webTelemetry.playPause();exitWithoutSaveArmed=false;$('#save-exit').textContent=saveExitLabel();pauseBuild.show(levels,heldForms,{survival:Boolean(survivalSession),killScale:survivalSession?SURVIVAL.killChargeScale:1});}
- else{pauseBuild.hide();if(!$('#toast').textContent&&!roomCleared&&!exitOpen&&!mirrorSession&&!survivalSession&&!expansionJourney&&!inAustinRoom()&&(region==='garden'||isAct2(region)))$('#toast').textContent=roomFor(stage,cycle,region).hint||'';$('#pause').focus({preventScroll:true});}
+ else{pauseBuild.hide();if(expansionJourney?.phase==='boss'&&roomCleared&&!exitOpen)openExit();if(!$('#toast').textContent&&!roomCleared&&!exitOpen&&!mirrorSession&&!survivalSession&&!expansionJourney&&!inAustinRoom()&&(region==='garden'||isAct2(region)))$('#toast').textContent=roomFor(stage,cycle,region).hint||'';$('#pause').focus({preventScroll:true});}
 }
 window.addEventListener('keydown',e=>{if(mode==='defense'||mode==='adventure'||mode==='expedition'||mode==='garden-challenge')return;if(e.target?.closest?.('input,textarea'))return;if(['Enter','Space'].includes(e.code)&&e.target?.closest?.('button,summary,a,select')&&!(e.code==='Space'&&mode==='playing'&&!paused&&e.target?.closest?.('#pause')))return;if(!e.repeat){const pick={Digit1:1,Digit2:2,Digit3:3,Numpad1:1,Numpad2:2,Numpad3:3}[e.code];if(pick){if(pickChoice(pick))e.preventDefault();}else if(e.code==='KeyF')useActive();else if(e.code==='KeyQ'&&e.shiftKey){selectedItem=nextHeld(inventory,selectedItem);itemBarKey='';if(selectedItem)$('#toast').textContent=`${ITEMS[selectedItem].name} 고름 · Q로 마시기`;}else if(e.code==='KeyQ')useInventoryItem(selectedItem&&inventory[selectedItem]>0?selectedItem:nextHeld(inventory));}if(['Space','KeyW','KeyA','KeyS','KeyD','ArrowUp','ArrowDown','ArrowLeft','ArrowRight'].includes(e.code))e.preventDefault();keys.add(e.code);if(e.code==='Space'&&!e.repeat&&mode==='playing'&&!paused)keyboardDash=true;if(!e.repeat&&(e.code==='KeyP'||e.code==='Escape'))togglePause();if(e.code==='KeyE'&&!e.repeat)useExit();if(e.code==='Enter'&&mode==='ready'){if($('#open-journey')){$('#open-journey').click();return;}if($('.journey-panel')){($('#continue-run')||$('#start-game')).click();return;}if($('#start-survival')){($('#resume-survival')||$('#start-survival')).click();return;}if($('#go-dungeon')){showDungeon();return;}if(!requireName())return;const saved=readCheckpoint(actStore());if(saved)restart(saved);else startGame();}});window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{keys.clear();keyboardDash=false;if(!paused&&(mode==='playing'||mode==='evolving'))togglePause();});$('#pause').onclick=togglePause;
 window.addEventListener('pagehide',()=>{saveLeaveState();});
