@@ -165,4 +165,14 @@ for(const survival of [false,true]){
  assert.equal(transfer.state().travel.stage,survival?'none':'land');assert(duration>.4&&duration<.5,'presentation preserves the actual transfer speed');
  c.baseSlideCooldown=0;movement.runInContext(c);assert.equal(c.baseSlideTime,0,'landing lock still prevents an automatic next transfer');
 }
-console.log('Journey presentation: Austin/Always phase engines, actual base movement/landing/lock, survival isolation, pause/restore, bounded Three reuse/reduced motion/disposal, and both durable clears PASS.');
+// Boss-specific loot heading uses textContent, including when returning from
+// a candidate, and skipping keeps the original completion callback.
+const relicSource=readFileSync('src/relic-ui.js','utf8').replace(/^import .*;\r?$/gm,'').replaceAll('export function ','function ');
+const relicContext={};vm.createContext(relicContext);vm.runInContext(relicSource,relicContext);
+assert(main.includes('relicFx,finalBossName()'));
+for(const name of ['오스틴','항상초심','<img src=x onerror=alert(1)>']){
+ const label={textContent:''},skip={},root={hidden:true,innerHTML:'',querySelectorAll:()=>[],querySelector:selector=>selector==='[data-relic-source]'?label:skip};
+ let skipped=false;relicContext.showRelicChoice(root,{},[],value=>{skipped=value===null;},null,name);
+ assert.equal(label.textContent,name+'의 유물함');assert(!root.innerHTML.includes(name));skip.onclick();assert(skipped);
+}
+console.log('Journey presentation: Austin/Always phase engines, actual base movement/landing/lock, survival isolation, pause/restore, bounded Three reuse/reduced motion/disposal, both durable clears and actual-boss loot heading PASS.');
