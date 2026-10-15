@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 
 // Two open wreath arcs and one six-leaf batch. No texture, lights, postprocess,
-// RAF or per-frame geometry/material creation. Nothing touches actor hitboxes.
+// RAF or per-frame geometry/material creation. Base transfers reuse these same
+// three meshes as a destination ring + six grounded leaf arrows.
 export function createJourneyPresentationView(scene,{document:doc=globalThis.document}={}){
  const root=new THREE.Group();root.name='journey-celebration';root.visible=false;scene.add(root);
  const ringGeo=new THREE.RingGeometry(.88,.94,32,1,.16,Math.PI-.32);
@@ -19,17 +20,34 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
  const kicker=doc.createElement('small'),title=doc.createElement('strong'),detail=doc.createElement('span');banner.append(kicker,title,detail);doc.body.append(banner);
  function hide(){root.visible=false;if(bannerShown){banner.hidden=true;bannerShown=false;}}
  function update(s,player,visible,reduced=false,low=false,dt=0){
-  if(disposed)return;if(!visible||!s.active){hide();return;}
-  if(serial!==s.serial){serial=s.serial;banner.dataset.kind=s.kind;kicker.textContent=s.kicker;title.textContent=s.title;detail.textContent=s.detail;ringMat.color.setHex(s.color);leafMat.color.setHex(s.color);hudClock=.05;opacity=-1;
+  if(disposed)return;if(!visible||!s.active&&!s.travel?.active){hide();return;}
+  if(serial!==s.serial){serial=s.serial;banner.dataset.kind=s.kind;kicker.textContent=s.kicker;title.textContent=s.title;detail.textContent=s.detail;hudClock=.05;opacity=-1;
    // The legacy fusion toast repeats this same name across the play field.
    // Remove only that exact duplicate; never hide a later danger message.
    const toast=doc.getElementById?.('toast');if(s.kind==='growth'&&toast?.textContent.startsWith(s.title+' Lv.'))toast.textContent='';
   }
-  const fade=Math.min(1,s.age/.12,(s.duration-s.age)/.28),showBanner=s.kind!=='law';
+  const fade=Math.min(1,s.age/.12,(s.duration-s.age)/.28),showBanner=s.active&&s.kind!=='law';
   if(bannerShown!==showBanner){bannerShown=showBanner;banner.hidden=!showBanner;}
   // Event-driven text, with at most 20Hz opacity changes while a cue is alive.
   hudClock+=Math.min(.1,Math.max(0,dt));if(hudClock>=.05){hudClock=0;const alpha=Math.round(Math.max(0,fade)*100)/100;if(alpha!==opacity){opacity=alpha;banner.style.opacity=String(alpha);}}
-  const world=s.kind==='law'||s.kind==='growth'||s.kind==='defeat';root.visible=world;if(!world)return;
+  const world=s.active&&(s.kind==='law'||s.kind==='growth'||s.kind==='defeat'),travel=s.travel;root.visible=world||Boolean(travel?.active);if(!root.visible)return;
+  if(!world){
+   const flight=travel.stage==='flight',progress=travel.age/travel.duration,alpha=flight?1:Math.max(0,1-progress);
+   root.position.set(0,0,0);root.rotation.y=0;root.scale.setScalar(1);ringMat.color.setHex(0xe9dfa4);leafMat.color.setHex(0xd3ebba);
+   ringMat.opacity=alpha*.62;leafMat.opacity=alpha*.68;
+   const radius=flight?.63:reduced?.7:.63+progress*.32;
+   for(const arc of arcs){arc.position.set(travel.targetX,.145,travel.targetZ);arc.scale.setScalar(radius);}
+   // The destination remains on low quality; the optional six arrows add one
+   // instanced draw, no new resources. Reduced motion keeps the route static.
+   leaves.visible=flight&&!low;
+   if(leaves.visible){
+    const dx=travel.targetX-travel.x,dz=travel.targetZ-travel.z,heading=Math.atan2(-dx,-dz);
+    for(let i=0;i<6;i++){const t=(i+.6)/6.7;pose.position.set(travel.x+dx*t,.15,travel.z+dz*t);pose.rotation.set(-Math.PI/2,0,heading);pose.scale.setScalar(reduced?.56:.5+.1*Math.sin(travel.age*13-i*.7));pose.updateMatrix();leaves.setMatrixAt(i,pose.matrix);}
+    leaves.instanceMatrix.needsUpdate=true;
+   }
+   return;
+  }
+  ringMat.color.setHex(s.color);leafMat.color.setHex(s.color);for(const arc of arcs){arc.position.set(0,.09,0);arc.scale.setScalar(1);}
   const grow=s.kind!=='defeat',age=s.age,progress=age/s.duration;
   root.position.set(grow?player.x:s.x,0,grow?player.z:s.z);root.rotation.y=reduced?0:age*.65;
   const scale=reduced?1:1+Math.sin(Math.PI*progress)*.32;root.scale.setScalar(scale);ringMat.opacity=Math.max(0,fade)*.48;
