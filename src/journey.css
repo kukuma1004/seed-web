@@ -8,6 +8,24 @@
 .touch-mode #stages i{width:9px}.touch-mode #stages span{width:20px;height:20px;font-size:17px}.touch-mode #boss-hud{top:96px;width:250px;max-width:58vw;font-size:11px}.touch-mode #boss-hud>div{margin:4px 0}.touch-mode #boss-hud small{font-size:9px;line-height:1.25;padding:0 3px}.touch-mode #exit-room{bottom:150px;max-width:70vw;font-size:13px}.touch-mode #toast{top:36%;font-size:12px}
 @media(orientation:portrait){.touch-mode #exit-room{bottom:175px}.touch-mode #boss-hud{top:100px}.touch-mode #toast{top:22%}}
 
+/* A live boss replaces the duplicate room heading. Keep the next-law meter
+   above its health/intent, instead of laying all three over the same line. */
+body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #encounter{visibility:hidden}
+body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #growth-progress{top:78px}
+body:not(.touch-mode):not(.survival-mode) #boss-hud{top:116px;width:360px;max-width:calc(100vw - 48px)}
+body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #journey-cue{top:216px}
+@media(max-height:500px) and (orientation:landscape){
+ body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #growth-progress{top:66px;font-size:10px;line-height:12px;letter-spacing:.3px}
+ body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #growth-progress div{height:6px;margin-top:3px}
+ body:not(.touch-mode):not(.survival-mode) #boss-hud{top:94px;width:min(340px,calc(100vw - 48px));max-width:none;font-size:11px;line-height:1.25}
+ body:not(.touch-mode):not(.survival-mode) #boss-hud>strong{line-height:14px;letter-spacing:.3px}
+ body:not(.touch-mode):not(.survival-mode) #boss-hud>div{height:8px;margin:3px 0}
+ body:not(.touch-mode):not(.survival-mode) #boss-hud .boss-move{max-width:100%;margin-bottom:3px;padding:2px 8px;font-size:10px;line-height:12px;letter-spacing:.02em}
+ body:not(.touch-mode):not(.survival-mode) #boss-hud small{font-size:9px;line-height:12px}
+ body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #journey-cue{top:174px}
+ body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #app-actions{visibility:hidden}
+}
+
 /* Compact desktop windows need the same readable message budget as phones.
    Leave the touch and survival HUDs' existing placement intact. */
 @media(max-height:500px) and (orientation:landscape){
