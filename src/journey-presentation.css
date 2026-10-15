@@ -2,7 +2,7 @@
 #journey-cue[hidden]{display:none}
 #journey-cue small{display:block;font-size:10px;line-height:1.4;letter-spacing:.1em;color:#aecab6}
 #journey-cue strong{display:block;font-size:19px;line-height:1.45;font-weight:700;overflow-wrap:anywhere}
-#journey-cue span{display:block;margin-top:2px;font-size:11px;line-height:1.5;color:#c6d7c8;overflow-wrap:anywhere}
+#journey-cue span{display:block;margin-top:2px;font-size:11px;line-height:1.5;color:#c6d7c8;word-break:keep-all;overflow-wrap:break-word}
 #journey-cue[data-kind=boss],#journey-cue[data-kind=defeat]{border-color:#e9cc91}
 #journey-cue[data-kind=boss] small,#journey-cue[data-kind=defeat] small{color:#d8c390}
 #journey-cue[data-kind=phase]{border-color:#e7aa78}
