@@ -10,6 +10,7 @@
 #journey-cue[data-kind=opening]{border-color:#b8e7ce}
 #journey-cue[data-kind=core-alert]{border-color:#f0a07f}
 #journey-cue[data-kind=opportunity],#journey-cue[data-kind=repair]{border-color:#ead6a0}
+#journey-cue[data-kind=route]{border-color:#e8d9ad}
 body:has(#crystal-siege-ui:not([hidden])) #journey-cue{top:196px}
 #evolution.journey-growth{bottom:max(48px,calc(env(safe-area-inset-bottom) + 48px));min-width:0;width:min(390px,68vw);padding:11px 20px 13px;border-top:1px solid #c2dec26e;border-bottom:1px solid #c2dec244;background:linear-gradient(90deg,#081d2000,#0b2526ed 18%,#0b2526ed 82%,#081d2000)}
 #evolution.journey-growth strong{font-size:24px;letter-spacing:.05em;margin:5px 0 6px}

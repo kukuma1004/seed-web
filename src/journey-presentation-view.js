@@ -27,6 +27,8 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
    const toast=doc.getElementById?.('toast');if(s.kind==='growth'&&toast?.textContent.startsWith(s.title+' Lv.'))toast.textContent='';
    if(s.kind==='night'&&toast?.textContent==='습격 시작 · 정원의 심장을 지키세요')toast.textContent='';
    if(s.kind==='tailwind'&&toast?.textContent==='전진하면 다음 편대가 옵니다 · 앞 편대를 끊으면 순풍 · 빛나는 모래원은 옆으로 피하세요 · 반사판을 활용하세요')toast.textContent='';
+   if(s.kind==='boss'&&toast?.textContent.startsWith(s.title+' 등장 · '))toast.textContent='';
+   if(s.kind==='route'&&['방을 정리했다 · 빛나는 출구로 이동하세요','항로가 이어집니다 · 다음 편대 접근','전장 돌파 · 출구를 눌러 다음 방으로 이동'].includes(toast?.textContent))toast.textContent='';
   }
   const fade=Math.min(1,s.age/.12,(s.duration-s.age)/.28),showBanner=s.active&&s.kind!=='law';
   if(bannerShown!==showBanner){bannerShown=showBanner;banner.hidden=!showBanner;}

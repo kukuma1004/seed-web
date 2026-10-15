@@ -1,6 +1,22 @@
 // Presentation derives from canonical journey/campaign state; never awards or
 // infers a victory from a room number, guard death, or broken scenery.
 const bossNames={crosswind:'횡풍의 수호자',crystalGorge:'수정의 정원사'};
+// Read the real open-exit state in the host before calling this. These words
+// describe the next action; they never finalize a run or award a victory.
+export function journeyRouteCue({region,stage,cycle=0,bossName='',bossAhead=false,bossWins=0,expansion=null,campaign=null,publicExpansion=false}={}){
+ if(expansion){
+  if(!Object.hasOwn(bossNames,expansion.act)||!['course','boss'].includes(expansion.phase)||!Number.isInteger(expansion.room)||expansion.room<0||expansion.room>4)return null;
+  if(expansion.phase==='course')return expansion.room===4?{title:bossNames[expansion.act]+'에게',detail:'출구 너머에서 최종 보스와 맞섭니다',automatic:false}:{title:'다음 전장으로',detail:`${expansion.room+2}/5 전장 · 출구를 눌러 이동하세요`,automatic:false};
+  if(!publicExpansion)return {title:'보스 검토 마치기',detail:'로컬 검토 · 계정 기록과 보상 제외',automatic:false};
+  const wins=expansionBossProgress(expansion,campaign);
+  return wins>=3?{title:'완주 정산으로',detail:'3/3 결전 승리 · 출구에서 기록을 마무리하세요',automatic:false}:{title:'다음 순환으로',detail:`${wins}/3 결전 승리 · 출구 너머로 이어집니다`,automatic:false};
+ }
+ if(!['garden','stadium','skyway'].includes(region)||!Number.isInteger(stage)||stage<0||stage>4)return null;
+ const automatic=region==='skyway';
+ if(stage<4)return {title:automatic?'다음 편대 접근':'다음 관문으로',detail:automatic?`${stage+2}번째 항로로 이어집니다`:`${stage+2}번째 관문 · 빛나는 출구로 이동하세요`,automatic};
+ if(bossAhead)return {title:bossName+'에게',detail:automatic?'최종 보스가 항로에 들어옵니다':'출구 너머에서 최종 보스와 맞섭니다',automatic};
+ return {title:'다음 여정으로',detail:`여정 ${Math.max(0,cycle|0)+2} · ${Math.max(0,Math.min(3,bossWins|0))}/3 결전 승리`,automatic};
+}
 export function expansionBossProgress(journey,campaign){
  const key=journey?.act==='crosswind'?'crosswindKeeper':'crystalGardener';
  return Math.max(0,Math.min(3,Number(campaign?.bossWins?.[key])||0));

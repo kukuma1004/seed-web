@@ -9,7 +9,7 @@ const BOSS_COPY={
  crystalGardener:{entry:'심장과 보스를 함께 보세요 · 열린 꽃심을 노리세요',arena:'수정 심장의 결전',phase:'수정의 공세가 거세진다',details:{1:'보스와 재생 습격대를 함께 살피세요',2:'포탑을 지원하며, 꽃심이 열리는 틈에 반격하세요'},win:'수정 정원에 빛이 돌아온다'}
 };
 const IMPORTANT=new Set(['boss','phase','growth','law','defeat','night','repair','core-alert','opportunity']);
-const EXPANSION_ACTS=new Set(['crosswind','crystalGorge']),EXPANSION_PHASES=new Set(['course','boss']),COVERED=new Set(['defeat','tailwind','night','support','repair','core-alert','opportunity']);
+const EXPANSION_ACTS=new Set(['crosswind','crystalGorge']),EXPANSION_PHASES=new Set(['course','boss']),COVERED=new Set(['defeat','tailwind','night','support','repair','core-alert','opportunity','route']);
 const bossId=actor=>actor.expansionBoss?actor.expansionMotion?.id:actor.type;
 export function journeyPresentationContext(region,mode,survival,mirror,training,expansion){
  if(survival||mirror||training||!MODES.has(mode))return false;
@@ -19,14 +19,14 @@ export function journeyPresentationContext(region,mode,survival,mirror,training,
 export function createJourneyPresentation({onBossEntry=()=>{}}={}){
  const travel={active:false,stage:'none',age:0,duration:0,x:0,z:0,targetX:0,targetZ:0};
  const forms=new Set(),state={serial:0,kind:'none',title:'',detail:'',kicker:'',age:0,duration:0,x:0,z:0,color:0xc7efd2,active:false,travel};
- let boss=null,phase=null,defeated=null,route=null,routePhase=null,tactic=null,tailActive=false,siegeState=null,siegePhase=null,coreHp=NaN,coreWarned=false,supportPad=null,supportCooldown=0,repairTime=-1,expansionActor=null,expansionState=null,coreOpen=false;
+ let boss=null,phase=null,defeated=null,route=null,routePhase=null,tactic=null,tailActive=false,siegeState=null,siegePhase=null,coreHp=NaN,coreWarned=false,supportPad=null,supportCooldown=0,repairTime=-1,expansionActor=null,expansionState=null,coreOpen=false,exitAnnounced=false;
  function cue(kind,title,detail,kicker,duration,point,color=0xc7efd2){
   state.serial++;state.kind=kind;state.title=String(title||'').slice(0,64);state.detail=String(detail||'').slice(0,140);state.kicker=kicker;
   state.age=0;state.duration=duration;state.x=Number.isFinite(point?.x)?point.x:0;state.z=Number.isFinite(point?.z)?point.z:0;state.color=color;state.active=true;
  }
  function reset(held=new Map()){
   forms.clear();for(const id of held.keys())forms.add(id);
-  boss=defeated=route=tactic=siegeState=expansionActor=null;phase=routePhase=siegePhase=expansionState=null;tailActive=coreWarned=coreOpen=false;coreHp=NaN;supportPad=null;supportCooldown=0;repairTime=-1;state.active=false;state.kind='none';state.age=state.duration=0;state.serial++;cancelSlide();
+  boss=defeated=route=tactic=siegeState=expansionActor=null;phase=routePhase=siegePhase=expansionState=null;tailActive=coreWarned=coreOpen=exitAnnounced=false;coreHp=NaN;supportPad=null;supportCooldown=0;repairTime=-1;state.active=false;state.kind='none';state.age=state.duration=0;state.serial++;cancelSlide();
  }
  function syncForms(held,catalog,announce,point){
   let added=null;for(const id of held.keys())if(!forms.has(id)&&catalog[id])added=id;
@@ -101,7 +101,9 @@ export function createJourneyPresentation({onBossEntry=()=>{}}={}){
   if(!travel.active||travel.stage!=='flight'||!Number.isFinite(point?.x)||!Number.isFinite(point?.z)||Math.hypot(point.x-travel.targetX,point.z-travel.targetZ)>.1)return false;
   travel.stage='land';travel.age=0;travel.duration=.42;return true;
  }
- return {reset,syncForms,observeBoss,observeSkyway,observeTactics,observeExpansionBoss,defeat,beginSlide,landSlide,cancelSlide,
+ function canGuideExit(){return !exitAnnounced&&(!state.active||!IMPORTANT.has(state.kind));}
+ function guideExit(next){if(!next||!canGuideExit())return false;cue('route',next.title,next.detail,'관문을 넘었다',next.automatic?.85:2.4,null,0xe8d9ad);exitAnnounced=true;return true;}
+ return {reset,syncForms,observeBoss,observeSkyway,observeTactics,observeExpansionBoss,defeat,beginSlide,landSlide,cancelSlide,canGuideExit,guideExit,
   cover(){if(COVERED.has(state.kind))state.active=false;cancelSlide();},
   law(title,detail,point,color){cue('law',title,detail,'새 법칙이 깨어난다',1.4,point,color);},
   step(dt,advancing=true){if(!advancing)return state;const step=Math.min(.1,Math.max(0,Number.isFinite(dt)?dt:0));supportCooldown=Math.max(0,supportCooldown-step);if(state.active){state.age+=step;if(state.age>=state.duration)state.active=false;}if(travel.active){travel.age+=step;if(travel.age>=travel.duration)cancelSlide();}return state;},
