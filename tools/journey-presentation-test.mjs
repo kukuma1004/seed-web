@@ -7,7 +7,7 @@ import {createJourneyPresentationView} from '../src/journey-presentation-view.js
 import {AUSTIN,createAustin,tickAustin} from '../src/austin.js';
 import {ALWAYS_BEGINNER,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner} from '../src/always-beginner.js';
 import {BASE_SLIDE,STADIUM_BASES,baseSlideFor,stadiumBaseAt} from '../src/stadium.js';
-import {TEMPEST_CARRIER,createTempestCarrier,tickTempestCarrier} from '../src/act3-enemies.js';
+import {TEMPEST_CARRIER,createTempestCarrier,tickTempestCarrier,act3BossHint,act3BossPatternName} from '../src/act3-enemies.js';
 import {createJourneySignature,stepJourneySignature} from '../src/journey-act-signatures.js';
 
 for(const mode of ['playing','cards','forms','evolving','dash-evolution']){
@@ -68,8 +68,8 @@ assert.equal(sounds,2,'only one added entry cue, no duplicate phase warnings');
 // Johan uses phaseIndex (0,1,2), not the unrelated actor sway phase. Observe
 // the actual engine's 66/33% changes without changing position or summoning.
 events.reset();const johan=createTempestCarrier(combatScene);
-assert(events.observeBoss(johan,TEMPEST_CARRIER.name,'추격'));assert.equal(state.kicker,'폭풍 너머의 결전');
-for(const [hp,index,label] of [[.65,1,'편대'],[.32,2,'폭풍핵']]){
+assert(events.observeBoss(johan,TEMPEST_CARRIER.name,'전운'));assert.equal(state.kicker,'폭풍 너머의 결전');
+for(const [hp,index,label] of [[.65,1,'뇌우'],[.32,2,'폭풍핵']]){
  johan.hp=johan.maxHp*hp;tickTempestCarrier(johan,.01,0,hooks);assert.equal(johan.phaseIndex,index);assert.equal(johan.phase,0);
  const pos=johan.g.position.clone();assert(events.observeBoss(johan,TEMPEST_CARRIER.name,label));assert(johan.g.position.equals(pos));
  assert.equal(state.title,label);assert(!state.kicker.includes('오스틴'));const serial=state.serial;
@@ -158,6 +158,20 @@ let geometryDisposals=0,materialDisposals=0;for(const g of new Set(root.children
 view.dispose();view.dispose();assert.equal(scene.children.length,0);assert.equal(doc.body.children.length,0);assert.equal(geometryDisposals,2);assert.equal(materialDisposals,2);
 
 const main=readFileSync('src/main.js','utf8'),css=readFileSync('src/journey-presentation.css','utf8'),viewSource=readFileSync('src/journey-presentation-view.js','utf8');
+// Execute the actual HUD host too: the authored names are 전운/뇌우/폭풍핵.
+// A numeric phaseIndex must reach both the HUD and the announcement, rather
+// than accidentally observing the flight rig's constant sway phase.
+const hudNodes=new Map(),hud={dataset:{},querySelector(selector){if(!hudNodes.has(selector))hudNodes.set(selector,{});return hudNodes.get(selector);}};
+const observed=createJourneyPresentation(),hudContext={journeyPresentation:observed,journeyPresentationEnabled:()=>true,TEMPEST_CARRIER,act3BossHint,act3BossPatternName,
+ $:()=>hud,setHidden(){},setWidth(){},setText(node,text){node.textContent=text;}};
+vm.createContext(hudContext);vm.runInContext(main.slice(main.indexOf('function renderBossHud('),main.indexOf('\nlet hudLast=')),hudContext);
+const liveJohan=createTempestCarrier(new THREE.Scene());
+for(const [hp,label] of [[1,'전운'],[.65,'뇌우'],[.32,'폭풍핵']]){
+ liveJohan.hp=liveJohan.maxHp*hp;tickTempestCarrier(liveJohan,.01,0,hooks);hudContext.renderBossHud(liveJohan);
+ assert(hudNodes.get('strong').textContent.includes(label));assert.equal(hud.dataset.phase,label);
+ assert.equal(observed.state().title,hp===1?TEMPEST_CARRIER.name:label);
+ const serial=observed.state().serial;hudContext.renderBossHud(liveJohan);assert.equal(observed.state().serial,serial);
+}
 assert(main.indexOf('journeyPresentationView.decorateClear')>main.indexOf('showEnd(null,{cleared:true,newTitle,bonus})'),'clear flourish follows durable completion, never awards it');
 assert(main.includes("!reset&&journeyPresentationEnabled()&&['cards','forms'].includes(mode)"));
 assert(main.includes('boss.phasePending||boss.phase'),'warn for the actual pending phase, without waiting for the first faster attack');
