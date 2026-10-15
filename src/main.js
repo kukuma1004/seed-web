@@ -173,6 +173,7 @@ import {responsiveView} from './responsive-view.js';
 import {createCameraFeel} from './camera-feel.js';
 import {createJourneyPresentation,journeyPresentationContext} from './journey-presentation.js';
 import {createJourneyPresentationView} from './journey-presentation-view.js';
+import {expansionBossHud} from './expansion-boss-hud.js';
 import './journey-presentation.css';
 const revealApp=()=>document.documentElement.classList.add('seed-loaded');
 const mobileDevice=matchMedia('(any-pointer: coarse)').matches||navigator.maxTouchPoints>0||(typeof location!=='undefined'&&['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('touchPreview'));
@@ -3013,11 +3014,12 @@ function animate(now){animationHandle=0;if(document.hidden||!mainOwnsFrames())re
  if(!showGardenScene){const laws=chosen.values(),first=laws.next().value||'seed';auraList.length=0;projectileBodyList.length=0;for(const p of shots){auraList.push(p);projectileBodyList.push(p);}for(const c of formCombats.values()){c.auraBolts?.(auraList);c.projectileBodies?.(projectileBodyList);}projectileSprites.sync(projectileBodyList,enemyShots);shotAuras.sync(auraList,camera,{theme:combatTheme,first,second:laws.next().value,bodyArt:'spriteHidden'});}perfMark(PS.scene);if(!menuArtCovers())composer.render();perfMark(PS.render);if(seedVisualDiagnostics&&frameCounter%60===0)$('#game').dataset.visual25dMetrics=JSON.stringify({renderer:'Three',drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,dpr:renderer.getPixelRatio(),mode,paused,shadowMaps:sun.castShadow?1:0,camera:showGardenScene?'garden':{height:19,offsetZ:19}});if(inspection&&!inspection.hidden&&frameCounter%30===0){const state=window.seedDebug.getState();inspection.textContent=JSON.stringify({fps:Math.round(state.fps),frameMsP95:Math.round(state.frameMsP95),drawCalls:state.drawCalls,triangles:state.triangles,textures:state.textures,geometries:state.geometries,enemies:state.enemies.length,projectiles:state.projectiles,enemyProjectiles:state.enemyProjectiles,player:state.player,mode:state.mode,paused:state.paused,audio:audio.state()});}}
 function renderBossHud(boss,group=[boss]){
  if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled()&&(boss.type==='austin'||boss.type==='alwaysbeginner'))journeyPresentation.observeBoss(boss,boss.type==='austin'?AUSTIN.name:ALWAYS_BEGINNER.name,(boss.type==='austin'?PHASES:ALWAYS_PHASES)[boss.phasePending||boss.phase]?.label||'결전');
- const hud=$('#boss-hud'),hpTotal=group.reduce((n,e)=>n+Math.max(0,e.hp),0),maxTotal=group.reduce((n,e)=>n+e.maxHp,0),pct=Math.max(0,hpTotal/maxTotal*100);setHidden(hud,false);setWidth(hud.querySelector('i'),pct.toFixed(1)+'%');
+ const hud=$('#boss-hud');if(!boss.expansionBoss&&hud.dataset.intent)delete hud.dataset.intent;
+ const hpTotal=group.reduce((n,e)=>n+Math.max(0,e.hp),0),maxTotal=group.reduce((n,e)=>n+e.maxHp,0),pct=Math.max(0,hpTotal/maxTotal*100);setHidden(hud,false);setWidth(hud.querySelector('i'),pct.toFixed(1)+'%');
  if(boss.expansionBoss){
   delete hud.dataset.phase;setText(hud.querySelector('strong'),boss.config.name+' · '+Math.ceil(pct)+'%');setHidden(hud.querySelector('.boss-move'),false);
-  const crystal=boss.expansionMotion?.id==='crystalGardener'||boss.type==='crystalGardener'||expansionJourney?.act==='crystalGorge';
-  setText(hud.querySelector('.boss-move'),boss.state==='tell'?'방향 고정 · 공격 준비':boss.state==='attack'?(crystal?'수정 공격':'횡풍 공격'):'회복 중 · 반격 기회');setText(hud.querySelector('small'),crystal&&expansionJourney?.siege?'열린 꽃심 반격 · 재생 습격대는 심장 전에 끊으세요':crystal?'열린 꽃심 피해 +30% · 다시 자라는 수정에서 비켜서세요':'준비 때 옆으로 피하세요 · 돌진이 끝난 뒤 반격');
+  const copy=expansionBossHud(boss,Boolean(expansionJourney?.siege));if(hud.dataset.intent!==copy.intent)hud.dataset.intent=copy.intent;
+  setText(hud.querySelector('.boss-move'),copy.move);setText(hud.querySelector('small'),copy.hint);
  }else if(boss.type==='mirrorseed'){
   delete hud.dataset.phase;setText(hud.querySelector('strong'),`거울의 탑 ${mirrorSession?.floor||1}층 · 비친 씨앗 · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),boss.moveName||'같은 선택을 비추는 중');setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),boss.broken>0?'거울이 깨졌습니다 · 지금 공격을 집중하세요':`회피로 탄환을 스치세요 · 균열 ${mirrorSession?.cracks||0}/${MIRROR_BREAK.crackGoal}`);
  }else if(boss.type==='austin'){

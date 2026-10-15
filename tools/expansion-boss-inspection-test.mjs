@@ -3,6 +3,8 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {createJourneyBossInspection,createDefenseBossInspection} from '../src/expansion-boss-inspection.js';
 import {stepDefense,defenseWaveInfo} from '../src/seed-defense-rules.js';
+import {expansionBossHud} from '../src/expansion-boss-hud.js';
+import {createExpansionBoss,stepExpansionBoss,expansionBossMove} from '../src/act-expansion-runtime.js';
 const source=readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const view=readFileSync('src/seed-defense-view.js','utf8');
 assert.equal(createDefenseBossInspection('crosswind'),null);
@@ -24,11 +26,12 @@ const start=source.indexOf('function renderBossHud('),end=source.indexOf('\n}',s
 assert(start>=0&&end>start);
 for(const [id,crystal] of [['crosswindKeeper',false],['crystalGardener',true]]){
  const elements=new Map(),hud={dataset:{},querySelector:s=>{if(!elements.has(s))elements.set(s,{});return elements.get(s);}};
- const context=vm.createContext({$:()=>hud,expansionJourney:null,setHidden:(e,v)=>e.hidden=v,setWidth:(e,v)=>e.width=v,setText:(e,v)=>e.text=v});
+ const context=vm.createContext({$:()=>hud,expansionBossHud,expansionJourney:null,setHidden:(e,v)=>e.hidden=v,setWidth:(e,v)=>e.width=v,setText:(e,v)=>e.text=v});
  vm.runInContext(source.slice(start,end),context);
- context.renderBossHud({expansionBoss:true,type:id,expansionMotion:{id},config:{name:id},state:'attack',hp:50,maxHp:100});
- assert.equal(elements.get('.boss-move').text,crystal?'수정 공격':'횡풍 공격');
- assert.match(elements.get('small').text,crystal?/꽃심.*다시 자라는 수정/:/돌진/);
+ const model=createExpansionBoss(id),position={x:0,z:0},player={x:4,z:2};while(model.state!=='attack')stepExpansionBoss(model,.05,{position,player});
+ context.renderBossHud({expansionBoss:true,type:id,expansionMotion:model,config:{name:id},state:model.state,hp:50,maxHp:100});
+ assert.equal(elements.get('.boss-move').text,expansionBossMove(model).name+' · 공격');
+ assert.equal(elements.get('small').text,expansionBossMove(model).hint);assert.equal(hud.dataset.intent,'attack');
 }
 const saveStart=source.indexOf('function canSaveExpansion('),saveEnd=source.indexOf('\n',saveStart);
 const context=vm.createContext({expansionJourney:{inspectionPreview:true},Boolean});
