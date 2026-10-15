@@ -456,7 +456,7 @@ function completeRun(){
  // 빨리 끝낸 만큼 완주 보너스(score.js CLEAR_BONUS).
  const bonus=clearBonus(elapsed);score+=bonus;
  showEnd(null,{cleared:true,newTitle,bonus});
- if(typeof journeyPresentationView!=='undefined'&&(region==='garden'||region==='stadium')&&!survivalSession&&!mirrorSession&&!trainingSession&&!expansionJourney)journeyPresentationView.decorateClear($('#overlay'));
+ if(typeof journeyPresentationView!=='undefined'&&(region==='garden'||region==='stadium'||region==='skyway')&&!survivalSession&&!mirrorSession&&!trainingSession&&!expansionJourney)journeyPresentationView.decorateClear($('#overlay'));
  return true;
 }
 function finalBossName(){return isAct3(region)?TEMPEST_CARRIER.name:isAct2(region)?ALWAYS_BEGINNER.name:AUSTIN.name;}
@@ -1169,12 +1169,16 @@ function updateJourneySignature(dt){
  if(!journeySignature||survivalSession||mirrorSession||trainingSession)return;
  journeySignatureContext.siege=expansionJourney?.siege;journeySignatureContext.boss=expansionJourney?.phase==='boss';journeySignatureContext.cleared=roomCleared;
  const out=stepJourneySignature(journeySignature,dt,journeySignatureContext);
+ if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.observeSkyway(journeySignature);
  if(out.warning)audio.play('bossWarning');
  if(out.damage&&invuln<=0&&shellTime<=0)hitPlayer(out.damage,'storm','폭풍의 항로');
  if(out.repaired){audio.play('harvest');const p=expansionJourney.siege.pads.find(p=>p.id===out.repaired);if(p)vfx.pulse(new V(p.x,.1,p.z),'seed',1.7,.3);}
 }
 function presentJourneySignature(){
  journeySignaturePresentation.siege=expansionJourney?.siege;journeySignaturePresentation.visible=mode==='playing'&&!paused&&!roomCleared&&!survivalSession&&!mirrorSession&&!trainingSession;
+ const cue=typeof journeyPresentation!=='undefined'?journeyPresentation.state():null;
+ journeySignaturePresentation.hideHint=Boolean(cue?.active&&(cue.kind==='storm'||cue.kind==='opening'));
+ journeySignaturePresentation.reducedMotion=typeof journeyReducedMotion!=='undefined'&&journeyReducedMotion;
  journeySignatureView.update(journeySignature,player.position,journeySignaturePresentation);
 }
 function updateEscorts(dt){
@@ -1878,7 +1882,7 @@ function enemyDown(e){perf.event(PE.enemyDeath);
  else if(e.type==='tempestcarrier'){austinsDefeated++;if(developerRun){bossRewardLine='3막 시제품 · 보상 저장 안 됨';$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파 · 3막 시제품 기록은 저장되지 않습니다`;}else{const firstTitle=!seedTitle.isJohanUnlocked(),wallet=earnCoins(runStorage,400);recordJourneyBossTitle(e.type,austinsDefeated);const johanWins=readAccountProfile(runStorage).johanWins;const gardenGrowth=grantFinalBossGardenMemory(e.type);const got=austinDrops(rng,inventory).filter(id=>addItem(inventory,id,1)).map(id=>ITEMS[id].name),fruitReward=grantGoldenFruitPotion(gardenGrowth);itemBarKey='';bossRewardLine=`+400 JP · ${got.length?got.join(' · ')+' 가방 저장':'물약 가방이 가득 참'}${fruitReward?` · ${fruitReward}`:''}`;$('#toast').textContent=`${TEMPEST_CARRIER.name} 격파! · +400 JP (보유 ${wallet.coins} JP) · ${got.length?got.join(' · ')+' 획득':'물약 가방이 가득 찼습니다'} · ${gardenGrowth.line}${fruitReward?` · ${fruitReward}`:''}${firstTitle?` · 칭호 '${JOHAN_TITLE}' (순환 +2%)`:''}${johanWins===10?` · 칭호 '${JOHAN_VETERAN_TITLE}' (순환 +3%)`:''}`;}}
  else if(main){wardensDefeated++;if(developerRun){$('#toast').textContent=`${e.config?.name||'문지기'} 격파 · 개발자 실험 기록은 저장되지 않습니다`;}else{remember('bosses','warden');const wallet=earnCoins(runStorage,50);if(!dashState.id)dashRewardPending=true;const relicFound=wardenRelicDrop(rng);if(relicFound)relicRewardPending=true;const bossSignal=act3BossAhead()?' · 폭풍 중심에서 거대한 기체음이 들립니다':act2BossAhead()?' · 관중석의 함성이 결승전을 부릅니다':austinAhead()?' · 무언가 째깍거리는 소리가 들립니다':'';$('#toast').textContent=`${e.config?.name||'문지기'} 격파! · +50 JP (보유 ${wallet.coins} JP)${wardensDefeated===1?' · 뿌리에 새로운 움직임이 깨어납니다':bossSignal}${relicFound?' · 희귀 유물 발견!':''}`;}}
  else $('#toast').textContent=stageWarden?'쌍문지기 한 명 격파 · 남은 문지기를 쓰러뜨리세요':'정예 문지기 격파!';
- if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled()&&(e.type==='austin'||e.type==='alwaysbeginner'))journeyPresentation.defeat(e,e.type==='austin'?AUSTIN.name:ALWAYS_BEGINNER.name,austinsDefeated);
+ if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled()&&(e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier'))journeyPresentation.defeat(e,e.type==='austin'?AUSTIN.name:e.type==='alwaysbeginner'?ALWAYS_BEGINNER.name:TEMPEST_CARRIER.name,austinsDefeated);
 }
 function updateFallen(dt,time){for(let i=fallen.length-1;i>=0;i--){const f=fallen[i],e=f.e;f.t+=dt;const k=Math.min(1,f.t/1.3);e.hit=Math.floor(f.t*14)%2?.14:0;e.updateArt?.(time);e.g.position.y=-k*k*1.1;e.g.scale.setScalar(1-k*.3);if(Math.floor(f.t/.18)!==Math.floor((f.t-dt)/.18))vfx.burst(e.g.position,'amber',10,1.2);if(f.t>=1.3){releaseEnemy(e);fallen.splice(i,1);}}}
 function austinBolt(pos,dir,spec){const ob=new THREE.Object3D();ob.position.set(pos.x+dir.x*1.3,.65,pos.z+dir.z*1.3);enemyShots.push({boss:true,spriteKey:'austin',ob,dir:dir.clone(),life:4,bounces:0,speed:spec.speed,damage:spec.damage,age:0,origin:pos.clone(),pierce:true});}
@@ -3006,7 +3010,7 @@ function renderBossHud(boss,group=[boss]){
   const phase=ALWAYS_PHASES[boss.phase];if(hud.dataset.phase!==boss.phase)hud.dataset.phase=boss.phase;
   setText(hud.querySelector('strong'),`${ALWAYS_BEGINNER.name} · ${phase.label} · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),alwaysBeginnerPatternName(boss));setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),alwaysBeginnerHint(boss));
  }else if(boss.type==='tempestcarrier'){
-  const phase=['전운','뇌우','폭풍핵'][boss.phaseIndex||0];if(hud.dataset.phase!==phase)hud.dataset.phase=phase;
+  const phase=['전운','뇌우','폭풍핵'][boss.phaseIndex||0];if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.observeBoss(boss,TEMPEST_CARRIER.name,phase);if(hud.dataset.phase!==phase)hud.dataset.phase=phase;
   setText(hud.querySelector('strong'),`${TEMPEST_CARRIER.name} · ${phase} · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),act3BossPatternName(boss));setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),act3BossHint(boss));
  }else if(boss.type==='act3warden'){
   delete hud.dataset.phase;setText(hud.querySelector('strong'),`${boss.config.name} · ${Math.ceil(pct)}%`);setText(hud.querySelector('.boss-move'),act3BossPatternName(boss));setHidden(hud.querySelector('.boss-move'),false);setText(hud.querySelector('small'),act3BossHint(boss));

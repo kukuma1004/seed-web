@@ -7,14 +7,17 @@ import {createJourneyPresentationView} from '../src/journey-presentation-view.js
 import {AUSTIN,createAustin,tickAustin} from '../src/austin.js';
 import {ALWAYS_BEGINNER,ALWAYS_PHASES,createAlwaysBeginner,tickAlwaysBeginner} from '../src/always-beginner.js';
 import {BASE_SLIDE,STADIUM_BASES,baseSlideFor,stadiumBaseAt} from '../src/stadium.js';
+import {TEMPEST_CARRIER,createTempestCarrier,tickTempestCarrier} from '../src/act3-enemies.js';
+import {createJourneySignature,stepJourneySignature} from '../src/journey-act-signatures.js';
 
 for(const mode of ['playing','cards','forms','evolving','dash-evolution']){
  assert(journeyPresentationContext('garden',mode));
  assert(journeyPresentationContext('stadium',mode));
- for(const act of ['garden','stadium'])for(let excluded=0;excluded<4;excluded++){const other=[false,false,false,false];other[excluded]=true;assert(!journeyPresentationContext(act,mode,...other));}
+ assert(journeyPresentationContext('skyway',mode));
+ for(const act of ['garden','stadium','skyway'])for(let excluded=0;excluded<4;excluded++){const other=[false,false,false,false];other[excluded]=true;assert(!journeyPresentationContext(act,mode,...other));}
 }
 for(const mode of ['dead','ready','duel','defense','adventure','expedition'])assert(!journeyPresentationContext('garden',mode));
-for(const act of ['skyway','crosswind','crystalGorge'])assert(!journeyPresentationContext(act,'playing'));
+for(const act of ['crosswind','crystalGorge'])assert(!journeyPresentationContext(act,'playing'));
 
 let sounds=0;const events=createJourneyPresentation({onBossEntry:()=>sounds++}),state=events.state(),point={x:2,z:4};
 const catalog={one:{name:'처음 융합'},two:{name:'다음 진화'}},held=new Map([['one',1]]);
@@ -61,6 +64,36 @@ for(const [hp,next] of [[.65,'rally'],[.32,'finish']]){
 }
 always.hp=0;always.dead=true;assert(events.defeat(always,ALWAYS_BEGINNER.name,2));assert.equal(state.kicker,'구장에 환호가 번진다');
 assert.equal(sounds,2,'only one added entry cue, no duplicate phase warnings');
+
+// Johan uses phaseIndex (0,1,2), not the unrelated actor sway phase. Observe
+// the actual engine's 66/33% changes without changing position or summoning.
+events.reset();const johan=createTempestCarrier(combatScene);
+assert(events.observeBoss(johan,TEMPEST_CARRIER.name,'추격'));assert.equal(state.kicker,'폭풍 너머의 결전');
+for(const [hp,index,label] of [[.65,1,'편대'],[.32,2,'폭풍핵']]){
+ johan.hp=johan.maxHp*hp;tickTempestCarrier(johan,.01,0,hooks);assert.equal(johan.phaseIndex,index);assert.equal(johan.phase,0);
+ const pos=johan.g.position.clone();assert(events.observeBoss(johan,TEMPEST_CARRIER.name,label));assert(johan.g.position.equals(pos));
+ assert.equal(state.title,label);assert(!state.kicker.includes('오스틴'));const serial=state.serial;
+ for(let i=0;i<120;i++)events.observeBoss(johan,TEMPEST_CARRIER.name,label);assert.equal(state.serial,serial);
+}
+johan.hp=0;johan.dead=true;assert(events.defeat(johan,TEMPEST_CARRIER.name,3));assert.equal(state.kicker,'폭풍 너머로 빛이 스민다');assert(state.detail.includes('완주 기록 확인'));assert.equal(sounds,3);
+
+// Weather is driven by the real, immutable-to-this-observer tactical state.
+// No extra damage, attack modifier, RNG draw, warning sound or queued replay.
+const weather=createJourneyPresentation(),weatherState=weather.state(),signature=createJourneySignature('skyway'),directions=new Set(),kinds=new Set();
+assert(!weather.observeSkyway(signature));assert(!weather.observeSkyway(createJourneySignature('crosswind')));
+for(let i=0;i<400;i++){
+ stepJourneySignature(signature,.1,{player:{x:0,z:5}});weather.step(.1);
+ const before=JSON.stringify(signature);
+ if(weather.observeSkyway(signature)){kinds.add(weatherState.kind);if(weatherState.kind==='storm')directions.add(weatherState.title);}
+ assert.equal(JSON.stringify(signature),before);const serial=weatherState.serial;
+ assert(!weather.observeSkyway(signature));assert.equal(weatherState.serial,serial);
+}
+assert.deepEqual([...kinds].sort(),['opening','storm']);assert.equal(directions.size,3);
+weather.reset();const protectedRoute=createJourneySignature('skyway');weather.observeSkyway(protectedRoute);weather.law('빙결','성장을 가리지 않습니다',point);
+for(let i=0;i<41;i++)stepJourneySignature(protectedRoute,.1,{player:point});
+assert(!weather.observeSkyway(protectedRoute));const protectedSerial=weatherState.serial;
+for(let i=0;i<40;i++)weather.step(.1);assert(!weather.observeSkyway(protectedRoute));assert.equal(weatherState.serial,protectedSerial,'suppressed warning never appears late');
+weather.reset();weather.observeSkyway(createJourneySignature('skyway'));assert(!weatherState.active,'room-entry resume starts without an old weather warning');
 
 // A real accepted base transfer has a separate bounded channel. Important
 // boss notices stay intact, and landing only fires at the actual destination.
@@ -137,9 +170,9 @@ const normalized=main.replaceAll('\r\n','\n'),completeSource=normalized.slice(no
 function completion(saved,region='garden'){
  const c={mode:'playing',region,developerRun:false,survivalSession:null,mirrorSession:null,trainingSession:null,expansionJourney:null,paused:false,journeyCompletionPending:false,
   score:900,elapsed:120,decorations:0,results:0,currentJourneyOwner:'guest',account:{user:()=>null},runStorage:{},enemyShots:[],
-  isAct2:()=>region==='stadium',isAct3:()=>false,CLEAR_ALL_STATS:.01,JOHAN_CLEAR_TITLE:'j',ALWAYS_CLEAR_TITLE:'a',AUSTIN_CLEAR_TITLE:'s',
+  isAct2:()=>region==='stadium',isAct3:()=>region==='skyway',CLEAR_ALL_STATS:.01,JOHAN_CLEAR_TITLE:'j',ALWAYS_CLEAR_TITLE:'a',AUSTIN_CLEAR_TITLE:'s',
   seedTitle:{isJohanClearUnlocked:()=>false,isAlwaysClearUnlocked:()=>false,isAustinClearUnlocked:()=>false},
-  remember:()=>({saved}),readDiscoveries:()=>({bosses:saved?[region==='stadium'?'alwaysclear':'austinclear']:[]}),protectJourneyBossReceipts:()=>saved,clearCheckpoint:()=>saved,actStore:()=>({}),
+  remember:()=>({saved}),readDiscoveries:()=>({bosses:saved?[region==='skyway'?'johanclear':region==='stadium'?'alwaysclear':'austinclear']:[]}),protectJourneyBossReceipts:()=>saved,clearCheckpoint:()=>saved,actStore:()=>({}),
   clearBonus:()=>123,release(){},pauseBuild:{setSaveStatus(){}},$:()=>({textContent:''}),
   journeyPresentationView:{decorateClear(){c.decorations++;}},togglePause(){c.paused=true;},showEnd(){c.results++;}};
  vm.createContext(c);vm.runInContext(completeSource,c);return c;
@@ -148,6 +181,8 @@ const blocked=completion(false);assert.equal(blocked.completeRun(),false);assert
 const durable=completion(true);assert.equal(durable.completeRun(),true);assert.equal(durable.score,1023);assert.equal(durable.results,1);assert.equal(durable.decorations,1);assert.equal(durable.completeRun(),true);assert.equal(durable.score,1023);assert.equal(durable.decorations,1,'result decoration is not a second completion');
 const stadiumBlocked=completion(false,'stadium');assert.equal(stadiumBlocked.completeRun(),false);assert.equal(stadiumBlocked.decorations,0);assert.equal(stadiumBlocked.score,900);
 const stadiumDurable=completion(true,'stadium');assert.equal(stadiumDurable.completeRun(),true);assert.equal(stadiumDurable.decorations,1);assert.equal(stadiumDurable.score,1023);
+const skyBlocked=completion(false,'skyway');assert.equal(skyBlocked.completeRun(),false);assert.equal(skyBlocked.decorations,0);assert.equal(skyBlocked.score,900);
+const skyDurable=completion(true,'skyway');assert.equal(skyDurable.completeRun(),true);assert.equal(skyDurable.decorations,1);assert.equal(skyDurable.score,1023);
 
 // Execute the shipping movement branch rather than a duplicate toy controller.
 // Synthetic inputs prove host timing and isolation, not physical-device play.
@@ -175,4 +210,4 @@ for(const name of ['오스틴','항상초심','<img src=x onerror=alert(1)>']){
  let skipped=false;relicContext.showRelicChoice(root,{},[],value=>{skipped=value===null;},null,name);
  assert.equal(label.textContent,name+'의 유물함');assert(!root.innerHTML.includes(name));skip.onclick();assert(skipped);
 }
-console.log('Journey presentation: Austin/Always phase engines, actual base movement/landing/lock, survival isolation, pause/restore, bounded Three reuse/reduced motion/disposal, both durable clears and actual-boss loot heading PASS.');
+console.log('Journey presentation: Austin/Always/Johan phases, real weather transitions and priority, actual base movement/landing/lock, mode/restore isolation, bounded Three resources, three durable clears and actual-boss loot heading PASS.');

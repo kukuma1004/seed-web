@@ -6,6 +6,7 @@ import {createJourneySignature,stepJourneySignature,creditJourneySignatureKill,j
 import {createCrystalSiege,startCrystalSiegeDefense,stepCrystalSiege,buildCrystalSiege,harvestCrystalSiege,checkpointCrystalSiege,restoreCrystalSiege,stepCrystalSiegeBossFacilities,stepCrystalSiegeThreat} from '../src/crystal-siege-rules.js';
 import {createExpansionThreat} from '../src/expansion-journey.js';
 import {createJourneySignatureView} from '../src/journey-act-signature-view.js';
+import {createJourneyPresentation} from '../src/journey-presentation.js';
 
 assert.equal(createJourneySignature('garden'),null);assert.equal(createJourneySignature('stadium'),null);
 for(let room=0;room<5;room++){
@@ -47,7 +48,7 @@ const sharedRaider=raiderCase(false);assert(!sharedRaider.warned&&!sharedRaider.
 
 // Execute the shipping host observer, including the actual player damage hook.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function updateJourneySignature(dt){'),end=main.indexOf('\nfunction updateEscorts',start);
-const ctx=vm.createContext({journeySignature:createJourneySignature('skyway'),survivalSession:null,mirrorSession:null,trainingSession:null,expansionJourney:null,player:{position:{x:-8,z:5}},journeySignatureContext:{player:{x:-8,z:5}},stepJourneySignature,roomCleared:false,invuln:0,shellTime:0,audio:{play(){}},hitPlayer(d){ctx.hp-=d;},hp:100});vm.runInContext(main.slice(start,end),ctx);for(let i=0;i<70;i++)ctx.updateJourneySignature(.1);assert(ctx.hp<100,'storm reaches the actual host hurt callback');
+const ctx=vm.createContext({journeySignature:createJourneySignature('skyway'),survivalSession:null,mirrorSession:null,trainingSession:null,expansionJourney:null,player:{position:{x:-8,z:5}},journeySignatureContext:{player:{x:-8,z:5}},stepJourneySignature,roomCleared:false,invuln:0,shellTime:0,audio:{play(){}},journeyPresentation:createJourneyPresentation(),journeyPresentationEnabled:()=>true,hitPlayer(d){ctx.hp-=d;},hp:100});vm.runInContext(main.slice(start,end),ctx);for(let i=0;i<70;i++)ctx.updateJourneySignature(.1);assert(ctx.hp<100,'storm reaches the actual host hurt callback');assert.equal(ctx.journeyPresentation.state().kind,'opening','shipping tactical update reaches the presentation observer');
 const hp=ctx.hp;ctx.survivalSession={};for(let i=0;i<100;i++)ctx.updateJourneySignature(.1);assert.equal(ctx.hp,hp,'Survival is excluded, even if a stale Journey signature exists');
 assert(main.includes('e.onJourneyDefeat?.(e)'));assert(main.includes('journeySignatureMoveScale(journeySignature)'));assert(main.includes('journeySignatureAttackScale(journeySignature,player.position)'));
 const nodes=[];globalThis.document={createElement(){const node={hidden:false,textContent:'',setAttribute(){},remove(){this.removed=true;}};nodes.push(node);return node;},body:{append(){}}};
@@ -55,5 +56,17 @@ const scene=new THREE.Scene(),view=createJourneySignatureView(scene),root=scene.
 const geometryIds=objects.map(o=>o.geometry.id),materialIds=objects.map(o=>o.material.id);let peak=0;
 for(let i=0;i<20000;i++){stepJourneySignature(signature,.02,{player:{x:0,z:5}});view.update(signature,{x:0,z:5},{visible:true});assert.equal(root.children.length,5);peak=Math.max(peak,root.children.filter(o=>o.visible).length);}
 assert.deepEqual(objects.map(o=>o.geometry.id),geometryIds);assert.deepEqual(objects.map(o=>o.material.id),materialIds);assert.equal(peak,4);assert.equal(nodes.length,1,'one bounded status element');
+// Warning fills gradually rather than flashing; its edges still match the
+// real 4.8-unit gap. One visible hint at a time, no extra world resources.
+Object.assign(signature,{phase:'warning',lane:0,time:4.02});
+view.update(signature,{x:0,z:5},{visible:true,hideHint:true});assert(root.visible&&nodes[0].hidden);const faint=objects[0].material.opacity,thin=objects[2].scale.x;
+signature.time=5.75;view.update(signature,{x:0,z:5},{visible:true});assert(!nodes[0].hidden);assert(objects[0].material.opacity>faint);assert(objects[2].scale.x>thin);
+for(const lane of [-5,0,5]){
+ signature.lane=lane;view.update(signature,{x:lane,z:5},{visible:true,reducedMotion:true});
+ assert.equal(objects[2].position.x,lane-R.stormHalfGap);assert.equal(objects[3].position.x,lane+R.stormHalfGap);
+ const stable=[objects[0].material.opacity,objects[2].scale.x];signature.time=4.03;view.update(signature,{x:lane,z:5},{visible:true,reducedMotion:true});assert.deepEqual([objects[0].material.opacity,objects[2].scale.x],stable);
+}
+signature.phase='storm';view.update(signature,{x:0,z:5},{visible:true});assert.equal(objects[2].scale.x,.14);assert.equal(objects[2].material.color.getHex(),0xb7ecd1);
+signature.phase='quiet';view.update(signature,{x:0,z:5},{visible:true});assert(objects.every(o=>!o.visible),'quiet interval leaves the field clear');
 view.hide();assert.equal(root.visible,false);assert.equal(nodes[0].hidden,true);view.dispose();view.dispose();assert.equal(scene.children.length,0);assert(nodes[0].removed);delete globalThis.document;
 console.log('Journey 3/4/5 signatures: storm lanes and dodge, honest front kills, real turret/support/repair, boss support, exact paid checkpoint, no other-mode leak and 20k fixed-geometry updates PASS.');

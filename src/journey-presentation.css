@@ -6,6 +6,8 @@
 #journey-cue[data-kind=boss],#journey-cue[data-kind=defeat]{border-color:#e9cc91}
 #journey-cue[data-kind=boss] small,#journey-cue[data-kind=defeat] small{color:#d8c390}
 #journey-cue[data-kind=phase]{border-color:#e7aa78}
+#journey-cue[data-kind=storm]{border-color:#e7b789}
+#journey-cue[data-kind=opening]{border-color:#b8e7ce}
 #evolution.journey-growth{bottom:max(48px,calc(env(safe-area-inset-bottom) + 48px));min-width:0;width:min(390px,68vw);padding:11px 20px 13px;border-top:1px solid #c2dec26e;border-bottom:1px solid #c2dec244;background:linear-gradient(90deg,#081d2000,#0b2526ed 18%,#0b2526ed 82%,#081d2000)}
 #evolution.journey-growth strong{font-size:24px;letter-spacing:.05em;margin:5px 0 6px}
 #evolution.journey-growth small{letter-spacing:.12em}
