@@ -5,14 +5,14 @@ import * as THREE from 'three';
 export function createJourneyPresentationView(scene,{document:doc=globalThis.document}={}){
  const root=new THREE.Group();root.name='journey-celebration';root.visible=false;scene.add(root);
  const ringGeo=new THREE.RingGeometry(.88,.94,32,1,.16,Math.PI-.32);
- const ringMat=new THREE.MeshBasicMaterial({color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const ringMat=new THREE.MeshBasicMaterial({color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const arcs=[new THREE.Mesh(ringGeo,ringMat),new THREE.Mesh(ringGeo,ringMat)];
  for(let i=0;i<2;i++){arcs[i].rotation.x=-Math.PI/2;arcs[i].rotation.z=i*Math.PI;arcs[i].position.y=.09;root.add(arcs[i]);}
  const leafGeo=new THREE.BufferGeometry();
  leafGeo.setAttribute('position',new THREE.Float32BufferAttribute([0,0,0,.14,.12,0,.19,.34,0,0,.64,0,-.19,.34,0,-.14,.12,0,0,.29,.035],3));
  leafGeo.setAttribute('color',new THREE.Float32BufferAttribute([.55,.72,.6,.78,.91,.74,1,1,.87,.96,1,.91,.62,.81,.67,.5,.7,.57,.93,1,.84],3));
  leafGeo.setIndex([6,0,1,6,1,2,6,2,3,6,3,4,6,4,5,6,5,0]);
- const leafMat=new THREE.MeshBasicMaterial({vertexColors:true,color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide});
+ const leafMat=new THREE.MeshBasicMaterial({vertexColors:true,color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const leaves=new THREE.InstancedMesh(leafGeo,leafMat,6);leaves.frustumCulled=false;root.add(leaves);
  const pose=new THREE.Object3D();let disposed=false,serial=-1,hudClock=0,opacity=-1,bannerShown=false;
  const banner=doc.createElement('aside');banner.id='journey-cue';banner.hidden=true;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');banner.setAttribute('aria-atomic','true');

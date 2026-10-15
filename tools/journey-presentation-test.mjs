@@ -54,6 +54,7 @@ const toast=new Element('div');toast.textContent='다음 진화 Lv.1 · 두 법�
 const doc={body:new Element('body'),createElement:tag=>new Element(tag),getElementById:id=>id==='toast'?toast:null},scene=new THREE.Scene(),view=createJourneyPresentationView(scene,{document:doc});
 const root=scene.getObjectByName('journey-celebration'),banner=doc.body.children[0],leaves=root.children[2];
 assert.equal(root.children.length,3);assert.equal(doc.body.children.length,1);assert.equal(banner.children.length,3);
+for(const mesh of root.children)assert(mesh.material.forceSinglePass,'flat translucent leaves/arcs must not silently double the three-draw budget');
 assert.equal(banner.attributes['aria-live'],'polite');
 events.law('관통','곧게 뻗는 첫 법칙',point,0xb7ead4);events.step(.2);view.update(state,point,true,false,false,.1);
 assert(root.visible);assert(banner.hidden,'first law already has a growth panel; do not stack a second banner');
