@@ -25,12 +25,14 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
    // The legacy fusion toast repeats this same name across the play field.
    // Remove only that exact duplicate; never hide a later danger message.
    const toast=doc.getElementById?.('toast');if(s.kind==='growth'&&toast?.textContent.startsWith(s.title+' Lv.'))toast.textContent='';
+   if(s.kind==='night'&&toast?.textContent==='습격 시작 · 정원의 심장을 지키세요')toast.textContent='';
+   if(s.kind==='tailwind'&&toast?.textContent==='전진하면 다음 편대가 옵니다 · 앞 편대를 끊으면 순풍 · 빛나는 모래원은 옆으로 피하세요 · 반사판을 활용하세요')toast.textContent='';
   }
   const fade=Math.min(1,s.age/.12,(s.duration-s.age)/.28),showBanner=s.active&&s.kind!=='law';
   if(bannerShown!==showBanner){bannerShown=showBanner;banner.hidden=!showBanner;}
   // Event-driven text, with at most 20Hz opacity changes while a cue is alive.
   hudClock+=Math.min(.1,Math.max(0,dt));if(hudClock>=.05){hudClock=0;const alpha=Math.round(Math.max(0,fade)*100)/100;if(alpha!==opacity){opacity=alpha;banner.style.opacity=String(alpha);}}
-  const world=s.active&&(s.kind==='law'||s.kind==='growth'||s.kind==='defeat'),travel=s.travel;root.visible=world||Boolean(travel?.active);if(!root.visible)return;
+  const world=s.active&&(s.kind==='law'||s.kind==='growth'||s.kind==='defeat'||s.kind==='repair'),travel=s.travel;root.visible=world||Boolean(travel?.active);if(!root.visible)return;
   if(!world){
    const flight=travel.stage==='flight',progress=travel.age/travel.duration,alpha=flight?1:Math.max(0,1-progress);
    root.position.set(0,0,0);root.rotation.y=0;root.scale.setScalar(1);ringMat.color.setHex(0xe9dfa4);leafMat.color.setHex(0xd3ebba);
@@ -48,7 +50,7 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
    return;
   }
   ringMat.color.setHex(s.color);leafMat.color.setHex(s.color);for(const arc of arcs){arc.position.set(0,.09,0);arc.scale.setScalar(1);}
-  const grow=s.kind!=='defeat',age=s.age,progress=age/s.duration;
+  const grow=s.kind==='law'||s.kind==='growth',age=s.age,progress=age/s.duration;
   root.position.set(grow?player.x:s.x,0,grow?player.z:s.z);root.rotation.y=reduced?0:age*.65;
   const scale=reduced?1:1+Math.sin(Math.PI*progress)*.32;root.scale.setScalar(scale);ringMat.opacity=Math.max(0,fade)*.48;
   leaves.visible=!low;leafMat.opacity=Math.max(0,fade)*.72;

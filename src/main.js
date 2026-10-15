@@ -737,6 +737,7 @@ function tickExpansionActor(e,dt){
   if(expansionJourney.siege&&!e.bossApproachPrepared){keepCrystalBossApproachOpen(expansionJourney.course.walls);expansionTerrain?.sync();e.bossApproachPrepared=true;}
   out=expansionApi.stepExpansionJourney(expansionJourney,dt,{position:e.g.position,player:player.position,walls:expansionJourney.course.walls,activeProjectiles:enemyShots.length,hpRatio:e.hp/e.maxHp});
   e.g.position.x+=out.move.x;e.g.position.z+=out.move.z;collide(e.g.position,.8,before);e.state=out.state;e.takenScale=expansionApi.expansionBossDamageMultiplier(expansionJourney.act,e.state,out.coreOpen);
+  if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.observeExpansionBoss(e,out);
   if(expansionTerrain&&out.terrain.length){expansionTerrain.apply(out.terrain,[{position:player.position,radius:.4},...enemies,...(expansionJourney.siege?expansionJourney.siege.pads.filter(p=>p.kind&&p.hp>0).map(p=>({position:p,radius:.75})):[])]);if(expansionJourney.siege)keepCrystalBossApproachOpen(expansionJourney.course.walls);syncExpansionCrystals();}
   for(const t of out.telegraphs)expansionJourneyView.tell(t);
   if(expansionJourney.siege&&out.events.some(evt=>evt.type==='crystal-regrowth')){let live=0;for(const q of enemies)if(!q.dead&&q.siegeGuard)live++;const guards=crystalBossGuardSpawns(e,out.events,live);for(const spec of guards)spawnExpansionActor(spec);if(guards.length)$('#toast').textContent='재생 습격대가 심장을 노립니다 · 보스와 심장 사이로 이동해 끊으세요';}
@@ -771,6 +772,7 @@ function showExpansionResult(won,ended=true){
  $('#expansion-retry').onclick=()=>isPublic?startPublicExpansionJourney(act):startExpansionJourney(0,act,{siegePreview});$('#expansion-back').onclick=showIntro;
  if(isPublic)$('#expansion-ranking').onclick=()=>showRanking(expansionRankView(act));
  if(typeof focusRunResult==='function'&&typeof runResultReflection==='function')focusRunResult($('#overlay'),{reflection:runResultReflection({won,coreLost:Boolean(expansionJourney.siege?.core?.hp<=0)}),primaryId:'expansion-retry'});
+ if(won&&ended&&expansionJourney.phase==='finished'&&typeof journeyPresentationView!=='undefined')journeyPresentationView.decorateClear($('#overlay'));
  if(!entry)return;
  const before=readAccountProfile(runStorage),key='act'+entry.act,after=recordBestScore(before,key,entry.score);
  if(after.bestScores[key]>before.bestScores[key]&&!writeAccountProfile(runStorage,after))setText($('#expansion-rank-status'),'기기 최고 기록을 저장하지 못했어요.');
@@ -1170,14 +1172,15 @@ function updateJourneySignature(dt){
  journeySignatureContext.siege=expansionJourney?.siege;journeySignatureContext.boss=expansionJourney?.phase==='boss';journeySignatureContext.cleared=roomCleared;
  const out=stepJourneySignature(journeySignature,dt,journeySignatureContext);
  if(typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.observeSkyway(journeySignature);
+ if(typeof journeyPresentation!=='undefined'&&!roomCleared&&journeyPresentationEnabled())journeyPresentation.observeTactics(journeySignature,expansionJourney?.siege);
  if(out.warning)audio.play('bossWarning');
  if(out.damage&&invuln<=0&&shellTime<=0)hitPlayer(out.damage,'storm','폭풍의 항로');
  if(out.repaired){audio.play('harvest');const p=expansionJourney.siege.pads.find(p=>p.id===out.repaired);if(p)vfx.pulse(new V(p.x,.1,p.z),'seed',1.7,.3);}
 }
 function presentJourneySignature(){
- journeySignaturePresentation.siege=expansionJourney?.siege;journeySignaturePresentation.visible=mode==='playing'&&!paused&&!roomCleared&&!survivalSession&&!mirrorSession&&!trainingSession;
+ journeySignaturePresentation.siege=expansionJourney?.siege;journeySignaturePresentation.visible=mode==='playing'&&!paused&&!roomCleared&&!survivalSession&&!mirrorSession&&!trainingSession&&!(expansionJourney?.act==='crosswind'&&expansionJourney.phase==='boss');
  const cue=typeof journeyPresentation!=='undefined'?journeyPresentation.state():null;
- journeySignaturePresentation.hideHint=Boolean(cue?.active&&(cue.kind==='storm'||cue.kind==='opening'));
+ journeySignaturePresentation.hideHint=Boolean(cue?.active&&(cue.kind==='storm'||cue.kind==='opening'||cue.kind==='tailwind'||cue.kind==='night'||cue.kind==='support'||cue.kind==='repair'||cue.kind==='core-alert'));
  journeySignaturePresentation.reducedMotion=typeof journeyReducedMotion!=='undefined'&&journeyReducedMotion;
  journeySignatureView.update(journeySignature,player.position,journeySignaturePresentation);
 }
@@ -1843,7 +1846,7 @@ function damageEnemy(e,amount,chaining=true,critical=false,meta=null){
  if(e.hp<=0&&!e.dead){e.dead=true;if(!e.siegeGuard){kills++;choiceKills++;}combatAnalysis.kill();chargeActive(activeGauge,killCharge(e)*(survivalSession?SURVIVAL.killChargeScale:1));if(!e.survivalKind)vfx.impact(e.g.position,'amber',true);enemyDown(e);}
 }
 function enemyDown(e){perf.event(PE.enemyDeath);
- if(e.expansionActor){if(e.expansionSettled||!e.dead||e.hp>0)return;e.expansionSettled=true;e.onJourneyDefeat?.(e);if(!e.siegeGuard)score+=e.expansionBoss&&expansionChannel==='public'?6000:20;if(e.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory()){paused=true;touch.reset();keys.clear();pauseBuild.show(levels,heldForms);pauseBuild.setSaveStatus('보스 격파를 저장하지 못했어요. 저장을 다시 확인할 때까지 다음 전장을 열지 않습니다.');}releaseEnemy(e);return;}
+ if(e.expansionActor){if(e.expansionSettled||!e.dead||e.hp>0)return;e.expansionSettled=true;e.onJourneyDefeat?.(e);if(!e.siegeGuard)score+=e.expansionBoss&&expansionChannel==='public'?6000:20;if(e.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory()){paused=true;touch.reset();keys.clear();pauseBuild.show(levels,heldForms);pauseBuild.setSaveStatus('보스 격파를 저장하지 못했어요. 저장을 다시 확인할 때까지 다음 전장을 열지 않습니다.');}else if(e.expansionBoss&&typeof journeyPresentation!=='undefined'&&journeyPresentationEnabled())journeyPresentation.defeat(e,e.config.name,expansionChannel==='public'?expansionPublicEntry.campaign.bossWins[expansionCampaignBoss(expansionJourney.act)]:null);releaseEnemy(e);return;}
  if(survivalSession){
   score+=e.survivalScore||500;settleSurvivalKill(survivalSession,{boss:Boolean(e.survivalBoss)});
   if(e.survivalBoss){if(!localInspection&&!survivalSession.lab&&!survivalSession.benchmark&&!developerRun&&!queueSurvivalTitle(survivalSession,e.type,survivalBossOrdinal(survivalSession,e.type),currentBossEpoch()))throw Error('survival-title-queue-full');settleSurvivalTitle();fallen.push({e,t:0,hold:true});invuln=3;$('#toast').textContent=`${survivalAct(survivalSession).boss} 격파 · 조합을 가지고 다음 전장으로 이동합니다`;audio.play('bossDefeat');for(const q of enemyShots)release(q.ob);enemyShots=[];}

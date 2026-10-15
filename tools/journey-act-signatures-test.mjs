@@ -68,5 +68,16 @@ for(const lane of [-5,0,5]){
 }
 signature.phase='storm';view.update(signature,{x:0,z:5},{visible:true});assert.equal(objects[2].scale.x,.14);assert.equal(objects[2].material.color.getHex(),0xb7ecd1);
 signature.phase='quiet';view.update(signature,{x:0,z:5},{visible:true});assert(objects.every(o=>!o.visible),'quiet interval leaves the field clear');
+// Wind points forward; repair fills only inside the existing facility ring.
+wind.tailwind=1;view.update(wind,player,{visible:true});assert.equal(objects[2].position.x,player.x+1.5);assert.equal(objects[2].rotation.z,-Math.PI*3/4);assert.equal(objects[3].rotation.z,-Math.PI/4);
+const repair=fixture(),pad=repair.siege.pads[0];repair.sig.rallyPad=repair.sig.repairPad=pad.id;
+for(const progress of [0,.25,.75,1,2]){
+ repair.sig.repairCharge=R.repairTime*progress;view.update(repair.sig,pad,{visible:true,siege:repair.siege,reducedMotion:true});
+ assert(objects[4].visible&&objects[2].visible);assert.equal(objects[2].rotation.z,0);assert.equal(objects[3].rotation.z,0);
+ const width=1.1*Math.min(1,progress);assert.equal(objects[3].scale.x,width);assert.equal(objects[3].position.x-width/2,pad.x-.55);assert.equal(objects[3].visible,progress>0);
+}
+repair.sig.repairPad=null;view.update(repair.sig,pad,{visible:true,siege:repair.siege});assert(objects[4].visible&&!objects[2].visible&&!objects[3].visible,'support ring remains after repair; bar does not');
+signature.phase='storm';view.update(signature,player,{visible:true});assert.equal(objects[2].rotation.z,0);assert.equal(objects[3].rotation.z,0);assert.equal(objects[3].scale.y,16,'returning to Act 3 resets the shared repair marker');
+assert.deepEqual(objects.map(o=>o.geometry.id),geometryIds);assert.deepEqual(objects.map(o=>o.material.id),materialIds);
 view.hide();assert.equal(root.visible,false);assert.equal(nodes[0].hidden,true);view.dispose();view.dispose();assert.equal(scene.children.length,0);assert(nodes[0].removed);delete globalThis.document;
 console.log('Journey 3/4/5 signatures: storm lanes and dodge, honest front kills, real turret/support/repair, boss support, exact paid checkpoint, no other-mode leak and 20k fixed-geometry updates PASS.');

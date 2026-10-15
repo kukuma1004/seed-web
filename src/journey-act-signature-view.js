@@ -10,7 +10,7 @@ export function createJourneySignatureView(scene){
  const ringGeo=new THREE.RingGeometry(R.rallyRadius-.07,R.rallyRadius,40),ring=new THREE.Mesh(ringGeo,safe);ring.rotation.x=-Math.PI/2;ring.position.y=.1;root.add(ring);
  const hud=document.createElement('div');hud.id='journey-signature';hud.setAttribute('role','status');hud.hidden=true;document.body.append(hud);let text='',disposed=false;
  function update(s,player,{siege=null,visible=false,hideHint=false,reducedMotion=false}={}){
-  if(disposed)return;root.visible=visible&&!!s&&(s.act!=='crystalGorge'||!!siege);hud.hidden=!root.visible||hideHint||s?.act==='crystalGorge'&&siege?.phase==='prep';left.visible=right.visible=edgeA.visible=edgeB.visible=ring.visible=false;if(!root.visible)return;safe.opacity=.6;safe.color.setHex(0xb7ecd1);
+  if(disposed)return;root.visible=visible&&!!s&&(s.act!=='crystalGorge'||!!siege);hud.hidden=!root.visible||hideHint||s?.act==='crystalGorge'&&siege?.phase==='prep';left.visible=right.visible=edgeA.visible=edgeB.visible=ring.visible=false;if(!root.visible)return;safe.opacity=.6;safe.color.setHex(0xb7ecd1);edgeA.rotation.z=edgeB.rotation.z=0;
   const hint=journeySignatureHint(s,siege);if(hint!==text){hud.textContent=hint;text=hint;}
   if(s.act==='skyway'&&s.phase!=='quiet'){
    const low=s.lane-R.stormHalfGap,high=s.lane+R.stormHalfGap;
@@ -21,8 +21,11 @@ export function createJourneySignatureView(scene){
    right.position.set((high+9.3)/2,.09,-.4);right.scale.set(9.3-high,16,1);
    edgeA.position.set(low,.11,-.4);edgeB.position.set(high,.11,-.4);edgeA.scale.set(warning?.08+progress*.05:.14,16,1);edgeB.scale.copy(edgeA.scale);
   }else if(s.act==='crosswind'&&s.tailwind>0){
-   edgeA.visible=edgeB.visible=true;edgeA.position.set(player.x+1.3,.12,player.z);edgeB.position.set(player.x+2,.12,player.z);edgeA.scale.set(.16,1,1);edgeB.scale.set(.16,1,1);
-  }else if(s.act==='crystalGorge'&&s.rallyPad){const p=siege?.pads.find(p=>p.id===s.rallyPad);if(p){ring.visible=true;ring.position.set(p.x,.11,p.z);safe.opacity=s.repairPad?.8:.6;}}
+   edgeA.visible=edgeB.visible=true;edgeA.position.set(player.x+1.5,.12,player.z-.22);edgeB.position.set(player.x+1.5,.12,player.z+.22);edgeA.scale.set(.13,.75,1);edgeB.scale.copy(edgeA.scale);edgeA.rotation.z=-Math.PI*3/4;edgeB.rotation.z=-Math.PI/4;
+  }else if(s.act==='crystalGorge'&&s.rallyPad){const p=siege?.pads.find(p=>p.id===s.rallyPad);if(p){
+   ring.visible=true;ring.position.set(p.x,.11,p.z);safe.opacity=s.repairPad?.8:.6;
+   if(s.repairPad===p.id){const progress=THREE.MathUtils.clamp(s.repairCharge/R.repairTime,0,1),width=1.1*progress;edgeA.visible=true;edgeA.position.set(p.x,.12,p.z+1.1);edgeA.scale.set(1.1,.025,1);edgeB.visible=progress>0;edgeB.position.set(p.x-.55+width/2,.125,p.z+1.1);edgeB.scale.set(width,.1,1);}
+  }}
  }
  return {update,hide(){root.visible=false;hud.hidden=true;},dispose(){if(disposed)return;disposed=true;root.removeFromParent();geo.dispose();ringGeo.dispose();danger.dispose();safe.dispose();hud.remove();}};
 }
