@@ -8,6 +8,13 @@
 .touch-mode #stages i{width:9px}.touch-mode #stages span{width:20px;height:20px;font-size:17px}.touch-mode #boss-hud{top:96px;width:250px;max-width:58vw;font-size:11px}.touch-mode #boss-hud>div{margin:4px 0}.touch-mode #boss-hud small{font-size:9px;line-height:1.25;padding:0 3px}.touch-mode #exit-room{bottom:150px;max-width:70vw;font-size:13px}.touch-mode #toast{top:36%;font-size:12px}
 @media(orientation:portrait){.touch-mode #exit-room{bottom:175px}.touch-mode #boss-hud{top:100px}.touch-mode #toast{top:22%}}
 
+/* Compact desktop windows need the same readable message budget as phones.
+   Leave the touch and survival HUDs' existing placement intact. */
+@media(max-height:500px) and (orientation:landscape){
+ body:not(.touch-mode):not(.survival-mode) #toast{top:max(164px,calc(env(safe-area-inset-top) + 164px));left:50%;transform:translateX(-50%);width:min(220px,calc(100vw - 40px));padding:5px 8px;font-size:11px;line-height:1.4;letter-spacing:.2px;word-break:keep-all;overflow-wrap:anywhere;border-radius:5px;background:#0a191acc}
+ body:not(.touch-mode):not(.survival-mode) #toast:empty{display:none}
+}
+
 #save-exit{position:fixed;z-index:8;left:50%;top:55%;transform:translateX(-50%);padding:15px 22px;background:#173b35;color:#eff6d9;border:1px solid #b3cead;max-width:85vw}#save-exit[hidden]{display:none}.route-options{display:flex;gap:16px}.route-options small{display:block;font-size:12px;margin-top:12px}.replace-options{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;max-width:800px}.replace-options .law-art{width:58px;height:58px;margin:0 auto 8px}.replace-options .primary{padding:12px}.save-note{font-size:11px!important}.route-options strong{font-size:20px}@media(max-width:600px){.route-options{flex-direction:column;gap:4px}.replace-options .primary{font-size:11px;padding:10px}.replace-options .law-art{width:42px;height:42px}}
 .cloud-save-warning{margin:12px 0 0!important;padding:10px 12px;border:1px solid #f2bd746e;border-radius:10px;background:#4c2a1eaa;color:#ffe6c1!important;font-size:12px!important;line-height:1.5!important}.cloud-save-warning button{margin-left:8px;padding:6px 10px;border:1px solid #efc899;border-radius:7px;background:#503223;color:#fff0ce}.cloud-save-warning button:disabled{opacity:.6}
 
