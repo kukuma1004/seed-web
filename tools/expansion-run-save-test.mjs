@@ -49,7 +49,7 @@ console.log('Expansion entry saves: both acts/5 rooms/boss, full build/potions, 
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),handler=source.split('\n').find(line=>line.includes("$('#reroll-laws').onclick="));assert(handler);
 for(const practice of [true,false]){
  const button={},ordinary={id:'ordinary',rerollUsed:false};let writes=0,choices=0;
- const context=vm.createContext({$:()=>button,mode:'cards',rerollUsed:false,survivalSession:null,developerRun:practice,expansionJourney:practice?{}:null,mid:true,actStore:()=>ordinary,readCheckpoint:()=>ordinary,writeCheckpoint:(_,value)=>{writes++;Object.assign(ordinary,value);},cardChoice:()=>choices++});
+ const context=vm.createContext({$:()=>button,current:()=>true,mode:'cards',rerollUsed:false,survivalSession:null,developerRun:practice,expansionJourney:practice?{}:null,mid:true,actStore:()=>ordinary,readCheckpoint:()=>ordinary,writeCheckpoint:(_,value)=>{writes++;Object.assign(ordinary,value);},cardChoice:()=>choices++});
  vm.runInContext(handler,context);button.onclick();assert.equal(writes,practice?0:1);assert.equal(ordinary.rerollUsed,!practice);assert.equal(choices,1);assert(context.rerollUsed);
 }
 console.log('Actual reroll handler: local expansion leaves ordinary account checkpoint untouched; ordinary reroll still persists once.');
