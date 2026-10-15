@@ -1,6 +1,6 @@
 {
   "name": "seed-web",
-  "version": "1.0.88",
+  "version": "1.0.89",
   "type": "module",
   "scripts": {
     "test:adventure-growth": "node tools/adventure-growth-choice-test.mjs && node tools/adventure-tempo-test.mjs && node tools/adventure-lazy-assets-test.mjs && node tools/adventure-sleep-test.mjs && node tools/adventure-contact-motion-test.mjs && node tools/adventure-projectile-sight-test.mjs && node tools/adventure-readability-test.mjs && node tools/adventure-act-events-test.mjs && node tools/adventure-act-event-view-test.mjs",

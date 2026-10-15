@@ -11,11 +11,16 @@ import {MIRROR_CHECKPOINT_KEY,MIRROR_RECORD_KEY,readMirrorCheckpoint,writeMirror
 import {BOSS_PET_KEY,readBossPet,writeBossPet} from '../src/boss-pets.js';
 import {QUALITY_KEY} from '../src/quality.js';
 import {CLOUD_SCHEMA,SYNC_KEYS,collectCloudSnapshot,normalizeCloudSnapshot,mergeCloudSnapshots,mergeGardenProgress,applyRewardGrants,applyCloudSnapshot,clearCloudLocalData,isSyncKey,replacedRuns,readCheckpointBackups,forgetCheckpointBackup,snapshotAdds,CHECKPOINT_BACKUP_KEY} from '../src/cloud-save.js';
-import {createCloudSync} from '../src/cloud-sync.js';
+import {createCloudSync as makeCloudSync} from '../src/cloud-sync.js';
 import {plantTreeSeed,clearTreePlot,craftTreeSeed} from '../src/tree-of-life.js';
 import {puzzleSaveKey,normalizePuzzleProgress,mergePuzzleProgress,readPuzzleProgress,writePuzzleProgress} from '../src/seed-puzzle-progress.js';
 import {createTitleCombatBinding,refreshAdventureTitleHp} from '../src/title-combat-bonuses.js';
 import {titleState} from '../src/titles.js';
+
+// Mocked upload failures schedule real retry timers. Stop every fixture after
+// its assertions so a passing test cannot keep the release suite alive.
+const cloudFixtures=[];
+const createCloudSync=options=>{const cloud=makeCloudSync(options);cloudFixtures.push(cloud);return cloud;};
 
 const memory=initial=>{const data=new Map(Object.entries(initial||{}).map(([k,v])=>[k,String(v)]));return {data,getItem:k=>data.get(k)??null,setItem:(k,v)=>data.set(k,String(v)),removeItem:k=>data.delete(k)};};
 
@@ -521,4 +526,5 @@ const cloudFixture=({read=()=>undefined,onPut=()=>{},beforePut=()=>null}={})=>{
  assert.equal(normalizeAccountProfile({crystalWins:'10'}).crystalWins,0);
 }
 
+for(const cloud of cloudFixtures)cloud.signOutCleanup();
 console.log('Cloud save: allowlist, cross-device merge, idempotent tester rewards, founder seed and safe apply passed.');
