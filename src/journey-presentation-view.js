@@ -2,7 +2,8 @@ import * as THREE from 'three';
 
 // Two open wreath arcs and one six-leaf batch. No texture, lights, postprocess,
 // RAF or per-frame geometry/material creation. Base transfers reuse these same
-// three meshes as a destination ring + six grounded leaf arrows.
+// three meshes as a destination ring + six grounded leaf arrows. Clear-room
+// guidance reuses them too; the leaves indicate direction, not a walkable path.
 export function createJourneyPresentationView(scene,{document:doc=globalThis.document}={}){
  const root=new THREE.Group();root.name='journey-celebration';root.visible=false;scene.add(root);
  const ringGeo=new THREE.RingGeometry(.88,.94,32,1,.16,Math.PI-.32);
@@ -15,12 +16,12 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
  leafGeo.setIndex([6,0,1,6,1,2,6,2,3,6,3,4,6,4,5,6,5,0]);
  const leafMat=new THREE.MeshBasicMaterial({vertexColors:true,color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const leaves=new THREE.InstancedMesh(leafGeo,leafMat,6);leaves.frustumCulled=false;root.add(leaves);
- const pose=new THREE.Object3D();let disposed=false,serial=-1,hudClock=0,opacity=-1,bannerShown=false;
+ const pose=new THREE.Object3D();let disposed=false,serial=-1,hudClock=0,opacity=-1,bannerShown=false,exitCached=false,exitX=NaN,exitZ=NaN,exitRadius=NaN,playerX=NaN,playerZ=NaN;
  const banner=doc.createElement('aside');banner.id='journey-cue';banner.hidden=true;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');banner.setAttribute('aria-atomic','true');
  const kicker=doc.createElement('small'),title=doc.createElement('strong'),detail=doc.createElement('span');banner.append(kicker,title,detail);doc.body.append(banner);
- function hide(){root.visible=false;if(bannerShown){banner.hidden=true;bannerShown=false;}}
+ function hide(){root.visible=false;exitCached=false;if(bannerShown){banner.hidden=true;bannerShown=false;}}
  function update(s,player,visible,reduced=false,low=false,dt=0){
-  if(disposed)return;if(!visible||!s.active&&!s.travel?.active){hide();return;}
+  if(disposed)return;if(!visible||!s.active&&!s.travel?.active&&!s.exitGuide?.active){hide();return;}
   if(serial!==s.serial){serial=s.serial;banner.dataset.kind=s.kind;kicker.textContent=s.kicker;title.textContent=s.title;detail.textContent=s.detail;hudClock=.05;opacity=-1;
    // The legacy fusion toast repeats this same name across the play field.
    // Remove only that exact duplicate; never hide a later danger message.
@@ -34,7 +35,32 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
   if(bannerShown!==showBanner){bannerShown=showBanner;banner.hidden=!showBanner;}
   // Event-driven text, with at most 20Hz opacity changes while a cue is alive.
   hudClock+=Math.min(.1,Math.max(0,dt));if(hudClock>=.05){hudClock=0;const alpha=Math.round(Math.max(0,fade)*100)/100;if(alpha!==opacity){opacity=alpha;banner.style.opacity=String(alpha);}}
-  const world=s.active&&(s.kind==='law'||s.kind==='growth'||s.kind==='defeat'||s.kind==='repair'),travel=s.travel;root.visible=world||Boolean(travel?.active);if(!root.visible)return;
+  const world=s.active&&(s.kind==='law'||s.kind==='growth'||s.kind==='defeat'||s.kind==='repair'),travel=s.travel,exit=s.exitGuide;
+  const guide=exit?.active&&(!s.active||s.kind==='route');
+  root.visible=world||Boolean(travel?.active)||Boolean(guide);if(!root.visible){exitCached=false;return;}
+  if(!world&&!travel?.active){
+   root.position.set(0,0,0);root.rotation.y=0;root.scale.setScalar(1);
+   ringMat.color.setHex(0xe9dfa4);leafMat.color.setHex(0xd3ebba);ringMat.opacity=.5;leafMat.opacity=.6;
+   // The wreath follows the host's real interaction radius. A small leaf fan
+   // near the player points to it without drawing a route through obstacles.
+   for(const arc of arcs){arc.position.set(exit.x,.145,exit.z);arc.scale.setScalar(exit.radius/.94);}
+   const dx=exit.x-player.x,dz=exit.z-player.z,distance=Math.hypot(dx,dz);
+   leaves.visible=!low&&distance>exit.radius+.75;
+   if(leaves.visible){
+    if(!exitCached||exitX!==exit.x||exitZ!==exit.z||exitRadius!==exit.radius||playerX!==player.x||playerZ!==player.z){
+     const ux=dx/distance,uz=dz/distance,heading=Math.atan2(-dx,-dz);
+     for(let i=0;i<6;i++){
+      const row=i>>1,side=i%2?1:-1,forward=.85+row*.3,lateral=side*(.12+(2-row)*.06);
+      pose.position.set(player.x+ux*forward-uz*lateral,.15,player.z+uz*forward+ux*lateral);
+      pose.rotation.set(-Math.PI/2,0,heading+side*.3);pose.scale.setScalar(.56);pose.updateMatrix();leaves.setMatrixAt(i,pose.matrix);
+     }
+     leaves.instanceMatrix.needsUpdate=true;
+     exitX=exit.x;exitZ=exit.z;exitRadius=exit.radius;playerX=player.x;playerZ=player.z;exitCached=true;
+    }
+   }else exitCached=false;
+   return;
+  }
+  exitCached=false;
   if(!world){
    const flight=travel.stage==='flight',progress=travel.age/travel.duration,alpha=flight?1:Math.max(0,1-progress);
    root.position.set(0,0,0);root.rotation.y=0;root.scale.setScalar(1);ringMat.color.setHex(0xe9dfa4);leafMat.color.setHex(0xd3ebba);

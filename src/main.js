@@ -77,7 +77,7 @@ import {captureSurvivalObjectiveSnapshot} from './survival-objective.js';
 import {defenseObjectiveEligible} from './defense-objective.js';
 import {expansionJourneyResult,expansionRankView} from './expansion-journey-result.js';
 import {expansionActorArt,expansionEnemyArt} from './expansion-actor-art.js';
-import {expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,journeyRouteCue} from './journey-purpose.js';
+import {expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,journeyRouteCue,journeyExitButtonLabel} from './journey-purpose.js';
 let expansionApi=expansionRuntime,survivalExpansion=null;
 let survivalSiegeApi=null,survivalSiege=null,survivalSiegeOwner=null,survivalSiegeInspectAt=-1;
 import {createContactShadows} from './contact-shadows.js';
@@ -470,13 +470,16 @@ const journeyPresentationView=createJourneyPresentationView(scene);
 const journeyReducedMotion=typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches;
 function journeyPresentationEnabled(){return journeyPresentationContext(region,mode,survivalSession,mirrorSession,trainingSession,expansionJourney);}
 function presentJourneyTransition(){
+ journeyPresentation.trackExit(null);
  if(paused||survivalSession||mirrorSession||trainingSession)return;
  if(mode==='ready'&&expansionJourney){audio.setMusicIntensity?.(.45);return;}
  if(!journeyPresentationContext(region,'playing',null,null,null,expansionJourney))return;
  if(mode==='dead'){audio.setMusicIntensity?.(.45);return;}
  if(mode!=='playing'&&mode!=='cards'&&mode!=='forms'&&mode!=='relics'&&mode!=='dash-evolution'&&mode!=='evolving')return;
  audio.setMusicIntensity?.(roomCleared?.65:expansionJourney?.siege?.phase==='prep'?.7:1);
- if(!roomCleared||!exitOpen||mode!=='playing'||!journeyPresentation.canGuideExit())return;
+ if(!roomCleared||!exitOpen||mode!=='playing'||!expansionJourney&&(!Number.isInteger(stage)||stage<0||stage>4))return;
+ journeyPresentation.trackExit(arena.exit||EXIT,Boolean(expansionJourney)||region!=='skyway');
+ if(!journeyPresentation.canGuideExit())return;
  const next=journeyRouteCue({region,stage,cycle,bossName:finalBossName(),bossAhead:finalBossAhead(),bossWins:austinsDefeated,expansion:expansionJourney,campaign:expansionPublicEntry?.campaign,publicExpansion:expansionChannel==='public'});
  if(next)journeyPresentation.guideExit(next);
 }
@@ -3052,7 +3055,7 @@ function presentFrame(time){
  renderItemBar();renderActiveButton($('#active-skill'),{forms:heldForms,gauge:activeGauge,live:mode==='playing'&&!paused,touch:document.body.classList.contains('touch-mode')});
  const readyNow=mode==='playing'&&!paused&&!activeGauge.plan&&activeGauge.cooldown<=0&&activeGauge.value>=ACTIVE.max&&activeState(heldForms).state!=='LOCKED';if(readyNow&&!activeReadyAnnounced)audio.play('ultimateReady');activeReadyAnnounced=readyNow;
  if(mode!=='playing'||paused)return;
- const wardenGroup=enemies.filter(e=>(e.type==='warden'||e.type==='act2warden'||e.type==='act3warden')&&!e.dead&&(stage===4||!e.elite)),boss=enemies.find(e=>e.expansionBoss||e.type==='mirrorseed'||e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier')||wardenGroup.find(e=>e.moveName)||wardenGroup.find(e=>!e.duoSupport&&!e.support)||wardenGroup[0];if(boss)renderBossHud(boss,(boss.expansionBoss||boss.type==='mirrorseed'||boss.type==='austin'||boss.type==='alwaysbeginner'||boss.type==='tempestcarrier')?[boss]:wardenGroup);else setHidden($('#boss-hud'),true);const nearExit=!mirrorSession&&canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});setHidden($('#exit-room'),!nearExit);setText($('#exit-room'),expansionJourney?expansionExitText(expansionJourney,expansionChannel==='public'?expansionPublicEntry?.campaign:null):stage===4?(finalBossAhead()?'최종 보스에게 · E':'다음 여정으로 · E'):touch.enabled?'다음 방으로':'다음 방으로 · E');gateHalo.rotation.y=time*.6;setWidth($('#hpbar'),(hp/maxPlayerHp()*100).toFixed(1)+'%');setText($('#hptext'),`${displayHp(hp)} / ${displayHp(maxPlayerHp())}`);setText($('#dashname'),`◇  ${dashState.id?DASH_EVOLUTIONS[dashState.id].name:'회피'}`);setWidth($('#dashbar'),(dm.fill*100).toFixed(1)+'%');setText($('#dashtext'),dashLock>0?'봉인 '+dashLock.toFixed(1)+'s':dm.maxCharges>1?`${dm.charges}/${dm.maxCharges}${dm.charges<dm.maxCharges?' · '+dm.recharge.toFixed(1)+'s':''}`:dm.ready?'준비':dm.recharge.toFixed(1)+'s');
+ const wardenGroup=enemies.filter(e=>(e.type==='warden'||e.type==='act2warden'||e.type==='act3warden')&&!e.dead&&(stage===4||!e.elite)),boss=enemies.find(e=>e.expansionBoss||e.type==='mirrorseed'||e.type==='austin'||e.type==='alwaysbeginner'||e.type==='tempestcarrier')||wardenGroup.find(e=>e.moveName)||wardenGroup.find(e=>!e.duoSupport&&!e.support)||wardenGroup[0];if(boss)renderBossHud(boss,(boss.expansionBoss||boss.type==='mirrorseed'||boss.type==='austin'||boss.type==='alwaysbeginner'||boss.type==='tempestcarrier')?[boss]:wardenGroup);else setHidden($('#boss-hud'),true);const nearExit=!mirrorSession&&canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});setHidden($('#exit-room'),!nearExit);setText($('#exit-room'),journeyExitButtonLabel({stage,bossAhead:finalBossAhead(),touch:touch.enabled,expansion:expansionJourney,campaign:expansionChannel==='public'?expansionPublicEntry?.campaign:null}));gateHalo.rotation.y=time*.6;setWidth($('#hpbar'),(hp/maxPlayerHp()*100).toFixed(1)+'%');setText($('#hptext'),`${displayHp(hp)} / ${displayHp(maxPlayerHp())}`);setText($('#dashname'),`◇  ${dashState.id?DASH_EVOLUTIONS[dashState.id].name:'회피'}`);setWidth($('#dashbar'),(dm.fill*100).toFixed(1)+'%');setText($('#dashtext'),dashLock>0?'봉인 '+dashLock.toFixed(1)+'s':dm.maxCharges>1?`${dm.charges}/${dm.maxCharges}${dm.charges<dm.maxCharges?' · '+dm.recharge.toFixed(1)+'s':''}`:dm.ready?'준비':dm.recharge.toFixed(1)+'s');
 }
 // The item bar is rebuilt only when counts or the selection change, never every frame.
 function renderItemBar(){

@@ -50,7 +50,7 @@ e.step(.1,false);assert.equal(s.age,0,'pause cannot expire the route');
 
 function host(){
  const controller=createJourneyPresentation(),levels=[];
- const c={region:'garden',stage:0,cycle:0,austinsDefeated:0,expansionJourney:null,expansionPublicEntry:null,expansionChannel:'inspection',roomCleared:false,exitOpen:false,mode:'playing',paused:false,survivalSession:null,mirrorSession:null,trainingSession:null,
+ const c={arena:{exit:{x:0,z:-6.2,radius:1.65}},EXIT:{x:0,z:-6.2,radius:1.65},region:'garden',stage:0,cycle:0,austinsDefeated:0,expansionJourney:null,expansionPublicEntry:null,expansionChannel:'inspection',roomCleared:false,exitOpen:false,mode:'playing',paused:false,survivalSession:null,mirrorSession:null,trainingSession:null,
   journeyPresentation:controller,journeyPresentationContext,journeyRouteCue,finalBossName:()=> '실제 보스',finalBossAhead:()=>false,audio:{setMusicIntensity:n=>levels.push(n)}};
  vm.createContext(c);vm.runInContext(hostSource,c);return {c,controller,levels};
 }

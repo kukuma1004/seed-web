@@ -39,6 +39,11 @@ export function expansionExitText(journey,campaign=null){
  return wins>=3?'보스 3회 격파 · 완주 정산 · E':`다음 순환으로 · 보스 ${wins}/3 · E`;
 }
 
+export function journeyExitButtonLabel({stage=0,bossAhead=false,touch=false,expansion=null,campaign=null}={}){
+ const label=expansion?expansionExitText(expansion,campaign):stage===4?(bossAhead?'최종 보스에게 · E':'다음 여정으로 · E'):'다음 방으로 · E';
+ return touch?label.replace(/ · E$/,''):label;
+}
+
 // The final siege arena keeps one horizontal approach to the heart. The
 // surrounding crystals remain cover; regrowth must not seal this route.
 export function keepCrystalBossApproachOpen(walls){
