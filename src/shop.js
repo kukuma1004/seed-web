@@ -9,6 +9,7 @@ export const SHOP_KEY='seed-shop-v1';
 export const SHOP_STOCK_MAX=999;
 export const TONIC_CARRY_MAX=5;
 export const SHOP_PRICES=Object.freeze({1:200,10:1500});
+export const SHOP_PRODUCTS=Object.freeze(['tonic','wind']);
 // 처음 오는 사람도 물약 하나는 살 수 있게 시작 자금을 준다(첫 판을 맨손으로 시작하지 않도록).
 export const STARTING_COINS=200;
 export const SHOP_PURCHASE_LOG=60;
@@ -79,12 +80,18 @@ export function stashItem(storage,id,n=1){
 }
 // 산 만큼은 가져가기에도 더한다(사자마자 가져가고 싶은 경우가 대부분). 줄이는 건 보관함에서.
 export function buyTonics(storage,n){
- const current=readShop(storage),price=SHOP_PRICES[n];
+ return buyShopItem(storage,'tonic',n);
+}
+export function buyShopItem(storage,id,n){
+ const current=readShop(storage);
+ if(!SHOP_PRODUCTS.includes(id))return {ok:false,reason:'item',shop:current};
+ const price=Number.isInteger(n)&&Object.hasOwn(SHOP_PRICES,n)?SHOP_PRICES[n]:0;
  if(!price)return {ok:false,reason:'count',shop:current};
- if(current.stash.tonic+n>SHOP_STOCK_MAX)return {ok:false,reason:'full',shop:current};
+ if(current.stash[id]+n>SHOP_STOCK_MAX)return {ok:false,reason:'full',shop:current};
  if(current.coins<price)return {ok:false,reason:'coins',shop:current};
- current.coins-=price;current.stash.tonic+=n;current.carry.tonic+=n;writeShop(storage,current);
- return {ok:true,count:n,price,shop:readShop(storage)};
+ const next={...current,coins:current.coins-price,stash:{...current.stash,[id]:current.stash[id]+n},carry:{...current.carry,[id]:current.carry[id]+n}};
+ if(!writeShop(storage,next))return {ok:false,reason:'save',shop:current};
+ return {ok:true,id,count:n,price,shop:readShop(storage)};
 }
 // 가져갈 개수 고르기. 보관한 만큼, 한 판 가방에 들어가는 만큼까지만.
 export function setCarry(storage,id,n){
@@ -104,6 +111,26 @@ export function claimCarry(storage){
  }
  writeShop(storage,current);
  return taken;
+}
+// Expansion departures already hold their save lease. Reserve supplies only
+// for that synchronous first-checkpoint attempt and return them if it fails.
+// Continuing an accepted run never calls this function.
+export function withDepartureSupplies(storage,accept){
+ if(typeof accept!=='function')return {ok:false,reason:'entry',restored:true};
+ const before=readShop(storage),items={};
+ for(const id of STASH_ORDER){const n=Math.min(before.carry[id],before.stash[id]);if(n)items[id]=n;}
+ const ids=Object.keys(items);
+ if(ids.length){
+  const reserved={...before,stash:{...before.stash}};
+  for(const id of ids)reserved.stash[id]-=items[id];
+  if(!writeShop(storage,reserved))return {ok:false,reason:'save',restored:true};
+ }
+ let accepted=false;try{accepted=accept(items)===true;}catch{}
+ if(accepted)return {ok:true,items};
+ if(!ids.length)return {ok:false,reason:'entry',restored:true};
+ const restored=readShop(storage);
+ for(const id of ids){restored.stash[id]=Math.min(STASH_ITEMS[id].max,restored.stash[id]+items[id]);restored.carry[id]=before.carry[id];}
+ return {ok:false,reason:'entry',restored:writeShop(storage,restored)};
 }
 // 한 번만 주는 선물. 같은 이름의 선물은 다시 주지 않는다. 받은 선물은 가져가기에도 넣어 둔다.
 // 여러 물건을 한 선물로(선물 id 하나로 한 번만). 보관함 상한을 넘는 몫은 버린다.

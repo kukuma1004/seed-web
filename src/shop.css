@@ -80,3 +80,46 @@
 .shop-panel{touch-action:pan-y;overscroll-behavior:contain}
 .shop-panel button{min-height:44px}
 .shop-panel #shop-back{min-height:44px}
+body.menu-mode:has(.shop-panel) #app-actions{top:max(8px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right))}
+
+/* Two real potion choices; only the contents scroll, never the return action. */
+.menu-panel.shop-panel{left:50%;top:50%;bottom:auto;transform:translate(-50%,-50%);width:min(860px,94vw)!important;height:min(680px,94dvh);max-height:94dvh;padding:20px;gap:8px;justify-content:flex-start;overflow:hidden;border:1px solid #b3c38e80;border-radius:12px;background:linear-gradient(145deg,#102b29f2,#081b20f5)}
+.shop-heading{flex:none;display:flex;align-items:center;justify-content:space-between;gap:14px;text-align:left}
+.shop-heading h2{font-size:28px!important;letter-spacing:2px!important;margin:2px 0!important}
+.shop-heading .eyebrow{margin:0!important;font-size:10px!important;letter-spacing:2px}
+.shop-heading .shop-wallet{flex:none;display:flex;flex-direction:column;align-items:flex-end;gap:2px;margin:0;padding:7px 12px}
+.shop-heading .shop-wallet span{font-size:11px}.shop-heading .shop-wallet strong{font-size:22px;white-space:nowrap}
+.shop-panel>.shop-message{flex:none;min-height:18px;margin:0!important;line-height:1.45!important;font-size:12px!important;text-align:left;letter-spacing:0;outline-offset:2px}
+.shop-scroll{flex:1;min-height:0;overflow:auto;overscroll-behavior:contain;padding:2px 4px 6px;scrollbar-width:thin;scrollbar-color:#ac9967 #071c20}
+.shop-panel .shop-columns{display:flex;flex-direction:column;gap:12px}
+.shop-products{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.shop-products .shop-product{min-width:0;padding:14px;border-radius:8px;text-align:left}
+.shop-products .shop-product-wind{border-color:#85d7bba0;background:linear-gradient(145deg,#193c31,#102323)}
+.shop-products .shop-product-art{justify-content:flex-start;gap:12px}.shop-products .potion-icon{width:52px;height:52px;flex:none}
+.shop-products .shop-product h3{font-size:18px}.shop-products .shop-product p{font-size:12px!important;line-height:1.5!important;letter-spacing:0}
+.shop-products .shop-stock{margin:8px 0!important;color:#d8e6bc!important;font-size:11px!important}
+.shop-products .shop-buy button{min-height:48px;padding:7px;border-radius:6px}
+.shop-buy button:focus-visible,.stash-carry button:focus-visible,#shop-back:focus-visible{outline:3px solid #f3dfa5;outline-offset:2px}
+.shop-panel .shop-stash ul{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 18px}
+.shop-panel .stash-row{min-width:0;min-height:48px}.shop-panel .stash-carry button{width:44px;height:44px;min-height:44px}
+.shop-panel .stash-name small{line-height:1.4;overflow-wrap:anywhere}
+.shop-footer{flex:none;border-top:1px solid #b3c38e44;padding-top:8px}
+.shop-panel .shop-footer #shop-back{width:100%;margin:0;min-height:44px;justify-content:center;padding:8px 16px}
+@media(max-height:500px) and (orientation:landscape){
+ .menu-panel.shop-panel{padding:46px 12px 8px;gap:4px}
+ .shop-heading h2{font-size:20px!important}.shop-heading .eyebrow{display:none}
+ .shop-heading .shop-wallet{padding:3px 9px;flex-direction:row;align-items:center;gap:8px}.shop-heading .shop-wallet strong{font-size:17px}
+ .shop-panel>.shop-message{min-height:15px;font-size:10px!important}
+ .shop-products{gap:8px}.shop-products .shop-product{padding:8px}
+ .shop-products .potion-icon{width:34px;height:34px}.shop-products .shop-product-art{gap:8px}
+ .shop-products .shop-product h3{font-size:14px}.shop-products .shop-product p{font-size:10px!important}
+ .shop-products .shop-stock{margin:5px 0!important;font-size:10px!important}
+ .shop-products .shop-buy button{min-height:44px;padding:5px}.shop-products .shop-buy button strong{font-size:12px}.shop-products .shop-buy button small{font-size:10px}
+ .shop-panel .shop-stash ul{gap:7px 12px}.shop-panel .stash-row{gap:6px}.shop-panel .stash-name small{font-size:10px}
+ .shop-footer{padding-top:4px}
+}
+@media(max-width:480px) and (min-height:501px){
+ .menu-panel.shop-panel{padding:52px 12px 10px}
+ .shop-heading h2{font-size:23px!important}.shop-heading .shop-wallet strong{font-size:18px}
+ .shop-products{grid-template-columns:1fr}.shop-panel .shop-stash ul{grid-template-columns:1fr}
+}

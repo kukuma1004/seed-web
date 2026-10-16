@@ -252,3 +252,19 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
  .dungeon-other-toggle{gap:10px}
  .dungeon-other-hint{font-size:11px}
 }
+
+/* Departure supplies stay visible beside the act heading, outside its scroll. */
+.journey-panel .journey-heading{display:flex;align-items:flex-end;justify-content:space-between;gap:14px;padding-right:0;min-height:92px}
+.journey-heading-copy{min-width:0}
+.journey-panel .journey-heading .journey-shop{width:auto;max-width:48%;min-height:56px;flex:none;display:grid;grid-template-columns:34px minmax(0,1fr) 12px;gap:10px;margin:0!important;padding:9px 12px!important;border-color:#dfcf8caa;border-radius:8px;background:linear-gradient(120deg,#284c3cef,#102e2ded)}
+.journey-heading .journey-shop .potion-icon{width:34px;height:34px;flex:none}
+.journey-heading .journey-shop>span{margin-left:0}
+.journey-shop-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
+.journey-heading .journey-shop strong{font-size:16px;line-height:1.25}
+.journey-heading .journey-shop small{font-size:11px;line-height:1.4;letter-spacing:0;overflow-wrap:anywhere}
+@media(max-height:500px) and (orientation:landscape){
+ .journey-panel .journey-heading{min-height:92px}
+ .journey-panel .journey-heading .journey-shop{min-height:48px;padding:6px 10px!important;grid-template-columns:30px minmax(0,1fr) 10px;gap:8px}
+ .journey-heading .journey-shop .potion-icon{width:30px;height:30px}
+ .journey-heading .journey-shop strong{font-size:14px}
+}

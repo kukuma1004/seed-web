@@ -15,6 +15,7 @@ import {levelsToSave,levelsFromSave} from '../src/progression.js';
 import {mutationsToSave,mutationsFromSave} from '../src/mutations.js';
 import {createDashState} from '../src/dash-evolution.js';
 import {emptyInventory,startingInventory,normalizeInventory,addItem} from '../src/inventory.js';
+import {withDepartureSupplies,writeShop,readShop} from '../src/shop.js';
 import {normalizeRunBonuses} from '../src/run-bonuses.js';
 import {createActiveGauge} from '../src/actives.js';
 import {createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS} from '../src/expansion-public-campaign.js';
@@ -38,7 +39,7 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
  const fetchImpl=async(url,o)=>{if(fetchFail)throw Error('offline');assert.match(url,/seedExpansionSaves\/owner-A\/(crosswind|crystalGorge)\.json/);if(o.method==='PUT'){stats.puts++;if(o.headers['if-match']!==String(etag))return {ok:false,status:412};remote=JSON.parse(o.body);etag++;return {ok:true,status:200};}stats.gets++;const value=clone(remote),tag=String(etag);if(getHook){const hook=getHook;getHook=null;await hook();}return {ok:true,status:200,json:async()=>value,headers:{get:()=>tag}};};
  const c=vm.createContext({expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,bossRecordReady:()=>true,protectJourneyBossReceipts:()=>true,account:{user:()=>({uid:'owner-A'})},journeyRunId,currentJourneyOwner:null,currentJourneyRunId:null,pendingJourneyBossTitles:[],__rules:acts,__view:{},console,setTimeout,clearTimeout,Promise,localInspection:inspection,expansionLaunch:0,expansionApi:acts,expansionOwner:()=>owner,
   expansionSaveLease:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionSaveOwner:null,expansionEntry:null,expansionJourney:null,expansionPendingBossCheckpoint:null,
-  rawStorage:storage,currentBossEpoch:()=>null,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountObjectiveEligible,expansionAccountExitCheckpoint,createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS,awardModeBoss:()=>true,
+  rawStorage:storage,withDepartureSupplies,currentBossEpoch:()=>null,createExpansionSaveStore,createExpansionEntry,expansionExitCheckpoint,createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAccountEligible,expansionAccountObjectiveEligible,expansionAccountExitCheckpoint,createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS,awardModeBoss:()=>true,
   createExpansionAccountSync:opts=>createExpansionAccountSync({...opts,fetchImpl}),account:{user:()=>({uid:owner,isAnonymous:anonymous}),tokenSession:async()=>({uid:owner,idToken:'token'})},FIREBASE_APP:{databaseURL:'https://example.invalid'},
   acquireExpansionSaveLease:(act,id)=>acquireExpansionSaveLease(act,id,{locks:manager}),expansionCrystalTexture:{},expansionJourneyView:{setActive(){}},scene:{},stone:{},prepareExpansionEnvironment:prepare,prepareExpansionCover:async()=>{},
   mirrorSession:null,survivalSession:null,survivalSiege:null,survivalSiegeOwner:null,trainingSession:null,developerRun:false,labSafe:false,startRegion:'garden',region:'garden',maintenanceOn:false,gameplayPaused:()=>false,showSeasonPause(){},showMaintenance(){},showIntro(){c.mode='ready';},isAct2:r=>r==='stadium',isAct3:r=>r==='skyway',
@@ -63,6 +64,32 @@ function fixture({acts=released,manager=locks(),prepare=async()=>{},inspection=f
 // from legacy three-circuit speed and does not claim five-win cloud merging.
 {const c=vm.createContext({expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,bossRecordReady:()=>true,protectJourneyBossReceipts:()=>true,account:{user:()=>({uid:'owner-A'})},journeyRunId,currentJourneyOwner:null,currentJourneyRunId:null,pendingJourneyBossTitles:[],survivalClock:n=>String(n)});vm.runInContext(source.slice(source.indexOf('function survivalClearRecordLabel('),source.indexOf('const packSurvivalActor=')),c);const r={wins:7,fastestClear:600,fiveWins:1,fastestFiveClear:960};assert.equal(c.survivalClearRecordLabel(r,true),'다섯 막 완주 1회 · 최단 다섯 막 완주 960');assert.equal(c.survivalClearRecordLabel(r),'세 막 완주 7회 · 최단 세 막 완주 600');assert.equal(c.survivalClearRecordLabel({wins:7,fastestClear:600},true),'다섯 막 완주 0회');assert.match(c.survivalLocalClearHistory(r),/이 기기 다섯 막/);}
 const tick=()=>new Promise(r=>setImmediate(r));
+// Bought departure supplies enter the first accepted public room in both acts.
+// A resume keeps spent inventory and never draws again from the departure box.
+for(const act of ['crosswind','crystalGorge']){
+ const f=fixture();writeShop(f.storage,{coins:500,stash:{wind:8,tonic:3},carry:{wind:3,tonic:1}});
+ assert(await f.c.startPublicExpansionJourney(act));
+ assert.equal(f.c.inventory.wind,3);assert.equal(f.c.inventory.tonic,1);
+ assert.equal(f.getStore(act).read().entry.run.inventory.wind,3);
+ assert.equal(readShop(f.storage).stash.wind,5);assert.equal(readShop(f.storage).stash.tonic,2);
+ f.c.inventory.wind--;assert(f.c.saveExpansionLeave());await f.c.syncPublicExpansion();
+ const stock=f.storage.getItem('seed-shop-v1');
+ assert(await f.c.startPublicExpansionJourney(act,{resume:true}));
+ assert.equal(f.c.inventory.wind,2);assert.equal(f.storage.getItem('seed-shop-v1'),stock);
+ await f.c.releaseExpansionSaveLease();
+}
+// A real initial checkpoint write failure returns reserved supplies and leaves
+// the previous act1 save intact, without granting a public saved inventory.
+for(const act of ['crosswind','crystalGorge']){
+ const f=fixture();writeShop(f.storage,{coins:500,stash:{wind:8},carry:{wind:3}});
+ const stock=f.storage.getItem('seed-shop-v1'),set=f.storage.setItem;
+ f.storage.setItem=function(key,value){if(key===expansionAccountSaveKey('owner-A',act))throw Error('checkpoint quota');return set.call(this,key,value);};
+ assert.equal(await f.c.startPublicExpansionJourney(act),false);
+ assert.equal(f.storage.getItem('seed-shop-v1'),stock);
+ assert.equal(f.getStore(act).read(),null);assert.equal(f.storage.getItem('seed-run-checkpoint-v1'),'original act1 bytes');
+ assert.equal(f.c.expansionJourney,null);assert.equal(f.c.mode,'ready');
+}
+console.log('Shop departure: actual 4/5 launcher carries bought supplies, durable first inventory, attrition/resume without re-claim, checkpoint-failure rollback PASS. Node host with mock cloud/locks.');
 // The original ordinary journey still clears its own entry and consumes its
 // own carry exactly once; only the explicit expansion reset bypasses them.
 {const f=fixture();f.c.restart();assert.equal(f.stats.clear,1);assert.equal(f.stats.carry,1);assert.deepEqual(f.stats.telemetry,[1]);assert.equal(f.stats.gardenWaves,1);assert.equal(f.c.inventory.tonic,startingInventory().tonic+1);}

@@ -130,7 +130,7 @@ import {MUTATIONS,RUNE,TUNE,MAX_SHOTS,parseMutationChoice,withMutationOffer,appl
  mutationsToSave,mutationsFromSave,mutationLabel,reflectBounceSpeed,chainRange,chainFalloff,fragmentSpeedScale,fragmentExtraLife} from './mutations.js';
 import {buildRecord,parseBuild,bossText,buildText} from './ranking-build.js';
 import {ITEMS,ITEM_ORDER,emptyInventory,startingInventory,normalizeInventory,addItem,useItem,tryRevive,austinDrops,goldenFruitPotion,turretPotionDrop,nextHeld,heldItems,usable} from './inventory.js';
-import {SHOP_STOCK_MAX,SHOP_PRICES,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,spendCoins,buyTonics,setCarry,claimCarry,grantGift,grantGiftSet,stashItem} from './shop.js';
+import {SHOP_STOCK_MAX,SHOP_PRICES,SHOP_PRODUCTS,STASH_ITEMS,STASH_ORDER,readShop,earnCoins,spendCoins,buyShopItem,setCarry,claimCarry,carryTotal,withDepartureSupplies,grantGift,grantGiftSet,stashItem} from './shop.js';
 import {SUPPORT_RELEASED,SUPPORT_PRODUCTS,supportRewardLines,supportPriceLabel,supportRoom} from './support.js';
 import {createBilling,completeSupportPurchase,recoverSupportPurchases} from './billing.js';
 import './shop.css';
@@ -702,8 +702,12 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   expansionSaveLease=lease;expansionSaveOwner=owner;expansionChannel=publicRun?'public':'inspection';expansionPublicSync=publicSync;expansionPublicEntry=publicRun&&saved?record:null;expansionFreshExpected=publicRun&&!saved?record:null;expansionPendingBossCheckpoint=null;
   expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;survivalSiege=null;survivalSiegeOwner=null;trainingSession=null;developerRun=!publicRun;labSafe=false;startRegion='garden';restart(saved?.run,{expansion:true});
   for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
-  expansionJourney=bossPreview?inspectionPreview.createJourneyBossInspection(act):saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413,{siege:siegePreview||!!objective,objective,quickPrep:siegePreview});stage=expansionJourney.room;mode='playing';paused=false;wave();
-  if(publicRun&&!expansionEntry)throw Error('checkpoint');
+  expansionJourney=bossPreview?inspectionPreview.createJourneyBossInspection(act):saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413,{siege:siegePreview||!!objective,objective,quickPrep:siegePreview});
+  const openRoom=()=>{stage=expansionJourney.room;mode='playing';paused=false;wave();return !publicRun||Boolean(expansionEntry);};
+  if(publicRun&&!saved){
+   const departure=withDepartureSupplies(runStorage,items=>{for(const [id,n] of Object.entries(items))addItem(inventory,id,n);return openRoom();});
+   if(!departure.ok)throw Error('departure');
+  }else if(!openRoom())throw Error('checkpoint');
   if(saved)player.position.fromArray(saved.position);
   if(publicRun)void webTelemetry.playStart(rules.EXPANSION_ACTS[act].number);
   $('#toast').textContent=bossPreview?(act==='crosswind'?'4막':'5막')+' 로컬 보스 시연 · 구간 생략 · 저장/보상/랭킹 제외':siegePreview?'5막 거점 방어 로컬 시연 · 수정 채집 → 시설 건설 → 습격':expansionPurposeHint(expansionJourney,rules.EXPANSION_ACTS[act].rooms[stage].hint);return true;
@@ -2392,31 +2396,39 @@ async function recoverSupport(){
  if(granted.length){$('#toast').textContent=`지난 후원 ${granted.length}건을 보관함에 넣었어요 · 고마워요!`;if(document.querySelector('.shop-panel'))showShop(lastShopBack);}
 }
 function showShop(back=showIntro,message=''){
+ const scrollTop=$('.shop-scroll')?.scrollTop||0,owner=account.user()?.uid||'guest';
  lastShopBack=back;mode='ready';touch.reset();keys.clear();
  $('#overlay').classList.remove('ranking-overlay','garden-mode');$('#overlay').classList.add('intro','menu-screen');$('#overlay').hidden=false;
- const shop=readShop(runStorage),oneDisabled=shop.coins<SHOP_PRICES[1]||shop.stash.tonic>=SHOP_STOCK_MAX,bundleDisabled=shop.coins<SHOP_PRICES[10]||shop.stash.tonic+10>SHOP_STOCK_MAX;
+ const shop=readShop(runStorage);
+ const products=SHOP_PRODUCTS.map(id=>`<section class="shop-product shop-product-${id}" aria-labelledby="shop-${id}-title"><div class="shop-product-art">${itemArt(id)}<div><h3 id="shop-${id}-title">${ITEMS[id].name}</h3><p>${ITEMS[id].desc}</p></div></div><p class="shop-stock">보관 ${shop.stash[id]}개 · 가져갈 물약 ${shop.carry[id]}/${STASH_ITEMS[id].carryMax}개</p><div class="shop-buy">${[1,10].map(n=>`<button type="button" id="buy-${id==='tonic'?'':id+'-'}${n===1?'one':'ten'}" data-buy-item="${id}" data-count="${n}" aria-label="${ITEMS[id].name} ${n}개 구매 · ${SHOP_PRICES[n].toLocaleString('ko-KR')} JP" ${shop.coins<SHOP_PRICES[n]||shop.stash[id]+n>SHOP_STOCK_MAX?'disabled':''}><strong>${n}개 · ${SHOP_PRICES[n].toLocaleString('ko-KR')} JP</strong><small>${n===10?'25% 할인 묶음':'낱개 구매'}</small></button>`).join('')}</div></section>`).join('');
  // 보관함: 가진 물약마다 새 여정에 가져갈 개수를 − + 로 고른다. 많이 있어도 0개로 두면 안 가져간다.
- const stashRows=STASH_ORDER.filter(id=>id==='tonic'||shop.stash[id]).map(id=>{
+ const stashRows=STASH_ORDER.filter(id=>SHOP_PRODUCTS.includes(id)||shop.stash[id]).map(id=>{
   const most=Math.min(shop.stash[id],STASH_ITEMS[id].carryMax);
   return `<li class="stash-row">${itemArt(id)}<div class="stash-name"><strong>${ITEMS[id].name}</strong><small>보관 ${shop.stash[id]}개 · 출발 최대 ${STASH_ITEMS[id].carryMax}개</small></div>`
    +`<div class="stash-carry" role="group" aria-label="${ITEMS[id].name} 가져갈 개수"><button type="button" data-carry="${id}" data-step="-1" ${shop.carry[id]<=0?'disabled':''} aria-label="하나 덜">−</button><b>${shop.carry[id]}</b><button type="button" data-carry="${id}" data-step="1" ${shop.carry[id]>=most?'disabled':''} aria-label="하나 더">+</button></div></li>`;
  }).join('');
- $('#overlay').innerHTML=`<div class="menu-panel shop-panel"><p class="eyebrow">SEED · 출발 준비</p><h2>물약 상점</h2>
+ $('#overlay').innerHTML=`<div class="menu-panel shop-panel"><header class="shop-heading"><div><p class="eyebrow">SEED · 출발 준비</p><h2>물약 상점</h2></div>
   <div class="shop-wallet"><span>보유 JP</span><strong>${shop.coins.toLocaleString('ko-KR')} JP</strong></div>
-  <div class="shop-columns">
-  <section class="shop-product"><div class="shop-product-art">${itemArt('tonic')}<div><h3>${ITEMS.tonic.name}</h3><p>생명력 +${ITEMS.tonic.heal} · 보관 최대 ${SHOP_STOCK_MAX}개</p></div></div>
-   <div class="shop-buy"><button id="buy-one" ${oneDisabled?'disabled':''}><strong>1개 · ${SHOP_PRICES[1].toLocaleString('ko-KR')} JP</strong><small>낱개 구매</small></button><button id="buy-ten" ${bundleDisabled?'disabled':''}><strong>10개 · ${SHOP_PRICES[10].toLocaleString('ko-KR')} JP</strong><small>25% 할인 묶음</small></button></div>
-   <p class="shop-message" aria-live="polite">${escapeHtml(message)}</p></section>
+  </header><p id="shop-message" class="shop-message" role="status" tabindex="-1">${escapeHtml(message)}</p>
+  <div class="shop-scroll"><div class="shop-columns"><section class="shop-products" aria-label="물약 구매">${products}</section>
   <section class="shop-stash"><h3>보관함 · 새 여정에 가져갈 개수</h3><ul>${stashRows}</ul>
    <p class="stash-note">새 여정을 시작할 때만 가방에 들어가요 · 이어하기에는 안 들어가요</p></section>
   </div>
   ${supportSection(shop)}
   <p class="shop-note">문지기 +50 JP · 오스틴 +200 JP · ${supportVisible()?'물약은 게임 안에서 모은 JP로만 사요. 실제 돈은 후원에서만 쓰여요.':'게임 안에서 얻는 재화이며 실제 결제가 아닙니다.'}</p>
-  <button id="shop-back" class="menu-item small-item">돌아가기</button></div>`;
- const buy=count=>{const result=buyTonics(runStorage,count);showShop(back,result.ok?`${result.count}개를 보관함에 담았어요 · ${result.price.toLocaleString('ko-KR')} JP 사용`:result.reason==='full'?`보관함에는 작은 물약을 ${SHOP_STOCK_MAX}개까지 둘 수 있어요`:'JP가 부족해요');};
- $('#buy-one').onclick=()=>buy(1);$('#buy-ten').onclick=()=>buy(10);$('#shop-back').onclick=back;
- document.querySelectorAll('[data-support]').forEach(button=>button.onclick=()=>buySupport(back,button.dataset.support));
- document.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
+  </div><footer class="shop-footer"><button id="shop-back" class="menu-item small-item">돌아가기</button></footer></div>`;
+ const root=$('#overlay'),backButton=$('#shop-back');
+ const owned=()=>mode==='ready'&&!root.hidden&&root.querySelector('#shop-back')===backButton&&(account.user()?.uid||'guest')===owner;
+ $('.shop-scroll').scrollTop=scrollTop;
+ root.querySelectorAll('[data-buy-item]').forEach(button=>button.onclick=()=>{
+  if(!owned())return;
+  const id=button.dataset.buyItem,result=buyShopItem(runStorage,id,Number(button.dataset.count));
+  const notice=result.ok?`${ITEMS[id].name} ${result.count}개 구매 · ${result.price.toLocaleString('ko-KR')} JP 사용 · 가져갈 물약 ${result.shop.carry[id]}/${STASH_ITEMS[id].carryMax}개`:result.reason==='full'?`${ITEMS[id].name} 보관은 ${SHOP_STOCK_MAX}개까지예요`:result.reason==='save'?'저장하지 못했어요 · JP와 물약은 그대로예요. 저장 공간을 확인해 주세요.':'JP가 부족해요';
+  showShop(back,notice);const next=$('#'+button.id);(next&&!next.disabled?next:$('#shop-message')).focus({preventScroll:true});
+ });
+ backButton.onclick=()=>{if(owned())back();};
+ root.querySelectorAll('[data-support]').forEach(button=>button.onclick=()=>{if(owned())buySupport(back,button.dataset.support);});
+ root.querySelectorAll('[data-carry]').forEach(button=>button.onclick=()=>{if(!owned())return;const id=button.dataset.carry;setCarry(runStorage,id,readShop(runStorage).carry[id]+Number(button.dataset.step));showShop(back);});
 }
 // 점검 사과 선물 안내. 한 번만 뜬다(grantGift가 같은 선물을 다시 주지 않는다).
 const BETA_BOOSTER_GIFT='beta-booster-sprout-20260918';
@@ -2728,9 +2740,8 @@ function showJourneys(){
  const art=number=>`<img class="journey-picture journey-art" src="${import.meta.env.BASE_URL}assets/menu/journey-act${number}-v3.webp" alt="" width="434" height="724" decoding="async" loading="lazy">`;
  const actCard=(id,number,title,description,boss,mechanic,ready=true)=>`<button id="${id}" class="journey-card act-card-${number}" ${ready?'':'disabled'}>${art(number)}<span class="journey-act">${number}막</span><span class="journey-caption"><span class="journey-mechanic">${mechanic}</span><strong>${title}</strong><span class="journey-opponent">${boss}</span><small>${description}</small></span></button>`;
  $('#overlay').innerHTML=`<div class="menu-panel dungeon-panel journey-panel">
-  <header class="dungeon-heading"><p class="eyebrow">SEED · JOURNEY</p><h2>어디로 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></header>
+  <header class="dungeon-heading journey-heading"><div class="journey-heading-copy"><p class="eyebrow">SEED · JOURNEY</p><h2>어디로 떠날까요</h2><span class="menu-ornament" aria-hidden="true">✦</span></div><button id="open-shop" class="journey-shop" aria-label="물약 상점 · 보유 ${shop.coins.toLocaleString('ko-KR')} JP · 가져갈 물약 ${carryTotal(shop)}개">${itemArt('wind')}<span class="journey-shop-copy"><strong>물약 상점</strong><small>${shop.coins.toLocaleString('ko-KR')} JP · ${carryTotal(shop)}개 준비</small></span><span aria-hidden="true">→</span></button></header>
   <div class="dungeon-scroll">
-   <button id="open-shop" class="journey-shop"><strong>출발 상점</strong><small>가져갈 물약 · ${itemCounts(shop.carry)||'없음'}</small><span aria-hidden="true">→</span></button>
    <div class="journey-grid">
     ${actCard(saved?'continue-run':'start-game',1,'잠든 정원',saved?'이어하기 · '+escapeHtml(where):'새 씨앗으로 출발','오스틴','피하고 쏘는 정원')}
     ${actCard('start-act2',2,'야간 경기장',act2Ready?(saved2?`이어하기 · 여정 ${saved2.cycle+1}`:'새 씨앗으로 출발'):'오스틴 격파 후 열려요','항상초심','베이스를 타고 돌파',act2Ready)}
