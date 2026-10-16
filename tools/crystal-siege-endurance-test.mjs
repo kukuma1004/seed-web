@@ -21,6 +21,9 @@ function host(j){
   line(){},V:THREE.Vector3,audio:{play(){}},$:()=>({textContent:''}),finishExpansionEntry:()=>true,showExpansionResult:(won,ended)=>{ctx.failure={won,ended};},collide:p=>constrainToArena(p,.65,{shape:'rect',halfWidth:7.5,halfDepth:6.5}),expansionBolt:()=>assert.fail('Siege minions must not use classic ranged bolts'),releaseEnemy(){}};
  ctx.expansionSiegeView={recordSupport(actual,id){if(!Number.isFinite(actual)||actual<0||!/^pad-[0-3]$/.test(id))throw Error("Invalid actual support receipt");}};vm.createContext(ctx);vm.runInContext(updateSource+'\n'+actorSource,ctx);return ctx;
 }
+// Legacy carry/combat baseline intentionally caps living facilities at Lv2.
+// The separate advanced balance test supplies a Lv5 preparation policy and
+// runs the real Journey command/rally hook before every host update.
 // No enemy is removed without paid facility damage or the explicitly described
 // bounded synthetic player hits. This exercises actual host closures and real
 // threat movement, not empty enemies/forced room completion.
@@ -30,7 +33,7 @@ function course({seed,hz,layout,shotDamage=0,quickPrep=false}){
   const s=j.siege,startKills=h.kills,startTurret=h.turretDamage,startPlayer=h.playerDamage,coreBefore=s.core.hp;h.player.position.set(-3,0,4);h.enemies.length=0;
   const kindFor=p=>layout==='mixed'?(p.id==='pad-0'?'turret':p.id==='pad-1'?'snare':'wall'):layout==='balanced'?(p.id==='pad-1'?'snare':p.id==='pad-2'?'wall':'turret'):'turret';
   const actions=layout==='none'?[]:[...s.nodes.map(n=>({point:n,kind:'node'})),...s.pads.map(p=>({point:p,kind:kindFor(p),plantOnly:layout==='balanced'})),...(layout==='balanced'?s.pads.filter(p=>p.id==='pad-0'||p.id==='pad-1').map(p=>({point:p,kind:kindFor(p)})):[])];let next=0,prep=0;
-  while(s.phase==='prep'&&prep<22){const a=actions[next];if(a){const dx=a.point.x-h.player.position.x,dz=a.point.z-h.player.position.z,d=Math.hypot(dx,dz),step=Math.min(d,6.09*dt);if(d){h.player.position.x+=dx/d*step;h.player.position.z+=dz/d*step;}if(Math.hypot(a.point.x-h.player.position.x,a.point.z-h.player.position.z)<.1){if(a.kind==='node')assert(a.point.harvested,'Actual main proximity harvesting must own receipt');else{siege.buildCrystalSiege(s,a.point.id,a.kind,h.player.position);if(!a.plantOnly&&a.point.level===1&&s.resources>=(a.kind==='turret'?3:2))siege.buildCrystalSiege(s,a.point.id,a.kind,h.player.position);}next++;}}
+  while(s.phase==='prep'&&prep<22){const a=actions[next];if(a){const dx=a.point.x-h.player.position.x,dz=a.point.z-h.player.position.z,d=Math.hypot(dx,dz),step=Math.min(d,6.09*dt);if(d){h.player.position.x+=dx/d*step;h.player.position.z+=dz/d*step;}if(Math.hypot(a.point.x-h.player.position.x,a.point.z-h.player.position.z)<.1){if(a.kind==='node')assert(a.point.harvested,'Actual main proximity harvesting must own receipt');else{if(a.point.level<2||a.point.hp<=0)siege.buildCrystalSiege(s,a.point.id,a.kind,h.player.position);if(!a.plantOnly&&a.point.level===1&&s.resources>=(a.kind==='turret'?3:2))siege.buildCrystalSiege(s,a.point.id,a.kind,h.player.position);}next++;}}
    h.updateExpansionCourse(dt);prep+=dt;result.seconds+=dt;
   }
   assert.equal(s.phase,'defense');const setup={harvested:s.nodes.filter(n=>n.harvested).length,facilities:s.pads.map(p=>({kind:p.kind,level:p.level,hp:p.hp})),resources:s.resources,completedPrepActions:next};

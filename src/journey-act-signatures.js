@@ -47,6 +47,6 @@ export function journeySignatureHint(s,siege=null){
  if(!siege)return '';
  if(siege.phase==='prep')return '낮: 수정 채집 → 시설 심기 · 밤에는 시설 사이로 이동';
  if(s.repairPad)return '시설 수리 중 · 수정 1로 생명력 +25';
- if(s.rallyPad)return s.rallyKind==='turret'?'포탑 지원 중 · 이 포탑 피해 +50%':'시설 곁에서 방어 중 · 손상되면 수정으로 수리';
- return '밤: 심장 방어 · 시설을 노리는 돌격대를 끊고 포탑 지원';
+ if(s.rallyPad)return s.rallyKind==='turret'?(siege.pads.find(p=>p.id===s.rallyPad)?.level>=3?'고급 화력 발동 · 이 포탑 피해 +50%':'포탑 지원 중 · 이 포탑 피해 +50%'):'시설 곁에서 방어 중 · 손상되면 수정으로 수리';
+ return '밤: 돌격대를 끊으세요 · 3단계 이상 포탑은 곁에서 지휘하면 고급 화력';
 }

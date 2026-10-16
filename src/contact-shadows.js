@@ -19,11 +19,13 @@ export function createContactShadows(scene,capacity=CONTACT_SHADOW_CAPACITY){
  }
  const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.name='actor-contact-shadows';mesh.frustumCulled=false;mesh.renderOrder=-1;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(mesh);
  const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),quaternion=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0));
+ let gardenActive=false;
  const add=(actor,type)=>{
   const group=actor?.g||actor;if(!group||group.visible===false||mesh.count>=capacity)return;
-  const radius=contactShadowRadius(type||actor?.type);position.set(group.position.x,.125,group.position.z);scale.set(radius,radius*.56,1);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(mesh.count++,matrix);
+  const radius=gardenActive&&actor?.expansionActor&&!actor.expansionBoss?.72:contactShadowRadius(type||actor?.type);position.set(group.position.x,.125,group.position.z);scale.set(radius,radius*.56,1);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(mesh.count++,matrix);
  };
- function update(player,enemies=[],fallen=[]){
+ function update(player,enemies=[],fallen=[],garden=false){
+  gardenActive=garden===true;material.opacity=gardenActive?.62:depthReview?.42:.23;
   mesh.count=0;add(player,'player');for(const enemy of enemies)if(!enemy.dead&&!enemy.survivalKind)add(enemy);for(const entry of fallen)add(entry.e);mesh.instanceMatrix.needsUpdate=true;return mesh.count;
  }
  function dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();}

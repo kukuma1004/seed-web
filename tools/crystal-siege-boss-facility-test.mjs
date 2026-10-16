@@ -26,5 +26,5 @@ for(const hz of [20,60]){
  console.log('Actual earned fifth-night host boss facility PASS',hz+'Hz','turret damage='+total.toFixed(2),'165 finite synthetic kills; original boss completion not certified.');
 }
 for(const room of [0,3,4])for(const phase of ['prep','defense','failed']){const s=siege.createCrystalSiege(room,1);s.phase=phase;Object.assign(s.pads[0],{kind:'turret',hp:45,level:1,cooldown:0});assert.equal(siege.stepCrystalSiegeBossFacilities(s,.1,[{id:'boss',x:-3,z:-2.5,hp:2400}]).hits.length,0,'Wrong room/phase cannot earn boss support');}
-const view=readFileSync(new URL('../src/crystal-siege-view.js',import.meta.url),'utf8');assert(view.includes("!boss&&s.phase===\'prep\'&&!!n&&!n.harvested"));assert(view.includes("coreDefense?' 보스 결전"));assert(main.includes('boss:expansionJourney?.phase===\'boss\''));
+const view=readFileSync(new URL('../src/crystal-siege-view.js',import.meta.url),'utf8');assert(view.includes("const visible=!boss&&s.phase===\'prep\'&&!!n&&(!n.harvested||harvestTime[i]>0)"));assert(view.includes("coreDefense?' 보스 결전"));assert(main.includes('boss:expansionJourney?.phase===\'boss\''));
 console.log('Paused/dead/wrong phase/no snare/no harvest/public save boundaries maintained; boss visuals retained. Node host only, not actual browser/device boss victory.');

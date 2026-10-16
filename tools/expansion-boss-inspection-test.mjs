@@ -9,6 +9,10 @@ const source=readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const view=readFileSync('src/seed-defense-view.js','utf8');
 assert.equal(createDefenseBossInspection('crosswind'),null);
 assert.equal(createDefenseBossInspection('unknown',{enabled:true}),null);
+const garden=createJourneyBossInspection('crystalGorge',{garden:true});
+assert.equal(garden.phase,'boss');assert(garden.inspectionPreview);assert.equal(garden.siege.phase,'clear');
+assert.equal(garden.siege.resources,0);assert.deepEqual(garden.siege.pads.map(p=>p.level),[2,1,1,1]);
+assert.equal(garden.siege.spawned,0,'visual fixture never invents ordinary victories');
 for(const [act,wave,id] of [['crosswind',48,'crosswindKeeper'],['crystalGorge',60,'crystalGardener']]){
  const journey=createJourneyBossInspection(act);
  assert.equal(journey.phase,'boss');assert.equal(journey.boss.id,id);assert(journey.inspectionPreview);

@@ -1,10 +1,19 @@
 import {createExpansionJourney,advanceExpansionJourney} from './expansion-journey.js';
+import {harvestCrystalSiege,buildCrystalSiege} from './crystal-siege-rules.js';
 import {createDefense,plantDefense,upgradeDefense,startDefenseWave,stepDefense,defenseWaveInfo,defensePoint} from './seed-defense-rules.js';
 
 // Scripted local scenarios only. They do not prove a completed campaign and
 // never accept account progress or write storage, rewards or leaderboard data.
-export function createJourneyBossInspection(act){
- const state=createExpansionJourney(act,4,413);
+export function createJourneyBossInspection(act,{garden=false}={}){
+ const state=createExpansionJourney(act,4,413,{siege:garden&&act==='crystalGorge'});
+ if(state.siege){
+  // Explicit local visual fixture: skip the nights without crediting kills,
+  // then spend only the fixture's finite harvest on actual paid facilities.
+  for(const node of state.siege.nodes)harvestCrystalSiege(state.siege,node.id,node);
+  for(const pad of state.siege.pads)buildCrystalSiege(state.siege,pad.id,'turret',pad);
+  buildCrystalSiege(state.siege,state.siege.pads[0].id,'turret',state.siege.pads[0]);
+  state.siege.phase='clear';
+ }
  advanceExpansionJourney(state);state.inspectionPreview=true;
  return state;
 }

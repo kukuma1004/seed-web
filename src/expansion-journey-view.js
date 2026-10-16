@@ -4,7 +4,7 @@ import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
- const plates=new Map();let course='crosswind',terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,crosswindPanoramaTexture=null,crosswindPanoramaSource=null,reflectorsActive=false;
+ const plates=new Map();let course='crosswind',garden=false,terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,crosswindPanoramaTexture=null,crosswindPanoramaSource=null,reflectorsActive=false;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
  const plate=new THREE.Mesh(plateGeometry,plateMaterial);plate.name='expansion-environment-plate';plate.rotation.x=-Math.PI/2;plate.position.y=.02;plate.visible=false;root.add(plate);
  const floorGeometry=new THREE.PlaneGeometry(8,4).rotateX(-Math.PI/2);
@@ -84,7 +84,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   coverAtlas=true;
  }
  function syncFloor(){
-  plateMaterial.map=course==='crosswind'?crosswindPanoramaTexture:plates.get(course)||null;plateMaterial.needsUpdate=true;
+  plateMaterial.map=course==='crosswind'?crosswindPanoramaTexture:(garden?plates.get('crystalGarden')||plates.get(course):plates.get(course))||null;plateMaterial.needsUpdate=true;
   plate.visible=!terrainOnly&&Boolean(plateMaterial.map);
   // The panorama spans the whole journey. Its painted paving cannot supply
   // local floor detail at that scale: keep world-sized stones on the corridor.
@@ -107,10 +107,10 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
     crosswindPanoramaTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/(EXPANSION_ENVIRONMENTS.crosswind.depth*aspect),1);crosswindPanoramaTexture.offset.set(0,0);crosswindPanoramaTexture.needsUpdate=true;
    }
   }
-  if(course===act)syncFloor();
+  if(course===act||garden&&act==='crystalGarden')syncFloor();
  }
- function setCourse(act,{halfDepth=null,plateBounds=null}={}){
-  course=act;siegePhase=null;plateMaterial.color.setHex(0xffffff);
+ function setCourse(act,{halfDepth=null,plateBounds=null,crystalGarden=false}={}){
+  course=act;garden=act==='crystalGorge'&&crystalGarden;siegePhase=null;plateMaterial.color.setHex(0xffffff);
   reflectorMarks.count=0;reflectorMarks.visible=false;
   syncUndertow(null);
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
@@ -157,6 +157,6 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   for(const mesh of undertowBatches){mesh.count=count;mesh.visible=course==='crosswind'&&!terrainOnly&&count>0;if(count){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;}}
  }
  setCourse(course);
- return {root,syncUndertow,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xc3c6e4:0xeee6e0);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
+ return {root,syncUndertow,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xd3dde6:0xfff6e8);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
   dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();for(const mesh of undertowBatches)mesh.dispose();for(const g of undertowGeometry)g.dispose();for(const mat of undertowMaterials)mat.dispose();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
 }

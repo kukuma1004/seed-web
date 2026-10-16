@@ -50,6 +50,36 @@ body:not(.touch-mode):not(.survival-mode):has(#boss-hud:not([hidden])) #journey-
 #crystal-siege-build [data-kind]{display:flex;align-items:center;flex-direction:column;gap:4px;padding:5px 7px;min-width:0;background:#274536;border-color:#7e9e7b}#crystal-siege-build [data-kind] b{font-size:13px;font-weight:650}#crystal-siege-build [data-kind] small{white-space:nowrap;font-size:10px;color:#d1dfc4}
 #crystal-siege-build .siege-art{display:block;width:48px;height:48px;background-repeat:no-repeat;background-size:contain;background-position:center}
 @media(max-height:500px){#crystal-siege-ui{top:76px;padding:5px 9px;font-size:12px;max-width:330px}#crystal-siege-ui strong{font-size:13px}#crystal-siege-ui small{font-size:10px}#crystal-siege-build{bottom:max(18px,calc(env(safe-area-inset-bottom) + 8px))}#crystal-siege-build button{padding:7px 10px}#crystal-siege-build [data-choices]{bottom:52px;padding:32px 8px 8px;gap:6px}}
+/* Keep the defended heart and build pads clear of the old full-width toast. */
+body:has(#crystal-siege-ui:not([hidden])) #toast{top:auto!important;bottom:max(88px,calc(env(safe-area-inset-bottom) + 80px));left:50%;transform:translateX(-50%);width:max-content;max-width:min(460px,60vw);padding:5px 10px;border:1px solid #b6c0a42e;border-radius:8px;background:#11291fe6;font:12px/1.45 system-ui;letter-spacing:.2px;word-break:keep-all}
+body:has(#crystal-siege-ui:not([hidden])) #toast:empty{display:none}
+body:has(#crystal-siege-build:not([hidden])) #help{display:none}
+@media(max-height:500px){body:has(#crystal-siege-ui:not([hidden])) #toast{bottom:max(70px,calc(env(safe-area-inset-bottom) + 66px));max-width:44vw;font-size:10px;padding:4px 7px}}
+body:has(#crystal-siege-ui:not([hidden])) #brand{display:none}
+#crystal-siege-ui{top:max(28px,env(safe-area-inset-top));width:250px;max-width:calc(100vw - 32px);box-sizing:border-box;border-radius:9px;background:#11291fe6}
+@media(max-height:500px){#crystal-siege-ui{left:max(10px,env(safe-area-inset-left));top:max(48px,calc(env(safe-area-inset-top) + 40px));width:180px;padding:6px 8px;font-size:10px;line-height:1.4}#crystal-siege-ui strong{font-size:11px}#crystal-siege-ui small{display:none}}
 #journey-signature{position:fixed;left:50%;bottom:max(44px,calc(env(safe-area-inset-bottom) + 34px));transform:translateX(-50%);max-width:calc(100vw - 240px);padding:6px 12px;color:#e5f5ce;background:#112c26d9;border-radius:18px;font:12px/1.35 system-ui;text-align:center;pointer-events:none;z-index:2}
 #journey-signature[hidden]{display:none!important}
 @media(max-height:500px){#journey-signature{font-size:11px;max-width:calc(100vw - 210px);padding:4px 8px}}
+
+/* The courtyard has its own compact chapter heading and two-line build cards. */
+body:has(#crystal-siege-ui:not([hidden])) #stages{display:none}
+body:has(#crystal-siege-ui:not([hidden])) #encounter{top:8px}
+body:has(#crystal-siege-ui:not([hidden])) #growth-progress{top:30px!important}
+#crystal-siege-build [data-kind] small{white-space:normal;word-break:keep-all;line-height:1.35;max-width:100%;text-align:center}
+#crystal-siege-build [data-kind] small span{display:block}
+#crystal-siege-build [data-context]{max-width:min(460px,65vw);white-space:normal;word-break:keep-all}
+@media(max-height:500px){body:has(#crystal-siege-ui:not([hidden])) #encounter{display:none}body:has(#crystal-siege-ui:not([hidden])) #growth-progress{top:10px!important}#crystal-siege-build [data-context]{font-size:11px}}
+
+#crystal-siege-build [data-dock]{align-items:center}
+#crystal-siege-build [data-start]{white-space:nowrap;flex-shrink:0;min-width:88px}
+#crystal-siege-build [data-context]:disabled{opacity:.76}
+
+/* A compact player marker stays distinct from gold damaged-facility bars. */
+body:has(#crystal-siege-ui:not([hidden])) #overhead{width:38px;gap:2px}
+body:has(#crystal-siege-ui:not([hidden])) #overhead:before{content:"나";color:#fff2bf;font:700 10px/12px system-ui;text-shadow:0 1px 3px #071a13}
+body:has(#crystal-siege-ui:not([hidden])) #overhead .oh-hp{height:5px}
+body:has(#crystal-siege-ui:not([hidden])) #overhead .oh-dash{display:none}
+#crystal-siege-ui{word-break:keep-all;overflow-wrap:break-word}
+
+body:has(#pause-build:not([hidden])) #crystal-siege-ui{visibility:hidden}

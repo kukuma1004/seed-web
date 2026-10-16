@@ -7,6 +7,11 @@ export const CRYSTAL_SIEGE_LIMITS=Object.freeze({live:24,spawnsPerStep:2,maxStep
 const PADS=Object.freeze([[-3,-2.5],[3,-2.5],[-3,2.5],[3,2.5]].map(([x,z],i)=>Object.freeze({id:`pad-${i}`,x,z})));
 const NODE_POINTS=Object.freeze([[-5,-4.5],[0,-4.5],[5,-4.5],[-5,4.5],[0,4.5],[5,4.5]]);
 const SPEC=Object.freeze({turret:{cost:3,hp:45,range:5.4,period:.65,damage:24},snare:{cost:2,hp:40,range:3,period:1.1},wall:{cost:2,hp:75}});
+export const CRYSTAL_TURRET_MAX_LEVEL=5;
+const TURRET_HP=[45,60,78,98,120],TURRET_DAMAGE=[24,40,48,58,70],TURRET_RANGE=[5.4,5.9,6.1,6.35,6.6],TURRET_PERIOD=[.65,.5,.47,.44,.4],TURRET_UPGRADE_COST=[3,6,10,15];
+// Immutable per-level data is shared by combat and presentation. It is derived
+// from the existing paid pad fields and adds no checkpoint fields or schema.
+const FACILITY_STATS=Object.freeze(Object.fromEntries(Object.keys(SPEC).map(kind=>[kind,Object.freeze(Array.from({length:kind==='turret'?CRYSTAL_TURRET_MAX_LEVEL:2},(_,i)=>Object.freeze({kind,level:i+1,maxHp:kind==='turret'?TURRET_HP[i]:SPEC[kind].hp+i*(kind==='wall'?35:15),damage:kind==='turret'?TURRET_DAMAGE[i]:0,range:kind==='turret'?TURRET_RANGE[i]:kind==='wall'?0:SPEC[kind].range+i*.5,period:kind==='turret'?TURRET_PERIOD[i]:SPEC[kind].period?SPEC[kind].period-i*.15:0}))) ])));
 const clamp=(n,a,b)=>Math.min(b,Math.max(a,n));
 const time=dt=>Number.isFinite(dt)?clamp(dt,0,.1):0;
 const distance=(a,b)=>Math.hypot(a.x-b.x,a.z-b.z);
@@ -21,8 +26,19 @@ const fail=()=>{throw new Error('Invalid or unsupported crystal siege checkpoint
 // packet has arrived and every actual enemy is gone, never on a timer alone.
 export const earliestCrystalSiegeClear=room=>.35+(CRYSTAL_SIEGE_PACKETS[room]-1)*.6;
 const clearTime=s=>s.paceVersion===2?earliestCrystalSiegeClear(s.room):25;
-const maxHp=(kind,level)=>SPEC[kind].hp+(level-1)*(kind==='wall'?35:15);
-export const crystalSiegeFacilityMaxHp=pad=>pad&&Object.hasOwn(SPEC,pad.kind)&&integer(pad.level,1,2)?maxHp(pad.kind,pad.level):0;
+export const crystalSiegeMaxLevel=kind=>Object.hasOwn(SPEC,kind)?kind==='turret'?CRYSTAL_TURRET_MAX_LEVEL:2:0;
+export const crystalSiegeFacilityStats=pad=>pad&&Object.hasOwn(FACILITY_STATS,pad.kind)&&integer(pad.level,1,crystalSiegeMaxLevel(pad.kind))?FACILITY_STATS[pad.kind][pad.level-1]:null;
+const maxHp=(kind,level)=>FACILITY_STATS[kind]?.[level-1]?.maxHp||0;
+export const crystalSiegeFacilityMaxHp=pad=>crystalSiegeFacilityStats(pad)?.maxHp||0;
+export function crystalSiegeBuildCost(pad,kind){
+ if(!Object.hasOwn(SPEC,kind))return 0;
+ if(!pad||pad.kind===null)return SPEC[kind].cost;
+ if(pad.kind!==kind)return 0;
+ const stats=crystalSiegeFacilityStats(pad);if(!stats||!finite(pad.hp,0,stats.maxHp))return 0;
+ if(pad.hp<=0)return kind==='turret'?3+Math.floor((pad.level-1)/2):SPEC[kind].cost;
+ if(pad.level>=crystalSiegeMaxLevel(kind))return 0;
+ return kind==='turret'?TURRET_UPGRADE_COST[pad.level-1]:SPEC[kind].cost;
+}
 export function clampCrystalSiegePoint(p){if(!point(p))throw new Error('Invalid crystal siege point');return{x:clamp(p.x,-7.5,7.5),z:clamp(p.z,-6.5,6.5)};}
 
 export function createCrystalSiege(room=0,seed=1,carry=null,prepDuration=null,initialResources=3){
@@ -42,11 +58,11 @@ export function buildCrystalSiege(s,padId,kind,player){
  if(s.phase!=='prep')return denied('phase');if(!Object.hasOwn(SPEC,kind))return denied('kind');
  const pad=s.pads.find(p=>p.id===padId);if(!pad)return denied('pad');if(!point(player)||distance(pad,player)>1.7)return denied('distance');
  const old=pad.kind?pad:null;if(old&&old.kind!==kind)return denied('occupied');
- if(old&&old.hp>0&&old.level===2)return denied('max-level');
- const cost=SPEC[kind].cost;if(s.resources<cost)return denied('resources');
+ if(old&&old.hp>0&&old.level>=crystalSiegeMaxLevel(kind))return denied('max-level');
+ const cost=crystalSiegeBuildCost(pad,kind);if(!cost)return denied('level');if(s.resources<cost)return denied('resources');
  s.resources-=cost;
  // A destroyed facility may be rebuilt at its existing level, paying again.
- // It cannot reset a level-2 facility into unlimited fresh upgrades.
+ // It retains the paid level instead of resetting into cheap fresh upgrades.
  const level=old?old.hp>0?old.level+1:old.level:1;
  const rebuilt=!!old&&old.hp<=0;Object.assign(pad,{kind,level,hp:maxHp(kind,level),cooldown:0});
  return{ok:true,padId,kind,level,cost,rebuilt};
@@ -55,18 +71,22 @@ export function startCrystalSiegeDefense(s){if(s.phase!=='prep'||s.core.hp<=0)re
 function reset(s){for(const k of ['spawns','hits','snares','events'])s.out[k].length=0;s.out.phase=s.phase;s.out.clear=s.phase==='clear';s.out.bossReady=s.phase==='clear'&&s.room===4;return s.out;}
 function facilities(s,delta,live,o,{boss=false}={}){
  for(const pad of s.pads){const f=pad;if(!f.kind||f.hp<=0||f.kind==='wall')continue;f.cooldown=Math.max(0,f.cooldown-delta);if(f.cooldown>0)continue;
-  const spec=SPEC[f.kind],range=spec.range+(f.level-1)*.5+(f.kind==='snare'&&s.paceVersion===2?1.2:0);
+  const paidSpec=crystalSiegeFacilityStats(f);if(!paidSpec)continue;
+  // Journey's advanced growth is commanded locally: unaccompanied Lv3+
+  // turrets retain their paid HP but fire at the old Lv2 baseline. Other modes
+  // never set journeyCommand and keep their existing paid offensive stats.
+  const spec=f.kind==='turret'&&s.journeyCommand===true&&f.level>=3&&s.journeyRallyPad!==f.id?FACILITY_STATS.turret[1]:paidSpec,range=spec.range+(f.kind==='snare'&&s.paceVersion===2?1.2:0);
   // New defensive nights bind the nearby group, retaining one short-lived
   // slot per paid pad. Existing checkpoints keep the original single target.
   if(f.kind==='snare'&&s.paceVersion===2){
    let caught=0;for(const e of live){if(caught>=24)break;if((!boss||e.siegeGuard===true)&&distance(pad,e)<=range){o.snares.push({id:e.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});caught++;}}
-   if(caught)f.cooldown=spec.period-(f.level-1)*.15;continue;
+   if(caught)f.cooldown=spec.period;continue;
   }
-  let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level===2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
-  if(!target)continue;f.cooldown=spec.period-(f.level-1)*.15;
+  let target=null,nearest=Infinity;for(const e of live){if(boss&&f.kind==='snare'&&e.siegeGuard!==true)continue;const d=distance(pad,e),priority=f.level>=2?distance(s.core,e):d;if(d<=range&&priority<nearest){nearest=priority;target=e;}}
+  if(!target)continue;f.cooldown=spec.period;
   // Ephemeral Journey command radius. Shared modes never set this field;
   // checkpoints deliberately contain only paid HP/resources, never the aura.
-  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:(spec.damage+(f.level-1)*16)*(s.journeyRallyPad===pad.id?1.5:1)});
+  if(f.kind==='turret')o.hits.push({id:target.id,facilityId:pad.id,damage:spec.damage*(s.journeyRallyPad===pad.id?1.5:1)});
   else o.snares.push({id:target.id,facilityId:pad.id,factor:f.level===2?.45:.6,duration:.8});
  }
 }
@@ -147,6 +167,6 @@ export function restoreCrystalSiege(saved){
  if(!keys(saved,['version','paceVersion','room','seed','phase','elapsed','spawnClock','spawnIndex','spawned','core','resources','nodes','pads','prepDuration'])||saved.paceVersion!==undefined&&saved.paceVersion!==2||saved.prepDuration!==undefined&&!integer(saved.prepDuration,10,20)||saved.version!==1||!integer(saved.room,0,4)||!integer(saved.seed,1,4294967295)||!['prep','defense','clear','failed','boss'].includes(saved.phase)||!finite(saved.elapsed,0,1e6)||!finite(saved.spawnClock,-.1,.6)||!integer(saved.spawnIndex,0,CRYSTAL_SIEGE_PACKETS[saved.room])||saved.spawned!==saved.spawnIndex+Math.floor(saved.spawnIndex/2)||!integer(saved.resources,0,3+12*(saved.room+1))||!keys(saved.core,['x','z','hp'])||saved.core.x!==0||saved.core.z!==0||!finite(saved.core.hp,0,100)||!Array.isArray(saved.nodes)||saved.nodes.length!==6||!Array.isArray(saved.pads)||saved.pads.length!==4)fail();
  if(saved.phase==='prep'&&(saved.elapsed>=(saved.prepDuration??20)||saved.spawnIndex!==0)||['clear','boss'].includes(saved.phase)&&(saved.elapsed+1e-8<clearTime(saved)||saved.spawnIndex!==CRYSTAL_SIEGE_PACKETS[saved.room])||saved.phase==='boss'&&saved.room!==4||saved.core.hp===0&&saved.phase!=='failed'||saved.phase==='failed'&&saved.core.hp>0)fail();
  const s=createCrystalSiege(saved.room,saved.seed,null,saved.prepDuration??null);if(saved.paceVersion!==2)delete s.paceVersion;for(let i=0;i<6;i++){const n=saved.nodes[i],expected=s.nodes[i];if(!keys(n,['id','x','z','harvested'])||n.id!==expected.id||n.x!==expected.x||n.z!==expected.z||typeof n.harvested!=='boolean')fail();expected.harvested=n.harvested;}
- for(let i=0;i<4;i++){const p=saved.pads[i],expected=s.pads[i];if(!keys(p,['id','x','z','kind','level','hp','cooldown'])||p.id!==expected.id||p.x!==expected.x||p.z!==expected.z)fail();if(p.kind===null){if(p.level!==0||p.hp!==0||p.cooldown!==0)fail();}else if(!Object.hasOwn(SPEC,p.kind)||!integer(p.level,1,2)||!finite(p.hp,0,maxHp(p.kind,p.level))||!finite(p.cooldown,0,1.1))fail();Object.assign(expected,p);}
+ for(let i=0;i<4;i++){const p=saved.pads[i],expected=s.pads[i];if(!keys(p,['id','x','z','kind','level','hp','cooldown'])||p.id!==expected.id||p.x!==expected.x||p.z!==expected.z)fail();if(p.kind===null){if(p.level!==0||p.hp!==0||p.cooldown!==0)fail();}else if(!Object.hasOwn(SPEC,p.kind)||!integer(p.level,1,crystalSiegeMaxLevel(p.kind))||!finite(p.hp,0,maxHp(p.kind,p.level))||!finite(p.cooldown,0,1.1))fail();Object.assign(expected,p);}
  Object.assign(s,{phase:saved.phase,elapsed:saved.elapsed,spawnClock:saved.spawnClock,spawnIndex:saved.spawnIndex,spawned:saved.spawned,core:{...saved.core},resources:saved.resources});return s;
 }
