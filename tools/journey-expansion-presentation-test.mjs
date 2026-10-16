@@ -84,7 +84,7 @@ for(const id of ['crosswindKeeper','crystalGardener']){
 const toast={textContent:'습격 시작 · 정원의 심장을 지키세요'},node=()=>({children:[],dataset:{},style:{},hidden:false,textContent:'',setAttribute(){},append(...c){this.children.push(...c);},remove(){}});
 const doc={body:{append(){}},createElement:node,getElementById:id=>id==='toast'?toast:null},scene=new THREE.Scene(),view=createJourneyPresentationView(scene,{document:doc}),root=scene.children[0];
 e.reset();const f=siegeFixture();e.observeTactics(f.signature,f.siege);startCrystalSiegeDefense(f.siege);stepJourneySignature(f.signature,.1,{player:f.pad,siege:f.siege});e.observeTactics(f.signature,f.siege);e.step(.1);view.update(state,player,true,false,false,.1);assert.equal(toast.textContent,'');
-const entryHint='전진하면 다음 편대가 옵니다 · 앞 편대를 끊으면 순풍 · 빛나는 모래원은 옆으로 피하세요 · 반사판을 활용하세요';
+const entryHint='전진·처치 → 순풍! / 모래 회피·반사판 활용';
 for(const [text,expected] of [[entryHint,''],['저장하지 못했어요','저장하지 못했어요']]){e.reset();toast.textContent=text;const w=createJourneySignature('crosswind');w.tailwind=1;e.observeTactics(w);e.step(.1);view.update(state,player,true,false,false,.1);assert.equal(toast.textContent,expected,'remove only the exact duplicate entry hint; retain failures');}
 e.reset();startCrystalSiegeDefense(f.siege);f.pad.hp=10;
 for(let i=0;i<16;i++){stepJourneySignature(f.signature,.1,{player:f.pad,siege:f.siege});e.step(.1);e.observeTactics(f.signature,f.siege);}

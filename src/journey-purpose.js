@@ -1,6 +1,7 @@
 // Presentation derives from canonical journey/campaign state; never awards or
 // infers a victory from a room number, guard death, or broken scenery.
 const bossNames={crosswind:'횡풍의 수호자',crystalGorge:'수정의 정원사'};
+export const CROSSWIND_ENTRY_HINTS=Object.freeze(['전진·처치 → 순풍! / 모래 회피·반사판 활용','뒤 조준을 남기고 전진 · 회복 중인 편대 먼저!','양쪽 조준이 겹치면 다른 줄로 회피!','앞뒤 협공! · 한쪽 편대를 먼저 끊으세요','조준을 한쪽에 남기고 반대 줄로 회피!']);
 // Read the real open-exit state in the host before calling this. These words
 // describe the next action; they never finalize a run or award a victory.
 export function journeyRouteCue({region,stage,cycle=0,bossName='',bossAhead=false,bossWins=0,expansion=null,campaign=null,publicExpansion=false}={}){
@@ -30,7 +31,7 @@ export function expansionPurposeText(journey,campaign=null){
 }
 export function expansionPurposeHint(journey,roomHint=''){
  if(journey?.phase==='boss')return journey.siege?'수정의 정원사와 결전 · 새로 자라는 습격대를 먼저 끊어 심장을 지키세요':'최종 보스의 준비 동작을 피하고 회복할 때 반격하세요';
- return journey?.siege?'수정 채집 → 시설 심기 · 밤에는 포탑 지원과 수리 · 다섯 습격 뒤 최종 보스':journey?.act==='crystalGorge'?`이전 협곡 저장을 이어갑니다 · ${roomHint}`:journey?.act==='crosswind'&&journey.course?.encounterVersion===3?`전진하면 다음 편대가 옵니다 · 앞 편대를 끊으면 순풍 · ${roomHint}`:roomHint;
+ return journey?.siege?'수정 채집 → 시설 심기 · 밤에는 포탑 지원과 수리 · 다섯 습격 뒤 최종 보스':journey?.act==='crystalGorge'?`이전 협곡 저장을 이어갑니다 · ${roomHint}`:journey?.act==='crosswind'&&journey.course?.encounterVersion===3?(CROSSWIND_ENTRY_HINTS[journey.room]||roomHint):roomHint;
 }
 export function expansionExitText(journey,campaign=null){
  if(journey.phase==='course')return journey.room===4?'최종 보스에게 · E':'다음 전장으로 · E';

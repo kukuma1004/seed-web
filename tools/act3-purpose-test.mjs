@@ -14,7 +14,7 @@ function fixture(type,{x=0,z=-6.2,player=new V(0,0,5.5),slow=0}={}){
 }
 
 assert.deepEqual(ACT3_ROOM_HINTS,SKYWAY_ROOMS.map(room=>room.hint));
-assert.ok(ACT3_ROOM_HINTS.every(hint=>hint.length>20));
+assert.ok(ACT3_ROOM_HINTS.every(hint=>hint.length>=12&&hint.length<=36),'compact actionable room hints fit the small combat HUD');
 assert.ok(ACT3_PRESSURE.projectileCapNormal<=48,'late pressure keeps a readable phone projectile ceiling');
 assert.deepEqual(Object.values(ACT3_MINIONS).map(({hp,damage})=>[hp,damage]),[[54,11],[28,18],[90,13],[185,13]],'movement pressure adds neither HP nor damage');
 assert.equal(Object.keys(ACT3_ART).length,6,'existing enemy and boss art families stay intact');

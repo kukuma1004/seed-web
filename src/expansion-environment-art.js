@@ -1,9 +1,9 @@
 import * as THREE from 'three';
 
-// These are finite environment plates, not seamless repeat tiles. The stone
-// band in Act 4 is centred over the real +/-7 corridor, with scenery outside it.
+// Finite environment plates. Act4's view borrows a sampler to mirror its wide
+// panorama at source aspect; its painted stone lip matches each real corridor.
 export const EXPANSION_ENVIRONMENTS=Object.freeze({
- crosswind:Object.freeze({file:'act4-crosswind-plate',width:180,depth:44,x:70,z:1.76}),
+ crosswind:Object.freeze({file:'act4-crosswind-plate',width:228,depth:32.2,x:70,z:1.2}),
  crystalGorge:Object.freeze({file:'act5-crystal-gorge-plate',width:48,depth:38,x:0,z:0})
 });
 
@@ -11,10 +11,10 @@ export function createExpansionEnvironmentArt({loader,baseUrl='',mobile=false}={
  const pending=new Map(),textures=new Map();let disposed=false;
  const prefix=baseUrl&&!baseUrl.endsWith('/')?baseUrl+'/':baseUrl;
  function load(act){
-  const definition=(act==='crystalGarden'?{file:'act5-crystal-gorge-plate'}:EXPANSION_ENVIRONMENTS[act])||(act==='cover'?{file:'crystal-cover'}:act==='crosswindFloor'?{file:'act4-crosswind-floor'}:null);if(!definition||disposed)return Promise.resolve(null);
+  const definition=(act==='crystalGarden'?{file:'act5-crystal-gorge-plate'}:EXPANSION_ENVIRONMENTS[act])||(act==='cover'?{file:'crystal-cover'}:act==='crosswindFloor'?{file:'act4-crosswind-floor'}:act==='crosswindSand'?{file:'act4-sand-depression'}:null);if(!definition||disposed)return Promise.resolve(null);
   if(textures.has(act))return Promise.resolve(textures.get(act));
   if(pending.has(act))return pending.get(act);
-  const revision=act==='crosswindFloor'?3:act==='crystalGarden'?3:act==='crystalGorge'?2:1;
+  const revision=act==='crosswindFloor'||act==='crosswind'?4:act==='crystalGarden'?3:act==='crystalGorge'||act==='crosswindSand'?2:1;
   const url=prefix+'assets/expansion/'+definition.file+(mobile&&act!=='cover'?'-mobile':'')+`-v${revision}.webp`;
   const job=Promise.resolve().then(()=>loader.loadAsync(url)).then(texture=>{
    if(disposed){texture.dispose();return null;}

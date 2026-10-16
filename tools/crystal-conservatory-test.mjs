@@ -3,6 +3,8 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
 import {crystalSiegeCamera} from '../src/crystal-siege-camera.js';
+import {journeyFlightCamera} from '../src/journey-flight-camera.js';
+import {crosswindJourneyCamera} from '../src/journey-crosswind-camera.js';
 import {CRYSTAL_GARDEN_ART,CRYSTAL_GARDEN_MOBILE_ART,CRYSTAL_TURRET_ART,CRYSTAL_TURRET_MOBILE_ART,crystalTurretTexture,CRYSTAL_GARDEN_FRAMES,crystalGardenTexture,crystalGardenArtStyle,crystalGardenFloorContactTexture} from '../src/crystal-garden-art.js';
 import {createCrystalSiegeView} from '../src/crystal-siege-view.js';
 import {createCrystalSiege} from '../src/crystal-siege-rules.js';
@@ -43,11 +45,11 @@ await group('Actual main camera wiring applies only to Journey siege and caps ul
  const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf(' const skyCamera=isAct3(region)&&!mirrorSession;'),end=main.indexOf('presentJourneySignature();',start);assert(start>0&&end>start);
  const source=main.slice(start,end);
  for(const[width,height]of viewportCases)for(const variant of['journey-prep','journey-boss','journey4','survival','classic']){
-  const siege=variant.startsWith('journey-'),expansionJourney=variant==='journey4'?{act:'crosswind',phase:'course'}:siege?{act:'crystalGorge',siege:{},phase:variant==='journey-boss'?'boss':'course'}:null;
+  const siege=variant.startsWith('journey-'),expansionJourney=variant==='journey4'?{act:'crosswind',phase:'course',course:{encounterVersion:3}}:siege?{act:'crystalGorge',siege:{},phase:variant==='journey-boss'?'boss':'course'}:null;
   const camera=new THREE.PerspectiveCamera(39,width/height,.1,100),viewLayout=responsiveView(width,height,height<=520);let followOptions;
-  const context={isAct3:()=>false,region:'garden',mirrorSession:null,expansionJourney,survivalSession:variant==='survival'?{}:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width,height},crystalSiegeCamera,camera,look:new THREE.Vector3(),visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player:{position:new THREE.Vector3(7,0,5)},viewLayout,ACT3_VIEW_ZOOM:1,ACT3_VIEW_BIAS:0,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1},seedVisualReview:false,cameraShake:0,rng:()=>.5,cameraFeel:{follow(_dt,opts){followOptions=opts;return{x:4,z:2,zoom:opts.baseZoom*1.038};}}};
+  const context={isAct3:()=>false,region:'garden',mirrorSession:null,expansionJourney,survivalSession:variant==='survival'?{}:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width,height},crystalSiegeCamera,journeyFlightCamera,crosswindJourneyCamera,trainingSession:null,camera,look:new THREE.Vector3(),visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player:{position:new THREE.Vector3(7,0,5)},viewLayout,ACT3_VIEW_ZOOM:1,ACT3_VIEW_BIAS:0,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1},seedVisualReview:false,cameraShake:0,rng:()=>.5,cameraFeel:{follow(_dt,opts){followOptions=opts;return{x:4,z:2,zoom:opts.baseZoom*1.038};}}};
   vm.runInNewContext(source,context);
-  if(siege){const pose=crystalSiegeCamera(width,height);assert.equal(camera.zoom,pose.zoom,'actual ultimate must not zoom above the safe fit');assert.equal(camera.position.x,0);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,pose.lookZ);assert.equal(camera.position.z-context.look.z,pose.offsetZ);assert.equal(followOptions.leadScale,0);}
+  if(siege||variant==='journey4'){const pose=siege?crystalSiegeCamera(width,height):crosswindJourneyCamera(width,height,5.4);assert.equal(camera.zoom,pose.zoom,'actual ultimate must not zoom above the safe fit');assert.equal(camera.position.x,siege?0:4);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,pose.lookZ);assert.equal(camera.position.z-context.look.z,pose.offsetZ);assert.equal(followOptions.leadScale,0);}
   else{assert.equal(followOptions.baseZoom,viewLayout.zoom*(variant==='survival'?1.12:1));assert(Math.abs(camera.zoom-followOptions.baseZoom*1.038)<1e-12,'other modes retain their previous ultimate punch');assert.equal(camera.position.y,22);assert.equal(camera.position.z-context.look.z,15.5);}
  }
 });

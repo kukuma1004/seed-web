@@ -18,7 +18,7 @@ for(const mobile of [false,true]){
  const first=cache.load('crosswind'),second=cache.load('crosswind');assert.equal(first,second,'concurrent requests share one decode');
  const t=await first;assert.equal(await cache.load('crosswind'),t);assert.equal(cache.loaded,1);
  assert.equal(t.wrapS,THREE.ClampToEdgeWrapping);assert.equal(t.wrapT,THREE.ClampToEdgeWrapping);assert.deepEqual(t.repeat.toArray(),[1,1]);
- const url=calls.at(-1);assert.equal(url,`/seed-web/assets/expansion/act4-crosswind-plate${mobile?'-mobile':''}-v1.webp`);
+ const url=calls.at(-1);assert.equal(url,`/seed-web/assets/expansion/act4-crosswind-plate${mobile?'-mobile':''}-v4.webp`);
  assert(fs.existsSync('public'+url.replace('/seed-web','')));
  const count=calls.length;assert.equal(await cache.load('unknown'),null);assert.equal(calls.length,count);
  const gorge=await cache.load('crystalGorge');assert.equal(cache.loaded,2);assert.notEqual(gorge,t);
@@ -34,7 +34,7 @@ const scene=new THREE.Scene(),sharedFloor=new THREE.Texture(),plate4=new THREE.T
 const view=createExpansionJourneyView(scene,sharedFloor);view.setActive(true);const plate=view.root.getObjectByName('expansion-environment-plate');
 const floor=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===8),planeGeometry=plate.geometry,material=plate.material;
 assert.equal(plate.visible,false);assert.equal(floor.visible,true);
-view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,true,'long panorama keeps world-sized road detail');const panoramaSampler=material.map;assert.notEqual(panoramaSampler,plate4);assert.equal(panoramaSampler.source,plate4.source,'owned sampling preserves original image');assert.equal(panoramaSampler.wrapS,THREE.MirroredRepeatWrapping);assert.deepEqual(plate4.repeat.toArray(),[1,1],'cache texture is untouched');
+view.setPlate('crosswind',plate4);assert.equal(plate.visible,true);assert.equal(floor.visible,false,'one integrated painting keeps its baked ground shadows');const panoramaSampler=material.map;assert.notEqual(panoramaSampler,plate4);assert.equal(panoramaSampler.source,plate4.source,'owned sampling preserves original image');assert.equal(panoramaSampler.wrapS,THREE.MirroredRepeatWrapping);assert.deepEqual(plate4.repeat.toArray(),[1,1],'cache texture is untouched');
 const edgeMarks=view.root.children.find(o=>o.isInstancedMesh&&o.geometry.parameters.width===.16);assert.equal(edgeMarks.visible,false,'old plate has no new edge markers');
 view.setCourse('crosswind',{halfDepth:5.4});assert.equal(edgeMarks.visible,true,'fresh closer ricochet boundaries are visible over the same plate');const edgeMatrix=new THREE.Matrix4();for(let i=0;i<edgeMarks.count;i++){edgeMarks.getMatrixAt(i,edgeMatrix);assert(Math.abs(Math.abs(edgeMatrix.elements[14])-5.25)<1e-6);}assert.equal(edgeMarks.count,40,'reuse the existing fixed marker pool');view.setCourse('crosswind');assert.equal(edgeMarks.visible,false,'legacy and other modes reset the optional marker layout');
 const roadMatrix=new THREE.Matrix4();floor.getMatrixAt(0,roadMatrix);assert(roadMatrix.elements[13]>plate.position.y,'road detail must be above the opaque panorama');
@@ -44,13 +44,13 @@ assert.equal(floor.geometry.getAttribute('uv').getX(1),4);assert.equal(floor.geo
 assert.equal(sharedFloor.repeat.x,1,'local road UVs leave all shared texture settings untouched');
 view.root.updateMatrixWorld(true);const box=new THREE.Box3().setFromObject(plate);assert(box.min.x<=-11&&box.max.x>=140,'finite scenery covers actual course and rear entries');
 const definition=EXPANSION_ENVIRONMENTS.crosswind;
-const bandMin=definition.z+(.29-.5)*definition.depth,bandMax=definition.z+(.63-.5)*definition.depth;
+const bandMin=plate.position.z+(.29-.5)*plate.scale.y,bandMax=plate.position.z+(.65-.5)*plate.scale.y;
 assert(bandMin<=-7&&bandMax>=7,'real movement stays on the painted stone band, not in clouds');
 view.setTerrainOnly(true);assert.equal(plate.visible,false);assert.equal(floor.visible,false,'survival keeps its existing ground');
 view.setPlate('crystalGorge',plate5);assert.equal(material.map,panoramaSampler,'a late inactive load cannot replace the current act');
 view.setCourse('crystalGorge');assert.equal(plate.visible,false);assert.equal(material.map,plate5);view.setTerrainOnly(false);assert.equal(plate.visible,true);
-assert.equal(plate.geometry,planeGeometry);assert.equal(plate.material,material);assert.equal(floor.count,12);
-view.setCourse('crystalGorge',{plateBounds:{width:20,depth:17}});assert.deepEqual(plate.scale.toArray(),[20,17,1]);assert.equal(plate.material.map,plate5);assert.equal(plate.geometry,planeGeometry);
+const gorgeGeometry=plate.geometry;assert.notEqual(gorgeGeometry,planeGeometry,'only Crosswind extends edge texels for the wider view');assert.equal(gorgeGeometry.parameters.width,1);assert.equal(gorgeGeometry.parameters.height,1);assert.equal(plate.material,material);assert.equal(floor.count,12);
+view.setCourse('crystalGorge',{plateBounds:{width:20,depth:17}});assert.deepEqual(plate.scale.toArray(),[20,17,1]);assert.equal(plate.material.map,plate5);assert.equal(plate.geometry,gorgeGeometry,'Act5 keeps its original plane without extra edge geometry');
 view.setCourse('crystalGorge');assert.deepEqual(plate.scale.toArray(),[48,38,1],'normal journey restores its original scenery footprint');
 view.setCourse('crystalGorge',{plateBounds:{width:NaN,depth:17}});assert.deepEqual(plate.scale.toArray(),[48,38,1]);
 for(let i=0;i<60;i++){view.setCourse(i%2?'crosswind':'crystalGorge');view.beginFrame();view.tell({position:{x:0,z:0},dir:{x:1,z:0}});}

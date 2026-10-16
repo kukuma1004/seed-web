@@ -56,6 +56,7 @@ import {createExpansionAccountEntry,createExpansionAccountSaveStore,expansionAcc
 import {createExpansionAccountSync} from './expansion-account-sync.js';
 import {createExpansionPublicCampaign,completeExpansionPublicBoss,advanceExpansionPublicCampaign,settleExpansionPublicTitles,expansionCampaignBoss,EXPANSION_CAMPAIGN_CLEARS} from './expansion-public-campaign.js';
 import {createSeedBody} from './seed-body.js';
+import {journeyPlayerScale} from './journey-player-presentation.js';
 import {journeyDuelContext} from './journey-duel-body.js';
 import {createSeedTitle,AUSTIN_TITLE,AUSTIN_TITLE_PERK,ALWAYS_BEGINNER_TITLE,ALWAYS_BEGINNER_TITLE_PERK} from './seed-title.js';
 import {codexNews,CODEX,AUSTIN_CLEAR_TITLE,AUSTIN_VETERAN_TITLE,ALWAYS_CLEAR_TITLE,ALWAYS_VETERAN_TITLE,JOHAN_TITLE,JOHAN_CLEAR_TITLE,JOHAN_VETERAN_TITLE,CLEAR_ALL_STATS} from './titles.js';
@@ -171,6 +172,8 @@ import {RUN_BONUSES,emptyRunBonuses,normalizeRunBonuses,runBonusOffers,rareRunBo
 import {rankingTermsAccepted,setRankingTermsAccepted,blockRankingUser,visibleRanking,rankingReportMailto} from './ranking-safety.js';
 import {responsiveView} from './responsive-view.js';
 import {crystalSiegeCamera} from './crystal-siege-camera.js';
+import {journeyFlightCamera} from './journey-flight-camera.js';
+import {crosswindJourneyCamera} from './journey-crosswind-camera.js';
 import {createCameraFeel} from './camera-feel.js';
 import {createJourneyPresentation,journeyPresentationContext} from './journey-presentation.js';
 import {createJourneyPresentationView} from './journey-presentation-view.js';
@@ -627,8 +630,10 @@ async function prepareExpansionEnvironment(act,{garden=false}={}){
  catch{console.warn('Expansion environment unavailable; retaining the existing course floor.');}
  if(garden&&act==='crystalGorge')try{const art=await expansionArtCache(),texture=await art.load('crystalGarden');if(texture)expansionJourneyView.setPlate('crystalGarden',texture);}
  catch{console.warn('Conservatory unavailable; retaining the existing course floor.');}
- if(act==='crosswind')try{const art=await expansionArtCache(),texture=await art.loadCrosswindFloor();if(texture)expansionJourneyView.setCrosswindFloorTexture(texture);}
+ if(act==='crosswind'&&!expansionJourneyView.hasPlate('crosswind'))try{const art=await expansionArtCache(),texture=await art.loadCrosswindFloor();if(texture)expansionJourneyView.setCrosswindFloorTexture(texture);}
  catch{console.warn('Crosswind floor unavailable; retaining the existing course floor.');}
+ if(act==='crosswind')try{const art=await expansionArtCache(),texture=await art.load('crosswindSand');if(texture)expansionJourneyView.setCrosswindSandTexture(texture);}
+ catch{console.warn('Crosswind sand unavailable; retaining the bounded warning.');}
 }
 async function prepareExpansionCover(){
  try{const art=await expansionArtCache(),texture=await art.loadCover();if(texture){expansionJourneyView.setCoverTexture(texture);syncExpansionCrystals();}}
@@ -727,7 +732,7 @@ function spawnExpansionActor(spec,boss=false){
  if(!boss)e.expansionThreat=expansionApi.createExpansionThreat(spec);
  if(!boss&&expansionJourney.act==='crosswind'&&expansionJourney.phase==='course')e.onJourneyDefeat=actor=>creditJourneySignatureKill(journeySignature,actor,player.position);
  if(boss){e.expansionMotion=expansionJourney.boss;attachActorArt(e,camera,release,expansionActorArt(expansionJourney.bossId));}
- else attachActorArt(e,camera,release,expansionJourney.siege?{...expansionEnemyArt(expansionJourney.act),size:2.2,lighting:true}:expansionEnemyArt(expansionJourney.act));
+ else attachActorArt(e,camera,release,expansionJourney.siege||expansionJourney.act==='crosswind'?{...expansionEnemyArt(expansionJourney.act),size:expansionJourney.act==='crosswind'?2.65:2.2,lighting:true}:expansionEnemyArt(expansionJourney.act));
  enemies.push(e);return e;
 }
 function expansionBolt(q){if(enemyShots.length>=48)return;const factor=expansionChannel==='public'?difficulty(cycle,'garden').projectileSpeed:1,spec={...q.spec,speed:q.spec.speed*factor,life:q.spec.committedLane?q.spec.life/factor:q.spec.life};skywayBolt(new V(q.position.x,0,q.position.z),new V(q.dir.x,0,q.dir.z),spec);}
@@ -764,7 +769,7 @@ function tickExpansionActor(e,dt){
   for(const t of out.telegraphs)expansionJourneyView.tell(t);
   if(expansionJourney.siege&&out.events.some(evt=>evt.type==='crystal-regrowth')){let live=0;for(const q of enemies)if(!q.dead&&q.siegeGuard)live++;const guards=crystalBossGuardSpawns(e,out.events,live);for(const spec of guards)spawnExpansionActor(spec);if(guards.length)$('#toast').textContent='재생 습격대가 심장을 노립니다 · 보스와 심장 사이로 이동해 끊으세요';}
   for(const contact of out.contacts){contact.to.x=e.g.position.x;contact.to.z=e.g.position.z;if(e.lastExpansionContact!==contact.hitId&&expansionApi.expansionContactHits(contact,player.position)){e.lastExpansionContact=contact.hitId;hitPlayer(contact.damage);}}
-  for(const evt of out.events)if(evt.type==='boss-tell'){audio.play('bossWarning');$('#toast').textContent=evt.hint;}
+  for(const evt of out.events)if(evt.type==='boss-tell'){audio.play('bossWarning');if(expansionJourney.act!=='crosswind')$('#toast').textContent=evt.hint;}
   if(out.bolts?.length||out.contacts?.length)audio.play('bossAttack');
  }else{
   const model=e.expansionThreat;model.position.x=e.g.position.x;model.position.z=e.g.position.z;model.hp=e.hp;
@@ -846,7 +851,7 @@ function drawRoom(){
  if(expansionJourney){
   for(const group of [arenaGroup,roomCover,trapGroup])for(const child of [...group.children])release(child);
   obstacles.length=0;traps=[];clockFloor=null;stadium.setActive(false);skyway.setActive(false);mirrorPanels.setActive(false);mirrorPanelsActive=false;expansionReflectors=null;expansionReflectorSection=-1;survivalArt?.setActive(false);
-  for(const object of hiddenGarden)object.visible=false;player.scale.setScalar(expansionJourney?.siege?1.42:1.25);
+  for(const object of hiddenGarden)object.visible=false;player.scale.setScalar(expansionJourney?.act==='crosswind'?1.75:expansionJourney?.siege?1.42:1.25);
   const s=expansionJourney,distance=s.course.distance,canyon=s.act==='crystalGorge',length=s.phase==='boss'?distance+14:140;
   if(s.siege&&s.phase==='boss')keepCrystalBossApproachOpen(s.course.walls);
   expansionJourneyView.setCourse(s.act,{halfDepth:!canyon&&s.phase==='course'&&s.course.encounterVersion>=2?5.4:null,crystalGarden:Boolean(s.siege),plateBounds:s.siege?{width:48,depth:42}:null});expansionJourneyView.setTerrainOnly(false);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
@@ -872,7 +877,7 @@ function drawRoom(){
   }else survivalExpansion=null;
   $('#stages').hidden=true;return;
  }
- survivalArt?.setActive(false);player.scale.setScalar(1.25);$('#stages').hidden=false;
+ survivalArt?.setActive(false);player.scale.setScalar(!mirrorSession&&!trainingSession&&isAct3(region)?1.75:1.25);$('#stages').hidden=false;
  shadowClock=SHADOW_REFRESH;expansionReflectors=null;expansionReflectorSection=-1;mirrorPanels.setPanels();const mirrorRoom=Boolean(mirrorSession),clockRoom=!mirrorRoom&&inAustinRoom()&&!isAct2(region)&&!isAct3(region),bossRoom=mirrorRoom||inAustinRoom();arena=mirrorRoom?MIRROR_ARENA:clockRoom?AUSTIN_ARENA:arenaFor(stage,cycle,region);
  for(const child of [...arenaGroup.children])release(child);buildRoomBoundary();clockFloor=clockRoom?createClockFloor(arenaGroup):null;
  for(const child of [...roomCover.children])release(child);obstacles.splice(0,obstacles.length,...(mirrorRoom?mirrorFloorObstacles(mirrorSession.floor):bossRoom?[]:roomFor(stage,cycle,region).covers).map(o=>({...o})));
@@ -1202,7 +1207,8 @@ function updateJourneySignature(dt){
 function presentJourneySignature(){
  journeySignaturePresentation.siege=expansionJourney?.siege;journeySignaturePresentation.visible=mode==='playing'&&!paused&&!roomCleared&&!survivalSession&&!mirrorSession&&!trainingSession&&!(expansionJourney?.act==='crosswind'&&expansionJourney.phase==='boss');
  const cue=typeof journeyPresentation!=='undefined'?journeyPresentation.state():null;
- journeySignaturePresentation.hideHint=Boolean(cue?.active&&(cue.kind==='storm'||cue.kind==='opening'||cue.kind==='tailwind'||cue.kind==='night'||cue.kind==='support'||cue.kind==='repair'||cue.kind==='core-alert'));
+ const compactScene=journeySignature?.act==='skyway'||journeySignature?.act==='crosswind';
+ journeySignaturePresentation.hideHint=Boolean(compactScene&&$('#toast').textContent||cue?.active&&(cue.kind==='storm'||cue.kind==='opening'||cue.kind==='tailwind'||cue.kind==='night'||cue.kind==='support'||cue.kind==='repair'||cue.kind==='core-alert'));
  journeySignaturePresentation.reducedMotion=typeof journeyReducedMotion!=='undefined'&&journeyReducedMotion;
  journeySignatureView.update(journeySignature,player.position,journeySignaturePresentation);
 }
@@ -3041,7 +3047,10 @@ function animate(now){animationHandle=0;if(document.hidden||!mainOwnsFrames())re
  perfT=performance.now();if(moteMeshes[0].visible&&(frameCounter===1||frameCounter%2===0)){for(const m of motes){m.y+=Math.sin(now*.001+m.seed)*visualDt*(frameCounter===1?.08:.16);moteMatrix.makeTranslation(m.x,m.y,m.z);moteMeshes[m.kind].setMatrixAt(m.index,moteMatrix);}for(const m of moteMeshes)m.instanceMatrix.needsUpdate=true;}
  const skyCamera=isAct3(region)&&!mirrorSession;
  const crystalGardenPose=expansionJourney?.siege?crystalSiegeCamera(canvasRect.width,canvasRect.height):null;
- const cameraPose=cameraFeel.follow(visualDt,{playerX:expansionJourney?.siege&&expansionJourney.phase==='course'||survivalSiege&&survivalSiege.phase!=='boss'?0:player.position.x,playerZ:expansionJourney?.siege&&expansionJourney.phase==='course'||survivalSiege&&survivalSiege.phase!=='boss'?0:player.position.z,moveX:cameraMoveX,moveZ:cameraMoveZ,followX:expansionJourney?1:survivalSession?1:skyCamera ? 0.045 : mirrorSession?Math.max(viewLayout.followX,MIRROR_VIEW.followX):viewLayout.followX,followZ:expansionJourney?.25:survivalSession?1:skyCamera ? 0.02 : mirrorSession?Math.max(viewLayout.followZ,MIRROR_VIEW.followZ):viewLayout.followZ,leadScale:skyCamera||expansionJourney?.siege||survivalSiege?0:1,baseZoom:crystalGardenPose?crystalGardenPose.zoom:viewLayout.zoom*(survivalSession?1.12:skyCamera?ACT3_VIEW_ZOOM:mirrorSession?MIRROR_VIEW.zoom:1),biasX:survivalExpansion?.act===3?3:0,biasZ:skyCamera?(stage===4||inAustinRoom()?0:ACT3_VIEW_BIAS):0});if(crystalGardenPose){cameraPose.x=0;cameraPose.z=crystalGardenPose.lookZ;cameraPose.zoom=Math.min(cameraPose.zoom,crystalGardenPose.zoom);}look.set(cameraPose.x,0,cameraPose.z);if(Math.abs(camera.zoom-cameraPose.zoom)>.0005){camera.zoom=cameraPose.zoom;camera.updateProjectionMatrix();}camera.position.set(look.x,crystalGardenPose?crystalGardenPose.height:seedVisualReview?19:22,(crystalGardenPose?crystalGardenPose.offsetZ:seedVisualReview?19:15.5)+look.z);cameraShake=Math.max(0,cameraShake-visualDt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);camera.updateMatrixWorld();presentJourneySignature();expansionSiegeView?.update(expansionJourney?.siege||(survivalSiegeActive()&&survivalSiegeApi.survivalSiegeState(survivalSiege)),player.position,{visible:mode!=='ready'&&mode!=='dead',interactive:mode==='playing'&&!paused,boss:expansionJourney?.phase==='boss'||survivalSiege?.phase==='boss',bossCleared:exitOpen,liveEnemies:enemies.reduce((n,e)=>n+(!e.dead&&e.hp>0?1:0),0),coreDefense:Boolean(expansionJourney?.siege&&expansionJourney.phase==='boss'),roundCount:survivalSiege?3:5,prepDuration:survivalSiege?15:expansionJourney?.siege?.prepDuration??20,prepRemaining:survivalSiege?15-survivalSiege.elapsed:null,dt:mode==='playing'&&!paused?visualDt:0});if(!paused)survivalVisualTime+=visualDt;survivalArt?.update(enemies,survivalComparisonEnabled?survivalVisualTime:now*.001);survivalComparison?.refresh();stadium.update(now*.001);skyway.tick(visualDt,mode==='playing'&&!paused);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);bossPet.update(visualDt,player.position,{visible:player.visible&&mode==='playing'&&!paused});perfMark(PS.scene);presentFrame(now*.001);presentJourneyTransition();journeyPresentationView.update(journeyPresentation.state(),player.position,journeyPresentationEnabled()&&!paused&&['playing','evolving'].includes(mode),journeyReducedMotion,qualityLevel===0,visualDt);perfMark(PS.hud);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='training-setup'||mode==='training-result'||mode==='notes'||mode==='maintenance'||mode==='gift'||mode==='developer-usage')&&gardenScene;
+ const flightPose=skyCamera&&!survivalSession&&!trainingSession&&!expansionJourney?journeyFlightCamera(canvasRect.width,canvasRect.height):null;
+ const crosswindPose=expansionJourney?.act==='crosswind'?crosswindJourneyCamera(canvasRect.width,canvasRect.height,expansionJourney.phase==='course'&&expansionJourney.course.encounterVersion>=2?5.4:7):null;
+ const journeyPose=crystalGardenPose||flightPose||crosswindPose;
+ const cameraPose=cameraFeel.follow(visualDt,{playerX:expansionJourney?.siege&&expansionJourney.phase==='course'||survivalSiege&&survivalSiege.phase!=='boss'?0:player.position.x,playerZ:expansionJourney?.siege&&expansionJourney.phase==='course'||survivalSiege&&survivalSiege.phase!=='boss'?0:player.position.z,moveX:cameraMoveX,moveZ:cameraMoveZ,followX:expansionJourney?1:survivalSession?1:skyCamera ? 0.045 : mirrorSession?Math.max(viewLayout.followX,MIRROR_VIEW.followX):viewLayout.followX,followZ:flightPose||crosswindPose?0:expansionJourney?.25:survivalSession?1:skyCamera ? 0.02 : mirrorSession?Math.max(viewLayout.followZ,MIRROR_VIEW.followZ):viewLayout.followZ,leadScale:skyCamera||crosswindPose||expansionJourney?.siege||survivalSiege?0:1,baseZoom:journeyPose?journeyPose.zoom:viewLayout.zoom*(survivalSession?1.12:skyCamera?ACT3_VIEW_ZOOM:mirrorSession?MIRROR_VIEW.zoom:1),biasX:survivalExpansion?.act===3?3:0,biasZ:skyCamera?(stage===4||inAustinRoom()?0:ACT3_VIEW_BIAS):0});if(journeyPose){if(!crosswindPose)cameraPose.x=0;cameraPose.z=journeyPose.lookZ;cameraPose.zoom=Math.min(cameraPose.zoom,journeyPose.zoom);}look.set(cameraPose.x,0,cameraPose.z);if(Math.abs(camera.zoom-cameraPose.zoom)>.0005){camera.zoom=cameraPose.zoom;camera.updateProjectionMatrix();}camera.position.set(look.x,journeyPose?journeyPose.height:seedVisualReview?19:22,(journeyPose?journeyPose.offsetZ:seedVisualReview?19:15.5)+look.z);cameraShake=Math.max(0,cameraShake-visualDt);if(cameraShake>0)camera.position.x+=(rng()-.5)*cameraShake;camera.lookAt(look);camera.updateMatrixWorld();presentJourneySignature();expansionSiegeView?.update(expansionJourney?.siege||(survivalSiegeActive()&&survivalSiegeApi.survivalSiegeState(survivalSiege)),player.position,{visible:mode!=='ready'&&mode!=='dead',interactive:mode==='playing'&&!paused,boss:expansionJourney?.phase==='boss'||survivalSiege?.phase==='boss',bossCleared:exitOpen,liveEnemies:enemies.reduce((n,e)=>n+(!e.dead&&e.hp>0?1:0),0),coreDefense:Boolean(expansionJourney?.siege&&expansionJourney.phase==='boss'),roundCount:survivalSiege?3:5,prepDuration:survivalSiege?15:expansionJourney?.siege?.prepDuration??20,prepRemaining:survivalSiege?15-survivalSiege.elapsed:null,dt:mode==='playing'&&!paused?visualDt:0});if(!paused)survivalVisualTime+=visualDt;survivalArt?.update(enemies,survivalComparisonEnabled?survivalVisualTime:now*.001);survivalComparison?.refresh();stadium.update(now*.001);skyway.tick(visualDt,mode==='playing'&&!paused);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);bossPet.update(visualDt,player.position,{visible:player.visible&&mode==='playing'&&!paused});perfMark(PS.scene);presentFrame(now*.001);presentJourneyTransition();journeyPresentationView.update(journeyPresentation.state(),player.position,journeyPresentationEnabled()&&!paused&&['playing','evolving'].includes(mode),journeyReducedMotion,qualityLevel===0,visualDt);perfMark(PS.hud);renderer.info.autoReset=false;renderer.info.reset();shadowClock+=Math.max(0,raw||0);if(sun.castShadow&&shadowClock>=SHADOW_REFRESH){shadowClock=0;renderer.shadowMap.needsUpdate=true;}const showGardenScene=(mode==='ready'||mode==='garden'||mode==='training-setup'||mode==='training-result'||mode==='notes'||mode==='maintenance'||mode==='gift'||mode==='developer-usage')&&gardenScene;
  if(showGardenScene)gardenScene.update(visualDt);
  renderPass.scene=showGardenScene?gardenScene.scene:scene;renderPass.camera=showGardenScene?gardenScene.camera:camera;
  if(!showGardenScene){const laws=chosen.values(),first=laws.next().value||'seed';auraList.length=0;projectileBodyList.length=0;for(const p of shots){auraList.push(p);projectileBodyList.push(p);}for(const c of formCombats.values()){c.auraBolts?.(auraList);c.projectileBodies?.(projectileBodyList);}projectileSprites.sync(projectileBodyList,enemyShots);shotAuras.sync(auraList,camera,{theme:combatTheme,first,second:laws.next().value,bodyArt:'spriteHidden'});}perfMark(PS.scene);if(!menuArtCovers())composer.render();perfMark(PS.render);if(seedVisualDiagnostics&&frameCounter%60===0)$('#game').dataset.visual25dMetrics=JSON.stringify({renderer:'Three',fps:frames.length?1000/(frames.reduce((a,b)=>a+b,0)/frames.length):0,frameMsP95:frames.length?[...frames].sort((a,b)=>a-b)[Math.min(frames.length-1,Math.floor(frames.length*.95))]:0,enemies:enemies.length,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,dpr:renderer.getPixelRatio(),mode,paused,shadowMaps:sun.castShadow?1:0,camera:showGardenScene?'garden':{height:camera.position.y,offsetZ:camera.position.z-look.z,lookX:look.x,lookZ:look.z,zoom:camera.zoom,aspect:camera.aspect}});if(inspection&&!inspection.hidden&&frameCounter%30===0){const state=window.seedDebug.getState();inspection.textContent=JSON.stringify({fps:Math.round(state.fps),frameMsP95:Math.round(state.frameMsP95),drawCalls:state.drawCalls,triangles:state.triangles,textures:state.textures,geometries:state.geometries,enemies:state.enemies.length,projectiles:state.projectiles,enemyProjectiles:state.enemyProjectiles,player:state.player,mode:state.mode,paused:state.paused,audio:audio.state()});}}
@@ -3075,9 +3084,14 @@ function renderBossHud(boss,group=[boss]){
 }
 let hudLast=-Infinity,hudMode='',hudPaused=false;
 function presentFrame(time){
- contactShadows.update(player,enemies,fallen,Boolean(expansionJourney?.siege));contactShadows.mesh.visible=!isAct3(region);player.userData.updateEvolutionArt?.(time,activeGauge.plan?.state==='OVERDRIVE');
+ const journeyReadable=expansionJourney?.act==='crosswind'||!expansionJourney&&!survivalSession&&!mirrorSession&&!trainingSession&&isAct3(region);
+ if(journeyReadable){const scale=journeyPlayerScale(canvasRect.width,canvasRect.height,expansionJourney?.act);if(player.scale.x!==scale)player.scale.setScalar(scale);}
+ contactShadows.update(player,enemies,fallen,expansionJourney?.act==='crosswind'?'crosswind':Boolean(expansionJourney?.siege));contactShadows.mesh.visible=!isAct3(region);player.userData.updateEvolutionArt?.(time,activeGauge.plan?.state==='OVERDRIVE');
  trackOverhead();
  const hudInterval=1/(mobileDevice?20:30),hudDue=time-hudLast>=hudInterval||mode!==hudMode||paused!==hudPaused;if(!hudDue)return;hudLast=time;hudMode=mode;hudPaused=paused;
+ const sceneStyle=expansionJourney?.act==='crosswind'?'crosswind':!expansionJourney&&!survivalSession&&!mirrorSession&&!trainingSession&&isAct3(region)?'skyway':'';
+ if((document.body.dataset.journeyScene||'')!==sceneStyle){if(sceneStyle)document.body.dataset.journeyScene=sceneStyle;else delete document.body.dataset.journeyScene;}
+
  if(survivalSiegeActive()){setText($('#encounter'),`5막 수정 협곡 거점 방어 · ${survivalSiege.round+1}/3 습격\n${survivalSiege.phase==='prep'?'채집과 시설 보강':survivalSiege.phase==='boss'?'수정의 정원사 결전':'정원의 심장을 지키세요'} · ${kills} 처치`);}else if(survivalSession){const pressure=survivalPressure(survivalSession),act=survivalAct(survivalSession);setText($('#encounter'),`${survivalSession.lap+1}순환 · ${survivalSession.act+1}막 ${act.name} · ${survivalClock(survivalActTime(survivalSession))} / ${survivalSession.bossSpawned?'보스':survivalClock(SURVIVAL.duration)}\n${survivalSession.benchmark?'가속 비교 · ':''}${pressure.formationLabel} · ${kills} 처치`);}
 
  const dm=dashMeter(dashState),dashExit=!mirrorSession&&canUseExit({open:exitOpen,mode,paused,x:player.position.x,z:player.position.z,exit:arena.exit||EXIT});touch.update(mode==='playing'&&!paused,Math.max(dm.ready?0:dm.recharge,dashLock),dm,{exit:dashExit});setHidden($('#save-exit'),!(paused&&(mode==='playing'||mode==='evolving')));
@@ -3109,7 +3123,7 @@ function renderItemBar(){
 }
 function trackOverhead(){
  const overhead=$('#overhead'),show=mode==='playing'&&!paused;setHidden(overhead,!show);if(!show)return;
- overheadWorld.copy(player.position);overheadWorld.y=1.95;overheadWorld.project(camera);const r=canvasRect;
+ overheadWorld.copy(player.position);overheadWorld.y=Math.max(1.95,player.scale.y*1.32);overheadWorld.project(camera);const r=canvasRect;
  const x=r.left+(overheadWorld.x+1)*r.width/2,y=r.top+(1-overheadWorld.y)*r.height/2;
  const transform=`translate3d(${x.toFixed(2)}px,${y.toFixed(2)}px,0) translate(-50%,-100%)`;
  if(overhead.__transform!==transform){overhead.style.transform=transform;overhead.__transform=transform;}

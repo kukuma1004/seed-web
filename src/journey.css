@@ -83,3 +83,48 @@ body:has(#crystal-siege-ui:not([hidden])) #overhead .oh-dash{display:none}
 #crystal-siege-ui{word-break:keep-all;overflow-wrap:break-word}
 
 body:has(#pause-build:not([hidden])) #crystal-siege-ui{visibility:hidden}
+
+/* Journey3/4: compact chapter information leaves the actual combat lane clear. */
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) :is(#brand,#stages){display:none}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #encounter{top:12px;max-width:48vw;font:11px/1.3 system-ui;letter-spacing:.2px}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #growth-progress{top:34px!important}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #toast{top:auto!important;bottom:max(44px,calc(env(safe-area-inset-bottom) + 36px));left:50%;transform:translateX(-50%);width:max-content;max-width:min(420px,55vw);padding:5px 9px;border:1px solid #b6c0a42e;border-radius:8px;background:#11291fe6;font:11px/1.4 system-ui;letter-spacing:.1px;word-break:keep-all}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #toast:empty{display:none}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #help{display:none}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #overhead{width:38px;gap:2px}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #overhead:before{content:"나";color:#fff2bf;font:700 10px/12px system-ui;text-shadow:0 1px 3px #071a13}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #overhead .oh-hp{height:5px}
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #overhead .oh-dash{display:none}
+/* Desktop shares the quiet top health row of the art target. Installation
+   remains on the main menu; the fight keeps only pause and combat controls. */
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) :is(#app-actions,#form-label){display:none}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #status{left:max(24px,env(safe-area-inset-left));top:max(22px,env(safe-area-inset-top));bottom:auto;width:270px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) .healthrow{gap:8px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) .healthrow b{font-size:30px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) .health{height:14px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #hptext{font-size:12px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) .dashrow{margin-left:35px;font-size:10px;gap:8px}
+body:not(.touch-mode):is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) .cooldown{width:85px}
+@media(max-height:500px){
+ body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #encounter{top:7px;font-size:9px}
+ body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #growth-progress{top:21px!important;font-size:9px}
+ body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #toast{bottom:max(30px,calc(env(safe-area-inset-bottom) + 24px));max-width:44vw;font-size:10px}
+}
+
+/* The boss identity and next-law meter have separate rows on these routes. */
+body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #boss-hud{top:70px!important;max-width:50vw}
+@media(max-height:500px){
+ body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #boss-hud{top:max(48px,calc(env(safe-area-inset-top) + 44px))!important;width:270px;max-width:44vw;font-size:9px;line-height:1.1}
+}
+
+/* Keep the middle and right entry lane clear: both thumb actions sit together
+   in the reserved bottom strip, with at least a 56px touch target. */
+@media(max-height:520px) and (orientation:landscape){
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]):has(#boss-hud:not([hidden])) #journey-cue[data-kind="boss"]{display:none}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #touch-dash{right:max(14px,env(safe-area-inset-right));bottom:max(16px,env(safe-area-inset-bottom));width:64px;height:64px;font-size:25px;background:#102b3099}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #touch-dash small{font-size:10px}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #active-skill{right:calc(max(14px,env(safe-area-inset-right)) + 80px);bottom:max(20px,env(safe-area-inset-bottom));width:56px;height:56px;background:#0f262ba6}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #active-skill .active-name{font-size:9px;bottom:-13px}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #move-stick{width:88px;height:88px;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom))}
+ body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #move-stick i{width:36px;height:36px}
+}

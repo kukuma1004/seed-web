@@ -18,14 +18,14 @@ export function createContactShadows(scene,capacity=CONTACT_SHADOW_CAPACITY){
   material.customProgramCacheKey=()=> 'seed-contact-garden-depth-v1';
  }
  const mesh=new THREE.InstancedMesh(geometry,material,capacity);mesh.name='actor-contact-shadows';mesh.frustumCulled=false;mesh.renderOrder=-1;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(mesh);
- const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),quaternion=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0));
- let gardenActive=false;
+ const matrix=new THREE.Matrix4(),position=new THREE.Vector3(),scale=new THREE.Vector3(),quaternion=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,0)),gardenQuaternion=new THREE.Quaternion().setFromEuler(new THREE.Euler(-Math.PI/2,0,-Math.PI/4));
+ let gardenActive=false,crosswindActive=false;
  const add=(actor,type)=>{
   const group=actor?.g||actor;if(!group||group.visible===false||mesh.count>=capacity)return;
-  const radius=gardenActive&&actor?.expansionActor&&!actor.expansionBoss?.72:contactShadowRadius(type||actor?.type);position.set(group.position.x,.125,group.position.z);scale.set(radius,radius*.56,1);matrix.compose(position,quaternion,scale);mesh.setMatrixAt(mesh.count++,matrix);
+  const radius=crosswindActive&&type==='player'?.82:gardenActive&&actor?.expansionActor&&!actor.expansionBoss?.72:contactShadowRadius(type||actor?.type);position.set(group.position.x+(crosswindActive?.2:0),.125,group.position.z+(crosswindActive?.22:0));scale.set(radius,radius*(crosswindActive?.5:.56),1);matrix.compose(position,crosswindActive?gardenQuaternion:quaternion,scale);mesh.setMatrixAt(mesh.count++,matrix);
  };
  function update(player,enemies=[],fallen=[],garden=false){
-  gardenActive=garden===true;material.opacity=gardenActive?.62:depthReview?.42:.23;
+  crosswindActive=garden==='crosswind';gardenActive=garden===true||crosswindActive;material.opacity=crosswindActive?.66:gardenActive?.62:depthReview?.42:.23;
   mesh.count=0;add(player,'player');for(const enemy of enemies)if(!enemy.dead&&!enemy.survivalKind)add(enemy);for(const entry of fallen)add(entry.e);mesh.instanceMatrix.needsUpdate=true;return mesh.count;
  }
  function dispose(){mesh.removeFromParent();geometry.dispose();material.dispose();}

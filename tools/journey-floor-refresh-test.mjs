@@ -11,7 +11,7 @@ import {createExpansionEntry,validExpansionEntry} from '../src/expansion-run-sav
 
 for(const mobile of [false,true]){
  const urls=[],cache=createExpansionEnvironmentArt({mobile,loader:{loadAsync:async url=>{urls.push(url);return new THREE.Texture();}}});
- for(const [act,revision,name] of [['crosswindFloor',3,'act4-crosswind-floor'],['crystalGorge',2,'act5-crystal-gorge-plate']]){
+ for(const [act,revision,name] of [['crosswindFloor',4,'act4-crosswind-floor'],['crystalGorge',2,'act5-crystal-gorge-plate']]){
   const a=cache.load(act),b=cache.load(act);assert.equal(a,b);await a;
   const path=`assets/expansion/${name}${mobile?'-mobile':''}-v${revision}.webp`;
   assert.equal(urls.at(-1),path);const bytes=readFileSync('public/'+path);
