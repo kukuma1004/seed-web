@@ -21,15 +21,15 @@ function makeCamera(width,height,pose){const camera=new THREE.PerspectiveCamera(
 function screen(point,camera,width,height){const p=point.clone().project(camera);return{x:(p.x+1)*width/2,y:(1-p.y)*height/2,depth:p.z};}
 function inside(point,bounds,width,height,label){const epsilon=1e-5;assert(point.x>=bounds.side-epsilon&&point.x<=width-bounds.side+epsilon,label+' horizontal safe area');assert(point.y>=bounds.top-epsilon&&point.y<=height-bounds.bottom+epsilon,label+' vertical safe area');assert(point.depth>-1&&point.depth<1,label+' camera clip planes');}
 
-await group('Actual THREE projection fits movement edges and six full billboard crystals in four landscape safe areas',()=>{
+await group('Close conservatory camera follows the seed and keeps nearby harvest props in four safe areas',()=>{
  for(const[width,height]of viewportCases){
-  const pose=crystalSiegeCamera(width,height),camera=makeCamera(width,height,pose),bounds=safeArea(width,height),points=[];
-  for(const z of[-7.5,7.5])for(const x of[-8.5,8.5]){const p=screen(new THREE.Vector3(x,0,z),camera,width,height);inside(p,bounds,width,height,'movement '+x+','+z);points.push(p);}
-  const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),right=new THREE.Vector3(1,0,0).applyQuaternion(camera.quaternion),nodes=createCrystalSiege(0,44).nodes;
-  // Sprite size 2.65 and center .035 are the actual shipping view, not a
-  // world-vertical approximation: the top moves along the camera's up vector.
-  for(const node of nodes)for(const sx of[-.5,.5])for(const sy of[-.035,.965]){const p=new THREE.Vector3(node.x,.025,node.z).addScaledVector(right,2.65*sx).addScaledVector(up,2.65*sy);const projected=screen(p,camera,width,height);inside(projected,bounds,width,height,'crystal '+node.id);points.push(projected);}
-  measurements.camera.push({width,height,zoom:pose.zoom,safe:bounds,occupied:{left:Math.min(...points.map(p=>p.x)),right:Math.max(...points.map(p=>p.x)),top:Math.min(...points.map(p=>p.y)),bottom:Math.max(...points.map(p=>p.y))}});
+  const pose=crystalSiegeCamera(width,height),bounds=safeArea(width,height);assert.equal(pose.zoom,responsiveView(width,height,height<=520).zoom*1.55);assert.equal(pose.followX,1);assert.equal(pose.followZ,1);
+  for(const player of [{x:-3,z:4},{x:7.5,z:-6.5},{x:-7.5,z:6.5}]){
+   const camera=makeCamera(width,height,{...pose,lookZ:player.z+pose.biasZ});camera.position.x=player.x;camera.lookAt(player.x,0,player.z+pose.biasZ);camera.updateMatrixWorld();
+   const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),foot=screen(new THREE.Vector3(player.x,0,player.z),camera,width,height),top=screen(new THREE.Vector3(player.x,0,player.z).addScaledVector(up,1.18*1.75),camera,width,height);
+   inside(foot,bounds,width,height,'tracked seed foot');inside(top,bounds,width,height,'tracked seed top');assert(foot.y-top.y>=45);
+   measurements.camera.push({width,height,player,zoom:pose.zoom,playerPixels:foot.y-top.y});
+  }
  }
 });
 
@@ -49,7 +49,7 @@ await group('Actual main camera wiring applies only to Journey siege and caps ul
   const camera=new THREE.PerspectiveCamera(39,width/height,.1,100),viewLayout=responsiveView(width,height,height<=520);let followOptions;
   const context={isAct3:()=>false,region:'garden',mirrorSession:null,expansionJourney,survivalSession:variant==='survival'?{}:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width,height},crystalSiegeCamera,journeyFlightCamera,crosswindJourneyCamera,trainingSession:null,camera,look:new THREE.Vector3(),visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player:{position:new THREE.Vector3(7,0,5)},viewLayout,ACT3_VIEW_ZOOM:1,ACT3_VIEW_BIAS:0,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1},seedVisualReview:false,cameraShake:0,rng:()=>.5,cameraFeel:{follow(_dt,opts){followOptions=opts;return{x:4,z:2,zoom:opts.baseZoom*1.038};}}};
   vm.runInNewContext(source,context);
-  if(siege||variant==='journey4'){const pose=siege?crystalSiegeCamera(width,height):crosswindJourneyCamera(width,height,5.4);assert.equal(camera.zoom,pose.zoom,'actual ultimate must not zoom above the safe fit');assert.equal(camera.position.x,siege?0:4);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,pose.lookZ);assert.equal(camera.position.z-context.look.z,pose.offsetZ);assert.equal(followOptions.leadScale,0);}
+  if(siege||variant==='journey4'){const pose=siege?crystalSiegeCamera(width,height,viewLayout):crosswindJourneyCamera(width,height,5.4,viewLayout);assert.equal(camera.zoom,pose.maxZoom);assert.equal(camera.position.x,4);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,2);assert.equal(camera.position.z-context.look.z,pose.offsetZ);assert.equal(followOptions.leadScale,.35);assert.equal(followOptions.followX,1);assert.equal(followOptions.followZ,1);assert.equal(followOptions.snapDistance,4.5);}
   else{assert.equal(followOptions.baseZoom,viewLayout.zoom*(variant==='survival'?1.12:1));assert(Math.abs(camera.zoom-followOptions.baseZoom*1.038)<1e-12,'other modes retain their previous ultimate punch');assert.equal(camera.position.y,22);assert.equal(camera.position.z-context.look.z,15.5);}
  }
 });

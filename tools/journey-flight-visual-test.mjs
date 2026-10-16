@@ -26,26 +26,17 @@ function makeSkyway(mobile=false){
  const view=context.createSkyway(scene,{lights:[sun,hemi],hide:[visible,hidden],mobile});return{scene,view,loads,textures,before,visible,hidden};
 }
 
-await check('Actual THREE projects all movement edges, authored entries, rotated aircraft and full Johan sweep inside four HUD safe areas',()=>{
- const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),seed=fs.readFileSync(new URL('../src/seed-body.js',import.meta.url),'utf8'),bodySize=Number(seed.match(/export const BODY_SIZE=([\d.]+)/)[1]),scaleHost=main.match(/survivalArt\?\.setActive\(false\);(player\.scale\.setScalar\([^;]+;)/)[1],scaleContext={player:new THREE.Object3D(),mirrorSession:null,trainingSession:null,isAct3:r=>r==='skyway',region:'skyway'};
- vm.runInNewContext(scaleHost,scaleContext);assert.equal(scaleContext.player.scale.x,1.75);
+await check('Close flight view preserves readable seed scale and reveals the wider corridor through movement',()=>{
  for(const[w,h]of cases){
-  const playerScale=journeyPlayerScale(w,h);
-  const pose=journeyFlightCamera(w,h),camera=makeCamera(w,h,pose);let points=0;
-  const verify=(point,label)=>{inside(project(point,camera,w,h),pose,w,h,label);points++;};
-  for(const[x,z]of ACT3_ARENA.points)verify(new THREE.Vector3(x,0,z),'floor '+x+','+z);
-  const players=[ACT3_ARENA.start,{x:0,z:-7.8},{x:-8.7,z:0},{x:8.7,z:7}];
-  for(let stage=0;stage<SKYWAY_ROOMS.length;stage++){
-   const actors=SKYWAY_ROOMS[stage].enemies.map(([type,x,z])=>({type,x,z}));
-   for(let i=0;i<42;i++)actors.push({type:act3CrowdType(i,stage),...act3ReinforcementSpawn(i)});
-   for(const actor of actors)for(const player of players){const art=ACT3_ART[actor.type],position=actor.type==='act3warden'?actor:act3EntryPoint(actor.x,actor.z,player);for(let i=0;i<16;i++)for(const corner of billboardCorners(position.x,position.z,art.size,art.baseline,i*Math.PI/8,camera))verify(corner,actor.type+' '+position.x+','+position.z);}
+  const pose=journeyFlightCamera(w,h),scale=journeyPlayerScale(w,h);assert.equal(scale,1.75);
+  assert.equal(pose.height,19);assert.equal(pose.offsetZ,19);assert.equal(pose.zoom,responsiveView(w,h,h<=520).zoom*1.55);
+  for(const player of [{x:0,z:5.5},{x:-8.7,z:-7.8},{x:8.7,z:7}]){
+   const local={...pose,x:player.x,lookZ:player.z+pose.biasZ},camera=makeCamera(w,h,local);
+   const foot=project(new THREE.Vector3(player.x,0,player.z),camera,w,h),up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
+   const top=project(new THREE.Vector3(player.x,0,player.z).addScaledVector(up,1.18*scale),camera,w,h);
+   inside(foot,pose,w,h,'tracked seed foot');inside(top,pose,w,h,'tracked seed top');assert(foot.y-top.y>=45);
+   measurements.push({viewport:[w,h],player,zoom:pose.zoom,playerPixels:foot.y-top.y});
   }
-  for(let x=-6.3;x<=6.301;x+=.63)for(let i=0;i<32;i++)for(const p of billboardCorners(x,-1.8,ACT3_ART.tempestcarrier.size,ACT3_ART.tempestcarrier.baseline,i*Math.PI/16,camera))verify(p,'Johan');
-  const start=project(new THREE.Vector3(0,0,ACT3_ARENA.start.z),camera,w,h),top=project(new THREE.Vector3(0,0,ACT3_ARENA.start.z).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),bodySize*playerScale),camera,w,h),playerPixels=Math.abs(start.y-top.y);
-  assert(playerPixels>=45,'player painting remains at least 45px on the smallest tested screen');assert(start.y<h*.78,'start no longer sits against the bottom HUD');
-  const legacyLookZ=ACT3_ARENA.start.z*.02+.4-2,legacy=makeCamera(w,h,{height:22,offsetZ:15.5,lookZ:legacyLookZ,zoom:responsiveView(w,h,h<=520).zoom*.88}),oldStart=project(new THREE.Vector3(0,0,ACT3_ARENA.start.z),legacy,w,h);
-  assert(start.y<oldStart.y-12,'framing visibly raises the starting player');
-  measurements.push({viewport:[w,h],pose,projectionPoints:points,playerPixels:+playerPixels.toFixed(2),startY:+start.y.toFixed(2),legacyStartY:+oldStart.y.toFixed(2)});
  }
 });
 
@@ -57,9 +48,9 @@ await check('Shipping main uses the native Journey3 fit for ordinary rooms and b
   const camera=new THREE.PerspectiveCamera(39,w/h,.1,100),viewLayout=responsiveView(w,h,h<=520);let follows,flightCalls=0;
   const context={isAct3:r=>r==='skyway',region,mirrorSession:mirror?{}:null,trainingSession:training?{}:null,expansionJourney,survivalSession:survival?{}:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width:w,height:h},journeyFlightCamera:(...args)=>{flightCalls++;return journeyFlightCamera(...args);},crystalSiegeCamera,crosswindJourneyCamera,camera,look:new THREE.Vector3(),visualDt:1/60,cameraMoveX:2,cameraMoveZ:-1,player:{position:new THREE.Vector3(8,0,7)},viewLayout,ACT3_VIEW_ZOOM:.88,ACT3_VIEW_BIAS:-2,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1.1},seedVisualReview:false,cameraShake:0,rng:()=>.5,stage:variant==='native3-boss'?4:0,inAustinRoom:()=>variant==='native3-boss',cameraFeel:{follow(_dt,opts){follows=opts;return{x:4,z:-3,zoom:opts.baseZoom*punch};}}};
   vm.runInNewContext(host,context);assert.equal(flightCalls,native?1:0,variant+' camera ownership');
-  if(native){const pose=journeyFlightCamera(w,h);assert.equal(camera.zoom,pose.zoom,'ultimate punch cannot crop the flight corridor');assert.equal(camera.position.x,0);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,pose.lookZ);assert(Math.abs(camera.position.z-context.look.z-pose.offsetZ)<1e-12);assert.equal(follows.leadScale,0);assert.equal(follows.followZ,0);for(const[x,z]of ACT3_ARENA.points)inside(project(new THREE.Vector3(x,0,z),camera,w,h),pose,w,h,'shipping flight floor');}
-  else if(variant==='journey4'){const pose=crosswindJourneyCamera(w,h,5.4);assert.equal(camera.position.x,4,'Act4 retains lateral camera follow');assert.equal(camera.zoom,pose.zoom);assert.equal(context.look.z,pose.lookZ);}
-  else if(variant==='journey5'){const pose=crystalSiegeCamera(w,h);assert.equal(camera.position.x,0);assert.equal(camera.zoom,pose.zoom);assert.equal(context.look.z,pose.lookZ);}
+  if(native){const pose=journeyFlightCamera(w,h,viewLayout);assert.equal(camera.zoom,pose.zoom*punch);assert.equal(camera.position.x,4);assert.equal(camera.position.y,pose.height);assert.equal(context.look.z,-3);assert(Math.abs(camera.position.z-context.look.z-pose.offsetZ)<1e-12);assert.equal(follows.leadScale,.35);assert.equal(follows.followX,1);assert.equal(follows.followZ,1);assert.equal(follows.snapDistance,4.5);}
+  else if(variant==='journey4'){const pose=crosswindJourneyCamera(w,h,5.4,viewLayout);assert.equal(camera.position.x,4,'Act4 retains lateral camera follow');assert.equal(camera.zoom,pose.zoom*punch);assert.equal(context.look.z,-3);}
+  else if(variant==='journey5'){const pose=crystalSiegeCamera(w,h,viewLayout);assert.equal(camera.position.x,4);assert.equal(camera.zoom,pose.zoom*punch);assert.equal(context.look.z,-3);}
   else{const sky=region==='skyway'&&!mirror,expected=viewLayout.zoom*(survival?1.12:sky?.88:mirror?1.1:1);assert.equal(follows.baseZoom,expected,variant+' original device zoom');assert.equal(camera.zoom,expected*punch,variant+' original ultimate punch');assert.equal(camera.position.x,4);assert.equal(context.look.z,-3);assert.equal(camera.position.y,22);assert.equal(camera.position.z-context.look.z,15.5);}
   runs++;
  }

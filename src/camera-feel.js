@@ -17,7 +17,7 @@ export function createCameraFeel(){
   return freeze>0?.08:1;
  }
  // biasZ: 적이 한쪽에서만 밀려오는 막에서 시선을 그쪽으로 당겨 둔다(3막 하늘길).
- function follow(dt,{playerX=0,playerZ=0,moveX=0,moveZ=0,followX=.14,followZ=.06,leadScale=1,baseZoom=1,biasX=0,biasZ=0}={}){
+ function follow(dt,{playerX=0,playerZ=0,moveX=0,moveZ=0,followX=.14,followZ=.06,leadScale=1,baseZoom=1,biasX=0,biasZ=0,snapDistance=Infinity}={}){
   const safe=clamp(Number.isFinite(dt)?dt:0,0,.1),speed=Math.hypot(moveX,moveZ)/Math.max(safe,.001);
   let targetLeadX=0,targetLeadZ=0;
   // A small stick deadzone prevents camera buzz; look-ahead is capped so the
@@ -30,7 +30,9 @@ export function createCameraFeel(){
   const dx=targetX-x,dz=targetZ-z;
   // The deadzone keeps the body and HP bar visually anchored during tiny
   // animation offsets while still letting deliberate movement pull the view.
-  if(Math.hypot(dx,dz)>.105){x=settle(x,targetX,4.6,safe);z=settle(z,targetZ,4.6,safe);}
+  // Restoring a far Act4 checkpoint must not strand the seed off camera.
+  if(Number.isFinite(snapDistance)&&snapDistance>0&&Math.hypot(dx,dz)>snapDistance){x=targetX;z=targetZ;}
+  else if(Math.hypot(dx,dz)>.105){x=settle(x,targetX,4.6,safe);z=settle(z,targetZ,4.6,safe);}
   let zoomScale=1;
   if(punch>0&&punchTotal>0){const age=1-punch/punchTotal;zoomScale=age<.18?1+.038*(age/.18):1-.022*Math.sin(Math.PI*clamp((age-.18)/.82,0,1));}
   return {x,z,zoom:baseZoom*zoomScale,lookAhead:{x:leadX,z:leadZ}};

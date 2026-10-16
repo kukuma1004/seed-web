@@ -19,7 +19,7 @@ for(const region of ['garden','stadium','skyway'])for(const variant of ['native'
  const player=new THREE.Object3D();player.scale.setScalar(1.42);
  const context={region,expansionJourney:variant==='crosswind'?{act:'crosswind'}:variant==='siege'?{act:'crystalGorge',siege:{}}:null,survivalSession:variant==='survival'?{}:null,mirrorSession:variant==='mirror'?{}:null,trainingSession:variant==='training'?{}:null,isAct3:r=>r==='skyway',player,canvasRect:{width,height},journeyPlayerScale};
  runInNewContext(scaleHost,context);
- assert.equal(player.scale.x,variant==='crosswind'||variant==='native'&&region==='skyway'?journeyPlayerScale(width,height,context.expansionJourney?.act):1.42,'only native Journey3/4 gets a responsive visual size');
+ assert.equal(player.scale.x,['crosswind','siege'].includes(variant)||variant==='native'&&region==='skyway'?journeyPlayerScale(width,height,context.expansionJourney?.act):1.42,'native Journey3/4/5 keeps a readable Seed silhouette');
 }
 assert(arenaStart>=0&&arenaEnd>arenaStart,'exercise the shipping host arena, not a duplicate arena fixture');
 const hostArena=(phase,encounterVersion)=>{
@@ -30,35 +30,16 @@ const camera=new THREE.PerspectiveCamera(39,1,.1,100),point=new THREE.Vector3(),
 const projection=[];
 for(const [width,height] of [[1280,720],[1024,768],[844,390],[640,360]])for(const [phase,version] of [['course',3],['course',1],['boss',3]]){
  const arena=hostArena(phase,version),layout=crosswindJourneyCamera(width,height,arena.halfDepth);
- assert.equal(layout,crosswindJourneyCamera(width,height,arena.halfDepth),'cached resize layout');assert(Object.isFrozen(layout));
- assert.equal(layout.followZ,0);assert.equal(layout.leadScale,0);assert.equal(layout.zoom,layout.maxZoom);
- assert(layout.zoom>0&&Number.isFinite(layout.zoom));
- const top=height<=520?70:92,bottom=height<=520?58:82,side=width<=700?22:36;
- for(const cameraX of [0,23.5,99]){
-  camera.aspect=width/height;camera.zoom=layout.zoom;camera.position.set(cameraX,layout.height,layout.offsetZ+layout.lookZ);camera.lookAt(cameraX,0,layout.lookZ);camera.updateProjectionMatrix();camera.updateMatrixWorld();
-  // Actual THREE projection includes the real corridor and its outside lip.
-  for(const z of [-arena.halfDepth-.62,arena.halfDepth+.62])for(const x of [-8.2,8.2]){
-   point.set(cameraX+x,0,z).project(camera);const px=(point.x+1)*width/2,py=(1-point.y)*height/2;
-   assert(px>=side-1e-5&&px<=width-side+1e-5,`local route side fit ${width}x${height}`);
-   assert(py>=top-1e-5&&py<=height-bottom+1e-5,`real edge vertical fit ${width}x${height}`);
-  }
-  for(const z of [-arena.halfDepth+.4,0,arena.halfDepth-.4])for(const y of [0,1.95]){
-   point.set(cameraX,y,z).project(camera);const py=(1-point.y)*height/2;
-   assert(py>=top-1e-5&&py<=height-bottom+1e-5,'seed silhouettes fit throughout the actual travel lane');
-  }
+ assert.equal(layout,crosswindJourneyCamera(width,height,arena.halfDepth));assert(Object.isFrozen(layout));assert.equal(layout.followZ,1);assert.equal(layout.leadScale,.35);
+ const feel=createCameraFeel();let actorPixels=0;
+ for(let frame=0;frame<600;frame++){
+  const playerX=frame===0?99:99+frame*6.09/60,playerZ=Math.sin(frame*.015)*(arena.halfDepth-.4),pose=feel.follow(1/60,{playerX,playerZ,moveX:6.09/60,moveZ:0,followX:1,followZ:1,leadScale:.35,baseZoom:layout.zoom,biasX:layout.biasX,biasZ:layout.biasZ,snapDistance:layout.snapDistance});
+  camera.aspect=width/height;camera.zoom=pose.zoom;camera.position.set(pose.x,layout.height,layout.offsetZ+pose.z);camera.lookAt(pose.x,0,pose.z);camera.updateProjectionMatrix();camera.updateMatrixWorld();
+  point.set(playerX,0,playerZ).project(camera);assert(Math.abs(point.x)<.35&&Math.abs(point.y)<.45,'entry at x99 and lane movement keep the player visible immediately');
+  const foot=point.y;point.set(playerX,0,playerZ).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),1.18*journeyPlayerScale(width,height,'crosswind')).project(camera);actorPixels=(point.y-foot)*height/2;
+  assert(actorPixels>=(height<=520?40:60));
  }
- point.set(99,0,0).project(camera);const foot=point.y,bodySize=Number(readFileSync(new URL('../src/seed-body.js',import.meta.url),'utf8').match(/export const BODY_SIZE=([\d.]+)/)[1]);
- point.set(99,0,0).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),bodySize*journeyPlayerScale(width,height,'crosswind')).project(camera);const actorPixels=(point.y-foot)*height/2;
- assert(actorPixels>=(height<=520?40:60),'actual shipping player painting remains readable while the garden framing gets wider');
- projection.push({width,height,phase,halfDepth:arena.halfDepth,zoom:+layout.zoom.toFixed(4),actorPixels:+actorPixels.toFixed(2)});
-}
-// Real shared follow supplies only X. Changing lanes cannot drag the fixed
-// road vertically, and ordinary sideways travel retains rear escape space.
-const feel=createCameraFeel(),layout=crosswindJourneyCamera(640,360);
-for(let frame=0;frame<600;frame++){
- const playerX=frame*6.09/60,pose=feel.follow(1/60,{playerX,playerZ:Math.sin(frame*.03)*5,moveX:6.09/60,moveZ:0,followX:1,followZ:layout.followZ,leadScale:layout.leadScale,baseZoom:layout.zoom});
- camera.aspect=640/360;camera.zoom=Math.min(pose.zoom,layout.maxZoom);camera.position.set(pose.x,layout.height,layout.offsetZ+layout.lookZ);camera.lookAt(pose.x,0,layout.lookZ);camera.updateProjectionMatrix();camera.updateMatrixWorld();
- point.set(playerX,.8,0).project(camera);assert(Math.abs(point.x)<.3,'side follow keeps player within the central 30 percent');
+ projection.push({width,height,phase,halfDepth:arena.halfDepth,zoom:layout.zoom,actorPixels});
 }
 
 const scene=new THREE.Scene(),ground=new THREE.Texture(),tile=new THREE.Texture({width:1024,height:1024}),panorama=new THREE.Texture({width:2048,height:1024}),canyon=new THREE.Texture();
