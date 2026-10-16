@@ -23,7 +23,7 @@ for(const mobile of [false,true]){
 
 // Execute the actual host arena assignment, then apply the shipping collision
 // constraint. The newly gained flank must be reachable, and still bounded.
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('arena=s.siege||canyon'),end=main.indexOf(';',start)+1;
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('arena=s.siege?'),end=main.indexOf(';',start)+1;
 assert(start>=0&&end>start);
 const context={s:{siege:{},phase:'course',course:{encounterVersion:3}},canyon:true,distance:0,length:140};
 runInNewContext(main.slice(start,end),context);const arena=context.arena;

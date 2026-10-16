@@ -860,7 +860,7 @@ function drawRoom(){
   expansionJourneyView.setCourse(s.act,{halfDepth:!canyon?9:null,crystalGarden:Boolean(s.siege),plateBounds:s.siege?{width:72,depth:64}:null});expansionJourneyView.setTerrainOnly(false);expansionTerrain=canyon?expansionApi.createCrystalCombatBridge(s.course.walls,{position:(x,z)=>new V(x,0,z)}):null;
   // Widen the player's flank space, retaining the inner ingress, core and paid
   // facility positions. A larger floor must not lengthen the assault path.
-  arena=s.siege||canyon?{shape:'poly',halfWidth:13,halfDepth:11,points:Array.from({length:12},(_,i)=>[Math.cos(i*Math.PI/6)*13,Math.sin(i*Math.PI/6)*11]),start:s.siege&&s.phase==='course'?{x:-3,z:4}:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:s.siege&&s.phase==='course'?{x:0,z:-5.4,radius:1.4}:{x:0,z:-7,radius:2}}:{shape:'rect',halfWidth:length,halfDepth:9,start:{x:s.phase==='boss'?distance-4:0,z:0},exit:{x:distance,z:0,radius:2}};
+  arena=s.siege?{shape:'poly',halfWidth:13,halfDepth:11,points:Array.from({length:12},(_,i)=>[Math.cos(i*Math.PI/6)*13,Math.sin(i*Math.PI/6)*11]),start:s.siege&&s.phase==='course'?{x:-3,z:4}:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:s.siege&&s.phase==='course'?{x:0,z:-5.4,radius:1.4}:{x:0,z:-7,radius:2}}:canyon?{shape:'rect',halfWidth:8.5,halfDepth:10,start:s.phase==='boss'?{x:-4,z:0}:{x:0,z:7},exit:{x:0,z:-7,radius:2}}:{shape:'rect',halfWidth:length,halfDepth:9,start:{x:s.phase==='boss'?distance-4:0,z:0},exit:{x:distance,z:0,radius:2}};
   gate.position.set(arena.exit.x,0,arena.exit.z);syncExpansionCrystals();return;
  }
  if(survivalSession){

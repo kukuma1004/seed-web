@@ -17,6 +17,7 @@ function expansionArena(act,phase='course'){
  const c={s:{act,phase,siege:act==='crystalGorge'?{}:null,course:{encounterVersion:3}},canyon:act==='crystalGorge',length:phase==='boss'?62:140,distance:48};
  vm.runInNewContext(main.slice(arenaStart,arenaEnd),c);return c.arena;
 }
+const legacy={s:{act:'crystalGorge',phase:'course',course:{}},canyon:true,length:140,distance:0};vm.runInNewContext(main.slice(arenaStart,arenaEnd),legacy);assert.equal(legacy.arena.halfWidth,8.5);assert.equal(legacy.arena.halfDepth,10,'old non-siege canyon keeps its saved route and original camera framing');
 const crosswind=expansionArena('crosswind'),crystal=expansionArena('crystalGorge');
 assert.equal(ACT3_ARENA.halfWidth,15);assert.equal(ACT3_ARENA.halfDepth,13);
 assert.equal(crosswind.halfDepth,9);assert.equal(crystal.halfWidth,13);assert.equal(crystal.halfDepth,11);
