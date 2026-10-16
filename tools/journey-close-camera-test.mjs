@@ -12,6 +12,8 @@ import {journeyPlayerScale} from '../src/journey-player-presentation.js';
 
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=source.indexOf(' const skyCamera=isAct3(region)&&!mirrorSession;'),end=source.indexOf('presentJourneySignature();',start);
 assert(start>0&&end>start);
+assert(source.includes('const player=createSeedBody(scene,{occlusion:qualityLevel>0});player.scale.setScalar(1.25)'), 'reference is actual Act1 rig size');
+assert.equal(journeyPlayerScale(1280,720),1.25, 'native3/4/5 must match Act1, without a second visual magnifier');
 const host=new vm.Script('(function(){'+source.slice(start,end)+'})()'),viewports=[[1280,720,false],[1024,768,true],[844,390,true],[640,360,true]],metrics=[];
 let projected=0;
 for(const[w,h,touch]of viewports)for(const act of['skyway','crosswind','crystalGorge']){
@@ -25,15 +27,15 @@ for(const[w,h,touch]of viewports)for(const act of['skyway','crosswind','crystalG
   if(act==='crystalGorge'&&section===3)context.expansionJourney.phase='boss';
   context.cameraMoveX=.07;context.cameraMoveZ=-.03;
   const before=player.position.toArray();host.runInContext(context);assert.deepEqual(player.position.toArray(),before,'camera cannot move gameplay state');
-  assert.equal(camera.zoom,viewLayout.zoom*1.55,'nearby combat, never a full-map fit');assert.equal(camera.position.y,19);assert.equal(camera.position.z-look.z,19);
+  assert.equal(camera.zoom,viewLayout.zoom,'nearby combat, never a full-map fit');assert.equal(camera.position.y,19);assert.equal(camera.position.z-look.z,19);
   const foot=player.position.clone().project(camera),up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),top=player.position.clone().addScaledVector(up,1.18*journeyPlayerScale(w,h,act)).project(camera);
   assert(Math.abs(foot.x)<.5&&Math.abs(foot.y)<.5,'seed stays in the middle half of the screen even on entry/resume');
-  const px=(top.y-foot.y)*h/2;assert(px>=65,'readable seed, including 640px landscape');minPixels=Math.min(minPixels,px);assert(top.y<1-2*pose.top/h,'head stays below HUD '+JSON.stringify({act,w,h,frame,foot:foot.y,top:top.y,camera:look.toArray()}));projected++;
+  const px=(top.y-foot.y)*h/2;assert(px>=35,'readable seed, including 640px landscape');minPixels=Math.min(minPixels,px);assert(top.y<1-2*pose.top/h,'head stays below HUD '+JSON.stringify({act,w,h,frame,foot:foot.y,top:top.y,camera:look.toArray()}));projected++;
  }
- // At the same location the view is 55% closer, independent of visual rig size.
+ // At the same location the view matches Act1 exactly, independent of visual rig size.
  const reference=new THREE.PerspectiveCamera(39,w/h,.1,100);reference.zoom=viewLayout.zoom;reference.position.copy(camera.position);reference.quaternion.copy(camera.quaternion);reference.updateProjectionMatrix();reference.updateMatrixWorld();
  const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),foot=player.position.clone().project(reference),top=player.position.clone().addScaledVector(up,1.18*journeyPlayerScale(w,h,act)).project(reference),nowFoot=player.position.clone().project(camera),nowTop=player.position.clone().addScaledVector(up,1.18*journeyPlayerScale(w,h,act)).project(camera);
- assert(Math.abs((nowTop.y-nowFoot.y)/(top.y-foot.y)-1.55)<1e-10);
+ assert(Math.abs((nowTop.y-nowFoot.y)/(top.y-foot.y)-1)<1e-10);
  const groundAtEdge=new THREE.Raycaster();groundAtEdge.setFromCamera(new THREE.Vector2(0,1),camera);const hit=new THREE.Vector3();assert(groundAtEdge.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0,1,0),0),hit));
  metrics.push({act,viewport:[w,h],zoom:pose.zoom,minSeedPixels:+minPixels.toFixed(1),nearbyForwardWorldUnits:+hit.distanceTo(player.position).toFixed(2)});
 }
@@ -47,4 +49,4 @@ for(const region of['skyway','garden'])for(const act of[null,'crosswind','crysta
 }
 const first=journeyCombatCamera(1280,720);for(let i=0;i<20000;i++)assert.equal(journeyCombatCamera(1280,720),first);assert(Object.isFrozen(first));
 console.log(JSON.stringify({projectedFrames:projected,otherModeParityFrames:1200,metrics},null,2));
-console.log('PASS actual shipping camera owner, 12 viewport/act cases, distant entry/boss continuity, Act1-relative55% scale, preserved other-mode follow and native damage visibility. CPU Three projection/VM; not device/browser play proof.');
+console.log('PASS actual shipping camera owner, 12 viewport/act cases, distant entry/boss continuity, exact Act1 camera zoom and Seed scale, preserved other-mode follow and native damage visibility. CPU Three projection/VM; not device/browser play proof.');

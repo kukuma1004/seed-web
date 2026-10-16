@@ -37,7 +37,7 @@ for(const [width,height] of [[1280,720],[1024,768],[844,390],[640,360]])for(cons
   camera.aspect=width/height;camera.zoom=pose.zoom;camera.position.set(pose.x,layout.height,layout.offsetZ+pose.z);camera.lookAt(pose.x,0,pose.z);camera.updateProjectionMatrix();camera.updateMatrixWorld();
   point.set(playerX,0,playerZ).project(camera);assert(Math.abs(point.x)<.35&&Math.abs(point.y)<.45,'entry at x99 and lane movement keep the player visible immediately');
   const foot=point.y;point.set(playerX,0,playerZ).addScaledVector(new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),1.18*journeyPlayerScale(width,height,'crosswind')).project(camera);actorPixels=(point.y-foot)*height/2;
-  assert(actorPixels>=(height<=520?40:60));
+  assert(actorPixels>=(height<=520?35:60));
  }
  projection.push({width,height,phase,halfDepth:arena.halfDepth,zoom:layout.zoom,actorPixels});
 }

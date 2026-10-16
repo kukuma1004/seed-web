@@ -23,11 +23,11 @@ function inside(point,bounds,width,height,label){const epsilon=1e-5;assert(point
 
 await group('Close conservatory camera follows the seed and keeps nearby harvest props in four safe areas',()=>{
  for(const[width,height]of viewportCases){
-  const pose=crystalSiegeCamera(width,height),bounds=safeArea(width,height);assert.equal(pose.zoom,responsiveView(width,height,height<=520).zoom*1.55);assert.equal(pose.followX,1);assert.equal(pose.followZ,1);
+  const pose=crystalSiegeCamera(width,height),bounds=safeArea(width,height);assert.equal(pose.zoom,responsiveView(width,height,height<=520).zoom);assert.equal(pose.followX,1);assert.equal(pose.followZ,1);
   for(const player of [{x:-3,z:4},{x:7.5,z:-6.5},{x:-7.5,z:6.5}]){
    const camera=makeCamera(width,height,{...pose,lookZ:player.z+pose.biasZ});camera.position.x=player.x;camera.lookAt(player.x,0,player.z+pose.biasZ);camera.updateMatrixWorld();
-   const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),foot=screen(new THREE.Vector3(player.x,0,player.z),camera,width,height),top=screen(new THREE.Vector3(player.x,0,player.z).addScaledVector(up,1.18*1.75),camera,width,height);
-   inside(foot,bounds,width,height,'tracked seed foot');inside(top,bounds,width,height,'tracked seed top');assert(foot.y-top.y>=45);
+   const up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion),foot=screen(new THREE.Vector3(player.x,0,player.z),camera,width,height),top=screen(new THREE.Vector3(player.x,0,player.z).addScaledVector(up,1.18*1.25),camera,width,height);
+   inside(foot,bounds,width,height,'tracked seed foot');inside(top,bounds,width,height,'tracked seed top');assert(foot.y-top.y>=35);
    measurements.camera.push({width,height,player,zoom:pose.zoom,playerPixels:foot.y-top.y});
   }
  }

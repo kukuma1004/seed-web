@@ -28,13 +28,13 @@ function makeSkyway(mobile=false){
 
 await check('Close flight view preserves readable seed scale and reveals the wider corridor through movement',()=>{
  for(const[w,h]of cases){
-  const pose=journeyFlightCamera(w,h),scale=journeyPlayerScale(w,h);assert.equal(scale,1.75);
-  assert.equal(pose.height,19);assert.equal(pose.offsetZ,19);assert.equal(pose.zoom,responsiveView(w,h,h<=520).zoom*1.55);
+  const pose=journeyFlightCamera(w,h),scale=journeyPlayerScale(w,h);assert.equal(scale,1.25);
+  assert.equal(pose.height,19);assert.equal(pose.offsetZ,19);assert.equal(pose.zoom,responsiveView(w,h,h<=520).zoom);
   for(const player of [{x:0,z:5.5},{x:-8.7,z:-7.8},{x:8.7,z:7}]){
    const local={...pose,x:player.x,lookZ:player.z+pose.biasZ},camera=makeCamera(w,h,local);
    const foot=project(new THREE.Vector3(player.x,0,player.z),camera,w,h),up=new THREE.Vector3(0,1,0).applyQuaternion(camera.quaternion);
    const top=project(new THREE.Vector3(player.x,0,player.z).addScaledVector(up,1.18*scale),camera,w,h);
-   inside(foot,pose,w,h,'tracked seed foot');inside(top,pose,w,h,'tracked seed top');assert(foot.y-top.y>=45);
+   inside(foot,pose,w,h,'tracked seed foot');inside(top,pose,w,h,'tracked seed top');assert(foot.y-top.y>=35);
    measurements.push({viewport:[w,h],player,zoom:pose.zoom,playerPixels:foot.y-top.y});
   }
  }
