@@ -52,7 +52,7 @@ export function createExpansionCourse(id,{room=0,seed=1,origin={x:0,z:0},encount
 // scroll distance supplied by a mode, or measured from the player's world x.
 // Camera and forward/back entries are in world space; moving the camera must not
 // move already spawned projectiles. No catch-up wave is emitted after a pause.
-export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileCount=0,fastPacing=false}={}){
+export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileCount=0,fastPacing=false,laneHalfDepth=4.5}={}){
  const out=resetOutput(s.out),step=dtOf(dt);if(!step)return out;
  const p=point(player||s.origin),definition=EXPANSION_ACTS[s.act],room=definition.rooms[s.room],length=s.act==='crosswind'?crosswindCourseLength(s):0,packets=expansionCoursePacketCount(s);s.time+=step;
  if(s.act==='crosswind')s.distance=clamp(Math.max(s.distance,p.x-s.origin.x)+(Number.isFinite(travel)?Math.max(0,travel):0),0,length);
@@ -83,7 +83,7 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
   if(!reached&&!waited){s.spawnClock=0;return out;}
  }
  // Re-arm even when saturated; capacity reopening cannot release queued waves.
- const close=s.encounterVersion>=2;
+ const close=s.encounterVersion>=2,laneDepth=s.act==='crosswind'&&Number.isFinite(laneHalfDepth)?clamp(laneHalfDepth,4.5,8.1):4.5;
  s.spawnClock=(s.encounterVersion===3?Math.max(.48,.68-s.room*.04):close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);
  // Only the Journey host opts into a quicker finite packet beat. Shared modes
  // and older saved courses keep their cadence; no catch-up or extra packets.
@@ -95,11 +95,11 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  for(let i=0;i<count;i++){
   const actorFormation=s.act==='crosswind'&&close?crosswindFormation(index,s.room,i):formation;
   const side=s.act==='crystalGorge'&&close&&p.z<s.origin.z-1.4?'rear':actorFormation.side,front=side==='front',cx=close?p.x:s.origin.x+s.distance;
-  const position=s.act==='crosswind'?{x:cx+(front?(close?6.8:12):(close?-6.4:-11)),z:s.origin.z+clamp(actorFormation.lane+(i&&(!close||s.room<2)?1.6:0),close?-4.5:-6.4,close?4.5:6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:close?clamp(p.z+(front?-6:6),s.origin.z-7.8,s.origin.z+7.8):s.origin.z-9};
+  const position=s.act==='crosswind'?{x:cx+(front?(close?6.8:12):(close?-6.4:-11)),z:s.origin.z+clamp((actorFormation.lane+(i&&(!close||s.room<2)?1.6:0))*(close?laneDepth/4.5:1),close?-laneDepth:-6.4,close?laneDepth:6.4)}:{x:s.origin.x+clamp(formation.lane+(i?1.6:0),-6.4,6.4),z:close?clamp(p.z+(front?-6:6),s.origin.z-7.8,s.origin.z+7.8):s.origin.z-9};
   if(s.act==='crystalGorge'&&close)constrainCrystalActor(position,.65,s.walls);
   const threat={id:`${s.act}-${s.room}-${index}-${i}`,type:formation.type,position,side,shots:formation.shots,windup:actorFormation.windup,
    hp:formation.type==='charger'?42+s.room*8:86+s.room*18,speed:formation.type==='charger'?4.1:2.1,cooldown:formation.type==='lobber'?2.1:1.7,bulletSpeed:5.2+s.room*.2,damage:12+s.room};
-  if(s.act==='crosswind'&&close)Object.assign(threat,{behavior:'crosswind',role:actorFormation.role,laneCenter:position.z,laneMin:s.origin.z-4.5,laneMax:s.origin.z+4.5,weave:actorFormation.weave,shots:1,windup:Math.max(actorFormation.windup,formation.type==='lobber'?1.15:.7)});
+  if(s.act==='crosswind'&&close)Object.assign(threat,{behavior:'crosswind',role:actorFormation.role,laneCenter:position.z,laneMin:s.origin.z-laneDepth,laneMax:s.origin.z+laneDepth,weave:actorFormation.weave,shots:1,windup:Math.max(actorFormation.windup,formation.type==='lobber'?1.15:.7)});
   out.spawns.push(threat);out.telegraphs.push({kind:'entry',id:threat.id,position:{...position},duration:threat.windup,side});
  }
  return out;

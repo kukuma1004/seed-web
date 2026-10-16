@@ -93,6 +93,10 @@ const passContact=(e,ctx,radius)=>{
 };
 const committedMove=(e,dt,speed)=>{const step=Math.min(e.commitRemaining,dt*speed);e.g.position.addScaledVector(e.move,step);e.commitRemaining=Math.max(0,e.commitRemaining-step);};
 
+// Only the Journey host supplies roamingArena; shared/legacy contexts retain
+// their exact original formation limits and warning timings.
+const formationX=(ctx,x,lo,hi)=>THREE.MathUtils.clamp(x,ctx.roamingArena?-ctx.roamingArena.halfWidth+.8:lo,ctx.roamingArena?ctx.roamingArena.halfWidth-.8:hi);
+const formationZ=(ctx,z,lo,hi)=>THREE.MathUtils.clamp(z,ctx.roamingArena?-ctx.roamingArena.halfDepth+.8:lo,ctx.roamingArena?ctx.roamingArena.halfDepth-.8:hi);
 export function tickAct3Minion(e,dt,time,ctx){
  e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;e.tell.material=ACT3_MATERIALS.warning;
  if(!e.homeReady){e.home.copy(e.g.position);e.homeReady=true;if(Math.abs(e.home.x)>.5)e.lane=Math.sign(e.home.x);}
@@ -101,8 +105,8 @@ export function tickAct3Minion(e,dt,time,ctx){
   if(e.timer<=0){e.state='stalk';e.timer=1.1+(e.phase%1)*.5;}
  }else if(e.type==='sky-scout'){
   if(e.state==='stalk'){
-   e.formation.set(THREE.MathUtils.clamp(ctx.player.x+e.lane*3,-7.4,7.4),0,THREE.MathUtils.clamp(ctx.player.z-2.6,-5.4,4.4));approach(e,dt,e.config.speed);face(e,to);
-   if(e.timer<=0&&e.g.position.distanceTo(ctx.player)<6){e.state='tell';e.timer=.5;lockAim(e,ctx.player);e.formation.set(THREE.MathUtils.clamp(ctx.player.x-e.lane*3.2,-7.4,7.4),0,THREE.MathUtils.clamp(ctx.player.z-.65,-6.5,6.6));ctx.sound?.('bossWarning');}
+   e.formation.set(formationX(ctx,ctx.player.x+e.lane*3,-7.4,7.4),0,formationZ(ctx,ctx.player.z-2.6,-5.4,4.4));approach(e,dt,e.config.speed);face(e,to);
+   if(e.timer<=0&&e.g.position.distanceTo(ctx.player)<6){e.state='tell';e.timer=.5;lockAim(e,ctx.player);e.formation.set(formationX(ctx,ctx.player.x-e.lane*3.2,-7.4,7.4),0,formationZ(ctx,ctx.player.z-.65,-6.5,6.6));ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1.05+(.5-e.timer)*.55);face(e,e.dir);
    if(e.timer<=0){shot(ctx,e,e.dir,{speed:ACT3_MINION_MISSILE_SPEED.scout});e.attacks++;e.move.copy(e.formation).sub(e.g.position).setY(0);e.commitRemaining=Math.min(8.8,e.move.length());e.move.normalize();e.state='sweep';e.chargeHit=false;ctx.sound?.('bossAttack');}
@@ -112,7 +116,7 @@ export function tickAct3Minion(e,dt,time,ctx){
   }else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;e.lane*=-1;}
  }else if(e.type==='sky-bomber'){
   if(e.state==='stalk'){
-   e.formation.set(THREE.MathUtils.clamp(e.home.x,-6.6,6.6),0,THREE.MathUtils.clamp(ctx.player.z-5.2,-5.8,1.6));approach(e,dt,e.config.speed);face(e,to);
+   e.formation.set(formationX(ctx,ctx.roamingArena?ctx.player.x+e.lane*3.8:e.home.x,-6.6,6.6),0,formationZ(ctx,ctx.player.z-5.2,-5.8,1.6));approach(e,dt,e.config.speed);face(e,to);
    if(e.timer<=0){e.state='tell';e.timer=.65;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1+(.65-e.timer)*.6);face(e,e.dir);
@@ -127,7 +131,7 @@ export function tickAct3Minion(e,dt,time,ctx){
   else if(e.timer<=0){e.state='stalk';e.timer=e.config.cooldown;}
  }else{
   if(e.state==='stalk'){
-   e.formation.set(THREE.MathUtils.clamp(e.home.x,-5.5,5.5),0,THREE.MathUtils.clamp(ctx.player.z-4.6,-5.8,2.2));approach(e,dt,e.config.speed);face(e,to);
+   e.formation.set(formationX(ctx,ctx.roamingArena?ctx.player.x+e.lane*3.4:e.home.x,-5.5,5.5),0,formationZ(ctx,ctx.player.z-4.6,-5.8,2.2));approach(e,dt,e.config.speed);face(e,to);
    if(e.timer<=0){e.state='tell';e.timer=.8;lockAim(e,ctx.player);ctx.sound?.('bossWarning');}
   }else if(e.state==='tell'){
    e.tell.visible=true;e.tell.scale.setScalar(1.5+Math.sin(time*9)*.08);face(e,e.dir);

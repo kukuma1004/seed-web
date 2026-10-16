@@ -46,7 +46,23 @@ export function act3ReinforcementSpawn(index){
 
 // Preserve the authored near/side formations. A late arrival never appears
 // directly on the player; its existing entry pause still precedes an attack.
-export function act3EntryPoint(x,z,player){
+export function act3EntryPoint(x,z,player,roamingArena=null){
+ if(roamingArena){
+  const mx=roamingArena.halfWidth-.8,mz=roamingArena.halfDepth-.8,clamp=(n,limit)=>Math.max(-limit,Math.min(limit,n));
+  let px=Number.isFinite(x)?x:0,pz=Number.isFinite(z)?z:-6.15;
+  if(Number.isFinite(player?.x)&&Number.isFinite(player?.z)){
+   // Keep the authored opening; late entries follow exploration rather than
+   // leaving every reinforcement at the centre of the enlarged route.
+   if(Math.abs(player.x)>8||Math.abs(player.z)>6.5){px+=player.x;pz+=player.z;}
+   px=clamp(px,mx);pz=clamp(pz,mz);
+   if(Math.hypot(px-player.x,pz-player.z)<3.4){
+    let best=Infinity,bx=px,bz=pz;
+    for(let i=0;i<8;i++){const angle=i*Math.PI/4,sx=clamp(player.x+Math.cos(angle)*6.5,mx),sz=clamp(player.z+Math.sin(angle)*6.5,mz);if(Math.hypot(sx-player.x,sz-player.z)<3.4)continue;const d=(sx-px)**2+(sz-pz)**2;if(d<best){best=d;bx=sx;bz=sz;}}
+    px=bx;pz=bz;
+   }
+  }
+  return {x:clamp(px,mx),z:clamp(pz,mz)};
+ }
  const p={x:Math.max(-8,Math.min(8,Number.isFinite(x)?x:0)),z:Math.max(-6.15,Math.min(5.7,Number.isFinite(z)?z:-6.15))};
  if(!Number.isFinite(player?.x)||!Number.isFinite(player?.z)||Math.hypot(p.x-player.x,p.z-player.z)>=3.4)return p;
  let nearest=null,best=Infinity;
@@ -73,8 +89,8 @@ export const SKYWAY_ROOMS=Object.freeze([
 export const ACT3_ROOM_HINTS=Object.freeze(SKYWAY_ROOMS.map(room=>room.hint));
 
 export const ACT3_ARENA=Object.freeze({
- shape:'poly',id:'skyway',
- points:Object.freeze([[-9.3,7.6],[9.3,7.6],[9.3,-8.4],[-9.3,-8.4]].map(Object.freeze)),
+ shape:'poly',id:'skyway',halfWidth:15,halfDepth:13,
+ points:Object.freeze([[-15,13],[15,13],[15,-13],[-15,-13]].map(Object.freeze)),
  start:Object.freeze({x:0,z:5.5}),exit:Object.freeze({x:0,z:-6.8,radius:1.7}),
  spawns:Object.freeze([[-7.8,-6.8],[0,-7.1],[7.8,-6.8],[-8,0],[8,0],[-7.6,5.7],[7.6,5.7]].map(([x,z])=>Object.freeze({x,z})))
 });

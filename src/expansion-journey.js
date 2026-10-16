@@ -57,8 +57,11 @@ export function createExpansionThreat(spec){
 function moveCrosswindThreat(s,step,player,recover=false){
  const sign=s.side==='rear'?-1:1,lobber=s.type==='lobber';
  const spread=s.role==='warden'?3.7:s.role==='split-lanes'?.5:s.role==='rear'?1:1.6;
- const centre=s.role==='warden'?(s.laneMin+s.laneMax)/2:s.laneCenter;
- const z=clamp(lobber?s.repositionLane:centre+Math.sin(s.elapsed*1.25+s.weave*.8)*spread,s.laneMin,s.laneMax);
+ const authoredCentre=s.role==='warden'?(s.laneMin+s.laneMax)/2:s.laneCenter;
+ // Wide Journey lanes stay contested: exploring the outer row cannot leave
+ // every shooter parked on its original centre strip. Default shared lanes stay exact.
+ const centre=s.laneMax-s.laneMin>10?clamp(player.z+authoredCentre*.3,s.laneMin,s.laneMax):authoredCentre;
+ const z=clamp(lobber?(s.laneMax-s.laneMin>10&&Math.abs(s.repositionLane-player.z)>6?centre:s.repositionLane):centre+Math.sin(s.elapsed*1.25+s.weave*.8)*spread,s.laneMin,s.laneMax);
  const x=player.x+sign*(recover?6.1:lobber?5.6:s.side==='rear'?3.8:4.4),dx=x-s.position.x,dz=z-s.position.z,n=Math.hypot(dx,dz);
  if(n>.05){const travel=Math.min(n,s.speed*(recover?.85:1)*step);s.position.x+=dx/n*travel;s.position.z+=dz/n*travel;}
  s.position.z=clamp(s.position.z,s.laneMin,s.laneMax);
