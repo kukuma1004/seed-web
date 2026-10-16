@@ -139,7 +139,7 @@ export function tickAct3Minion(e,dt,time,ctx){
 }
 
 export function tickAct3Warden(e,dt,time,ctx){
- e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;
+ e.before.copy(e.g.position);e.timer-=dt;const to=e.target.copy(ctx.player).sub(e.g.position).setY(0),distance=to.length();if(distance>.001)to.normalize();e.tell.visible=e.line.visible=false;e.tell.material=ACT3_MATERIALS.bossWarning;
  if(e.state==='stalk'){
   e.g.position.x+=Math.sin(time*.9)*dt*2.2;e.g.position.addScaledVector(to,dt*(distance>6.5?2.15:distance<4.2?-1.5:0));face(e,to);
   if(e.timer<=0){e.pattern=e.attacks++%3;e.state='tell';e.timer=e.pattern===1?.34:.52;e.dir.copy(to);e.moveName=['교차 편대','낙하 관통','회전 뇌광'][e.pattern];e.hint=['빠른 탄과 느린 탄의 틈을 두 번 나누어 지나세요','날개가 접히면 옆으로 크게 벗어나세요','한 방향으로 돌며 나선의 뒤를 따라가세요'][e.pattern];ctx.sound?.('bossWarning');}
@@ -149,6 +149,9 @@ export function tickAct3Warden(e,dt,time,ctx){
  }else if(e.state==='charge'){
   face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*16.2);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<1.05){e.chargeHit=true;ctx.hit(28);}if(e.timer<=0){e.state='recover';e.timer=.62;}
  }else if(e.timer<=0){e.state='stalk';e.timer=.5;e.moveName='';e.hint='';}
+ // The same ring marks the real recovery already rewarded by combat. It
+ // never marks a charging/telegraphing warden as an opening to approach.
+ if(e.state==='recover'&&e.timer>0){e.tell.visible=true;e.tell.material=ACT3_MATERIALS.opening;e.tell.scale.setScalar(1.3);}
  ctx.collide(e.g.position,.78);finishMotion(e,dt,time);
 }
 

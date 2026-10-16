@@ -22,8 +22,11 @@ export function createJourneySignatureView(scene){
    edgeA.position.set(low,.11,-.4);edgeB.position.set(high,.11,-.4);edgeA.scale.set(warning?.08+progress*.05:.14,16,1);edgeB.scale.copy(edgeA.scale);
   }else if(s.act==='crosswind'&&s.tailwind>0){
    edgeA.visible=edgeB.visible=true;edgeA.position.set(player.x+1.5,.12,player.z-.22);edgeB.position.set(player.x+1.5,.12,player.z+.22);edgeA.scale.set(.13,.75,1);edgeB.scale.copy(edgeA.scale);edgeA.rotation.z=-Math.PI*3/4;edgeB.rotation.z=-Math.PI/4;
-  }else if(s.act==='crystalGorge'&&s.rallyPad){const p=siege?.pads.find(p=>p.id===s.rallyPad);if(p){
-   ring.visible=true;ring.position.set(p.x,.11,p.z);safe.opacity=s.repairPad?.8:.6;
+  }else if(s.act==='crystalGorge'&&(s.rallyPad||s.repairAway&&s.repairPad)){
+   const away=Boolean(s.repairAway&&!s.rallyPad&&s.repairGrace>0),p=siege?.pads.find(p=>p.id===(s.rallyPad||s.repairPad));if(p&&p.kind&&p.hp>0&&(!away||siege.resources>=1)){
+   // A dodge briefly preserves earned repair progress, never the support
+   // radius/bonus. The dim bar is paused work, not healing outside the ring.
+   ring.visible=!away;ring.position.set(p.x,.11,p.z);safe.opacity=away?.25:s.repairPad?.8:.6;
    if(s.repairPad===p.id){const progress=THREE.MathUtils.clamp(s.repairCharge/R.repairTime,0,1),width=1.1*progress;edgeA.visible=true;edgeA.position.set(p.x,.12,p.z+1.1);edgeA.scale.set(1.1,.025,1);edgeB.visible=progress>0;edgeB.position.set(p.x-.55+width/2,.125,p.z+1.1);edgeB.scale.set(width,.1,1);}
   }}
  }

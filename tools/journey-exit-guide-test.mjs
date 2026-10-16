@@ -76,7 +76,7 @@ assert.deepEqual(Array.from(leaves.instanceMatrix.array),matrices);assert.equal(
 assert.deepEqual(root.children.map(m=>m.geometry),geometry);assert.deepEqual(root.children.map(m=>m.material),materials);
 player.x=1;update();assert.equal(leaves.instanceMatrix.version,matrixVersion+1,'moving the player updates direction once');
 player.x=0;player.z=-7;update();assert(root.visible&&!leaves.visible,'near the exit only the real interaction wreath remains');
-player.z=0;update(false,true);assert(root.visible&&!leaves.visible);update(true,false);assert(leaves.visible);
+player.z=0;update(false,true);assert(root.visible&&leaves.visible);assert.equal(leaves.count,2,'low quality retains the two functional direction leaves');update(true,false);assert(leaves.visible);assert.equal(leaves.count,6);
 // A flight, celebration or covered menu cannot leave old transforms cached.
 events.beginSlide({duration:.4,targetX:3,targetZ:2},player);update();assert.equal(arcs[0].position.x,3);
 events.law('성장','연출 우선',player);update();assert.equal(arcs[0].position.x,0);assert.equal(arcs[0].scale.x,1);

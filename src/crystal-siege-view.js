@@ -21,9 +21,17 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
  const shadowTexture=crystalGardenFloorContactTexture();textures.push(shadowTexture);
  const shadowGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false,toneMapped:false});owned.push(shadowGeometry,shadowMaterial);
  const contacts=new THREE.InstancedMesh(shadowGeometry,shadowMaterial,11),shadowMatrix=new THREE.Matrix4();contacts.name='crystal-garden-ground-contacts';contacts.frustumCulled=false;world.add(contacts);
+ const contactCache=new Float64Array(44).fill(NaN);let contactCount=0,contactDirty=false;
+ function contact(x,z,w,d){
+  const index=contactCount++,offset=index*4;
+  if(contactCache[offset]===x&&contactCache[offset+1]===z&&contactCache[offset+2]===w&&contactCache[offset+3]===d)return;
+  shadowMatrix.makeScale(w,1,d);shadowMatrix.setPosition(x,.032,z);contacts.setMatrixAt(index,shadowMatrix);contactDirty=true;
+  contactCache[offset]=x;contactCache[offset+1]=z;contactCache[offset+2]=w;contactCache[offset+3]=d;
+ }
  const harvested=new Uint8Array(6),harvestTime=new Float32Array(6);
  const barGeometry=new THREE.PlaneGeometry(1,1),barBackMaterial=new THREE.MeshBasicMaterial({color:0x142d23,depthWrite:false,toneMapped:false}),barFillMaterial=new THREE.MeshBasicMaterial({color:0xffffff,depthWrite:false,toneMapped:false});owned.push(barGeometry,barBackMaterial,barFillMaterial);
  const barBack=new THREE.InstancedMesh(barGeometry,barBackMaterial,4),barFill=new THREE.InstancedMesh(barGeometry,barFillMaterial,4),barPose=new THREE.Object3D(),barColor=new THREE.Color();barBack.name='crystal-garden-facility-hp-background';barFill.name='crystal-garden-facility-hp-fill';barBack.frustumCulled=barFill.frustumCulled=false;barPose.rotation.x=-Math.atan2(22,18);world.add(barBack,barFill);
+ const barCache=new Float64Array(16).fill(NaN);
  heart.name='crystal-siege-heart';heart.center.y=.035;
  facilities.forEach(o=>{o.center.y=.06;});nodes.forEach((o,i)=>{o.center.y=.035;o.name='crystal-garden-harvest-'+i;});
  facilities.forEach((o,i)=>{o.name='crystal-siege-facility-'+i;});
@@ -51,14 +59,14 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
   if(feedbackState!==s){resetFeedback(s);facilitiesSeen=false;plantTime.fill(0);harvested.fill(0);harvestTime.fill(0);}
   heart.position.set(s.core.x,.04,s.core.z);
   const step=Number.isFinite(dt)?Math.max(0,Math.min(.1,dt)):0;
-  let contactCount=0;const contact=(x,z,w,d)=>{shadowMatrix.makeScale(w,1,d);shadowMatrix.setPosition(x,.032,z);contacts.setMatrixAt(contactCount++,shadowMatrix);};contact(s.core.x,s.core.z,3.15,1.9);
+  contactCount=0;contactDirty=false;contact(s.core.x,s.core.z,3.15,1.9);
   for(let i=0;i<nodes.length;i++){
    const n=s.nodes[i];if(n?.harvested&&!harvested[i])harvestTime[i]=.2;harvested[i]=n?.harvested?1:0;harvestTime[i]=Math.max(0,harvestTime[i]-step);
    const visible=!boss&&s.phase==='prep'&&!!n&&(!n.harvested||harvestTime[i]>0);nodes[i].visible=visible;
    if(n){nodes[i].position.set(n.x,.025,n.z);nodes[i].scale.setScalar(2.65*(n.harvested?harvestTime[i]/.2:1));if(visible)contact(n.x,n.z,2.2,1.3);}
   }
   for(let i=0;i<4;i++){const p=s.pads[i];plinths[i].position.set(p.x,.036,p.z);plinths[i].material.color.setHex(Math.hypot(player.x-p.x,player.z-p.z)<=1.7?0xfff1cf:0xcad3ca);if(p.kind&&p.hp>0)contact(p.x,p.z,2.15,1.3);}
-  contacts.count=contactCount;contacts.instanceMatrix.needsUpdate=true;
+  contacts.count=contactCount;if(contactDirty)contacts.instanceMatrix.needsUpdate=true;
   let nearest=null,best=Infinity;for(let i=0;i<rings.length;i++){const p=s.pads[i];rings[i].position.set(p.x,.05,p.z);facilities[i].visible=!!p.kind&&p.hp>0;facilities[i].position.set(p.x,.04,p.z);facilities[i].material.map=p.kind==='snare'?snareTexture:p.kind==='wall'?wallTexture:turretStages[Math.max(0,Math.min(4,p.level-1))];const d=Math.hypot(player.x-p.x,player.z-p.z);rings[i].material.opacity=d<=1.7?.7:0;rings[i].material.color.setHex(d<=1.7?0xffe7a8:0xb7c6a1);if(d<=1.7&&d<best){best=d;nearest=p;}}
   // Four existing sprites settle briefly after a paid build/upgrade. No new
   // particles, lights, geometry or combat hitboxes are created for this cue.
@@ -76,13 +84,16 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
    const bump=Math.sin(Math.PI*plantTime[i]/.24)*.16;
    const size=p.kind==='turret'?2.45+Math.max(0,p.level-1)*.07:2.45;facilities[i].scale.set(size*(1+bump),size*(1+bump),1);
   }
-  let barCount=0;for(let i=0;i<4;i++){
+  let barCount=0,barDirty=false;for(let i=0;i<4;i++){
    const p=s.pads[i],maxHp=crystalSiegeFacilityMaxHp(p);if(!p.kind||p.hp<=0||p.hp>=maxHp)continue;
    const ratio=Math.max(0,Math.min(1,p.hp/maxHp)),y=p.kind==='snare'?1.2:p.kind==='wall'?1.8:2.25;
-   barPose.position.set(p.x,y,p.z);barPose.scale.set(1.55,.13,1);barPose.updateMatrix();barBack.setMatrixAt(barCount,barPose.matrix);
-   barPose.position.set(p.x-.7*(1-ratio),y+.025,p.z+.018);barPose.scale.set(1.4*ratio,.065,1);barPose.updateMatrix();barFill.setMatrixAt(barCount,barPose.matrix);barColor.setHex(ratio<.35?0xff927f:0xe9d28b);barFill.setColorAt(barCount,barColor);barCount++;
+   const offset=barCount*4;if(barCache[offset]!==p.x||barCache[offset+1]!==p.z||barCache[offset+2]!==y||barCache[offset+3]!==ratio){
+    barPose.position.set(p.x,y,p.z);barPose.scale.set(1.55,.13,1);barPose.updateMatrix();barBack.setMatrixAt(barCount,barPose.matrix);
+    barPose.position.set(p.x-.7*(1-ratio),y+.025,p.z+.018);barPose.scale.set(1.4*ratio,.065,1);barPose.updateMatrix();barFill.setMatrixAt(barCount,barPose.matrix);barColor.setHex(ratio<.35?0xff927f:0xe9d28b);barFill.setColorAt(barCount,barColor);barDirty=true;
+    barCache[offset]=p.x;barCache[offset+1]=p.z;barCache[offset+2]=y;barCache[offset+3]=ratio;
+   }barCount++;
   }
-  barBack.count=barFill.count=barCount;barBack.instanceMatrix.needsUpdate=barFill.instanceMatrix.needsUpdate=true;if(barFill.instanceColor)barFill.instanceColor.needsUpdate=true;
+  barBack.count=barFill.count=barCount;if(barDirty){barBack.instanceMatrix.needsUpdate=barFill.instanceMatrix.needsUpdate=true;if(barFill.instanceColor)barFill.instanceColor.needsUpdate=true;}
   facilitiesSeen=true;
   const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));
   const liveText=Number.isInteger(liveEnemies)&&liveEnemies>=0?`남은 적 ${liveEnemies}`:'';

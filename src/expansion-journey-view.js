@@ -105,7 +105,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   // The new painted stone wall aligns with the real lane. Keep the low-cost
   // geometry only as an asset-load fallback instead of drawing bars over it.
   for(const batch of [curbs,seams,ivy])batch.visible=!terrainOnly&&course==='crosswind'&&!plate.visible;
-  for(const batch of undertowBatches)batch.visible=!terrainOnly&&course==='crosswind'&&batch.count>0&&(batch===undertowBatches[0]||!undertowMaterials[0].map);
+  for(let i=0;i<undertowBatches.length;i++)undertowBatches[i].visible=!terrainOnly&&course==='crosswind'&&undertowBatches[i].count>0&&(i<2||!undertowMaterials[0].map);
  }
  function setPlate(act,texture){
   if(disposed)return;plates.set(act,texture);
@@ -180,22 +180,34 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   }
   const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setIndex(indices);g.computeVertexNormals();return g;
  }
- const undertowGeometry=[sandBowlGeometry(),new THREE.RingGeometry(.965,1,48).rotateX(-Math.PI/2),sandLeafGeometry()];
- const undertowMaterials=[new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:true,transparent:true,opacity:.68,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}),...[[0xd1b780,.76],[0xe2cb94,.68]].map(([tint,opacity])=>new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}))];
+ function sandContourGeometry(){
+  // Eight short warm arcs mark the exact pull radius, never a safe/pickup ring.
+  const g=new THREE.RingGeometry(.975,1,64).rotateX(-Math.PI/2),index=g.getIndex(),segments=[];
+  for(let i=0;i<64;i++)if(i%8<4)for(let j=0;j<6;j++)segments.push(index.getX(i*6+j));g.setIndex(segments);return g;
+ }
+ const undertowGeometry=[sandBowlGeometry(),sandContourGeometry(),sandLeafGeometry()];
+ const undertowMaterials=[new THREE.MeshBasicMaterial({color:0xffffff,vertexColors:true,transparent:true,opacity:.68,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}),...[[0xffffff,.8],[0xe2cb94,.68]].map(([tint,opacity])=>new THREE.MeshBasicMaterial({color:tint,transparent:true,opacity,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true}))];
  const sandFrames=undertowGeometry[0].getAttribute('gardenSandFrame');
  undertowMaterials[0].onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nattribute float gardenSandFrame;').replace('#include <uv_vertex>','#include <uv_vertex>\n#ifdef USE_MAP\nvMapUv.x=(vMapUv.x+gardenSandFrame)*.5;\n#endif');};
  undertowMaterials[0].customProgramCacheKey=()=> 'crosswind-sand-atlas-v1';
  function setCrosswindSandTexture(texture){if(disposed||!texture||undertowMaterials[0].map===texture)return;const material=undertowMaterials[0];material.map=texture;material.vertexColors=false;material.opacity=1;material.alphaTest=.04;material.needsUpdate=true;syncFloor();}
  const undertowBatches=undertowGeometry.map((g,i)=>{const mesh=new THREE.InstancedMesh(g,undertowMaterials[i],2);mesh.name='crosswind-undertow-'+i;mesh.count=0;mesh.visible=false;mesh.frustumCulled=false;root.add(mesh);return mesh;});
- const undertowEmpty=[];
+ const undertowEmpty=[],undertowCache=Array.from({length:3},()=>new Float64Array(12).fill(NaN)),undertowMatrixDirty=new Uint8Array(3),undertowColorDirty=new Uint8Array(3);
  function syncUndertow(fields){
-  let count=0,sandChanged=false;for(const f of fields||undertowEmpty){if(count>=2||f.phase==='off')continue;const frame=f.phase==='warning'?0:1;if(sandFrames.array[count]!==frame){sandFrames.array[count]=frame;sandChanged=true;}
+  let count=0,sandChanged=false;const painted=Boolean(undertowMaterials[0].map);undertowMatrixDirty.fill(0);undertowColorDirty.fill(0);
+  for(const f of fields||undertowEmpty){if(count>=2||f.phase==='off')continue;const frame=f.phase==='warning'?0:1;if(sandFrames.array[count]!==frame){sandFrames.array[count]=frame;sandChanged=true;}
    for(let i=0;i<3;i++){
-    const mesh=undertowBatches[i],radius=f.radius*(i===2?.82+.18*(1-f.progress):1);color.setHex(f.phase==='warning'?(i===0?0xf2dfbc:0xfff0cd):(i===0?0xd0bfa5:0xd7b77c));
-    borderPose.position.set(f.x,.048+i*.002,f.z);borderPose.rotation.set(0,i===2?f.progress*.55:0,0);borderPose.scale.set(radius,1,radius);borderPose.updateMatrix();mesh.setMatrixAt(count,borderPose.matrix);mesh.setColorAt(count,color);
+    if(i===2&&painted)continue;
+    const mesh=undertowBatches[i],cached=undertowCache[i],offset=count*6,radius=f.radius*(i===2?.82+.18*(1-f.progress):1),turn=i===2?f.progress*.55:0;
+    const tint=i===1?(frame?0xe9a765:0xffd198):f.phase==='warning'?(i===0?0xf2dfbc:0xfff0cd):(i===0?0xd0bfa5:0xd7b77c),strength=i===1?(frame?.45+.55*Math.sin(f.progress*Math.PI):.55+.45*f.progress):1;
+    if(cached[offset]!==f.x||cached[offset+1]!==f.z||cached[offset+2]!==radius||cached[offset+3]!==turn){
+     borderPose.position.set(f.x,.048+i*.002,f.z);borderPose.rotation.set(0,turn,0);borderPose.scale.set(radius,1,radius);borderPose.updateMatrix();mesh.setMatrixAt(count,borderPose.matrix);undertowMatrixDirty[i]=1;
+     cached[offset]=f.x;cached[offset+1]=f.z;cached[offset+2]=radius;cached[offset+3]=turn;
+    }
+    if(cached[offset+4]!==tint||cached[offset+5]!==strength){color.setHex(tint).multiplyScalar(strength);mesh.setColorAt(count,color);undertowColorDirty[i]=1;cached[offset+4]=tint;cached[offset+5]=strength;}
    }count++;
   }
-  if(sandChanged)sandFrames.needsUpdate=true;for(const mesh of undertowBatches){mesh.count=count;mesh.visible=course==='crosswind'&&!terrainOnly&&count>0&&(mesh===undertowBatches[0]||!undertowMaterials[0].map);if(count){mesh.instanceMatrix.needsUpdate=true;mesh.instanceColor.needsUpdate=true;}}
+  if(sandChanged)sandFrames.needsUpdate=true;for(let i=0;i<3;i++){const mesh=undertowBatches[i];mesh.count=i===2&&painted?0:count;mesh.visible=course==='crosswind'&&!terrainOnly&&mesh.count>0;if(undertowMatrixDirty[i])mesh.instanceMatrix.needsUpdate=true;if(undertowColorDirty[i])mesh.instanceColor.needsUpdate=true;}
  }
  setCourse(course);
  return {root,hasPlate:act=>Boolean(plates.get(act)),setCrosswindSandTexture,syncUndertow,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xd3dde6:0xfff6e8);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,

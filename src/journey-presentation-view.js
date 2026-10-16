@@ -17,7 +17,7 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
  leafGeo.setIndex([6,0,1,6,1,2,6,2,3,6,3,4,6,4,5,6,5,0]);
  const leafMat=new THREE.MeshBasicMaterial({vertexColors:true,color:0xc7efd2,transparent:true,opacity:0,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const leaves=new THREE.InstancedMesh(leafGeo,leafMat,6);leaves.frustumCulled=false;root.add(leaves);
- const pose=new THREE.Object3D();let disposed=false,serial=-1,hudClock=0,opacity=-1,bannerShown=false,exitCached=false,exitX=NaN,exitZ=NaN,exitRadius=NaN,playerX=NaN,playerZ=NaN;
+ const pose=new THREE.Object3D();let disposed=false,serial=-1,hudClock=0,opacity=-1,bannerShown=false,exitCached=false,exitX=NaN,exitZ=NaN,exitRadius=NaN,playerX=NaN,playerZ=NaN,exitLeaves=0;
  const banner=doc.createElement('aside');banner.id='journey-cue';banner.hidden=true;banner.setAttribute('role','status');banner.setAttribute('aria-live','polite');banner.setAttribute('aria-atomic','true');
  const kicker=doc.createElement('small'),title=doc.createElement('strong'),detail=doc.createElement('span');banner.append(kicker,title,detail);doc.body.append(banner);
  function hide(){root.visible=false;exitCached=false;if(bannerShown){banner.hidden=true;bannerShown=false;}}
@@ -46,22 +46,25 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
    // near the player points to it without drawing a route through obstacles.
    for(const arc of arcs){arc.position.set(exit.x,.145,exit.z);arc.scale.setScalar(exit.radius/.94);}
    const dx=exit.x-player.x,dz=exit.z-player.z,distance=Math.hypot(dx,dz);
-   leaves.visible=!low&&distance>exit.radius+.75;
+   // Direction remains functional on low quality. Two static local leaves
+   // reuse the same batch; decorative six-leaf celebrations stay optional.
+   leaves.count=low?2:6;leaves.visible=distance>exit.radius+.75;
    if(leaves.visible){
-    if(!exitCached||exitX!==exit.x||exitZ!==exit.z||exitRadius!==exit.radius||playerX!==player.x||playerZ!==player.z){
+    if(!exitCached||exitX!==exit.x||exitZ!==exit.z||exitRadius!==exit.radius||playerX!==player.x||playerZ!==player.z||exitLeaves!==leaves.count){
      const ux=dx/distance,uz=dz/distance,heading=Math.atan2(-dx,-dz);
-     for(let i=0;i<6;i++){
+     for(let i=0;i<leaves.count;i++){
       const row=i>>1,side=i%2?1:-1,forward=.85+row*.3,lateral=side*(.12+(2-row)*.06);
       pose.position.set(player.x+ux*forward-uz*lateral,.15,player.z+uz*forward+ux*lateral);
       pose.rotation.set(-Math.PI/2,0,heading+side*.3);pose.scale.setScalar(.56);pose.updateMatrix();leaves.setMatrixAt(i,pose.matrix);
      }
      leaves.instanceMatrix.needsUpdate=true;
-     exitX=exit.x;exitZ=exit.z;exitRadius=exit.radius;playerX=player.x;playerZ=player.z;exitCached=true;
+     exitX=exit.x;exitZ=exit.z;exitRadius=exit.radius;playerX=player.x;playerZ=player.z;exitLeaves=leaves.count;exitCached=true;
     }
    }else exitCached=false;
    return;
   }
   exitCached=false;
+  leaves.count=6;
   if(!world){
    const flight=travel.stage==='flight',progress=travel.age/travel.duration,alpha=flight?1:Math.max(0,1-progress);
    root.position.set(0,0,0);root.rotation.y=0;root.scale.setScalar(1);ringMat.color.setHex(0xe9dfa4);leafMat.color.setHex(0xd3ebba);

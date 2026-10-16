@@ -116,7 +116,7 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
  // Night light: the act-1 values are remembered and restored when the stadium is left.
  const saved=new Map(),hidden=new Map();
  const night={background:new THREE.Color('#0d1a2a'),fog:new THREE.Color('#122236'),fogDensity:.014};
- let active=false,baseEnabled=false;
+ let active=false,baseEnabled=false,lastFlagTime=NaN;
  return {
   group,coverMaterial:trimMat,boundaryMaterials:{dark:track.material,armor:trimMat,stone:trimMat},
   setActive(on,arena=null){
@@ -126,7 +126,7 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
     floorMat.color.setHex(surface.color);floorMat.map.repeat.setScalar(surface.repeat);floorMat.map.rotation=surface.rotation;floorMat.map.offset.set(...surface.offset);
    }
    baseEnabled=Boolean(on&&baseSlidesEnabled(arena));
-   if(on===active)return;active=on;group.visible=on;
+   if(on===active)return;active=on;group.visible=on;lastFlagTime=NaN;
    if(on){
     saved.set('background',scene.background?.clone());saved.set('fog',scene.fog?.color.clone());saved.set('density',scene.fog?.density);
     for(const light of lights)saved.set(light,{intensity:light.intensity,color:light.color.clone()});
@@ -143,9 +143,13 @@ export function createStadium(scene,{lights=[],hide=[],mobile=false}={}){
   isActive:()=>active,
   baseAt:position=>stadiumBaseAt(position),
   tryBaseSlide(position,cooldown=0,blockedIndex=-1){return baseSlideFor(position,cooldown,active&&baseEnabled,blockedIndex);},
-  update(time){
-   if(!active)return;
-   flagXs.forEach((x,i)=>{q.setFromAxisAngle(yAxis,Math.sin(time*2.2+i*.9)*.35-.2);p.set(x,2.05,-8.9);m.compose(p,q,s);flags.setMatrixAt(i,m);});
+  update(time,running=true,reducedMotion=false){
+   if(!active||!running)return;
+   // Decoration follows pause/accessibility and needs only 30Hz on mobile.
+   // Combat, base triggers and the committed transfer never read this clock.
+   const sample=reducedMotion?0:mobile?Math.floor(time*30)/30:time;
+   if(sample===lastFlagTime)return;lastFlagTime=sample;
+   for(let i=0;i<flagXs.length;i++){q.setFromAxisAngle(yAxis,Math.sin(sample*2.2+i*.9)*.35-.2);p.set(flagXs[i],2.05,-8.9);m.compose(p,q,s);flags.setMatrixAt(i,m);}
    flags.instanceMatrix.needsUpdate=true;
   },
   state:()=>({active,baseEnabled})
