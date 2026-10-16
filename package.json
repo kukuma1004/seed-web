@@ -1,6 +1,6 @@
 {
   "name": "seed-web",
-  "version": "1.0.89",
+  "version": "1.0.90",
   "type": "module",
   "scripts": {
     "test:journey-shop": "node tools/shop-test.mjs && node tools/items-test.mjs && node tools/journey-shop-test.mjs",
@@ -26,7 +26,7 @@
     "test:duel-final-08-ai": "node tools/duel-final-08-ai.mjs",
     "test:boss-events": "node tools/boss-victory-events-test.mjs && node tools/boss-victory-event-sync-test.mjs && node tools/boss-victory-migration-test.mjs && node tools/boss-victory-account-test.mjs && node tools/boss-victory-cloud-cutover-test.mjs && node tools/boss-receipt-epoch-test.mjs && node tools/adventure-boss-epoch-test.mjs && node tools/boss-legacy-quarantine-test.mjs && node tools/boss-account-menu-test.mjs && node tools/defense-live-boss-epoch-test.mjs",
     "admin:migrate-boss-counts": "node tools/boss-victory-admin-migration.mjs",
-    "test:crystal-conservatory": "node tools/crystal-conservatory-test.mjs && node tools/crystal-turret-growth-test.mjs && node tools/crystal-turret-command-balance-test.mjs",
+    "test:crystal-conservatory": "node tools/crystal-turret-mixed-client-test.mjs && node tools/crystal-conservatory-test.mjs && node tools/crystal-turret-growth-test.mjs && node tools/crystal-turret-command-balance-test.mjs",
     "test:crystal-siege": "npm run test:crystal-conservatory && node tools/crystal-siege-clarity-view-test.mjs && node tools/crystal-siege-test.mjs && node tools/crystal-siege-support-test.mjs && node tools/crystal-siege-journey-test.mjs && node tools/crystal-siege-independent-test.mjs && node tools/crystal-siege-endurance-test.mjs && node tools/crystal-siege-boss-facility-test.mjs && node tools/crystal-siege-boss-facility-independent-test.mjs",
     "test:defense-siege": "node tools/defense-crystal-siege-test.mjs && node tools/defense-crystal-siege-independent-test.mjs",
     "test:survival-siege": "node tools/survival-crystal-siege-test.mjs && node tools/survival-crystal-siege-host-test.mjs",
