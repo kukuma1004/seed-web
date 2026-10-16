@@ -169,6 +169,15 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
 }
 
 /* Mode choice: visible play styles, stable card sizes and a fixed return lane. */
+.journey-panel .journey-grid-six{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1100px}
+.journey-panel .journey-grid-six .journey-card{aspect-ratio:1.65;min-height:158px}
+.journey-panel .act-card-6 .journey-art{object-position:50% 40%}
+.arbor-result{width:min(560px,90vw);margin:auto;text-align:center;padding:32px;display:grid;gap:14px;border:1px solid #b6c99466;background:#102724e8;border-radius:18px}
+.arbor-result h2{font-size:clamp(26px,4vw,38px);margin:0;letter-spacing:0}
+.arbor-result p{font-size:13px;color:#c6d6c5;line-height:1.6}
+.arbor-result button{min-height:46px;background:#173a32;color:#e9eccb;border:1px solid #aabc8877;border-radius:8px}
+@media(max-width:600px){.journey-panel .journey-grid-six{grid-template-columns:1fr}.journey-panel .journey-grid-six .journey-card{aspect-ratio:1.85}}
+@media(min-width:601px) and (max-height:500px){.journey-panel .journey-grid-six .journey-card{aspect-ratio:1.35;min-height:144px}}
 .dungeon-scroll,.menu-panel.home-panel{touch-action:pan-y}
 .dungeon-hub .dungeon-modes:has(.mode-adventure){height:auto;min-height:0;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:none;grid-auto-rows:minmax(190px,1fr);gap:14px;align-content:start}
 .dungeon-hub .dungeon-mode{height:auto;max-height:none;aspect-ratio:auto;min-height:190px;border-width:1px;border-radius:14px;text-align:left}

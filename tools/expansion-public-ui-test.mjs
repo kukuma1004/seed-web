@@ -7,7 +7,7 @@ import {itemArt} from '../src/item-art.js';
 import {expansionJourneyResult,expansionRankView} from '../src/expansion-journey-result.js';
 import {EXPANSION_ACTS,expansionCircuitReleased} from '../src/act-expansion.js';
 import {EXPANSION_CIRCUIT_KILLS,CROSSWIND_CIRCUIT_KILLS} from '../src/act-expansion-runtime.js';
-import {ACT} from '../src/online-ranking.js';
+import {ACT,JOURNEY_EXPANSION_KILL_BUDGET} from '../src/online-ranking.js';
 import {readAccountProfile,writeAccountProfile,recordBestScore} from '../src/account-profile.js';
 import {accountRole,rankingDecision,classifySubmitError} from '../src/ranking-eligibility.js';
 import {fixture,released,source} from './expansion-public-host-test.mjs';
@@ -15,8 +15,10 @@ const both=released.EXPANSION_ACTS;
 const input={act:'crosswind',owner:'owner-A',currentOwner:'owner-A',ended:true,done:true,name:'테스터',score:20520,cycle:2,stage:4,kills:126,time:680,acts:both};
 for(const act of ['crosswind','crystalGorge']){
  const e=expansionJourneyResult({...input,act});assert(e);assert.equal(e.act,act==='crosswind'?4:5);assert.equal(Object.isFrozen(e),true);assert.equal(e.done,true);
- for(const patch of [{acts:closedExpansionActs},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:(act==='crosswind'?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*3+1},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
- assert(expansionJourneyResult({...input,act,kills:(act==='crosswind'?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*3}),'fresh three-circuit maximum remains eligible');
+ const maximum=JOURNEY_EXPANSION_KILL_BUDGET[act==='crosswind'?4:5]*3;
+ for(const patch of [{acts:closedExpansionActs},{currentOwner:'owner-B'},{inspection:true},{practice:true},{ended:false},{cycle:3},{stage:0},{kills:maximum+1},{time:1},{act:'garden'}])assert.equal(expansionJourneyResult({...input,act,...patch}),null);
+ assert(expansionJourneyResult({...input,act,kills:(act==='crosswind'?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*3}),'the earlier guardian-free three-circuit maximum remains eligible');
+ assert(expansionJourneyResult({...input,act,kills:maximum}),'five actual guardian deaths per lap fit the new exact physical maximum');
  assert.equal(expansionJourneyResult({...input,act,done:false,cycle:0,stage:0,kills:10,score:200,time:10}).done,false);
 }
 assert.equal(expansionRankView('crosswind'),'crosswind');assert.equal(expansionRankView('crystalGorge'),'crystal');assert.equal(expansionRankView('austin'),null);
@@ -47,9 +49,11 @@ for(const variant of ['closed','one','open','inspection','anonymous','art-previe
  const nodes=new Map(),$=k=>{if(!nodes.has(k))nodes.set(k,{innerHTML:'',classList:{remove(){},add(){}}});return nodes.get(k);};let launch;
  const acts=variant==='closed'?closedExpansionActs:variant==='one'?{...both,crystalGorge:{...both.crystalGorge,released:false}}:both;
  const c=vm.createContext({$,mode:'ready',touch:{reset(){}},keys:new Set(),readCheckpoint:()=>null,actStorage:s=>s,act3Storage:s=>s,runStorage:{},rawStorage:{},profile:{},act2Available:()=>true,act3Available:()=>true,act2Unlocked:()=>true,act3Unlocked:()=>true,location:{search:variant.includes('art-preview')?'?journeyArtLab=1':''},URLSearchParams,localInspection:variant==='inspection'||variant==='art-preview',EXPANSION_ACTS:acts,expansionCircuitReleased:()=>expansionCircuitReleased(acts),expansionOwner:()=> 'owner-A',account:{user:()=>({uid:'owner-A',isAnonymous:variant==='anonymous'||variant==='anonymous-art-preview'})},createExpansionAccountSaveStore:()=>{assert(variant==='open','art inspection must not access account saves');return {read:()=>null};},MIRROR_TRIAL_PROTOTYPE:{released:false},austinKnown:()=>false,readMirrorRecord:()=>({}),readMirrorCheckpoint:()=>null,readCheckpointBackups:()=>({}),readShop:()=>({coins:200,carry:{}}),carryTotal,itemArt,itemCounts:()=>'',escapeHtml:s=>s,AUSTIN:{name:'オ'},requireName:()=>true,startPublicExpansionJourney:(...args)=>{launch=['public',...args];},startExpansionJourney:(...args)=>{launch=['inspection',...args];},showIntro(){},showShop(){},showDungeon(){}});
+ c.rawStorage={getItem:()=>null};c.arborOwner=()=> 'owner-A';c.startArborJourney=options=>{launch=['arbor',options];};
  vm.runInContext(menu,c);c.showJourneys();assert.equal(c.$('#overlay').innerHTML.includes('id="start-crosswind"'),variant==='open'||variant==='art-preview');assert.equal(c.$('#overlay').innerHTML.includes('id="start-crystalGorge"'),variant==='open'||variant==='art-preview');
+ assert(c.$('#overlay').innerHTML.includes('id="start-arbor"'),'the independently saved sixth Journey remains visible');assert(fs.existsSync('public/assets/arbor/arbor-courtyard-v1.webp'));c.$('#start-arbor').onclick();assert.deepEqual(JSON.parse(JSON.stringify(launch)),['arbor',{resume:false}]);
  if(variant==='art-preview'){c.$('#start-crystalGorge').onclick();assert.deepEqual(JSON.parse(JSON.stringify(launch)),['inspection',0,'crystalGorge',{siegePreview:true}]);}
- if(variant==='open'){c.$('#start-crosswind').onclick();assert.deepEqual(JSON.parse(JSON.stringify(launch)),['public','crosswind',{resume:false}]);for(const path of [...c.$('#overlay').innerHTML.matchAll(/assets\/(menu\/journey-act[1-5]-v3\.webp)/g)].map(m=>m[1]))assert(fs.existsSync('public/assets/'+path),path);assert.equal([...c.$('#overlay').innerHTML.matchAll(/class="journey-picture journey-art"/g)].length,5);}
+ if(variant==='open'){c.$('#start-crosswind').onclick();assert.deepEqual(JSON.parse(JSON.stringify(launch)),['public','crosswind',{resume:false}]);for(const path of [...c.$('#overlay').innerHTML.matchAll(/assets\/(menu\/journey-act[1-5]-v3\.webp)/g)].map(m=>m[1]))assert(fs.existsSync('public/assets/'+path),path);assert.equal([...c.$('#overlay').innerHTML.matchAll(/class="journey-picture journey-art"/g)].length,6);}
 }
 {const f=fixture({inspection:true});f.c.expansionJourney={act:'crystalGorge',siege:{}};f.c.expansionChannel='inspection';f.c.showExpansionResult(true,true);assert(f.$('#overlay').innerHTML.includes('보스 검토 종료'));assert(!f.$('#overlay').innerHTML.includes('완주'));assert.equal(readAccountProfile(f.storage).bestScores.act5,0);}
 console.log('Actual public result/menu/ranking functions: immutable finished score, owner switch cancellation, account act4/5 best, release/inspection/auth gates, exact boss filters and shipped art references passed. DOM/REST mocks, no visual or production claim.');

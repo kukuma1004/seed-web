@@ -11,7 +11,7 @@ import {recordModeBossVictory} from '../src/mode-boss-titles.js';
 import {readAccountProfile,ACCOUNT_PROFILE_KEY} from '../src/account-profile.js';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const tick=()=>new Promise(r=>setImmediate(r));
-function host(){const f=fixture();f.c.musicSceneFor=musicSceneFor;f.c.audio.setScene=id=>{f.c.audioScene=id;};f.c.JOURNEY_HEAL=25;f.c.openExit=()=>{f.c.exitOpen=true;};f.c.awardModeBoss=(mode,runId,boss,ordinal,practice)=>recordModeBossVictory(f.storage,{mode,runId,boss,ordinal,practice}).saved;
+function host(){const f=fixture();f.c.journeyRoomLayoutState=null;f.c.musicSceneFor=musicSceneFor;f.c.audio.setScene=id=>{f.c.audioScene=id;};f.c.JOURNEY_HEAL=25;f.c.openExit=()=>{f.c.exitOpen=true;};f.c.awardModeBoss=(mode,runId,boss,ordinal,practice)=>recordModeBossVictory(f.storage,{mode,runId,boss,ordinal,practice}).saved;
  vm.runInContext(source.slice(source.indexOf('function enemyDown(e){'),source.indexOf('function updateFallen(')),f.c);
  vm.runInContext(source.slice(source.indexOf('function advancePublicExpansionLap(){'),source.indexOf('\nfor(const material',source.indexOf('function advancePublicExpansionLap(){'))),f.c);return f;}
 function bossEntry(f){const next=createExpansionJourney(f.c.expansionJourney.act,0,413);for(let i=0;i<5;i++)advanceExpansionJourney(next);f.c.expansionJourney=next;f.c.stage=4;assert(f.c.captureExpansionEntry());assert.equal(f.c.expansionEntry.journey.phase,'boss');}

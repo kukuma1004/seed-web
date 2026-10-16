@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "act": "arbor",
+  "name": "거목의 숨결",
+  "generation": "Built-in image_gen, original PNGs preserved; resized and encoded to WebP without compositing or alpha replacement.",
+  "style": "Painterly botanical fantasy, muted moss sandstone and warm golden bark; shallow 2.5D matching SEED garden art.",
+  "assets": {
+    "floor": {"file": "arbor-courtyard-v1.webp", "mobile": "arbor-courtyard-v1-mobile.webp", "size": [1024, 1024], "mobileSize": [768, 768], "alpha": false, "world": [72, 72], "walkableCentralFraction": 0.64, "menuReusable": true},
+    "boss": {"file": "arbo-motion-v1.webp", "mobile": "arbo-motion-v1-mobile.webp", "size": [1024, 1024], "mobileSize": [768, 768], "alpha": true, "grid": [2, 2], "frames": ["idle", "windup", "attack", "recover"], "worldSize": 4.2, "anchor": [0.5, 0.075]},
+    "root": {"file": "arbor-root-v1.webp", "mobile": "arbor-root-v1-mobile.webp", "size": [1024, 374], "mobileSize": [768, 281], "alpha": true, "anchor": [0.5, 0.12], "collisionOwnedBy": "arbor-journey rules"}
+  },
+  "prompts": {
+    "floor": "Strict orthographic top-down golden life-tree courtyard; central 64 percent continuous walkable muted moss-green sandstone and subtle leaf carvings; giant golden tree base, flowers, roots and lanterns at outer margins only; no actors, text or UI.",
+    "boss": "Arbo, ancient stout tree guardian with golden leaf crown and glowing seed heart; transparent 2 by 2 grid of same full-body character in idle, raised-arm windup, forearm slam, and exposed-heart recovery; consistent elevated game view, fixed scale, no text or background.",
+    "root": "Single short low horizontal raised root barrier, furrowed warm bark, moss and a few white-gold flowers; painterly shallow 2.5D elevated game view, tapered grounded ends; real transparent cutout, no floor or UI."
+  }
+}

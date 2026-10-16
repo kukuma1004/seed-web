@@ -18,7 +18,7 @@ const host=new vm.Script('(function(){'+source.slice(start,end)+'})()'),viewport
 let projected=0;
 for(const[w,h,touch]of viewports)for(const act of['skyway','crosswind','crystalGorge']){
  const viewLayout=responsiveView(w,h,touch),pose=journeyCombatCamera(w,h,act,viewLayout),camera=new THREE.PerspectiveCamera(39,w/h,.1,100),player={position:new THREE.Vector3()},look=new THREE.Vector3(),feel=createCameraFeel();
- const context=vm.createContext({isAct3:r=>r==='skyway',region:act==='skyway'?'skyway':'garden',mirrorSession:null,trainingSession:null,expansionJourney:act==='skyway'?null:{act,phase:'course',course:{encounterVersion:3},...(act==='crystalGorge'?{siege:{}}:{})},survivalSession:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width:w,height:h},journeyFlightCamera,crosswindJourneyCamera,crystalSiegeCamera,camera,look,visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player,viewLayout,ACT3_VIEW_ZOOM:.88,ACT3_VIEW_BIAS:-2,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1.1},seedVisualReview:true,cameraShake:0,rng:()=>.5,stage:0,inAustinRoom:()=>false,cameraFeel:feel});
+ const context=vm.createContext({isAct3:r=>r==='skyway',region:act==='skyway'?'skyway':'garden',mirrorSession:null,trainingSession:null,arborJourney:null,expansionJourney:act==='skyway'?null:{act,phase:'course',course:{encounterVersion:3},...(act==='crystalGorge'?{siege:{}}:{})},survivalSession:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width:w,height:h},journeyFlightCamera,crosswindJourneyCamera,crystalSiegeCamera,camera,look,visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player,viewLayout,ACT3_VIEW_ZOOM:.88,ACT3_VIEW_BIAS:-2,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1.1},seedVisualReview:true,cameraShake:0,rng:()=>.5,stage:0,inAustinRoom:()=>false,cameraFeel:feel});
  let minPixels=Infinity;
  for(let frame=0;frame<720;frame++){
   const section=Math.floor(frame/180),t=frame%180/60;
@@ -43,9 +43,9 @@ for(const[w,h,touch]of viewports)for(const act of['skyway','crosswind','crystalG
 const old=new vm.Script(readFileSync(new URL('./fixtures/camera-feel-v90.mjs',import.meta.url),'utf8').replace('export function createCameraFeel','function createCameraFeel')+';createCameraFeel()').runInNewContext({});
 const unchanged=createCameraFeel();for(let frame=0;frame<1200;frame++){const options={playerX:Math.sin(frame*.03)*12,playerZ:Math.cos(frame*.04)*8,moveX:.04,moveZ:.01,followX:.5,followZ:.4,baseZoom:1.32};assert.equal(JSON.stringify(unchanged.follow(1/60,options)),JSON.stringify(old.follow(1/60,options)));}
 // Damage still has its actual tint/pose feedback; native3/4/5 never blank the rig.
-const blink=source.match(/player\.visible=Boolean\(expansionJourney\|\|[^;]+;/)?.[0];assert(blink);
+const blink=source.match(/player\.visible=Boolean\([^;]+;/)?.[0];assert(blink);
 for(const region of['skyway','garden'])for(const act of[null,'crosswind','crystalGorge'])for(const time of[.05,.1,.15,.2,1.05]){
- const c={player:{visible:false},region,expansionJourney:act?{act}:null,survivalSession:null,mirrorSession:null,trainingSession:null,isAct3:r=>r==='skyway',invuln:1,time};vm.runInNewContext(blink,c);assert.equal(c.player.visible,Boolean(act||region==='skyway')||Math.floor(time*20)%2===0);
+ const c={player:{visible:false},region,arborJourney:null,expansionJourney:act?{act}:null,survivalSession:null,mirrorSession:null,trainingSession:null,isAct3:r=>r==='skyway',invuln:1,time};vm.runInNewContext(blink,c);assert.equal(c.player.visible,Boolean(act||region==='skyway')||Math.floor(time*20)%2===0);
 }
 const first=journeyCombatCamera(1280,720);for(let i=0;i<20000;i++)assert.equal(journeyCombatCamera(1280,720),first);assert(Object.isFrozen(first));
 console.log(JSON.stringify({projectedFrames:projected,otherModeParityFrames:1200,metrics},null,2));

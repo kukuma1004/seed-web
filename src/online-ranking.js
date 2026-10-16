@@ -7,6 +7,7 @@ import {isBadName} from './name-filter.js';
 import {validBuild} from './ranking-build.js';
 import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
 import {EXPANSION_CIRCUIT_KILLS,CROSSWIND_CIRCUIT_KILLS} from './act-expansion-runtime.js';
+import {EXPANSION_WARDENS_PER_BOSS} from './expansion-guardians.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
@@ -29,13 +30,20 @@ const int=(v,max)=>Number.isInteger(v)&&v>=0&&v<=max;
 // Late journeys can now contain up to 166 legitimate kills while still drawing
 // only fourteen enemies at once. Keep a small margin for future hand-tuned rooms.
 export const MAX_KILLS_PER_JOURNEY=180;
+// New Journey circuits contain one real guardian in each of their five rooms.
+// Shared Survival/Defense course packet counts remain unchanged. The wider
+// ceiling also retains all legitimate records from the earlier guardian-free route.
+export const JOURNEY_EXPANSION_KILL_BUDGET=Object.freeze({
+ 4:CROSSWIND_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS,
+ 5:EXPANSION_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS
+});
 export function validRun(e,{acts=EXPANSION_ACTS}={}){
  const expansion=e?.act===4||e?.act===5;
  if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER||e.act===ACT.JOHAN||expansion&&expansionCircuitReleased(acts))&&(e.done===undefined||typeof e.done==='boolean')))return false;
  // Deliberate-crossing courses share the actual accepted-packet kill budget.
  // A campaign has 3 laps, with one true boss per completed lap.
  // Ordinary 1/2/3 validation below is unchanged.
- if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*(e.act===4?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
+ if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*JOURNEY_EXPANSION_KILL_BUDGET[e.act]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  const multiplier=1+e.cycle*.5;
  const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;
  return e.kills<=(e.cycle+1)*MAX_KILLS_PER_JOURNEY&&e.score<=scoreCeiling&&e.time>=e.cycle*15&&e.time>=e.kills/6;

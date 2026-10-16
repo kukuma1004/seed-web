@@ -6,7 +6,7 @@ import {isAct2} from '../src/act2.js';
 import {isAct3,ACT3_ROOM_HINTS} from '../src/act3.js';
 import {MIRROR_BREAK} from '../src/mirror-trial.js';
 
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8').replaceAll('\r\n','\n');
 const start=main.indexOf(' combatAnalysis.begin(elapsed,{stage:mirrorSession?'),end=main.indexOf('\n}\nfunction openExit(',start);
 assert(start>0&&end>start);
 const nodes=new Map(),$=id=>{if(!nodes.has(id))nodes.set(id,{textContent:'',hidden:true});return nodes.get(id);};
@@ -28,7 +28,7 @@ for(const special of [{boss:true,mirrorSession:null},{boss:false,mirrorSession:{
 // Run shipping new-run departure code: a present tactical hint wins over the
 // inventory sentence; modes without a room hint keep their original fallback.
 const departureStart=main.indexOf('  itemBarKey=\'\';\n  const departure=itemCounts(inventory);',main.indexOf('function restart('));
-const departureEnd=main.indexOf('\n }}',departureStart);assert(departureStart>0&&departureEnd>departureStart);
+const departureEnd=main.indexOf('\n }',departureStart);assert(departureStart>0&&departureEnd>departureStart);
 Object.assign(ctx,{itemCounts:()=> '물약 2개',inventory:{tonic:2},mirrorSession:null});
 $('#toast').textContent=roomFor(0,0,'garden').hint;vm.runInContext('{'+main.slice(departureStart,departureEnd)+'}',ctx);assert.equal($('#toast').textContent,roomFor(0,0,'garden').hint);
 $('#toast').textContent='';vm.runInContext('{'+main.slice(departureStart,departureEnd)+'}',ctx);assert.match($('#toast').textContent,/물약 2개.*Q/);
@@ -39,7 +39,7 @@ const pauseStart=main.indexOf('function togglePause(){'),pauseEnd=main.indexOf('
 assert(pauseStart>0&&pauseEnd>pauseStart);
 let pauses=0,resumes=0,focuses=0;
 $('#pause').focus=options=>{assert.equal(options.preventScroll,true);focuses++;};
-Object.assign(ctx,{journeyCompletionPending:false,saveExitBusy:false,mode:'playing',paused:false,roomCleared:false,exitOpen:false,survivalSession:null,expansionJourney:null,mirrorSession:null,boss:false,
+Object.assign(ctx,{journeyCompletionPending:false,saveExitBusy:false,mode:'playing',paused:false,roomCleared:false,exitOpen:false,survivalSession:null,expansionJourney:null,arborJourney:null,mirrorSession:null,boss:false,
  touch:{reset(){}},keys:new Set(),keyboardDash:false,player:{visible:false},audio:{setPaused(){}},webTelemetry:{playPause(){pauses++;}},saveExitLabel:()=> '저장하고 돌아가기',pauseBuild:{show(){},hide(){resumes++;}},levels:new Map(),heldForms:new Map(),SURVIVAL:{killChargeScale:.18}});
 vm.runInContext(main.slice(pauseStart,pauseEnd),ctx);
 for(const region of ['garden','stadium'])for(let cycle=0;cycle<4;cycle++)for(let stage=0;stage<5;stage++){

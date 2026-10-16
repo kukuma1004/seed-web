@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import {act3EntryPoint,act3ReinforcementSpawn,SKYWAY_ROOMS,ACT3_ARENA} from '../src/act3.js';
 import {createAct3Minion,tickAct3Minion,ACT3_ART,ACT3_MATERIALS} from '../src/act3-enemies.js';
 import {constrainToArena,insideArena} from '../src/arena.js';
+import {journeyRoomLayout} from '../src/journey-room-layouts.js';
 for(const player of [{x:0,z:5.5},{x:0,z:0},{x:-8,z:0},{x:8,z:5.7}])for(let i=0;i<84;i++){
  const raw=act3ReinforcementSpawn(i),p=act3EntryPoint(raw.x,raw.z,player);assert(insideArena(p,.52,ACT3_ARENA));assert(Math.hypot(p.x-player.x,p.z-player.z)>=3.4);
 }
@@ -14,7 +15,15 @@ function firstTell(legacy){const e=createAct3Minion(scene,'sky-scout',()=>.25),e
 const nearby=firstTell(false),roof=firstTell(true);assert(nearby.t<roof.t-.3,'close entry yields a real earlier decision');
 const e=nearby.e;e.state='recover';e.timer=.6;tickAct3Minion(e,.02,1,{player,collide(){},hit(){},bolt(){}});assert(e.tell.visible&&e.tell.material===ACT3_MATERIALS.opening);e.state='stalk';e.timer=1;tickAct3Minion(e,.02,2,{player,collide(){},hit(){},bolt(){}});assert(!e.tell.visible&&e.tell.material===ACT3_MATERIALS.warning);
 const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),host=main.split(/\r?\n/).find(line=>line.trim().startsWith('function spawnAct3('));let attached=0;
-const context={THREE,scene,player:{position:player},createAct3Minion,ACT3_ART,act3EntryPoint,rng:()=>.25,survivalSession:null,mirrorSession:null,trainingSession:null,arena:ACT3_ARENA,qualityLevel:1,camera:{},release(){},enemies:[],attachActorArt(){attached++;}};vm.createContext(context);vm.runInContext(host,context);const actor=context.spawnAct3('sky-scout',-7,-1.8);assert.equal(actor.g.position.z,-1.8);assert.equal(attached,1);context.survivalSession={};assert.equal(context.spawnAct3('sky-scout',-7,-1.8).g.position.z,-8.05,'shared Survival entry is unchanged');
-assert(main.includes("if(e.state==='recover'&&!e.expansionBoss)amount*=1.35"),'green opening represents the existing real counter damage rule');
+const context={THREE,scene,player:{position:player},createAct3Minion,ACT3_ART,act3EntryPoint,rng:()=>.25,survivalSession:null,mirrorSession:null,trainingSession:null,journeyRoomLayoutState:null,expansionJourney:null,expansionTerrain:null,obstacles:[],constrainToArena,arena:ACT3_ARENA,qualityLevel:1,camera:{},release(){},enemies:[],attachActorArt(){attached++;}};vm.createContext(context);vm.runInContext(host,context);const actor=context.spawnAct3('sky-scout',-7,-1.8);assert.equal(actor.g.position.z,-1.8);assert.equal(attached,1);context.survivalSession={};assert.equal(context.spawnAct3('sky-scout',-7,-1.8).g.position.z,-8.05,'shared Survival entry is unchanged');
+// Native rooms additionally constrain an entry through their actual static
+// cover footprints. Baseline/null above continues to exercise the old entry.
+const collideSource=main.split(/\r?\n/).find(line=>line.startsWith('function collide('));assert(collideSource);vm.runInContext(collideSource,context);context.survivalSession=null;
+let layoutEntries=0;for(let room=0;room<5;room++){
+ context.journeyRoomLayoutState=journeyRoomLayout(3,room);context.obstacles=context.journeyRoomLayoutState.cover;
+ for(const cover of context.obstacles){const a=context.spawnAct3('sky-scout',cover.x,cover.z),p=a.g.position;assert(insideArena(p,.65,ACT3_ARENA));assert(!context.obstacles.some(c=>Math.abs(p.x-c.x)<c.w/2+.65-1e-7&&Math.abs(p.z-c.z)<c.d/2+.65-1e-7),'actual native spawn is moved outside solid cover');layoutEntries++;}
+}
+const counterRule=main.split(/\r?\n/).find(line=>line.includes("if(e.state==='recover'")&&line.includes('amount*=1.35'));assert(counterRule,'shipping recovery damage rule remains present');
+for(const [enemy,expected]of [[{state:'recover'},135],[{state:'stalk'},100],[{state:'recover',expansionBoss:true,takenScale:1.35},135],[{state:'recover',arborBoss:true,takenScale:1.35},135]]){const c={e:enemy,amount:100};vm.runInNewContext(counterRule,c);assert.equal(c.amount,expected,'real recovery counter damage remains +35%, with boss multiplier applied once');}
 assert(SKYWAY_ROOMS[0].hint.includes('피해 +35%'));
-console.log(`Act3 entry PASS: actual near tell ${nearby.t.toFixed(2)}s vs roof ${roof.t.toFixed(2)}s, safe front/flank entries, original entry pause, green real recovery window, shipping host and shared-mode isolation. CPU/host, not native proof.`);
+console.log(`Act3 entry PASS: actual near tell ${nearby.t.toFixed(2)}s vs roof ${roof.t.toFixed(2)}s, safe front/flank entries, original entry pause, green real recovery window, shipping host/shared-mode isolation and ${layoutEntries} actual layout collision entries. CPU/host, not native proof.`);

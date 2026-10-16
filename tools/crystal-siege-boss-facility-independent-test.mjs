@@ -77,7 +77,7 @@ group('Actual cover sweep visits nearest wall first, including unsorted canonica
 
 group('Actual frame guard pauses facilities during pause and selection screens',()=>{
  const start=main.indexOf('function update(dt,time){'),end=main.indexOf('if(survivalSession?.won)',start);assert(end>start);const prefix=main.slice(start,end)+'updateExpansionCourse(dt); }';
- const h={CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSession:null,expansionJourney:null,mode:'playing',paused:false,performance:{now:()=>0},growth:{update(){}},perfMark(){},PS:{animation:0},mirrorReadyRing:{visible:false},player:{userData:{updateArt(){}}},camera:{},cameraMoveX:0,cameraMoveZ:0,updates:0,signatureHides:0,journeySignatureView:{hide(){h.signatureHides++;}},updateExpansionCourse(){h.updates++;}};
+ const h={CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSession:null,expansionJourney:null,arborJourney:null,mode:'playing',paused:false,performance:{now:()=>0},growth:{update(){}},perfMark(){},PS:{animation:0},mirrorReadyRing:{visible:false},player:{userData:{updateArt(){}}},camera:{},cameraMoveX:0,cameraMoveZ:0,updates:0,signatureHides:0,journeySignatureView:{hide(){h.signatureHides++;}},updateExpansionCourse(){h.updates++;}};
  vm.createContext(h);vm.runInContext(prefix,h);for(const mode of ['ready','dead','choice','forms']){h.mode=mode;h.paused=false;h.update(.05,0);}h.mode='playing';h.paused=true;h.update(.05,0);assert.equal(h.updates,0);assert.equal(h.signatureHides,5,'tactical HUD hides on every paused/non-combat frame');h.paused=false;h.update(.05,0);assert.equal(h.updates,1);
 });
 

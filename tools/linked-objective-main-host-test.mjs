@@ -25,14 +25,14 @@ let cases=0;
 // This executes the actual early-return prefix, rather than inspecting guard text.
 for(let act=0;act<5;act++)for(const mode of ['playing','evolving','forms'])for(const change of ['gate','owner'])for(const won of [false,true]){
  const session=survival.createSurvivalSession(413,{actCount:5,objective});Object.assign(session,{act,won,transitionTime:1.99});const original=JSON.stringify(session),calls={pause:0,growth:0,advance:0,art:0};const toast={};
- const c=vm.createContext({survivalSession:session,survivalSaveToken:{owner:'owner'},survivalOwner:()=>change==='owner'?'foreign':'owner',CRYSTAL_DEFENSE_OBJECTIVE:objective,expansionObjectiveReleased:()=>change!=='gate',mode,paused:false,evolutionTime:.99,evolutionDuration:1,expansionJourney:null,
+ const c=vm.createContext({survivalSession:session,survivalSaveToken:{owner:'owner'},survivalOwner:()=>change==='owner'?'foreign':'owner',CRYSTAL_DEFENSE_OBJECTIVE:objective,expansionObjectiveReleased:()=>change!=='gate',mode,paused:false,evolutionTime:.99,evolutionDuration:1,expansionJourney:null,arborJourney:null,
   togglePause(){calls.pause++;c.paused=true;},$:()=>toast,growth:{update(){calls.growth++;}},continueSurvival(){calls.advance++;},updateFallen(){throw Error('authority lost before victory processing');},performance:{now:()=>0},perfMark(){},PS:{animation:0},player:{userData:{updateArt(){calls.art++;}}},mirrorReadyRing:{visible:true},camera:{}});
  vm.runInContext(updatePrefix,c);c.update(.1,3);c.update(.1,4);
  assert.equal(JSON.stringify(session),original,`${act} ${mode} ${change} won=${won}`);assert.equal(c.evolutionTime,.99);assert.equal(calls.growth,0);assert.equal(calls.advance,0);assert.equal(calls.art,0);assert.equal(calls.pause,mode==='playing'?1:0);assert.match(toast.textContent,/보존/);cases++;
 }
 for(const modern of [false,true]){
  const session=survival.createSurvivalSession(413,{actCount:5,...(modern?{objective}:{})});Object.assign(session,{won:true,transitionTime:1.99});let advanced=0,grown=0;
- const c=vm.createContext({survivalSession:session,survivalSaveToken:{owner:'owner'},survivalOwner:()=>modern?'owner':'foreign',CRYSTAL_DEFENSE_OBJECTIVE:objective,expansionObjectiveReleased:()=>modern,mode:'playing',paused:false,expansionJourney:null,growth:{update(){grown++;}},performance:{now:()=>0},perfMark(){},PS:{animation:0},updateFallen(){},continueSurvival(){advanced++;}});
+ const c=vm.createContext({survivalSession:session,survivalSaveToken:{owner:'owner'},survivalOwner:()=>modern?'owner':'foreign',CRYSTAL_DEFENSE_OBJECTIVE:objective,expansionObjectiveReleased:()=>modern,mode:'playing',paused:false,expansionJourney:null,arborJourney:null,growth:{update(){grown++;}},performance:{now:()=>0},perfMark(){},PS:{animation:0},updateFallen(){},continueSurvival(){advanced++;}});
  vm.runInContext(updatePrefix,c);c.update(.1,2);assert.equal(advanced,1);assert.equal(grown,1);assert.equal(session.transitionTime,2.09);
 }
 console.log(`PASS actual update prefix ${cases} authority-loss cases: all acts, choices, evolution and won; legitimate and classic transitions remain live`);

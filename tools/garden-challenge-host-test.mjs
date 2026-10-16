@@ -23,7 +23,9 @@ vm.createContext(raf);vm.runInContext(`let mode='garden-challenge',animationHand
 assert.equal((source.match(/mode==='expedition'\|\|mode==='garden-challenge'\)return;/g)||[]).length,3,'parent keyboard, visibility and pageshow leave challenge to its owner');
 assert(source.includes("if(mode==='garden-challenge')gardenChallengeScreen?.close();"));
 assert(source.includes("window.addEventListener('pageshow',()=>{if(mode==='adventure'||mode==='expedition'||mode==='garden-challenge')return;"),'parent cannot resume child audio from bfcache');
-const leaveBegin=source.indexOf('function saveLeaveState(){');assert(source.slice(leaveBegin,leaveBegin+90).includes("if(mode==='garden-challenge')return false;"),'pagehide cannot persist old journey/survival while in short challenge');
+const leaveBegin=source.indexOf('function saveLeaveState(){'),leaveEnd=source.indexOf('\n}',leaveBegin)+2;assert(leaveBegin>=0&&leaveEnd>leaveBegin);let parentWrites=0;
+const leaveContext=vm.createContext({mode:'garden-challenge',arborJourney:null,expansionJourney:{act:'crosswind'},survivalSession:{},saveExpansionLeave:()=>{parentWrites++;return true;},saveSurvival:()=>{parentWrites++;return true;}});
+vm.runInContext(source.slice(leaveBegin,leaveEnd),leaveContext);assert.equal(leaveContext.saveLeaveState(),false,'pagehide cannot persist old journey/survival while in short challenge');assert.equal(parentWrites,0,'the real mode guard precedes every previous-mode save');
 assert(source.includes("$('#open-garden-challenge').onclick=()=>void showSeedGardenChallenge();"));
 assert(source.includes("$('#overlay').hidden=true;\n  $('#overlay').innerHTML='';\n  gardenChallengeScreen=mountGardenChallenge"),'loading controls are removed even if a parent theme overrides hidden display');
 console.log('Garden Challenge shipping entry: lazy mount/cancel/failure/return, raw device store isolation and parent RAF/input ownership PASS. VM proof, not real browser input.');

@@ -19,7 +19,7 @@ const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:'',hidden:tru
 for(const act of [3,4]){
  const session=createSurvivalSession(413,{actCount:5});session.act=act;
  const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionActorArt,expansionApi,ACT3_ART,constrainToArena,
-  survivalSiege:null,survivalSiegeApi,survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
+  journeyRoomView:{hide(){}},journeyRoomLayoutState:null,arborView:null,arborJourney:null,survivalSiege:null,survivalSiegeApi,survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
   camera:new THREE.PerspectiveCamera(),arena:SURVIVAL.arena,player:new THREE.Object3D(),enemies:[],enemyShots:[],obstacles:[],traps:[],clockFloor:null,shadowClock:0,SHADOW_REFRESH:1,
   arenaGroup:new THREE.Group(),roomCover:new THREE.Group(),trapGroup:new THREE.Group(),hiddenGarden:[],mirrorPanelsActive:false,
   stadium:{setActive(){}},skyway:{setActive(){}},mirrorPanels:{setActive(){}},survivalArt:{setReadability(){},setAct(){},setActive(){}},survivalComparisonEnabled:false,survivalReadability:true,

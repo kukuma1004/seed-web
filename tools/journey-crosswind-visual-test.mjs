@@ -17,7 +17,7 @@ const scaleHost=main.slice(main.indexOf(' const journeyReadable='),main.indexOf(
 assert(scaleHost.includes('journeyPlayerScale(canvasRect.width,canvasRect.height,expansionJourney?.act)'));
 for(const region of ['garden','stadium','skyway'])for(const variant of ['native','survival','mirror','training','crosswind','siege'])for(const [width,height] of [[1280,720],[640,360]]){
  const player=new THREE.Object3D();player.scale.setScalar(1.42);
- const context={region,expansionJourney:variant==='crosswind'?{act:'crosswind'}:variant==='siege'?{act:'crystalGorge',siege:{}}:null,survivalSession:variant==='survival'?{}:null,mirrorSession:variant==='mirror'?{}:null,trainingSession:variant==='training'?{}:null,isAct3:r=>r==='skyway',player,canvasRect:{width,height},journeyPlayerScale};
+ const context={region,arborJourney:null,expansionJourney:variant==='crosswind'?{act:'crosswind'}:variant==='siege'?{act:'crystalGorge',siege:{}}:null,survivalSession:variant==='survival'?{}:null,mirrorSession:variant==='mirror'?{}:null,trainingSession:variant==='training'?{}:null,isAct3:r=>r==='skyway',player,canvasRect:{width,height},journeyPlayerScale};
  runInNewContext(scaleHost,context);
  assert.equal(player.scale.x,['crosswind','siege'].includes(variant)||variant==='native'&&region==='skyway'?journeyPlayerScale(width,height,context.expansionJourney?.act):1.42,'native Journey3/4/5 keeps a readable Seed silhouette');
 }

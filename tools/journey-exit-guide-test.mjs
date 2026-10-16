@@ -89,13 +89,13 @@ view.dispose();view.dispose();assert.equal(scene.children.length,0);assert.equal
 
 // Run the shipping HUD expression as well as the pure copy helper. Mobile
 // strips only the keyboard suffix; stage/win information must remain intact.
-const hud=main.match(/setText\(\$\('#exit-room'\),journeyExitButtonLabel\([^\n]*?\}\)\);/)?.[0];assert(hud);
+const hud=main.match(/setText\(\$\('#exit-room'\),[^\n]*?journeyExitButtonLabel\([^\n]*?\}\)\);/)?.[0];assert(hud);
 for(const expansion of [null,...['crosswind','crystalGorge'].flatMap(act=>{const course=createExpansionJourney(act,4,413),boss=createExpansionJourney(act,4,413);advanceExpansionJourney(boss);return [course,boss];})]){
  for(const stage of [0,4])for(const bossAhead of [false,true])for(const wins of [1,2,3]){
   const campaign=expansion?{bossWins:{[expansion.act==='crosswind'?'crosswindKeeper':'crystalGardener']:wins}}:null;
   const input={stage,bossAhead,expansion,campaign},pc=journeyExitButtonLabel(input),mobile=journeyExitButtonLabel({...input,touch:true});
   assert(pc.endsWith(' · E'));assert.equal(pc.slice(0,-4),mobile);assert(!mobile.endsWith(' · E'));
-  const element={},context={stage,finalBossAhead:()=>bossAhead,touch:{enabled:true},expansionJourney:expansion,expansionChannel:'public',expansionPublicEntry:{campaign},journeyExitButtonLabel,$:()=>element,setText:(e,t)=>{e.textContent=t;}};
+  const element={},context={stage,finalBossAhead:()=>bossAhead,touch:{enabled:true},arborJourney:null,expansionJourney:expansion,expansionChannel:'public',expansionPublicEntry:{campaign},journeyExitButtonLabel,$:()=>element,setText:(e,t)=>{e.textContent=t;}};
   vm.createContext(context);vm.runInContext(hud,context);assert.equal(element.textContent,mobile);
  }
 }

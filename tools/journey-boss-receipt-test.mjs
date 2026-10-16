@@ -38,7 +38,7 @@ assert.equal(cloud.checkpoints.act1.runId,legacy,'account snapshot preserves the
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 let allowDiscovery=false,treeGrants=0;
 const toast={textContent:''};
-const ctx=vm.createContext({currentJourneyOwner:'owner',rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'owner'})},localInspection:false,developerRun:false,
+const ctx=vm.createContext({currentJourneyOwner:'owner',rawStorage:storage,runStorage:storage,account:{user:()=>({uid:'owner'})},localInspection:false,developerRun:false,arborJourney:null,
  bossRecordReady:()=>true,createModeBossOutbox,addJourneyBossReceipt,readCheckpoint,writeCheckpoint,actStore:()=>storage,currentJourneyRunId:legacy,pendingJourneyBossTitles:[],survivalSession:null,expansionJourney:null,paused:false,togglePause:()=>{ctx.paused=true;},MODE_BOSSES,recordModeBossVictory,readAccountProfile,readBossVictoryAccount,readDiscoveries,profile:readDiscoveries(storage),
  remember:(_kind,id)=>allowDiscovery?recordDiscovery(storage,readDiscoveries(storage),'bosses',id):{saved:false},$:()=>toast,
  dominantLaw:()=>null,effectiveLevels:()=>new Map(),levels:new Map(),heldForms:new Map(),cloud:{flush:()=>Promise.resolve()},

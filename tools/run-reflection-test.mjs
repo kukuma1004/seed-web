@@ -11,7 +11,7 @@ function host(){
  const events=[],evidence=createRunReflection();
  const ctx={hp:100,labSafe:false,invuln:0,shellTime:0,mode:'playing',cycle:0,region:'garden',elapsed:12,runDamageTaken:0,runReflection:evidence,
   difficulty:()=>({damage:2}),player:{position:{},userData:{pulseHurt:n=>events.push(['hurt',n])}},burst(){},cameraShake:0,audio:{play(){}},
-  survivalSession:null,mirrorSession:null,expansionJourney:null,inventory:{},tryRevive:()=>null,finishRoomAnalysis:()=>null,
+  survivalSession:null,mirrorSession:null,expansionJourney:null,arborJourney:null,inventory:{},tryRevive:()=>null,finishRoomAnalysis:()=>null,
   developerRun:false,protectJourneyBossReceipts:()=>true,clearCheckpoint:()=>events.push(['end-save']),actStore:()=>({}),showEnd:()=>events.push(['end'])};
  vm.createContext(ctx);vm.runInContext(hitSource+'\nglobalThis.hit=hitPlayer;',ctx);return {ctx,events,evidence};
 }
@@ -66,7 +66,7 @@ const restartAt=source.indexOf('function restart('),resetAt=source.indexOf('held
 assert(restartAt>0&&resetAt>restartAt);
 for(const {ok,developer=false,survival=false,saved=null} of [{ok:false},{ok:true},{ok:false,developer:true},{ok:false,survival:true},{ok:false,saved:{version:1,region:'garden',pendingBossTitles:[]}}]){
  let clearCalls=0,newIds=0,resetReached=0;const labels={textContent:''};
- const state={bossRecordReady:()=>true,protectJourneyBossReceipts:()=>true,developerRun:developer,survivalSession:survival?{}:null,
+ const state={bossRecordReady:()=>true,protectJourneyBossReceipts:()=>true,developerRun:developer,survivalSession:survival?{}:null,arborJourney:null,
   account:{user:()=>({uid:'same-owner'})},$ :()=>labels,expansionLaunch:0,releaseExpansionSaveLease:()=>Promise.resolve(),expansionChannel:'inspection',expansionPublicEntry:null,expansionPublicSync:null,expansionFreshExpected:null,expansionPendingBossCheckpoint:null,expansionJourney:null,expansionTerrain:null,expansionJourneyView:{setActive(){}},gameplayPaused:()=>false,showSeasonPause(){},maintenanceOn:false,showMaintenance(){},playableAct3Region:r=>r,playableRegion:r=>r,location:{},region:'stadium',startRegion:'garden',
   clearCheckpoint:store=>{clearCalls++;assert.equal(store.region,'garden','clear only the intended fresh act');return ok;},actStore:()=>({region:state.region}),journeyCompletionPending:false,currentJourneyOwner:'same-owner',currentJourneyRunId:'existing-run',journeyRunId:()=>{newIds++;return 'new-run';},pendingJourneyBossTitles:[],runReflection:createRunReflection(),touch:{enabled:false},appShell:{enterFullscreen(){}},perfBegin(){},resetReached:()=>resetReached++};
  vm.createContext(state);vm.runInContext(source.slice(restartAt,resetAt)+'resetReached();return;}\nglobalThis.retry=restart;',state);

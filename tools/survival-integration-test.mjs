@@ -88,7 +88,7 @@ assert.match(main,/if\(!expansion&&!restore&&!developerRun&&!survivalSession\)fo
 assert.match(between('function saveBoundary(', '// After a warden'),/if\(survivalSession\)return true/);
 assert.match(between('function saveLeaveState(', '// 일시정지'),/if\(survivalSession\)return saveSurvival\(\)/);
 assert.match(between('function hitPlayer(', 'let cameraShake='),/if\(survivalSession\)\{finishSurvival\(false\);return;\}/);
-assert.match(main,/if\(!survivalSession&&!trainingSession&&!enemies.length/,'empty moment must not finish survival');
+assert.match(main,/if\(!arborJourney&&!survivalSession&&!trainingSession&&!enemies.length/,'empty moment must not finish Survival or the independent sixth Journey');
 const down=between('function enemyDown(', 'function updateFallen(');assert(down.indexOf('if(survivalSession)')<down.indexOf('earnCoins('),'boss reward interception precedes journey writes');
 assert.match(main,/recordSurvivalResult\(survivalRecordStorage\(rawStorage/,'account-scoped survival record, separate from journey');
 assert.match(main,/survivalSession&&shots.length>=MAX_SHOTS/,'base/fragment projectile hard ceiling');

@@ -1,0 +1,59 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import * as THREE from 'three';
+import {createArborJourneyView,ARBOR_ART,ARBOR_VIEW_LIMITS} from '../src/arbor-journey-view.js';
+import {ARBOR_SECTORS} from '../src/arbor-journey.js';
+
+function fakeLoader({fail=false,immediate=false}={}){
+ const loads=[];
+ return {loads,load(url,loaded,progress,error){const texture=new THREE.Texture();const entry={url,texture,loaded,error};loads.push(entry);if(immediate)loaded(texture);return texture;},finish(){for(const l of loads)fail?l.error(new Error('intentional offline')):l.loaded(l.texture);}};
+}
+function sceneResources(scene){const geometries=new Set(),materials=new Set(),textures=new Set();scene.traverse(o=>{if(o.geometry&&!o.isSprite)geometries.add(o.geometry);for(const m of Array.isArray(o.material)?o.material:o.material?[o.material]:[]){materials.add(m);if(m.map)textures.add(m.map);}});return {geometries,materials,textures};}
+function rootState(){return {sector:0,phase:'skirmish',round:0,roots:Array.from({length:4},(_,i)=>({id:i,x:(i-1.5)*5,z:i%2?4:-4,w:3.4+i*.3,d:.9+i*.1,phase:'rest',t:0,active:false}))};}
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera();camera.position.set(0,19,19);camera.zoom=1.18;
+const cameraBefore={position:camera.position.clone(),zoom:camera.zoom},loader=fakeLoader(),view=createArborJourneyView(scene,{camera,loader,base:'/seed-web/'});
+const world=scene.getObjectByName('arbor-journey'),floor=scene.getObjectByName('arbor-painted-courtyard');
+assert.equal(loader.loads.length,3);assert.ok(loader.loads.every(l=>l.url.startsWith('/seed-web/assets/arbor/')));
+assert.equal(world.visible,false);assert.equal(floor.material.map,null);assert.equal(floor.material.transparent,false);assert.ok(floor.material.color.getHex()>0);
+loader.finish();view.setActive(true);const state=rootState();view.update(state,{x:0,z:0},{dt:1/60});
+assert.equal(world.visible,true);assert.equal(view.diagnostics().loaded,3);assert.equal(floor.material.map,loader.loads[0].texture);
+for(let i=0;i<4;i++){assert.equal(world.getObjectByName('arbor-root-'+i).visible,true);}
+const resources=sceneResources(scene),before=view.diagnostics();
+for(let frame=0;frame<6000;frame++){
+ state.sector=Math.floor(frame/1200);state.round=Math.floor(frame/2000);const phase=['rest','warn','active','lower'][Math.floor(frame/60)%4];
+ for(const r of state.roots){r.phase=phase;r.active=phase==='active';}
+ view.update(state,{x:Math.sin(frame*.01)*13,z:Math.cos(frame*.01)*11},{dt:1/60,reducedMotion:frame%2===0});
+}
+const after=sceneResources(scene),diagnostics=view.diagnostics();assert.deepEqual([...after.geometries],[...resources.geometries]);assert.deepEqual([...after.materials],[...resources.materials]);assert.deepEqual([...after.textures],[...resources.textures]);
+assert.equal(diagnostics.roots,4);assert.equal(diagnostics.geometries,ARBOR_VIEW_LIMITS.geometries);assert.equal(diagnostics.materials,ARBOR_VIEW_LIMITS.materials);assert.equal(diagnostics.textures,3);assert.equal(diagnostics.poseWrites,before.poseWrites);assert.equal(diagnostics.lights,0);assert.equal(diagnostics.raf,0);assert.equal(diagnostics.drawCallsMax,18);
+assert.equal(camera.zoom,cameraBefore.zoom);assert.ok(camera.position.equals(cameraBefore.position));
+// A root's marked rectangle is the exact authored collision footprint.
+state.roots[0].phase='warn';view.update(state,{},{dt:0,reducedMotion:true});const first=world.getObjectByName('arbor-root-0');
+assert.equal(first.getObjectByName('arbor-root-emergence-warning').scale.x,state.roots[0].w);assert.equal(first.getObjectByName('arbor-root-emergence-warning').scale.z,state.roots[0].d);assert.equal(first.getObjectByName('arbor-root-emergence-warning').visible,true);
+state.roots[0].phase='active';view.update(state,{},{dt:1/60,reducedMotion:true});assert.equal(first.getObjectByName('arbor-raised-living-root').visible,true);assert.equal(first.getObjectByName('arbor-root-emergence-warning').visible,false);
+// Consume every real authored layout, including the 1x4.2 vertical roots.
+for(let sector=0;sector<ARBOR_SECTORS.length;sector++){
+ const layout=ARBOR_SECTORS[sector];state.sector=sector;for(let i=0;i<4;i++)Object.assign(state.roots[i],layout.roots[i],{phase:'warn'});view.update(state,{},{dt:1/60,reducedMotion:true});
+ for(let i=0;i<4;i++){const authored=layout.roots[i],slot=world.getObjectByName('arbor-root-'+i),tell=slot.getObjectByName('arbor-root-emergence-warning'),edge=slot.getObjectByName('arbor-root-collision-edge');assert.equal(tell.scale.x,authored.w);assert.equal(tell.scale.z,authored.d);assert.equal(edge.scale.x,authored.w);assert.equal(edge.scale.z,authored.d);assert.equal(slot.position.x,authored.x);assert.equal(slot.position.z,authored.z);}
+ for(const r of state.roots)r.phase='active';view.update(state,{},{dt:1/60,reducedMotion:true});
+ for(let i=0;i<4;i++){const authored=layout.roots[i],art=world.getObjectByName('arbor-root-'+i).getObjectByName('arbor-raised-living-root');assert.equal(art.visible,true);if(authored.d>authored.w){assert.equal(art.material.rotation,-Math.PI/2);assert.ok(art.scale.x>=authored.d*.7,'vertical raised root spans actual long axis');assert.equal(art.center.y,.5);}else{assert.equal(art.material.rotation,0);assert.ok(art.scale.x>=authored.w);}}
+}
+const frozen=JSON.stringify(view.diagnostics()),position=first.position.clone(),opacity=first.getObjectByName('arbor-root-collision-edge').material.opacity;
+state.roots[0].x=999;state.sector=0;for(let i=0;i<200;i++)view.update(state,{},{dt:1/60,active:false});assert.equal(JSON.stringify(view.diagnostics()),frozen);assert.ok(first.position.equals(position));assert.equal(first.getObjectByName('arbor-root-collision-edge').material.opacity,opacity);
+// One owned atlas sampler, fixed 4.2 world-unit boss, no shared sprite disposal.
+const actor=new THREE.Group();scene.add(actor);let sharedSpriteDisposals=0;
+const boss=view.setBossArt(actor,'windup');assert.equal(boss.parent,actor);assert.equal(boss.scale.x,4.2);assert.equal(boss.material.map.repeat.x,.5);assert.equal(boss.material.map.offset.x,.5);assert.equal(boss.material.map.offset.y,.5);view.setBossArt(actor,'attack');assert.equal(boss.material.map.offset.x,0);assert.equal(boss.material.map.offset.y,0);view.setBossArt(actor,'recover');assert.equal(boss.material.map.offset.x,0,'attack frame holds beyond single event frame');for(let i=0;i<12;i++)view.update(state,{},{dt:1/60});view.setBossArt(actor,'recover');assert.equal(boss.material.map.offset.x,.5,'recovery frame resumes after160ms');
+boss.geometry.addEventListener('dispose',()=>sharedSpriteDisposals++);state.phase='boss';view.setBossArt(actor,'windup');view.update(state,{},{dt:1/60,reducedMotion:true});assert.ok(boss.scale.y>4.2&&boss.scale.x<4.2,'windup raises distinct full pose');view.setBossArt(actor,'attack');view.update(state,{},{dt:1/60,reducedMotion:true});assert.ok(boss.scale.y<4.2&&boss.scale.x>4.2,'impact has brief contact squash');
+view.hide();assert.equal(boss.visible,false);assert.equal(world.visible,false);const pausedUpdates=view.diagnostics().updates;view.update(state,{},{dt:1});assert.equal(view.diagnostics().updates,pausedUpdates);
+const disposedCounts=new Map();for(const resource of [...resources.geometries,...resources.materials,...loader.loads.map(l=>l.texture),boss.material])resource.addEventListener('dispose',()=>disposedCounts.set(resource,(disposedCounts.get(resource)||0)+1));
+view.dispose();view.dispose();assert.equal(world.parent,null);assert.equal(boss.parent,null);assert.equal(sharedSpriteDisposals,0);assert.ok([...disposedCounts.values()].every(n=>n===1));
+loader.finish();assert.ok([...disposedCounts.values()].every(n=>n===1));assert.equal(view.diagnostics().disposed,true);
+// A failed load still leaves an opaque readable floor and raised cover proxy.
+const failedScene=new THREE.Scene(),failedLoader=fakeLoader({fail:true}),failedView=createArborJourneyView(failedScene,{loader:failedLoader,lowQuality:true});failedLoader.finish();failedView.setActive(true);const failedState=rootState();for(const r of failedState.roots)r.phase='active';failedView.update(failedState,{},{dt:1/60,reducedMotion:true});assert.equal(failedView.diagnostics().failed,3);assert.equal(failedScene.getObjectByName('arbor-painted-courtyard').material.map,null);assert.equal(failedScene.getObjectByName('arbor-root-loading-shape').visible,true);assert.ok(failedLoader.loads.every(l=>l.url.includes('-mobile.webp')));failedView.dispose();
+const immediateScene=new THREE.Scene(),immediate=fakeLoader({immediate:true}),immediateView=createArborJourneyView(immediateScene,{loader:immediate});assert.equal(immediateView.diagnostics().loaded,3);immediateView.dispose();
+// Local delivery assets are valid RIFF/WEBP files and mobile versions are smaller.
+let desktopBytes=0,mobileBytes=0;for(const [normal,mobile] of [[ARBOR_ART.floor,ARBOR_ART.floorMobile],[ARBOR_ART.root,ARBOR_ART.rootMobile],[ARBOR_ART.boss,ARBOR_ART.bossMobile]]){
+ const a=fs.readFileSync(new URL('../public/'+normal,import.meta.url)),b=fs.readFileSync(new URL('../public/'+mobile,import.meta.url));assert.equal(a.toString('ascii',0,4),'RIFF');assert.equal(a.toString('ascii',8,12),'WEBP');assert.equal(b.toString('ascii',8,12),'WEBP');assert.ok(b.length<a.length);desktopBytes+=a.length;mobileBytes+=b.length;
+}
+assert.ok(desktopBytes<1_500_000);assert.ok(mobileBytes<750_000);
+console.log('PASS Arbor authored view: 6000 active frames; all5 real layouts exact footprint/axis art; fixed 4 roots/19 materials/4 geometries/3 textures; pause0; camera untouched; boss160ms impact hold; loading fallback; lifecycle; desktop '+desktopBytes+' B/mobile '+mobileBytes+' B. CPU/Three tests, not real browser or device play.');

@@ -42,7 +42,7 @@ function cardHost({bonus=['move','power'],survival=false}={}){
   survivalSession:survival?{}:null,survivalPendingChoice:null,kills:0,roomCleared:false,invuln:0,shootCD:7,
   hp:70,maxPlayerHp:()=>100,choicesTaken:0,rng:()=>.99,bossPet:{id:null},inAustinRoom:()=>false,finalBossName:()=>'',choiceGoal:()=>12,
   parseMutationChoice:()=>null,lawArt:()=>'',formArt:()=>'',formLawHint:()=>'',orbitCore:()=>null,rerollUnlocked:()=>true,rerollUsed:false,
-  secondFusionOptions:()=>[],awakenOptions:()=>[],awakenable:()=>true,developerRun:true,expansionJourney:null,
+  secondFusionOptions:()=>[],awakenOptions:()=>[],awakenable:()=>true,developerRun:true,expansionJourney:null,arborJourney:null,
   runBonusCard:id=>`<button data-run-bonus="${id}">${id}</button>`,applyRunBonus,RUN_BONUSES,displayHp:String,
   player:{position:{}},vfx:{pulse(){events.pulse++;},burst(){},evolution(){}},audio:{play:id=>events.sounds.push(id)},
   syncLaws(){c.chosen=new Set(c.levels.keys());},beginEvolution(){events.evolution++;c.mode='evolving';c.touch.reset();c.keys.clear();c.keyboardDash=false;},
