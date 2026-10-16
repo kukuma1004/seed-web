@@ -23,14 +23,15 @@ for(const mobile of [false,true]){
 
 // Execute the actual host arena assignment, then apply the shipping collision
 // constraint. The newly gained flank must be reachable, and still bounded.
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('arena=s.siege&&s.phase'),end=main.indexOf(';',start)+1;
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('arena=s.siege||canyon'),end=main.indexOf(';',start)+1;
 assert(start>=0&&end>start);
 const context={s:{siege:{},phase:'course',course:{encounterVersion:3}},canyon:true,distance:0,length:140};
 runInNewContext(main.slice(start,end),context);const arena=context.arena;
-assert.equal(arena.halfWidth*2,17);assert.equal(arena.halfDepth*2,15);
+assert.equal(arena.halfWidth*2,26);assert.equal(arena.halfDepth*2,22);assert.equal(arena.shape,'poly');assert.equal(arena.points.length,12,'follow the courtyard instead of exposing forest corners');
+for(const [x,z]of [[12.4,0],[0,10.4]]){const outer={x,z};constrainToArena(outer,.4,arena);assert.equal(outer.x,x);assert.equal(outer.z,z,'new outer axes are reachable');}
 const p={x:8,z:7};constrainToArena(p,.2,arena);assert.equal(p.x,8);assert.equal(p.z,7,'old edge is no longer a player wall');
-const escaped={x:100,z:100};constrainToArena(escaped,.2,arena);assert(escaped.x<=8.5&&escaped.z<=7.5);
-context.s.phase='boss';runInNewContext(main.slice(start,end),context);assert.equal(context.arena.halfWidth,8.5);assert.equal(context.arena.halfDepth,10,'boss depth is not reduced');
+const escaped={x:100,z:100};constrainToArena(escaped,.2,arena);assert(escaped.x<=13&&escaped.z<=11);
+context.s.phase='boss';runInNewContext(main.slice(start,end),context);assert.equal(context.arena.halfWidth,13);assert.equal(context.arena.halfDepth,11,'boss also gains roaming space');
 
 const siege=createCrystalSiege(0,413),original=checkpointCrystalSiege(siege),restored=restoreCrystalSiege(original);
 assert.deepEqual(checkpointCrystalSiege(restored),original,'floor/layout requires no checkpoint migration');
@@ -42,7 +43,7 @@ siege.phase='defense';for(let i=0;i<4;i++)stepCrystalSiege(siege,.1);
 assert.equal(siege.out.spawns.length,1);assert(Math.abs(siege.out.spawns[0].position.x)<=7.3);assert(Math.abs(siege.out.spawns[0].position.z)<=6.3,'enemy ingress stays close to the core');
 
 const scene=new THREE.Scene(),ground=new THREE.Texture(),tile=new THREE.Texture(),plate=new THREE.Texture(),view=createExpansionJourneyView(scene,ground);
-view.setCrosswindFloorTexture(tile);view.setPlate('crystalGorge',plate);view.setCourse('crystalGorge',{plateBounds:{width:38,depth:28}});const count=view.root.children.length;
+view.setCrosswindFloorTexture(tile);view.setPlate('crystalGorge',plate);view.setCourse('crystalGorge',{plateBounds:{width:72,depth:64}});const count=view.root.children.length;
 for(let i=0;i<500;i++){view.setSiegePhase(i%2?'prep':'defense');view.beginFrame();}
 assert.equal(view.root.children.length,count,'no extra lights/particles/frame scene allocation');view.dispose();assert.equal(scene.children.length,0);
 console.log('Journey floor refresh PASS: revised desktop/mobile art, size budgets, actual wider host collision bounds, unchanged checkpoint and inner ingress, fixed scene resources. Not physical-device QA.');
