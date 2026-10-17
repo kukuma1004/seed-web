@@ -64,11 +64,11 @@ export function createJourneyDuelMotion(){
  };
 }
 
-export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new THREE.TextureLoader(),reducedMotion=false}={}){
+export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new THREE.TextureLoader(),reducedMotion=false,occlusionOpacity=.34}={}){
  const motion=createJourneyDuelMotion();
  const cropUV=new THREE.Vector4(0,0,1,1);
  const material=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{cropUV});
- const ghostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
+ const ghostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:THREE.MathUtils.clamp(occlusionOpacity,.2,.85),depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
  const sprite=new THREE.Sprite(material),ghost=new THREE.Sprite(ghostMaterial);ghost.renderOrder=2;
  sprite.name='journey-duel-body';ghost.name='journey-duel-body-occlusion';root.add(sprite,ghost);sprite.visible=ghost.visible=false;
  let selected=null,enabled=false,active=null,pending=null,disposed=false,occlusion=true,frame=-1,flipped=null;

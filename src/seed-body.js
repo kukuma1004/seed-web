@@ -62,7 +62,9 @@ export function stableSeedFrame(facing,cameraYaw,current=0,margin=.13){
 // Production cells share a centred silhouette and feet at y=240 of 256.
 // No per-direction legacy offsets: turning must never make the feet hop.
 
-export function createSeedBody(scene,{occlusion=true}={}){
+export function createSeedBody(scene,{occlusion=true,criticalOcclusion=false}={}){
+ // One player silhouette remains readable even on the lowest quality tier.
+ occlusion=Boolean(criticalOcclusion||occlusion);
  const visualReview=seedVisualEnabled(typeof location==='undefined'?null:location);
  const shotPresentation=createSeedShotPresentation({enabled:visualReview,reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
  const hurtPresentation=createSeedHurtPresentation({enabled:visualReview,reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
@@ -83,7 +85,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
  };
  const ensureThemeCrest=()=>{if(themeTexture||themeLoading)return;themeLoading=true;themeTexture=loader.load(import.meta.env.BASE_URL+'assets/'+THEME_CREST_ART,applyThemeCrest);themeTexture.colorSpace=THREE.SRGBColorSpace;themeTexture.repeat.set(.25,1);themeTexture.minFilter=themeTexture.magFilter=THREE.LinearFilter;};
  // A faint copy draws through walls so the seed is never lost behind cover.
- const ghostMaterial=new THREE.SpriteMaterial({map:texture,alphaTest:.08,transparent:true,opacity:.38,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0x9ff5d2});
+ const ghostMaterial=new THREE.SpriteMaterial({map:texture,alphaTest:.08,transparent:true,opacity:criticalOcclusion?.76:.38,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0x9ff5d2});
  const ghost=new THREE.Sprite(ghostMaterial);ghost.center.set(.5,.0625);ghost.scale.set(BODY_SIZE,BODY_SIZE,1);ghost.renderOrder=2;root.add(ghost);
 
  let applyEvolution=()=>{};
@@ -94,13 +96,13 @@ export function createSeedBody(scene,{occlusion=true}={}){
  };
  const evolutionMaterial=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{shadow:.76,highlight:1.1,rim:0xffe8ae,rimStrength:.085,atlasGrid:[4,3]});
  const evolutionSprite=new THREE.Sprite(evolutionMaterial);evolutionSprite.center.set(.5,.0625);evolutionSprite.scale.set(EVOLUTION_SIZE,EVOLUTION_SIZE,1);evolutionSprite.visible=false;root.add(evolutionSprite);
- const evolutionGhostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
+ const evolutionGhostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:criticalOcclusion?.76:.34,depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
  const evolutionGhost=new THREE.Sprite(evolutionGhostMaterial);evolutionGhost.center.set(.5,.0625);evolutionGhost.scale.copy(evolutionSprite.scale);evolutionGhost.renderOrder=2;evolutionGhost.visible=false;root.add(evolutionGhost);
  const secondaryMaterial=new THREE.MeshBasicMaterial({color:0xffffff,transparent:true,opacity:.68,depthWrite:false,toneMapped:false,side:THREE.DoubleSide,forceSinglePass:true});
  const secondaryAura=new THREE.Mesh(new THREE.TorusGeometry(.48,.025,5,36),secondaryMaterial);secondaryAura.rotation.x=Math.PI/2;secondaryAura.position.y=.12;secondaryAura.visible=false;root.add(secondaryAura);
 
  let currentEvolution=null,secondaryEvolution=null;
- const journeyBody=createJourneyDuelBody(root,{baseURL:import.meta.env.BASE_URL,loader,onChange:()=>applyEvolution(),reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
+ const journeyBody=createJourneyDuelBody(root,{occlusionOpacity:criticalOcclusion?.76:.34,baseURL:import.meta.env.BASE_URL,loader,onChange:()=>applyEvolution(),reducedMotion:typeof matchMedia==='function'&&matchMedia('(prefers-reduced-motion: reduce)').matches});
  journeyBody.setOcclusion(occlusion);
  const sourceFor=id=>Object.values(sources).find(source=>Object.hasOwn(source.tiles,id));
  const ensureSource=source=>{
@@ -130,7 +132,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
   if(!currentEvolution)secondaryEvolution=rankedEvolutions(forms,ALL_FORMS,1)[0]?.id||null;
   root.userData.evolutionArt=currentEvolution;root.userData.secondaryEvolutionArt=secondaryEvolution;journeyBody.select(dominantJourneyBodyForm(forms,levels));ensureSource(sourceFor(currentEvolution));applyEvolution();return currentEvolution;
  };
- root.userData.setQuality=level=>{occlusion=level>0;journeyBody.setOcclusion(occlusion);applyEvolution();};
+ root.userData.setQuality=level=>{occlusion=Boolean(criticalOcclusion||level>0);journeyBody.setOcclusion(occlusion);applyEvolution();};
  root.userData.updateEvolutionArt=(time,overdrive=false)=>{
   if(!secondaryAura.visible)return;const pulse=1+Math.sin(time*4)*.055+(overdrive?.12:0);secondaryAura.scale.setScalar(pulse);secondaryAura.rotation.z=time*(overdrive?2.2:.8);secondaryMaterial.opacity=overdrive?.92:.68;
  };

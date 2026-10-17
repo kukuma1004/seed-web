@@ -87,7 +87,7 @@ export function stepExpansionCourse(s,dt,{player,travel,enemyCount=0,projectileC
  s.spawnClock=(s.encounterVersion===3?Math.max(.48,.68-s.room*.04):close?Math.max(.62,.98-s.room*.075):Math.max(.82,1.7-s.room*.14))+random(s)*(close?.15:.25);
  // Only the Journey host opts into a quicker finite packet beat. Shared modes
  // and older saved courses keep their cadence; no catch-up or extra packets.
- if(fastPacing===true&&s.act==='crosswind'&&s.encounterVersion===3)s.spawnClock*=.84;
+ if(fastPacing===true&&s.act==='crosswind'&&s.encounterVersion===3)s.spawnClock*=.80;
  const free=EXPANSION_RUNTIME_LIMITS.enemies-Math.max(0,finite(enemyCount));
  if(free<1||projectileCount>=EXPANSION_RUNTIME_LIMITS.projectiles)return out;
  const index=s.spawnIndex++,formation=s.act==='crosswind'?crosswindFormation(index,s.room):{side:'front',lane:[-4.8,0,4.8][index%3],type:index%5===4?'charger':'shooter',shots:1,windup:.85};

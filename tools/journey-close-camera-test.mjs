@@ -12,7 +12,7 @@ import {journeyPlayerScale} from '../src/journey-player-presentation.js';
 
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=source.indexOf(' const skyCamera=isAct3(region)&&!mirrorSession;'),end=source.indexOf('presentJourneySignature();',start);
 assert(start>0&&end>start);
-assert(source.includes('const player=createSeedBody(scene,{occlusion:qualityLevel>0});player.scale.setScalar(1.25)'), 'reference is actual Act1 rig size');
+assert(source.includes('const player=createSeedBody(scene,{occlusion:qualityLevel>0,criticalOcclusion:true});player.scale.setScalar(1.25)'), 'reference is actual Act1 rig size');
 assert.equal(journeyPlayerScale(1280,720),1.25, 'native3/4/5 must match Act1, without a second visual magnifier');
 const host=new vm.Script('(function(){'+source.slice(start,end)+'})()'),viewports=[[1280,720,false],[1024,768,true],[844,390,true],[640,360,true]],metrics=[];
 let projected=0;

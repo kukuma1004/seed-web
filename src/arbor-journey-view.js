@@ -85,7 +85,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
   const fallback=new THREE.Mesh(fallbackGeometry,fallbackMaterial);fallback.name='arbor-root-loading-shape';fallback.position.y=.07;slot.add(fallback);
   rootSlots.push({slot,shadow,tell,edge,art,fallback,x:NaN,z:NaN,w:NaN,d:NaN,angle:NaN,rise:0,artWidth:1,artHeight:1,solid:false,hitTime:0});
  }
- const bossMaterial=bind(ownMaterial(new THREE.SpriteMaterial({transparent:true,alphaTest:.08,depthWrite:false,toneMapped:false,color:0xffffff})),bossAsset);
+ const bossMaterial=bind(ownMaterial(new THREE.SpriteMaterial({transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false,color:0xffffff})),bossAsset);
  const bossSprite=new THREE.Sprite(bossMaterial);bossSprite.name='arbor-arbo-authored-motion';bossSprite.center.set(.5,.075);bossSprite.scale.set(ARBOR_ART.bossSize,ARBOR_ART.bossSize,1);bossSprite.position.y=.08;bossSprite.visible=false;
 
  function setBossArt(actor,phase='idle'){

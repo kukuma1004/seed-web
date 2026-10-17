@@ -7,6 +7,10 @@ import {fixture,released,source} from './expansion-public-host-test.mjs';
 import {createTempestCarrier,tickTempestCarrier,createAct3Warden,damageTempestCarrier,TEMPEST_CARRIER} from '../src/act3-enemies.js';
 import {ACT3_PRESSURE,act3Storage} from '../src/act3.js';
 import {createExpansionJourney,advanceExpansionJourney} from '../src/expansion-journey.js';
+import {createWarden} from '../src/warden.js';
+import {safeArenaSpawn} from '../src/arena.js';
+import * as guardianRules from '../src/expansion-guardians.js';
+import {creditJourneySignatureKill} from '../src/journey-act-signatures.js';
 import {stepExpansionBoss} from '../src/act-expansion-runtime.js';
 import {difficulty,readCheckpoint,writeCheckpoint,clearCheckpoint,SAVE_KEY} from '../src/run-save.js';
 import {bossCapReached,FINAL_BOSS_CAP,canUseExit,EXIT,roomFor} from '../src/journey.js';
@@ -136,11 +140,29 @@ for(const epoch of [false,true]){
  const f=fixture(),{c,storage,rankings}=prepare(f,{epoch});c.region='garden';c.runStorage=storage;
  execute(c,'function advancePublicExpansionLap(){','\nfor(const material');
  execute(c,'function spawnExpansionActor(','function updateExpansionCourse(');
+ Object.assign(c,{...guardianRules,createWarden,safeArenaSpawn,creditJourneySignatureKill,expansionGuardianActor:null,journeySignature:null,journeyRoomLayoutState:null,levelPressure:()=>1,copiedEvolution:()=>null,qualityLevel:1,obstacles:[],mats:{amber:new THREE.MeshBasicMaterial({color:0xffcc55})},arena:{shape:'rect',halfWidth:140,halfDepth:9},collide:noop});
+ const previousIsBoss=c.isBoss;c.isBoss=e=>e.type==='warden'||previousIsBoss(e);
+ execute(c,'function spawnWardenAt(','\nfunction saveBoundary(');
+ execute(c,'function spawnExpansionGuardian(','\nfunction tickExpansionActor(');
  assert(await c.startPublicExpansionJourney('crosswind'));await c.syncPublicExpansion();
  const runId=c.expansionEntry.id,receiptId=c.expansionPublicEntry.campaign.receiptRunId;
  for(let lap=0;lap<3;lap++){
   assert.equal(c.cycle,lap);
-  for(let room=0;room<5;room++){assert.equal(c.expansionJourney.room,room);assert.equal(c.expansionPublicEntry.campaign.bossWins.crosswindKeeper,lap);c.exitOpen=true;c.exitExpansionJourney();}
+  for(let room=0;room<5;room++){
+   assert.equal(c.expansionJourney.room,room);assert.equal(c.expansionPublicEntry.campaign.bossWins.crosswindKeeper,lap);
+   const s=c.expansionJourney;c.player.position.set(s.course.origin.x,0,s.course.origin.z);let steps=0;
+   while(!s.course.finishAnnounced&&steps++<2400){
+    c.elapsed+=.05;c.player.position.x+=6.09*1.18*.05;
+    const out=c.expansionApi.stepExpansionJourney(s,.05,{player:c.player.position,enemyCount:0,projectileCount:0,laneHalfDepth:9});
+    for(const spec of out.spawns){const minion=c.spawnExpansionActor(spec);for(let hits=0;!minion.dead&&hits<200;hits++){c.elapsed+=.05;c.damageEnemy(minion,10,false,false,{kind:'synthetic-contract-hit'});}assert(minion.dead);}
+    c.enemies=c.enemies.filter(e=>!e.dead);
+   }
+   assert(s.course.finishAnnounced);c.spawnExpansionGuardian();const gate=c.expansionGuardianActor;assert(gate?.expansionWarden&&gate.hp>0);
+   for(let hits=0;!gate.dead&&hits<1000;hits++){c.elapsed+=.05;c.damageEnemy(gate,10,false,false,{kind:'synthetic-contract-hit'});}
+   assert(gate.dead);assert.equal(s.guardians.cleared,room+1);assert.equal(c.wardensDefeated,lap*5+room+1);
+   const beforeScore=c.score;c.enemyDown(gate);assert.equal(c.score,beforeScore);assert.equal(s.guardians.cleared,room+1);
+   c.enemies=c.enemies.filter(e=>!e.dead);c.exitOpen=true;c.exitExpansionJourney();
+  }
   assert.equal(c.expansionJourney.phase,'boss');assert(c.captureExpansionEntry());
   const e=c.spawnExpansionActor({position:{x:c.expansionJourney.course.distance+7,z:0}},true),maxHp=e.maxHp;assert.equal(maxHp,2400*difficulty(lap).bossHp);
   let time=0,bolts=0;const patterns=new Set();while(!e.dead&&time<90){time+=.05;c.elapsed+=.05;const out=stepExpansionBoss(c.expansionJourney.boss,.05,{position:e.g.position,player:{x:e.g.position.x-7,z:Math.sin(time)*3},hpRatio:e.hp/e.maxHp});e.state=out.state;bolts+=out.bolts.length;patterns.add(out.pattern);e.g.position.x+=out.move.x;e.g.position.z+=out.move.z;c.damageEnemy(e,10,false,false,{kind:'synthetic-contract-hit'});}

@@ -20,7 +20,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const floor=new THREE.InstancedMesh(floorGeometry,floorMaterial,84),m=new THREE.Matrix4();root.add(floor);
  // Borrow the image but own the sampling state. One repeated, world-sized
  // fossil-leaf tile replaces the enlarged illustration without touching shared art.
- const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xffffff});
+ const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xc4c7b5});
  const road=new THREE.Mesh(roadGeometry,roadMaterial);road.name='crosswind-painted-corridor-floor';road.position.set(EXPANSION_ENVIRONMENTS.crosswind.x,.037,0);road.visible=false;root.add(road);
  // These low stone lips sit beyond the real movement limit. Bevels, inset
  // copper seams and little ivy leaves give the corridor a visible scale;
@@ -65,7 +65,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  }
  function setCrosswindFloorTexture(texture){
   if(disposed||texture===crosswindFloorSource)return;crosswindFloorSource=texture||null;crosswindFloorTexture?.dispose();crosswindFloorTexture=texture?texture.clone():null;
-  if(crosswindFloorTexture){crosswindFloorTexture.wrapS=crosswindFloorTexture.wrapT=THREE.RepeatWrapping;crosswindFloorTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/6,(laneBound===null?14:laneBound*2)/6);crosswindFloorTexture.offset.set(0,0);crosswindFloorTexture.needsUpdate=true;}
+  if(crosswindFloorTexture){crosswindFloorTexture.wrapS=crosswindFloorTexture.wrapT=THREE.RepeatWrapping;crosswindFloorTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/4,(laneBound===null?14:laneBound*2)/4);crosswindFloorTexture.offset.set(0,0);crosswindFloorTexture.needsUpdate=true;}
   roadMaterial.map=crosswindFloorTexture;roadMaterial.needsUpdate=true;syncFloor();
  }
  const laneGeometry=new THREE.PlaneGeometry(.16,1.1).rotateX(-Math.PI/2),laneMaterial=new THREE.MeshBasicMaterial({color:0xd7e8a5,transparent:true,opacity:.32,depthWrite:false});
@@ -96,15 +96,15 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  function syncFloor(){
   plateMaterial.map=course==='crosswind'?crosswindPanoramaTexture:(garden?plates.get('crystalGarden')||plates.get(course):plates.get(course))||null;plateMaterial.needsUpdate=true;
   plate.visible=!terrainOnly&&Boolean(plateMaterial.map);
-  // One painting owns ground, wall contact and diagonal palm shadows. A
-  // repeated floor would erase that depth; retain it only as a load fallback.
-  road.visible=!terrainOnly&&!plate.visible&&course==='crosswind'&&Boolean(crosswindFloorTexture);
+  // Keep the painting for garden margins. Inside the real lane a small-paver
+  // surface supplies the same readable world scale as Act 1.
+  road.visible=!terrainOnly&&course==='crosswind'&&Boolean(crosswindFloorTexture);
   floor.visible=!terrainOnly&&!road.visible&&!plate.visible;
   reflectorMarks.visible=!terrainOnly&&course==='crosswind'&&reflectorsActive&&reflectorMarks.count>0;
   lanes.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||laneBound!==null);
   // The new painted stone wall aligns with the real lane. Keep the low-cost
   // geometry only as an asset-load fallback instead of drawing bars over it.
-  for(const batch of [curbs,seams,ivy])batch.visible=!terrainOnly&&course==='crosswind'&&!plate.visible;
+  for(const batch of [curbs,seams,ivy])batch.visible=!terrainOnly&&course==='crosswind'&&(!plate.visible||road.visible);
   for(let i=0;i<undertowBatches.length;i++)undertowBatches[i].visible=!terrainOnly&&course==='crosswind'&&undertowBatches[i].count>0&&(i<2||!undertowMaterials[0].map);
  }
  function setPlate(act,texture){
@@ -129,9 +129,9 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
   if(act==='crosswind'){
    // The painted road ends at the real wall, before its outside stone lip.
-   // Tile scale stays six world units for both modern and legacy corridors.
+   // Four-unit stone cells keep individual pavers near the Act 1 scale.
    const depth=laneBound===null?14:laneBound*2;road.scale.z=depth/15;
-   if(crosswindFloorTexture)crosswindFloorTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/6,depth/6);
+   if(crosswindFloorTexture)crosswindFloorTexture.repeat.set(EXPANSION_ENVIRONMENTS.crosswind.width/4,depth/4);
   }
   const canyon=act==='crystalGorge';floor.count=canyon?12:84;lanes.visible=!canyon;floorMaterial.color.setHex(canyon?0x7e9aab:0x87a88e);
   // Preserve the painting's road/wall composition at the canonical bounds.

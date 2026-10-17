@@ -51,7 +51,7 @@ for(const texture of [ownedTile,ownedPanorama])texture.addEventListener('dispose
 view.setActive(true);
 for(const [phase,version] of [['course',3],['course',1],['boss',3]]){
  const arena=hostArena(phase,version);view.setCourse('crosswind',{halfDepth:arena.halfDepth});root.updateMatrixWorld(true);
- assert(!road.visible&&plate.visible,'integrated paving, wall contact and palm shadows use one painting');
+ assert(road.visible&&plate.visible,'small-paver lane overlays the garden panorama without changing its margins');assert(road.position.y>plate.position.y,'real lane remains visible over the panorama');
  assert(Math.abs(ownedPanorama.repeat.x-plate.scale.x/(plate.scale.y*2))<1e-10,'legacy and boss widths retain the image source aspect too');
  const coverage=new THREE.Box3().setFromObject(plate),ray=new THREE.Raycaster(),groundPlane=new THREE.Plane(new THREE.Vector3(0,1,0),-.02),hit=new THREE.Vector3();
  for(const [w,h] of [[1280,720],[1024,768],[844,390],[640,360]])for(const x of [0,99]){
@@ -60,7 +60,7 @@ for(const [phase,version] of [['course',3],['course',1],['boss',3]]){
  }
  bounds.setFromObject(road);assert(Math.abs(bounds.min.z+arena.halfDepth)<1e-6&&Math.abs(bounds.max.z-arena.halfDepth)<1e-6,'painted road and actual movement wall agree exactly');
  const escaped={x:0,z:100};constrainToArena(escaped,.4,arena);assert(Math.abs(escaped.z+.4-bounds.max.z)<1e-6,'shipping player-radius constraint reaches the visible floor edge');
- assert(Math.abs(ownedTile.repeat.x-38)<1e-8);assert(Math.abs(ownedTile.repeat.y-arena.halfDepth/3)<1e-8,'six-world-unit stone sampling across modern and legacy widths');
+ assert(Math.abs(ownedTile.repeat.x-57)<1e-8);assert(Math.abs(ownedTile.repeat.y-arena.halfDepth/2)<1e-8,'four-world-unit stone sampling across modern and legacy widths');
  curbs.geometry.computeBoundingBox();
  for(let i=0;i<curbs.count;i++){
   curbs.getMatrixAt(i,matrix);bounds.copy(curbs.geometry.boundingBox).applyMatrix4(matrix);const inner=i%2?bounds.min.z:-bounds.max.z;

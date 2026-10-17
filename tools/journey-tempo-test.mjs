@@ -20,8 +20,8 @@ const oldMovement=movement.replace('*journeyTravelScale(region,expansionJourney?
 assert.notEqual(movement,oldMovement,'negative control actually removes the new factor');
 const cases=[
  ['garden',null,false,false,false,1],['stadium',null,false,false,false,1],
- ['skyway',null,false,false,false,1.08],['garden','crosswind',false,false,false,1.12],
- ['garden','crystalGorge',false,false,false,1.12],['skyway',null,true,false,false,1],
+ ['skyway',null,false,false,false,1.14],['garden','crosswind',false,false,false,1.18],
+ ['garden','crystalGorge',false,false,false,1.18],['skyway',null,true,false,false,1],
  ['skyway',null,false,true,false,1],['skyway',null,false,false,true,1],
  ['garden','crosswind',true,false,false,1],['garden','crystalGorge',false,true,false,1]
 ];
@@ -38,7 +38,7 @@ for(const hz of [20,60])for(const [region,act,survival,mirror,training,ratio] of
 }
 for(const stage of [0,1,2,3,4])for(const cycle of [0,20,99]){
  const c={crowdInterval,cycle,isAct3,region:'skyway',act3RoomPressure,stage,isAct2:()=>false,ACT2_PRESSURE:{},journeyReinforcementScale,mirrorSession:null,trainingSession:null};vm.createContext(c);
- assert(Math.abs(vm.runInContext(cadence,c)-crowdInterval(cycle)*act3RoomPressure(stage).crowdInterval*.82)<1e-12);
+ assert(Math.abs(vm.runInContext(cadence,c)-crowdInterval(cycle)*act3RoomPressure(stage).crowdInterval*.78)<1e-12);
  c.mirrorSession={};assert(Math.abs(vm.runInContext(cadence,c)-crowdInterval(cycle)*act3RoomPressure(stage).crowdInterval)<1e-12);
  c.mirrorSession=null;c.trainingSession={};assert(Math.abs(vm.runInContext(cadence,c)-crowdInterval(cycle)*act3RoomPressure(stage).crowdInterval)<1e-12);
 }
@@ -46,7 +46,7 @@ const copy=o=>JSON.parse(JSON.stringify(o)),metrics=[];
 function courseRun(room,fastPacing,hz){
  let s=createExpansionCourse('crosswind',{room,seed:413}),actors=0;const length=crosswindCourseLength(s);
  for(let f=0;f<hz*120;f++){
-  const context={fastPacing,player:{x:Math.min(length,s.time*6.09*(fastPacing?1.12:1)),z:Math.sin(s.time)*2.5}};
+  const context={fastPacing,player:{x:Math.min(length,s.time*6.09*(fastPacing?1.18:1)),z:Math.sin(s.time)*2.5}};
   const out=stepExpansionCourse(s,1/hz,context);actors+=out.spawns.length;
   assert(out.spawns.length<=2);for(const e of out.spawns){assert(e.windup>=.7&&e.shots===1);}
   if(f===hz*2){const restored=restoreExpansionCourse(copy(checkpointExpansionCourse(s)));assert.deepEqual(copy(checkpointExpansionCourse(restored)),copy(checkpointExpansionCourse(s)));s=restored;}

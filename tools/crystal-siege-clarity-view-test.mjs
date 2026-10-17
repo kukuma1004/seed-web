@@ -21,6 +21,7 @@ try{
  const scene=new THREE.Scene(),callbacks=[];
  const view=createCrystalSiegeView(scene,{load:()=>new THREE.Texture()},'/',{onBuild:(id,kind)=>callbacks.push([id,kind]),onStart:()=>callbacks.push('start')});
  const [hud,menu]=doc.body.children,world=scene.children[0],heart=world.getObjectByName('crystal-siege-heart'),facility=world.getObjectByName('crystal-siege-facility-0');
+ assert(heart.material.depthWrite&&facility.material.depthWrite,'opaque facility pixels expose the occluded player ghost');assert(heart.material.alphaTest>0);
  const rings=world.children.filter(o=>o.name.startsWith('crystal-garden-build-ring-')),objects=world.children.length;
  let s=createCrystalSiege(0,413);
  const show=(opts={})=>view.update(s,{x:-3,z:-2.5},{visible:true,interactive:true,dt:.1,...opts});

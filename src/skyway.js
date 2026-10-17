@@ -64,8 +64,10 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
  updateInstances();
  return {
   group,coverMaterial:edgeMat,boundaryMaterials:{dark:floorMat,armor:edgeMat,stone:edgeMat},materials:[floorMat,edgeMat,cloudMat,darkMat],geometries:[panelGeo,edgeGeo],setActive,
-  tick(dt,running=true){
-   if(disposed||!active||!running)return;const safe=Math.min(.1,Math.max(0,Number.isFinite(dt)?dt:0)),travel=safe*speed*(mobile?.72:1);if(travel===0)return;
+  tick(dt,running=true,reducedMotion=false){
+   if(disposed||!active)return;
+   edges.visible=clouds.visible=!reducedMotion;
+   if(!running||reducedMotion)return;const safe=Math.min(.1,Math.max(0,Number.isFinite(dt)?dt:0)),travel=safe*speed*(mobile?.72:1);if(travel===0)return;
    distance+=travel;for(let i=0;i<rain.length;i++){const f=rain[i];f.z=((f.z+22+travel*(i<farCount?1.05:1.8))%44+44)%44-22;}
    rainClock+=safe;if(!mobile||rainClock>=1/30){rainClock%=1/30;updateInstances();}
   },

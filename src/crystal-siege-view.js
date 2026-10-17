@@ -16,9 +16,9 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
  const artCell=kind=>{const t=crystalGardenTexture(facilityAtlas,kind);textures.push(t);return t;};
  const crystal=artCell('crystal'),turret=artCell('turret'),coreTexture=artCell('heart'),snareTexture=artCell('snare'),wallTexture=artCell('wall'),plinthTexture=artCell('plinth');
  const growthAtlas=load((mobile?CRYSTAL_TURRET_MOBILE_ART:CRYSTAL_TURRET_ART).slice(7)),turretStages=[turret];for(let level=2;level<=5;level++){const t=crystalTurretTexture(growthAtlas,level);textures.push(t);turretStages.push(t);}
- const sprite=(texture,size)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:false,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
+ const sprite=(texture,size,solid=true)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:solid,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
  const heart=sprite(coreTexture,3.35),nodes=Array.from({length:6},()=>sprite(crystal,2.65)),facilities=Array.from({length:4},()=>sprite(turret,2.45));
- const plinths=Array.from({length:4},()=>sprite(plinthTexture,2.15));for(const p of plinths){p.center.y=.13;p.name='crystal-garden-build-plinth';}
+ const plinths=Array.from({length:4},()=>sprite(plinthTexture,2.15,false));for(const p of plinths){p.center.y=.13;p.name='crystal-garden-build-plinth';}
  const shadowTexture=crystalGardenFloorContactTexture();textures.push(shadowTexture);
  const shadowGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false,toneMapped:false});owned.push(shadowGeometry,shadowMaterial);
  const contacts=new THREE.InstancedMesh(shadowGeometry,shadowMaterial,11),shadowMatrix=new THREE.Matrix4();contacts.name='crystal-garden-ground-contacts';contacts.frustumCulled=false;world.add(contacts);

@@ -104,6 +104,18 @@ await check('Finite rain pools remain fixed for 20k frames, pause/idle cause no 
  }
 });
 
+await check('Reduced motion removes decorative rain and freezes drift without changing scene ownership or enemy logic',()=>{
+ for(const mobile of[false,true]){
+  const {view,scene}=makeSkyway(mobile);view.setActive(true);view.tick(.1);
+  const sea=view.group.getObjectByName('skyway-painted-route'),edges=view.group.getObjectByName('skyway-far-rain'),near=view.group.getObjectByName('skyway-near-rain'),camera=makeCamera(640,360,journeyFlightCamera(640,360));
+  sea.onBeforeRender(null,scene,camera);const offset=sea.material.map.offset.clone(),distance=view.state().distance,version=edges.instanceMatrix.version;
+  for(let i=0;i<6000;i++){view.tick(1/60,true,true);sea.onBeforeRender(null,scene,camera);}
+  assert(!edges.visible&&!near.visible);assert.equal(view.state().distance,distance);assert.equal(edges.instanceMatrix.version,version);assert(sea.material.map.offset.equals(offset));assert(sea.visible);
+  view.tick(.1,true,false);assert(edges.visible&&near.visible);assert(view.state().distance>distance);view.dispose();
+ }
+ const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');assert(main.includes("skyway.tick(visualDt,mode==='playing'&&!paused,journeyReducedMotion)"));
+});
+
 await check('Activation restores borrowed scene/color/fog/light/visibility and idempotent disposal releases only owned resources',()=>{
  for(const backgroundKind of['color','texture','none']){
   const f=makeSkyway(),{view,scene,before}=f;if(backgroundKind==='texture')scene.background=new THREE.Texture();if(backgroundKind==='none')scene.background=null;const original=scene.background,lightValues=before.lights.map(({light})=>({intensity:light.intensity,color:light.color.clone()}));
