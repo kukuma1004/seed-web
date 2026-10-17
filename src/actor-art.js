@@ -102,13 +102,19 @@ function atlas(file){
 function billboard(mesh,camera,size,baseline){
  mesh.userData.roll=0;
  mesh.onBeforeRender=()=>{
-  mesh.parent.getWorldQuaternion(parentWorld);inverseParent.copy(parentWorld).invert();
+  // WebGLRenderer has already updated scene matrices before this callback.
+  // Read that matrix instead of recursively rebuilding every ancestor for
+  // every actor (and its occlusion copy) on every render.
+  mesh.parent.matrixWorld.decompose(localOffset,parentWorld,cameraUp);inverseParent.copy(parentWorld).invert();
   mesh.quaternion.copy(inverseParent).multiply(camera.quaternion);
   rollQuaternion.setFromAxisAngle(localForward,mesh.userData.roll||0);mesh.quaternion.multiply(rollQuaternion);
   cameraUp.copy(localUp).applyQuaternion(mesh.quaternion);
   // Use the final rolled plane and its current height, keeping the authored
   // foot contact fixed through both impact squash and side-to-side reactions.
   localOffset.copy(cameraUp).multiplyScalar((.5-baseline)*mesh.scale.y);mesh.position.copy(localOffset);
+  // onBeforeRender precedes modelView calculation. Commit this pose now so
+  // turning the camera/actor does not render the previous frame's billboard.
+  mesh.updateMatrixWorld();
  };
 }
 

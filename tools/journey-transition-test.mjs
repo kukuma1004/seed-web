@@ -11,7 +11,7 @@ import {createExpansionJourney,advanceExpansionJourney} from '../src/expansion-j
 const main=readFileSync('src/main.js','utf8').replaceAll('\r\n','\n');
 const hostSource=main.slice(main.indexOf('function presentJourneyTransition(){'),main.indexOf('\nfunction ring(',main.indexOf('function presentJourneyTransition(){')));
 assert(hostSource.startsWith('function presentJourneyTransition(){')&&hostSource.trimEnd().endsWith('}'));
-assert(main.includes('presentFrame(now*.001);presentJourneyTransition();journeyPresentationView.update('),'shipping RAF owns the transition observer');
+assert(main.includes("presentFrame(now*.001);seedTitle.update(camera,canvasRect,player.visible&&mode==='playing'&&!paused);presentJourneyTransition();journeyPresentationView.update("),'shipping RAF owns the transition observer');
 
 for(const region of ['garden','stadium','skyway'])for(let stage=0;stage<5;stage++){
  const input={region,stage,cycle:1,bossName:'실제 보스',bossAhead:stage===4,bossWins:1},before=JSON.stringify(input),out=journeyRouteCue(input);

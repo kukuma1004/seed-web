@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {ARBOR_ACT1_BOSS_SIZE} from './journey-actor-scale.js';
 
 // Authored scenery only. Root collision, spawning and boss attacks belong to
 // arbor-journey.js; the four reusable presentations never invent hitboxes.
@@ -6,7 +7,7 @@ export const ARBOR_ART=Object.freeze({
  floor:'assets/arbor/arbor-courtyard-v2.webp',floorMobile:'assets/arbor/arbor-courtyard-v2-mobile.webp',
  root:'assets/arbor/arbor-root-v1.webp',rootMobile:'assets/arbor/arbor-root-v1-mobile.webp',
  boss:'assets/arbor/arbo-motion-v1.webp',bossMobile:'assets/arbor/arbo-motion-v1-mobile.webp',
- menu:'assets/arbor/arbor-courtyard-v2.webp',bossColumns:2,bossRows:2,bossSize:4.2,
+ menu:'assets/arbor/arbor-courtyard-v2.webp',bossColumns:2,bossRows:2,bossSize:ARBOR_ACT1_BOSS_SIZE,
 });
 export const ARBOR_VIEW_LIMITS=Object.freeze({roots:4,floorWidth:72,floorDepth:72,lights:0,raf:0,drawCalls:18,geometries:4,materials:19,textures:3});
 const FRAMES=Object.freeze({idle:0,warn:1,windup:1,charge:1,attack:2,slam:2,recover:3,recovery:3});
@@ -85,7 +86,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
   rootSlots.push({slot,shadow,tell,edge,art,fallback,x:NaN,z:NaN,w:NaN,d:NaN,angle:NaN,rise:0,artWidth:1,artHeight:1,solid:false,hitTime:0});
  }
  const bossMaterial=bind(ownMaterial(new THREE.SpriteMaterial({transparent:true,alphaTest:.08,depthWrite:false,toneMapped:false,color:0xffffff})),bossAsset);
- const bossSprite=new THREE.Sprite(bossMaterial);bossSprite.name='arbor-arbo-authored-motion';bossSprite.center.set(.5,.075);bossSprite.scale.set(4.2,4.2,1);bossSprite.position.y=.08;bossSprite.visible=false;
+ const bossSprite=new THREE.Sprite(bossMaterial);bossSprite.name='arbor-arbo-authored-motion';bossSprite.center.set(.5,.075);bossSprite.scale.set(ARBOR_ART.bossSize,ARBOR_ART.bossSize,1);bossSprite.position.y=.08;bossSprite.visible=false;
 
  function setBossArt(actor,phase='idle'){
   if(disposed)return null;
@@ -154,7 +155,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
   }
   if(boss){const actor=boss.actor||boss.g||boss;const phase=boss.phase||boss.state||'idle';setBossArt(actor,phase);}
   else if(bossActor)bossSprite.visible=enabled&&bossAsset.ready&&state.phase==='boss';
-  if(bossSprite.visible){const breath=reducedMotion?0:Math.sin(clock*2.2)*.012;bossSprite.scale.set(4.2*(bossFrame===2?1.055:bossFrame===1?.975:1+breath),4.2*(bossFrame===2?.94:bossFrame===1?1.035:1-breath*.5),1);bossSprite.position.y=bossFrame===1?.14:.08;}
+  if(bossSprite.visible){const breath=reducedMotion?0:Math.sin(clock*2.2)*.012;bossSprite.scale.set(ARBOR_ART.bossSize*(bossFrame===2?1.055:bossFrame===1?.975:1+breath),ARBOR_ART.bossSize*(bossFrame===2?.94:bossFrame===1?1.035:1-breath*.5),1);bossSprite.position.y=bossFrame===1?.14:.08;}
  }
  function hide(){setActive(false);}
  function diagnostics(){

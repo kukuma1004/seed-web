@@ -118,6 +118,7 @@ export function createSeedBody(scene,{occlusion=true}={}){
  // Preserve the visual rig interface used by evolution and combat.
  root.userData={legs:[],heart:new THREE.Object3D(),halo:new THREE.Object3D(),artFrame:0,evolutionArt:null,secondaryEvolutionArt:null,theme:themeId,themeCrest:0};
  root.userData.pulseShot=(strength=1)=>{shotPresentation.pulse(strength);journeyBody.basic();};root.userData.pulseHurt=amount=>{hurtPresentation.pulse(amount);journeyBody.hurt();};root.userData.stepShot=dt=>{shotPresentation.step(dt);hurtPresentation.step(dt);journeyBody.step(dt);};root.userData.resetShot=()=>{shotPresentation.reset();hurtPresentation.reset();journeyBody.reset();};
+ root.userData.titleSprites=[sprite,evolutionSprite,themeCrest,...journeyBody.titleSprites];
  root.userData.setJourneyBuild=(forms,levels)=>journeyBody.select(dominantJourneyBodyForm(forms,levels));
  root.userData.setJourneyActive=journeyBody.setEnabled;root.userData.pulseJourneyForm=journeyBody.fire;root.userData.pulseJourneyHit=(owner,part)=>journeyBody.hit(owner,Boolean(ALL_FORMS[part]?.passive));root.userData.pulseJourneyActive=journeyBody.active;root.userData.journeyIdentityState=journeyBody.state;root.userData.disposeJourneyIdentity=journeyBody.dispose;
  root.userData.setTheme=id=>{themeId=normalizeTheme(id);root.userData.theme=themeId;root.userData.themeCrest=THEMES[themeId].crest;ensureThemeCrest();applyThemeCrest();return themeId;};

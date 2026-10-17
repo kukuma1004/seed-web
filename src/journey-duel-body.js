@@ -110,6 +110,7 @@ export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new T
   loadSheet(0);onChange();
  }
  return {
+  titleSprites:[sprite],
   select(bodyId){if(selected?.bodyId===bodyId)return;selected=journeyDuelIdentity(bodyId);reconcile();},
   setEnabled(value){value=Boolean(value);if(enabled!==value){enabled=value;reconcile();}},
   ready(){return Boolean(enabled&&active&&!disposed);},
