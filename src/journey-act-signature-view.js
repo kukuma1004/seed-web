@@ -45,11 +45,11 @@ export function createJourneySignatureView(scene,{loader=null}={}){
  function updateBank(mesh,min,max,frame,active,low){
   // Broad interlocking storm fronts, rather than a grid of identical icons.
   // The fragment clip remains authoritative at both the gap and map ends.
-  const width=max-min,cols=Math.min(3,Math.max(1,Math.ceil(width/8))),rows=low?2:3,depth=ACT3_ARENA.halfDepth*2,dz=depth/rows,dx=width/cols;
+  const width=max-min,cols=Math.min(2,Math.max(1,Math.ceil(width/15))),rows=2,depth=ACT3_ARENA.halfDepth*2,dz=depth/rows,dx=width/cols;
   mesh.geometry=active?lightningGeo:windGeo;let count=0;
   for(let row=0;row<rows;row++)for(let col=0;col<cols;col++){
    const drift=Math.sin(frame*.013+row*1.7+col*.9)*.035,stagger=cols>1?(row%2?.12:-.12):0;
-   pose.makeScale(dx*(row%2?1.25:1.12),dz*1.46,1);pose.setPosition(min+dx*(col+.5+stagger+drift),ACT3_ARENA.halfDepth-dz*(row+.5)+(col%2?.13:-.13)*dz,.11);mesh.setMatrixAt(count++,pose);
+   pose.makeScale(dx*(row%2?1.18:1.08),dz*1.22,1);pose.setPosition(min+dx*(col+.5+stagger+drift),ACT3_ARENA.halfDepth-dz*(row+.5)+(col%2?.13:-.13)*dz,.11);mesh.setMatrixAt(count++,pose);
   }
   mesh.count=count;mesh.instanceMatrix.needsUpdate=true;
  }
@@ -61,7 +61,7 @@ export function createJourneySignatureView(scene,{loader=null}={}){
    const low=s.lane-R.stormHalfGap,high=s.lane+R.stormHalfGap;
    const warning=s.phase==='warning',progress=warning?(reducedMotion?1:THREE.MathUtils.clamp(((s.time-R.stormDelay)%R.stormPeriod)/R.stormWarning,0,1)):1;
    loadStorm(lowQuality);stormUniforms.lane.value=s.lane;stormUniforms.frame.value=warning?0:reducedMotion?1:1+(Math.floor(s.time*3)%2);
-   left.visible=right.visible=stormReady;edgeA.visible=edgeB.visible=true;danger.color.setHex(0xffffff);danger.opacity=warning?.18+progress*.30:.66;
+   left.visible=right.visible=stormReady;edgeA.visible=edgeB.visible=true;danger.color.setHex(0xffffff);danger.opacity=warning?.18+progress*.30:.52;
    safe.color.setHex(warning?0xeec99a:0xb7ecd1);safe.opacity=warning?.35+progress*.35:.72;
    const frame=reducedMotion?0:Math.floor((Number.isFinite(s.time)?s.time:0)*30);
    if(frame!==lastFrame||s.lane!==lastLane||s.phase!==lastPhase||reducedMotion!==lastReduced||lowQuality!==lastLow){updateBank(left,-ACT3_ARENA.halfWidth,low,frame,!warning,lowQuality);updateBank(right,high,ACT3_ARENA.halfWidth,frame,!warning,lowQuality);lastFrame=frame;lastLane=s.lane;lastPhase=s.phase;lastReduced=reducedMotion;lastLow=lowQuality;}

@@ -11,7 +11,7 @@ export const ARBOR_ART=Object.freeze({
  boss:'assets/arbor/arbo-motion-v1.webp',bossMobile:'assets/arbor/arbo-motion-v1-mobile.webp',
  menu:'assets/arbor/arbor-courtyard-v2.webp',bossColumns:2,bossRows:2,bossSize:ARBOR_ACT1_BOSS_SIZE,
 });
-export const ARBOR_VIEW_LIMITS=Object.freeze({roots:4,floorWidth:72,floorDepth:72,lights:0,raf:0,drawCalls:23,geometries:9,materials:23,textures:6});
+export const ARBOR_VIEW_LIMITS=Object.freeze({roots:4,floorWidth:72,floorDepth:72,lights:0,raf:0,drawCalls:24,geometries:10,materials:24,textures:7});
 const FRAMES=Object.freeze({idle:0,warn:1,windup:1,charge:1,attack:2,slam:2,recover:3,recovery:3});
 const SECTOR_TINTS=Object.freeze([0xc1d5d4,0xb7cdca,0xcbd4c9,0xb8ced1,0xc5d1c6]);
 const BASE_URL=import.meta.env?.BASE_URL||'./';
@@ -59,6 +59,21 @@ function livingRootGeometry(){
   const a=vertex(u,j),b=vertex(u,j+1),base={p:[u-.5,0,0],c:[.065,.038,.017],uv:[(420+90*u+.5)/1024,1-178.5/374]};
   u===0?triangle(a,b,base):triangle(a,base,b);
  }
+ // Two tapered, interwoven daughter roots break the old single cushion
+ // silhouette. They are part of the same buffered bark/moss surface, and
+ // normalization below retains its exact original width, depth and height.
+ for(const side of [-1,1]){
+  const branch=(u,j)=>{
+   const a=j*Math.PI/6,bulge=Math.pow(Math.sin(u*Math.PI),.65),crown=Math.sin(a);
+   const spine=Math.sin(u*Math.PI*1.35+side*.6)*.20+side*.18;
+   const v=vertex(u,j*archSteps/6);
+   return {p:[u*.92-.46,.025+bulge*(.12+.25*crown),spine+Math.cos(a)*.13*bulge],c:v.c,uv:v.uv};
+  };
+  for(let i=0;i<10;i++)for(let j=0;j<6;j++){
+   const a=branch(i/10,j),b=branch((i+1)/10,j),c=branch((i+1)/10,j+1),d=branch(i/10,j+1);
+   triangle(a,b,c);triangle(a,c,d);
+  }
+ }
  // Round ends and a wandering ridge still occupy exactly the old width/depth
  // and unit height. Runtime scales only the visual emergence, never rules.
  let minZ=Infinity,maxZ=-Infinity,maxY=0;for(let i=0;i<positions.length;i+=3){maxY=Math.max(maxY,positions[i+1]);minZ=Math.min(minZ,positions[i+2]);maxZ=Math.max(maxZ,positions[i+2]);}
@@ -86,7 +101,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
  const floorMaterial=bind(ownMaterial(new THREE.MeshBasicMaterial({color:0xa3ae88,toneMapped:false})),floorAsset);
  journeySurfaceLight(floorMaterial,{courtPosition:true});
  const floor=new THREE.Mesh(floorGeometry,floorMaterial);floor.name='arbor-painted-courtyard';floor.position.y=.043;floor.scale.set(28/72,1,24/72);world.add(floor);
- const gardenCourt=createArborGardenPresentation(world,{loadAsset,bind,ownGeometry,ownMaterial,lowQuality});
+ const gardenCourt=createArborGardenPresentation(world,{loadAsset,bind,ownGeometry,ownMaterial,lowQuality,worldKitLoader:textureLoader,base});
  const footprintGeometry=ownGeometry(new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2));
  const edgeGeometry=ownGeometry(new THREE.BufferGeometry().setFromPoints([
   new THREE.Vector3(-.5,0,-.5),new THREE.Vector3(.5,0,-.5),new THREE.Vector3(.5,0,-.5),new THREE.Vector3(.5,0,.5),
@@ -181,7 +196,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
  function hide(){setActive(false);}
  function diagnostics(){
   let meshes=0,visibleMeshes=0,groups=0;world.traverse(o=>{if(o.isMesh||o.isSprite||o.isLineSegments){meshes++;if(world.visible&&o.visible)visibleMeshes++;}else if(o.isGroup)groups++;});
-  return {disposed,active:enabled,sector,updates,poseWrites,impactEvents,impactWrites,impactPending:rootSlots.reduce((n,p)=>n+(p.hitTime>0?1:0),0),roots:rootSlots.length,meshes,visibleMeshes,groups,geometries:geometries.size,materials:materials.size,textures:textures.size,lights:0,raf:0,drawCallsMax:23,actorBossSprite:!!bossActor,loaded:assets.filter(a=>a.ready).length,failed:assets.filter(a=>a.failed).length,lowQuality,floorWidth:72,floorDepth:72,cameraOwned:false,playerScaleOwned:false,garden:gardenCourt.diagnostics()};
+  return {disposed,active:enabled,sector,updates,poseWrites,impactEvents,impactWrites,impactPending:rootSlots.reduce((n,p)=>n+(p.hitTime>0?1:0),0),roots:rootSlots.length,meshes,visibleMeshes,groups,geometries:geometries.size+1,materials:materials.size+1,textures:textures.size+(gardenCourt.diagnostics().worldKit?.textures||0),lights:0,raf:0,drawCallsMax:24,actorBossSprite:!!bossActor,loaded:assets.filter(a=>a.ready).length,failed:assets.filter(a=>a.failed).length,lowQuality,floorWidth:72,floorDepth:72,cameraOwned:false,playerScaleOwned:false,garden:gardenCourt.diagnostics()};
  }
  function dispose(){if(disposed)return;resetRootImpacts();disposed=true;enabled=false;gardenCourt.dispose();clearBossArt();world.removeFromParent();for(const m of materials)m.dispose();for(const g of geometries)g.dispose();for(const t of textures)t.dispose();}
  return {setActive,update,setBossArt,clearBossArt,impactRoot,hide,dispose,diagnostics};

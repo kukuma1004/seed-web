@@ -57,7 +57,7 @@
     "test:journey-sizes": "node tools/act1-actor-scale-test.mjs && node tools/seed-title-anchor-test.mjs",
     "test:journey-review": "node tools/gamers12-readability-test.mjs",
     "test:inspection-film": "node tools/inspection-film-test.mjs",
-    "test:journey-entry-recovery": "node tools/journey-entry-recovery-test.mjs && node tools/arbor-seed-display-test.mjs && node tools/arbor-garden-presentation-test.mjs && node tools/journey-muzzle-cue-test.mjs"
+    "test:journey-entry-recovery": "node tools/journey-world-kit-test.mjs && node tools/journey-entry-recovery-test.mjs && node tools/arbor-seed-display-test.mjs && node tools/arbor-garden-presentation-test.mjs && node tools/journey-muzzle-cue-test.mjs"
   },
   "dependencies": {
     "@capacitor-firebase/authentication": "^8.5.2",

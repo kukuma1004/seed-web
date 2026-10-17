@@ -7,6 +7,11 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
  const plates=new Map();let course='crosswind',garden=false,terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,crosswindPanoramaTexture=null,crosswindPanoramaSource=null,reflectorsActive=false;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
+ const conservatoryGeometry=new THREE.PlaneGeometry(1,1),conservatoryUV=conservatoryGeometry.getAttribute('uv');
+ // Bring the painted circular paving/flower border into the real outer patrol
+ // ring, rather than magnifying a small centre crop across the entire view.
+ // The 72x64 support plane and playable arena remain exactly as before.
+ for(let i=0;i<conservatoryUV.count;i++)conservatoryUV.setXY(i,(conservatoryUV.getX(i)-.5)*1.15+.5,(conservatoryUV.getY(i)-.5)*1.15+.5);
  const plateLight=journeySurfaceLight(plateMaterial,{strength:0,conservatory:true});
  // Outer rows mirror only the painting's garden margins. The central unit
  // rectangle keeps its exact road UVs; a wider camera cannot expose sky bars.
@@ -143,7 +148,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   if(course===act||garden&&act==='crystalGarden')syncFloor();
  }
  function setCourse(act,{halfDepth=null,plateBounds=null,crystalGarden=false}={}){
-  course=act;garden=act==='crystalGorge'&&crystalGarden;siegePhase=null;plateMaterial.color.setHex(0xffffff);plateLight.setStrength(garden?1:0);plate.geometry=act==='crosswind'?crosswindPlateGeometry:plateGeometry;
+  course=act;garden=act==='crystalGorge'&&crystalGarden;siegePhase=null;plateMaterial.color.setHex(0xffffff);plateLight.setStrength(garden?1:0);plate.geometry=act==='crosswind'?crosswindPlateGeometry:garden?conservatoryGeometry:plateGeometry;
   reflectorMarks.count=0;reflectorMarks.visible=false;
   syncUndertow(null);
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;
@@ -231,5 +236,5 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  }
  setCourse(course);
  return {root,hasPlate:act=>Boolean(plates.get(act)),setCrosswindSandTexture,syncUndertow,setSiegePhase:phase=>{siegePhase=phase;plateMaterial.color.setHex(phase==='defense'||phase==='boss'?0xd3dde6:0xfff6e8);},setPlate,setCrosswindFloorTexture,syncReflectors,setReflectorsActive:v=>{reflectorsActive=Boolean(v);reflectorMarks.visible=reflectorsActive&&course==='crosswind'&&!terrainOnly&&reflectorMarks.count>0;},setCoverTexture,setActive:v=>{root.visible=v;},setTerrainOnly:v=>{terrainOnly=Boolean(v);syncFloor();},setCourse,syncCrystals,beginFrame:()=>{tellCount=0;for(const o of tells)o.visible=false;},tell,
-  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();for(const mesh of undertowBatches)mesh.dispose();for(const g of undertowGeometry)g.dispose();for(const mat of undertowMaterials)mat.dispose();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,crosswindPlateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
+  dispose:()=>{if(disposed)return;disposed=true;root.removeFromParent();plates.clear();for(const mesh of undertowBatches)mesh.dispose();for(const g of undertowGeometry)g.dispose();for(const mat of undertowMaterials)mat.dispose();crosswindFloorTexture?.dispose();crosswindPanoramaTexture?.dispose();for(const o of [floor,lanes,curbs,seams,ivy,reflectorMarks,...coverStages,shadows])o.dispose();for(const o of new Set([plateGeometry,conservatoryGeometry,crosswindPlateGeometry,plateMaterial,floorGeometry,roadGeometry,roadMaterial,curbGeometry,curbMaterial,seamGeometry,seamMaterial,ivyGeometry,ivyMaterial,reflectorGeometry,reflectorMaterial,laneGeometry,lineGeometry,siegeWarningGeometry,siegeEntryMaterial,...coverStages.map(o=>o.geometry),shadowGeometry,floorMaterial,laneMaterial,lineMaterial,crystalMaterial,shadowMaterial]))o.dispose();}};
 }

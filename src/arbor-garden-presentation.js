@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {createJourneyWorldKit} from './journey-world-kit.js';
 import {DECOR_PROP_REGIONS} from './garden-decor-art.js';
 import {ARBOR_GARDEN_LAYOUTS,ARBOR_GARDEN_LIMITS} from './arbor-garden-layout.js';
 
@@ -52,8 +53,9 @@ function atlasShader(material){
 
 // The owning Act6 view supplies its resource registry and one loader. The five
 // batches never create lights, clocks, input, collision or another frame loop.
-export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry,ownMaterial,lowQuality=false}){
+export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry,ownMaterial,lowQuality=false,worldKitLoader=null,base=import.meta.env?.BASE_URL||'./'}){
  const root=new THREE.Group();root.name='arbor-authored-garden';parent.add(root);
+ const worldKit=createJourneyWorldKit(root,{lowQuality,loader:worldKitLoader,base});
  const records={terrain:loadAsset(ARBOR_GARDEN_ART.terrain),plants:loadAsset(ARBOR_GARDEN_ART.plants),props:loadAsset(ARBOR_GARDEN_ART.props)};
  for(const record of Object.values(records))if(record.texture){record.texture.generateMipmaps=false;record.texture.minFilter=THREE.LinearFilter;record.texture.magFilter=THREE.LinearFilter;}
  const groundMaterial=bind(ownMaterial(new THREE.MeshBasicMaterial({color:0xaebba2,transparent:true,depthWrite:false,toneMapped:false})),records.terrain);
@@ -102,7 +104,7 @@ export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry
  }
  function setSector(value){
   if(disposed)return false;const next=Math.max(0,Math.min(4,Number.isFinite(value)?value|0:0));if(next===sector){refresh();return false;}
-  sector=next;layoutWrites++;for(const mesh of batches)mesh.count=0;
+  sector=next;worldKit.setLayout(null,{sector});layoutWrites++;for(const mesh of batches)mesh.count=0;
   const layout=ARBOR_GARDEN_LAYOUTS[sector];
   for(const p of layout.patches){
    const vertical=p.d>p.w,long=vertical?p.d:p.w,minor=vertical?p.w:p.d,count=Math.max(2,Math.min(4,Math.ceil(long/4)));
@@ -133,8 +135,8 @@ export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry
   for(const mesh of batches){mesh.instanceMatrix.needsUpdate=true;if(mesh.instanceColor)mesh.instanceColor.needsUpdate=true;const atlas=mesh.geometry.getAttribute('instanceAtlas');if(atlas)atlas.needsUpdate=true;mesh.computeBoundingSphere();}
   refresh();return true;
  }
- const setActive=value=>{if(disposed)return;active=Boolean(value);refresh();};
- function dispose(){if(disposed)return;disposed=true;active=false;root.visible=false;root.removeFromParent();for(const mesh of batches)mesh.dispose();}
- const diagnostics=()=>({disposed,active:root.visible,sector,name:ARBOR_GARDEN_LAYOUTS[sector]?.name||null,layoutWrites,matrixWrites,visibilityWrites,plants:plants.count,props:props.count,beds:curbs.count,passablePatches:lawns.count,grassTiles:144,drawCalls:5,geometries:5,materials:4,textures:3,lights:0,raf:0,collisionOwned:false});
+ const setActive=value=>{if(disposed)return;active=Boolean(value);worldKit.setActive(active);refresh();};
+ function dispose(){if(disposed)return;disposed=true;worldKit.dispose();active=false;root.visible=false;root.removeFromParent();for(const mesh of batches)mesh.dispose();}
+ const diagnostics=()=>({worldKit:worldKit.diagnostics(),disposed,active:root.visible,sector,name:ARBOR_GARDEN_LAYOUTS[sector]?.name||null,layoutWrites,matrixWrites,visibilityWrites,plants:plants.count,props:props.count,beds:curbs.count,passablePatches:lawns.count,grassTiles:144,drawCalls:6,geometries:6,materials:5,textures:3+worldKit.diagnostics().textures,lights:0,raf:0,collisionOwned:false});
  return {setSector,setActive,refresh,dispose,diagnostics};
 }

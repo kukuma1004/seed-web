@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import {JOURNEY_ROOM_LAYOUT_LIMITS} from './journey-room-layouts.js';
+import {createJourneyWorldKit} from './journey-world-kit.js';
 
 const COVER_CAP=JOURNEY_ROOM_LAYOUT_LIMITS.cover,DECOR_CAP=JOURNEY_ROOM_LAYOUT_LIMITS.decor;
 const finite=(n,fallback=0)=>Number.isFinite(n)?n:fallback;
@@ -64,8 +65,9 @@ function flatLeavesGeometry(source){
 
 // Six fixed instanced batches. Scenery has no clock, animation callback,
 // texture, light or hidden collider; the host owns the identical cover list.
-export function createJourneyRoomLayoutView(scene,{lowQuality=false}={}){
+export function createJourneyRoomLayoutView(scene,{lowQuality=false,loader=null}={}){
  const root=new THREE.Group();root.name='journey-room-layout';root.visible=false;scene.add(root);
+ const worldKit=createJourneyWorldKit(root,{lowQuality,loader});
  const stone=stoneGeometry(),leaves=leafGeometry(),moss=mossGeometry(),flatLeaves=flatLeavesGeometry(leaves),ring=new THREE.RingGeometry(.34,.5,12).rotateX(-Math.PI/2);
  const stoneMaterial=new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false}),leafMaterial=new THREE.MeshBasicMaterial({vertexColors:true,toneMapped:false,side:THREE.DoubleSide}),mossMaterial=new THREE.MeshBasicMaterial({vertexColors:true,color:0x263724,transparent:true,opacity:.42,depthWrite:false,toneMapped:false}),ringMaterial=new THREE.MeshBasicMaterial({color:0xa4ad86,toneMapped:false,depthWrite:false});
  const makeBatch=(name,g,material,cap)=>{const b=new THREE.InstancedMesh(g,material,cap);b.name=name;b.count=0;b.visible=false;b.castShadow=false;b.receiveShadow=false;b.instanceMatrix.setUsage(THREE.StaticDrawUsage);root.add(b);return b;};
@@ -105,14 +107,14 @@ export function createJourneyRoomLayoutView(scene,{lowQuality=false}={}){
     decorCount++;
    }
   }
-  finish();return Boolean(current);
+  worldKit.setLayout(current,{x:offsetX,z:offsetZ});worldKit.setActive(active&&Boolean(current));finish();return Boolean(current);
  }
  function resetImpacts(){
   if(!impactsLive)return;
   for(let i=0;i<coverCount;i++)if(impactTimers[i]>0){impactTimers[i]=0;color.setHex(coverColors[i]);batches.stone.setColorAt(i,color);impactWrites++;}
   if(batches.stone.instanceColor)batches.stone.instanceColor.needsUpdate=true;impactsLive=false;
  }
- function setActive(value){if(disposed)return;active=Boolean(value);root.visible=active&&Boolean(current)&&coverCount+decorCount>0;if(!active)resetImpacts();}
+ function setActive(value){if(disposed)return;active=Boolean(value);worldKit.setActive(active&&Boolean(current));root.visible=active&&Boolean(current)&&coverCount+decorCount>0;if(!active)resetImpacts();}
  function impactCover(x,z){
   if(disposed||!root.visible||!Number.isFinite(x)||!Number.isFinite(z))return false;
   let nearest=Infinity,index=-1;
@@ -135,7 +137,7 @@ export function createJourneyRoomLayoutView(scene,{lowQuality=false}={}){
   batches.stone.instanceColor.needsUpdate=true;impactsLive=pending;
  }
  function hide(){setActive(false);}
- function diagnostics(){let instances=0,triangles=0,drawCalls=0;for(const b of Object.values(batches)){instances+=b.count;triangles+=b.count*(b.geometry.index?b.geometry.index.count:b.geometry.attributes.position.count)/3;if(root.visible&&b.visible&&b.count)drawCalls++;}return{disposed,active:root.visible,name:current?.name||null,coverCount,decorCount,drawCalls,instances,triangles,geometries:disposed?0:ownedGeometries.size,materials:disposed?0:ownedMaterials.size,textures:0,lights:0,raf:0,updates,impactEvents,impactWrites,impactPending:impactsLive,offset:{x:offsetX,z:offsetZ}};}
- function dispose(){if(disposed)return;resetImpacts();disposed=true;root.removeFromParent();root.visible=false;for(const b of Object.values(batches)){b.count=0;b.dispose();}for(const g of ownedGeometries)g.dispose();for(const material of ownedMaterials)material.dispose();current=null;coverCount=decorCount=0;}
+ function diagnostics(){let instances=0,triangles=0,drawCalls=0;for(const b of Object.values(batches)){instances+=b.count;triangles+=b.count*(b.geometry.index?b.geometry.index.count:b.geometry.attributes.position.count)/3;if(root.visible&&b.visible&&b.count)drawCalls++;}const kit=worldKit.diagnostics();drawCalls+=kit.drawCalls;triangles+=kit.triangles;instances+=kit.instances;return{worldKit:kit,disposed,active:root.visible,name:current?.name||null,coverCount,decorCount,drawCalls,instances,triangles,geometries:disposed?0:ownedGeometries.size+1,materials:disposed?0:ownedMaterials.size+1,textures:kit.textures,lights:0,raf:0,updates,impactEvents,impactWrites,impactPending:impactsLive,offset:{x:offsetX,z:offsetZ}};}
+ function dispose(){if(disposed)return;resetImpacts();disposed=true;worldKit.dispose();root.removeFromParent();root.visible=false;for(const b of Object.values(batches)){b.count=0;b.dispose();}for(const g of ownedGeometries)g.dispose();for(const material of ownedMaterials)material.dispose();current=null;coverCount=decorCount=0;}
  return{setLayout,setActive,update,impactCover,hide,dispose,diagnostics};
 }
