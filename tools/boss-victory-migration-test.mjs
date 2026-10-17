@@ -27,7 +27,9 @@ assert.equal(protocol.account.austinWins,8);assert.equal(protocol.account.bestSc
 assert.throws(()=>withBossMigrationProtocol(save,seal,'wrong'));assert.throws(()=>withBossMigrationProtocol({...save,bossProtocol:{version:2,ownerUid:uid,epoch:'wrong-epoch'}},seal,uid));
 
 const base=JSON.parse(readFileSync('docs/firebase-rules-with-seed.json','utf8')),rules=createBossMigrationRules(base);
-assert(assertBossMigrationRules(rules));assert.deepEqual(createBossMigrationRules(rules),rules);assert.throws(()=>assertBossMigrationRules(base));
+assert(assertBossMigrationRules(rules));assert.deepEqual(createBossMigrationRules(rules),rules);
+const missingProtocol=copy(rules);delete missingProtocol.rules.seedUsers.$uid.save.bossProtocol;
+assert.throws(()=>assertBossMigrationRules(missingProtocol),/migration-rules-not-installed/,'reject an explicitly incomplete policy even if the live reference already has migration guards');
 for(const key of Object.keys(base.rules).filter(k=>k!=='seedUsers'))assert.deepEqual(rules.rules[key],base.rules[key],'unrelated rules preserved: '+key);
 assert.throws(()=>createBossMigrationRules({...base,rules:{...base.rules,'.write':true}}));
 const ancestor=copy(base);ancestor.rules.seedUsers.$uid['.write']='auth != null';assert.throws(()=>createBossMigrationRules(ancestor));

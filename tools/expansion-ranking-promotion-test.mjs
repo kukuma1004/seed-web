@@ -3,7 +3,7 @@ import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.m
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import {EXPANSION_ACTS,expansionCircuitReleased,publicCircuitActCount} from '../src/act-expansion.js';
-import {createSurvivalSession} from '../src/survival-rules.js';
+import {createSurvivalSession,survivalActCount} from '../src/survival-rules.js';
 import {survivalExpansionRankProgress} from '../src/survival-ranking.js';
 import {defenseRankEntry,defenseExpansionRankProgress,validDefenseRank,defenseRankScore} from '../src/defense-ranking.js';
 import {migrateSurvivalToFiveActs} from '../src/survival-expansion.js';
@@ -36,14 +36,15 @@ assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');assert.equal(ty
 // A resumed checkpoint must never be rebound to a UID which changed during load.
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('function startSurvival('),end=main.indexOf(' if(!localInspection&&!requireName())',start);
 assert(start>=0&&end>start,'actual survival launch prefix must be present');
-const prefix=main.slice(start,end)+' return {fiveActs,saved};\n}';
+const prefix=main.slice(start,end)+' return {fiveActs,selectedActCount,saved};\n}';
 function host({released=false,inspection=false,ready=true}={}){
- let owner='A',resolve;const toast={textContent:''},status={textContent:'',dataset:{},setAttribute(k,v){this[k]=v;}},c=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalSaveMessage:'',bossRecordReady:()=>true,expansionLaunch:0,releaseExpansionSaveLease:()=>{},publicCircuitActCount:()=>released?5:3,localInspection:inspection,expansionJourneyView:ready?{}:null,survivalOwner:()=>owner,prepareExpansionAssets:()=>new Promise(r=>resolve=r),migrateSurvivalToFiveActs,$:id=>id==='#survival-start-status'?status:toast});
+ let owner='A',resolve;const toast={textContent:''},status={textContent:'',dataset:{},setAttribute(k,v){this[k]=v;}},c=vm.createContext({CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased,survivalActCount,survivalSaveMessage:'',bossRecordReady:()=>true,expansionLaunch:0,releaseExpansionSaveLease:()=>{},publicCircuitActCount:()=>released?5:3,localInspection:inspection,expansionJourneyView:ready?{}:null,survivalOwner:()=>owner,prepareExpansionAssets:()=>new Promise(r=>resolve=r),migrateSurvivalToFiveActs,$:id=>id==='#survival-start-status'?status:toast});
  vm.runInContext(main.slice(main.indexOf('function survivalStartBlocked('),main.indexOf('\nconst survivalEntry='))+prefix,c);return {c,toast,status,setOwner:v=>owner=v,complete:()=>{c.expansionJourneyView={};resolve();}};
 }
 const oldSave={id:'kept-run',revision:4,session:{...createSurvivalSession(3),time:900,act:2,lap:1,completedLaps:1,fastestLap:800},progress:{forms:{returnblade:5},inventory:{tonic:2},hp:45}};
 const closed=host();assert.equal(closed.c.startSurvival(null,{...oldSave,session:{...oldSave.session,actCount:5}}),undefined);assert.match(closed.toast.textContent,/보존|그대로/);
 assert.equal(closed.status.role,'alert');assert.equal(closed.status.textContent,closed.toast.textContent);
-const launched=host({released:true}).c.startSurvival(null,oldSave);assert.equal(launched.fiveActs,true);assert.equal(launched.saved.id,'kept-run');assert.equal(launched.saved.revision,4);assert.equal(launched.saved.session.actCount,5);assert.equal(launched.saved.progress.hp,45);assert.equal(launched.saved.progress.inventory.tonic,2);assert.equal(oldSave.session.actCount,undefined,'original bytes are not mutated before accepted next checkpoint');
-const loading=host({released:true,ready:false}),promise=loading.c.startSurvival(null,oldSave);loading.setOwner('B');loading.complete();assert.equal(await promise,undefined);assert.match(loading.toast.textContent,/계정이 바뀌/);
+const launched=host({released:true}).c.startSurvival(null,oldSave);assert.equal(launched.fiveActs,false);assert.equal(launched.selectedActCount,3);assert.equal(launched.saved.id,'kept-run');assert.equal(launched.saved.revision,4);assert.equal(launched.saved.session.actCount,undefined);assert.equal(launched.saved.progress.hp,45);assert.equal(launched.saved.progress.inventory.tonic,2);assert.equal(oldSave.session.actCount,undefined,'existing three-act run resumes without implicit circuit promotion');
+const fiveSave={...oldSave,session:{...oldSave.session,actCount:5}};
+const loading=host({released:true,ready:false}),promise=loading.c.startSurvival(null,fiveSave);loading.setOwner('B');loading.complete();assert.equal(await promise,undefined);assert.match(loading.toast.textContent,/계정이 바뀌/);
 console.log('Connected circuit rank promotion: both-acts gate required, explicit closed/open gates verified, legacy three-act rows unchanged, inspection/practice excluded, migration routing earns zero extra score; no server publish or main route promotion.');

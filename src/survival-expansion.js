@@ -1,11 +1,12 @@
 import {survivalAct,survivalActTime,survivalActCount} from './survival-rules.js';
 import {createExpansionCrystalWalls,sweepCrystalTerrain,createExpansionBoss,stepExpansionBoss,checkpointExpansionBoss,restoreExpansionBoss,applyCrystalTerrainActions} from './act-expansion-runtime.js';
+import {createSurvivalArbor} from './survival-arbor.js';
 
 // Opt-in runtime for the existing survival host. Ordinary crowds remain melee;
 // only the two true bosses use the shared expansion patterns. Camera scrolling
 // is presentation only: neither existing bullets nor actors are translated.
 export function survivalExpansionWalls(session,saved){
- if(survivalActCount(session)!==5||session.act!==4)return [];
+ if(survivalActCount(session)<5||session.act!==4)return [];
  const walls=createExpansionCrystalWalls(Math.min(4,session.lap||0));
  // Spread cover around the arena, keeping a generous central escape crossing.
  for(let i=0;i<walls.length;i++){
@@ -16,6 +17,13 @@ export function survivalExpansionWalls(session,saved){
 }
 export function createSurvivalExpansion(session,saved=null){
  const definition=survivalAct(session);if(!definition.expansion)return null;
+ if(definition.expansion==='arbor'){
+  const runtime=createSurvivalArbor(session,saved?.boss);if(!runtime)return null;
+  return {act:session.act,terrain:[],boss:runtime.model,coreOpen:false,trace:()=>null,
+   stepBoss(dt,context){const out=runtime.step(dt,context);this.coreOpen=out.coreOpen;return out;},
+   camera:player=>({x:player.x,z:player.z,scroll:0}),
+   checkpoint:()=>({act:5,walls:[],boss:runtime.checkpoint()})};
+ }
  const terrain=survivalExpansionWalls(session,saved?.walls),boss=saved?.boss?restoreExpansionBoss(saved.boss,definition.type):createExpansionBoss(definition.type,{seed:session.rngState});
  return {act:session.act,terrain,boss,coreOpen:false,
   trace(from,to,options){return sweepCrystalTerrain(terrain,from,to,options);},
@@ -34,6 +42,7 @@ export function createSurvivalExpansion(session,saved=null){
 // actor fields. Old three-act clears stay historical, never credited as five.
 export function migrateSurvivalToFiveActs(snapshot){
  if(!snapshot?.session||snapshot.ended)return null;
+ if(survivalActCount(snapshot.session)===6)return null;
  const next=structuredClone(snapshot),s=next.session;if(survivalActCount(s)===5)return next;
  s.actCount=5;s.legacyCompletedLaps=s.completedLaps||0;s.legacyFastestLap=s.fastestLap||0;
  s.completedLaps=0;s.fastestLap=0;

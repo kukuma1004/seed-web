@@ -141,5 +141,6 @@ const shown=profileContext.permanentStatsProfile(titleState(earned));assert.matc
 assert.equal(typeof EXPANSION_ACTS.crosswind.released,'boolean');assert.equal(typeof EXPANSION_ACTS.crystalGorge.released,'boolean');
 assert.match(source,/실험 기록은 계정·칭호·랭킹에 반영하지 않습니다/);
 assert.match(source,/e\.expansionBoss&&expansionChannel==='public'&&!saveExpansionBossVictory\(\)/,'public boss requires durable campaign credit; actual retry path is covered by public-campaign test');
-assert.match(source,/localInspection&&actCount===5\?true:awardModeBoss/,'five-act defense prototype remains practice');
+assert(source.includes('testRun=localInspection||developerRun'),'defense inspection and developer runs remain practice');
+assert.match(source,/onBossDefeated:\(event,state\)=>testRun\?true:awardModeBoss/,'defense practice still bypasses normal boss grants while genuine play passes its actual state');
 console.log('4/5 candidate titles: actual receipt/discovery/DOM/main bridge, additive buffs/cap, failure/FIFO/account separation and unreleased gates passed (VM/helper validation only)');

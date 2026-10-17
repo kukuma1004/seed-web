@@ -13,11 +13,13 @@ export function survivalObjectiveLegacyProjection(s){
 }
 
 export function validSurvivalObjectiveRecord(s,{owner,enabled=true}={}){
+ if(s?.session?.actCount===6)return false;
  if(!objectiveEnabled(enabled)||!s||s.version!==2||s.objective!==SURVIVAL_OBJECTIVE||!ownerName(s.owner)||owner&&s.owner!==owner||!parentProof(s.parent)||s.lab||s.benchmark||s.siegeReview)return false;
  if(s.ended===true)return typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0&&survivalTitleEvents(s)!==null;
  return validSurvivalObjectiveSave(s,{owner,enabled});
 }
 export function validSurvivalObjectiveSave(s,{owner,enabled=true}={}){
+ if(s?.session?.actCount===6)return false;
  if(!objectiveEnabled(enabled)||!s||s.version!==2||s.ended||!clean(s)||owner&&s.owner!==owner||!parentProof(s.parent))return false;
  if(!validSurvivalSave(survivalObjectiveLegacyProjection(s)))return false;
  if(s.session.act!==4)return s.siege===null;

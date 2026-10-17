@@ -28,7 +28,10 @@ export const EXPANSION_ACTS=Object.freeze({
 // The three connected modes promote the same route together. One unfinished
 // act must not turn a saved three-act circuit into a partly released circuit.
 export function expansionCircuitReleased(acts=EXPANSION_ACTS){return acts?.crosswind?.released===true&&acts?.crystalGorge?.released===true;}
-export function publicCircuitActCount(acts=EXPANSION_ACTS){return expansionCircuitReleased(acts)?5:3;}
+// Circuit-only Arbor content is deliberately separate: Journey already owns
+// its dedicated sixth-act launcher and must not gain a duplicate expansion card.
+export const CIRCUIT_ACTS=Object.freeze({...EXPANSION_ACTS,arbor:Object.freeze({number:6,name:'생명의 뿌리정원',bossId:'arbor',bossName:'아르보',released:true})});
+export function publicCircuitActCount(acts=CIRCUIT_ACTS){return expansionCircuitReleased(acts)?acts?.arbor?.released===true?6:5:3;}
 
 // Counter-spawns never surround the player immediately. The lead lane is read
 // first; rear threats begin only after the player has learned forward pressure.

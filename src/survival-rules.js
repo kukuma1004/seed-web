@@ -1,6 +1,6 @@
 // Pure rules for the separate survival challenge. The caller owns actors and
 // only ticks while playing; menus and law choices therefore freeze the clock.
-import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
+import {CIRCUIT_ACTS,expansionCircuitReleased} from './act-expansion.js';
 import {EXPANSION_OBJECTIVES,CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from './expansion-objective.js';
 export const SURVIVAL=Object.freeze({
  duration:180,supplyInterval:60,entryPressureSeconds:30,
@@ -20,10 +20,10 @@ const bounded=(value,limit,fallback=0)=>Number.isFinite(value)?Math.max(0,Math.m
 const count=(value,limit=1000000)=>Math.floor(bounded(value,limit));
 const buildHealth=level=>Math.min(24,Math.pow(1+Math.max(0,count(level)-30)/60,1.5));
 
-export const survivalActCount=session=>session?.actCount===5?5:3;
+export const survivalActCount=session=>session?.actCount===6?6:session?.actCount===5?5:3;
 export function createSurvivalSession(seed=1,{actCount=3,objective=null}={}){
  const initial=Number.isFinite(seed)?seed>>>0:1;
- return {seed:initial,rngState:initial,...(actCount===5?{actCount:5,crosswindBossWins:0,crystalBossWins:0,...(objective==='crystal-defense-v1'?{objective}:{})}:{}),time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
+ return {seed:initial,rngState:initial,...(actCount===5||actCount===6?{actCount,crosswindBossWins:0,crystalBossWins:0,...(actCount===6?{arborBossWins:0,circuit:'arbor-six-v1'}:{}),...(objective==='crystal-defense-v1'?{objective}:{})}:{}),time:0,legStartedAt:0,act:0,lap:0,bossesDefeated:0,completedLaps:0,lapStartedAt:0,fastestLap:0,transitionTime:0,spawnTimer:0,spawnIndex:0,kills:0,bossSpawned:false,won:false,supplyInterval:SURVIVAL.supplyInterval,nextSupply:SURVIVAL.supplyInterval};
 }
 
 export const SURVIVAL_ACTS=Object.freeze([
@@ -31,7 +31,8 @@ export const SURVIVAL_ACTS=Object.freeze([
  Object.freeze({name:'별빛 야구장',boss:'항상초심',type:'alwaysbeginner',music:'stadium'}),
  Object.freeze({name:'폭풍 항로',boss:'폭풍비행사 요한',type:'tempestcarrier',music:'skyway'}),
  Object.freeze({name:'횡풍의 항로',boss:'횡풍의 수호자',type:'crosswindKeeper',music:'skyway',expansion:'crosswind',released:false}),
- Object.freeze({name:'무너지는 수정 협곡',boss:'수정의 정원사',type:'crystalGardener',music:'garden',expansion:'crystalGorge',released:false})
+ Object.freeze({name:'무너지는 수정 협곡',boss:'수정의 정원사',type:'crystalGardener',music:'garden',expansion:'crystalGorge',released:false}),
+ Object.freeze({name:'거목의 숨결',boss:'녹관의 수호자 아르보',type:'arbor',music:'garden',expansion:'arbor',released:false})
 ]);
 export const survivalAct=session=>SURVIVAL_ACTS[count(session?.act,survivalActCount(session)-1)];
 export const survivalActTime=session=>Math.max(0,(session?.time||0)-(session?.legStartedAt||0));
@@ -122,9 +123,9 @@ export function survivalPressure(seconds){
  if(time>=SURVIVAL.duration)return {cap:SURVIVAL.maxBossAdds,spawnInterval:SURVIVAL.bossSpawnInterval,hpScale:Math.max(3.45,1+strength*.35),speedScale:1.49,label:survivalAct(session).boss,formation:'boss',formationLabel:'최종 결전',relief:false};
  const rules=PHASES[phase],beat=time%60,relief=beat>=60-SURVIVAL.reliefDuration;
  const opening=time<8&&!lap;
- const expansion=act===3?'crosswind':act===4?'crystal':null;
+ const expansion=act===3?'crosswind':act===4?'crystal':act===5?'arbor':null;
  const formation=relief?'relief':expansion|| (opening?'column':beat<25?'pincer':'surround');
- const formationLabel=relief?'숨 고르기':formation==='crosswind'?'횡풍 편대 · 앞뒤 돌파':formation==='crystal'?'수정 틈새 · 길을 열어 생존':formation==='column'?'한쪽에서 접근':formation==='pincer'?'양쪽 압박':'사방 포위';
+ const formationLabel=relief?'숨 고르기':formation==='crosswind'?'횡풍 편대 · 앞뒤 돌파':formation==='crystal'?'수정 틈새 · 길을 열어 생존':formation==='arbor'?'뿌리의 물결 · 열린 쪽으로 돌아 나가기':formation==='column'?'한쪽에서 접근':formation==='pincer'?'양쪽 압박':'사방 포위';
  return {cap:relief?Math.floor(rules.cap*.7):rules.cap,spawnInterval:opening?1:relief?.65:rules.spawnInterval,hpScale:1+strength*.35,speedScale:1+Math.min(5,strength)*.07,label:relief?'숨 고르기':rules.label,formation,formationLabel,relief};
 }
 
@@ -150,7 +151,9 @@ export function survivalSpawn(session,player,arena=SURVIVAL.arena){
  const pressure=survivalPressure(session),index=count(session.spawnIndex),packet=Math.floor(index/SURVIVAL.spawnBatch);
  const turn=(Math.floor(survivalActTime(session)/60)+(session.seed>>>0)%4)%4;
  const sides=pressure.formation==='column'||pressure.relief?1:pressure.formation==='pincer'?2:4;
- const preferred=pressure.formation==='crosswind'?(packet%4===3?2:0):pressure.formation==='crystal'?(packet%2?1:3):(turn+(sides===1?0:sides===2?(packet%2)*2:packet%4))%4;
+ // Arbor sends three packets from adjacent sides, then rotates the open flank.
+ // It never fills all four approaches in the same packet or spawns on the seed.
+ const preferred=pressure.formation==='crosswind'?(packet%4===3?2:0):pressure.formation==='crystal'?(packet%2?1:3):pressure.formation==='arbor'?(turn+packet%3)%4:(turn+(sides===1?0:sides===2?(packet%2)*2:packet%4))%4;
  for(let attempt=0;attempt<16;attempt++){
   const side=(preferred+Math.floor(attempt/4))%4;
   const angle=side*Math.PI/2,forward=SURVIVAL.arrivalDistance+random(session)*3;
@@ -201,7 +204,7 @@ export function settleSurvivalKill(session,{boss=false}={}){
  session.kills=count(session.kills+1);
  if(boss){
   session.won=true;session.transitionTime=0;session.bossesDefeated=count(session.bossesDefeated)+1;
-  if(survivalActCount(session)===5&&session.act>=3){const key=session.act===3?'crosswindBossWins':'crystalBossWins';session[key]=count(session[key])+1;}
+  if(survivalActCount(session)>=5&&session.act>=3){const key=session.act===3?'crosswindBossWins':session.act===4?'crystalBossWins':'arborBossWins';session[key]=count(session[key])+1;}
   if(session.act===survivalActCount(session)-1){session.completedLaps=count(session.completedLaps)+1;const duration=session.time-(session.lapStartedAt||0);session.fastestLap=Math.min(session.fastestLap||duration,duration);}
  }
  return session;
@@ -213,6 +216,7 @@ export function settleSurvivalKill(session,{boss=false}={}){
 export function survivalBossOrdinal(session,boss){
  if(boss==='crosswindKeeper')return count(session?.crosswindBossWins);
  if(boss==='crystalGardener')return count(session?.crystalBossWins);
+ if(boss==='arbor')return count(session?.arborBossWins);
  return count(session?.lap)+1;
 }
 
@@ -223,11 +227,11 @@ export function survivalOutcome(session,{left=false,boss=null}={}){
  const reached=session?.bossSpawned===true,bossName=survivalAct(session).boss;
  const remaining=boss&&Number.isFinite(boss.hp)&&Number.isFinite(boss.maxHp)&&boss.maxHp>0
   ?Math.max(1,Math.min(100,Math.ceil(boss.hp/boss.maxHp*100))):null;
- const five=survivalActCount(session)===5;
+ const acts=survivalActCount(session),five=acts===5,six=acts===6;
  return {won,status:won?'cleared':left?'left':reached?'boss-defeat':'defeat',
-  title:won?(five?'다섯 전장을 넘어선 씨앗':'세 전장을 넘어선 씨앗'):left?'다음 씨앗을 기약하며':reached?`${bossName} 앞에서 멈춘 씨앗`:'씨앗은 다시 자랍니다',
+  title:won?(six?'여섯 전장을 넘어선 씨앗':five?'다섯 전장을 넘어선 씨앗':'세 전장을 넘어선 씨앗'):left?'다음 씨앗을 기약하며':reached?`${bossName} 앞에서 멈춘 씨앗`:'씨앗은 다시 자랍니다',
   value:won?`${session.completedLaps}순환`:reached?(remaining===null?'도달':`${remaining}%`):`${Math.min(99,Math.floor(time/SURVIVAL.duration*100))}%`,
-  label:won?(five?'다섯 막 완주':'세 막 완주'):reached?(remaining===null?`${bossName} 미격파`:`${bossName} 남은 체력`):'보스까지 생존 진행',
+  label:won?(six?'여섯 막 완주':five?'다섯 막 완주':'세 막 완주'):reached?(remaining===null?`${bossName} 미격파`:`${bossName} 남은 체력`):'보스까지 생존 진행',
   bossSeconds:reached?Math.max(0,time-SURVIVAL.duration):0};
 }
 
@@ -241,6 +245,11 @@ function normalizeRecord(value){
   record.fiveWins=count(source.fiveWins);const fiveClear=bounded(source.fastestFiveClear,86400);
   record.fastestFiveClear=record.fiveWins&&fiveClear>=SURVIVAL.duration*5?fiveClear:0;
  }
+ if(Object.hasOwn(source,'sixWins')||Object.hasOwn(source,'fastestSixClear')){
+  record.sixWins=count(source.sixWins);const sixClear=bounded(source.fastestSixClear,86400);
+  // Six-act public circuits include the finite 150s paid-defense fifth act.
+  record.fastestSixClear=record.sixWins&&sixClear>=SURVIVAL.duration*6-30?sixClear:0;
+ }
  return record;
 }
 
@@ -251,14 +260,14 @@ export function readSurvivalRecord(storage){
 
 // A device-local personal best, independent of accounts, rankings and saves.
 // bestTime is longest survival time, including the final boss battle.
-export function recordSurvivalResult(storage,result={}, {acts=EXPANSION_ACTS,inspection=false,objectives=EXPANSION_OBJECTIVES}={}){
+export function recordSurvivalResult(storage,result={}, {acts=CIRCUIT_ACTS,inspection=false,objectives=EXPANSION_OBJECTIVES}={}){
  // Closed expansion, inspection and accelerated outcomes never become public
  // records. Promotion lets genuine five-act play share best kills/time/bosses.
- const five=result?.actCount===5;
- if(inspection||result?.lab||result?.benchmark||result?.siegeReview||five&&!expansionCircuitReleased(acts)||result?.objective&&(result.objective!==CRYSTAL_DEFENSE_OBJECTIVE||!expansionObjectiveReleased('crystalGorge',result.objective,objectives)))return readSurvivalRecord(storage);
+ const six=result?.actCount===6,five=result?.actCount===5,expanded=five||six;
+ if(inspection||result?.lab||result?.benchmark||result?.siegeReview||expanded&&!expansionCircuitReleased(acts)||six&&acts?.arbor?.released!==true||result?.objective&&(result.objective!==CRYSTAL_DEFENSE_OBJECTIVE||!expansionObjectiveReleased('crystalGorge',result.objective,objectives)))return readSurvivalRecord(storage);
  const previous=readSurvivalRecord(storage),source=result&&typeof result==='object'?result:{};
- const loops=count(source.completedLaps),clearTime=loops&&source.fastestLap>=SURVIVAL.duration*(five?5:3)?bounded(source.fastestLap,86400):0;
- const record=normalizeRecord({...previous,bestKills:Math.max(previous.bestKills,count(source.kills)),bestTime:Math.max(previous.bestTime,bounded(source.time,86400)),wins:previous.wins+(five?0:loops),bestBosses:Math.max(previous.bestBosses,count(source.bossesDefeated)),runs:previous.runs+1,fastestClear:!five&&clearTime?Math.min(previous.fastestClear||clearTime,clearTime):previous.fastestClear,...(five?{fiveWins:(previous.fiveWins||0)+loops,fastestFiveClear:clearTime?Math.min(previous.fastestFiveClear||clearTime,clearTime):previous.fastestFiveClear||0}:{})});
+ const loops=count(source.completedLaps),clearTime=loops&&source.fastestLap>=SURVIVAL.duration*(six?6:five?5:3)-(six?30:0)?bounded(source.fastestLap,86400):0;
+ const record=normalizeRecord({...previous,bestKills:Math.max(previous.bestKills,count(source.kills)),bestTime:Math.max(previous.bestTime,bounded(source.time,86400)),wins:previous.wins+(expanded?0:loops),bestBosses:Math.max(previous.bestBosses,count(source.bossesDefeated)),runs:previous.runs+1,fastestClear:!expanded&&clearTime?Math.min(previous.fastestClear||clearTime,clearTime):previous.fastestClear,...(five?{fiveWins:(previous.fiveWins||0)+loops,fastestFiveClear:clearTime?Math.min(previous.fastestFiveClear||clearTime,clearTime):previous.fastestFiveClear||0}:{}),...(six?{sixWins:(previous.sixWins||0)+loops,fastestSixClear:clearTime?Math.min(previous.fastestSixClear||clearTime,clearTime):previous.fastestSixClear||0}:{})});
  try{storage?.setItem(SURVIVAL.recordKey,JSON.stringify(record));}catch{/* Storage may be disabled or full. */}
  return record;
 }

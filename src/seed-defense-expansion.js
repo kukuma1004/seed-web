@@ -16,7 +16,7 @@ export function createDefenseCrystalWalls(room=0,saved,towers=[]){
 }
 export function defenseTraceTerrain(state,from,to,options){return sweepCrystalTerrain(state.crystalWalls||[],from,to,options);}
 export function prepareDefenseTerrain(s,info){
- if(s.actCount!==5)return;
+ if(s.actCount!==5&&s.actCount!==6)return;
  if(info.act!==4){s.crystalWalls=[];s.crystalRoom=-1;return;}
  const room=Math.min(4,Math.floor((info.localWave-1)/3));
  if(s.crystalRoom!==room||s.crystalLap!==info.lap){s.crystalRoom=room;s.crystalLap=info.lap;s.crystalWalls=createDefenseCrystalWalls(room,null,s.towers);}

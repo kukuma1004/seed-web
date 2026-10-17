@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import vm from 'node:vm';
 import {readFileSync} from 'node:fs';
-import {createDefense,defenseWaveInfo,defenseSpawnKind,checkpointDefense,restoreDefense} from '../src/seed-defense-rules.js';
+import {createDefense,defenseActCount,defenseWaveInfo,defenseSpawnKind,checkpointDefense,restoreDefense} from '../src/seed-defense-rules.js';
 import {defenseWavePreview} from '../src/defense-wave-preview.js';
 const source=readFileSync('src/seed-defense-rules.js','utf8'),a=source.indexOf('function spawn(s,info){'),b=source.indexOf('\nfunction tick(',a);
 assert.ok(a>0&&b>a);
@@ -12,7 +12,7 @@ for(const acts of [3,5])for(let wave=1;wave<=12*acts*3;wave++){
  assert.equal(preview.count,Object.values(preview.counts).reduce((a,b)=>a+b,0));
  assert.equal(preview.title,info.title);assert.equal(preview.wave,wave);
  const spawned={...state,wave,spawned:0,nextId:1,enemies:[]};
- const ctx=vm.createContext({defenseSpawnKind,random:()=>.5,defensePathLength:()=>100,DEFENSE_PATH_LENGTH:100,defensePoint:()=>({x:0,y:0})});
+ const ctx=vm.createContext({defenseActCount,defenseSpawnKind,random:()=>.5,defensePathLength:()=>100,DEFENSE_PATH_LENGTH:100,defensePoint:()=>({x:0,y:0})});
  vm.runInContext(source.slice(a,b),ctx);
  for(let i=0;i<info.count;i++)ctx.spawn(spawned,info);
  const actual={normal:0,fast:0,shield:0,resilient:0,boss:0};for(const e of spawned.enemies)actual[e.kind]++;

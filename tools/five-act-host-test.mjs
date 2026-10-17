@@ -12,6 +12,8 @@ import {constrainToArena} from '../src/arena.js';
 import {expansionActorArt} from '../src/expansion-actor-art.js';
 import {ACT3_ART} from '../src/act3-enemies.js';
 import {createCameraFeel} from '../src/camera-feel.js';
+import {publicCircuitActCount} from '../src/act-expansion.js';
+import {closedExpansionActs,openExpansionActs} from './expansion-gate-fixtures.mjs';
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8').replaceAll('\r\n','\n');
 function fn(name){const start=source.indexOf(`function ${name}(`),first=source.indexOf('\n',start),end=source.slice(start,first).endsWith('}')?first:source.indexOf('\n}',first)+2;assert(start>=0&&end>start,name);return source.slice(start,end);}
 const forbidden=()=>{throw new Error('New boss fell through to an old boss implementation');};
@@ -19,7 +21,7 @@ const dom=new Map(),$=id=>{if(!dom.has(id))dom.set(id,{textContent:'',hidden:tru
 for(const act of [3,4]){
  const session=createSurvivalSession(413,{actCount:5});session.act=act;
  const tells=[],ctx=vm.createContext({THREE,V:THREE.Vector3,scene:new THREE.Scene(),SURVIVAL,survivalAct,survivalScaling,survivalSpawn,survivalEnemySpec,tickSurvivalRush,createSurvivalExpansion,expansionActorArt,expansionApi,ACT3_ART,constrainToArena,
-  journeyRoomView:{hide(){}},journeyRoomLayoutState:null,arborView:null,arborJourney:null,survivalSiege:null,survivalSiegeApi,survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
+  journeyRoomView:{hide(){}},journeyRoomLayoutState:null,arborView:null,arborJourney:null,survivalArborCue:null,survivalSiege:null,survivalSiegeApi,survivalSession:session,survivalExpansion:null,expansionJourney:null,expansionTerrain:null,expansionTerrainDirty:false,prepareExpansionCover:()=>Promise.resolve(),expansionJourneyView:{setActive(){},setCourse(){},setTerrainOnly(){},syncCrystals(){},tell:t=>tells.push(t)},
   camera:new THREE.PerspectiveCamera(),arena:SURVIVAL.arena,player:new THREE.Object3D(),enemies:[],enemyShots:[],obstacles:[],traps:[],clockFloor:null,shadowClock:0,SHADOW_REFRESH:1,
   arenaGroup:new THREE.Group(),roomCover:new THREE.Group(),trapGroup:new THREE.Group(),hiddenGarden:[],mirrorPanelsActive:false,
   stadium:{setActive(){}},skyway:{setActive(){}},mirrorPanels:{setActive(){}},survivalArt:{setReadability(){},setAct(){},setActive(){}},survivalComparisonEnabled:false,survivalReadability:true,
@@ -46,7 +48,9 @@ for(const act of [3,4]){
  console.log(`Actual survival Act${act+1} host: ${spawned} boss projectiles, peak ${maximum}, three phases, valid replay and terrain collision passed (renderless).`);
 }
 const camera=createCameraFeel();let framed;for(let i=0;i<240;i++)framed=camera.follow(1/60,{playerX:5,followX:1,biasX:3});assert(Math.abs(framed.x-8)<.12);assert.equal(camera.follow(0,{biasX:Infinity}).zoom,1);
-assert(source.includes("actCount:publicCircuitActCount()===5?5:localInspection&&actCount===5?5:3"),'defense public expansion requires both actual release gates');
+assert(source.includes('let circuit=localInspection&&[3,5,6].includes(actCount)?actCount:publicCircuitActCount()'),'normal defense entry uses the public gate; local inspection may explicitly retain its legacy circuit');
+assert.equal(publicCircuitActCount(closedExpansionActs),3,'closed expansion gates cannot expose later acts');
+assert.equal(publicCircuitActCount(openExpansionActs),5,'an explicit legacy five-act manifest remains a five-act circuit');
 assert(source.includes("if(fiveActs&&!expansionJourneyView){const owner=survivalOwner();return prepareExpansionAssets("));
 assert(source.includes('owner!==survivalOwner()'),'async scenery preparation must retain the save owner');
 console.log('Five-act host options require both release gates outside inspection; horizontal look-ahead is camera-only. No browser, GPU, account or device claim.');

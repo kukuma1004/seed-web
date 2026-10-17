@@ -2,17 +2,18 @@
 export const SURVIVAL_SAVE_KEY='seed-survival-checkpoint-v1';
 const newWriteId=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}-${Math.random()}`;
 export const survivalRecordId=s=>s?JSON.stringify(s):'none';
-export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.version===1&&s.ended===true&&typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0&&survivalTitleEvents(s)!==null);}
+export function validSurvivalRecord(s){return validSurvivalSave(s)||Boolean(s?.version===1&&s.ended===true&&typeof s.id==='string'&&s.id.length>0&&s.id.length<100&&Number.isInteger(s.revision)&&s.revision>0&&Number.isFinite(s.savedAt)&&s.savedAt>0&&survivalTitleEvents(s)!==null&&!survivalTitleEvents(s).some(e=>e.boss==='arbor'));}
 const forbidden=new Set(['__proto__','prototype','constructor']);
 const finite=n=>typeof n==='number'&&Number.isFinite(n)&&Math.abs(n)<=1e12;
 import {validSurvivalExpansionCheckpoint} from './survival-expansion-save.js';
 import {SURVIVAL_OBJECTIVE,validSurvivalObjectiveSave,validSurvivalObjectiveRecord,objectiveEnabled,survivalObjectiveParent,sameSurvivalObjectiveParent} from './survival-objective-save.js';
+import {SURVIVAL_SIX_SAVE_KEY,SURVIVAL_SIX_CIRCUIT,sixEnabled,validSurvivalSixSave,validSurvivalSixRecord,survivalSixParent,sameSurvivalSixParent} from './survival-six-save.js';
 export const SURVIVAL_OBJECTIVE_SAVE_KEY='seed-survival-checkpoint-v2';
 // Exact pending events, not a per-boss high-water: three failed Austin wins
 // must credit three victories when storage recovers. FIFO also prevents a
 // later ordinal from bypassing an earlier failed account receipt.
 export const SURVIVAL_TITLE_LIMIT=96;
-const titleBosses=new Set(['austin','alwaysbeginner','tempestcarrier','crosswindKeeper','crystalGardener']);
+const titleBosses=new Set(['austin','alwaysbeginner','tempestcarrier','crosswindKeeper','crystalGardener','arbor']);
 const validEpoch=value=>typeof value==='string'&&/^[\w-]{6,96}$/.test(value);
 const titleEvent=e=>e&&titleBosses.has(e.boss)&&Number.isInteger(e.ordinal)&&e.ordinal>=1&&e.ordinal<=1000000&&(!Object.hasOwn(e,'bossEpoch')||validEpoch(e.bossEpoch));
 export function survivalTitleEvents(session){
@@ -70,14 +71,15 @@ export function restoreCombatFields(actor,fields,vector){
  }
  return actor;
 }
-export function validSurvivalSave(s){
+export function validSurvivalSave(s,{six=false}={}){
  if(s?.version!==1||s.ended||typeof s.id!=='string'||!Number.isInteger(s.revision)||s.revision<1)return false;
  const t=s.session,p=s.progress;
  if(s.objective!==undefined||s.parent!==undefined||s.siege!==undefined||t?.objective!==undefined)return false;
  if(!t||t.lab||t.benchmark||t.siegeReview||t.finished||!p||!finite(p.hp)||p.hp<=0||survivalTitleEvents(t)===null)return false;
- if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3)return false;
- for(const key of ['crosswindBossWins','crystalBossWins'])if(t[key]!==undefined&&(!Number.isInteger(t[key])||t[key]<0||t[key]>1000000||t[key]>(t.bossesDefeated||0)))return false;
- if(!Number.isInteger(t.act)||t.act<0||t.act>(t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
+ if(t.actCount!==undefined&&t.actCount!==5&&t.actCount!==3&&!(six&&t.actCount===6))return false;
+ if(!six&&survivalTitleEvents(t).some(e=>e.boss==='arbor'))return false;
+ for(const key of ['crosswindBossWins','crystalBossWins','arborBossWins'])if(t[key]!==undefined&&(!Number.isInteger(t[key])||t[key]<0||t[key]>1000000||t[key]>(t.bossesDefeated||0)))return false;
+ if(!Number.isInteger(t.act)||t.act<0||t.act>(six&&t.actCount===6?5:t.actCount===5?4:2)||!Number.isInteger(t.lap)||t.lap<0)return false;
  if(t.act>=3&&!validSurvivalExpansionCheckpoint(s.expansion,t.act,t.lap))return false;
  if(!finite(t.time)||t.time<0||!finite(t.legStartedAt)||t.legStartedAt>t.time||!finite(t.rngState))return false;
  if(t.pressureBuildLevel!==undefined||t.pressureLegStartedAt!==undefined){
@@ -104,11 +106,11 @@ export function validSurvivalSave(s){
  if(t.bossSpawned&&!t.won&&!s.enemies.some(e=>e.fields.survivalBoss))return false;
  return true;
 }
-export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,currentOwner=()=>owner,inspection=()=>false}={}){
- const v2=objectiveEnabled(objectives),key=(v2?SURVIVAL_OBJECTIVE_SAVE_KEY:SURVIVAL_SAVE_KEY)+':'+encodeURIComponent(owner||'guest');
- const allowed=()=>currentOwner()===owner&&inspection()!==true&&(!v2||objectiveEnabled(objectives));
- const validRecord=s=>v2?validSurvivalObjectiveRecord(s,{owner,enabled:objectives}):validSurvivalRecord(s);
- const validSave=s=>v2?validSurvivalObjectiveSave(s,{owner,enabled:objectives}):validSurvivalSave(s);
+export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,sixActs=false,currentOwner=()=>owner,inspection=()=>false}={}){
+ const v3=sixEnabled(sixActs),v2=!v3&&objectiveEnabled(objectives),key=(v3?SURVIVAL_SIX_SAVE_KEY:v2?SURVIVAL_OBJECTIVE_SAVE_KEY:SURVIVAL_SAVE_KEY)+':'+encodeURIComponent(owner||'guest');
+ const allowed=()=>currentOwner()===owner&&inspection()!==true&&(!v2||objectiveEnabled(objectives))&&(!v3||sixEnabled(sixActs));
+ const validRecord=s=>v3?validSurvivalSixRecord(s,{owner,enabled:sixActs}):v2?validSurvivalObjectiveRecord(s,{owner,enabled:objectives}):validSurvivalRecord(s);
+ const validSave=s=>v3?validSurvivalSixSave(s,{owner,enabled:sixActs}):v2?validSurvivalObjectiveSave(s,{owner,enabled:objectives}):validSurvivalSave(s);
  const raw=()=>{try{return JSON.parse(storage?.getItem(key)||'null');}catch{return null;}};
  return {key,
   readRecord(){if(!allowed())return null;const s=raw();return validRecord(s)?s:null;},
@@ -118,6 +120,10 @@ export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,
     if(!allowed())return {ok:false,reason:'account'};
     if(survivalRecordId(raw())!==survivalRecordId(expected))return {ok:false,reason:'conflict'};
     if(!validRecord(next))return {ok:false,reason:'invalid'};
+    if(v3){
+     if(expected&&survivalRecordId(expected.parent)!==survivalRecordId(next.parent))return {ok:false,reason:'parent'};
+     if(!expected){const route=routeSurvivalSaveStore(storage,owner,{objectives,currentOwner,inspection,ignoreSix:true}),prior=route.store.readRecord()||route.legacy||null;if(prior&&!prior.ended||!sameSurvivalSixParent(next.parent,prior))return {ok:false,reason:'parent'};}
+    }
     if(v2){
      if(expected&&survivalRecordId(expected.parent)!==survivalRecordId(next.parent))return {ok:false,reason:'parent'};
      if(!expected){const parent=createSurvivalSaveStore(storage,owner,{currentOwner,inspection}).readRecord();if(!sameSurvivalObjectiveParent(next.parent,parent))return {ok:false,reason:'parent'};}
@@ -137,6 +143,13 @@ export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,
     const old=raw();
     if(fresh&&validRecord(old)&&(survivalTitleEvents(old.ended?old:old.session)?.length||0)>0)return {ok:false,reason:'rewards'};
     if(!fresh&&(!old||old.ended||old.id!==snapshot.id||old.revision!==snapshot.revision||snapshot.writeId&&old.writeId!==snapshot.writeId))return {ok:false,reason:'conflict'};
+    if(v3&&fresh){
+     const route=routeSurvivalSaveStore(storage,owner,{objectives,currentOwner,inspection,ignoreSix:true}),prior=route.store.readRecord()||route.legacy||null;
+     if(prior&&!prior.ended)return {ok:false,reason:'legacy-active'};
+     if(prior&&(survivalTitleEvents(prior)?.length||0)>0)return {ok:false,reason:'rewards'};
+     snapshot={...snapshot,owner,circuit:SURVIVAL_SIX_CIRCUIT,parent:survivalSixParent(prior)};
+    }
+    if(v3&&!fresh&&survivalRecordId(snapshot.parent)!==survivalRecordId(old.parent))return {ok:false,reason:'parent'};
     if(v2&&fresh){
      if(snapshot.parent!=null)return {ok:false,reason:'parent'};
      const legacy=createSurvivalSaveStore(storage,owner,{currentOwner,inspection}).readRecord();
@@ -146,7 +159,7 @@ export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,
      snapshot={...snapshot,parent};
     }
     if(v2&&!fresh&&survivalRecordId(snapshot.parent)!==survivalRecordId(old.parent))return {ok:false,reason:'parent'};
-    const next={...snapshot,version:v2?2:1,revision:fresh?1:snapshot.revision+1,savedAt:Date.now(),writeId:newWriteId()};
+    const next={...snapshot,version:v3?3:v2?2:1,revision:fresh?1:snapshot.revision+1,savedAt:Date.now(),writeId:newWriteId()};
     if(!validSave(next))return {ok:false,reason:'invalid'};
     const json=JSON.stringify(next);if(json.length>800000||!storage)return {ok:false,reason:'storage'};
     if(!allowed())return {ok:false,reason:'account'};
@@ -170,7 +183,7 @@ export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,
   end(id,revision,writeId,pending){
    try{if(!allowed())return false;const old=raw();if(!validSave(old)||old.id!==id||old.revision!==revision||writeId&&old.writeId!==writeId)return false;
     const events=survivalTitleEvents(pending||old.session);if(!events)return false;
-    const next={version:v2?2:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId(),pendingBossTitles:events,...(v2?{owner,objective:SURVIVAL_OBJECTIVE,parent:old.parent}:{} )};
+    const next={version:v3?3:v2?2:1,ended:true,id,revision:revision+1,savedAt:Date.now(),writeId:newWriteId(),pendingBossTitles:events,...(v3?{owner,circuit:SURVIVAL_SIX_CIRCUIT,parent:old.parent,...(old.objective?{objective:old.objective}:{})}:v2?{owner,objective:SURVIVAL_OBJECTIVE,parent:old.parent}:{} )};
     const json=JSON.stringify(next);if(!allowed()||survivalRecordId(raw())!==survivalRecordId(old))return false;storage.setItem(key,json);return storage.getItem(key)===json;
    }catch{return false;}
   }
@@ -179,6 +192,14 @@ export function createSurvivalSaveStore(storage,owner='guest',{objectives=false,
 // A live legacy run owns its slot until death/clear; enabling the new circuit
 // cannot silently replace its timeline. Ended v1 records remain as ancestry.
 export function routeSurvivalSaveStore(storage,owner='guest',options={}){
+ if(!options.ignoreSix&&(sixEnabled(options.sixActs)||storage?.getItem?.(SURVIVAL_SIX_SAVE_KEY+':'+encodeURIComponent(owner||'guest')))){
+  const oldRoute=routeSurvivalSaveStore(storage,owner,{...options,sixActs:false,ignoreSix:true}),prior=oldRoute.store.readRecord()||oldRoute.legacy||null;
+  if(prior&&(!prior.ended||(survivalTitleEvents(prior)?.length||0)>0)||['objective-locked','objective-invalid'].includes(oldRoute.kind))return oldRoute;
+  const key=SURVIVAL_SIX_SAVE_KEY+':'+encodeURIComponent(owner||'guest'),held=storage?.getItem?.(key),store=createSurvivalSaveStore(storage,owner,{...options,sixActs:options.sixActs});
+  if(!sixEnabled(options.sixActs))return {kind:'six-locked',legacy:prior,store:{key,readRecord:()=>null,read:()=>null,replace:()=>({ok:false,reason:'locked'}),write:()=>({ok:false,reason:'locked'}),retryTitles:()=>({ok:false,reason:'locked'}),end:()=>false}};
+  const record=store.readRecord();if(held&&!record)return {kind:'six-invalid',legacy:prior,store:{key,readRecord:()=>null,read:()=>null,replace:()=>({ok:false,reason:'invalid'}),write:()=>({ok:false,reason:'invalid'}),retryTitles:()=>({ok:false,reason:'invalid'}),end:()=>false}};
+  return {kind:record?'six':prior?'six-after-legacy':'six-fresh',store,legacy:prior,record,parent:survivalSixParent(prior)};
+ }
  const legacy=createSurvivalSaveStore(storage,owner,{currentOwner:options.currentOwner||(()=>owner),inspection:options.inspection||(()=>false)});
  const modern=objectiveEnabled(options.objectives)?createSurvivalSaveStore(storage,owner,options):null;
  const old=legacy.readRecord(),next=modern?.readRecord();

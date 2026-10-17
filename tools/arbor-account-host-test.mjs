@@ -37,7 +37,7 @@ function fixture(net=transport()){
  const c=vm.createContext({console,Math,Date,URLSearchParams,Set,Map,Object,Promise,setTimeout,clearTimeout,location:{search:''},document:{querySelectorAll:()=>[]},$,__errors:[],__rules:rules,__boss:boss,__save:save,__view:{createArborJourneyView:()=>view},
   account:{user:()=>({uid,isAnonymous:false}),tokenSession:async()=>({uid,idToken:'token'}),native:false},rawStorage:storage,runStorage:storage,FIREBASE_APP:{databaseURL:'https://example.invalid'},
   arborJourney:null,arborApi:null,arborBossApi:null,arborSaveApi:null,arborView:null,arborEntry:null,arborStore:null,arborLease:null,arborBoss:null,arborLaunch:0,arborRecords:null,arborSync:null,arborBeginPending:null,arborEndPending:null,arborEndingFlight:null,
-  arborCueText:'',arborCueTime:0,localInspection:false,developerRun:false,maintenanceOn:false,mobileDevice:false,qualityLevel:1,mode:'ready',paused:false,saveOK:false,
+  arborCueText:'',arborCueTime:0,circuitArborReceipt:null,localInspection:false,developerRun:false,maintenanceOn:false,mobileDevice:false,qualityLevel:1,mode:'ready',paused:false,saveOK:false,
   bossRecordReady:()=>true,gameplayPaused:()=>false,protectJourneyBossReceipts:()=>true,bossPresentationReady:true,seedTitle:{setArborUnlocked:v=>title.first=v,setArborClearUnlocked:v=>title.clear=v,setArborVeteranUnlocked:v=>title.veteran=v},
   createArborAccountRecords,arborAccountEligible,validArborEnded,
   acquireExpansionSaveLease:(act,owner)=>acquireExpansionSaveLease(act,owner,{locks}),

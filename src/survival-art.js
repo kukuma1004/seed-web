@@ -1,10 +1,12 @@
 import * as THREE from 'three';
 import {EXPANSION_ENEMY_ART,expansionEnemyFrame} from './expansion-actor-art.js';
 import {SURVIVAL_BASES} from './survival-rules.js';
+import {createJourneyWorldKit} from './journey-world-kit.js';
 
 const KINDS=['swarm','runner','brute'];
 const FILES=['enemy-hound-v4.webp','enemy-runner-v1.webp','enemy-shield-v4.webp'];
-const ACT_FILES=[FILES,['enemy-pitcher-v1.webp','enemy-runner-v1.webp','enemy-catcher-v1.webp'],['enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp']];
+const ACT_FILES=[FILES,['enemy-pitcher-v1.webp','enemy-runner-v1.webp','enemy-catcher-v1.webp'],['enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp','enemy-act3-flight-atlas-v2.webp'],null,null,FILES];
+const expansionAct=act=>act===3||act===4;
 const SIZES=[.78,.86,1.28];
 const QUIET_SIZES=[1.02,1.00,1.38];
 const CUTE_FOLDER='cute/';
@@ -21,6 +23,11 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  const root=new THREE.Group();root.name='survival-garden-art';root.visible=false;scene.add(root);
  const geometries=new Set(),materials=new Set(),textures=new Set(),loader=new THREE.TextureLoader();
  const prefix=baseUrl&&!baseUrl.endsWith('/')?baseUrl+'/':baseUrl;
+ // Reuse the journey's authored flower masonry and root arches. Only their
+ // positions scale to this arena: silhouettes stay outside the movement limit.
+ // One static atlas batch, no lights, animation loop or collision ownership.
+ const gardenFrame=createJourneyWorldKit(root,{lowQuality:mobile,base:prefix});
+ gardenFrame.setLayout(null,{positionScaleX:(halfWidth+2.8)/16.1,positionScaleZ:(halfDepth+3.2)/13.6});
  let act=0,readability=true,quietMap=null,gardenMap=null;const textureCache=new Map();
  let disposed=false,rendered=0,overflow=0,lastTime=0,defeatCursor=0;
  const defeats=Array.from({length:DEFEAT_LIMIT},()=>({active:false}));
@@ -64,7 +71,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
    // enemies with an overlay. Baked once into the existing vertex colors;
    // both edges of every floor quad sample the same world-space value.
    const canopy=Math.max(0,Math.sin(wx*.29+wz*.19+.8))*Math.max(0,Math.sin(wz*.37-wx*.11));
-   const shade=(.78+.13*sun+.025*Math.sin(wx*.23+wz*.17)-canopy*.11*(1-sun*.55))*(1-edge*.12);
+   const shade=(.74+.17*sun+.025*Math.sin(wx*.23+wz*.17)-canopy*.17*(1-sun*.55))*(1-edge*.15);
    color.copy(shadedStone).lerp(sunlitStone,pathBlend*.24+sun*.28).multiplyScalar(shade);
    uvs.push(wx/18,wz/18);colors.push(color.r,color.g,color.b);
   }
@@ -177,7 +184,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  function applyActorArt(){
   for(let k=0;k<3;k++)for(let direction=0;direction<4;direction++){
    const b=bodies[k*4+direction];
-   const extra=act>=3?EXPANSION_ENEMY_ART[act===3?'crosswind':'crystalGorge']:null;
+   const extra=expansionAct(act)?EXPANSION_ENEMY_ART[act===3?'crosswind':'crystalGorge']:null;
    b.material.map=extra?texture(mobile?extra.file.replace('-v1.webp','-mobile-v1.webp'):extra.file,''):texture(ACT_FILES[act][k],readability?CUTE_FOLDER:'mobile/');b.material.needsUpdate=true;
    b.geometry=extra?threatFrames()[expansionEnemyFrame(KINDS[k],direction%2===1)]:act===2?frames[k===2?2:k]:frames[direction];
   }
@@ -186,18 +193,18 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
  // slabs give the cute actors a readable scale; restrained lifted shadows retain
  // the garden palette without competing with ivory faces and warm enemy bodies.
  function applyGardenFloor(){
-  if(act!==0)return;
+  if(act!==0&&act!==5)return;
   const uv=floorGeometry.attributes.uv,c=floorGeometry.attributes.color;
   uv.array.set(originalUV);c.array.set(originalColors);
   if(readability){
    for(let i=0;i<uv.count;i++){
-    uv.setXY(i,originalUV[i*2]*1.45,originalUV[i*2+1]*1.45);
-    c.setXYZ(i,Math.min(1,originalColors[i*3]*1.20),Math.min(1,originalColors[i*3+1]*1.18),Math.min(1,originalColors[i*3+2]*1.14));
+    uv.setXY(i,originalUV[i*2]*1.12,originalUV[i*2+1]*1.12);
+    c.setXYZ(i,originalColors[i*3]*.89,originalColors[i*3+1]*.95,originalColors[i*3+2]*.97);
    }
   }
   uv.needsUpdate=true;c.needsUpdate=true;
-  if(!readability&&!gardenMap){gardenMap=texture(GARDEN_SURFACE,mobile?'mobile/':'');gardenMap.wrapS=gardenMap.wrapT=THREE.RepeatWrapping;}
-  floor.material.map=readability?quietMap:gardenMap;floor.material.needsUpdate=true;
+  if(!gardenMap){gardenMap=texture(GARDEN_SURFACE,mobile?'mobile/':'');gardenMap.wrapS=gardenMap.wrapT=THREE.RepeatWrapping;}
+  floor.material.map=gardenMap;floor.material.needsUpdate=true;
  }
  function setReadability(enabled){
   if(disposed)return;
@@ -206,13 +213,18 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   applyActorArt();
  }
  function setAct(value=0){
-  if(disposed)return;const next=Math.max(0,Math.min(4,Math.floor(Number(value)||0)));
+  if(disposed)return;const next=Math.max(0,Math.min(5,Math.floor(Number(value)||0)));
   if(next===act)return;act=next;clear();for(const d of defeats)d.active=false;flecks.count=0;
+  gardenFrame.setActive(root.visible&&(act===0||act===5)&&!sceneryVisibility);
   const uv=floorGeometry.attributes.uv,c=floorGeometry.attributes.color,pos=floorGeometry.attributes.position;
   if(act===0){applyGardenFloor();}
   else if(act===1){
    floor.material.map=texture('stadium-clay-hd-v1.webp','');floor.material.map.wrapS=floor.material.map.wrapT=THREE.MirroredRepeatWrapping;floor.material.map.repeat.set(4,4);
    for(let i=0;i<uv.count;i++){uv.setXY(i,(pos.getX(i)+halfWidth)/(2*halfWidth),(pos.getZ(i)+halfDepth)/(2*halfDepth));c.setXYZ(i,.5,.55,.46);}
+  }else if(act===5){
+   // Authored teal paving shares the first garden's tactile scale. The
+   // root-and-flower frame supplies Arbor identity without enlarged stones.
+   applyGardenFloor();
   }else if(act===4){
    floor.material.map=quietMap;uv.array.set(originalUV);c.array.set(originalColors);
    for(let i=0;i<c.count;i++)c.setXYZ(i,originalColors[i*3]*.8,originalColors[i*3+1]*.88,originalColors[i*3+2]*1.05);
@@ -222,7 +234,7 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   }
   uv.needsUpdate=true;c.needsUpdate=true;floor.material.needsUpdate=true;
   earth.material.color.setHex(act===2||act===3?0x0b1d2b:act===1?0x20271d:0x172d25);
-  leaves.visible=act===0;moss.visible=false;undergrowth.visible=false;
+  leaves.visible=act===0||act===5;moss.visible=false;undergrowth.visible=false;
   rocks.visible=act!==2&&act!==3;edging.visible=act!==2&&act!==3;diamond.visible=bases.visible=act===1;
   applyActorArt();
  }
@@ -235,14 +247,14 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
    if(rendered>=limit){overflow++;continue;}
    const p=e.g.position,yaw=Math.atan2(camera.position.x-p.x,camera.position.z-p.z),facing=e.g.rotation.y-yaw;
    const angle=Math.atan2(Math.sin(facing),Math.cos(facing));
-   const direction=act>=3?(e.rushState==='rush'||e.timer>.68?1:0):Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3,b=bodies[kind*4+direction];
+   const direction=expansionAct(act)?(e.rushState==='rush'||e.timer>.68?1:0):Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3,b=bodies[kind*4+direction];
    const phase=Number.isFinite(e.phase)?e.phase:0,gait=e.frostLock>0?0:Math.sin(time*SPEEDS[kind]+phase),size=(readability?QUIET_SIZES:SIZES)[kind];
    const impact=Math.min(1,Math.max(0,(e.hit||0)/.14)),bob=Math.abs(gait)*(kind===2?.018:.035);
    // Camera-up translation anchors the actual feet at the ground, matching the
    // existing actor billboards even when the camera follows across the arena.
    const yScale=e.rushState==='brace'?.78:e.rushState==='rush'?1.1:1-impact*.04;
-   position.copy(p).addScaledVector(up,size*(act>=3?(450/512-.5)*yScale:readability&&act!==2?.4375:.46));position.y+=.035+bob;
-   roll.setFromAxisAngle(axis,act>=3?0:act===2?-e.g.rotation.y:gait*(kind===2?.018:.04));quaternion.copy(camera.quaternion).multiply(roll);
+   position.copy(p).addScaledVector(up,size*(expansionAct(act)?(450/512-.5)*yScale:readability&&act!==2?.4375:.46));position.y+=.035+bob;
+   roll.setFromAxisAngle(axis,expansionAct(act)?0:act===2?-e.g.rotation.y:gait*(kind===2?.018:.04));quaternion.copy(camera.quaternion).multiply(roll);
    scale.set(size*(e.rushState==='brace'?1.12:1+impact*.06),size*(e.rushState==='brace'?.78:e.rushState==='rush'?1.1:1-impact*.04),1);matrix.compose(position,quaternion,scale);b.setMatrixAt(b.count,matrix);
    color.setHex(impact>0?0xffe2bd:e.frostLock>0?0x87dcf3:e.slow>0?0xb0dce2:e.rushState==='brace'?0xffb66b:0xffffff);b.setColorAt(b.count++,color);
    const radius=Number.isFinite(e.radius)?e.radius:kind===2?.55:kind===1?.36:.3;
@@ -281,13 +293,14 @@ export function createSurvivalArt(scene,camera,{baseUrl='',mobile=false,capacity
   d.active=true;d.time=lastTime;d.x=p.x;d.z=p.z;d.kind=kind;d.dx=dx/length;d.dz=dz/length;d.spin=Math.sin(e.phase||0)>0?1:-1;
   d.direction=Math.abs(angle)<=Math.PI/4?0:Math.abs(angle)>=Math.PI*3/4?2:angle>0?1:3;
  }
- function setActive(active){if(disposed)return;root.visible=Boolean(active);if(!root.visible){clear();flecks.count=0;for(const d of defeats)d.active=false;}}
- function state(){return {readability:readability?'quiet':'classic',act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:act===0?5:act===1?6:2,defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:act===1?'stadium-clay-hd-v1.webp':act===2||act===3?'act3-storm-route-v1.webp':readability?'quiet-stone-v1.webp':GARDEN_SURFACE,groundTextureSize:readability&&act===0?768:mobile?768:1024,actorTextureSize:act>=3?(mobile?768:1536):512,actorArt:act>=3?[EXPANSION_ENEMY_ART[act===3?'crosswind':'crystalGorge'].file]:ACT_FILES[act],actorFolder:act>=3?'':readability?CUTE_FOLDER:'mobile/',mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
- function dispose(){if(disposed)return;setActive(false);disposed=true;root.removeFromParent();for(const b of bodies)b.dispose();for(const b of [edging,leaves,rocks,shadows,undergrowth,flecks,bases])b.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
+ function setActive(active){if(disposed)return;root.visible=Boolean(active);gardenFrame.setActive(root.visible&&(act===0||act===5)&&!sceneryVisibility);if(!root.visible){clear();flecks.count=0;for(const d of defeats)d.active=false;}}
+ function state(){return {readability:readability?'quiet':'classic',act,active:root.visible&&!disposed,capacity:limit,rendered,overflow,bodyBatches:bodies.filter(b=>b.count>0).length,maxBodyBatches:12,shadowBatches:shadows.count?1:0,environmentDrawCalls:(act===0||act===5?5:act===1?6:2)+gardenFrame.diagnostics().drawCalls,gardenFrame:gardenFrame.diagnostics(),defeatPetals:flecks.count,maxDefeatPetals:FLECK_LIMIT,defeatPool:DEFEAT_LIMIT,textureCount:textures.size,sharedGround:false,groundArt:act===5?GARDEN_SURFACE:act===1?'stadium-clay-hd-v1.webp':act===2||act===3?'act3-storm-route-v1.webp':act===4?'quiet-stone-v1.webp':GARDEN_SURFACE,groundTextureSize:readability&&act===0?768:mobile?768:1024,actorTextureSize:expansionAct(act)?(mobile?768:1536):512,actorArt:expansionAct(act)?[EXPANSION_ENEMY_ART[act===3?'crosswind':'crystalGorge'].file]:ACT_FILES[act],actorFolder:expansionAct(act)?'':readability?CUTE_FOLDER:'mobile/',mobile:Boolean(mobile),arena:{halfWidth,halfDepth},decorativeObstacles:0,disposed};}
+ function dispose(){if(disposed)return;setActive(false);gardenFrame.dispose();disposed=true;root.removeFromParent();for(const b of bodies)b.dispose();for(const b of [edging,leaves,rocks,shadows,undergrowth,flecks,bases])b.dispose();for(const g of geometries)g.dispose();for(const m of materials)m.dispose();for(const t of textures)t.dispose();root.clear();}
  applyGardenFloor();
  let sceneryVisibility=null;
  function setSceneryVisible(visible){
   if(disposed)return;
+  gardenFrame.setActive(Boolean(visible)&&root.visible&&(act===0||act===5));
   const objects=[floor,earth,moss,leaves,rocks,edging,undergrowth,diamond,bases];
   if(!visible&&!sceneryVisibility){sceneryVisibility=objects.map(o=>o.visible);for(const o of objects)o.visible=false;}
   else if(visible&&sceneryVisibility){objects.forEach((o,i)=>{o.visible=sceneryVisibility[i];});sceneryVisibility=null;}

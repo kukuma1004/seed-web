@@ -31,7 +31,7 @@ const FORM_DETAIL={returnblade:'큰 잎 칼날이 여섯 적을 꿰뚫고 돌아
 const symbols={slash:'╱',throw:'➶',hybrid:'✣',dodge:'↝',ultimate:'✥'};
 // Optional sheets are requested only by the equipped body or a live attack.
 // Byte figures describe unchanged files, not observed network/cache transfers.
-const OPTIONAL_ART=Object.freeze({solo:['cute/seed-solo-v1.webp',271254],fusion:['cute/seed-fusion-v1.webp',298570],awaken:['cute/seed-awaken-v1.webp',343438],orbit:['seed-orbit-sprites-v1.webp',205304],orbitAdvanced:['seed-orbit-advanced-v1.webp',103410],comet:['seed-comethalo-sprite-v1.webp',50402],combo:['combo-projectiles-v1.webp',388708]});
+const OPTIONAL_ART=Object.freeze({solo:['cute/seed-solo-v1.webp',271254],fusion:['cute/seed-fusion-v1.webp',298570],awaken:['cute/seed-awaken-v1.webp',343438],orbit:['seed-orbit-sprites-v1.webp',205304],orbitAdvanced:['seed-orbit-advanced-v1.webp',103410],comet:['seed-comethalo-sprite-v1.webp',50402],combo:['mobile/combo-projectiles-botanical-v2.png',283833]});
 
 // 2026-09-28: 저장(문 앞)·도감·햇살(JP)·보스 칭호를 계정과 잇는다. 연습(로컬 검사·개발자 실험)은 보상 없음.
 export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},storage=null,owner='guest',bossEpoch=null,practice=false,currentOwner=()=>'',titleStats=()=>null,pet=null,onCredit=()=>'',onDiscover=()=>{},onBossDefeated=()=>{},onResult=()=>'',onRanking=()=>{}}={}){
@@ -59,7 +59,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  const listen=(target,name,fn,options)=>{target.addEventListener(name,fn,options);listeners.push(()=>target.removeEventListener(name,fn,options));};
  const assetPaths={},ownedImages=new Set();let assetRequests=0,optionalBytes=0;
  const assetReview=['localhost','127.0.0.1'].includes(location.hostname)&&new URLSearchParams(location.search).has('inspect');
- const assetMetrics=()=>{if(assetReview){root.dataset.assetRequestCount=String(assetRequests);root.dataset.assetOptionalBytes=String(optionalBytes);root.dataset.assetDeferredBytes=String(1661086-optionalBytes);}};
+ const assetMetrics=()=>{if(assetReview){root.dataset.assetRequestCount=String(assetRequests);root.dataset.assetOptionalBytes=String(optionalBytes);root.dataset.assetDeferredBytes=String(1556211-optionalBytes);}};
  const releaseImage=im=>{if(!im)return;im.onload=im.onerror=null;im.src='';ownedImages.delete(im);};
  const load=(key,path)=>{if(closed)return null;if(assets[key]&&assetPaths[key]===path)return assets[key];releaseImage(assets[key]);const im=new Image();assets[key]=im;assetPaths[key]=path;ownedImages.add(im);assetRequests++;if(OPTIONAL_ART[key])optionalBytes+=OPTIONAL_ART[key][1];assetMetrics();im.onload=()=>{if(!closed&&!document.hidden&&assets[key]===im)draw();};im.src=BASE+'assets/'+path;return im;};
  const ensureAsset=key=>assets[key]||(OPTIONAL_ART[key]?load(key,OPTIONAL_ART[key][0]):null);
@@ -79,7 +79,7 @@ export function mountSeedAdventure({host=document.body,audio,onClose=()=>{},stor
  // 162 조합 탄환·공전 그림(수호전과 같은 아틀라스)과 물약·버프 아이템 그림.
  if(pet?.file)load('pet',pet.file);load('combat','adventure/seed-combat-v1.webp');load('plants','garden-growth-atlas-v3.webp');load('portal','seed-law-portal-v1.webp');load('items',ITEM_ATLAS);
  // 2026-09-28 사용자: 이미 있는 탄환 그림을 재활용. 법칙 탄은 본편 탄환 DNA 4×4, 융합 탄은 조합 카드 탄환 4×3.
- load('projectile','mobile/seed-projectile-dna-v1.png');
+ load('projectile','mobile/seed-projectile-botanical-v2.png');
  function resetInput(){keys.clear();move.x=move.y=0;pointerAttack=false;mouse=null;mouseHeld=false;aimDragged=false;stickPointers.clear();for(const e of root.querySelectorAll('.sa-stick i'))e.style.transform='';}
  // 클라우드 규칙이 게시되면 계정 저장 칸 하나(기기 사이 동기화), 그 전에는 계정별 이 기기 칸.
  const saveKey=ADVENTURE_CLOUD_READY?ADVENTURE_SAVE_KEY:ADVENTURE_SAVE_KEY+':'+encodeURIComponent(owner);let lastForm=null,creditNote='';

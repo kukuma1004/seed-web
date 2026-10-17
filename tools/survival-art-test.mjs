@@ -10,12 +10,12 @@ try{
  const art=createSurvivalArt(scene,camera,{baseUrl:'/seed/',capacity:3,mobile:true});
  const root=scene.getObjectByName('survival-garden-art');
  assert.equal(root.visible,false);assert.equal(art.update([],0),0);
- assert.equal(loaded.length,4);assert(loaded.every(t=>t.userData.url.startsWith('/seed/assets/cute/')));
+ assert.equal(loaded.length,5);assert.equal(loaded.filter(t=>t.userData.url.startsWith('/seed/assets/cute/')).length,4);assert(loaded.every(t=>t.userData.url.startsWith('/seed/assets/')));
  assert.equal(art.state().readability,'quiet','approved cute style is the normal default');
  assert.equal(art.state().actorFolder,'cute/');
  assert(loaded.every(t=>!t.userData.url.includes('/labs/')),'normal renderer uses production asset paths');
  const floor=root.getObjectByName('survival-garden-floor'),surface=floor.material.map;
- assert.match(surface.userData.url,/cute\/quiet-stone-v1.webp$/);
+ assert.match(surface.userData.url,/mobile\/survival-garden-paving-v1.webp$/);
  assert.equal(art.state().groundTextureSize,768);
  const originalFloorUv=Array.from(floor.geometry.attributes.uv.array),originalFloorColors=Array.from(floor.geometry.attributes.color.array);
  const positionAttribute=floor.geometry.attributes.position,colorAttribute=floor.geometry.attributes.color,joins=new Map();
@@ -46,7 +46,7 @@ try{
  art.update(enemies,4.1);assert.equal(art.state().defeatPetals,96,'burst storm uses fixed particle pool');
  assert(bodies.every(b=>b.count<=27),'living + collapsing bodies fit the existing batches');
  art.update(enemies,4.5);assert.equal(art.state().defeatPetals,0,'kill feedback expires');
- assert.equal(loaded.length,4,'no added texture for groundcover or kill feedback');
+ assert.equal(loaded.length,5,'groundcover and kill feedback allocate no textures beyond the authored paving');
  art.setActive(false);assert.equal(root.visible,false);assert.equal(shadow.count,0);assert.equal(art.state().rendered,0);
  art.setActive(true);assert.equal(art.update([],5),0);assert(bodies.every(b=>b.count===0));
  // Warm both styles and all themes once. Style changes reuse all twelve
@@ -91,7 +91,7 @@ try{
  // The dedicated floor owns its map; supplied shared journey texture must survive disposal.
  const shared=new THREE.Texture();let sharedDisposals=0;shared.addEventListener('dispose',()=>sharedDisposals++);
  const n=loaded.length,borrowed=createSurvivalArt(scene,camera,{groundTexture:shared});
- assert.equal(loaded.length-n,4);assert.equal(borrowed.state().sharedGround,false);
+ assert.equal(loaded.length-n,5);assert.equal(borrowed.state().sharedGround,false);
  borrowed.dispose();assert.equal(sharedDisposals,0);shared.dispose();
  console.log('Survival garden: default cute assets, exact classic restoration, all acts, fixed 12 body batches, bounded population, pooled transforms, lifecycle and resource disposal passed.');
 }finally{THREE.TextureLoader.prototype.load=originalLoad;}

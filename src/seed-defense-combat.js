@@ -91,7 +91,7 @@ export function createDefenseCombat(state,{sound=()=>{}}={}){
    const t=entry.tower,range=defenseTowerStats(t).range/K;let target=null;
    for(const e of list)if(!e.dead&&(e.g.position.x-entry.player.position.x)**2+(e.g.position.z-entry.player.position.z)**2<=range*range&&(!target||e.source.progress>target.source.progress))target=e;
    if(target){direction.copy(target.g.position).sub(entry.player.position).setY(0).normalize();t.angle=Math.atan2(direction.z,direction.x);if(!target.terrain)t.ultimateCharge=clamp((t.ultimateCharge||0)+dt*titleCombatBonuses(state).cadence,0,DEFENSE_COMBAT.ultimateSeconds);}
-   for(let i=0;i<entry.parts.length;i++){entry.timers[i]=Math.max(0,entry.timers[i]-dt);if(target&&entry.timers[i]<=0){const cadence=entry.parts[i].fire(entry.player.position,direction,target.g.position);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence/titleCombatBonuses(state).cadence):.15;if(Number.isFinite(cadence))state.stats.shots++;}entry.parts[i].update(dt);}
+   for(let i=0;i<entry.parts.length;i++){entry.timers[i]=Math.max(0,entry.timers[i]-dt);if(target&&!(t.rootBind>0)&&entry.timers[i]<=0){const cadence=entry.parts[i].fire(entry.player.position,direction,target.g.position);entry.timers[i]=Number.isFinite(cadence)?Math.max(.12,cadence/titleCombatBonuses(state).cadence):.15;if(Number.isFinite(cadence))state.stats.shots++;}entry.parts[i].update(dt);}
   }
   applyControls();
  }

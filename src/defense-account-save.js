@@ -8,13 +8,13 @@ const bytes=value=>JSON.stringify(value);
 const uuid=()=>globalThis.crypto?.randomUUID?.()||`${Date.now()}-${Math.random()}-${Math.random()}`;
 const keys=new Set(['version','ownerUid','circuit','id','revision','writeId','ended','checkpoint']);
 export function validDefenseAccountRecord(record,owner,circuit){
- if(!record||![1,2].includes(record.version)||record.ownerUid!==owner||record.circuit!==circuit||![3,5].includes(circuit)||typeof record.id!=='string'||! /^[\w-]{1,90}$/.test(record.id)||!Number.isSafeInteger(record.revision)||record.revision<1||typeof record.writeId!=='string'||record.writeId.length<1||record.writeId.length>120||typeof record.ended!=='boolean'||Object.keys(record).some(k=>!keys.has(k)&&!(record.version===2&&['objective','previousObjective'].includes(k))))return false;
- if(record.version===2&&(circuit!==5||record.objective!==CRYSTAL_DEFENSE_OBJECTIVE))return false;
+ if(!record||![1,2].includes(record.version)||record.ownerUid!==owner||record.circuit!==circuit||![3,5,6].includes(circuit)||typeof record.id!=='string'||! /^[\w-]{1,90}$/.test(record.id)||!Number.isSafeInteger(record.revision)||record.revision<1||typeof record.writeId!=='string'||record.writeId.length<1||record.writeId.length>120||typeof record.ended!=='boolean'||Object.keys(record).some(k=>!keys.has(k)&&!(record.version===2&&['objective','previousObjective'].includes(k))))return false;
+ if(record.version===2&&(![5,6].includes(circuit)||record.objective!==CRYSTAL_DEFENSE_OBJECTIVE))return false;
  if(record.previousObjective!==undefined){if(typeof record.previousObjective!=='string'||record.previousObjective.length>DEFENSE_ACCOUNT_LIMIT)return false;let parent;try{parent=JSON.parse(record.previousObjective);}catch{return false;}if(parent?.version!==1||!parent.ended||parent.id===record.id||!validDefenseAccountRecord(parent,owner,circuit))return false;}
  if(bytes(record).length>DEFENSE_ACCOUNT_LIMIT)return false;
  if(record.ended)return record.checkpoint===null;
  if(['siegeReview','inspectionPreview','practice','developerRun','lab'].some(k=>Boolean(record.checkpoint?.[k])))return false;
- if(record.version===2?record.checkpoint?.version!==7||record.checkpoint?.objective!==record.objective:record.checkpoint?.objective!==undefined||record.checkpoint?.version===7)return false;
+ if(record.version===2?record.checkpoint?.version!==(circuit===6?8:7)||record.checkpoint?.objective!==record.objective:record.checkpoint?.objective!==undefined||record.checkpoint?.version===7)return false;
  const restored=restoreDefense(record.checkpoint);
  return Boolean(restored&&restored.runId===record.id&&(restored.actCount??3)===circuit&&bytes(record).length<=DEFENSE_ACCOUNT_LIMIT);
 }

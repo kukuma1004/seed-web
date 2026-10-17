@@ -26,7 +26,11 @@ try{
   assert.ok(enemy.slice(12).every(p=>!p.ob.userData.spriteHidden),'overflow falls back to the original body');
   const batches=scene.children.filter(c=>c.isInstancedMesh&&c.count>0);
   assert.ok(batches.length<=16&&batches.length>0,'one shared atlas, at most one draw per visible cell');
-  assert.equal(new Set(batches.map(b=>b.material)).size,1);
+  const bodies=batches.filter(b=>b.name!=='seed-hostile-short-wakes');
+  assert.equal(new Set(bodies.map(b=>b.material)).size,1,'body cells still share one material');
+  const wake=scene.getObjectByName('seed-hostile-short-wakes');
+  assert.equal(sprites.state().hostileWakes,24,'enemy wake storage is bounded by the shared capacity');
+  assert.equal(wake.count,24);assert.equal(wake.instanceMatrix.array.length,24*16);
   assert.ok(batches.every(b=>[...b.instanceMatrix.array].every(Number.isFinite)));
   const mirror={...shot('split'),mirror:true,law:'split',age:.4};
   sprites.sync([], [mirror]);
@@ -42,8 +46,10 @@ try{
   assert.ok(form.ob.userData.spriteHidden&&baseball.ob.userData.spriteHidden);
   assert.equal(scene.getObjectByName('seed-projectile-combo-7').geometry.getAttribute('position').count,4);
   sprites.setEnabled(false);sprites.sync(player,enemy);
+  assert.equal(wake.count,0,'disabled rendering clears the wake batch');
   assert.ok([...player,...enemy].every(p=>p.ob.visible&&p.ob.userData.spriteHidden===false),'3D fallback restores all bodies');
   sprites.dispose();
+  assert.equal(scene.children.length,0,'all owned batches and wake geometry are removed');
   const fallbackScene=new THREE.Scene(),fallback=createProjectileSprites(fallbackScene,camera,{capacity:8});
   for(const finish of finishLoads.values())finish();fallback.setEnabled(false);fallback.sync([], [{...shot('seed'),mirror:true,law:'seed'}]);
   assert.equal(fallback.state().mirrorRims,1,'a mirror rim remains visible with the old 3D body and no VFX atlas');

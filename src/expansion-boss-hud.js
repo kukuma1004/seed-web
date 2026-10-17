@@ -34,9 +34,15 @@ for(const id of ['crosswindKeeper','crystalGardener']){
 }
 Object.freeze(moves);
 const unknown=copy('보스의 움직임','보스의 공격 예고를 살피세요','preparing');
+const arborMoves=[
+ copy('가지창 부채 · 준비','가지가 향한 쪽을 읽고 옆으로 피하세요','preparing'),
+ copy('세 번의 뿌리 · 준비','금빛 원을 벗어나며 계속 이동하세요','preparing'),
+ copy('꽃심 개방 · 반격','남은 탄환을 피하며 열린 꽃심을 공격하세요 · 피해 +35%','open')
+];
 
 export function expansionBossHud(actor,siege=false){
  const model=actor?.expansionMotion,id=model?.id||actor?.type;
+ if(id==='arbor')return model?.coreOpen?arborMoves[2]:arborMoves[model?.pattern===1?1:0];
  if(!Object.hasOwn(moves,id))return unknown;
  if(!model||!Number.isInteger(model.pattern)||model.pattern<0||model.pattern>2)return model?.pattern===-1?opening[id]:fallback[id];
  const move=moves[id][model.pattern],state=model.state;

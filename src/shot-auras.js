@@ -10,6 +10,7 @@ export const SHOT_CELLS=Object.freeze({seed:0,reflect:1,split:2,chain:3,orbit:4,
 const TRAIL_OF=Object.freeze({seed:'leafTrail',reflect:'sparkTrail',split:'sparkTrail',chain:'crackleTrail',orbit:'trail',pierce:'trail',burst:'sparkTrail',recall:'trail',gravity:'trail',frost:'mistTrail'});
 // 창끝처럼 방향이 있는 무늬는 날아가는 쪽으로 세우고, 나머지는 천천히 돈다.
 const ALIGNED=new Set(['pierce']);
+const TRAIL_SHAPE=Object.freeze({seed:[.68,.26],reflect:[.72,.22],split:[.6,.24],chain:[.82,.2],orbit:[.62,.24],pierce:[1.08,.14],burst:[.76,.3],recall:[.72,.22],gravity:[.58,.3],frost:[.8,.24]});
 const SPIN=Object.freeze({seed:1.6,reflect:1.1,split:.9,chain:2.4,orbit:.7,burst:1.8,recall:3.2,gravity:2.8,frost:.8,critical:2});
 
 // 탄 하나에 소재 판 두 장(빛 무늬 + 꼬리)을 붙인다. 탄 몸체(모양·충돌)는 그대로 두고 뒤에 겹쳐 그리기만 한다.
@@ -30,8 +31,8 @@ export function createShotAuras(scene,{atlas=null,capacity=320,mobile=false}={})
  mesh.instanceColor=new THREE.InstancedBufferAttribute(new Float32Array(capacity*3).fill(1),3);mesh.instanceColor.setUsage(THREE.DynamicDrawUsage);
  mesh.frustumCulled=false;mesh.count=0;mesh.castShadow=false;mesh.receiveShadow=false;scene.add(mesh);
  const dummy=new THREE.Object3D(),view=new THREE.Vector3(),color=new THREE.Color(),bright=mobile?1.25:1;
- function put(i,x,z,sx,sy,cell,angle,hex,glow){
-  dummy.position.set(x,.67,z);dummy.scale.set(sx,sy,1);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
+ function put(i,x,z,sx,sy,cell,angle,hex,glow,height=.67){
+  dummy.position.set(x,height,z);dummy.scale.set(sx,sy,1);dummy.updateMatrix();mesh.setMatrixAt(i,dummy.matrix);
   cells.setXY(i,cell,angle);color.setHex(hex).multiplyScalar(glow*bright);mesh.setColorAt(i,color);
  }
  // first·second: 지금 고른 첫째·둘째 법칙(첫 법칙 = 탄 색). 매 프레임 호출, 살아 있는 탄만큼만 GPU로 올린다.
@@ -46,10 +47,17 @@ export function createShotAuras(scene,{atlas=null,capacity=320,mobile=false}={})
     const age=p.age??.3,life=p.life??1;
     view.set(p.dir.x,0,p.dir.z).transformDirection(camera.matrixWorldInverse);
     const heading=Math.atan2(-view.x,view.y),k=p.visualScale||1,fade=Math.min(1,life/.18,(age+.03)/.08),x=p.ob.position.x,z=p.ob.position.z;
+    const painted=bodyArt==='spriteHidden'?Boolean(p.ob?.userData.spriteHidden):Boolean(bodyArt);
     // 2026-09-22 사용자: "탄이 커진 느낌, 반사·분열로 퍼지면 어지럽다" → 무늬 약 25% 작게, 꼬리 짧고 가늘게,
     // 분열로 갈라진 작은 탄은 꼬리 없이 작고 흐린 무늬만(분열 5단계면 탄이 수십 개라 화면을 덮었다).
-    if(!p.fragment){const length=1.05*Math.min(k,1.4),width=length*.5;put(count++,x-p.dir.x*length*.46,z-p.dir.z*length*.46,width,length,look.trail,heading,look.trailColor,1.35*fade);}
-    if(!(bodyArt==='spriteHidden'?Boolean(p.ob?.userData.spriteHidden):bodyArt)){
+    if(!p.fragment){
+     const shape=TRAIL_SHAPE[p.tint]||TRAIL_SHAPE.seed;
+     // Attach the narrow wake to the painted seed at its actual altitude.
+     // Tiny secondary undulation reads as living leaves without shaking aim.
+     const length=shape[0]*Math.min(k,1.4)*1.12,width=shape[1]*Math.min(k,1.2),flutter=.94+.06*Math.sin(age*14);
+     put(count++,x-p.dir.x*(length*.48+.14),z-p.dir.z*(length*.48+.14),width*flutter*(painted?.78:1),length,look.trail,heading,look.trailColor,(painted?.58:.88)*fade,Math.max(.4,p.ob.position.y));
+    }
+    if(!painted){
      const size=(p.critical?.5:p.fragment?.4:.66)*k,pulse=.88+.12*Math.sin(age*10);
      put(count++,x,z,size,size,look.aura,look.aligned?heading:age*look.spin,look.auraColor,(p.fragment?.8:1.15)*pulse*fade);
     }

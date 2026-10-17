@@ -9,9 +9,11 @@ export const SPRITE_LIGHTING_VERSION='painted-dome-v2';
 const fixed=n=>Number(Number(n).toFixed(4));
 // Give painted billboards a stable top-left key light and a cool edge light.
 // It keeps the one-quad sprite path while adding shape cues that survive at mobile size.
-export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8fffd4,rimStrength=.08,atlasGrid=null,cropUV=null}={}){
+export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8fffd4,rimStrength=.08,atlasGrid=null,cropUV=null,character=false}={}){
  const depthReview=seedVisualEnabled(typeof location==='undefined'?null:location);
  if(depthReview){shadow=.72;highlight=1.12;rim=0xffedc4;rimStrength=.035;}
+ // Character-only tuning preserves authored pigment and adds a restrained warm key.
+ if(character){shadow=.76;highlight=1.16;rim=0xffedce;rimStrength=.045;}
  const color=new THREE.Color(rim);
  const values={shadow:fixed(shadow),highlight:fixed(highlight),rim:new THREE.Vector3(fixed(color.r),fixed(color.g),fixed(color.b)),strength:fixed(rimStrength)};
  material.userData.spriteLighting={version:SPRITE_LIGHTING_VERSION,shadow,highlight,rim,rimStrength};
@@ -37,10 +39,14 @@ export function applySpriteLighting(material,{shadow=.78,highlight=1.08,rim=0x8f
  diffuseColor.rgb*=mix(seedLightShadow,seedLightHighlight,seedLightKey);
  float seedLightRim=pow(clamp(1.-seedLightDome,0.,1.),2.);
  diffuseColor.rgb+=seedLightRim*seedLightRimColor*seedLightRimStrength;
+ ${character?`// Crop-local foot shade: preserve the painted face while seating boots
+ // and lower robes into the cool ambient light. No extra texture sampling.
+ float seedFootShade=1.-smoothstep(-.9,-.12,seedLightP.y);
+ diffuseColor.rgb*=mix(vec3(1.),vec3(.86,.91,.94),seedFootShade*.62);`:''}
 #endif`);
  };
  // 값이 셰이더 밖(유니폼)에 있으니 모든 그림이 같은 키를 쓴다.
- material.customProgramCacheKey=()=>SPRITE_LIGHTING_VERSION+(depthReview?':garden-depth-v1':'')+(cropUV?':crop-local-v1':'');
+ material.customProgramCacheKey=()=>SPRITE_LIGHTING_VERSION+(depthReview?':garden-depth-v1':'')+(cropUV?':crop-local-v1':'')+(character?':character-foot-v1':'');
  material.needsUpdate=true;
  return material;
 }

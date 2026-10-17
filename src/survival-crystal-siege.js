@@ -13,7 +13,7 @@ const delta=dt=>Number.isFinite(dt)?Math.max(0,Math.min(.1,dt)):0;
 const exact=(o,keys)=>o&&typeof o==='object'&&!Array.isArray(o)&&Object.keys(o).every(k=>keys.includes(k));
 const clone=v=>JSON.parse(JSON.stringify(v));
 export const SURVIVAL_OBJECTIVE='crystal-defense-v1';
-export const survivalSiegeActive=session=>session?.actCount===5&&session.act===4&&!session.finished&&!session.won&&(
+export const survivalSiegeActive=session=>(session?.actCount===5||session?.actCount===6)&&session.act===4&&!session.finished&&!session.won&&(
  (session.siegeReview===true&&session.lab==='siege')||
  (session.objective===SURVIVAL_OBJECTIVE&&!session.lab&&!session.benchmark&&!session.siegeReview));
 const active=survivalSiegeActive;
@@ -99,8 +99,8 @@ function validWorld(world,s,threats){
 // route it must never rewrite lab/review markers to make a fixture acceptable.
 export function validSurvivalPublicSiegeWorld(world,s,threats){
  const session=world?.session;
- if(!session||session.objective!==SURVIVAL_OBJECTIVE||session.lab||session.benchmark||session.siegeReview||session.act!==4||session.actCount!==5||session.lap!==s?.lap||session.time!==s.time||!Array.isArray(threats)||threats.length>72)return false;
- if(!validSurvivalSave(survivalObjectiveLegacyProjection(world))||survivalTitleEvents(session)===null)return false;
+ if(!session||session.objective!==SURVIVAL_OBJECTIVE||session.lab||session.benchmark||session.siegeReview||session.act!==4||![5,6].includes(session.actCount)||session.lap!==s?.lap||session.time!==s.time||!Array.isArray(threats)||threats.length>72)return false;
+ if(!validSurvivalSave(survivalObjectiveLegacyProjection(world),{six:session.actCount===6})||survivalTitleEvents(session)===null)return false;
  if(s.phase==='failed'||s.crystal.core.hp<=0)return false;
  if(s.phase==='boss'&&!session.bossSpawned||s.phase!=='boss'&&(session.bossSpawned||world.enemies?.some(e=>e.fields?.survivalBoss)))return false;
  if(['prep','boss'].includes(s.phase)&&threats.length||s.phase==='prep'&&world.enemies.length)return false;

@@ -8,7 +8,11 @@ const AWAKEN={bigcrunch:0,frostarmada:1,thousandblades:2,infiniteprism:3,skyspea
 export function paintDefenseCrystal(g,wall,image){
  const ready=image?.complete&&image.naturalWidth>0;
  if(wall.broken&&!ready)return false;
- g.save();g.translate(wall.x,wall.z);g.fillStyle='#192438';g.beginPath();g.ellipse(0,.25,wall.w*.58,wall.d*.22,0,0,Math.PI*2);g.fill();
+ g.save();g.translate(wall.x,wall.z);
+ // Soft contact shade grounds the original crystal art without the opaque
+ // navy plinth that visually floated above the garden.
+ const shade=g.createRadialGradient(0,.2,0,0,.2,wall.w*.6);shade.addColorStop(0,'#071c17a0');shade.addColorStop(1,'#071c1700');
+ g.save();g.translate(0,.2);g.scale(1,.38);g.fillStyle=shade;g.beginPath();g.arc(0,0,wall.w*.6,0,Math.PI*2);g.fill();g.restore();
  if(ready){
   const frame=wall.broken?2:wall.hp/wall.maxHp<.5?1:0,cell=image.width/3,size=wall.w/.88;
   g.drawImage(image,frame*cell,0,cell,image.height,-size/2,-size*.88,size,size);
@@ -34,32 +38,44 @@ export function defenseBedPath(g,x,y,inset=0){const w=DEFENSE_CELL_SIZE.w-.7-ins
 // 흙을 살짝 어둡게, 테두리는 옅은 돌 띠, 네 귀퉁이에 작은 말뚝.
 function paintBeds(g){
  for(const c of DEFENSE_CELLS){
-  defenseBedPath(g,c.x,c.y);g.fillStyle='#0d1a1266';g.fill();g.lineWidth=.34;g.strokeStyle='#0b150e88';g.stroke();
-  defenseBedPath(g,c.x,c.y,.22);g.lineWidth=.16;g.strokeStyle='#e9dfae5c';g.stroke();
-  const w=DEFENSE_CELL_SIZE.w-.7,h=DEFENSE_CELL_SIZE.h-.9;g.fillStyle='#b99a64b0';
+  defenseBedPath(g,c.x,c.y);g.fillStyle='#0d1a120c';g.fill();g.lineWidth=.2;g.strokeStyle='#0b150e28';g.stroke();
+  defenseBedPath(g,c.x,c.y,.22);g.lineWidth=.1;g.strokeStyle='#e9dfae22';g.stroke();
+  const w=DEFENSE_CELL_SIZE.w-.7,h=DEFENSE_CELL_SIZE.h-.9;g.fillStyle='#c7b58255';
   for(const [dx,dy] of [[-1,-1],[1,-1],[-1,1],[1,1]]){const px=c.x+dx*(w/2-.55),py=c.y+.4+dy*(h/2-.55);g.fillRect(px-.28,py-.28,.56,.56);}
  }
 }
 export function paintDefenseGround(g,assets,path,state){
- if(assets.floor?.naturalWidth){g.save();g.filter='brightness(1.19) saturate(1.62) contrast(1.13)';g.drawImage(assets.floor,-8,4,118,54);g.restore();}
+ // Keep the painted meadow under every garden: path masonry must read
+ // as a raised route, not merge into a second oversized stone carpet.
+ if(assets.floor?.naturalWidth){g.save();g.filter='brightness(1.08) saturate(1.18) contrast(1.08)';g.drawImage(assets.floor,-8,4,118,54);g.restore();}
  else{g.fillStyle='#283c32';g.fillRect(-8,4,118,54);}
- const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act){g.fillStyle=act===1?'#7c48232b':act===3?'#78955920':act===4?'#344b8428':'#28577c30';g.fillRect(-8,4,118,54);}
+ const act=defenseWaveInfo(Math.max(1,state.wave),state).act;if(act){g.fillStyle=act===1?'#7c48232b':act===3?'#78955920':act===4?'#344b8428':act===5?'#c8b65a0c':'#28577c30';g.fillRect(-8,4,118,54);}
  // Directional canopy light is baked once with the ground, never per frame.
  const sunlight=g.createRadialGradient(12,15,1,22,22,69);
  sunlight.addColorStop(0,'#f6dc682e');sunlight.addColorStop(.45,'#c5cb480c');sunlight.addColorStop(1,'#062e3100');
  g.fillStyle=sunlight;g.fillRect(-8,4,118,54);
  const trace=()=>{g.beginPath();path.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));};
- g.lineJoin=g.lineCap='round';trace();g.strokeStyle='#182818a0';g.lineWidth=7.5;g.stroke();trace();g.strokeStyle='#64703d';g.lineWidth=6.2;g.stroke();
+ g.lineJoin=g.lineCap='round';
+ // A narrow lower shadow makes the authored stones sit above the meadow.
+ // This is part of the cached ground, with the route coordinates untouched.
+ g.save();g.translate(0,.38);trace();g.strokeStyle='#14251ab8';g.lineWidth=7.7;g.stroke();g.restore();
+ trace();g.strokeStyle='#182818a0';g.lineWidth=7.5;g.stroke();trace();g.strokeStyle='#64703d';g.lineWidth=6.2;g.stroke();
  paintBeds(g);
  // Worn flagstones are baked into the ground canvas only when layout changes.
  for(let i=0;i<path.length-1;i++){
   const a=path[i],b=path[i+1],len=Math.hypot(b.x-a.x,b.y-a.y),angle=Math.atan2(b.y-a.y,b.x-a.x);
-  for(let d=1;d<len;d+=5.25){const k=Math.floor(d/5.25)+i*29,noise=Math.sin(k*12.93)*.22;g.save();g.translate(a.x+Math.cos(angle)*d,a.y+Math.sin(angle)*d);g.rotate(noise*.3);
+  for(let d=1;d<len;d+=5.25){const k=Math.floor(d/5.25)+i*29,noise=Math.sin(k*12.93)*.22;g.save();g.translate(a.x+Math.cos(angle)*d,a.y+Math.sin(angle)*d);g.rotate(noise*.56);
    if(assets.flagstones?.naturalWidth){const img=assets.flagstones,cell=k%4,sw=img.width/2,sh=img.height/2;g.drawImage(img,cell%2*sw,Math.floor(cell/2)*sh,sw,sh,-3.05,-3.4,6.1,6.8);g.restore();continue;}
    g.rotate(angle);g.scale(1.5+noise*.3,.94+noise*.22);
    g.beginPath();g.moveTo(-1.3,-2.3+noise);g.lineTo(1.15,-2.45);g.lineTo(1.45,-.9);g.lineTo(1.3,2.4);g.lineTo(-1.1,2.55-noise);g.lineTo(-1.5,1.5);g.closePath();g.fillStyle=['#717661','#81816a','#777b65','#85846b'][k%4];g.fill();if(assets.stone?.naturalWidth){g.save();g.clip();const img=assets.stone,cut=img.width*.35;g.drawImage(img,(k%3)*img.width*.21,(k%2)*img.height*.28,cut,cut,-1.6,-2.6,3.2,5.2);g.fillStyle='#c6bb7b26';g.fillRect(-1.6,-2.6,3.2,5.2);g.restore();}g.strokeStyle='#303d32a0';g.lineWidth=.13;g.stroke();g.beginPath();g.moveTo(-1.2,-2.1);g.lineTo(1,-2.2);g.strokeStyle='#bbc09b70';g.lineWidth=.14;g.stroke();
    if(k%3===0){g.beginPath();g.moveTo(-1.35,.3);g.lineTo(-.1,.7);g.lineTo(.3,1.8);g.strokeStyle='#404c3970';g.stroke();}g.restore();
   }
+ }
+ // Broad, soft canopy shadows cross grass and paving together, breaking the
+ // identical brightness of repeated stones without adding scene objects.
+ // Drawn only when the existing ground cache is refreshed, never per frame.
+ for(const [x,y,rx,ry,alpha] of [[20,12,14,7,.19],[58,15,17,9,.22],[88,27,15,11,.22],[40,39,14,8,.16],[73,49,19,7,.18]]){
+  g.save();g.translate(x,y);g.scale(rx,ry);const shadow=g.createRadialGradient(0,0,.12,0,0,1);shadow.addColorStop(0,`rgba(7,27,23,${alpha})`);shadow.addColorStop(.52,`rgba(7,27,23,${alpha*.65})`);shadow.addColorStop(1,'rgba(7,27,23,0)');g.fillStyle=shadow;g.fillRect(-1,-1,2,2);g.restore();
  }
  // Sparse warm petals connect the painted grass and stone edges. Cached with
  // the floor, so detail does not add any frame-time particle work.

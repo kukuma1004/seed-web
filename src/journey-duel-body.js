@@ -67,7 +67,7 @@ export function createJourneyDuelMotion(){
 export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new THREE.TextureLoader(),reducedMotion=false,occlusionOpacity=.34}={}){
  const motion=createJourneyDuelMotion();
  const cropUV=new THREE.Vector4(0,0,1,1);
- const material=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{cropUV});
+ const material=applySpriteLighting(new THREE.SpriteMaterial({map:null,transparent:true,alphaTest:.08,depthWrite:true,toneMapped:false}),{cropUV,character:true});
  const ghostMaterial=new THREE.SpriteMaterial({map:null,alphaTest:.08,transparent:true,opacity:THREE.MathUtils.clamp(occlusionOpacity,.2,.85),depthTest:true,depthFunc:THREE.GreaterDepth,depthWrite:false,toneMapped:false,color:0xcfffe9});
  const sprite=new THREE.Sprite(material),ghost=new THREE.Sprite(ghostMaterial);ghost.renderOrder=2;
  sprite.name='journey-duel-body';ghost.name='journey-duel-body-occlusion';root.add(sprite,ghost);sprite.visible=ghost.visible=false;
@@ -122,10 +122,14 @@ export function createJourneyDuelBody(root,{baseURL,onChange=()=>{},loader=new T
    if(frame!==next||flipped!==flip)applyCrop(next,flip);
    const [,,w,h]=art.frames[next].dst;
    // Existing movement rig owns collision. Only the two artwork sprites deform.
-   const step=Math.sin(phase)*pace*(reducedMotion?.3:1),bob=Math.max(0,step)*.01;
+   // Let the authored attack/recoil pose settle onto its feet instead of
+   // carrying a full walking sway through the weapon's release. Pose selection,
+   // source crop and display scale remain owned by their existing paths.
+   const planted=next===0?1:next===7?.18:.32;
+   const step=Math.sin(phase)*pace*planted*(reducedMotion?.3:1),bob=Math.max(0,step)*.006;
    sprite.position.y=ghost.position.y=bob;
-   sprite.scale.set(w*DISPLAY_SCALE*(1+step*.018+contact*.025),h*DISPLAY_SCALE*(1-step*.011-contact*.02),1);ghost.scale.copy(sprite.scale);
-   material.rotation=ghostMaterial.rotation=step*.022;
+   sprite.scale.set(w*DISPLAY_SCALE*(1+step*.011+contact*.018),h*DISPLAY_SCALE*(1-step*.008-contact*.014),1);ghost.scale.copy(sprite.scale);
+   material.rotation=ghostMaterial.rotation=step*.014;
    material.color.setRGB(1,1-contact*.16,1-contact*.28);sprite.visible=true;ghost.visible=occlusion;
   },
   attacking:motion.attacking,

@@ -35,5 +35,5 @@ for(const file of Object.values(COMBO_ART)){
  assert.ok(fs.statSync(path).size<500_000,`${file} stays below the mobile atlas budget`);
 }
 assert.match(comboArt(SECOND_FUSIONS[0]),/combo-core/);
-assert.match(comboProjectileArt(SECOND_FUSIONS[0]),/combo-projectiles-v1\.webp/);
+assert.match(comboProjectileArt(SECOND_FUSIONS[0]),/combo-projectiles-botanical-v2\.png/);
 console.log('combo catalogue archive: 10 laws, 45 first, 990 second; live gate: 36 curated first, 0 generated second, 20 curated second held (4 batches)');

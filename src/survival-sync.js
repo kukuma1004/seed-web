@@ -1,5 +1,7 @@
 import {routeSurvivalSaveStore,validSurvivalRecord,survivalRecordId,SURVIVAL_OBJECTIVE_SAVE_KEY} from './survival-save.js';
 import {validSurvivalObjectiveRecord,objectiveEnabled,sameSurvivalObjectiveParent} from './survival-objective-save.js';
+import {createSurvivalSixSync} from './survival-six-sync.js';
+import {sixEnabled} from './survival-six-save.js';
 
 const META='seed-survival-sync-v1:';
 const identity=s=>s?.writeId||survivalRecordId(s);
@@ -25,7 +27,8 @@ export function survivalSyncLabel(state){
 // Separate from progression merges: an active combat timeline is never unioned.
 // No wall-clock last-writer-wins. Only the server revision read by this device
 // may be replaced, using Firebase's ETag conditional write.
-export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,delay=30000,timeout=10000,isActive=()=>false,onState=()=>{},objectives=false,currentOwner=()=>account.user()?.uid,inspection=()=>false}){
+export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,delay=30000,timeout=10000,isActive=()=>false,onState=()=>{},objectives=false,sixActs=false,ignoreSix=false,currentOwner=()=>account.user()?.uid,inspection=()=>false}){
+ if(!ignoreSix&&sixEnabled(sixActs))return createSurvivalSixSync({storage,account,databaseURL,fetchImpl,delay,timeout,isActive,onState,objectives,sixActs,currentOwner,inspection});
  let state={kind:'idle'},flight=null,timer=null;
  const user=()=>account.user();
  const eligible=u=>u?.uid&&!u.isAnonymous;
@@ -36,7 +39,7 @@ export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,
  const ack=(uid,revision,record,modern)=>persist(metaKey(uid,modern),JSON.stringify({revision,writeId:identity(record),recordId:survivalRecordId(record)}));
  const unchanged=(uid,modern)=>{if(user()?.uid!==uid||!eligible(user())||currentOwner()!==uid||inspection()||modern&&!objectiveEnabled(objectives))throw Error('account');};
  async function perform({allowPull=false,choice=null,expected=null}={}){
-  const u=user();if(!eligible(u))return set('guest');const uid=u.uid;let route=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection}),store=route.store,modern=Boolean(store?.key?.startsWith(SURVIVAL_OBJECTIVE_SAVE_KEY));if(route.kind==='objective-locked')return set('invalid');
+  const u=user();if(!eligible(u))return set('guest');const uid=u.uid;let route=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection,ignoreSix}),store=route.store,modern=Boolean(store?.key?.startsWith(SURVIVAL_OBJECTIVE_SAVE_KEY));if(route.kind==='objective-locked'||route.kind.startsWith('six'))return set('invalid');
   set('checking');const controller=new AbortController(),alarm=setTimeout(()=>controller.abort(),timeout);
   try{
    // Token acquisition also has a deadline: an auth popup must not hang save/exit.
@@ -50,16 +53,16 @@ export function createSurvivalSync({storage,account,databaseURL,fetchImpl=fetch,
     // Before the first v2 child exists, the cloud still owns the v1 timeline.
     // Read/ack it through its own slot; an empty v2 slot cannot prove ancestry.
     // Recheck after the GET so a concurrent child or invalid v2 is never hidden.
-    const latest=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection});
+    const latest=routeSurvivalSaveStore(storage,uid,{objectives,currentOwner,inspection,ignoreSix});
     if(['objective-fresh','objective-after-legacy'].includes(latest.kind)){
-     route=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection});store=route.store;modern=false;
+     route=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection,ignoreSix});store=route.store;modern=false;
      remote=decodeSurvivalCloud(payloadRead);unchanged(uid,false);
     }
    }
    const local=store.readRecord(),m=meta(uid,modern),localId=survivalRecordId(local);
    if(modern&&local&&remote.record&&local.id===remote.record.id&&survivalRecordId(local.parent)!==survivalRecordId(remote.record.parent))return set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
    if(modern&&!local&&remote.record?.parent){
-    const legacy=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection}).legacy,receipt=meta(uid,false);
+    const legacy=routeSurvivalSaveStore(storage,uid,{currentOwner,inspection,ignoreSix}).legacy,receipt=meta(uid,false);
     if(!sameSurvivalObjectiveParent(remote.record.parent,legacy)||!Number.isSafeInteger(receipt.revision)||receipt.revision<1||receipt.writeId!==identity(legacy)||receipt.recordId&&receipt.recordId!==survivalRecordId(legacy))return set('conflict',{local,remote:remote.record,expected:{revision:remote.revision,localId}});
    }
    if(modern&&remote.legacyRecord){

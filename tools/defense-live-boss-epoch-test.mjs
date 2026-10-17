@@ -7,7 +7,7 @@ const view=readFileSync(new URL('../src/seed-defense-view.js',import.meta.url),'
 const copy=v=>JSON.parse(JSON.stringify(v));
 const refresh=view.slice(view.indexOf('function refreshBossEpoch(){'),view.indexOf(' binding.attach(state);'));
 const auto=view.slice(view.indexOf('function autoUltimates(){'),view.indexOf(" $('#td-speed').onclick"));
-const step=view.slice(view.indexOf('for(let left=Math.min(.05,raw)*speed;'),view.indexOf('autoUltimates();if(!paused'));
+const step=view.slice(view.indexOf('for(let left=Math.min(.05,raw)*speed;'),view.indexOf('autoUltimates();flushBossReceipts('));
 const observedStep=view.slice(view.indexOf(' function stepLearningDefense(dt){'),view.indexOf(' function loop(now){'));
 assert(observedStep.includes('lossObserver.before(state);stepDefense(state,dt,combat);lossObserver.after(state);'),'use the shipping observer wrapper, not a bare step alias');
 const manual=view.split('\n').find(line=>line.includes("if($('#td-ultimate'))"));

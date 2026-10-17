@@ -7,6 +7,7 @@ import {SEED_VISUAL_LANGUAGE,seedVisualReviewEnabled} from './seed-visual-langua
 import {createSeedCanvasPaint} from './seed-canvas-presentation.js';
 
 const BASE=import.meta.env?.BASE_URL||'/';
+const TRAIL_PROFILE={seed:[.92,.25],reflect:[1,.22],split:[.86,.24],chain:[1.08,.18],orbit:[.85,.23],pierce:[1.3,.13],burst:[1,.3],recall:[.95,.22],gravity:[.8,.28],frost:[1.05,.23]};
 const TRAIL_OF={seed:'leafTrail',reflect:'sparkTrail',split:'sparkTrail',chain:'crackleTrail',orbit:'trail',pierce:'trail',burst:'sparkTrail',recall:'trail',gravity:'trail',frost:'mistTrail'};
 export const VFX_TINT_LIMIT=128;
 
@@ -72,12 +73,37 @@ export function createCanvasVfx({onReady=()=>{},visualReview=seedVisualReviewEna
   const key=TRAIL_OF[law]?law:'seed';
   if(!(size>0)||!Number.isFinite(size))return;
   if(visualReview)color=SEED_VISUAL_LANGUAGE.laws[key]||color;
-  shot(ctx,TRAIL_OF[key],x-Math.cos(angle)*size*.58,y-Math.sin(angle)*size*.58,size*1.25,{rotation:angle+Math.PI/2,color,alpha:.42,stretch:.4});
+  const profile=TRAIL_PROFILE[key];
+  // One fine stem and two drifting pollen points connect the painted head to
+  // its wake. The size comes from the existing visual, never the hit radius.
+  ctx.save();ctx.translate(x,y);ctx.rotate(angle);ctx.globalCompositeOperation='source-over';
+  ctx.lineCap='round';ctx.strokeStyle=color;ctx.globalAlpha=.58;ctx.lineWidth=Math.max(.45,size*.035);
+  const sway=Math.sin(now*.009+x*.13+y*.07)*size*.035;
+  ctx.beginPath();ctx.moveTo(-size*.22,0);ctx.quadraticCurveTo(-size*.68,sway,-size*1.12,sway*.5);ctx.stroke();
+  ctx.strokeStyle='#fff6d8';ctx.globalAlpha=.78;ctx.lineWidth=Math.max(.35,size*.016);
+  ctx.beginPath();ctx.moveTo(-size*.24,0);ctx.lineTo(-size*.7,sway*.35);ctx.stroke();
+  ctx.fillStyle=color;ctx.globalAlpha=.58;
+  for(let i=0;i<2;i++){const phase=(now*.0009+i*.47)%1,px=-size*(.5+phase*.82),py=Math.sin(phase*5+i*2)*size*.12,r=size*(.027-phase*.013);ctx.beginPath();ctx.arc(px,py,r,0,Math.PI*2);ctx.fill();}
+  ctx.restore();
+  shot(ctx,TRAIL_OF[key],x-Math.cos(angle)*size*.56,y-Math.sin(angle)*size*.56,size*profile[0],{rotation:angle+Math.PI/2,color,alpha:.38,stretch:profile[1]});
   shot(ctx,key,x,y,size*1.04,{rotation:key==='pierce'?angle+Math.PI/2:now*.004*(key==='chain'?2.4:1.4),color,alpha:.4});
   core(ctx,key,x,y,angle,size,color);
   if(visualReview){ctx.save();ctx.globalAlpha=.72;ctx.strokeStyle=SEED_VISUAL_LANGUAGE.colors.ivory;ctx.lineWidth=size*.045;ctx.beginPath();ctx.moveTo(x+Math.cos(angle)*size*.28,y+Math.sin(angle)*size*.28-size*.045);ctx.lineTo(x-Math.cos(angle)*size*.08,y-Math.sin(angle)*size*.08-size*.045);ctx.stroke();ctx.restore();}
  }
 
+ // Crisp petal contact: four tiny strokes and a brief broken crown, bounded
+ // by the existing effect lifetime. Source-over retains contrast on pale tiles.
+ function contact(ctx,x,y,t,unit,color,seed){
+  if(t>=.72)return;const fade=(1-t/.72),radius=unit*(.17+t*.42);
+  ctx.save();ctx.globalCompositeOperation='source-over';ctx.globalAlpha=fade*.9;ctx.translate(x,y);ctx.rotate(seed);ctx.strokeStyle='#fff3c7';ctx.lineWidth=unit*.075;
+  ctx.beginPath();ctx.arc(0,0,radius,.18,2.7);ctx.arc(0,0,radius,3.35,5.9);ctx.stroke();
+  // The dark seed-sized centre gives the bright crown a crisp edge on paving.
+  if(t<.3){ctx.globalAlpha=fade*.8;ctx.fillStyle='#254039';ctx.beginPath();ctx.arc(0,0,unit*(.085+t*.06),0,Math.PI*2);ctx.fill();ctx.globalAlpha=fade*.9;}
+  ctx.lineWidth=unit*.03;ctx.strokeStyle=color;
+  ctx.beginPath();ctx.arc(0,0,radius+unit*.065,.5,2.4);ctx.arc(0,0,radius+unit*.065,3.65,5.6);ctx.stroke();
+  for(let i=0;i<4;i++){ctx.rotate(Math.PI*.5);const d=unit*(.32+t*.75),n=unit*(.17-t*.12);ctx.fillStyle=color;ctx.strokeStyle='#fff6dd';ctx.lineWidth=unit*.035;ctx.beginPath();ctx.moveTo(d+n,0);ctx.quadraticCurveTo(d,-n*.55,d-n,0);ctx.quadraticCurveTo(d,n*.55,d+n,0);ctx.fill();ctx.stroke();}
+  ctx.restore();
+ }
  // 효과 하나. e: {kind,x,y,tx,ty,radius,law}, t: 0(시작)→1(끝), size: 기본 크기 단위.
  function effect(ctx,e,t,color,unit=1){
   if(visualReview){color=SEED_VISUAL_LANGUAGE.laws[e.law]||color;if(['hit','impact','muzzle','reflect','death'].includes(e.kind))spritePaint.impact(ctx,e.x,e.y,unit*1.3,t,color);}
@@ -110,10 +136,10 @@ export function createCanvasVfx({onReady=()=>{},visualReview=seedVisualReviewEna
    case 'trail':
     fx(ctx,'trail',x,y,unit*1.4,{color,alpha:a*.6,rotation:seed});return;
    case 'muzzle':
-    fx(ctx,'star',x,y,unit*1.3*(1-t*.5),{color,alpha:a});return;
+    fx(ctx,'star',x,y,unit*.9*(1-t*.5),{color,alpha:a*.75});return;
    default:
     // 맞힘: 별빛 한 번 + 부스러기.
-    fx(ctx,'star',x,y,unit*1.65*(1-t*.4),{color,alpha:a*.7,rotation:seed});fx(ctx,'flecks',x,y,unit*2*grow,{color,alpha:a*.65,rotation:seed});core(ctx,TRAIL_OF[e.law]?e.law:'seed',x,y,seed,unit*(.85-t*.3),color,a);
+    fx(ctx,'star',x,y,unit*1.2*(1-t*.4),{color,alpha:a*.65,rotation:seed});contact(ctx,x,y,t,unit,color,seed);
   }
  }
  // 오래 남는 장판: 중력 우물·서리 그물.

@@ -6,13 +6,17 @@ export const SEED_CANVAS_LIGHT_CACHE_LIMIT=48;
 export const SEED_CANVAS_LIGHT_TILE_LIMIT=256;
 export const SEED_CANVAS_LIGHT_BAKES_PER_WINDOW=4;
 export const SEED_CANVAS_LIGHT_BAKE_WINDOW_MS=16;
-export function createSeedCanvasPaint({review=seedVisualEnabled(globalThis.location),reducedMotion=typeof globalThis.matchMedia==='function'?globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches:false,canvas=()=>document.createElement('canvas'),onCacheChange=()=>{},now=()=>performance.now()}={}){
+export function createSeedCanvasPaint({characterLighting=false,review=seedVisualEnabled(globalThis.location),reducedMotion=typeof globalThis.matchMedia==='function'?globalThis.matchMedia('(prefers-reduced-motion: reduce)').matches:false,canvas=()=>document.createElement('canvas'),onCacheChange=()=>{},now=()=>performance.now()}={}){
+ const characterState={enabled:false};
  const tiles=new Map(),ids=new WeakMap();let nextId=0,disposed=false,oldest=null,newest=null,bytes=0,windowAt=-Infinity,windowBakes=0,bakes=0,deferred=0;
  const stats=()=>({enabled:review,tiles:tiles.size,bytes,limit:SEED_CANVAS_LIGHT_CACHE_LIMIT,bakes,deferred,disposed});
  if(review)onCacheChange(stats());
  function draw(ctx,image,sx,sy,sw,sh,dx,dy,dw,dh){
-  if(!review||disposed||!(sw>0&&sh>0))return ctx.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
-  let id=ids.get(image);if(!id){id=++nextId;ids.set(image,id);}const key=`${id}:${sx}:${sy}:${sw}:${sh}`;let entry=tiles.get(key);
+  const character=characterLighting&&characterState.enabled;
+  // Dimensions can arrive before an HTML image is drawable. A loading copy
+  // can be transparent; never retain it as the pose's permanent shaded tile.
+  if((!review&&!character)||disposed||image?.complete===false||!(sw>0&&sh>0))return ctx.drawImage(image,sx,sy,sw,sh,dx,dy,dw,dh);
+  let id=ids.get(image);if(!id){id=++nextId;ids.set(image,id);}const key=`${id}:${sx}:${sy}:${sw}:${sh}:${character?1:0}`;let entry=tiles.get(key);
   if(!entry){
    const at=now();if(at-windowAt>=SEED_CANVAS_LIGHT_BAKE_WINDOW_MS||at<windowAt){windowAt=at;windowBakes=0;}
    // A crowd can request more unique poses than the cache can retain. Preserve
@@ -34,8 +38,9 @@ export function createSeedCanvasPaint({review=seedVisualEnabled(globalThis.locat
    // Source-over transparent pixels do not erase an old pose in a recycled
    // backing store. Clear before copying, then restore the bake composite.
    g.clearRect(0,0,width,height);g.globalCompositeOperation='source-over';g.drawImage(image,sx,sy,sw,sh,0,0,width,height);
+   if(entry.character!==character){entry.light=null;entry.character=character;}
    if(!entry.light){const light=g.createLinearGradient(0,0,width,height);
-    light.addColorStop(0,'#fff3c522');light.addColorStop(.36,'#fff4d00a');light.addColorStop(.72,'#1f3a2520');light.addColorStop(1,'#162c2b47');entry.light=light;}
+    if(character){light.addColorStop(0,'#fff1c520');light.addColorStop(.22,'#fff4d006');light.addColorStop(.48,'#273c3100');light.addColorStop(.72,'#18323812');light.addColorStop(.88,'#10282e32');light.addColorStop(1,'#0c202644');}else{light.addColorStop(0,'#fff3c522');light.addColorStop(.36,'#fff4d00a');light.addColorStop(.72,'#1f3a2520');light.addColorStop(1,'#162c2b47');}entry.light=light;}
    g.globalCompositeOperation='source-atop';g.fillStyle=entry.light;g.fillRect(0,0,width,height);
    entry.key=key;tiles.set(key,entry);bytes+=width*height*4;
    // Capacity diagnostics need no JSON/DOM update when an eviction keeps the
@@ -55,7 +60,7 @@ export function createSeedCanvasPaint({review=seedVisualEnabled(globalThis.locat
   const a=1-progress,p=reducedMotion?.28:progress;ctx.save();ctx.globalAlpha*=a;ctx.strokeStyle=color;ctx.lineWidth=Math.max(size*.055,.025);ctx.beginPath();ctx.ellipse(x,y,size*(.22+.56*p),size*(.12+.28*p),0,0,Math.PI*2);ctx.stroke();
   ctx.fillStyle=SEED_VISUAL_LANGUAGE.colors.ivory;for(let i=0;i<4;i++){const angle=i*Math.PI/2+.6,d=size*(.12+p*.52);ctx.beginPath();ctx.ellipse(x+Math.cos(angle)*d,y+Math.sin(angle)*d*.76,size*.12*(reducedMotion?1:a),size*.035*(reducedMotion?1:a),angle,0,Math.PI*2);ctx.fill();}ctx.restore();return true;
  }
- return {review,draw,contact,impact,law:(law,fallback)=>review?SEED_VISUAL_LANGUAGE.laws[law]||fallback:fallback,
+ return {get character(){return characterState.enabled;},set character(value){characterState.enabled=Boolean(value);},review,draw,contact,impact,law:(law,fallback)=>review?SEED_VISUAL_LANGUAGE.laws[law]||fallback:fallback,
   stats,
   dispose(){if(disposed)return;disposed=true;for(const e of tiles.values()){e.tile.width=e.tile.height=0;e.light=null;e.prev=e.next=null;}tiles.clear();oldest=newest=null;bytes=0;if(review)onCacheChange(stats());}
  };

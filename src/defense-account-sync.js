@@ -1,5 +1,5 @@
 import {EXPANSION_OBJECTIVES,defenseObjectiveEligible} from './defense-objective.js';
-import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
+import {CIRCUIT_ACTS,expansionCircuitReleased,publicCircuitActCount} from './act-expansion.js';
 import {createDefenseAccountStore,validDefenseAccountRecord,DEFENSE_ACCOUNT_LIMIT} from './defense-account-save.js';
 
 const bytes=value=>JSON.stringify(value);
@@ -11,9 +11,9 @@ export function decodeDefenseAccountCloud(value,owner,circuit){
 }
 export function defenseAccountLabel(state){return ({synced:'계정에 저장됐어요 · 다른 기기에서도 준비를 이어할 수 있어요',empty:'저장된 준비가 없어요',local:'이 기기에 저장했어요 · 계정 전송 대기',checking:'계정 준비 저장을 확인하고 있어요…',conflict:'두 기기에서 따로 준비했어요 · 이어갈 기록을 선택하세요',remote:'다른 기기 기록이 바뀌었어요 · 나간 뒤 다시 확인하세요',offline:'연결이 끊겼어요 · 이 기기 저장은 보존돼요',permission:'계정 저장 권한 확인이 필요해요 · 이 기기 저장은 보존돼요',invalid:'읽을 수 없는 저장이 있어요 · 원본을 보존합니다',storage:'저장 공간을 확인해 주세요 · 계정 기록은 덮지 않았어요',account:'계정이 바뀌었어요 · 기록을 덮지 않았어요',lease:'다른 창에서 수호전을 진행 중이에요',ineligible:'이 기기에만 저장해요'})[state?.kind]||'계정 저장 확인이 필요해요';}
 
-export function createDefenseAccountSync({storage,account,owner,circuit=3,lease,databaseURL,acts=EXPANSION_ACTS,objectives=EXPANSION_OBJECTIVES,practice=()=>false,isActive=()=>false,fetchImpl=globalThis.fetch,timeout=10000,onState=()=>{}}={}){
+export function createDefenseAccountSync({storage,account,owner,circuit=3,lease,databaseURL,acts=CIRCUIT_ACTS,objectives=EXPANSION_OBJECTIVES,practice=()=>false,isActive=()=>false,fetchImpl=globalThis.fetch,timeout=10000,onState=()=>{}}={}){
  let state={kind:'local',owner},flight=null;
- const eligible=()=>account.user()?.uid===owner&&!account.user()?.isAnonymous&&practice()===false&&(circuit===3||circuit===5&&expansionCircuitReleased(acts));
+ const eligible=()=>account.user()?.uid===owner&&!account.user()?.isAnonymous&&practice()===false&&(circuit===3||circuit===5&&expansionCircuitReleased(acts)||circuit===6&&publicCircuitActCount(acts)>=6);
  const current=()=>{if(!eligible())throw Error('account');if(!lease?.active())throw Error('lease');};
  const store=createDefenseAccountStore({storage,owner,circuit,currentOwner:()=>account.user()?.uid,lease,acts,objectives});
  const metaKey=store.key+':sync',set=(kind,extra={})=>{state={kind,owner,...extra};onState(state);return state;};

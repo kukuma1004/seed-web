@@ -1,7 +1,7 @@
 export const COMBO_ART=Object.freeze({
  cores:'combo-cores-v1.webp',
  shells:'combo-shells-v1.webp',
- projectiles:'combo-projectiles-v1.webp'
+ projectiles:'mobile/combo-projectiles-botanical-v2.png'
 });
 
 const BASE=import.meta.env?.BASE_URL||'/';

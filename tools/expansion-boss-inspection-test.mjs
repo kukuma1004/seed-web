@@ -44,10 +44,11 @@ assert.equal(context.canSaveExpansion(),false,'scripted journey never enters sav
 assert(source.includes('if(bossPreview&&(publicRun||resume||!localInspection))return false;'));
 assert(source.includes('bossPreview:localInspection?bossPreview:null'));
 assert(view.includes("['127.0.0.1','localhost'].includes(location.hostname)"));
-assert(view.includes("has('inspect')&&isolated()?createDefenseBossInspection"));
+assert(view.includes("has('inspect')&&isolated()?(bossPreview==='arbor'?createDefenseArborInspection"),'all scripted defense previews retain the inspect and isolated-run gates');
+assert(view.includes('createDefenseBossInspection(bossPreview,{enabled:actCount>=5})'),'explicit legacy expansion inspection still delegates to its original actual boss factory');
 // Actual canvas framing must retain the old three-act projection while making
 // room for a larger expansion boss above the entry path and below the HUD.
-const projectionStart=view.indexOf('const expanded=state.actCount===5'),projectionEnd=view.indexOf('dirty=true;placeButtons();',projectionStart);
+const projectionStart=view.indexOf('const expanded=state.actCount>=5'),projectionEnd=view.indexOf('dirty=true;placeButtons();',projectionStart);
 assert(projectionStart>=0&&projectionEnd>projectionStart);
 for(const [width,height] of [[844,390],[1280,720]])for(const actCount of [3,5]){
  const context=vm.createContext({width,height,state:{actCount,wave:60},defenseWaveInfo,scale:0,ox:0,oy:0});

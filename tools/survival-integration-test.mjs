@@ -102,7 +102,7 @@ const nodes=new Map(),node=id=>{
  return nodes.get(id);
 };
 let writes=0,retryLab,homeVisits=0,setupVisits=0,stored=null;
-const finishContext=vm.createContext({survivalSaveToken:null,survivalPendingEnd:null,settleSurvivalTitle(){},
+const finishContext=vm.createContext({survivalSaveToken:null,survivalPendingEnd:null,survivalArborCue:null,settleSurvivalTitle(){},
  rankingDecision:()=>({eligible:false}),developerRun:false,localInspection:false,score:100,playerName:'씨앗',adminMode:false,betaTesterMode:false,account:{user:()=>null},paceTrusted:()=>true,paceGame:1,paceReal:1,
  survivalPersonalRecord:()=>readSurvivalRecord(finishContext.rawStorage),survivalRecordStorage:s=>s,survivalOwner:()=> 'guest',
  document:{body:{classList:{add(){}}}},elapsed:34,

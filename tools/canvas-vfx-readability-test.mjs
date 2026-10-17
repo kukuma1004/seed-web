@@ -5,6 +5,7 @@ import {createCanvasVfx,VFX_TINT_LIMIT} from '../src/canvas-vfx.js';
 // This verifies commands/state/resource bounds, not browser pixels or taste.
 class Shape{
  constructor(){this.commands=[];}
+ arc(...a){this.commands.push(['arc',...a]);}
  moveTo(...a){this.commands.push(['moveTo',...a]);}lineTo(...a){this.commands.push(['lineTo',...a]);}quadraticCurveTo(...a){this.commands.push(['quadraticCurveTo',...a]);}bezierCurveTo(...a){this.commands.push(['bezierCurveTo',...a]);}ellipse(...a){this.commands.push(['ellipse',...a]);}closePath(){this.commands.push(['closePath']);}
 }
 class Context extends Shape{
@@ -26,7 +27,7 @@ try{
  assert(vfx.ready());assert.equal(images.length,2);
  for(const law of laws){
   ctx.calls=[];vfx.projectile(ctx,law,7,11,Math.PI/3,2,'#f1d48a',1200);
-  const stamps=ctx.calls.filter(c=>c[0]==='image'),fill=ctx.calls.find(c=>c[0]==='fill'),stroke=ctx.calls.find(c=>c[0]==='stroke');
+  const stamps=ctx.calls.filter(c=>c[0]==='image'),fill=ctx.calls.find(c=>c[0]==='fill'&&c[5]==='evenodd'),stroke=ctx.calls.find(c=>c[0]==='stroke'&&c[3]==='#18302c');
   assert.equal(stamps.length,2,'two existing stamps, no extra glow layers');assert(stamps.every(c=>c[1]==='lighter'&&c[2]<=.42));
   assert.equal(fill[1],'source-over');assert.equal(fill[2],.94);assert.equal(fill[3],'#f1d48a');assert.equal(fill[5],'evenodd');assert.equal(stroke[3],'#18302c');assert(stroke[5]<.08,'outline stays smaller than projectile');
   assert(ctx.calls.some(c=>c[0]==='translate'&&c[1]===7&&c[2]===11));assert(ctx.calls.some(c=>c[0]==='rotate'&&c[1]===Math.PI/3),'core follows actual travel direction');
@@ -34,7 +35,7 @@ try{
  }
  assert.equal(new Set(shapeSignatures).size,10,'all nine laws and ordinary seed have distinct compact silhouettes');
  const warmed=canvases.length;for(let i=0;i<1000;i++)vfx.projectile(ctx,laws[i%10],7,11,0,2,'#f1d48a',1200);assert.equal(canvases.length,warmed,'normal palette is cached after warmup');
- for(let i=0;i<90;i++)vfx.effect(ctx,{kind:'hit',x:2,y:3,law:'pierce'},.15,`#${(0x225500+i).toString(16)}`,1);
+ for(let i=0;i<180;i++)vfx.effect(ctx,{kind:'hit',x:2,y:3,law:'pierce'},.15,`#${(0x225500+i).toString(16)}`,1);
  assert.equal(canvases.filter(c=>c.width>0&&c.height>0).length,VFX_TINT_LIMIT,'changing colours cannot accumulate retained tiles');assert(canvases.filter(c=>c.width===0).length>0,'evicted backing stores released');
  assert(canvases.filter(c=>c.width>0).every(c=>c.width===128&&c.height===128),'only requested atlas cells are tinted');
  assert.equal(vfx.stats().bytes,8*1024*1024,'worst case bounded to eight RGBA atlas equivalents instead of24');
@@ -46,7 +47,7 @@ try{
  const beforeReady=ready;images[1].onload();assert.equal(ready,beforeReady+1);assert.equal(canvases.filter(c=>c.width>0).length,0,'atlas reload clears all owned tinted stores');
  // Older embedded browser fallback still uses the same path, not a glow-only
  // replacement. Exercise it with a standard Canvas2D command interface.
- delete globalThis.Path2D;const fallback=createCanvasVfx(),fallbackCtx=new Context();fallback.projectile(fallbackCtx,'recall',1,2,0,1,'#88ddaa');assert(fallbackCtx.calls.find(c=>c[0]==='fill')[4].some(c=>c[0]==='quadraticCurveTo'));assert.equal(fallbackCtx.stack.length,0);
+ delete globalThis.Path2D;const fallback=createCanvasVfx(),fallbackCtx=new Context();fallback.projectile(fallbackCtx,'recall',1,2,0,1,'#88ddaa');assert(fallbackCtx.calls.find(c=>c[0]==='fill'&&c[5]==='evenodd')[4].some(c=>c[0]==='quadraticCurveTo'));assert.equal(fallbackCtx.stack.length,0);
  vfx.dispose();vfx.dispose();assert.equal(vfx.stats().bytes,0);assert.equal(vfx.stats().disposed,true);assert.equal(vfx.ready(),false);assert(images.slice(0,2).every(i=>i.onload===null),'late image callbacks disconnected on close');
  console.log('Canvas VFX PASS: preserved silhouettes/blending, warm reuse,128 small tile cap (8MiB vs24MiB), zero backing stores after idempotent teardown, atlas refresh and Path2D fallback. CPU instrumentation; live pixels/device acceptance separate.');
 }finally{for(const [key,value] of Object.entries(previous)){if(value===undefined)delete globalThis[key];else globalThis[key]=value;}}

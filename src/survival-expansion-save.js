@@ -1,7 +1,9 @@
 import {createExpansionCrystalWalls} from './act-expansion-runtime.js';
+import {restoreSurvivalArbor} from './survival-arbor.js';
 const finite=(v,min,max)=>Number.isFinite(v)&&v>=min&&v<=max;
 export function validSurvivalExpansionCheckpoint(saved,act,lap){
  if(!saved||saved.act!==act||!Array.isArray(saved.walls))return false;
+ if(act===5)return saved.walls.length===0&&Boolean(restoreSurvivalArbor(saved.boss,lap));
  const walls=act===4?createExpansionCrystalWalls(Math.min(4,lap)):[],ids=new Map(walls.map(w=>[w.id,w.maxHp]));
  if(saved.walls.length!==walls.length||new Set(saved.walls.map(w=>w?.id)).size!==walls.length||saved.walls.some(w=>!w||!ids.has(w.id)||!finite(w.hp,0,ids.get(w.id))))return false;
  const b=saved.boss;if(!b||b.version!==1||b.id!==(act===3?'crosswindKeeper':'crystalGardener')||!['recover','tell','attack'].includes(b.state))return false;

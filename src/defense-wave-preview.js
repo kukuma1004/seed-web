@@ -9,7 +9,7 @@ export function defenseWavePreview(state){
   const kind=defenseSpawnKind(info.wave,i,info);counts[kind]++;
   if(info.act===3&&kind!=='boss'&&i%6===5)rear++;
  }
- const advice=info.boss?'문지기·보스의 후반 심장 공격에 대비하세요':
+ const advice=info.act===5?(info.final?'아르보의 부채탄을 막고, 뿌리가 예고된 씨앗을 옮기세요 · 열린 꽃심이 반격 기회예요':'금빛 뿌리 예고가 뜨면 씨앗을 다른 빈 화단으로 옮겨요 · 그대로면 잠시 공격이 묶여요'):info.boss?'문지기·보스의 후반 심장 공격에 대비하세요':
   rear?'뒤쪽 길에도 씨앗을 나눠 배치하세요':
   counts.shield&&counts.fast?'관통으로 방패를, 빙결로 빠른 적을 대비하세요':
   counts.shield?'방패는 관통으로 무시할 수 있어요':
