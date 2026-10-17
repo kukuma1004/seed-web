@@ -117,9 +117,9 @@ test('actual launcher + restart + wave capture a normal-owner Act 6 boundary wit
  assert.equal(save.validArborEntry(f.c.arborEntry),true);tick(f);assert.equal(f.c.enemies.length,2);assert.ok(f.c.enemies.every(e=>e.arborId));f.normalUnchanged();await f.cleanup();
 });
 test('actual death receipts clear one sector, save its reward and preserve exit on a failed advance',async()=>{
- const f=fixture();assert.ok(await f.c.startArborJourney());clearSector(f);assert.equal(f.c.arborJourney.wardens,1);assert.equal(f.c.arborEntry.world.phase,'cleared');assert.equal(f.c.exitOpen,true);
+ const f=fixture();assert.ok(await f.c.startArborJourney());clearSector(f);assert.equal(f.c.arborJourney.wardens,0,'a normal room never grants a warden');assert.equal(f.c.arborJourney.circuit.room,0);assert.equal(f.c.arborEntry.world.phase,'cleared');assert.equal(f.c.exitOpen,true);
  const before=f.c.arborEntry.revision;f.setFail(true);f.c.exitArborJourney();assert.equal(f.c.arborJourney.sector,0);assert.equal(f.c.arborEntry.revision,before);assert.equal(f.c.exitOpen,true);
- f.setFail(false);f.c.player.position.set(13,0,11);f.c.useExit();assert.equal(f.c.arborJourney.sector,0,'remote exit press does not teleport');f.c.player.position.set(f.c.arena.exit.x,0,f.c.arena.exit.z);f.c.useExit();assert.equal(f.c.arborJourney.sector,1);assert.equal(f.c.arborJourney.phase,'skirmish');assert.equal(f.c.arborEntry.world.sector,1);assert.equal(f.c.stage,1);assert.equal(f.c.arborEntry.revision,before+1,'advance saves once, wave does not duplicate it');f.normalUnchanged();await f.cleanup();
+ f.setFail(false);f.c.player.position.set(13,0,11);f.c.useExit();assert.equal(f.c.arborJourney.sector,0,'remote exit press does not teleport');f.c.player.position.set(f.c.arena.exit.x,0,f.c.arena.exit.z);f.c.useExit();assert.equal(f.c.arborJourney.sector,0);assert.equal(f.c.arborJourney.circuit.room,1);assert.equal(f.c.arborJourney.phase,'skirmish');assert.equal(f.c.arborEntry.world.sector,0);assert.equal(f.c.arborEntry.world.circuit.room,1);assert.equal(f.c.stage,1);assert.equal(f.c.arborEntry.revision,before+1,'advance saves once, wave does not duplicate it');f.normalUnchanged();await f.cleanup();
 });
 test('clear-boundary write failure stays paused and opens after an explicit retry',async()=>{
  const f=fixture();assert.ok(await f.c.startArborJourney());

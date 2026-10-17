@@ -15,7 +15,7 @@ export function createJourneyWorldKit(parent,{lowQuality=false,loader=null,base=
  };
  material.customProgramCacheKey=()=> 'journey-world-kit-v1';
  const mesh=new THREE.InstancedMesh(geometry,material,CAPACITY);mesh.name='journey-flower-masonry-and-landmarks';mesh.count=0;mesh.instanceMatrix.setUsage(THREE.StaticDrawUsage);root.add(mesh);
- const pose=new THREE.Object3D(),tint=new THREE.Color();let texture=null,started=false,ready=false,active=false,disposed=false,layoutKey='',writes=0;
+ const pose=new THREE.Object3D(),tint=new THREE.Color();let texture=null,started=false,ready=false,active=false,disposed=false,layoutKey='',writes=0,positionScaleX=1,positionScaleZ=1;
  const refresh=()=>{root.visible=!disposed&&active&&ready&&mesh.count>0;};
  function load(){
   if(started||disposed||!loader&&(typeof document==='undefined'||typeof document.createElementNS!=='function'))return;
@@ -28,13 +28,13 @@ export function createJourneyWorldKit(parent,{lowQuality=false,loader=null,base=
  function add(tile,x,z,width,height,y=.06,color=0xffffff,flip=false){
   if(mesh.count>=CAPACITY)return;
   const index=mesh.count++,[x0,y0,x1,y1]=REGIONS[tile];
-  pose.position.set(x,y,z);pose.rotation.set(0,0,0);pose.scale.set(width,height,height);pose.updateMatrix();mesh.setMatrixAt(index,pose.matrix);
+  pose.position.set(x*positionScaleX,y,z*positionScaleZ);pose.rotation.set(0,0,0);pose.scale.set(width,height,height);pose.updateMatrix();mesh.setMatrixAt(index,pose.matrix);
   tint.setHex(color);mesh.setColorAt(index,tint);
   geometry.getAttribute('kitRegion').setXYZW(index,flip?x1:x0,1-y1,(x1-x0)*(flip?-1:1),y1-y0);writes++;
  }
- function setLayout(layout,{x=0,z=0,sector=0}={}){
-  if(disposed)return;const act=layout?.act||'arbor',key=layout?`${act}:${layout.room}:${layout.round}:${x}:${z}`:`arbor:${sector}`;
-  if(key===layoutKey)return;layoutKey=key;mesh.count=0;
+ function setLayout(layout,{x=0,z=0,sector=0,positionScaleX:scaleX=1,positionScaleZ:scaleZ=1}={}){
+  if(disposed)return;const act=layout?.act||'arbor',key=layout?`${act}:${layout.room}:${layout.round}:${x}:${z}:${layout.courseLength??''}`:`arbor:${sector}:${scaleX}:${scaleZ}`;
+  if(key===layoutKey)return;layoutKey=key;positionScaleX=Number.isFinite(scaleX)&&scaleX>0?scaleX:1;positionScaleZ=Number.isFinite(scaleZ)&&scaleZ>0?scaleZ:1;mesh.count=0;
   if(layout&&!['skyway','crosswind','crystalGorge'].includes(act)){refresh();return;}
   if(act==='skyway'){
    // Islands remain outside the exact route. Their bottom-hung rock is below

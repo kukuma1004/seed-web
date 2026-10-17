@@ -85,10 +85,10 @@ export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry
  const props=batch('arbor-garden-landmarks',atlasGeometry(ARBOR_GARDEN_LIMITS.props),propMaterial,ARBOR_GARDEN_LIMITS.props);
  const curbs=batch('arbor-outside-flowerbed-masonry',curbGeometry(),curbMaterial,ARBOR_GARDEN_LIMITS.beds);
  const pose=new THREE.Object3D(),color=new THREE.Color(),batches=[lawns,plants,props,curbs];
- let disposed=false,active=false,sector=-1,layoutWrites=0,matrixWrites=0,visibilityKey=-1,visibilityWrites=0;
+ let disposed=false,active=false,sector=-1,circuitWide=false,layoutWrites=0,matrixWrites=0,visibilityKey=-1,visibilityWrites=0;
  const add=(mesh,x,y,z,sx,sy,sz,angle=0,tint=0xffffff)=>{
   if(mesh.count>=mesh.instanceMatrix.count)throw new Error('arbor garden capacity');
-  pose.position.set(x,y,z);pose.scale.set(sx,sy,sz);pose.rotation.set(0,angle,0);pose.updateMatrix();mesh.setMatrixAt(mesh.count,pose.matrix);color.setHex(tint);mesh.setColorAt(mesh.count,color);mesh.count++;matrixWrites++;
+  const fx=circuitWide?18/14:1,fz=circuitWide?15/12:1,horizontal=mesh===lawns||mesh===curbs;pose.position.set(x*fx,y,z*fz);pose.scale.set(horizontal?sx*fx:sx,sy,horizontal?sz*fz:sz);pose.rotation.set(0,angle,0);pose.updateMatrix();mesh.setMatrixAt(mesh.count,pose.matrix);color.setHex(tint);mesh.setColorAt(mesh.count,color);mesh.count++;matrixWrites++;
  };
  const art=(mesh,item,regions)=>{
   const [x0,y0,x1,y1]=regions[item.tile],height=item.height,width=height*(x1-x0)/(y1-y0),index=mesh.count;
@@ -102,9 +102,9 @@ export function createArborGardenPresentation(parent,{loadAsset,bind,ownGeometry
   const key=active&&sector>=0?4+Number(records.plants.ready)+Number(records.props.ready)*2:0;if(key===visibilityKey)return;visibilityKey=key;visibilityWrites++;
   root.visible=active&&sector>=0;ground.visible=true;lawns.visible=lawns.count>0;curbs.visible=curbs.count>0;plants.visible=records.plants.ready&&plants.count>0;props.visible=records.props.ready&&props.count>0;
  }
- function setSector(value){
-  if(disposed)return false;const next=Math.max(0,Math.min(4,Number.isFinite(value)?value|0:0));if(next===sector){refresh();return false;}
-  sector=next;worldKit.setLayout(null,{sector});layoutWrites++;for(const mesh of batches)mesh.count=0;
+ function setSector(value,{roomCircuit=false}={}){
+  if(disposed)return false;const next=Math.max(0,Math.min(4,Number.isFinite(value)?value|0:0));if(next===sector&&circuitWide===roomCircuit){refresh();return false;}circuitWide=roomCircuit;
+  ground.scale.set(roomCircuit?18/14:1,1,roomCircuit?15/12:1);sector=next;worldKit.setLayout(null,{sector,positionScaleX:roomCircuit?18/14:1,positionScaleZ:roomCircuit?15/12:1});layoutWrites++;for(const mesh of batches)mesh.count=0;
   const layout=ARBOR_GARDEN_LAYOUTS[sector];
   for(const p of layout.patches){
    const vertical=p.d>p.w,long=vertical?p.d:p.w,minor=vertical?p.w:p.d,count=Math.max(2,Math.min(4,Math.ceil(long/4)));

@@ -1,7 +1,7 @@
 import {LAWS,offerLaws} from './laws.js';
 import {isStarRoom} from './room-rotation.js';
 import {STADIUM_ROOMS,isAct2} from './act2.js';
-import {SKYWAY_ROOMS,isAct3} from './act3.js';
+import {skywayRoomFor,isAct3} from './act3.js';
 const wall=(x,z,w,d,h=1.4)=>({x,z,w,d,h});
 // 한 판의 찐보스를 세 번 이기면 완주한다. 다섯 여정마다 한 번이므로 15번째 여정에서 끝난다.
 export const FINAL_BOSS_CAP=3,FINAL_BOSS_EVERY=5;
@@ -26,7 +26,7 @@ export const GARDEN_ROUTE_ROOMS=Object.freeze([
  Object.freeze({name:'갈라진 뿌리길',hint:'가운데 길은 열려 있어요 · 두 날개를 돌아 적의 사선을 끊으세요',covers:[wall(-3,0,1.2,4),wall(3,-1,1.2,4)],enemies:[['caster',-6,-3],['caster',6,-3],['hound',0,-4]],shield:{x:0,z:1}}),
  Object.freeze({name:'빛샘의 교차로',hint:'네 모서리에서 몰려와요 · 기둥 사이를 지나 한쪽부터 돌파하세요',covers:[wall(-3,-2,1.2,1.2),wall(3,-2,1.2,1.2),wall(-4.6,.5,1.2,1.2),wall(4.6,.5,1.2,1.2)],enemies:[['caster',-6,-4],['caster',6,-4],['hound',-6,3],['hound',6,3]],elite:{x:0,z:-4.8},shield:{x:0,z:1}})
 ]);
-export function roomFor(stage,cycle=0,region='garden'){if(isAct3(region))return SKYWAY_ROOMS[stage];if(isAct2(region))return STADIUM_ROOMS[stage];if(isStarRoom(stage,cycle))return STAR_ROOM;if(cycle>0&&(stage===0||stage===3)&&cycle%2===1)return GARDEN_ROUTE_ROOMS[stage===0?0:1];return ROOMS[stage];}
+export function roomFor(stage,cycle=0,region='garden'){if(isAct3(region))return skywayRoomFor(stage,cycle);if(isAct2(region))return STADIUM_ROOMS[stage];if(isStarRoom(stage,cycle))return STAR_ROOM;if(cycle>0&&(stage===0||stage===3)&&cycle%2===1)return GARDEN_ROUTE_ROOMS[stage===0?0:1];return ROOMS[stage];}
 export const LAW_NAMES=Object.fromEntries(Object.entries(LAWS).map(([id,v])=>[id,v.name]));
 export function rewardOptions(room,laws,mutated=[],options={}){
  const random=options.random||Math.random;

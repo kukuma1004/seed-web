@@ -1,5 +1,6 @@
 // Presentation derives from canonical journey/campaign state; never awards or
 // infers a victory from a room number, guard death, or broken scenery.
+import {expansionRoomCircuit,expansionGateIndex} from './expansion-guardians.js';
 const bossNames={crosswind:'횡풍의 수호자',crystalGorge:'수정의 정원사'};
 export const CROSSWIND_ENTRY_HINTS=Object.freeze(['전진·처치 → 순풍! / 모래 회피·반사판 활용','뒤 조준을 남기고 전진 · 회복 중인 편대 먼저!','양쪽 조준이 겹치면 다른 줄로 회피!','앞뒤 협공! · 한쪽 편대를 먼저 끊으세요','조준을 한쪽에 남기고 반대 줄로 회피!']);
 // Read the real open-exit state in the host before calling this. These words
@@ -7,6 +8,10 @@ export const CROSSWIND_ENTRY_HINTS=Object.freeze(['전진·처치 → 순풍! / 
 export function journeyRouteCue({region,stage,cycle=0,bossName='',bossAhead=false,bossWins=0,expansion=null,campaign=null,publicExpansion=false}={}){
  if(expansion){
   if(!Object.hasOwn(bossNames,expansion.act)||!['course','boss'].includes(expansion.phase)||!Number.isInteger(expansion.room)||expansion.room<0||expansion.room>4)return null;
+  if(expansion.phase==='course'&&expansionRoomCircuit(expansion)){
+   const final=expansion.room===4&&expansion.guardians.cleared===5;
+   return {title:final?bossNames[expansion.act]+'에게':expansion.room===3?'문지기의 방으로':expansion.room===4?'다음 여정으로':'다음 방으로',detail:final?'다섯 문지기 격파 · 최종 보스와 맞섭니다':`문지기 ${expansion.guardians.cleared}/5 · ${expansion.room===4?'새 여정의 첫 방':`${expansion.room+2}/5번째 방`}`,automatic:false};
+  }
   if(expansion.phase==='course')return expansion.room===4?{title:bossNames[expansion.act]+'에게',detail:'출구 너머에서 최종 보스와 맞섭니다',automatic:false}:{title:'다음 전장으로',detail:`${expansion.room+2}/5 전장 · 출구를 눌러 이동하세요`,automatic:false};
   if(!publicExpansion)return {title:'보스 검토 마치기',detail:'로컬 검토 · 계정 기록과 보상 제외',automatic:false};
   const wins=expansionBossProgress(expansion,campaign);
@@ -26,14 +31,18 @@ export function expansionPurposeText(journey,campaign=null){
  if(!journey)return '';
  const progress=campaign?` · 최종 보스 ${expansionBossProgress(journey,campaign)}/3`:' · 로컬 검토';
  if(journey.phase==='boss')return `${bossNames[journey.act]} · 최종 보스 결전${progress}`;
+ if(expansionRoomCircuit(journey))return `${journey.act==='crosswind'?'4막':'5막'} · 여정 ${expansionGateIndex(journey)+1} · ${journey.room===4?'문지기의 방':`방 ${journey.room+1}/5`} · 문지기 ${journey.guardians.cleared}/5${progress}`;
  if(journey.siege)return `5막 · 심장 방어 ${journey.room+1}/5${progress}`;
  return `${journey.act==='crosswind'?'4막 · 항로 돌파':'5막 · 이전 협곡 여정'} ${journey.room+1}/5${progress}`;
 }
 export function expansionPurposeHint(journey,roomHint=''){
  if(journey?.phase==='boss')return journey.siege?'수정의 정원사와 결전 · 새로 자라는 습격대를 먼저 끊어 심장을 지키세요':'최종 보스의 준비 동작을 피하고 회복할 때 반격하세요';
+ if(expansionRoomCircuit(journey)&&journey.room===4)return journey.siege?'다섯 번째 방 · 심어 둔 포탑과 문지기를 쓰러뜨리세요':'다섯 번째 방 · 바뀐 엄폐물을 돌며 문지기를 피하고 쏘세요';
+ if(expansionRoomCircuit(journey)&&journey.siege)return '수정 채집 → 시설 심기 → 습격 방어 · 다섯 번째 방은 문지기';
  return journey?.siege?'수정 채집 → 시설 심기 · 밤에는 포탑 지원과 수리 · 다섯 습격 뒤 최종 보스':journey?.act==='crystalGorge'?`이전 협곡 저장을 이어갑니다 · ${roomHint}`:journey?.act==='crosswind'&&journey.course?.encounterVersion===3?(CROSSWIND_ENTRY_HINTS[journey.room]||roomHint):roomHint;
 }
 export function expansionExitText(journey,campaign=null){
+ if(journey.phase==='course'&&expansionRoomCircuit(journey))return journey.room===4?(journey.guardians.cleared===5?'최종 보스에게 · E':'다음 여정으로 · E'):journey.room===3?'문지기의 방으로 · E':'다음 방으로 · E';
  if(journey.phase==='course')return journey.room===4?'최종 보스에게 · E':'다음 전장으로 · E';
  if(!campaign)return '로컬 보스 검토 마치기 · E';
  const wins=expansionBossProgress(journey,campaign);

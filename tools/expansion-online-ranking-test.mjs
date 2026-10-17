@@ -11,7 +11,7 @@ assert.equal(ACT.CROSSWIND_KEEPER,4);assert.equal(ACT.CRYSTAL_GARDENER,5);assert
 for(const act of [4,5]){
  const e={...entry,act};assert(!validRun(e,{acts:closedExpansionActs}));assert(validRun(e,{acts}));
  assert(!validRun(e,{acts:{...acts,crystalGorge:{released:false}}}));
- for(const edit of [{cycle:3},{cycle:1},{stage:3},{score:1},{score:1e9},{time:1},{kills:1e7},{act:6}])assert(!validRun({...e,...edit},{acts}),JSON.stringify(edit));
+ for(const edit of [{cycle:3},{cycle:1},{stage:3},{score:1},{score:1e9},{time:1},{kills:1e7},{act:7}])assert(!validRun({...e,...edit},{acts}),JSON.stringify(edit));
  assert.match(bossText(buildRecord({austins:3}),act),act===4?/횡풍의 수호자 3회/:/수정의 정원사 3회/);
 }
 const board={a:entry,b:{...entry,act:5,score:25460},c:{...entry,uid:'v',score:25441}};
@@ -23,7 +23,7 @@ const rules=JSON.parse(fs.readFileSync('docs/firebase-rules-with-seed.json','utf
 function snap(value){return {val:()=>value,child:key=>snap(value?.[key]),hasChildren:keys=>keys.every(k=>value?.[k]!==undefined),isNumber:()=>typeof value==='number'};}
 function allowed(e,released){const root=snap({seedExpansionRelease:released?{crosswind:true,crystalGorge:true}:{crosswind:true,crystalGorge:false}});return Function('newData','root',`return (${rules['.validate']});`)(snap(e),root)&&Function('newData','root',`return (${rules.act['.validate']});`)(snap(e.act),root);}
 assert.equal(CROSSWIND_CIRCUIT_KILLS,220,'shared Survival/Defense packet budget is unchanged');assert.equal(EXPANSION_CIRCUIT_KILLS,166,'shared Survival/Defense packet budget is unchanged');
-assert.deepEqual(JOURNEY_EXPANSION_KILL_BUDGET,{4:225,5:171});
+assert.deepEqual(JOURNEY_EXPANSION_KILL_BUDGET,{4:846,5:636});
 const newMaximums=[];
 for(const act of [4,5]){
  const e={...entry,act};assert(allowed(e,true));assert(!allowed(e,false));
@@ -31,7 +31,7 @@ for(const act of [4,5]){
   const kills=JOURNEY_EXPANSION_KILL_BUDGET[act]*(cycle+1),max={...e,cycle,kills,score:kills*25+6000*(cycle+1),done:cycle===2};newMaximums.push(max);
   assert(validRun(max,{acts})&&allowed(max,true),`act ${act} lap ${cycle+1} includes five real Journey guardian kills`);
   assert(!validRun({...max,kills:max.kills+1},{acts})&&!allowed({...max,kills:max.kills+1},true),'one beyond each physical budget is rejected on both sides');
-  const legacyKills=(act===4?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*(cycle+1),legacy={...max,kills:legacyKills};assert(validRun(legacy,{acts})&&allowed(legacy,true),'earlier guardian-free legitimate records remain readable');
+  const legacyKills=(act===4?CROSSWIND_CIRCUIT_KILLS:EXPANSION_CIRCUIT_KILLS)*(cycle+1),legacy={...max,kills:legacyKills,score:legacyKills*25+6000*(cycle+1)};assert(validRun(legacy,{acts})&&allowed(legacy,true),'earlier guardian-free legitimate records remain readable');
  }
  for(const edit of [{cycle:3},{done:true,stage:2},{score:1e9},{time:1},{kills:372.5}])assert(!allowed({...e,...edit},true));
 }

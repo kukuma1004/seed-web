@@ -101,7 +101,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
   }
   barBack.count=barFill.count=barCount;if(barDirty){barBack.instanceMatrix.needsUpdate=barFill.instanceMatrix.needsUpdate=true;if(barFill.instanceColor)barFill.instanceColor.needsUpdate=true;}
   facilitiesSeen=true;
-  const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));
+  const phase=boss?(bossCleared?' 결전 승리 · 출구로 이동':coreDefense?' 보스 결전 · 재생 습격대에서 심장을 지키세요':s.journeyCircuit&&!s.journeyCircuit.wardenCleared?' 문지기 결전 · 심어 둔 포탑과 함께':' 보스 결전 · 심어 둔 포탑과 함께'):s.phase==='prep'?' 낮 · 채집과 준비':s.phase==='defense'?' 밤 · 정원의 심장을 지키세요':s.phase==='clear'?' 습격을 막았습니다':' 심장이 꺼졌습니다';const remaining=Math.max(0,Math.ceil(prepRemaining??prepDuration-s.elapsed));
   const liveText=Number.isInteger(liveEnemies)&&liveEnemies>=0?`남은 적 ${liveEnemies}`:'';
   // Survival owns a different wave ledger. Only the five-night Journey uses
   // this finite packet count; an empty arena never invents a clear receipt.
@@ -115,7 +115,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
   if(hud.dataset.command!==commandKey)hud.dataset.command=commandKey;if(hud.dataset.cleanup!==cleanupKey)hud.dataset.cleanup=cleanupKey;
   const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}|${pressure}|${detail}|${receipt}`;
   const choosing=menuOpen&&interactive&&s.phase==='prep'&&!boss;
-  if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):pressure||'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(receipt||detail)+'</small>';uiKey=text+'|'+choosing;}
+  if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':s.journeyCircuit&&!s.journeyCircuit.wardenCleared?'문지기 격파':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):pressure||'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(receipt||detail)+'</small>';uiKey=text+'|'+choosing;}
   if(!boss&&s.phase==='prep'&&interactive){
    interactiveNow=true;menu.hidden=false;const nextId=nearest?.id??null;if(nextId!==padId)menuOpen=false;padId=nextId;nearestPad=nearest;currentResources=s.resources;
    const key=padId+'|'+nearest?.kind+'|'+nearest?.level+'|'+(nearest?.hp>0)+'|'+currentResources;

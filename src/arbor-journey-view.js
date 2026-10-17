@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {arborRoomLayoutIndex} from './arbor-journey.js';
 import {ARBOR_ACT1_BOSS_SIZE} from './journey-actor-scale.js';
 import {createArborGardenPresentation} from './arbor-garden-presentation.js';
 import {journeySurfaceLight} from './journey-surface-light.js';
@@ -84,7 +85,7 @@ function livingRootGeometry(){
 export function createArborJourneyView(scene,{camera=null,lowQuality=false,loader=null,base=BASE_URL}={}){
  const world=new THREE.Group();world.name='arbor-journey';world.visible=false;scene.add(world);
  const materials=new Set(),geometries=new Set(),textures=new Set(),assets=[];
- let disposed=false,enabled=false,sector=-1,clock=0,updates=0,poseWrites=0,bossActor=null,bossFrame=-1,bossAttackUntil=-1,impactEvents=0,impactWrites=0;
+ let disposed=false,enabled=false,sector=-1,circuitWide=false,clock=0,updates=0,poseWrites=0,bossActor=null,bossFrame=-1,bossAttackUntil=-1,impactEvents=0,impactWrites=0;
  const ownMaterial=m=>(materials.add(m),m),ownGeometry=g=>(geometries.add(g),g);
  const textureLoader=loader||new THREE.TextureLoader();
  function loadAsset(file){
@@ -158,8 +159,8 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
  function update(state,player,{dt=0,active=true,reducedMotion=false,boss=null}={}){
   if(disposed||!enabled||!active||!state)return;
   updates++;clock+=clamp(finite(dt),0,.1);
-  const nextSector=clamp(finite(state.sector)|0,0,4);
-  if(sector!==nextSector){sector=nextSector;gardenCourt.setSector(sector);floor.rotation.y=0;floorMaterial.color.setHex(floorAsset.ready?SECTOR_TINTS[sector]:0xa3ae88);}
+  const nextSector=arborRoomLayoutIndex(state);const floorWidth=state.circuit?36/72:28/72,floorDepth=state.circuit?30/72:24/72;if(floor.scale.x!==floorWidth||floor.scale.z!==floorDepth)floor.scale.set(floorWidth,1,floorDepth);
+  if(sector!==nextSector||circuitWide!==Boolean(state.circuit)){sector=nextSector;circuitWide=Boolean(state.circuit);gardenCourt.setSector(sector,{roomCircuit:circuitWide});floor.rotation.y=0;floorMaterial.color.setHex(floorAsset.ready?SECTOR_TINTS[sector]:0xa3ae88);}
   else if(floorAsset.ready&&floorMaterial.color.getHex()===0xa3ae88)floorMaterial.color.setHex(SECTOR_TINTS[sector]);
   gardenCourt.refresh();
   const roots=Array.isArray(state.roots)?state.roots:[];

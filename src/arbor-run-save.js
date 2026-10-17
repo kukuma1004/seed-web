@@ -1,5 +1,5 @@
 import {validCheckpoint,roomExitCheckpoint} from './run-save.js';
-import {checkpointArborJourney,restoreArborJourney} from './arbor-journey.js';
+import {checkpointArborJourney,restoreArborJourney,arborRoomIndex} from './arbor-journey.js';
 
 export const ARBOR_SAVE_KEY='seed-arbor-entry-v1';
 const copy=v=>JSON.parse(JSON.stringify(v));
@@ -11,7 +11,7 @@ export function validArborEntry(v,owner=v?.owner){
  try{
   if(v?.version!==1||v.kind!=='arbor-room-entry'||!validOwner(owner)||v.owner!==owner||!validId(v.id)||!Number.isSafeInteger(v.revision)||v.revision<0||!validCheckpoint(v.run))return false;
   const s=restoreArborJourney(v.world);if(!s||JSON.stringify(checkpointArborJourney(s))!==JSON.stringify(v.world))return false;
-  if(v.run.region!=='garden'||v.run.mode!=='entry'||v.run.cycle!==s.round||v.run.stage!==s.sector||v.run.wardens!==s.wardens||v.run.austins!==s.bossWins)return false;
+  if(v.run.region!=='garden'||v.run.mode!=='entry'||v.run.cycle!==s.round||v.run.stage!==arborRoomIndex(s)||v.run.wardens!==s.wardens||v.run.austins!==s.bossWins)return false;
   // Only a real boundary is durable: retry cannot carry unfinished kills and
   // upgrades into a freshly populated room, nor replay a completed guardian.
   return (s.phase==='cleared'||s.phase==='complete'||s.phase==='boss'&&!s.pending.length||s.phase==='skirmish'&&!s.pending.length&&!s.spawnIndex)&&Number.isFinite(v.savedAt)&&v.savedAt>=0;

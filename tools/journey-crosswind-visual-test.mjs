@@ -12,7 +12,7 @@ import {crosswindUndertowFields,applyCrosswindUndertow,CROSSWIND_UNDERTOW} from 
 import {constrainToArena} from '../src/arena.js';
 import {reflectMirrorPanels} from '../src/mirror-fighter.js';
 
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),arenaStart=main.indexOf('arena=s.siege?'),arenaEnd=main.indexOf(';',arenaStart)+1;
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),arenaStart=main.indexOf("arena=s.act==='crosswind'&&expansionRoomCircuit(s)"),arenaEnd=main.indexOf(';',arenaStart)+1;
 const scaleHost=main.slice(main.indexOf(' const journeyReadable='),main.indexOf(' contactShadows.mesh.visible=',main.indexOf(' const journeyReadable=')));
 assert(scaleHost.includes('journeyPlayerScale(canvasRect.width,canvasRect.height,expansionJourney?.act)'));
 for(const region of ['garden','stadium','skyway'])for(const variant of ['native','survival','mirror','training','crosswind','siege'])for(const [width,height] of [[1280,720],[640,360]]){
@@ -23,7 +23,7 @@ for(const region of ['garden','stadium','skyway'])for(const variant of ['native'
 }
 assert(arenaStart>=0&&arenaEnd>arenaStart,'exercise the shipping host arena, not a duplicate arena fixture');
 const hostArena=(phase,encounterVersion)=>{
- const context={s:{act:'crosswind',phase,course:{encounterVersion}},canyon:false,distance:48,length:140};
+ const context={expansionRoomCircuit:()=>false,s:{act:'crosswind',phase,course:{encounterVersion}},canyon:false,distance:48,length:140};
  runInNewContext(main.slice(arenaStart,arenaEnd),context);return context.arena;
 };
 const camera=new THREE.PerspectiveCamera(39,1,.1,100),point=new THREE.Vector3(),matrix=new THREE.Matrix4(),bounds=new THREE.Box3();

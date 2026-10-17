@@ -1,9 +1,10 @@
 import {createCrystalSiege,stepCrystalSiege,checkpointCrystalSiege,restoreCrystalSiege} from './crystal-siege-rules.js';
-import {validExpansionGuardians,expansionGuardiansAllowAdvance} from './expansion-guardians.js';
+import {validExpansionGuardians,expansionGuardiansAllowAdvance,expansionRoomCircuit,expansionGateIndex} from './expansion-guardians.js';
+export {expansionRoomCircuit,expansionGateIndex} from './expansion-guardians.js';
 import {EXPANSION_ACTS} from './act-expansion.js';
 import {CRYSTAL_DEFENSE_OBJECTIVE} from './expansion-objective.js';
 export {EXPANSION_OBJECTIVES,freshExpansionObjective,pinnedExpansionObjective} from './expansion-objective.js';
-import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,createExpansionBoss,stepExpansionBoss,checkpointExpansionBoss,restoreExpansionCourse,restoreExpansionBoss,EXPANSION_RUNTIME_LIMITS} from './act-expansion-runtime.js';
+import {createExpansionCourse,stepExpansionCourse,checkpointExpansionCourse,createExpansionBoss,stepExpansionBoss,checkpointExpansionBoss,restoreExpansionCourse,restoreExpansionBoss,EXPANSION_RUNTIME_LIMITS,CROSSWIND_DENSE_PACKETS,EXPANSION_COURSE_PACKETS,expansionCoursePacketCount,crosswindCourseLength} from './act-expansion-runtime.js';
 export {createCrystalCombatBridge,traceCrystalProjectile} from './crystal-combat-bridge.js';
 export {EXPANSION_ACTS};
 export {crosswindReflectorPanels} from './act-expansion.js';
@@ -12,6 +13,13 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 const point=p=>({x:p.x,z:p.z});
 const direction=(a,b)=>{const x=b.x-a.x,z=b.z-a.z,n=Math.hypot(x,z)||1;return {x:x/n,z:z/n};};
 const safeDt=dt=>clamp(Number.isFinite(dt)?dt:0,0,.1);
+export function expansionRoomCircuitKillBudget(act){
+ if(!Object.hasOwn(EXPANSION_ACTS,act))throw Error('Unknown expansion journey');
+ const packets=act==='crosswind'?CROSSWIND_DENSE_PACKETS:EXPANSION_COURSE_PACKETS;
+ return 5*packets.slice(0,4).reduce((n,count)=>n+count+Math.floor(count/2),0)+6;
+}
+const circuitSiege=(gate,wardenCleared=false)=>({version:1,gate,wardenCleared});
+const sameCheckpoint=(a,b)=>a===b||a!==null&&b!==null&&typeof a==='object'&&typeof b==='object'&&Array.isArray(a)===Array.isArray(b)&&Object.keys(a).length===Object.keys(b).length&&Object.keys(a).every(key=>Object.hasOwn(b,key)&&sameCheckpoint(a[key],b[key]));
 function protectSiegeFacilities(s){
  if(!s.siege||s.phase!=='boss')return;
  for(const w of s.course.walls)if(s.siege.pads.some(p=>p.kind&&p.hp>0&&Math.abs(w.x-p.x)<w.w/2+.75&&Math.abs(w.z-p.z)<w.d/2+.75)){w.hp=0;w.broken=true;}
@@ -20,28 +28,53 @@ function protectSiegeFacilities(s){
 // The existing journey owns the seed, attack/choice engine, damage and visuals.
 // This adapter owns world course progress and warned enemy intent only. It never
 // writes account, title or ranking data; preview checkpoints are kept separately.
-export function createExpansionJourney(act='crosswind',room=0,seed=1,{siege=false,objective=null,quickPrep=false,wardens=false}={}){
+export function createExpansionJourney(act='crosswind',room=0,seed=1,{siege=false,objective=null,quickPrep=false,wardens=false,roomCircuit=false}={}){
  if(!Object.hasOwn(EXPANSION_ACTS,act))throw new Error('Unknown expansion journey');
  if(objective!==null&&(objective!==CRYSTAL_DEFENSE_OBJECTIVE||act!=='crystalGorge'||!siege))throw Error('Invalid expansion objective');
- const s={act,room:clamp(room|0,0,4),seed:seed>>>0||1,course:createExpansionCourse(act,{room,seed}),boss:null,phase:'course',bossId:EXPANSION_ACTS[act].bossId};if(objective)s.objective=objective;if(wardens)s.guardians={version:1,cleared:s.room};if(siege){if(act!=='crystalGorge')throw Error('Siege is Act5 only');s.siege=createCrystalSiege(s.room,s.seed,null,objective||quickPrep?10:null,objective||quickPrep?1:3);s.course.walls=[];}return s;
+ if(roomCircuit&&room!==0)throw Error('New room circuits start at the first room');
+ const s={act,room:clamp(room|0,0,4),seed:seed>>>0||1,course:createExpansionCourse(act,{room,seed}),boss:null,phase:'course',bossId:EXPANSION_ACTS[act].bossId};if(objective)s.objective=objective;if(roomCircuit)s.guardians={version:2,cleared:0,gateCleared:false,receipts:[]};else if(wardens)s.guardians={version:1,cleared:s.room};if(siege){if(act!=='crystalGorge')throw Error('Siege is Act5 only');s.siege=createCrystalSiege(s.room,s.seed,null,objective||quickPrep?10:null,objective||quickPrep?1:3,roomCircuit?circuitSiege(0):null);s.course.walls=[];}return s;
 }
 export function advanceExpansionJourney(s){
+ if(expansionRoomCircuit(s)){
+  if(s.phase!=='course'||!expansionGuardiansAllowAdvance(s))return false;
+  if(s.room===4&&s.guardians.cleared===5){if(s.siege)s.course=createExpansionCourse(s.act,{room:4,seed:s.siege.seed});s.phase='boss';s.boss=createExpansionBoss(s.bossId,{seed:s.course.seed});protectSiegeFacilities(s);return true;}
+  const carry=s.siege?checkpointCrystalSiege(s.siege):null,nextRoom=s.room===4?0:s.room+1,nextSeed=s.siege?s.siege.seed:s.course.seed,course=createExpansionCourse(s.act,{room:nextRoom,seed:nextSeed});
+  const siege=carry?createCrystalSiege(nextRoom,nextSeed,carry,null,3,circuitSiege(s.guardians.cleared)):null;
+  s.seed=nextSeed;s.room=nextRoom;s.guardians.gateCleared=false;s.course=course;if(siege){s.siege=siege;s.course.walls=[];}return true;
+ }
  if(!expansionGuardiansAllowAdvance(s)||s.phase==='finished'||s.siege&&s.phase==='course'&&s.siege.phase!=='clear')return false;
  if(s.room===4){if(s.siege)s.course=createExpansionCourse(s.act,{room:s.room,seed:s.siege.seed});s.phase='boss';s.boss=createExpansionBoss(s.bossId,{seed:s.course.seed});protectSiegeFacilities(s);return true;}
  const carry=s.siege?checkpointCrystalSiege(s.siege):null;s.room++;s.seed=s.siege?s.siege.seed:s.course.seed;s.course=createExpansionCourse(s.act,{room:s.room,seed:s.seed});s.phase='course';if(carry){s.siege=createCrystalSiege(s.room,s.seed,carry);s.course.walls=[];}return true;
 }
-export function checkpointExpansionJourney(s){return {version:1,act:s.act,room:s.room,seed:s.seed,phase:s.phase,course:checkpointExpansionCourse(s.course),boss:s.boss?checkpointExpansionBoss(s.boss):null,...(s.siege?{siege:checkpointCrystalSiege(s.siege)}:{}),...(s.objective?{objective:s.objective}:{}),...(s.guardians?{guardians:{...s.guardians}}:{})};}
+export function checkpointExpansionJourney(s){return {version:1,act:s.act,room:s.room,seed:s.seed,phase:s.phase,course:checkpointExpansionCourse(s.course),boss:s.boss?checkpointExpansionBoss(s.boss):null,...(s.siege?{siege:checkpointCrystalSiege(s.siege)}:{}),...(s.objective?{objective:s.objective}:{}),...(s.guardians?{guardians:{...s.guardians,...(expansionRoomCircuit(s)?{receipts:[...s.guardians.receipts]}:{})}}:{})};}
 export function restoreExpansionJourney(raw){
  if(raw?.version!==1||!Object.hasOwn(EXPANSION_ACTS,raw.act)||!Number.isInteger(raw.room)||raw.room<0||raw.room>4||!['course','boss','finished'].includes(raw.phase)||raw.course?.version!==1||raw.course?.act!==raw.act||raw.course?.room!==raw.room)return null;
  if(raw.phase==='boss'&&!raw.boss)return null;
  if(raw.objective!==undefined&&(raw.objective!==CRYSTAL_DEFENSE_OBJECTIVE||raw.act!=='crystalGorge'||raw.siege===undefined))return null;
- if(raw.guardians!==undefined&&!validExpansionGuardians(raw.guardians,raw.room,raw.phase))return null;
- const s=createExpansionJourney(raw.act,raw.room,raw.seed);if(raw.guardians)s.guardians={...raw.guardians};if(raw.objective)s.objective=raw.objective;s.course=restoreExpansionCourse(raw.course);s.phase=raw.phase;if(raw.siege!==undefined){if(raw.act!=='crystalGorge')return null;try{s.siege=restoreCrystalSiege(raw.siege);}catch{return null;}if(s.siege.room!==raw.room||raw.phase==='boss'&&s.siege.phase!=='clear')return null;if(raw.phase==='course')s.course.walls=[];}
- if(raw.boss){if(raw.boss.version!==1||raw.boss.id!==s.bossId)return null;s.boss=restoreExpansionBoss(raw.boss,s.bossId);}if(s.guardians&&s.phase==='course'&&s.guardians.cleared>s.room&&!(s.siege?s.siege.phase==='clear':s.course.finishAnnounced))return null;protectSiegeFacilities(s);return s;
+ if(raw.guardians!==undefined&&!validExpansionGuardians(raw.guardians,raw.room,raw.phase,raw.act))return null;
+ const s=createExpansionJourney(raw.act,raw.room,raw.seed);if(raw.guardians)s.guardians={...raw.guardians,...(raw.guardians.version===2?{receipts:[...raw.guardians.receipts]}:{})};if(raw.objective)s.objective=raw.objective;s.course=restoreExpansionCourse(raw.course);s.phase=raw.phase;if(raw.siege!==undefined){if(raw.act!=='crystalGorge')return null;try{s.siege=restoreCrystalSiege(raw.siege);}catch{return null;}if(s.siege.room!==raw.room||raw.phase==='boss'&&(expansionRoomCircuit(s)?!s.siege.journeyCircuit?.wardenCleared:s.siege.phase!=='clear'))return null;if(raw.phase==='course')s.course.walls=[];}
+ if(raw.boss){if(raw.boss.version!==1||raw.boss.id!==s.bossId)return null;s.boss=restoreExpansionBoss(raw.boss,s.bossId);}
+ if(expansionRoomCircuit(s)){
+  const circuit=s.siege?.journeyCircuit;
+  if(s.siege&&(!circuit||circuit.gate!==expansionGateIndex(s)||circuit.wardenCleared!==s.guardians.gateCleared)||!s.siege&&raw.siege?.journeyCircuit)return null;
+  if(!Number.isInteger(raw.seed)||raw.seed<1||raw.seed>4294967295||s.course.encounterVersion!==(s.act==='crosswind'?3:2)||s.phase==='course'&&s.boss||s.phase!=='course'&&!s.boss)return null;
+  if(s.guardians.gateCleared&&s.guardians.receipts.at(-1)!==`gate:${s.act}:${expansionGateIndex(s)}:4:${s.seed}`)return null;
+  if(s.phase==='course'&&s.room===4&&(s.course.time!==0||s.course.distance!==0||s.course.spawnIndex!==0||s.course.finishAnnounced||s.course.seed!==s.seed))return null;
+  if(s.phase==='course'&&s.room<4&&(s.course.spawnIndex>expansionCoursePacketCount(s.course)||s.course.finishAnnounced&&(s.siege?s.siege.phase!=='clear':s.act==='crosswind'?s.course.distance<crosswindCourseLength(s.course)||s.course.spawnIndex!==expansionCoursePacketCount(s.course):s.course.distance<14||s.course.time<22+s.room*2)))return null;
+  if(!sameCheckpoint(checkpointExpansionJourney(s),raw))return null;
+ }else if(s.siege?.journeyCircuit||s.guardians&&s.phase==='course'&&s.guardians.cleared>s.room&&!(s.siege?s.siege.phase==='clear':s.course.finishAnnounced))return null;
+ protectSiegeFacilities(s);return s;
 }
 export function stepExpansionJourney(s,dt,context){
+ if(expansionRoomCircuit(s)&&s.phase==='course'&&s.room===4){
+  // A standalone fifth room contains its real warden only. The course and
+  // siege ledgers remain a pristine entry rather than fabricated mob clears.
+  const out=s.course.out;out.hits??=[];out.snares??=[];for(const key of ['spawns','telegraphs','bolts','terrain','events','contacts','hits','snares'])out[key].length=0;out.move.x=out.move.z=0;out.coreOpen=false;out.phase=s.siege?.phase||'course';out.finish=true;out.progress=1;return out;
+ }
  if(s.phase==='course'&&s.siege){const out=stepCrystalSiege(s.siege,dt,context);s.course.time=s.siege.elapsed;s.course.seed=s.siege.seed;out.finish=out.clear;return out;}
- if(s.phase==='course')return stepExpansionCourse(s.course,dt,context);
+ if(s.phase==='course'){
+  const out=stepExpansionCourse(s.course,dt,context);if(expansionRoomCircuit(s)){const prefix=`gate-${expansionGateIndex(s)}:`;for(const spec of out.spawns)spec.id=prefix+spec.id;for(const tell of out.telegraphs)if(tell.id)tell.id=prefix+tell.id;}return out;
+ }
  if(s.phase==='boss')return stepExpansionBoss(s.boss,dt,context);
  return null;
 }

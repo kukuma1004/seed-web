@@ -8,6 +8,7 @@ import {validBuild} from './ranking-build.js';
 import {EXPANSION_ACTS,expansionCircuitReleased} from './act-expansion.js';
 import {EXPANSION_CIRCUIT_KILLS,CROSSWIND_CIRCUIT_KILLS} from './act-expansion-runtime.js';
 import {EXPANSION_WARDENS_PER_BOSS} from './expansion-guardians.js';
+import {JOURNEY_ROOM_CIRCUIT_KILLS,ARBOR_ROOM_CIRCUIT_KILLS} from './journey-room-circuit.js';
 export const FIREBASE=Object.freeze({
  apiKey:'AIzaSyD9mHiQ8Cyh4zJKbyhW_oYZkcu3WPMYw3k',
  databaseURL:'https://jpmathlab-default-rtdb.asia-southeast1.firebasedatabase.app'
@@ -34,8 +35,8 @@ export const MAX_KILLS_PER_JOURNEY=180;
 // Shared Survival/Defense course packet counts remain unchanged. The wider
 // ceiling also retains all legitimate records from the earlier guardian-free route.
 export const JOURNEY_EXPANSION_KILL_BUDGET=Object.freeze({
- 4:CROSSWIND_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS,
- 5:EXPANSION_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS
+ 4:Math.max(CROSSWIND_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS,JOURNEY_ROOM_CIRCUIT_KILLS[4]),
+ 5:Math.max(EXPANSION_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS,JOURNEY_ROOM_CIRCUIT_KILLS[5])
 });
 export function validRun(e,{acts=EXPANSION_ACTS}={}){
  const expansion=e?.act===4||e?.act===5,arbor=e?.act===6;
@@ -43,7 +44,7 @@ export function validRun(e,{acts=EXPANSION_ACTS}={}){
  // Deliberate-crossing courses share the actual accepted-packet kill budget.
  // A campaign has 3 laps, with one true boss per completed lap.
  // Ordinary 1/2/3 validation below is unchanged.
- if(arbor)return e.cycle<=2&&e.kills<=[86,182,288][e.cycle]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+11000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
+ if(arbor)return e.cycle<=2&&e.kills<=ARBOR_ROOM_CIRCUIT_KILLS[e.cycle]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+11000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*JOURNEY_EXPANSION_KILL_BUDGET[e.act]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  const multiplier=1+e.cycle*.5;
  const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;

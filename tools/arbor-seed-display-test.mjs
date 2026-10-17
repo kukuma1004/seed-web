@@ -19,5 +19,5 @@ for(const [w,h] of [[1280,720],[960,540],[844,390],[667,375]]){
 }
 const main=readFileSync('src/main.js','utf8');
 assert.match(main,/const player=createSeedBody[^\n]*player.scale.setScalar\(1\.25\)/);
-assert.match(main,/arena=arborApi.ARBOR_ARENA;player.scale.setScalar\(ARBOR_SEED_DISPLAY_SCALE\)/);
+assert.match(main,/arena=arborApi.arborArenaFor\(arborJourney\);player.scale.setScalar\(ARBOR_SEED_DISPLAY_SCALE\)/);
 console.log('Act6 visual scale matches Act1 start within 1.5%; original Act1 rig, camera, collision and seed art preserved. Projection test, not physical-device pixels.');

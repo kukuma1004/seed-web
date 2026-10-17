@@ -43,7 +43,7 @@ assert.equal(act3SupplyDrop('sky-scout',3,false,{tonic:0}),null,'일반 잡몹�
 assert.equal(SKYWAY_ROOMS.length,5);assert.equal(arenaFor(0,0,ACT3_REGION),ACT3_ARENA);
 assert.equal(shouldBuildArenaBoundary(ACT3_REGION),false,'the scrolling route has no visible front/back room walls');assert.equal(shouldBuildArenaBoundary('garden'),true);
 SKYWAY_ROOMS.forEach((room,stage)=>{
- assert.equal(roomFor(stage,0,ACT3_REGION),room);assert.equal(roomFor(stage,4,ACT3_REGION),room);
+ assert.equal(roomFor(stage,0,ACT3_REGION),room);if(stage<4)assert.equal(roomFor(stage,4,ACT3_REGION),room);else {const gates=Array.from({length:5},(_,cycle)=>roomFor(4,cycle,ACT3_REGION));assert.equal(new Set(gates.map(g=>JSON.stringify(g.enemies))).size,5);for(const gate of gates){assert.equal(gate.enemies.filter(([t])=>t==='act3warden').length,1);assert.equal(gate.enemies.length,5);for(const [,x,z]of gate.enemies)assert(insideArena({x,z},.5,ACT3_ARENA));}}
  for(const [type,x,z] of room.enemies){assert.ok(isAct3Minion(type)||type==='act3warden',type);assert.ok(insideArena({x,z},.5,ACT3_ARENA),`${room.name}: ${type}`);}
  assert.deepEqual(trapsFor(stage,0,ACT3_REGION),[]);assert.deepEqual(turretSpots(stage,0,ACT3_REGION),[]);
 });

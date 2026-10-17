@@ -1,0 +1,9 @@
+/* Brief route messages belong below the fight, not across a seed at the rim. */
+body.journey-seed-readable:not(.survival-mode) #toast{
+ top:auto!important;bottom:max(68px,calc(env(safe-area-inset-bottom) + 60px));
+ left:50%;transform:translateX(-50%);width:max-content;max-width:min(520px,62vw);
+ padding:5px 9px;border:1px solid #b6c0a42e;border-radius:8px;background:#11291fe6;
+ font:12px/1.4 system-ui;letter-spacing:.2px;word-break:keep-all;overflow-wrap:anywhere;
+}
+body.journey-seed-readable:not(.survival-mode) #toast:empty{display:none}
+@media(max-height:520px){body.journey-seed-readable:not(.survival-mode) #toast{bottom:max(62px,calc(env(safe-area-inset-bottom) + 54px));max-width:48vw;font-size:10px}}

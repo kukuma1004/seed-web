@@ -50,6 +50,7 @@ for(const act of [3,4,5])for(let room=0;room<5;room++)for(let round=0;round<5;ro
  layouts++;
 }
 for(const act of [3,4,5]){const names=new Set(),positions=new Set();for(let room=0;room<5;room++){const l=journeyRoomLayout(act,room);names.add(l.name);positions.add(JSON.stringify(l.cover.map(c=>[c.x,c.z,c.w,c.d])));}assert.equal(names.size,5);assert.equal(positions.size,5,'different rooms must change real cover, not only colours');}
+for(let gate=0;gate<5;gate++){const l=journeyRoomLayout('crosswind',4,gate,{gateRoom:true});assert.equal(l.courseLength,28);references.add(l);}
 assert.equal(references.size,CAPS.cache);
 for(let i=0;i<10000;i++)assert(references.has(journeyRoomLayout(3+i%3,i,i*7)),'bounded immutable cache');
 for(const unknown of ['garden',6,'toString','__proto__',null])assert.equal(journeyRoomLayout(unknown),null);assert.equal(journeyRoomLayout(3,NaN,Infinity),journeyRoomLayout(3,0,0));

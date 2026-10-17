@@ -23,9 +23,9 @@ for(const mobile of [false,true]){
 
 // Execute the actual host arena assignment, then apply the shipping collision
 // constraint. The newly gained flank must be reachable, and still bounded.
-const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf('arena=s.siege?'),end=main.indexOf(';',start)+1;
+const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=main.indexOf("arena=s.act==='crosswind'&&expansionRoomCircuit(s)"),end=main.indexOf(';',start)+1;
 assert(start>=0&&end>start);
-const context={s:{siege:{},phase:'course',course:{encounterVersion:3}},canyon:true,distance:0,length:140};
+const context={expansionRoomCircuit:()=>false,s:{siege:{},phase:'course',course:{encounterVersion:3}},canyon:true,distance:0,length:140};
 runInNewContext(main.slice(start,end),context);const arena=context.arena;
 assert.equal(arena.halfWidth*2,26);assert.equal(arena.halfDepth*2,22);assert.equal(arena.shape,'poly');assert.equal(arena.points.length,12,'follow the courtyard instead of exposing forest corners');
 for(const [x,z]of [[12.4,0],[0,10.4]]){const outer={x,z};constrainToArena(outer,.4,arena);assert.equal(outer.x,x);assert.equal(outer.z,z,'new outer axes are reachable');}

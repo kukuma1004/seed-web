@@ -88,6 +88,21 @@ export const SKYWAY_ROOMS=Object.freeze([
 ]);
 export const ACT3_ROOM_HINTS=Object.freeze(SKYWAY_ROOMS.map(room=>room.hint));
 
+// Each fifth room has a different approach and real cover layout. Preserve
+// the same four scouts/one warden, so old kill and reward budgets do not drift.
+const gateFormations=[
+ [[0,-5.2],[-7,-1.8],[-3.3,-4.8],[3.3,-4.8],[7,-1.8]],
+ [[-6,-2],[-9,3],[-7,-6],[0,-7],[5,1]],
+ [[6,-2],[9,3],[7,-6],[0,-7],[-5,1]],
+ [[0,-8],[-8,-6],[-4,1],[4,1],[8,-6]],
+ [[0,0],[-9,-6],[9,-6],[-9,6],[9,6]]
+];
+export const SKYWAY_GATE_ROOMS=Object.freeze(gateFormations.map((points,i)=>i===0?SKYWAY_ROOMS[4]:Object.freeze({
+ ...SKYWAY_ROOMS[4],name:['폭풍 관문','왼쪽 계류 관문','오른쪽 계류 관문','쌍아치 관문','갈림 정원 관문'][i],
+ enemies:Object.freeze(points.map(([x,z],j)=>Object.freeze([j===0?'act3warden':'sky-scout',x,z])))
+})));
+export function skywayRoomFor(stage,cycle=0){return stage===4?SKYWAY_GATE_ROOMS[((Math.floor(cycle)%5)+5)%5]:SKYWAY_ROOMS[stage];}
+
 export const ACT3_ARENA=Object.freeze({
  shape:'poly',id:'skyway',halfWidth:15,halfDepth:13,
  points:Object.freeze([[-15,13],[15,13],[15,-13],[-15,-13]].map(Object.freeze)),

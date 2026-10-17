@@ -22,10 +22,10 @@ export const arborBossPatternName=s=>ARBOR_BOSS_MOVES[s.pattern]?.name||ARBOR_BO
 function cue(s,kind,radius=0){
  const c=s.cue;c.kind=kind;copy(c.position,kind==='root'?s.target:s.position);copy(c.direction,s.aim);c.radius=radius;c.remaining=Math.max(0,s.timer);s.out.cue=c;
 }
-function tell(s,player){
+function tell(s,player,arena=ARBOR_ARENA){
  s.phase='windup';s.coreOpen=false;
  if(s.pattern===0){aimAt(s.aim,s.position,player);s.timer=Math.max(.88,1.12-s.phaseIndex*.08-s.round*.025);}
- else if(s.pattern===1){copy(s.target,player);s.target.x=clamp(s.target.x,-13,13);s.target.z=clamp(s.target.z,-11,11);s.timer=Math.max(.85,1.03-s.round*.04-s.phaseIndex*.035);}
+ else if(s.pattern===1){copy(s.target,player);s.target.x=clamp(s.target.x,-arena.halfWidth+1,arena.halfWidth-1);s.target.z=clamp(s.target.z,-arena.halfDepth+1,arena.halfDepth-1);s.timer=Math.max(.85,1.03-s.round*.04-s.phaseIndex*.035);}
  else{s.phase='recover';s.coreOpen=true;s.timer=2.8;}
 }
 function recover(s,duration){s.phase='recover';s.coreOpen=true;s.timer=duration;}
@@ -37,11 +37,11 @@ function fireFan(s,active){
    spec:{boss:true,pierce:false,speed:5.8+s.round*.35+s.phaseIndex*.2,damage:18+s.round*3,life:4.1}});
  }
 }
-export function stepArborBoss(s,dt,{player=ARBOR_ARENA.start,projectiles=0}={}){
+export function stepArborBoss(s,dt,{player=ARBOR_ARENA.start,projectiles=0,arena=ARBOR_ARENA}={}){
  const out=s.out;out.bolts.length=0;out.zones.length=0;out.cue=null;
  if(s.hp<=0){s.phase='dead';s.coreOpen=false;return out;}
  const step=safeDt(dt);if(!step)return out;
- const p=s.playerSample;p.x=clamp(finite(player?.x),-13.5,13.5);p.z=clamp(finite(player?.z),-11.5,11.5);
+ const p=s.playerSample;p.x=clamp(finite(player?.x),-arena.halfWidth+.5,arena.halfWidth-.5);p.z=clamp(finite(player?.z),-arena.halfDepth+.5,arena.halfDepth-.5);
  const ratio=clamp(s.hp/Math.max(1,s.maxHp),0,1);
  // Low HP changes attack density; surviving several complete cycles also
  // advances the pattern, so an invulnerable stationary build is still tested.
@@ -50,8 +50,8 @@ export function stepArborBoss(s,dt,{player=ARBOR_ARENA.start,projectiles=0}={}){
  if(s.phase==='approach'){
   const dx=p.x-s.position.x,dz=p.z-s.position.z,d=Math.hypot(dx,dz);
   if(d>6.4){const travel=Math.min(d-6.4,(1.8+s.round*.15+s.phaseIndex*.12)*step);s.position.x+=dx/d*travel;s.position.z+=dz/d*travel;}
-  s.position.x=clamp(s.position.x,-11.8,11.8);s.position.z=clamp(s.position.z,-9.8,9.8);
-  if(s.timer<=0&&d<=10.5)tell(s,p);
+  s.position.x=clamp(s.position.x,-arena.halfWidth+2.2,arena.halfWidth-2.2);s.position.z=clamp(s.position.z,-arena.halfDepth+2.2,arena.halfDepth-2.2);
+  if(s.timer<=0&&d<=10.5)tell(s,p,arena);
   return out;
  }
  if(s.phase==='windup'){
@@ -60,7 +60,7 @@ export function stepArborBoss(s,dt,{player=ARBOR_ARENA.start,projectiles=0}={}){
   if(s.pattern===0){fireFan(s,Math.max(0,finite(projectiles)));recover(s,1.3);}
   else{
    out.zones.push({position:{x:s.target.x,z:s.target.z},radius:1.5+s.phaseIndex*.1,damage:17+s.round*3});s.rootStep++;
-   if(s.rootStep<3)tell(s,p);else recover(s,1.85);
+   if(s.rootStep<3)tell(s,p,arena);else recover(s,1.85);
   }
   return out;
  }

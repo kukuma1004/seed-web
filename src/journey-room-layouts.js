@@ -2,7 +2,7 @@
 // presentation, movement and projectile collision; decoration never blocks.
 // Course lengths, entry saves, encounter packets and paid siege facilities
 // remain owned by the existing engines. No random state is consumed here.
-export const JOURNEY_ROOM_LAYOUT_LIMITS=Object.freeze({cover:6,decor:16,cache:75});
+export const JOURNEY_ROOM_LAYOUT_LIMITS=Object.freeze({cover:6,decor:16,cache:80});
 const LENGTHS=Object.freeze([48,56,60,64,44]);
 const aliases=Object.freeze({3:'skyway',4:'crosswind',5:'crystalGorge',skyway:'skyway',crosswind:'crosswind',crystalGorge:'crystalGorge'});
 const freeze=o=>{for(const value of Object.values(o))if(value&&typeof value==='object')freeze(value);return Object.freeze(o);};
@@ -39,11 +39,11 @@ const SIEGE=freeze([
 ]);
 const tables={skyway:SKY,crosswind:WIND,crystalGorge:SIEGE};
 
-export function journeyRoomLayout(act,room=0,round=0){
- if(!Object.hasOwn(aliases,act))return null;const region=aliases[act];
- const stage=wrap(room,5),lap=wrap(round,5),key=`${region}:${stage}:${lap}`;
+export function journeyRoomLayout(act,room=0,round=0,{gateRoom=false}={}){
+ if(!Object.hasOwn(aliases,act))return null;const region=aliases[act];gateRoom=Boolean(gateRoom&&region==='crosswind');
+ const stage=wrap(room,5),lap=wrap(round,5),key=`${region}:${stage}:${lap}${gateRoom?':gate':''}`;
  let layout=cache.get(key);if(layout)return layout;
- const index=(stage+lap)%5,source=tables[region][index],length=region==='crosswind'?LENGTHS[stage]:null;
+ const index=(stage+lap)%5,source=tables[region][index],length=region==='crosswind'?(gateRoom?28:LENGTHS[stage]):null;
  const convertX=x=>length===null?x:Math.round(x*length*1000)/1000;
  const cover=source.cover.map(([x,z,w,d,kind],i)=>({id:`journey-${region}-${stage}-${lap}-cover-${i}`,x:convertX(x),z,w,d,h:kind==='post'?1.05:kind==='ruin'?.85:.65,kind,solid:true}));
  const decor=source.decor.map(([x,z,kind],i)=>({id:`journey-${region}-${stage}-${lap}-decor-${i}`,x:convertX(x),z,w:kind==='tile-band'?2.2:kind==='leaf-trace'?1.7:1.3,d:kind==='tile-band'?.5:1.3,kind,solid:false}));

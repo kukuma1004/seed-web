@@ -4,6 +4,7 @@ import {createArborBoss,stepArborBoss} from '../src/arbor-boss.js';
 import {titleState} from '../src/titles.js';
 import {effectiveTitleCombatBonuses} from '../src/title-combat-bonuses.js';
 import {validRun,runAct,ACT} from '../src/online-ranking.js';
+import {ARBOR_ROOM_CIRCUIT_KILLS} from '../src/journey-room-circuit.js';
 const clone=v=>JSON.parse(JSON.stringify(v));
 const histories=[];
 for(const legacy of [false,true]){
@@ -40,8 +41,8 @@ assert.equal(clear.powerBonus,0);assert.equal(clear.cooldownBonus,0);
 assert.equal(effectiveTitleCombatBonuses(clear).cadence,1.04);
 assert.equal(new Set(clear.titles.map(x=>x.id)).size,3);
 for(let cycle=0;cycle<3;cycle++){
- const cap=[86,182,288][cycle],entry={uid:'ordinary',name:'씨앗',act:ACT.ARBOR,cycle,stage:4,kills:cap,score:[13000,27000,39750][cycle],time:300*(cycle+1),at:Date.now(),done:cycle===2};
- assert.equal(runAct(entry),6);assert(validRun(entry));assert(!validRun({...entry,kills:cap+1}));
+ const cap=ARBOR_ROOM_CIRCUIT_KILLS[cycle],entry={uid:'ordinary',name:'씨앗',act:ACT.ARBOR,cycle,stage:4,kills:cap,score:[13000,27000,39750][cycle],time:300*(cycle+1),at:Date.now(),done:cycle===2};
+ assert.equal(runAct(entry),6);assert(validRun({...entry,kills:[86,182,288][cycle]}),'legacy records remain readable');assert(validRun(entry));assert(!validRun({...entry,kills:cap+1}));
  if(cycle<2)assert(!validRun({...entry,done:true}));
 }
 assert(!validRun({uid:'ordinary',name:'씨앗',act:6,cycle:3,stage:4,kills:300,score:40000,time:2000,at:Date.now()}));

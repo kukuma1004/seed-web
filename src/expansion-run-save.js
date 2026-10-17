@@ -14,7 +14,7 @@ export function validExpansionEntry(value){
   const restored=restoreExpansionJourney(value.journey);if(!restored)return false;
   // Reject future/corrupt runtime state instead of silently clamping it away.
   if(JSON.stringify(checkpointExpansionJourney(restored))!==JSON.stringify(value.journey))return false;
-  if(value.journey.phase==='course'&&value.journey.course.time!==0)return false;
+  if(value.journey.phase==='course'&&(value.journey.course.time!==0||value.journey.guardians?.version===2&&value.journey.guardians.gateCleared))return false;
   if(value.journey.phase==='course'&&value.journey.siege&&(value.journey.siege.phase!=='prep'||value.journey.siege.elapsed!==0||value.journey.siege.spawnIndex!==0))return false;
   return Array.isArray(value.position)&&value.position.length===3&&value.position.every(n=>Number.isFinite(n)&&Math.abs(n)<=10000);
  }catch{return false;}

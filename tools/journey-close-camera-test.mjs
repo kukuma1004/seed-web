@@ -3,6 +3,7 @@ import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
 import * as THREE from 'three';
 import {journeyCombatCamera} from '../src/journey-combat-camera.js';
+import {frameJourneySeed} from '../src/journey-edge-framing.js';
 import {journeyFlightCamera} from '../src/journey-flight-camera.js';
 import {crosswindJourneyCamera} from '../src/journey-crosswind-camera.js';
 import {crystalSiegeCamera} from '../src/crystal-siege-camera.js';
@@ -17,8 +18,8 @@ assert.equal(journeyPlayerScale(1280,720),1.25, 'native3/4/5 must match Act1, wi
 const host=new vm.Script('(function(){'+source.slice(start,end)+'})()'),viewports=[[1280,720,false],[1024,768,true],[844,390,true],[640,360,true]],metrics=[];
 let projected=0;
 for(const[w,h,touch]of viewports)for(const act of['skyway','crosswind','crystalGorge']){
- const viewLayout=responsiveView(w,h,touch),pose=journeyCombatCamera(w,h,act,viewLayout),camera=new THREE.PerspectiveCamera(39,w/h,.1,100),player={position:new THREE.Vector3()},look=new THREE.Vector3(),feel=createCameraFeel();
- const context=vm.createContext({isAct3:r=>r==='skyway',region:act==='skyway'?'skyway':'garden',mirrorSession:null,trainingSession:null,arborJourney:null,expansionJourney:act==='skyway'?null:{act,phase:'course',course:{encounterVersion:3},...(act==='crystalGorge'?{siege:{}}:{})},survivalSession:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width:w,height:h},journeyFlightCamera,crosswindJourneyCamera,crystalSiegeCamera,camera,look,visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player,viewLayout,ACT3_VIEW_ZOOM:.88,ACT3_VIEW_BIAS:-2,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1.1},seedVisualReview:true,cameraShake:0,rng:()=>.5,stage:0,inAustinRoom:()=>false,cameraFeel:feel});
+ const viewLayout=responsiveView(w,h,touch),pose=journeyCombatCamera(w,h,act,viewLayout),camera=new THREE.PerspectiveCamera(39,w/h,.1,100),player={position:new THREE.Vector3(),scale:new THREE.Vector3(1.25,1.25,1.25)},look=new THREE.Vector3(),feel=createCameraFeel();
+ const context=vm.createContext({mode:'playing',frameJourneySeed,isAct3:r=>r==='skyway',region:act==='skyway'?'skyway':'garden',mirrorSession:null,trainingSession:null,arborJourney:null,expansionJourney:act==='skyway'?null:{act,phase:'course',course:{encounterVersion:3},...(act==='crystalGorge'?{siege:{}}:{})},survivalSession:null,survivalSiege:null,survivalExpansion:null,canvasRect:{width:w,height:h},journeyFlightCamera,crosswindJourneyCamera,crystalSiegeCamera,camera,look,visualDt:1/60,cameraMoveX:0,cameraMoveZ:0,player,viewLayout,ACT3_VIEW_ZOOM:.88,ACT3_VIEW_BIAS:-2,MIRROR_VIEW:{followX:.2,followZ:.2,zoom:1.1},seedVisualReview:true,cameraShake:0,rng:()=>.5,stage:0,inAustinRoom:()=>false,cameraFeel:feel});
  let minPixels=Infinity;
  for(let frame=0;frame<720;frame++){
   const section=Math.floor(frame/180),t=frame%180/60;

@@ -12,12 +12,12 @@ import {journeyCombatCamera} from '../src/journey-combat-camera.js';
 import {responsiveView} from '../src/responsive-view.js';
 
 const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
-const arenaStart=main.indexOf('  arena=s.siege'),arenaEnd=main.indexOf('\n  gate.position',arenaStart);assert(arenaStart>=0&&arenaEnd>arenaStart);
+const arenaStart=main.indexOf("  arena=s.act==='crosswind'&&expansionRoomCircuit(s)"),arenaEnd=main.indexOf(';',arenaStart)+1;assert(arenaStart>=0&&arenaEnd>arenaStart);
 function expansionArena(act,phase='course'){
- const c={s:{act,phase,siege:act==='crystalGorge'?{}:null,course:{encounterVersion:3}},canyon:act==='crystalGorge',length:phase==='boss'?62:140,distance:48};
+ const c={expansionRoomCircuit:()=>false,s:{act,phase,siege:act==='crystalGorge'?{}:null,course:{encounterVersion:3}},canyon:act==='crystalGorge',length:phase==='boss'?62:140,distance:48};
  vm.runInNewContext(main.slice(arenaStart,arenaEnd),c);return c.arena;
 }
-const legacy={s:{act:'crystalGorge',phase:'course',course:{}},canyon:true,length:140,distance:0};vm.runInNewContext(main.slice(arenaStart,arenaEnd),legacy);assert.equal(legacy.arena.halfWidth,8.5);assert.equal(legacy.arena.halfDepth,10,'old non-siege canyon keeps its saved route and original camera framing');
+const legacy={expansionRoomCircuit:()=>false,s:{act:'crystalGorge',phase:'course',course:{}},canyon:true,length:140,distance:0};vm.runInNewContext(main.slice(arenaStart,arenaEnd),legacy);assert.equal(legacy.arena.halfWidth,8.5);assert.equal(legacy.arena.halfDepth,10,'old non-siege canyon keeps its saved route and original camera framing');
 const crosswind=expansionArena('crosswind'),crystal=expansionArena('crystalGorge');
 assert.equal(ACT3_ARENA.halfWidth,15);assert.equal(ACT3_ARENA.halfDepth,13);
 assert.equal(crosswind.halfDepth,9);assert.equal(crystal.halfWidth,13);assert.equal(crystal.halfDepth,11);
