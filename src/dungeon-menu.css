@@ -172,6 +172,14 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
 .journey-panel .journey-grid-six{grid-template-columns:repeat(3,minmax(0,1fr));max-width:1100px}
 .journey-panel .journey-grid-six .journey-card{aspect-ratio:1.65;min-height:158px}
 .journey-panel .act-card-6 .journey-art{object-position:50% 40%}
+.journey-panel .journey-card-action{display:flex;align-items:center;gap:8px;min-height:38px;margin-top:5px;padding:6px 11px;border:1px solid #f4dc94;border-radius:7px;background:linear-gradient(110deg,#ecd28b,#c4b56d);color:#152c23;text-shadow:none;box-shadow:0 2px 8px #0003,inset 0 1px #fff5}
+.journey-card-action b{flex:1;font:700 15px/1.35 'Malgun Gothic',sans-serif;word-break:keep-all}.journey-card-action>span{font-size:20px;line-height:1}
+.journey-panel .journey-card-action.is-resume{background:#173e37;border-color:#b6d3ba;color:#eff4d7}
+.journey-panel .journey-card:disabled .journey-card-action{background:#293731;border-color:#738373;color:#c3cdc3;box-shadow:none}
+.journey-panel .journey-caption small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.journey-fresh-options{margin-top:14px;padding:12px 0 0;border-top:1px solid #c5b37a55}.journey-fresh-options p{margin:0 0 8px!important;font-size:13px!important;color:#e9ddbb}.journey-fresh-options>div{display:flex;flex-wrap:wrap;gap:8px}.journey-fresh-options button{min-height:44px;margin:0!important;padding:9px 14px!important;border:1px solid #e1ca88;border-radius:7px;background:#294035;color:#fff0c8;font-size:14px!important}
+@media(min-width:601px) and (max-height:500px){.journey-panel .journey-card-action{min-height:34px;padding:5px 8px;margin-top:3px}.journey-card-action b{font-size:13px}.journey-panel .journey-opponent{display:none}}
+@media(max-width:600px){.journey-panel .journey-card-action{max-width:260px}.journey-card-action b{font-size:15px}}
 .arbor-result{width:min(560px,90vw);margin:auto;text-align:center;padding:32px;display:grid;gap:14px;border:1px solid #b6c99466;background:#102724e8;border-radius:18px}
 .arbor-result h2{font-size:clamp(26px,4vw,38px);margin:0;letter-spacing:0}
 .arbor-result p{font-size:13px;color:#c6d6c5;line-height:1.6}
