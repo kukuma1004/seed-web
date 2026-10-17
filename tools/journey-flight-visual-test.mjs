@@ -21,7 +21,7 @@ function makeSkyway(mobile=false){
  const scene=new THREE.Scene();scene.background=new THREE.Color('#264731');scene.fog=new THREE.FogExp2('#526153',.027);
  const sun=new THREE.DirectionalLight('#fff2d0',1.7),hemi=new THREE.HemisphereLight('#77aabb','#665544',.8),visible=new THREE.Group(),hidden=new THREE.Group();hidden.visible=false;scene.add(sun,hemi,visible,hidden);
  const loads=[],textures=[];class TextureLoader{load(url){loads.push(url);const t=new THREE.Texture({width:1536,height:864});textures.push(t);return t;}}
- const context={THREE:{...THREE,TextureLoader},document:{}};vm.runInNewContext(skywaySource.replace("import * as THREE from 'three';",'').replace('export function createSkyway','function createSkyway').replaceAll('import.meta.env.BASE_URL',"'/seed/'"),context);
+ const context={ACT3_ARENA,THREE:{...THREE,TextureLoader},document:{}};vm.runInNewContext(skywaySource.replace(/^import .*;$/gm,'').replace('export function createSkyway','function createSkyway').replaceAll('import.meta.env.BASE_URL',"'/seed/'"),context);
  const before={background:scene.background,color:scene.background.clone(),fog:scene.fog,fogColor:scene.fog.color.clone(),density:scene.fog.density,lights:[sun,hemi].map(light=>({light,intensity:light.intensity,color:light.color.clone()}))};
  const view=context.createSkyway(scene,{lights:[sun,hemi],hide:[visible,hidden],mobile});return{scene,view,loads,textures,before,visible,hidden};
 }
@@ -123,7 +123,7 @@ await check('Fixed background grading uses the actual stock one-map shader witho
 
 await check('Rain keeps two fixed batches and one program, with a clip-space central fade instead of a new full-screen pass',()=>{
  const {view}=makeSkyway(true);view.setActive(true);const far=view.group.getObjectByName('skyway-far-rain'),near=view.group.getObjectByName('skyway-near-rain');
- assert.equal(view.group.children.length,3);assert.equal(view.materials.length,4);assert.equal(view.geometries.length,2);assert.equal(view.state().drawCalls,3);
+ assert.equal(view.group.children.length,4);assert.equal(view.materials.length,5);assert.equal(view.geometries.length,3);assert.equal(view.state().drawCalls,4);
  assert.equal(far.material.customProgramCacheKey(),near.material.customProgramCacheKey());assert.notEqual(far.material.customProgramCacheKey(),view.group.getObjectByName('skyway-painted-route').material.customProgramCacheKey());
  for(const material of[far.material,near.material]){
   assert(material.transparent&&!material.depthWrite);assert.equal(material.map,null,'rain adds no sampler');
@@ -140,7 +140,7 @@ await check('Rain keeps two fixed batches and one program, with a clip-space cen
 
 await check('Finite rain pools remain fixed for 20k frames, pause/idle cause no uploads and mobile animation is slower at 30Hz',()=>{
  for(const mobile of[false,true]){
-  const f=makeSkyway(mobile),{view}=f;view.setActive(true);const ids=view.group.children.map(o=>o.uuid),resources=[...view.materials,...view.geometries],edges=view.group.getObjectByName('skyway-far-rain'),near=view.group.getObjectByName('skyway-near-rain');assert.equal(view.state().instances,mobile?20:30);assert.equal(edges.count+near.count,mobile?20:30);assert.equal(view.group.children.length,3);
+  const f=makeSkyway(mobile),{view}=f;view.setActive(true);const ids=view.group.children.map(o=>o.uuid),resources=[...view.materials,...view.geometries],edges=view.group.getObjectByName('skyway-far-rain'),near=view.group.getObjectByName('skyway-near-rain');assert.equal(view.state().instances,mobile?20:30);assert.equal(edges.count+near.count,mobile?20:30);assert.equal(view.group.children.length,4);
   for(let i=0;i<20000;i++)view.tick(1/60);assert.deepEqual(view.group.children.map(o=>o.uuid),ids);assert.deepEqual([...view.materials,...view.geometries],resources);assert.equal(f.loads.length,1);
   const distance=view.state().distance,version=edges.instanceMatrix.version,matrix=edges.instanceMatrix.array.slice();for(let i=0;i<300;i++)view.tick(.1,false);assert.equal(view.state().distance,distance);assert.equal(edges.instanceMatrix.version,version);assert.deepEqual(edges.instanceMatrix.array,matrix);
   view.setSpeed(0);for(let i=0;i<30;i++)view.tick(.1);view.tick(NaN);view.tick(-1);assert.equal(edges.instanceMatrix.version,version,'zero travel must not upload matrices');view.setSpeed(6.8);

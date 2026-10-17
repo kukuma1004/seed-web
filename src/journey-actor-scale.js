@@ -31,6 +31,12 @@ const crosswindRoles=Object.freeze({scout:role(H.hound,385/512),lobber:role(H.ca
 const crystalRoles=Object.freeze({swarm:role(H.hound,306/512),brute:role(H.shield,378/512),runner:role(H.hound,320/512)});
 export const ARBOR_ACT1_BOSS_SIZE=H.boss/(489/512);
 
+// Act1's starting seed is nearer the perspective camera (z5, lookZ~.7).
+// Act6 follows its seed at the centre (lookZ~5.4). Equal world scale therefore
+// made it 12% smaller on screen. Compensate only its visual rig, keeping the
+// Act1 camera, arena, collision radius and all other modes unchanged.
+export const ARBOR_SEED_DISPLAY_SCALE=1.425;
+
 export function journeyActorArt(actor,art){
  if(!art?.file||!Number.isFinite(art.size))return art;
  const file=art.file.split('/').at(-1),type=actor?.type;

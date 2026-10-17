@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import {ACT3_ARENA} from './act3.js';
 
 const FAR_RAIN=18,NEAR_RAIN=12,ROUTE_ASPECT=16/9,COVER_OVERSCAN=1.025;
 export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
@@ -8,21 +9,23 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
  const floorMat=new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false,fog:false,depthWrite:false});
  // Grade the existing sample before Three's output conversion. The central
  // combat lane compresses cloud contrast and chroma into a quiet storm-blue
- // midground; the peripheral garden painting keeps its original detail/value.
+ // midground; the peripheral garden keeps its forms with a distant cool wash.
  // This is part of the opaque background draw, not a veil over combat actors.
  floorMat.onBeforeCompile=shader=>{
   shader.vertexShader='varying vec2 vSkywayFrameUv;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSkywayFrameUv=uv;');
   shader.fragmentShader='varying vec2 vSkywayFrameUv;\n'+shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
-   float skywayRadius=length((vSkywayFrameUv-vec2(.5,.49))*vec2(1.36,1.0));
-   float skywayQuiet=(1.0-smoothstep(.18,.66,skywayRadius))*${mobile?'.92':'.86'};
+   float skywayRadius=length((vSkywayFrameUv-vec2(.5,.49))*vec2(1.18,1.0));
+   float skywayQuiet=(1.0-smoothstep(.24,.75,skywayRadius))*${mobile?'.97':'.94'};
    float skywayLuma=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
-   vec3 skywayQuietColor=mix(vec3(skywayLuma),diffuseColor.rgb,.48);
-   skywayQuietColor=mix(vec3(.015,.027,.045),skywayQuietColor,.42);
-   diffuseColor.rgb=mix(diffuseColor.rgb,skywayQuietColor,skywayQuiet);`);
+   vec3 skywayDistanceColor=mix(vec3(skywayLuma),diffuseColor.rgb,.76);
+   skywayDistanceColor=mix(vec3(.018,.03,.048),skywayDistanceColor,.78);
+   vec3 skywayQuietColor=mix(vec3(skywayLuma),diffuseColor.rgb,.34);
+   skywayQuietColor=mix(vec3(.018,.03,.048),skywayQuietColor,.30);
+   diffuseColor.rgb=mix(skywayDistanceColor,skywayQuietColor,skywayQuiet);`);
  };
- floorMat.customProgramCacheKey=()=>mobile?'skyway-painted-hierarchy-mobile-v1':'skyway-painted-hierarchy-v1';
- const edgeMat=new THREE.MeshBasicMaterial({color:0xbce9ee,transparent:true,opacity:.14,depthWrite:false,toneMapped:false,fog:false});
- const cloudMat=new THREE.MeshBasicMaterial({color:0xe4faff,transparent:true,opacity:.22,depthWrite:false,toneMapped:false,fog:false});
+ floorMat.customProgramCacheKey=()=>mobile?'skyway-painted-hierarchy-mobile-v2':'skyway-painted-hierarchy-v2';
+ const edgeMat=new THREE.MeshBasicMaterial({color:0xbce9ee,transparent:true,opacity:.09,depthWrite:false,toneMapped:false,fog:false});
+ const cloudMat=new THREE.MeshBasicMaterial({color:0xe4faff,transparent:true,opacity:.13,depthWrite:false,toneMapped:false,fog:false});
  // Keep a sense of travel in the margins without decorative rain crossing
  // the seed/threat focal area at full contrast. Both batches share a program;
  // no texture, uniform clock, new draw, or per-frame material update is needed.
@@ -33,6 +36,23 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
   };
   material.customProgramCacheKey=()=> 'skyway-rain-margins-v1';
  }
+ // A single static, world-aligned inlay follows the REAL movement rectangle.
+ // A slim jade filament and sparse copper ties mark the edge of the air route.
+ // The exact collision rectangle stays readable without a painted road rail.
+ const boundaryVertices=[],boundaryColors=[];
+ const boundaryQuad=(x,z,w,d,tint,y=.065)=>{
+  for(const [a,b]of [[0,0],[1,0],[1,1],[0,0],[1,1],[0,1]]){boundaryVertices.push(x+(a-.5)*w,y,z+(b-.5)*d);boundaryColors.push(...tint);}
+ };
+ const bw=ACT3_ARENA.halfWidth,bd=ACT3_ARENA.halfDepth;
+ for(const side of [-1,1]){
+  boundaryQuad(side*bw,0,.24,bd*2+.24,[.018,.045,.06]);boundaryQuad(0,side*bd,bw*2,.24,[.018,.045,.06]);
+  boundaryQuad(side*bw,0,.065,bd*2,[.24,.42,.39],.07);boundaryQuad(0,side*bd,bw*2,.065,[.24,.42,.39],.07);
+  for(let z=-bd+.6;z<bd;z+=1.8)boundaryQuad(side*bw,z,.23,.075,[.45,.40,.23],.075);
+  for(let x=-bw+.6;x<bw;x+=1.8)boundaryQuad(x,side*bd,.075,.23,[.45,.40,.23],.075);
+ }
+ const boundaryGeo=new THREE.BufferGeometry();boundaryGeo.setAttribute('position',new THREE.Float32BufferAttribute(boundaryVertices,3));boundaryGeo.setAttribute('color',new THREE.Float32BufferAttribute(boundaryColors,3));boundaryGeo.computeBoundingSphere();
+ const boundaryMat=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,toneMapped:false,fog:false});
+ const boundary=new THREE.Mesh(boundaryGeo,boundaryMat);boundary.name='skyway-true-route-perimeter';group.add(boundary);
  const darkMat=new THREE.MeshBasicMaterial({color:0x172b3d});
  const panelGeo=new THREE.PlaneGeometry(1,1),sea=new THREE.Mesh(panelGeo,floorMat);sea.name='skyway-painted-route';sea.renderOrder=-10;sea.frustumCulled=false;group.add(sea);
  const edgeGeo=new THREE.PlaneGeometry(.016,.86);
@@ -88,7 +108,7 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
  }
  updateInstances();
  return {
-  group,coverMaterial:edgeMat,boundaryMaterials:{dark:floorMat,armor:edgeMat,stone:edgeMat},materials:[floorMat,edgeMat,cloudMat,darkMat],geometries:[panelGeo,edgeGeo],setActive,
+  group,coverMaterial:edgeMat,boundaryMaterials:{dark:floorMat,armor:edgeMat,stone:edgeMat},materials:[floorMat,edgeMat,cloudMat,darkMat,boundaryMat],geometries:[panelGeo,edgeGeo,boundaryGeo],setActive,
   tick(dt,running=true,reducedMotion=false){
    if(disposed||!active)return;
    edges.visible=clouds.visible=!reducedMotion;
@@ -97,7 +117,7 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
    rainClock+=safe;if(!mobile||rainClock>=1/30){rainClock%=1/30;updateInstances();}
   },
   setSpeed(value){speed=Math.max(0,Math.min(9,Number(value)||0));},
-  state:()=>({active,distance:+distance.toFixed(1),speed,drawCalls:3,instances:rain.length,openEnds:true,parallaxLayers:3,sourceAspect:map?.image?.width>0&&map?.image?.height>0?map.image.width/map.image.height:ROUTE_ASPECT,mobileMotion:mobile?.72:1,quietCombatCenter:true,backgroundSamples:1,rainInMargins:true,disposed}),
-  dispose(){if(disposed)return;setActive(false);disposed=true;group.removeFromParent();map?.dispose();for(const material of[floorMat,edgeMat,cloudMat,darkMat])material.dispose();panelGeo.dispose();edgeGeo.dispose();}
+  state:()=>({active,distance:+distance.toFixed(1),speed,drawCalls:4,instances:rain.length,openEnds:false,trueArenaPerimeter:true,parallaxLayers:3,sourceAspect:map?.image?.width>0&&map?.image?.height>0?map.image.width/map.image.height:ROUTE_ASPECT,mobileMotion:mobile?.72:1,quietCombatCenter:true,backgroundSamples:1,rainInMargins:true,disposed}),
+  dispose(){if(disposed)return;setActive(false);disposed=true;group.removeFromParent();map?.dispose();for(const material of[floorMat,edgeMat,cloudMat,darkMat,boundaryMat])material.dispose();panelGeo.dispose();edgeGeo.dispose();boundaryGeo.dispose();}
  };
 }

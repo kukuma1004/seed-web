@@ -7,6 +7,7 @@ import {createCrystalSiege,startCrystalSiegeDefense,stepCrystalSiege,buildCrysta
 import {createExpansionThreat} from '../src/expansion-journey.js';
 import {createJourneySignatureView} from '../src/journey-act-signature-view.js';
 import {createJourneyPresentation} from '../src/journey-presentation.js';
+import {ACT3_ARENA} from '../src/act3.js';
 
 assert.equal(createJourneySignature('garden'),null);assert.equal(createJourneySignature('stadium'),null);
 for(let room=0;room<5;room++){
@@ -51,22 +52,29 @@ const main=readFileSync(new URL('../src/main.js',import.meta.url),'utf8'),start=
 const ctx=vm.createContext({journeySignature:createJourneySignature('skyway'),survivalSession:null,mirrorSession:null,trainingSession:null,expansionJourney:null,player:{position:{x:-8,z:5}},journeySignatureContext:{player:{x:-8,z:5}},stepJourneySignature,roomCleared:false,invuln:0,shellTime:0,audio:{play(){}},journeyPresentation:createJourneyPresentation(),journeyPresentationEnabled:()=>true,hitPlayer(d){ctx.hp-=d;},hp:100});vm.runInContext(main.slice(start,end),ctx);for(let i=0;i<70;i++)ctx.updateJourneySignature(.1);assert(ctx.hp<100,'storm reaches the actual host hurt callback');assert.equal(ctx.journeyPresentation.state().kind,'opening','shipping tactical update reaches the presentation observer');
 const hp=ctx.hp;ctx.survivalSession={};for(let i=0;i<100;i++)ctx.updateJourneySignature(.1);assert.equal(ctx.hp,hp,'Survival is excluded, even if a stale Journey signature exists');
 assert(main.includes('e.onJourneyDefeat?.(e)'));assert(main.includes('journeySignatureMoveScale(journeySignature)'));assert(main.includes('journeySignatureAttackScale(journeySignature,player.position)'));
-const nodes=[];globalThis.document={createElement(){const node={hidden:false,textContent:'',setAttribute(){},remove(){this.removed=true;}};nodes.push(node);return node;},body:{append(){}}};
-const scene=new THREE.Scene(),view=createJourneySignatureView(scene),root=scene.children[0],signature=createJourneySignature('skyway'),objects=[...root.children];
-const geometryIds=objects.map(o=>o.geometry.id),materialIds=objects.map(o=>o.material.id);let peak=0;
+const nodes=[];globalThis.document={createElement(){const node={_hidden:false,_text:'',hiddenWrites:0,textWrites:0,get hidden(){return this._hidden;},set hidden(value){this.hiddenWrites++;this._hidden=value;},get textContent(){return this._text;},set textContent(value){this.textWrites++;this._text=value;},setAttribute(){},remove(){this.removed=true;}};nodes.push(node);return node;},body:{append(){}}};
+const scene=new THREE.Scene(),view=createJourneySignatureView(scene,{loader:{load(url,onLoad){const t=new THREE.Texture();onLoad(t);return t;}}}),root=scene.children[0],signature=createJourneySignature('skyway'),objects=[...root.children];
+// Two finite shared wind/electricity geometries switch only at storm phase
+// boundaries. The actor count and every geometry/material identity stay fixed.
+Object.assign(signature,{phase:'warning',lane:0,time:4.02});view.update(signature,{x:0,z:5},{visible:true});const windGeometry=objects[0].geometry;
+signature.phase='storm';view.update(signature,{x:0,z:5},{visible:true});const lightningGeometry=objects[0].geometry;
+const fixedGeometries=new Set([windGeometry,lightningGeometry,objects[2].geometry,objects[4].geometry]),geometryBuffers=[...fixedGeometries].map(g=>g.attributes.position.array.slice()),materialIds=objects.map(o=>o.material.id);let peak=0;
+assert.equal(fixedGeometries.size,4);assert.notEqual(windGeometry,lightningGeometry);signature.time=0;signature.phase='quiet';
 for(let i=0;i<20000;i++){stepJourneySignature(signature,.02,{player:{x:0,z:5}});view.update(signature,{x:0,z:5},{visible:true});assert.equal(root.children.length,5);peak=Math.max(peak,root.children.filter(o=>o.visible).length);}
-assert.deepEqual(objects.map(o=>o.geometry.id),geometryIds);assert.deepEqual(objects.map(o=>o.material.id),materialIds);assert.equal(peak,4);assert.equal(nodes.length,1,'one bounded status element');
-// Warning fills gradually rather than flashing; its edges still match the
-// real 4.8-unit gap. One visible hint at a time, no extra world resources.
+assert(objects.every(o=>fixedGeometries.has(o.geometry)));[...fixedGeometries].forEach((g,i)=>assert.deepEqual(g.attributes.position.array,geometryBuffers[i]));assert.deepEqual(objects.map(o=>o.material.id),materialIds);assert.equal(peak,4);assert.equal(nodes.length,1,'one bounded status element');
+// Amber wind is anticipation; branching electricity exists only in the real
+// active damage phase. Neither is a filled rectangle or a projectile laser.
 Object.assign(signature,{phase:'warning',lane:0,time:4.02});
 view.update(signature,{x:0,z:5},{visible:true,hideHint:true});assert(root.visible&&nodes[0].hidden);const faint=objects[0].material.opacity,thin=objects[2].scale.x;
+assert.equal(objects[0].geometry,windGeometry);assert.equal(objects[0].isInstancedMesh,true);assert(nodes[0].textContent.includes('폭풍 접근'));
 signature.time=5.75;view.update(signature,{x:0,z:5},{visible:true});assert(!nodes[0].hidden);assert(objects[0].material.opacity>faint);assert(objects[2].scale.x>thin);
 for(const lane of [-5,0,5]){
  signature.lane=lane;view.update(signature,{x:lane,z:5},{visible:true,reducedMotion:true});
  assert.equal(objects[2].position.x,lane-R.stormHalfGap);assert.equal(objects[3].position.x,lane+R.stormHalfGap);
  const stable=[objects[0].material.opacity,objects[2].scale.x];signature.time=4.03;view.update(signature,{x:lane,z:5},{visible:true,reducedMotion:true});assert.deepEqual([objects[0].material.opacity,objects[2].scale.x],stable);
 }
-signature.phase='storm';view.update(signature,{x:0,z:5},{visible:true});assert.equal(objects[2].scale.x,.14);assert.equal(objects[2].material.color.getHex(),0xb7ecd1);
+signature.phase='storm';view.update(signature,{x:0,z:5},{visible:true});assert.equal(objects[0].geometry,lightningGeometry);assert.equal(objects[2].scale.x,.14);assert.equal(objects[2].material.color.getHex(),0xb7ecd1);assert(nodes[0].textContent.includes('지속 피해'));
+signature.lane=0;view.update(signature,{x:-14,z:5},{visible:true});assert(nodes[0].textContent.includes('오른쪽 밝은 틈으로 →'),'offscreen safe route still gives an honest direction');view.update(signature,{x:14,z:5},{visible:true});assert(nodes[0].textContent.includes('← 왼쪽 밝은 틈으로'));view.update(signature,{x:0,z:5},{visible:true});assert(nodes[0].textContent.includes('항로 안에서'));
 signature.phase='quiet';view.update(signature,{x:0,z:5},{visible:true});assert(objects.every(o=>!o.visible),'quiet interval leaves the field clear');
 // Wind points forward; repair fills only inside the existing facility ring.
 wind.tailwind=1;view.update(wind,player,{visible:true});assert.equal(objects[2].position.x,player.x+1.5);assert.equal(objects[2].rotation.z,-Math.PI*3/4);assert.equal(objects[3].rotation.z,-Math.PI/4);
@@ -77,7 +85,34 @@ for(const progress of [0,.25,.75,1,2]){
  const width=1.1*Math.min(1,progress);assert.equal(objects[3].scale.x,width);assert.equal(objects[3].position.x-width/2,pad.x-.55);assert.equal(objects[3].visible,progress>0);
 }
 repair.sig.repairPad=null;view.update(repair.sig,pad,{visible:true,siege:repair.siege});assert(objects[4].visible&&!objects[2].visible&&!objects[3].visible,'support ring remains after repair; bar does not');
-signature.phase='storm';view.update(signature,player,{visible:true});assert.equal(objects[2].rotation.z,0);assert.equal(objects[3].rotation.z,0);assert.equal(objects[3].scale.y,16,'returning to Act 3 resets the shared repair marker');
-assert.deepEqual(objects.map(o=>o.geometry.id),geometryIds);assert.deepEqual(objects.map(o=>o.material.id),materialIds);
+signature.phase='storm';view.update(signature,player,{visible:true});assert.equal(objects[2].rotation.z,0);assert.equal(objects[3].rotation.z,0);assert.equal(objects[3].scale.y,ACT3_ARENA.halfDepth*2,'returning to Act 3 restores the full actual roaming depth');
+assert(objects.every(o=>fixedGeometries.has(o.geometry)));assert.deepEqual(objects.map(o=>o.material.id),materialIds);
+
+const beforeSignature=JSON.stringify(signature),instanceMatrix=new THREE.Matrix4(),vertex=new THREE.Vector3();
+for(const lane of[-5,0,5])for(const lowQuality of[false,true]){
+ signature.lane=lane;view.update(signature,player,{visible:true,lowQuality,reducedMotion:true});assert(view.state().instances<=48);assert.equal(view.state().drawCalls,4);assert.equal(view.state().textures,1);
+ // Image cards can overlap: the actual GPU world-space mask clips the safe
+ // corridor AND outside arena, independent of painted alpha or card drift.
+ const shader={uniforms:{},vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader};
+ objects[0].material.onBeforeCompile(shader);
+ assert.equal(shader.uniforms.stormGap.value,R.stormHalfGap);
+ assert.equal(shader.uniforms.stormLane.value,lane);
+ assert.deepEqual(shader.uniforms.stormBounds.value.toArray(),[ACT3_ARENA.halfWidth,ACT3_ARENA.halfDepth]);
+ assert(shader.vertexShader.includes('modelMatrix * instanceMatrix * vec4(position,1.0)'));
+ assert(shader.fragmentShader.includes('smoothstep(stormGap,stormGap+.32,abs(vStormWorld.x-stormLane))'));
+ assert(shader.fragmentShader.includes('step(abs(vStormWorld.x),stormBounds.x)*step(abs(vStormWorld.y),stormBounds.y)'));
+ for(const mesh of[objects[0],objects[1]]){assert(mesh.count<=12);for(let i=0;i<mesh.count;i++){mesh.getMatrixAt(i,instanceMatrix);assert(Array.from(instanceMatrix.elements).every(Number.isFinite));}}
+
+ const versions=[objects[0].instanceMatrix.version,objects[1].instanceMatrix.version],matrix=objects[0].instanceMatrix.array.slice();
+ signature.time+=3;view.update(signature,player,{visible:true,lowQuality,reducedMotion:true});assert.deepEqual([objects[0].instanceMatrix.version,objects[1].instanceMatrix.version],versions);assert.deepEqual(objects[0].instanceMatrix.array,matrix,'reduced motion has no animated matrix uploads');
+}
+Object.assign(signature,JSON.parse(beforeSignature));signature.time=4.001;signature.phase='warning';view.update(signature,player,{visible:true});const version=objects[0].instanceMatrix.version;signature.time=4.002;view.update(signature,player,{visible:true});assert.equal(objects[0].instanceMatrix.version,version,'normal decorative animation is throttled to30Hz');
+signature.phase='quiet';signature.time=0;view.update(signature,player,{visible:true});assert(nodes[0].textContent.includes('구역 공격'));assert(objects.every(o=>!o.visible),'intro does not invent actual damage graphics');
+const renderState=JSON.stringify(signature),hintWrites=[nodes[0].hiddenWrites,nodes[0].textWrites];for(let i=0;i<3000;i++)view.update(signature,player,{visible:true});assert.equal(JSON.stringify(signature),renderState,'presentation cannot advance storm timing or cause damage');assert.deepEqual([nodes[0].hiddenWrites,nodes[0].textWrites],hintWrites,'static intro has no repeated DOM attribute/text writes');
+let disposedResources=0;for(const geometry of fixedGeometries)geometry.addEventListener('dispose',()=>disposedResources++);for(const material of new Set(objects.map(o=>o.material)))material.addEventListener('dispose',()=>disposedResources++);
 view.hide();assert.equal(root.visible,false);assert.equal(nodes[0].hidden,true);view.dispose();view.dispose();assert.equal(scene.children.length,0);assert(nodes[0].removed);delete globalThis.document;
+assert.equal(disposedResources,6,'four owned shared geometries and two materials dispose once');
+// Delayed/error loads leave image banks hidden; the true corridor and text
+// remain available. Disposal while loading never resurrects its texture.
+{let ready,failed,loads=0,disposed=0;globalThis.document={body:{append(){}},createElement:()=>({hidden:true,textContent:'',setAttribute(){},remove(){}})};const t=new THREE.Texture();t.addEventListener('dispose',()=>disposed++);const v=createJourneySignatureView(new THREE.Scene(),{loader:{load(url,success,_p,error){assert(url.includes('mobile/journey-storm-atlas-v1.webp'));loads++;ready=success;failed=error;return t;}}});const q={...signature,phase:'storm',time:8};v.update(q,player,{visible:true,lowQuality:true});assert.equal(v.state().drawCalls,2);assert.equal(v.state().artReady,false);failed();v.update(q,player,{visible:true,lowQuality:true});assert.equal(loads,1);v.dispose();ready(t);assert.equal(disposed,1);assert.equal(v.state().artReady,false);delete globalThis.document;}
 console.log('Journey 3/4/5 signatures: storm lanes and dodge, honest front kills, real turret/support/repair, boss support, exact paid checkpoint, no other-mode leak and 20k fixed-geometry updates PASS.');

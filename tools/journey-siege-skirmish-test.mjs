@@ -66,7 +66,7 @@ groups.push('17 mode, phase, visibility, proximity, death, freeze and cap exclus
  const extract=name=>{const start=source.indexOf('function '+name+'('),line=source.slice(start,source.indexOf('\n',start)).trim();assert(line.endsWith('}'),'shipping bolt adapter remains one complete function line');return line;};
  for(const speedScale of [1,1.8]){
   const f=setup();until(f,o=>o.started);const q=until(f,o=>o.bolts.length).bolts[0];
-  const context=vm.createContext({THREE,V:THREE.Vector3,enemyShots:[],qualityLevel:1,stage:0,act3RoomPressure:()=>({projectileCapNormal:48}),expansionChannel:speedScale===1?'inspection':'public',cycle:0,difficulty:()=>({projectileSpeed:speedScale})});
+  const context=vm.createContext({performance,skywayMuzzleAt:-Infinity,journeyReducedMotion:false,vfx:{muzzle(){}},THREE,V:THREE.Vector3,enemyShots:[],qualityLevel:1,stage:0,act3RoomPressure:()=>({projectileCapNormal:48}),expansionChannel:speedScale===1?'inspection':'public',cycle:0,difficulty:()=>({projectileSpeed:speedScale})});
   // Execute both actual host adapters, including the muzzle offset and the
   // public difficulty speed/life adjustment, not a copy of the intended math.
   vm.runInContext(extract('skywayBolt')+'\n'+extract('expansionBolt'),context);

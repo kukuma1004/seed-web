@@ -46,7 +46,8 @@ import './final-identity-art.css';
 import './combo-art.css';
 import './dash-evolution.css';
 import {ACTOR_ART_GEOMETRIES,ACTOR_MOTION_GEOMETRIES,ACTOR_THREAT_GEOMETRIES,configureActorArt,configureOcclusion,attachActorArt as attachRawActorArt} from './actor-art.js';
-import {journeyActorArt} from './journey-actor-scale.js';
+import {journeyActorArt,ARBOR_SEED_DISPLAY_SCALE} from './journey-actor-scale.js';
+import {launchJourneyCard} from './journey-entry-ui.js';
 import {attachBossActionRig} from './boss-action-rig.js';
 import {BOSS_PETS,createBossPet,readBossPet,unlockedBossPets,writeBossPet} from './boss-pets.js';
 import {createSpatialIndex} from './spatial-index.js';
@@ -641,7 +642,7 @@ function drawArborRoom(){
  for(const group of [arenaGroup,roomCover,trapGroup])for(const child of [...group.children])release(child);
  obstacles.length=0;traps=[];clockFloor=null;stadium.setActive(false);skyway.setActive(false);mirrorPanelsActive=false;mirrorPanels.setActive(false);survivalArt?.setActive(false);expansionJourneyView?.setActive(false);expansionSiegeView?.hide();
  for(const object of hiddenGarden)object.visible=false;
- arena=arborApi.ARBOR_ARENA;player.scale.setScalar(1.25);arborView.setActive(true);gate.position.set(0,0,-8);syncArborRoots();
+ arena=arborApi.ARBOR_ARENA;player.scale.setScalar(ARBOR_SEED_DISPLAY_SCALE);arborView.setActive(true);gate.position.set(0,0,-8);syncArborRoots();
 }
 function syncArborRoots(){
  if(!arborJourney)return;
@@ -856,8 +857,8 @@ function traceExpansionFormShot(shot,previous,next,dir,meta){
  if(result.reflected){dir.x=result.dir.x;dir.z=result.dir.z;}
  if(result.hits.some(h=>h.damage>0))expansionTerrainDirty=true;return result;
 }
-async function startPublicExpansionJourney(act,{resume=false}={}){return startExpansionJourney(0,act,{resume,publicRun:true});}
-async function startExpansionJourney(room=0,act='crosswind',{resume=false,publicRun=false,bossPreview=false,siegePreview=false}={}){
+async function startPublicExpansionJourney(act,{resume=false,syncChoice=null,syncExpected=null}={}){return startExpansionJourney(0,act,{resume,publicRun:true,syncChoice,syncExpected});}
+async function startExpansionJourney(room=0,act='crosswind',{resume=false,publicRun=false,bossPreview=false,siegePreview=false,syncChoice=null,syncExpected=null}={}){
  if(publicRun&&!bossRecordReady())return false;
  if(siegePreview&&(publicRun||bossPreview||act!=='crystalGorge'||!localInspection))return false;
  if(bossPreview&&(publicRun||resume||!localInspection))return false;
@@ -885,7 +886,8 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   if(publicRun){
    const local=store.read();if(local?.campaign?.pendingBossTitles.length){const settled=settleExpansionPublicTitles(store,local,(runId,event)=>launch===expansionLaunch&&owner===expansionOwner()&&awardModeBoss('journey',runId,event.boss,event.ordinal,false,event.bossEpoch??null));if(!settled.ok){if(!reused)await lease.release();$('#toast').textContent='보관된 보스 보상을 저장하지 못했어요. 기록은 그대로 남아 있습니다.';return false;}}
    publicSync=createExpansionAccountSync({storage:rawStorage,account,act,databaseURL:FIREBASE_APP.databaseURL,context:facts,acts:rules.EXPANSION_ACTS,activeLease:()=>lease,isActive:()=>false});
-   const result=await publicSync.sync({allowPull:true});publicSyncKind=result.kind;
+   const result=await publicSync.sync({allowPull:true,choice:syncChoice,expected:syncExpected});publicSyncKind=result.kind;
+   if(result.kind==='conflict'){if(!reused)await lease.release();showExpansionSaveConflict(act,result);return false;}
    if(!['synced','empty','offline'].includes(result.kind)){$('#toast').textContent='계정 기록을 안전하게 확인하지 못했어요. 기존 저장은 보존했습니다.';if(!reused)await lease.release();return false;}
   }
   // Read under the exclusive lease, after both scenery and remote validation.
@@ -893,13 +895,16 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   if(publicRun&&record?.campaign?.pendingBossTitles.length){const settled=settleExpansionPublicTitles(store,record,(runId,event)=>launch===expansionLaunch&&owner===expansionOwner()&&awardModeBoss('journey',runId,event.boss,event.ordinal,false,event.bossEpoch??null));record=settled.value;if(!settled.ok){if(!reused)await lease.release();$('#toast').textContent='이전 보스 보상을 저장하지 못했어요. 기록을 보존하고 재시도를 기다립니다.';return false;}}
   if(publicRun&&record&&!record.entry.ended&&!record.campaign){const upgraded={...record,campaign:createExpansionPublicCampaign(act),entry:{...record.entry,run:{...record.entry.run,cycle:0}}},result=store.write(upgraded);if(!result.ok){if(!reused)await lease.release();return false;}record=result.value;}
   saved=publicRun?(record&&!record.entry.ended?record.entry:null):(resume?record:null);
+  // The menu may predate a cloud pull. Resume the accepted checkpoint under
+  // this lease instead of refusing a tap on the old 'new seed' label.
+  if(publicRun&&resume===null)resume=Boolean(saved);
   if(resume&&!saved||publicRun&&!resume&&(record&&!record.entry.ended||publicSyncKind==='offline')){if(!reused)await lease.release();$('#toast').textContent='이어할 기록을 먼저 확인해 주세요. 기존 기록은 남겨 두었습니다.';return false;}
   const objective=saved?saved.journey.objective??null:publicRun?rules.freshExpansionObjective(act):null;
   if(objective)await prepareCrystalSiegeView();
   if(previousLease&&previousLease!==lease)await previousLease.release();
   if(launch!==expansionLaunch||owner!==expansionOwner()||!lease.active()||publicRun&&(!expansionAccountEligible(act,owner,facts())||gameplayPaused()||maintenanceOn)){if(!reused)await lease.release();return false;}
   expansionSaveLease=lease;expansionSaveOwner=owner;expansionChannel=publicRun?'public':'inspection';expansionPublicSync=publicSync;expansionPublicEntry=publicRun&&saved?record:null;expansionFreshExpected=publicRun&&!saved?record:null;expansionPendingBossCheckpoint=null;
-  expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;survivalSiege=null;survivalSiegeOwner=null;trainingSession=null;developerRun=!publicRun;labSafe=false;startRegion='garden';restart(saved?.run,{expansion:true});
+  expansionJourney=null;expansionEntry=saved;mirrorSession=null;survivalSession=null;survivalSiege=null;survivalSiegeOwner=null;trainingSession=null;developerRun=!publicRun;labSafe=false;startRegion='garden';const restarted=restart(saved?.run,{expansion:true});if(restarted!==true)throw Error('restart');
   for(const e of enemies)releaseEnemy(e);enemies=[];for(const f of fallen)releaseEnemy(f.e);fallen.length=0;
   expansionJourney=bossPreview?inspectionPreview.createJourneyBossInspection(act,{garden:act==='crystalGorge'}):saved?expansionApi.restoreExpansionJourney(saved.journey):expansionApi.createExpansionJourney(act,Math.max(0,Math.min(4,room|0)),413,{siege:siegePreview||!!objective,objective,quickPrep:siegePreview,wardens:true});
   const openRoom=()=>{stage=expansionJourney.room;mode='playing';paused=false;wave();return !publicRun||Boolean(expansionEntry);};
@@ -914,6 +919,18 @@ async function startExpansionJourney(room=0,act='crosswind',{resume=false,public
   if(expansionSaveLease===lease&&launch===expansionLaunch){expansionSaveLease=null;expansionJourney=null;expansionEntry=null;expansionPublicEntry=null;expansionPublicSync=null;expansionPendingBossCheckpoint=null;expansionTerrain=null;mode='ready';paused=false;$('#toast').textContent='여정을 시작하지 못했어요. 기존 저장은 남겨 두었습니다.';}
   if(!reused||expansionSaveLease!==lease)await lease.release();return false;
  }
+}
+
+function showExpansionSaveConflict(act,state){
+ const number=EXPANSION_ACTS[act].number;
+ const detail=value=>value?.entry?.ended?'종료된 도전':value?.entry?`${(value.campaign?.lap||0)+1}순환 · ${value.entry.journey.room+1}번째 관문`:'저장 없음';
+ mode='ready';$('#overlay').hidden=false;
+ $('#overlay').innerHTML=`<div class="menu-panel"><p class="eyebrow">${number}막 · 계정 저장 확인</p><h2>이어갈 도전을 골라 주세요</h2><p>두 기기의 진행이 달라요. 선택 전 기록은 이 기기에 백업해요.</p><button id="expansion-use-local">이 기기 · ${detail(state.local)}</button><button id="expansion-use-remote">계정 · ${detail(state.remote)}</button><p id="journey-entry-status" role="status" hidden></p><button id="expansion-conflict-back">돌아가기</button></div>`;
+ for(const [id,choice,value] of [['expansion-use-local','local',state.local],['expansion-use-remote','remote',state.remote]]){
+  const button=$('#'+id);button.disabled=!value;
+  button.onclick=()=>void launchJourneyCard(button,()=>startPublicExpansionJourney(act,{resume:null,syncChoice:choice,syncExpected:state.expected}),{status:$('#journey-entry-status'),buttons:[$('#expansion-use-local'),$('#expansion-use-remote')],message:()=>$('#toast').textContent,label:number+'막'});
+ }
+ $('#expansion-conflict-back').onclick=()=>{++expansionLaunch;showJourneys();};
 }
 
 function spawnExpansionActor(spec,boss=false){
@@ -1440,8 +1457,11 @@ function presentJourneySignature(){
  journeySignaturePresentation.siege=expansionJourney?.siege;journeySignaturePresentation.visible=mode==='playing'&&!paused&&!roomCleared&&!survivalSession&&!mirrorSession&&!trainingSession&&!(expansionJourney?.act==='crosswind'&&expansionJourney.phase==='boss');
  const cue=typeof journeyPresentation!=='undefined'?journeyPresentation.state():null;
  const compactScene=journeySignature?.act==='skyway'||journeySignature?.act==='crosswind';
+ const defaultSkyHint=journeySignature?.act==='skyway'&&(ACT3_ROOM_HINTS[stage]||ACT3_ROOM_HINTS[0]);
+ if(defaultSkyHint&&$('#toast').textContent===defaultSkyHint)$('#toast').textContent='';
  journeySignaturePresentation.hideHint=Boolean(compactScene&&$('#toast').textContent||cue?.active&&(cue.kind==='storm'||cue.kind==='opening'||cue.kind==='tailwind'||cue.kind==='night'||cue.kind==='support'||cue.kind==='repair'||cue.kind==='core-alert'));
  journeySignaturePresentation.reducedMotion=typeof journeyReducedMotion!=='undefined'&&journeyReducedMotion;
+ journeySignaturePresentation.lowQuality=qualityLevel===0||mobileDevice;
  journeySignatureView.update(journeySignature,player.position,journeySignaturePresentation);
 }
 function updateEscorts(dt){
@@ -2169,7 +2189,8 @@ function enemyDown(e){perf.event(PE.enemyDeath);
 function updateFallen(dt,time){for(let i=fallen.length-1;i>=0;i--){const f=fallen[i],e=f.e;f.t+=dt;const k=Math.min(1,f.t/1.3);e.hit=Math.floor(f.t*14)%2?.14:0;e.updateArt?.(time);e.g.position.y=-k*k*1.1;e.g.scale.setScalar(1-k*.3);if(Math.floor(f.t/.18)!==Math.floor((f.t-dt)/.18))vfx.burst(e.g.position,'amber',10,1.2);if(f.t>=1.3){releaseEnemy(e);fallen.splice(i,1);}}}
 function austinBolt(pos,dir,spec){const ob=new THREE.Object3D();ob.position.set(pos.x+dir.x*1.3,.65,pos.z+dir.z*1.3);enemyShots.push({boss:true,spriteKey:'austin',ob,dir:dir.clone(),life:4,bounces:0,speed:spec.speed,damage:spec.damage,age:0,origin:pos.clone(),pierce:true});}
 function stadiumBolt(pos,dir,spec){const ob=new THREE.Object3D();ob.position.set(pos.x+dir.x*1.05,.65,pos.z+dir.z*1.05);enemyShots.push({boss:Boolean(spec.boss),spriteKey:'baseball',ob,dir:dir.clone(),life:spec.life||4.8,bounces:enemyBounces(spec.bounces),speed:spec.speed,damage:spec.damage,curve:spec.curve||0,age:0,origin:pos.clone(),pierce:Boolean(spec.pierce)});}
-function skywayBolt(pos,dir,spec){const cap=qualityLevel===0?act3RoomPressure(stage).projectileCapLow:act3RoomPressure(stage).projectileCapNormal;if(enemyShots.length>=cap)return;const boss=Boolean(spec.boss),ob=new THREE.Object3D();ob.position.set(pos.x+dir.x*1.05,.72,pos.z+dir.z*1.05);enemyShots.push({skyway:true,boss,spriteKey:'storm',visualScale:spec.scale||1,ob,dir:dir.clone(),life:spec.life||4.8,bounces:0,speed:spec.speed,damage:spec.damage,curve:spec.curve||0,age:0,origin:pos.clone(),pierce:Boolean(spec.pierce),committedLane:Boolean(spec.committedLane)});}
+let skywayMuzzleAt=-Infinity;
+function skywayBolt(pos,dir,spec){const cap=qualityLevel===0?act3RoomPressure(stage).projectileCapLow:act3RoomPressure(stage).projectileCapNormal;if(enemyShots.length>=cap)return;const boss=Boolean(spec.boss),ob=new THREE.Object3D();ob.position.set(pos.x+dir.x*1.05,.72,pos.z+dir.z*1.05);enemyShots.push({skyway:true,boss,spriteKey:'storm',visualScale:spec.scale||1,ob,dir:dir.clone(),life:spec.life||4.8,bounces:0,speed:spec.speed,damage:spec.damage,curve:spec.curve||0,age:0,origin:pos.clone(),pierce:Boolean(spec.pierce),committedLane:Boolean(spec.committedLane)});const at=performance.now();if(at>=skywayMuzzleAt&&!journeyReducedMotion){skywayMuzzleAt=at+120;vfx.muzzle(ob.position,dir,'amber');}}
 // ---------------- active (F) ----------------
 function useActive(){
  if(mode!=='playing'||paused)return;
@@ -3002,9 +3023,9 @@ function showJourneys(){
    <details class="journey-extra"><summary>별도 도전 · 거울의 탑</summary>${mirrorReady?`<button id="start-mirror" class="menu-item mirror-button"><strong>거울의 탑 · 100층</strong><small>${mirrorRecord.bestFloor?`최고 ${mirrorRecord.bestFloor}층 · `:''}같은 조합을 쓰는 분신과 승부</small></button>${mirrorCheckpoint?`<button id="continue-mirror" class="menu-item mirror-button">거울의 탑 ${mirrorCheckpoint.floor}층 이어하기</button>`:''}`:'<p>오스틴을 쓰러뜨리면 열려요.</p>'}</details>
    ${saved||saved2||saved3||restoreRuns.length?`<details class="journey-extra"><summary>저장 관리 · 새로 시작</summary>${saved?'<button id="start-game" class="menu-item">1막 새로 시작</button>':''}${saved2?'<button id="new-act2" class="menu-item">2막 새로 시작</button>':''}${saved3?'<button id="new-act3" class="menu-item">3막 새로 시작</button>':''}${restoreRuns.map(r=>`<button id="restore-${r.act}" class="menu-item restore-run"><strong>${r.label} 이전 저장 되살리기</strong><small>${escapeHtml(r.detail)} · 현재 판과 맞바꿔요</small></button>`).join('')}</details>`:''}
   </div>
-  <footer class="dungeon-footer"><button id="back-menu">돌아가기</button></footer>
+  <footer class="dungeon-footer"><p id="journey-entry-status" role="status" hidden></p><button id="back-menu">돌아가기</button></footer>
  </div>`;
- for(const {act,record} of expansionRows)$('#start-'+act).onclick=()=>{if(expansionArtPreview){void startExpansionJourney(0,act,{siegePreview:act==='crystalGorge'});return;}if(!requireName())return;void startPublicExpansionJourney(act,{resume:Boolean(record&&!record.entry.ended)});};
+ for(const {act,definition} of expansionRows){const button=$('#start-'+act);button.onclick=()=>{if(!expansionArtPreview&&!requireName())return;$('#toast').textContent='';void launchJourneyCard(button,()=>expansionArtPreview?startExpansionJourney(0,act,{siegePreview:act==='crystalGorge'}):startPublicExpansionJourney(act,{resume:null}),{status:$('#journey-entry-status'),buttons:[...$('#overlay').querySelectorAll('.journey-card')],message:()=>$('#toast').textContent,label:definition.number+'막'});};}
  const enter=(run,selectedRegion='garden')=>{if(!requireName())return;mirrorSession=null;startRegion=selectedRegion;$('#overlay').classList.remove('intro','menu-screen');if(run)restart(run);else startGame();};
  for(const r of restoreRuns)$(`#restore-${r.act}`).onclick=()=>{const store=restoreStores[r.act],current=readCheckpoint(store),backup=backups[r.act].checkpoint;if(!writeCheckpoint(store,backup)){$('#toast').textContent='판을 되살리지 못했어요';return;}setCheckpointBackup(runStorage,r.act,current);$('#toast').textContent=`${r.label} 판을 되살렸어요${current?' · 바꾼 판은 다시 맞바꿀 수 있어요':''}`;showJourneys();};
  if($('#continue-run'))$('#continue-run').onclick=()=>enter(saved);
@@ -3017,7 +3038,7 @@ function showJourneys(){
  if($('#new-act3'))$('#new-act3').onclick=()=>enter(null,ACT3_REGION);
  if($('#start-mirror'))$('#start-mirror').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro','menu-screen');startMirrorTower({publicRun:true});};
  if($('#continue-mirror'))$('#continue-mirror').onclick=()=>{if(!requireName())return;$('#overlay').classList.remove('intro','menu-screen');startMirrorTower({publicRun:true,checkpoint:readMirrorCheckpoint(runStorage)});};
- $('#back-menu').onclick=showDungeon;
+ $('#back-menu').onclick=()=>{++expansionLaunch;++arborLaunch;showDungeon();};
 }
 // Every visible ranking line shows its build. Legacy runs explain why they cannot.
 function rankBuild(entry,place,showBoss=true){

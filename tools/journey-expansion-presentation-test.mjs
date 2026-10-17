@@ -99,9 +99,10 @@ vm.createContext(host);vm.runInContext(main.slice(start,end),host);for(let i=0;i
 // The real presentation host suppresses course-only hints in Act 4's boss
 // arena while preserving Act 5's functional support/repair view in that arena.
 const presentStart=main.indexOf('function presentJourneySignature('),presentEnd=main.indexOf('\nfunction updateEscorts(',presentStart);
-const shown={expansionJourney:{act:'crosswind',phase:'boss'},mode:'playing',paused:false,roomCleared:false,survivalSession:null,mirrorSession:null,trainingSession:null,journeySignaturePresentation:{},journeySignature:{},player:{position:player},journeySignatureView:{update(){}}};
+const shown={expansionJourney:{act:'crosswind',phase:'boss'},mode:'playing',paused:false,roomCleared:false,survivalSession:null,mirrorSession:null,trainingSession:null,qualityLevel:0,mobileDevice:false,journeySignaturePresentation:{},journeySignature:{},player:{position:player},journeySignatureView:{update(){}}};
 vm.createContext(shown);vm.runInContext(main.slice(presentStart,presentEnd),shown);shown.presentJourneySignature();assert(!shown.journeySignaturePresentation.visible);
 shown.expansionJourney.phase='course';shown.presentJourneySignature();assert(shown.journeySignaturePresentation.visible);
+assert.equal(shown.journeySignaturePresentation.lowQuality,true);shown.qualityLevel=2;shown.presentJourneySignature();assert.equal(shown.journeySignaturePresentation.lowQuality,false);shown.mobileDevice=true;shown.presentJourneySignature();assert.equal(shown.journeySignaturePresentation.lowQuality,true,'the real host forwards mobile and low-quality art budgets');
 shown.expansionJourney={act:'crystalGorge',phase:'boss',siege:{}};shown.presentJourneySignature();assert(shown.journeySignaturePresentation.visible);assert.equal(shown.journeySignaturePresentation.siege,shown.expansionJourney.siege);
 // Execute actual exit + result hosts: failed durable finalization never
 // reaches celebration or destroys the existing boss entry.

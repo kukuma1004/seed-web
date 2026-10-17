@@ -1,3 +1,4 @@
+import {ARBOR_SEED_DISPLAY_SCALE} from '../src/journey-actor-scale.js';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -48,7 +49,7 @@ function fixture(){
  const stageNodes=Array.from({length:5},node),document={querySelectorAll:selector=>selector==='#stages span'?stageNodes:[],body:{classList:{add:noop,remove:noop}}};
  const scene=new THREE.Scene(),mats={amber:new THREE.MeshBasicMaterial({color:0xffcc55})},shared=new Set(Object.values(mats));
  const view={hide:noop,setActive:noop,setBossArt:noop,clearBossArt:noop};
- const c=vm.createContext({console,Math,Date,Set,Map,Object,Promise,URLSearchParams,THREE,V:THREE.Vector3,location:{search:''},document,$,scene,mats,camera:new THREE.PerspectiveCamera(),
+ const c=vm.createContext({ARBOR_SEED_DISPLAY_SCALE,console,Math,Date,Set,Map,Object,Promise,URLSearchParams,THREE,V:THREE.Vector3,location:{search:''},document,$,scene,mats,camera:new THREE.PerspectiveCamera(),
   __records:{},__network:{},__rules:rules,__boss:boss,__save:save,__view:{createArborJourneyView:()=>view},__errors:[],
   account:{user:()=>({uid})},arborOwner:()=>`${c.localInspection?'inspection:':''}${uid}`,acquireExpansionSaveLease:(act,owner)=>acquireExpansionSaveLease(act,owner,{locks}),
   arborAccountEligible,validArborEnded,arborAccountFacts:()=>({currentOwner:uid,released:true,anonymous:true}),arborRecords:null,arborSync:null,arborBeginPending:null,arborEndPending:null,arborEndingFlight:null,arborCueTime:0,arborCueText:'',arborVictories:{read:()=>({wins:0,clears:0,pending:0}),record:()=>false,sync:async()=>({kind:'ineligible'})},adminMode:false,betaTesterMode:false,rankSerial:0,playerName:'시험',lastName:()=>'',buildRecord:()=>null,accountRole:()=>({}),rankingDecision:()=>({eligible:false}),ACT:{ARBOR:6},rawStorage:storage,runStorage:storage,arborJourney:null,arborApi:null,arborBossApi:null,arborSaveApi:null,arborView:null,arborEntry:null,arborStore:null,arborLease:null,arborBoss:null,arborLaunch:0,

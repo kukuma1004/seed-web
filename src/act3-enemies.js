@@ -148,7 +148,7 @@ export function tickAct3Warden(e,dt,time,ctx){
   e.g.position.x+=Math.sin(time*.9)*dt*2.2;e.g.position.addScaledVector(to,dt*(distance>6.5?2.15:distance<4.2?-1.5:0));face(e,to);
   if(e.timer<=0){e.pattern=e.attacks++%3;e.state='tell';e.timer=e.pattern===1?.34:.52;e.dir.copy(to);e.moveName=['교차 편대','낙하 관통','회전 뇌광'][e.pattern];e.hint=['빠른 탄과 느린 탄의 틈을 두 번 나누어 지나세요','날개가 접히면 옆으로 크게 벗어나세요','한 방향으로 돌며 나선의 뒤를 따라가세요'][e.pattern];ctx.sound?.('bossWarning');}
  }else if(e.state==='tell'){
-  face(e,e.dir);if(e.pattern===1){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);}else{e.tell.visible=true;e.tell.scale.setScalar(1.15+Math.sin(time*15)*.12);}
+  face(e,e.dir);if(e.pattern===1){e.line.visible=true;e.line.rotation.y=0;}else{e.tell.visible=true;e.tell.scale.setScalar(1.15+Math.sin(time*15)*.12);}
   if(e.timer<=0){if(e.pattern===1){e.state='charge';e.timer=.58;e.chargeHit=false;}else{const count=e.pattern===2?16:9;for(let i=0;i<count;i++){const a=e.pattern===2?i*Math.PI*2/count:(i-(count-1)/2)*.15;shot(ctx,e,(e.pattern===2?new V(Math.sin(a),0,Math.cos(a)):e.dir.clone().applyAxisAngle(AXIS_Y,a)),{speed:e.pattern===2?6.8+(i%2)*1.8:8.6+Math.abs(i-(count-1)/2)*.22,damage:16,boss:true});}e.state='recover';e.timer=.68;ctx.sound?.('bossAttack');}}
  }else if(e.state==='charge'){
   face(e,e.dir);e.g.position.addScaledVector(e.dir,dt*16.2);if(!e.chargeHit&&e.g.position.distanceTo(ctx.player)<1.05){e.chargeHit=true;ctx.hit(28);}if(e.timer<=0){e.state='recover';e.timer=.62;}
@@ -228,7 +228,7 @@ export function tickTempestCarrier(e,dt,time,ctx){
   const move=BOSS_MOVES[e.pattern];e.state='tell';e.timer=[.46,.38,.34,.42,.5][e.pattern]/(1+phase*.06);e.dir.copy(to);e.moveName=move.name;e.hint=move.hint;ctx.sound?.('bossWarning');
  }else if(e.state==='tell'){
   e.tell.visible=true;e.tell.scale.setScalar((e.pattern===4?2.1:1.45)+Math.sin(time*16)*.13);
-  if(e.pattern===2){e.line.visible=true;e.line.rotation.y=Math.atan2(e.dir.x,e.dir.z);}
+  if(e.pattern===2){e.line.visible=true;e.line.rotation.y=0;}
   if(e.timer<=0)startBossBarrage(e,phase);
  }else if(e.state==='barrage'){
   if(tickBossBarrage(e,phase,dt,ctx)){e.state='recover';e.timer=.58-phase*.04;}

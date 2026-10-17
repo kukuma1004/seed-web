@@ -1,11 +1,13 @@
 import * as THREE from 'three';
 import {EXPANSION_ENVIRONMENTS} from './expansion-environment-art.js';
+import {journeySurfaceLight} from './journey-surface-light.js';
 // Finite baked scenery and pooled warnings/cover. Environment art never moves
 // actors or supplies collision; course walls remain the canonical game state.
 export function createExpansionJourneyView(scene,groundTexture,crystalTexture=null){
  const root=new THREE.Group();root.name='expansion-journey';root.visible=false;scene.add(root);
  const plates=new Map();let course='crosswind',garden=false,terrainOnly=false,disposed=false,coverAtlas=false,laneBound=null,siegePhase=null,crosswindFloorTexture=null,crosswindFloorSource=null,crosswindPanoramaTexture=null,crosswindPanoramaSource=null,reflectorsActive=false;
  const plateGeometry=new THREE.PlaneGeometry(1,1),plateMaterial=new THREE.MeshBasicMaterial({toneMapped:false});
+ const plateLight=journeySurfaceLight(plateMaterial,{strength:0,conservatory:true});
  // Outer rows mirror only the painting's garden margins. The central unit
  // rectangle keeps its exact road UVs; a wider camera cannot expose sky bars.
  const crosswindPlateGeometry=new THREE.BufferGeometry();
@@ -21,6 +23,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  // Borrow the image but own the sampling state. One repeated, world-sized
  // fossil-leaf tile replaces the enlarged illustration without touching shared art.
  const roadGeometry=new THREE.PlaneGeometry(EXPANSION_ENVIRONMENTS.crosswind.width,15).rotateX(-Math.PI/2),roadMaterial=new THREE.MeshBasicMaterial({toneMapped:false,color:0xc4c7b5});
+ journeySurfaceLight(roadMaterial,{corridor:true});
  const road=new THREE.Mesh(roadGeometry,roadMaterial);road.name='crosswind-painted-corridor-floor';road.position.set(EXPANSION_ENVIRONMENTS.crosswind.x,.037,0);road.visible=false;root.add(road);
  // These low stone lips sit beyond the real movement limit. Bevels, inset
  // copper seams and little ivy leaves give the corridor a visible scale;
@@ -37,7 +40,24 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
  const seamGeometry=new THREE.PlaneGeometry(4.28,.034).rotateX(-Math.PI/2),seamMaterial=new THREE.MeshBasicMaterial({color:0xc1ad83,toneMapped:false});
  const seams=new THREE.InstancedMesh(seamGeometry,seamMaterial,72);seams.name='crosswind-inset-copper-seams';root.add(seams);
  const leafShape=new THREE.Shape();leafShape.moveTo(0,-.42);leafShape.quadraticCurveTo(.26,-.16,.15,.15);leafShape.quadraticCurveTo(.09,.36,0,.43);leafShape.quadraticCurveTo(-.28,.05,0,-.42);
- const ivyGeometry=new THREE.ShapeGeometry(leafShape,5).rotateX(-Math.PI/2),ivyMaterial=new THREE.MeshBasicMaterial({color:0x63715a,toneMapped:false});
+ // Tiny ivory flowers and ivy share the existing edge batch. Their scale is
+ // deliberately below the hero's face, and every cluster sits on the outside
+ // stone lip rather than implying a new object in the passable promenade.
+ const leafGeometry=new THREE.ShapeGeometry(leafShape,5).rotateX(-Math.PI/2),leafTriangles=leafGeometry.toNonIndexed(),ivyPositions=Array.from(leafTriangles.getAttribute('position').array),ivyColors=[];
+ for(let i=0;i<ivyPositions.length/3;i++)ivyColors.push(.125,.20,.105);
+ const blossom=(x,z,r)=>{
+  for(let petal=0;petal<5;petal++){
+   const a=petal*Math.PI*2/5,cx=x+Math.cos(a)*r*.55,cz=z+Math.sin(a)*r*.55;
+   for(let j=0;j<5;j++){
+    const b=j*Math.PI*2/5,c=(j+1)*Math.PI*2/5;
+    ivyPositions.push(cx,.018,cz,cx+Math.cos(b)*r*.48,.018,cz+Math.sin(b)*r*.48,cx+Math.cos(c)*r*.48,.018,cz+Math.sin(c)*r*.48);
+    ivyColors.push(.80,.78,.58,.80,.78,.58,.80,.78,.58);
+   }
+  }
+ };
+ blossom(.14,-.21,.12);blossom(-.10,.19,.09);leafGeometry.dispose();leafTriangles.dispose();
+ const ivyGeometry=new THREE.BufferGeometry();ivyGeometry.setAttribute('position',new THREE.Float32BufferAttribute(ivyPositions,3));ivyGeometry.setAttribute('color',new THREE.Float32BufferAttribute(ivyColors,3));ivyGeometry.computeVertexNormals();
+ const ivyMaterial=new THREE.MeshBasicMaterial({vertexColors:true,side:THREE.DoubleSide,toneMapped:false});
  const ivy=new THREE.InstancedMesh(ivyGeometry,ivyMaterial,108);ivy.name='crosswind-boundary-ivy';root.add(ivy);
  const borderPose=new THREE.Object3D();
  function syncBoundary(){
@@ -123,7 +143,7 @@ export function createExpansionJourneyView(scene,groundTexture,crystalTexture=nu
   if(course===act||garden&&act==='crystalGarden')syncFloor();
  }
  function setCourse(act,{halfDepth=null,plateBounds=null,crystalGarden=false}={}){
-  course=act;garden=act==='crystalGorge'&&crystalGarden;siegePhase=null;plateMaterial.color.setHex(0xffffff);plate.geometry=act==='crosswind'?crosswindPlateGeometry:plateGeometry;
+  course=act;garden=act==='crystalGorge'&&crystalGarden;siegePhase=null;plateMaterial.color.setHex(0xffffff);plateLight.setStrength(garden?1:0);plate.geometry=act==='crosswind'?crosswindPlateGeometry:plateGeometry;
   reflectorMarks.count=0;reflectorMarks.visible=false;
   syncUndertow(null);
   laneBound=Number.isFinite(halfDepth)&&halfDepth>0?halfDepth:null;

@@ -8,7 +8,7 @@ const scene=new THREE.Scene(),warden=createAct3Warden(scene),player=new THREE.Ve
 warden.g.position.set(-2,0,-4);warden.timer=0;
 const context={player,collide:(p,r)=>constrainToArena(p,r,ACT3_ARENA),hit(){},bolt:(p,d,spec)=>shots.push({...spec}),sound(){}};
 const objects=[],geometries=[],materials=[];scene.traverse(o=>{objects.push(o);if(o.geometry)geometries.push(o.geometry);if(o.material)materials.push(o.material);});
-const fixedGeometry=warden.tell.geometry,fixedLine=warden.line.geometry,body=warden.body;
+const fixedGeometry=warden.tell.geometry,fixedLine=warden.line.geometry,body=warden.body,lineA=new THREE.Vector3(),lineB=new THREE.Vector3();
 let recoveries=0,warningAfterRecovery=0,previous='',green=false;const patterns=new Set();
 for(let frame=0;frame<3000;frame++){
  tickAct3Warden(warden,1/60,frame/60,context);
@@ -20,6 +20,7 @@ for(let frame=0;frame<3000;frame++){
   if(warden.state==='tell'){
    if(green){warningAfterRecovery++;green=false;}
    if(previous==='tell')assert.equal(warden.tell.visible,warden.pattern!==1,'charge uses its actual line, other attacks use hostile ring');
+   if(warden.pattern===1&&warden.line.visible){warden.g.updateMatrixWorld(true);lineA.set(0,-5.5,0);lineB.set(0,5.5,0);warden.line.localToWorld(lineA);warden.line.localToWorld(lineB);lineB.sub(lineA).setY(0).normalize();assert(Math.abs(lineB.dot(warden.dir))>1-1e-9,'charge warning follows the real locked path without applying aim yaw twice');}
   }else assert(!warden.tell.visible,'stalking or committed charges never borrow the recovery ring');
  }
  assert.equal(warden.tell.geometry,fixedGeometry);assert.equal(warden.line.geometry,fixedLine);assert.equal(warden.body,body);assert.equal(warden.tell.parent,warden.g,'ground cue stays outside the banking visual body');
