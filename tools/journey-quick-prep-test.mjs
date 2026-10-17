@@ -6,6 +6,7 @@ import * as siege from '../src/crystal-siege-rules.js';
 import {createCrystalSiege,checkpointCrystalSiege,restoreCrystalSiege,stepCrystalSiege,harvestCrystalSiege,buildCrystalSiege,startCrystalSiegeDefense} from '../src/crystal-siege-rules.js';
 import {createExpansionJourney,restoreExpansionJourney,checkpointExpansionJourney,advanceExpansionJourney} from '../src/expansion-journey.js';
 import {CRYSTAL_DEFENSE_OBJECTIVE} from '../src/expansion-objective.js';
+import {installSiegeFeedbackHost} from './siege-feedback-host-fixture.mjs';
 
 const old=createCrystalSiege(),raw=checkpointCrystalSiege(old);
 assert(!Object.hasOwn(raw,'prepDuration'));
@@ -36,7 +37,7 @@ assert(start>=0&&end>start);
 const j=createExpansionJourney('crystalGorge',0,413,{siege:true,objective:CRYSTAL_DEFENSE_OBJECTIVE});
 let selecting=true;
 const c=vm.createContext({journeySiegeSkirmish:null,expansionGuardianActor:null,expansionJourney:j,expansionApi:expansion,expansionSiegeApi:siege,expansionSiegeView:{preparationHeld:()=>selecting},expansionJourneyView:{beginFrame(){},syncUndertow(fields){if(fields!==null)throw Error("Act5 undertow leak");},setSiegePhase(){}},syncExpansionCrystals(){},roomCleared:false,expansionSiegeInputs:[],enemies:[],enemyShots:[],player:{position:{x:0,z:0}},audio:{play(){}},$:()=>({textContent:''}),showCrystalSiegeDefenseHint(){},spawnExpansionActor(){throw Error('Unexpected prep spawn');},crowdLeft:0});
-vm.runInContext(main.slice(start,end),c);
+installSiegeFeedbackHost(c);vm.runInContext(main.slice(start,end),c);
 for(let i=0;i<200;i++)c.updateExpansionCourse(.1);
 assert.equal(j.siege.elapsed,0);assert.equal(j.siege.phase,'prep');
 assert.deepEqual(checkpointExpansionJourney(restoreExpansionJourney(checkpointExpansionJourney(j))),checkpointExpansionJourney(j));

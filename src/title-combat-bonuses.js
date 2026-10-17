@@ -6,14 +6,14 @@ const held=new WeakMap();
 const heroHp=new WeakMap();
 export const NEUTRAL_TITLE_COMBAT=Object.freeze({power:1,cadence:1,move:1,critical:0,maxHpBonus:0,clearStatBonus:0});
 export const TITLE_CRIT_DAMAGE=lawStats(new Map()).critDamage;
-const titleFlags=Object.freeze({austin:'austin',austinclear:'austinClear',austinveteran:'austinVeteran',alwaysbeginner:'alwaysBeginner',alwaysclear:'alwaysClear',alwaysveteran:'alwaysVeteran',tempestcarrier:'johan',johanclear:'johanClear',johanveteran:'johanVeteran',crosswindKeeper:'crosswind',crosswindclear:'crosswindClear',crosswindveteran:'crosswindVeteran',crystalGardener:'crystal',crystalclear:'crystalClear',crystalveteran:'crystalVeteran'});
+const titleFlags=Object.freeze({austin:'austin',austinclear:'austinClear',austinveteran:'austinVeteran',alwaysbeginner:'alwaysBeginner',alwaysclear:'alwaysClear',alwaysveteran:'alwaysVeteran',tempestcarrier:'johan',johanclear:'johanClear',johanveteran:'johanVeteran',crosswindKeeper:'crosswind',crosswindclear:'crosswindClear',crosswindveteran:'crosswindVeteran',crystalGardener:'crystal',crystalclear:'crystalClear',crystalveteran:'crystalVeteran',arbor:'arbor',arborclear:'arborClear',arborveteran:'arborVeteran'});
 // Recompute perks from actually held title IDs, not arbitrary scalar fields or
 // codex/garden rates. This adapter only supplies the shared title contract.
 export function effectiveTitleCombatBonuses(info){
  if(!Array.isArray(info?.titles))return NEUTRAL_TITLE_COMBAT;
  const flags={};for(const title of info.titles){const key=titleFlags[title?.id];if(key)flags[key]=true;}
  const s=titleState(flags),clear=s.clearStatBonus;
- return Object.freeze({power:1+s.powerBonus+clear,cadence:1+s.cooldownBonus+clear,move:1+s.moveSpeedBonus+clear,critical:Math.min(.25,s.criticalBonus+clear),maxHpBonus:s.maxHpBonus,clearStatBonus:clear});
+ return Object.freeze({power:1+s.powerBonus+clear,cadence:1+s.cooldownBonus+s.attackCadenceBonus+clear,move:1+s.moveSpeedBonus+clear,critical:Math.min(.25,s.criticalBonus+clear),maxHpBonus:s.maxHpBonus,clearStatBonus:clear});
 }
 export function createTitleCombatBinding({owner='',currentOwner=()=>'',practice=false,titleStats=()=>null}={}){
  let previous=null,cached=NEUTRAL_TITLE_COMBAT;
@@ -49,7 +49,7 @@ export function checkpointAdventureTitleHp(state){
 }
 export function validAdventureTitleHp(marker,maxHp,hp){
  if(marker===undefined)return true;
- return marker?.version===1&&Object.keys(marker).every(k=>['version','bonus','health'].includes(k))&&Number.isFinite(marker.bonus)&&marker.bonus>0&&marker.bonus<=25&&Number.isFinite(marker.health)&&marker.health>0&&marker.health<=maxHp+marker.bonus&&Math.abs(hp-marker.health*maxHp/(maxHp+marker.bonus))<1e-7;
+ return marker?.version===1&&Object.keys(marker).every(k=>['version','bonus','health'].includes(k))&&Number.isFinite(marker.bonus)&&marker.bonus>0&&marker.bonus<=26&&Number.isFinite(marker.health)&&marker.health>0&&marker.health<=maxHp+marker.bonus&&Math.abs(hp-marker.health*maxHp/(maxHp+marker.bonus))<1e-7;
 }
 export function restoreAdventureTitleHp(state,marker){
  if(marker)heroHp.set(state,{applied:0,restoreHealth:marker.health});

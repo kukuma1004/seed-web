@@ -57,9 +57,11 @@ try{
 
  for(const value of [0,-1,NaN,Infinity,1e7])assert(!view.recordSupport(value,'pad-0'));
  assert(!view.recordSupport(24,'missing'));Object.assign(s.pads[1],{kind:'wall',hp:75,level:1});assert(!view.recordSupport(24,'pad-1'));
- assert(view.recordSupport(7.25,'pad-0'));show({dt:0,liveEnemies:2});assert(hud.innerHTML.includes('포탑 적중 · 피해 7.3'));assert.equal(facility.material.color.getHex(),0xb5ffd7);
+ assert(view.recordSupport(7.25,'pad-0',{x:s.pads[0].x+4,z:s.pads[0].z}));show({dt:0,liveEnemies:2});assert(hud.innerHTML.includes('포탑 적중 · 피해 7.3'));assert.equal(facility.material.color.getHex(),0xb5ffd7);
+ show({dt:.06,liveEnemies:2});assert(facility.position.x<s.pads[0].x,'actual target to the right produces a short leftward recoil');assert.equal(facility.position.z,s.pads[0].z);assert(facility.position.distanceTo(new THREE.Vector3(s.pads[0].x,.04,s.pads[0].z))<=.12);const pausedRecoil=facility.position.clone();for(let i=0;i<20;i++)show({dt:0,liveEnemies:2});assert(facility.position.equals(pausedRecoil),'paused feedback holds without an external timer');assert.equal(world.children.length,objects,'target recoil reuses the existing facility sprite');
  assert(view.recordSupport(2,'pad-0'));show({dt:0,liveEnemies:2});assert(hud.innerHTML.includes('피해 2')&&!hud.innerHTML.includes('7.3'),'one latest real receipt, not an invented total');
- for(let i=0;i<15;i++)show({liveEnemies:2});assert(!hud.innerHTML.includes('포탑 적중'));assert.equal(facility.material.color.getHex(),0xffffff);
+ for(let i=0;i<15;i++)show({liveEnemies:2});assert(!hud.innerHTML.includes('포탑 적중'));assert.equal(facility.material.color.getHex(),0xffffff);assert.equal(facility.position.x,s.pads[0].x);assert.equal(facility.position.z,s.pads[0].z);
+ s.core.hp-=1;show({liveEnemies:2});assert(hud.innerHTML.includes('심장이 공격받고'));assert(view.recordSupport(5,'pad-0',{x:s.pads[0].x,z:s.pads[0].z-4}));show({dt:0,liveEnemies:2});assert(hud.innerHTML.includes('심장이 공격받고')&&!hud.innerHTML.includes('포탑 적중'),'a real turret hit must not replace the urgent core warning');for(let i=0;i<15;i++)show({liveEnemies:2});
  s.pads[0].hp=0;assert(!view.recordSupport(3,'pad-0'));show();assert(!facility.visible);assert.equal(rings[0].material.color.getHex(),0xff8777,'destroyed facility retains only existing ring cue');
  passed.push('Positive actual paid turret support has one bounded receipt and no fabricated totals');
 

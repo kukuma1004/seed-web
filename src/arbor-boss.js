@@ -11,9 +11,10 @@ const finite=(n,fallback=0)=>Number.isFinite(n)?n:fallback;
 const safeDt=dt=>clamp(finite(dt),0,ARBOR_BOSS_LIMITS.maxStep);
 const copy=(to,from)=>{to.x=finite(from?.x);to.z=finite(from?.z);};
 const aimAt=(aim,from,to)=>{const x=to.x-from.x,z=to.z-from.z,n=Math.hypot(x,z)||1;aim.x=x/n;aim.z=z/n;};
-export function createArborBoss(round=0){
+export function createArborBoss(round=0,{encounterVersion=1}={}){
  const r=clamp(round|0,0,2),hp=arborBossHp(r);
- return {round:r,position:{x:0,z:-4.4},hp,maxHp:hp,phase:'approach',pattern:0,timer:.5,phaseIndex:0,cycles:0,
+ const sequence=encounterVersion===2?[[0,1,2],[1,0,2],[0,1,0,2]][r]:[0,1,2];
+ return {round:r,sequence,sequenceIndex:0,position:{x:0,z:-4.4},hp,maxHp:hp,phase:'approach',pattern:sequence[0],timer:.5,phaseIndex:0,cycles:0,
   rootStep:0,coreOpen:false,aim:{x:0,z:1},target:{x:0,z:0},playerSample:{x:0,z:5},
   cue:{kind:'fan',position:{x:0,z:0},direction:{x:0,z:1},radius:0,remaining:0},out:{bolts:[],zones:[],cue:null}};
 }
@@ -65,7 +66,7 @@ export function stepArborBoss(s,dt,{player=ARBOR_ARENA.start,projectiles=0}={}){
  }
  if(s.phase==='recover'){
   cue(s,'core-open');if(s.timer>1e-9)return out;
-  s.pattern=(s.pattern+1)%3;if(s.pattern===0)s.cycles++;s.rootStep=0;s.coreOpen=false;s.phase='approach';s.timer=.38;return out;
+  s.sequenceIndex=(s.sequenceIndex+1)%s.sequence.length;s.pattern=s.sequence[s.sequenceIndex];if(s.sequenceIndex===0)s.cycles++;s.rootStep=0;s.coreOpen=false;s.phase='approach';s.timer=.38;return out;
  }
  return out;
 }

@@ -1,3 +1,4 @@
+import {installSiegeFeedbackHost} from './siege-feedback-host-fixture.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
@@ -21,7 +22,7 @@ let courseSource=baseline.slice(baseline.indexOf('function course({'),baseline.i
 assert.equal(courseSource.split('if(a.point.level<2||a.point.hp<=0)').length,2,'legacy baseline owns an explicit Lv2 cap');
 courseSource=courseSource.replace('if(a.point.level<2||a.point.hp<=0)','if(a.point.level<5||a.point.hp<=0)').replace(' return result;',' result.command=j.siege.journeyCommand===true;result.rally=j.siege.journeyRallyPad;result.maxPaidLevel=h.maxPaidLevel;result.commandTicks=h.commandTicks;result.rallyTicks=h.rallyTicks;return result;');
 assert(courseSource.includes('result.commandTicks=h.commandTicks'));
-const context={expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,siege,journey,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource:source('updateExpansionCourse','tickExpansionActor'),actorSource:source('tickExpansionActor','waveExpansionJourney'),copy:value=>JSON.parse(JSON.stringify(value)),earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
+const context={installSiegeFeedbackHost,expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,siege,journey,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource:source('updateExpansionCourse','tickExpansionActor'),actorSource:source('tickExpansionActor','waveExpansionJourney'),copy:value=>JSON.parse(JSON.stringify(value)),earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
 vm.createContext(context);vm.runInContext(hostSource+'\n'+courseSource,context);
 const originalHost=context.host;
 context.host=j=>{

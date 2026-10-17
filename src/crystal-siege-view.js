@@ -8,6 +8,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
  const owned=[],textures=[],rings=[];let disposed=false,uiKey='',buildKey='',padId=null,menuOpen=false,interactiveNow=false,nearestPad=null,currentResources=0;
  const facilityCodes=new Uint8Array(4),plantTime=new Float32Array(4);let facilitiesSeen=false;
  const padPreviousHp=new Float32Array(4),padHitTime=new Float32Array(4),supportTime=new Float32Array(4);
+ const supportX=new Float32Array(4),supportZ=new Float32Array(4);
  let feedbackState=null,corePreviousHp=NaN,coreHitTime=0,receipt='',receiptTime=0;
  const facilityCode={turret:1,snare:3,wall:5};
  const load=path=>{const t=loader.load(base+'assets/'+path);t.colorSpace=THREE.SRGBColorSpace;textures.push(t);return t;};
@@ -48,11 +49,13 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
  menu.querySelector('[data-close]').onclick=()=>{menuOpen=false;choices.hidden=true;contextButton.setAttribute('aria-expanded','false');};
  startButton.onclick=()=>{if(interactiveNow){menuOpen=false;choices.hidden=true;onStart?.();startButton.blur();}};
  function resetFeedback(next=null){feedbackState=next;corePreviousHp=NaN;coreHitTime=0;padPreviousHp.fill(NaN);padHitTime.fill(0);supportTime.fill(0);receipt='';receiptTime=0;heart.material.color.setHex(0xffffff);for(const o of facilities)o.material.color.setHex(0xffffff);}
- function recordSupport(appliedDamage,facilityId){
+ function recordSupport(appliedDamage,facilityId,target=null){
   if(disposed||!world.visible||!feedbackState||!['defense','clear','boss'].includes(feedbackState.phase)||!Number.isFinite(appliedDamage)||appliedDamage<=0||appliedDamage>1e6)return false;
   const index=feedbackState.pads.findIndex(p=>p.id===facilityId),pad=feedbackState.pads[index];
   if(index<0||index>=4||pad.kind!=='turret'||pad.hp<=0)return false;
-  supportTime[index]=.24;receipt=`포탑 적중 · 피해 ${Math.round(appliedDamage*10)/10}`;receiptTime=1.2;return true;
+  const dx=target?.x-pad.x,dz=target?.z-pad.z,n=Math.hypot(dx,dz);
+  supportX[index]=Number.isFinite(n)&&n>0?dx/n:0;supportZ[index]=Number.isFinite(n)&&n>0?dz/n:0;
+  supportTime[index]=.24;if(coreHitTime<=0){receipt=`포탑 적중 · 피해 ${Math.round(appliedDamage*10)/10}`;receiptTime=.8;}return true;
  }
  function update(s,player,{visible=false,interactive=false,boss=false,bossCleared=false,coreDefense=false,roundCount=5,prepDuration=20,prepRemaining=null,liveEnemies=null,dt=0}={}){
   if(disposed)return;world.visible=visible&&!!s;hud.hidden=!world.visible;menu.hidden=true;interactiveNow=false;if(!world.visible){menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;facilitiesSeen=false;plantTime.fill(0);resetFeedback();return;}
@@ -78,6 +81,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
    padHitTime[i]=Math.max(0,padHitTime[i]-step);supportTime[i]=Math.max(0,supportTime[i]-step);
    if(Number.isFinite(padPreviousHp[i])&&p.hp<padPreviousHp[i])padHitTime[i]=.3;padPreviousHp[i]=p.hp;
    facilities[i].material.color.setHex(padHitTime[i]>0?0xff8777:supportTime[i]>0?0xb5ffd7:0xffffff);
+   if(supportTime[i]>0){const recoil=Math.sin(Math.PI*supportTime[i]/.24)*.12;facilities[i].position.x-=supportX[i]*recoil;facilities[i].position.z-=supportZ[i]*recoil;rings[i].material.color.setHex(0xb5ffd7);rings[i].material.opacity=Math.max(rings[i].material.opacity,supportTime[i]*2);}
    if(padHitTime[i]>0||p.kind&&p.hp<=0){rings[i].material.color.setHex(0xff8777);rings[i].material.opacity=.75;}if(p.kind&&p.hp<=0)plinths[i].material.color.setHex(0x9a796a);
    if(facilitiesSeen&&code>0&&code!==facilityCodes[i])plantTime[i]=.24;
    facilityCodes[i]=code;plantTime[i]=Math.max(0,plantTime[i]-step);

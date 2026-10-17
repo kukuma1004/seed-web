@@ -1,0 +1,23 @@
+{
+  "version": 2,
+  "act": "arbor",
+  "name": "거목의 숨결 — 작은 정원 포석",
+  "generation": "Built-in image_gen edit. Original PNG preserved privately. Resized and encoded to WebP without compositing or alpha replacement. Existing v1 art retained.",
+  "style": "Painterly botanical fantasy; small muted olive limestone pavers, fine moss joints, uninterrupted central courtyard; tree roots and flowers only at the outer margin.",
+  "floor": {
+    "file": "arbor-courtyard-v2.webp",
+    "mobile": "arbor-courtyard-v2-mobile.webp",
+    "size": [1024, 1024],
+    "mobileSize": [768, 768],
+    "bytes": 388046,
+    "mobileBytes": 208344,
+    "alpha": false,
+    "world": [72, 72],
+    "cameraChanged": false,
+    "collisionChanged": false
+  },
+  "prompt": "Edit the supplied overhead courtyard while preserving its square orthographic painted botanical garden, the giant tree roots and foliage at the outer margins, bottom entry and top altar. Reduce paving stone diameter to about one fourth of the original. Keep central 80 percent calm, flat and uninterrupted, with small worn gray-olive limestone stones, tiny thin moss joints and low contrast. Remove giant repeated leaf emblems. Preserve outer-margin roots, flowers and dark forest. No actors, particles, text, UI, logos, grid or perspective tilt.",
+  "retained": {"root": "arbor-root-v1.webp", "boss": "arbo-motion-v1.webp"},
+  "rootPresentation": "Four fixed opaque furrowed wood bodies, 80 triangles each, exact rule footprint. Warm amber outline only during emergence warning. No always-on solid-state rectangle. Existing cutout supplies botanical surface detail.",
+  "runtimeBudget": {"geometries": 4, "materials": 19, "textures": 3, "lights": 0, "drawCallsMax": 18}
+}

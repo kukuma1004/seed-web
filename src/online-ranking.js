@@ -20,8 +20,8 @@ export const SEASON=Object.freeze({id:'1.2',name:'시즌 1',start:1789956000000}
 export const PREVIOUS_SEASON=Object.freeze({id:'1.1',name:'베타 시즌 1.1 · 균형의 정원',start:1789662000000,end:SEASON.start});
 export const ARCHIVE_SEASON=Object.freeze({id:'1.0',name:'베타 시즌 1.0 · 첫 정원',start:0,end:PREVIOUS_SEASON.start});
 export const ARCHIVE_SEASONS=Object.freeze([PREVIOUS_SEASON,ARCHIVE_SEASON]);
-export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2,JOHAN:3,CROSSWIND_KEEPER:4,CRYSTAL_GARDENER:5});
-export const runAct=run=>[2,3,4,5].includes(run?.act)?run.act:ACT.AUSTIN;
+export const ACT=Object.freeze({AUSTIN:1,ALWAYS_BEGINNER:2,JOHAN:3,CROSSWIND_KEEPER:4,CRYSTAL_GARDENER:5,ARBOR:6});
+export const runAct=run=>[2,3,4,5,6].includes(run?.act)?run.act:ACT.AUSTIN;
 export const inSeason=(run,season=SEASON)=>Number.isFinite(run?.at)&&run.at>=season.start&&(!Number.isFinite(season.end)||run.at<season.end);
 // Firebase push IDs begin with their creation time, so a key range finds every run since the season began without a new index.
 const PUSH_CHARS='-0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_abcdefghijklmnopqrstuvwxyz';
@@ -38,11 +38,12 @@ export const JOURNEY_EXPANSION_KILL_BUDGET=Object.freeze({
  5:EXPANSION_CIRCUIT_KILLS+EXPANSION_WARDENS_PER_BOSS
 });
 export function validRun(e,{acts=EXPANSION_ACTS}={}){
- const expansion=e?.act===4||e?.act===5;
- if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER||e.act===ACT.JOHAN||expansion&&expansionCircuitReleased(acts))&&(e.done===undefined||typeof e.done==='boolean')))return false;
+ const expansion=e?.act===4||e?.act===5,arbor=e?.act===6;
+ if(!(e&&typeof e.uid==='string'&&e.uid&&typeof e.name==='string'&&e.name&&cleanName(e.name)===e.name&&int(e.score,1e9)&&e.score>0&&int(e.cycle,1e5)&&int(e.stage,4)&&int(e.kills,1e7)&&int(e.time,1e7)&&Number.isFinite(e.at)&&(e.act===undefined||e.act===ACT.AUSTIN||e.act===ACT.ALWAYS_BEGINNER||e.act===ACT.JOHAN||arbor||expansion&&expansionCircuitReleased(acts))&&(e.done===undefined||typeof e.done==='boolean')))return false;
  // Deliberate-crossing courses share the actual accepted-packet kill budget.
  // A campaign has 3 laps, with one true boss per completed lap.
  // Ordinary 1/2/3 validation below is unchanged.
+ if(arbor)return e.cycle<=2&&e.kills<=[86,182,288][e.cycle]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+11000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  if(expansion)return e.cycle<=2&&e.kills<=(e.cycle+1)*JOURNEY_EXPANSION_KILL_BUDGET[e.act]&&(!e.done||e.cycle===2&&e.stage===4)&&e.score>=e.kills*8&&e.score<=(e.kills+12)*50+6000*(e.cycle+1)&&e.time>=e.cycle*15&&e.time>=e.kills/6;
  const multiplier=1+e.cycle*.5;
  const scoreCeiling=runAct(e)===ACT.JOHAN?((e.kills+12)*120+6000)*multiplier:(e.kills+12)*50*multiplier;

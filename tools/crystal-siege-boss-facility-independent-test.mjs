@@ -1,3 +1,4 @@
+import {installSiegeFeedbackHost} from './siege-feedback-host-fixture.mjs';
 import {expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen} from '../src/journey-purpose.js';
 import assert from 'node:assert/strict';
 import {CRYSTAL_DEFENSE_OBJECTIVE,expansionObjectiveReleased} from '../src/expansion-objective.js';
@@ -18,7 +19,7 @@ const source=(name,next)=>main.slice(main.indexOf('function '+name+'('),main.ind
 const updateSource=source('updateExpansionCourse','tickExpansionActor'),actorSource=source('tickExpansionActor','waveExpansionJourney');
 const hostSource=harness.slice(harness.indexOf('function host(j){'),harness.indexOf('// No enemy is removed'));
 const courseSource=harness.slice(harness.indexOf('function course({'),harness.indexOf("group('Actual host end-to-end")).replace(' return result;',' this.lastHost=h;this.lastJourney=j;return result;');
-const scope={expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,journey,siege,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource,actorSource,copy,earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
+const scope={installSiegeFeedbackHost,expansionPurposeText,expansionPurposeHint,expansionExitText,crystalBossGuardSpawns,keepCrystalBossApproachOpen,THREE,journey,siege,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,source,updateSource,actorSource,copy,earnedEntries:[],initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
 scope.expansionSiegeView=null;vm.createContext(scope);vm.runInContext(hostSource+'\n'+courseSource,scope);
 const passed=[],measurements=[];
 const group=(name,run)=>{run();passed.push(name);console.log('PASS',name);};
@@ -26,7 +27,7 @@ const group=(name,run)=>{run();passed.push(name);console.log('PASS',name);};
 function actualHost(saved){
  const j=journey.restoreExpansionJourney(copy(saved)),h=scope.host(j);assert(j);
  Object.assign(h,{survivalSession:null,activeGauge:{},isBoss:e=>!!e.expansionBoss,chargeActive(){},bossCharge:()=>0,elapsed:0,chosen:new Set(),vfx:{impact(){}},combatAnalysis:{damage(_kind,n){h.applied=(h.applied||0)+n;},utility(){},kill(){}},enemyDown:()=>assert.fail('This bounded review does not kill the original boss'),expansionTerrainDirty:false,lines:[],line(a,b){h.lines.push({a:{x:a.x,z:a.z},b:{x:b.x,z:b.z}});}});
- h.expansionTerrain=journey.createCrystalCombatBridge(j.course.walls);h.expansionBolt=q=>h.enemyShots.push(copy(q));h.collide=()=>{};
+ installSiegeFeedbackHost(h);h.expansionTerrain=journey.createCrystalCombatBridge(j.course.walls);h.expansionBolt=q=>h.enemyShots.push(copy(q));h.collide=()=>{};
  vm.runInContext(source('damageEnemy','enemyDown'),h);
  const e={dead:false,expansionActor:true,expansionBoss:true,type:'expansion-boss',hp:2400,maxHp:2400,g:{position:new THREE.Vector3(3,0,-2.5),rotation:{}},state:'recover',takenScale:1,hit:0};h.enemies.push(e);return{j,h,e};
 }

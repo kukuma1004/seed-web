@@ -5,6 +5,7 @@ import * as THREE from 'three';
 import * as rules from '../src/arbor-journey.js';
 import * as boss from '../src/arbor-boss.js';
 import * as save from '../src/arbor-run-save.js';
+import {arborAccountEligible,validArborEnded} from '../src/arbor-account-records.js';
 import * as ordinary from '../src/run-save.js';
 import {acquireExpansionSaveLease} from '../src/expansion-save-lease.js';
 import {createWarden,tickWarden,SEAL,DUO_WARDEN} from '../src/warden.js';
@@ -48,9 +49,9 @@ function fixture(){
  const scene=new THREE.Scene(),mats={amber:new THREE.MeshBasicMaterial({color:0xffcc55})},shared=new Set(Object.values(mats));
  const view={hide:noop,setActive:noop,setBossArt:noop,clearBossArt:noop};
  const c=vm.createContext({console,Math,Date,Set,Map,Object,Promise,URLSearchParams,THREE,V:THREE.Vector3,location:{search:''},document,$,scene,mats,camera:new THREE.PerspectiveCamera(),
-  __rules:rules,__boss:boss,__save:save,__view:{createArborJourneyView:()=>view},__errors:[],
+  __records:{},__network:{},__rules:rules,__boss:boss,__save:save,__view:{createArborJourneyView:()=>view},__errors:[],
   account:{user:()=>({uid})},arborOwner:()=>`${c.localInspection?'inspection:':''}${uid}`,acquireExpansionSaveLease:(act,owner)=>acquireExpansionSaveLease(act,owner,{locks}),
-  rawStorage:storage,runStorage:storage,arborJourney:null,arborApi:null,arborBossApi:null,arborSaveApi:null,arborView:null,arborEntry:null,arborStore:null,arborLease:null,arborBoss:null,arborLaunch:0,
+  arborAccountEligible,validArborEnded,arborAccountFacts:()=>({currentOwner:uid,released:true,anonymous:true}),arborRecords:null,arborSync:null,arborBeginPending:null,arborEndPending:null,arborEndingFlight:null,arborCueTime:0,arborCueText:'',arborVictories:{read:()=>({wins:0,clears:0,pending:0}),record:()=>false,sync:async()=>({kind:'ineligible'})},adminMode:false,betaTesterMode:false,rankSerial:0,playerName:'시험',lastName:()=>'',buildRecord:()=>null,accountRole:()=>({}),rankingDecision:()=>({eligible:false}),ACT:{ARBOR:6},rawStorage:storage,runStorage:storage,arborJourney:null,arborApi:null,arborBossApi:null,arborSaveApi:null,arborView:null,arborEntry:null,arborStore:null,arborLease:null,arborBoss:null,arborLaunch:0,
   arborContext:{},arborBossContext:{},localInspection:false,developerRun:false,maintenanceOn:false,mobileDevice:false,qualityLevel:1,mode:'ready',paused:false,
   bossRecordReady:()=>true,gameplayPaused:()=>false,protectJourneyBossReceipts:()=>receiptOK,
   expansionJourney:null,expansionTerrain:null,expansionJourneyView:null,expansionSiegeView:null,expansionChannel:'inspection',expansionPublicEntry:null,expansionPendingBossCheckpoint:null,
@@ -87,8 +88,8 @@ function fixture(){
  c.syncLaws=()=>{c.chosen.clear();for(const key of c.levels.keys())c.chosen.add(key);};
  c.copiedEvolution=()=>null;c.player.userData={stepShot:noop,resetShot:noop,halo:{rotation:{z:0}}};c.orbitGroup.visible=false;
  c.enemyVector=new THREE.Vector3();c.previousEnemy=new THREE.Vector3();c.LS={frostFactor:.7};c.PS={orbit:0,enemyAI:1,spawn:2};
- for(const name of ['canSaveArbor','arborSnapshot','captureArborBoundary','saveArborLeave','drawArborRoom','syncArborRoots','arborEncounterText','waveArborJourney','spawnArborActor','updateArborJourney','tickArborBoss','settleArborActor','openArborExit','exitArborJourney','showArborResult','expansionRunSnapshot','enemy','swarm','spawnWardenAt','bossBolt','stadiumBolt','offerDashEvolution','damageEnemy','enemyDown','hitPlayer','inAustinRoom','clearEscorts','updateEscorts'])vm.runInContext(actual(name),c,{filename:`actual-main-${name}`});
- const launcher=actual('startArborJourney').replace("import('./arbor-journey.js')",'Promise.resolve(__rules)').replace("import('./arbor-boss.js')",'Promise.resolve(__boss)').replace("import('./arbor-run-save.js')",'Promise.resolve(__save)').replace("import('./arbor-journey-view.js')",'Promise.resolve(__view)').replace('}catch(error){','}catch(error){__errors.push(error);');vm.runInContext(launcher,c);
+ for(const name of ['arborCue','captureArborPublic','finishArborRun','canSaveArbor','arborSnapshot','captureArborBoundary','saveArborLeave','drawArborRoom','syncArborRoots','arborEncounterText','waveArborJourney','spawnArborActor','updateArborJourney','tickArborBoss','settleArborActor','openArborExit','exitArborJourney','showArborResult','expansionRunSnapshot','enemy','swarm','spawnWardenAt','bossBolt','stadiumBolt','offerDashEvolution','damageEnemy','enemyDown','hitPlayer','inAustinRoom','clearEscorts','updateEscorts'])vm.runInContext(actual(name),c,{filename:`actual-main-${name}`});
+ const launcher=actual('startArborJourney').replace("import('./arbor-journey.js')",'Promise.resolve(__rules)').replace("import('./arbor-boss.js')",'Promise.resolve(__boss)').replace("import('./arbor-run-save.js')",'Promise.resolve(__save)').replace("import('./arbor-journey-view.js')",'Promise.resolve(__view)').replace("import('./arbor-account-records.js')",'Promise.resolve(__records)').replace("import('./arbor-account-sync.js')",'Promise.resolve(__network)').replace('}catch(error){','}catch(error){__errors.push(error);');vm.runInContext(launcher,c);
  vm.runInContext(actual('drawRoom'),c);vm.runInContext(actual('wave'),c);
  vm.runInContext(actual('restart','\nfunction togglePause('),c);
  const rawUpdate=actual('update','\n// 판 시간');vm.runInContext(rawUpdate,c);
@@ -133,7 +134,7 @@ test('actual 15 wardens and 3 bosses finish, terminate the save and allow fresh 
    f.c.openArborExit();if(f.c.mode==='dash-evolution')f.$('#keep-dash').onclick();if(f.c.exitOpen)f.c.exitArborJourney();
   }
  }
- assert.equal(f.c.arborJourney.wardens,15);assert.equal(f.c.arborJourney.bossWins,3);assert.equal(bossSpawns,3);assert.equal(f.c.mode,'ready');assert.equal(f.c.arborStore.read(),null);assert.equal(f.c.arborLease,null);
+ assert.equal(f.c.arborJourney.wardens,15);assert.equal(f.c.arborJourney.bossWins,3);assert.equal(bossSpawns,3);assert.equal(f.c.mode,'ready');assert.equal(f.c.arborStore.read(),null);await f.c.arborEndingFlight;assert.equal(f.c.arborLease,null);
  await new Promise(resolve=>setImmediate(resolve));assert.equal(await f.c.startArborJourney(),true);assert.equal(f.c.arborJourney.wardens,0);f.normalUnchanged();await f.cleanup();
 });
 test('actual player death ends only the Act 6 entry and result retry starts a new run',async()=>{

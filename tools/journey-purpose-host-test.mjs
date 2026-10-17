@@ -1,3 +1,4 @@
+import {installSiegeFeedbackHost} from './siege-feedback-host-fixture.mjs';
 import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import vm from 'node:vm';
@@ -11,7 +12,7 @@ import {validRun} from '../src/online-ranking.js';
 const main=readFileSync('src/main.js','utf8').replaceAll('\r\n','\n'),harness=readFileSync('tools/crystal-siege-endurance-test.mjs','utf8');
 const source=(name,next)=>main.slice(main.indexOf('function '+name+'('),main.indexOf('\nfunction '+next+'(',main.indexOf('function '+name+'(')));
 const copy=x=>JSON.parse(JSON.stringify(x));
-const scope={THREE,journey,siege,crystalBossGuardSpawns,keepCrystalBossApproachOpen,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,copy,earnedEntries:[],
+const scope={installSiegeFeedbackHost,THREE,journey,siege,crystalBossGuardSpawns,keepCrystalBossApproachOpen,assert,vm,createExpansionEntry,validExpansionEntry,constrainToArena,copy,earnedEntries:[],
  updateSource:source('updateExpansionCourse','tickExpansionActor'),actorSource:source('tickExpansionActor','waveExpansionJourney'),
  initialRun:{version:1,cycle:0,region:'garden',stage:0,mode:'entry',hp:100,kills:0,elapsed:0,rules:[],mutated:[],forms:{},inventory:{potion:2},score:0,choicesTaken:0,choiceKills:0}};
 vm.createContext(scope);

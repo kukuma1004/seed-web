@@ -18,6 +18,7 @@ import {MASTERY,MASTERY_STEP} from '../src/garden.js';
 const source=readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const titleSource=readFileSync(new URL('../src/seed-title.js',import.meta.url),'utf8');
 const close=(a,b)=>assert.ok(Math.abs(a-b)<1e-9,`${a} != ${b}`);
+const neutralArborVictories=()=>({read:()=>({wins:0,clears:0,pending:0}),sync:async()=>({kind:'synced'})});
 function memory(){const data=new Map();return {get length(){return data.size;},key:i=>[...data.keys()][i]??null,data,fail:'',getItem:k=>data.get(k)||null,setItem(k,v){if(this.fail===k)throw Error('quota');data.set(k,v);},removeItem:k=>data.delete(k)};}
 function functionSlice(name,next){const start=source.indexOf(`function ${name}(`),end=source.indexOf(`function ${next}(`,start);assert(start>=0&&end>start);return source.slice(start,end);}
 function titleView(options={}){
@@ -72,14 +73,22 @@ dom.dispose();assert(dom.root.removed);
 const storage=memory();writeAccountProfile(storage,{crosswindWins:10,crystalWins:10});
 storage.setItem(DISCOVERIES_KEY,JSON.stringify({version:1,forms:[],bosses:['crosswindKeeper','crosswindclear','crystalGardener','crystalclear'],records:{}}));
 let initial;
-const init=vm.createContext({runStorage:storage,readDiscoveries,readAccountProfile,discoveredCount:p=>p.forms.length,DISCOVERY_FORMS:ALL_FORMS,player:{},createSeedTitle:(_p,o)=>{initial=o;return titleView(o);}});
-vm.runInContext(source.slice(source.indexOf('let saveOK=false,profile='),source.indexOf('\nconst bossPet=',source.indexOf('let saveOK=false,profile=')))+'\nglobalThis.seedTitleResult=seedTitle;',init);
+const init=vm.createContext({arborVictories:neutralArborVictories(),refreshArborTitles:()=>{},runStorage:storage,readDiscoveries,readAccountProfile,discoveredCount:p=>p.forms.length,DISCOVERY_FORMS:ALL_FORMS,player:{},createSeedTitle:(_p,o)=>{initial=o;return titleView(o);}});
+const initBlock=source.slice(source.indexOf('let saveOK=false,profile='),source.indexOf('\nconst bossPet=',source.indexOf('let saveOK=false,profile=')))+'\nglobalThis.seedTitleResult=seedTitle;';
+vm.runInContext(initBlock,init);
 for(const key of Object.keys(earned))assert.equal(initial[key],true,key);
 close(init.seedTitleResult.state().powerBonus,.03);close(init.seedTitleResult.state().criticalBonus,.03);
+for(const key of ['arbor','arborClear','arborVeteran'])assert.equal(initial[key],false,'neutral new-act fixture does not award '+key);
+// New independent Arbor receipts coexist with all six existing act-4/5 flags.
+// Exercise the real main initializer and real title view, not a renamed mock.
+let allInitial;const allInit=vm.createContext({arborVictories:{read:()=>({wins:10,clears:1,pending:0}),sync:async()=>({kind:'synced'})},refreshArborTitles:()=>{},runStorage:storage,readDiscoveries,readAccountProfile,discoveredCount:p=>p.forms.length,DISCOVERY_FORMS:ALL_FORMS,player:{},createSeedTitle:(_p,o)=>{allInitial=o;return titleView(o);}});
+vm.runInContext(initBlock,allInit);for(const key of [...Object.keys(earned),'arbor','arborClear','arborVeteran'])assert.equal(allInitial[key],true,key);
+const allState=allInit.seedTitleResult.state();close(allState.attackCadenceBonus,.03);close(allState.clearStatBonus,.03);close(allState.powerBonus,.03);close(allState.criticalBonus,.03);assert.equal(allState.titles.length,9);
+for(const [name,id] of [['Arbor','arbor'],['ArborClear','arborclear'],['ArborVeteran','arborveteran']]){assert(allInit.seedTitleResult.state().titles.some(t=>t.id===id));allInit.seedTitleResult[`set${name}Unlocked`](false);assert.equal(allInit.seedTitleResult.state().titles.some(t=>t.id===id),false);allInit.seedTitleResult[`set${name}Unlocked`](true);assert(allInit.seedTitleResult.state().titles.some(t=>t.id===id));}
 
 // Buffs join garden/codex/clear exactly once. Chance is additive percentage
 // points, uses the existing 25% cap and is neutral in the mirror duel.
-const stats=vm.createContext({mirrorSession:null,gardenStats:()=>({points:{power:2,critical:3}}),MASTERY_STEP,LS:{critChance:.05},titleState});
+const stats=vm.createContext({createArborVictoryRecords:neutralArborVictories,rawStorage:memory(),account:{},FIREBASE_APP:{databaseURL:'https://example.invalid'},mirrorSession:null,gardenStats:()=>({points:{power:2,critical:3}}),MASTERY_STEP,LS:{critChance:.05},titleState});
 const statBlock=source.slice(source.indexOf('const codexRate='),source.indexOf('// 정원 장면은',source.indexOf('const codexRate=')));
 vm.runInContext(statBlock+'\nseedTitle={state:()=>globalThis.titleInfo};globalThis.power=gardenPower;globalThis.crit=totalCritChance;globalThis.rate=masteryRate;',stats);
 stats.titleInfo=titleState({...earned,discovered:30});
@@ -124,7 +133,7 @@ gardenContext.grantFinalBossGardenMemory('crosswindKeeper');gardenContext.grantF
 assert.deepEqual(gardenEvents.map(e=>[e.act,e.wins]),[[4,7],[5,8]]);
 
 // The profile shows earned effects, never advertises locked candidate rewards.
-const profileContext=vm.createContext({MASTERY,MASTERY_STEP,gardenStats:()=>({points:{}}),escapeHtml:s=>String(s),readAccountProfile,runStorage:memory()});
+const profileContext=vm.createContext({arborVictories:neutralArborVictories(),MASTERY,MASTERY_STEP,gardenStats:()=>({points:{}}),escapeHtml:s=>String(s),readAccountProfile,runStorage:memory()});
 vm.runInContext(functionSlice('permanentStatsProfile','backfillPersonalBests'),profileContext);
 const hidden=profileContext.permanentStatsProfile(titleState());assert.doesNotMatch(hidden,/횡풍의 수호자|수정의 정원사|칭호 공격력|칭호 치명타/);
 writeAccountProfile(profileContext.runStorage,{crosswindWins:10,crystalWins:10});

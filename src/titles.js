@@ -33,6 +33,10 @@ export const CRYSTAL_CLEAR_TITLE='협곡을 피운 자';
 export const CRYSTAL_VETERAN_TITLE='열 번의 개화';
 export const CRYSTAL_POWER=.01;
 export const CRYSTAL_VETERAN_POWER=.02;
+export const ARBOR_TITLE='녹관을 두드린 자';
+export const ARBOR_VETERAN_TITLE='열 번의 녹관';
+export const ARBOR_CLEAR_TITLE='거목을 깨운 자';
+export const ARBOR_CADENCE=.01,ARBOR_VETERAN_CADENCE=.02;
 // 현재 도감은 153종이다. 10종마다 +0.5%에 30종마다 +0.5%를 더해
 // 150종에서 다섯 능력 모두 +10%에 닿는다. 정원 성장과는 따로 더한다.
 export const CODEX=Object.freeze({titleAt:10,step:10,statPerStep:.005,milestoneStep:30,milestoneBonus:.005,maxStat:.1,completeAt:153});
@@ -41,7 +45,7 @@ const percent=v=>`${Math.round(v*1000)/10}%`;
 export function codexSteps(discovered=0){return discovered>=CODEX.titleAt?Math.floor(discovered/CODEX.step):0;}
 export function codexBonus(discovered=0){return Math.min(CODEX.maxStat,codexSteps(discovered)*CODEX.statPerStep+Math.floor(Math.max(0,Number(discovered)||0)/CODEX.milestoneStep)*CODEX.milestoneBonus);}
 
-export function titleState({austin=false,austinClear=false,austinVeteran=false,alwaysBeginner=false,alwaysClear=false,alwaysVeteran=false,johan=false,johanClear=false,johanVeteran=false,crosswind=false,crosswindClear=false,crosswindVeteran=false,crystal=false,crystalClear=false,crystalVeteran=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
+export function titleState({austin=false,austinClear=false,austinVeteran=false,alwaysBeginner=false,alwaysClear=false,alwaysVeteran=false,johan=false,johanClear=false,johanVeteran=false,crosswind=false,crosswindClear=false,crosswindVeteran=false,crystal=false,crystalClear=false,crystalVeteran=false,arbor=false,arborClear=false,arborVeteran=false,discovered=0,total=Infinity,badges=[],equipped=''}={}){
  const n=Math.max(0,Math.floor(Number(discovered)||0)),codex=n>=CODEX.titleAt,codexStat=codexBonus(n);
  const titles=[];
  if(Array.isArray(badges)&&badges.includes(FIRST_GARDEN_BADGE))titles.push({id:FIRST_GARDEN_BADGE,name:FIRST_GARDEN_TITLE,perk:'초대 명예의 전당 TOP 10',shotSpeed:0,moveSpeed:0,maxHp:0});
@@ -60,6 +64,9 @@ export function titleState({austin=false,austinClear=false,austinVeteran=false,a
  if(crystalClear)titles.push({id:'crystalclear',name:CRYSTAL_CLEAR_TITLE,perk:`수정의 정원사 한 판 3회 격파 · 완주 · 모든 능력 +${percent(CLEAR_ALL_STATS)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
  if(crystalVeteran)titles.push({id:'crystalveteran',name:CRYSTAL_VETERAN_TITLE,perk:`수정의 정원사 누적 10회 격파 · 공격력 +${percent(CRYSTAL_VETERAN_POWER)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
  if(crystal)titles.push({id:'crystalGardener',name:CRYSTAL_TITLE,perk:`수정의 정원사 첫 격파 · 공격력 +${percent(CRYSTAL_POWER)}`,shotSpeed:0,moveSpeed:0,maxHp:0});
+ if(arborClear)titles.push({id:'arborclear',name:ARBOR_CLEAR_TITLE,perk:'아르보 한 판 3회 격파 · 완주 · 모든 능력 +1%',shotSpeed:0,moveSpeed:0,maxHp:0});
+ if(arborVeteran)titles.push({id:'arborveteran',name:ARBOR_VETERAN_TITLE,perk:'아르보 누적 10회 격파 · 공격 빈도 +2%',shotSpeed:0,moveSpeed:0,maxHp:0});
+ if(arbor)titles.push({id:'arbor',name:ARBOR_TITLE,perk:'아르보 첫 격파 · 공격 빈도 +1%',shotSpeed:0,moveSpeed:0,maxHp:0});
  if(codex)titles.push({id:'codex',name:CODEX_TITLE,perk:`도감 ${n}개 · 공격력·이속·치명타·순환·최대 생명력 +${percent(codexStat)}`,shotSpeed:0,moveSpeed:0,maxHp:0,codexBonus:codexStat});
  if(n>=CODEX.completeAt)titles.push({id:'codexcomplete',name:CODEX_COMPLETE_TITLE,perk:`도감 ${CODEX.completeAt}종 완성 · 기념 칭호`,shotSpeed:0,moveSpeed:0,maxHp:0});
  const selected=titles.find(title=>title.id===equipped)||titles[0]||null;
@@ -69,8 +76,9 @@ export function titleState({austin=false,austinClear=false,austinVeteran=false,a
  const moveSpeedBonus=(austin?AUSTIN_MOVE_SPEED:0)+(austinVeteran?AUSTIN_VETERAN_MOVE_SPEED:0),shotSpeedBonus=0,maxHpBonus=(alwaysBeginner?ALWAYS_BEGINNER_MAX_HP:0)+(alwaysVeteran?ALWAYS_VETERAN_MAX_HP:0);
  const cooldownBonus=(johan?JOHAN_COOLDOWN:0)+(johanVeteran?JOHAN_VETERAN_COOLDOWN:0);
  const criticalBonus=(crosswind?CROSSWIND_CRITICAL:0)+(crosswindVeteran?CROSSWIND_VETERAN_CRITICAL:0),powerBonus=(crystal?CRYSTAL_POWER:0)+(crystalVeteran?CRYSTAL_VETERAN_POWER:0);
- const clearStatBonus=(Number(austinClear)+Number(alwaysClear)+Number(johanClear)+Number(crosswindClear)+Number(crystalClear))*CLEAR_ALL_STATS;
- return {titles,equipped:selected?.id||null,shown:selected?.name||null,moveSpeed:1+moveSpeedBonus,moveSpeedBonus,shotSpeed:1,shotSpeedBonus,shotSpeedSources:sources,attackCadence:1,attackCadenceBonus:0,maxHp:100+maxHpBonus+100*clearStatBonus,maxHpBonus,cooldownBonus,criticalBonus,powerBonus,clearStatBonus,codexBonus:codex?codexStat:0,next};
+ const clearStatBonus=(Number(austinClear)+Number(alwaysClear)+Number(johanClear)+Number(crosswindClear)+Number(crystalClear)+Number(arborClear))*CLEAR_ALL_STATS;
+ const attackCadenceBonus=(arbor?ARBOR_CADENCE:0)+(arborVeteran?ARBOR_VETERAN_CADENCE:0);
+ return {titles,equipped:selected?.id||null,shown:selected?.name||null,moveSpeed:1+moveSpeedBonus,moveSpeedBonus,shotSpeed:1,shotSpeedBonus,shotSpeedSources:sources,attackCadence:1+attackCadenceBonus,attackCadenceBonus,maxHp:100+maxHpBonus+100*clearStatBonus,maxHpBonus,cooldownBonus,criticalBonus,powerBonus,clearStatBonus,codexBonus:codex?codexStat:0,next};
 }
 
 // What changed when the discovery count went from `before` to `after`, as one line for the toast (null if nothing).

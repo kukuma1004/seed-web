@@ -128,3 +128,9 @@ body:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #boss-hu
  body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #move-stick{width:88px;height:88px;left:max(14px,env(safe-area-inset-left));bottom:max(14px,env(safe-area-inset-bottom))}
  body.touch-mode:is([data-journey-scene="skyway"],[data-journey-scene="crosswind"]) #move-stick i{width:36px;height:36px}
 }
+
+/* Reuse the existing encounter line: small screens still show five wards/three bosses. */
+body.arbor-mode #encounter{color:#f1edcf;letter-spacing:.3px;text-shadow:0 1px 3px #07180f;background:#10251cc4;border-radius:5px;padding:3px 8px;white-space:nowrap}
+body.phone-landscape.arbor-mode #encounter{display:block!important;visibility:visible;top:9px!important;left:50%;transform:translateX(-50%);font:10px/1.3 system-ui;max-width:55vw;letter-spacing:0}
+body.phone-landscape.arbor-mode:has(#boss-hud:not([hidden])) #encounter{display:none!important}
+body.phone-landscape.arbor-mode #growth-progress{top:34px!important}

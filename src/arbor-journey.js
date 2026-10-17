@@ -27,6 +27,14 @@ const integer=(n,a,b)=>Number.isInteger(n)&&n>=a&&n<=b;
 const mobId=(r,s,i)=>`arbor:r${r}:s${s}:m${i}`;
 const wardenId=(r,s)=>`arbor:r${r}:s${s}:w`;
 const bossId=r=>`arbor:r${r}:b`;
+export const ARBOR_ENCOUNTERS=Object.freeze([
+ Object.freeze({name:'정면 유인',hint:'앞에서 오는 무리를 뿌리 옆으로 유인하세요',types:['swarm','swarm','hound','swarm','caster','swarm'],interval:.6}),
+ Object.freeze({name:'엇갈린 협공',hint:'좌우에서 번갈아 와요 · 한쪽을 먼저 비우세요',types:['hound','swarm','hound','caster','swarm','shield'],interval:.52}),
+ Object.freeze({name:'포위 돌파',hint:'앞뒤 포위를 읽고 빈 옆길로 빠져나가세요',types:['swarm','hound','caster','swarm','hound','swarm'],interval:.46}),
+ Object.freeze({name:'방패의 틈',hint:'방패 옆으로 돌아 뒤의 술사를 먼저 끊으세요',types:['shield','caster','swarm','hound','caster','swarm'],interval:.58}),
+ Object.freeze({name:'녹관의 시험',hint:'뒤를 돌아보세요 · 뿌리가 오르면 공격을 끊으세요',types:['hound','shield','caster','swarm','hound','caster'],interval:.48})
+]);
+const mobType=(index,sector,version)=>version===2?ARBOR_ENCOUNTERS[sector].types[index%ARBOR_ENCOUNTERS[sector].types.length]:index%7===6?'shield':index%4===2?'caster':index%3===1?'hound':'swarm';
 export const arborSectorMobQuota=(round=0,sector=0)=>12+clamp(round|0,0,2)*2+clamp(sector|0,0,4)*2;
 export const arborBossHp=(round=0)=>Math.round(2800*(1+clamp(round|0,0,2)*.48));
 function random(s){let n=s.seed|0;n^=n<<13;n^=n>>>17;n^=n<<5;s.seed=n>>>0;return s.seed/4294967296;}
@@ -37,7 +45,7 @@ function configureRoots(s){
  for(let i=0;i<layout.length;i++)Object.assign(s.roots[i],layout[i],{phase:'rest',t:ARBOR_ROOT_TIMING.rest+i*.35,active:false});
 }
 function fresh(){
- const s={version:VERSION,act:'arbor',round:0,sector:0,phase:'skirmish',wardens:0,bossWins:0,time:0,sectorTime:0,
+ const s={version:VERSION,encounterVersion:2,act:'arbor',round:0,sector:0,phase:'skirmish',wardens:0,bossWins:0,time:0,sectorTime:0,
   initialSeed:DEFAULT_SEED,seed:DEFAULT_SEED,spawnIndex:0,spawnClock:0,kills:0,wardenSpawned:false,bossSpawned:false,lastClear:null,
   roots:ARBOR_SECTORS[0].roots.map((r,i)=>({id:`arbor-root-${i}`,...r,phase:'rest',t:0,active:false})),
   pending:[],killIds:[],playerSample:{x:0,z:5},out:{spawns:[],events:[],phaseChanged:false}};
@@ -58,7 +66,13 @@ function rootsStep(s,dt,p){
  }
 }
 function spawnPoint(s,p){
- const angle=random(s)*Math.PI*2,radius=6.2+random(s)*1.3;
+ const roll=random(s),radius=6.2+random(s)*1.3;
+ // Exactly two RNG draws per receipt, including legacy saves. Only new runs
+ // use directional packets; roots and the arena edge still leave safe spawns.
+ let angle=roll*Math.PI*2;
+ if(s.encounterVersion===2){const i=s.spawnIndex;
+  angle=s.sector===0?-Math.PI/2+(roll-.5)*1.2:s.sector===1?(i%2?0:Math.PI)+(roll-.5)*.8:s.sector===2?(i%2?Math.PI/2:-Math.PI/2)+(roll-.5)*1.1:s.sector===3?-Math.PI/2+(i%3-1)*.65+(roll-.5)*.3:(i%3===2?Math.PI/2:-Math.PI/2)+(roll-.5)*1.5;
+ }
  for(let i=0;i<16;i++){
   const a=angle+i*Math.PI*2/16,x=clamp(p.x+Math.cos(a)*radius,-13,13),z=clamp(p.z+Math.sin(a)*radius,-11,11);
   if(Math.hypot(x-p.x,z-p.z)<ARBOR_LIMITS.minSpawnDistance)continue;
@@ -72,7 +86,7 @@ function issue(s,role,p){
  const pos=spawnPoint(s,p),r=s.round,sector=s.sector,index=s.spawnIndex;
  let type,id,hp,speed,damage;
  if(role==='mob'){
-  type=index%7===6?'shield':index%4===2?'caster':index%3===1?'hound':'swarm';
+  type=mobType(index,sector,s.encounterVersion);
   id=mobId(r,sector,index);hp=({swarm:44,hound:86,caster:108,shield:140}[type]+sector*8)*(1+r*.5);
   speed=({swarm:2.8,hound:3.5,caster:2.1,shield:1.9}[type])*(1+r*.06);damage=10+r*2+Math.floor(sector/2);s.spawnIndex++;
  }else if(role==='warden'){type='warden';id=wardenId(r,sector);hp=640+sector*90+r*430;speed=2.3+r*.12;damage=17+r*3;s.wardenSpawned=true;}
@@ -94,7 +108,7 @@ export function stepArborJourney(s,dt,{player=ARBOR_ARENA.start,alive=0,projecti
  }
  s.spawnClock=Math.max(0,s.spawnClock-step);if(s.spawnClock>1e-9||s.spawnIndex>=quota)return out;
  // There is no queued catch-up after a crowded frame or a background return.
- s.spawnClock=Math.max(.38,.64-s.round*.045-s.sector*.025);
+ s.spawnClock=s.encounterVersion===2?Math.max(.38,ARBOR_ENCOUNTERS[s.sector].interval-s.round*.025):Math.max(.38,.64-s.round*.045-s.sector*.025);
  if(projectiles>=ARBOR_LIMITS.projectiles)return out;
  const count=Math.min(ARBOR_LIMITS.spawnsPerStep,ARBOR_LIMITS.enemies-live,quota-s.spawnIndex);
  for(let i=0;i<count;i++)issue(s,'mob',p);
@@ -126,7 +140,7 @@ export function advanceArborJourney(s){
 }
 const copyActor=a=>({id:a.id,role:a.role,type:a.type,x:a.x,z:a.z,hp:a.hp,speed:a.speed,damage:a.damage});
 export function checkpointArborJourney(s){
- return {version:VERSION,act:'arbor',round:s.round,sector:s.sector,phase:s.phase,wardens:s.wardens,bossWins:s.bossWins,
+ return {version:VERSION,...(s.encounterVersion===2?{encounterVersion:2}:{}),act:'arbor',round:s.round,sector:s.sector,phase:s.phase,wardens:s.wardens,bossWins:s.bossWins,
   time:s.time,sectorTime:s.sectorTime,initialSeed:s.initialSeed,seed:s.seed,spawnIndex:s.spawnIndex,spawnClock:s.spawnClock,kills:s.kills,
   wardenSpawned:s.wardenSpawned,bossSpawned:s.bossSpawned,lastClear:s.lastClear,
   roots:s.roots.map(r=>({id:r.id,x:r.x,z:r.z,w:r.w,d:r.d,phase:r.phase,t:r.t,active:r.active})),
@@ -137,9 +151,9 @@ function validActor(a){
   Number.isFinite(a.x)&&Math.abs(a.x)<=13&&Number.isFinite(a.z)&&Math.abs(a.z)<=11&&
   Number.isFinite(a.hp)&&a.hp>0&&a.hp<=10000&&Number.isFinite(a.speed)&&a.speed>0&&a.speed<=6&&Number.isFinite(a.damage)&&a.damage>0&&a.damage<=60;
 }
-function canonicalActor(a,round,sector){
+function canonicalActor(a,round,sector,encounterVersion){
  const index=a.role==='mob'?Number(a.id.split(':m')[1]):-1;
- const type=a.role==='mob'?(index%7===6?'shield':index%4===2?'caster':index%3===1?'hound':'swarm'):'warden';
+ const type=a.role==='mob'?mobType(index,sector,encounterVersion):'warden';
  const hp=a.role==='mob'?Math.round((({swarm:44,hound:86,caster:108,shield:140}[type])+sector*8)*(1+round*.5)):a.role==='warden'?640+sector*90+round*430:arborBossHp(round);
  const speed=a.role==='mob'?({swarm:2.8,hound:3.5,caster:2.1,shield:1.9}[type])*(1+round*.06):a.role==='warden'?2.3+round*.12:1.8+round*.15;
  const damage=a.role==='mob'?10+round*2+Math.floor(sector/2):a.role==='warden'?17+round*3:18+round*3;
@@ -148,7 +162,7 @@ function canonicalActor(a,round,sector){
 // This is schema/progression validation, not an anti-cheat signature. It rejects
 // impossible skipped sectors and mismatched receipts without silently healing them.
 export function restoreArborJourney(raw){
- if(!raw||raw.version!==VERSION||raw.act!=='arbor'||!integer(raw.round,0,2)||!integer(raw.sector,0,4)||!PHASES.has(raw.phase)||
+ if(!raw||raw.version!==VERSION||![undefined,2].includes(raw.encounterVersion)||raw.act!=='arbor'||!integer(raw.round,0,2)||!integer(raw.sector,0,4)||!PHASES.has(raw.phase)||
   !integer(raw.wardens,0,15)||!integer(raw.bossWins,0,3)||!uint(raw.seed)||!uint(raw.initialSeed)||
   !Number.isFinite(raw.time)||raw.time<0||!Number.isFinite(raw.sectorTime)||raw.sectorTime<0||raw.sectorTime>raw.time+1e-8||
   !Number.isFinite(raw.spawnClock)||raw.spawnClock<0||raw.spawnClock>.64||!integer(raw.spawnIndex,0,arborSectorMobQuota(raw.round,raw.sector))||
@@ -157,7 +171,7 @@ export function restoreArborJourney(raw){
   !Array.isArray(raw.pending)||raw.pending.length>ARBOR_LIMITS.enemies||!raw.pending.every(validActor)||
   !Array.isArray(raw.roots)||raw.roots.length!==ARBOR_LIMITS.roots)return null;
  const killed=new Set(raw.killIds),pending=new Map();
- for(const actor of raw.pending){if(pending.has(actor.id)||killed.has(actor.id)||!canonicalActor(actor,raw.round,raw.sector))return null;pending.set(actor.id,actor);}
+ for(const actor of raw.pending){if(pending.has(actor.id)||killed.has(actor.id)||!canonicalActor(actor,raw.round,raw.sector,raw.encounterVersion))return null;pending.set(actor.id,actor);}
  const expected=new Set(),requireDead=id=>{expected.add(id);return killed.has(id);};
  for(let r=0;r<raw.round;r++){
   for(let sector=0;sector<5;sector++){
@@ -197,6 +211,7 @@ export function restoreArborJourney(raw){
    !['x','z','w','d'].every(key=>root[key]===layout[key]))return null;
  }
  const s=fresh();
+ if(raw.encounterVersion!==2)delete s.encounterVersion;
  for(const key of ['round','sector','phase','wardens','bossWins','time','sectorTime','initialSeed','seed','spawnIndex','spawnClock','kills','wardenSpawned','bossSpawned','lastClear'])s[key]=raw[key];
  for(let i=0;i<ARBOR_LIMITS.roots;i++)Object.assign(s.roots[i],raw.roots[i]);
  s.pending.push(...raw.pending.map(copyActor));s.killIds.push(...raw.killIds);return s;
