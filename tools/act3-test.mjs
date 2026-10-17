@@ -141,7 +141,8 @@ for(const type of ['sky-scout','sky-diver','sky-bomber','sky-carrier']){
 {
  const skyScene=new THREE.Scene();skyScene.background=new THREE.Color(0x102010);skyScene.fog=new THREE.FogExp2(0x102010,.02);const light=new THREE.HemisphereLight(0xffffff,0x334455,1),garden=new THREE.Group();garden.visible=true;skyScene.add(light,garden);
  const sky=createSkyway(skyScene,{lights:[light],hide:[garden],mobile:true});assert.equal(sky.group.visible,false);sky.setActive(true);const before=sky.state();sky.tick(1,true);const after=sky.state();
- assert.equal(sky.group.visible,true);assert.equal(garden.visible,false);assert.ok(after.distance>before.distance);assert.equal(after.drawCalls,3);assert.equal(after.openEnds,true);assert.equal(after.parallaxLayers,3);assert.ok(after.instances<100,'scrolling environment stays batched');
+ assert.equal(sky.group.visible,true);assert.equal(garden.visible,false);assert.ok(after.distance>before.distance);assert.equal(after.drawCalls,4);assert.equal(after.openEnds,false);assert.equal(after.trueArenaPerimeter,true);assert.equal(after.parallaxLayers,3);assert.ok(after.instances<100,'scrolling environment stays batched');
+ const perimeter=sky.group.getObjectByName('skyway-true-route-perimeter');assert(perimeter?.isMesh,'the extra draw is the actual finite movement boundary');perimeter.geometry.computeBoundingBox();assert(Math.abs(perimeter.geometry.boundingBox.max.x-ACT3_ARENA.halfWidth)<.25);assert(Math.abs(perimeter.geometry.boundingBox.max.z-ACT3_ARENA.halfDepth)<.25);
  sky.setActive(false);assert.equal(garden.visible,true);assert.equal(sky.group.visible,false);
 }
 console.log('Act 3: public gate, separate save, five rooms, flight roles, warden, boss patterns and batched scrolling passed.');
