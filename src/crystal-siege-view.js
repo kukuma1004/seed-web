@@ -1,6 +1,8 @@
 import * as THREE from 'three';
 import {CRYSTAL_GARDEN_ART,CRYSTAL_GARDEN_MOBILE_ART,CRYSTAL_TURRET_ART,CRYSTAL_TURRET_MOBILE_ART,crystalTurretTexture,crystalGardenTexture,crystalGardenArtStyle,crystalGardenFloorContactTexture} from './crystal-garden-art.js';
 import {CRYSTAL_SIEGE_PACKETS,crystalSiegeBuildCost,crystalSiegeMaxLevel,crystalSiegeFacilityMaxHp} from './crystal-siege-rules.js';
+import {journeySignatureHint} from './journey-act-signatures.js';
+export const CRYSTAL_SIEGE_PRESENTATION=Object.freeze({heart:2.85,node:2.15,facility:2.05,levelStep:.06});
 // Eleven actor sprites, four grounded plinths and one contact-shadow batch.
 // All combat ownership stays in crystal-siege-rules; no lights or per-frame DOM.
 export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile=false}={}){
@@ -17,7 +19,7 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
  const crystal=artCell('crystal'),turret=artCell('turret'),coreTexture=artCell('heart'),snareTexture=artCell('snare'),wallTexture=artCell('wall'),plinthTexture=artCell('plinth');
  const growthAtlas=load((mobile?CRYSTAL_TURRET_MOBILE_ART:CRYSTAL_TURRET_ART).slice(7)),turretStages=[turret];for(let level=2;level<=5;level++){const t=crystalTurretTexture(growthAtlas,level);textures.push(t);turretStages.push(t);}
  const sprite=(texture,size,solid=true)=>{const material=new THREE.SpriteMaterial({map:texture,transparent:true,alphaTest:.12,depthWrite:solid,toneMapped:false});owned.push(material);const o=new THREE.Sprite(material);o.scale.set(size,size,1);o.center.set(.5,.14);world.add(o);return o;};
- const heart=sprite(coreTexture,3.35),nodes=Array.from({length:6},()=>sprite(crystal,2.65)),facilities=Array.from({length:4},()=>sprite(turret,2.45));
+ const heart=sprite(coreTexture,CRYSTAL_SIEGE_PRESENTATION.heart),nodes=Array.from({length:6},()=>sprite(crystal,CRYSTAL_SIEGE_PRESENTATION.node)),facilities=Array.from({length:4},()=>sprite(turret,CRYSTAL_SIEGE_PRESENTATION.facility));
  const plinths=Array.from({length:4},()=>sprite(plinthTexture,2.15,false));for(const p of plinths){p.center.y=.13;p.name='crystal-garden-build-plinth';}
  const shadowTexture=crystalGardenFloorContactTexture();textures.push(shadowTexture);
  const shadowGeometry=new THREE.PlaneGeometry(1,1).rotateX(-Math.PI/2),shadowMaterial=new THREE.MeshBasicMaterial({map:shadowTexture,transparent:true,depthWrite:false,toneMapped:false});owned.push(shadowGeometry,shadowMaterial);
@@ -57,16 +59,16 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
   supportX[index]=Number.isFinite(n)&&n>0?dx/n:0;supportZ[index]=Number.isFinite(n)&&n>0?dz/n:0;
   supportTime[index]=.24;if(coreHitTime<=0){receipt=`포탑 적중 · 피해 ${Math.round(appliedDamage*10)/10}`;receiptTime=.8;}return true;
  }
- function update(s,player,{visible=false,interactive=false,boss=false,bossCleared=false,coreDefense=false,roundCount=5,prepDuration=20,prepRemaining=null,liveEnemies=null,dt=0}={}){
+ function update(s,player,{visible=false,interactive=false,boss=false,bossCleared=false,coreDefense=false,roundCount=5,prepDuration=20,prepRemaining=null,liveEnemies=null,signature=null,dt=0}={}){
   if(disposed)return;world.visible=visible&&!!s;hud.hidden=!world.visible;menu.hidden=true;interactiveNow=false;if(!world.visible){menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;facilitiesSeen=false;plantTime.fill(0);resetFeedback();return;}
   if(feedbackState!==s){resetFeedback(s);facilitiesSeen=false;plantTime.fill(0);harvested.fill(0);harvestTime.fill(0);}
   heart.position.set(s.core.x,.04,s.core.z);
   const step=Number.isFinite(dt)?Math.max(0,Math.min(.1,dt)):0;
-  contactCount=0;contactDirty=false;contact(s.core.x,s.core.z,3.15,1.9);
+  contactCount=0;contactDirty=false;contact(s.core.x,s.core.z,2.65,1.55);
   for(let i=0;i<nodes.length;i++){
    const n=s.nodes[i];if(n?.harvested&&!harvested[i])harvestTime[i]=.2;harvested[i]=n?.harvested?1:0;harvestTime[i]=Math.max(0,harvestTime[i]-step);
    const visible=!boss&&s.phase==='prep'&&!!n&&(!n.harvested||harvestTime[i]>0);nodes[i].visible=visible;
-   if(n){nodes[i].position.set(n.x,.025,n.z);nodes[i].scale.setScalar(2.65*(n.harvested?harvestTime[i]/.2:1));if(visible)contact(n.x,n.z,2.2,1.3);}
+   if(n){nodes[i].position.set(n.x,.025,n.z);nodes[i].scale.setScalar(CRYSTAL_SIEGE_PRESENTATION.node*(n.harvested?harvestTime[i]/.2:1));if(visible)contact(n.x,n.z,1.8,1.1);}
   }
   for(let i=0;i<4;i++){const p=s.pads[i];plinths[i].position.set(p.x,.036,p.z);plinths[i].material.color.setHex(Math.hypot(player.x-p.x,player.z-p.z)<=1.7?0xfff1cf:0xcad3ca);if(p.kind&&p.hp>0)contact(p.x,p.z,2.15,1.3);}
   contacts.count=contactCount;if(contactDirty)contacts.instanceMatrix.needsUpdate=true;
@@ -86,11 +88,11 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
    if(facilitiesSeen&&code>0&&code!==facilityCodes[i])plantTime[i]=.24;
    facilityCodes[i]=code;plantTime[i]=Math.max(0,plantTime[i]-step);
    const bump=Math.sin(Math.PI*plantTime[i]/.24)*.16;
-   const size=p.kind==='turret'?2.45+Math.max(0,p.level-1)*.07:2.45;facilities[i].scale.set(size*(1+bump),size*(1+bump),1);
+   const size=CRYSTAL_SIEGE_PRESENTATION.facility+(p.kind==='turret'?Math.max(0,p.level-1)*CRYSTAL_SIEGE_PRESENTATION.levelStep:0);facilities[i].scale.set(size*(1+bump),size*(1+bump),1);
   }
   let barCount=0,barDirty=false;for(let i=0;i<4;i++){
    const p=s.pads[i],maxHp=crystalSiegeFacilityMaxHp(p);if(!p.kind||p.hp<=0||p.hp>=maxHp)continue;
-   const ratio=Math.max(0,Math.min(1,p.hp/maxHp)),y=p.kind==='snare'?1.2:p.kind==='wall'?1.8:2.25;
+   const ratio=Math.max(0,Math.min(1,p.hp/maxHp)),y=p.kind==='snare'?1.05:p.kind==='wall'?1.55:1.95;
    const offset=barCount*4;if(barCache[offset]!==p.x||barCache[offset+1]!==p.z||barCache[offset+2]!==y||barCache[offset+3]!==ratio){
     barPose.position.set(p.x,y,p.z);barPose.scale.set(1.55,.13,1);barPose.updateMatrix();barBack.setMatrixAt(barCount,barPose.matrix);
     barPose.position.set(p.x-.7*(1-ratio),y+.025,p.z+.018);barPose.scale.set(1.4*ratio,.065,1);barPose.updateMatrix();barFill.setMatrixAt(barCount,barPose.matrix);barColor.setHex(ratio<.35?0xff927f:0xe9d28b);barFill.setColorAt(barCount,barColor);barDirty=true;
@@ -106,7 +108,11 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
   const packetTotal=CRYSTAL_SIEGE_PACKETS[s.room],packetRemaining=roundCount===5&&Number.isInteger(s.spawnIndex)&&Number.isInteger(packetTotal)?Math.max(0,packetTotal-s.spawnIndex):null;
   const pressure=!boss&&s.phase==='defense'?(packetRemaining!==null?`남은 습격 ${packetRemaining}${liveText?' · '+liveText:''}`:liveText):'';
   const defenseHint=packetRemaining===0?(liveText?(liveEnemies>0?'마지막 적을 처치하면 다음 전장이 열려요':'습격 정산 중'):'남은 적을 확인하세요'):packetRemaining!==null?'다가오는 습격대를 심장 전에 끊으세요':'';
-  const detail=!boss&&s.phase==='prep'?'빛나는 수정에 다가가 채집 · 원 안에서 시설 심기':!boss&&s.phase==='defense'?defenseHint:'';
+  const command=signature?.act==='crystalGorge'&&(signature.rallyPad||signature.repairPad)?journeySignatureHint(signature,s):'';
+  const detail=command||(!boss&&s.phase==='prep'?'수정 채집 → 화단에서 심기':!boss&&s.phase==='defense'?defenseHint:'');
+  const phaseKey=boss?'boss':s.phase,alertKey=coreHitTime>0?'danger':receipt?'feedback':'none',commandKey=command?'active':'none',cleanupKey=packetRemaining===0?'true':'false';
+  if(hud.dataset.phase!==phaseKey)hud.dataset.phase=phaseKey;if(hud.dataset.alert!==alertKey)hud.dataset.alert=alertKey;
+  if(hud.dataset.command!==commandKey)hud.dataset.command=commandKey;if(hud.dataset.cleanup!==cleanupKey)hud.dataset.cleanup=cleanupKey;
   const text=`${s.room+1}/${roundCount}${phase}|${remaining}|${Math.ceil(s.core.hp)}|${s.resources}|${pressure}|${detail}|${receipt}`;
   const choosing=menuOpen&&interactive&&s.phase==='prep'&&!boss;
   if(text+'|'+choosing!==uiKey){hud.innerHTML='<strong>'+phase+'</strong><span>심장 '+Math.ceil(s.core.hp)+'/100 · 수정 '+s.resources+' · '+(boss?(bossCleared?'출구로 다음 진행':coreDefense?'보스와 습격대를 막기':'보스 결전'):s.phase==='prep'?(choosing?'시설 선택 중 · 준비 시간 멈춤':remaining+'초 뒤 습격'):pressure||'습격 '+(s.room+1)+'/'+roundCount)+'</span><small>'+(receipt||detail)+'</small>';uiKey=text+'|'+choosing;}
@@ -122,5 +128,5 @@ export function createCrystalSiegeView(scene,loader,base,{onBuild,onStart,mobile
    if(nearest?.kind)menuOpen=false;choices.hidden=!menuOpen;contextButton.setAttribute('aria-expanded',String(menuOpen));
   }else{menuOpen=false;choices.hidden=true;padId=null;nearestPad=null;buildKey='';}
  }
- return {update,recordSupport,preparationHeld(){return !disposed&&interactiveNow&&menuOpen&&!menu.hidden&&!choices.hidden;},hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);resetFeedback();},dispose(){if(disposed)return;disposed=true;interactiveNow=false;menuOpen=false;nearestPad=null;padId=null;resetFeedback();world.removeFromParent();contacts.dispose();barBack.dispose();barFill.dispose();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
+ return {update,recordSupport,notice(text,seconds=1.2){if(disposed||!world.visible||coreHitTime>0||typeof text!=='string')return false;receipt=text.replace(/[<>&]/g,'').slice(0,100);receiptTime=Math.max(.2,Math.min(3,Number(seconds)||1.2));return true;},preparationHeld(){return !disposed&&interactiveNow&&menuOpen&&!menu.hidden&&!choices.hidden;},hide(){world.visible=false;hud.hidden=menu.hidden=true;menuOpen=false;choices.hidden=true;interactiveNow=false;padId=null;nearestPad=null;buildKey='';facilitiesSeen=false;plantTime.fill(0);resetFeedback();},dispose(){if(disposed)return;disposed=true;interactiveNow=false;menuOpen=false;nearestPad=null;padId=null;resetFeedback();world.removeFromParent();contacts.dispose();barBack.dispose();barFill.dispose();owned.forEach(o=>o.dispose());textures.forEach(t=>t.dispose());hud.remove();menu.remove();}};
 }

@@ -76,10 +76,10 @@ await check('Real desktop/mobile landscape WebPs retain source aspect with bound
  }
 });
 
-await check('Actual skyway scene covers every viewport without stretching, shader seams, cloned samplers or out-of-source UVs',()=>{
+await check('Actual skyway scene covers every viewport without stretching, cloned samplers or out-of-source UVs',()=>{
  for(const mobile of[false,true]){
   const f=makeSkyway(mobile),{view}=f;assert.equal(f.loads.length,0,'lazy before first entry');view.setActive(true);const sea=view.group.getObjectByName('skyway-painted-route'),map=sea.material.map;
-  assert.equal(f.loads[0],'/seed/assets/'+(mobile?'mobile/':'')+'act3-storm-route-v2.webp');assert.equal(f.loads.length,1);assert.equal(map.source,f.textures[0].source);assert.equal(map.wrapS,THREE.ClampToEdgeWrapping);assert.equal(map.wrapT,THREE.ClampToEdgeWrapping);assert(!skywaySource.includes('onBeforeCompile'),'one ordinary texture sample');
+  assert.equal(f.loads[0],'/seed/assets/'+(mobile?'mobile/':'')+'act3-storm-route-v2.webp');assert.equal(f.loads.length,1);assert.equal(map.source,f.textures[0].source);assert.equal(map.wrapS,THREE.ClampToEdgeWrapping);assert.equal(map.wrapT,THREE.ClampToEdgeWrapping);assert.equal(view.state().backgroundSamples,1);
   for(const[w,h]of[...cases,[390,844]]){
    const camera=makeCamera(w,h,journeyFlightCamera(w,h));
    for(let i=0;i<70;i++){view.tick(.1);sea.onBeforeRender(null,f.scene,camera);assert(Math.abs(map.repeat.x*map.image.width/(map.repeat.y*map.image.height)-w/h)<1e-10,'source pixel crop matches view aspect');assert(map.offset.x>=0&&map.offset.y>=0&&map.offset.x+map.repeat.x<=1&&map.offset.y+map.repeat.y<=1,'bounded crop never exposes an image seam');}
@@ -90,6 +90,52 @@ await check('Actual skyway scene covers every viewport without stretching, shade
   map.image={width:1600,height:1000};sea.onBeforeRender(null,f.scene,makeCamera(1024,768,journeyFlightCamera(1024,768)));assert(Math.abs(map.repeat.x*1600/(map.repeat.y*1000)-4/3)<1e-10);
   view.setActive(false);view.setActive(true);assert.equal(f.loads.length,1);assert.equal(sea.material.map,map);view.dispose();
  }
+});
+
+await check('Fixed background grading uses the actual stock one-map shader without touching actor materials or output colour conversion',()=>{
+ const unrelated=new THREE.MeshBasicMaterial({color:0xff8a20}),unrelatedKey=unrelated.customProgramCacheKey(),unrelatedHook=unrelated.onBeforeCompile;
+ const keys=[];
+ for(const mobile of[false,true]){
+  const {view}=makeSkyway(mobile);view.setActive(true);
+  const material=view.group.getObjectByName('skyway-painted-route').material;
+  assert(material.isMeshBasicMaterial);assert(!material.transparent&&!material.fog&&!material.toneMapped&&!material.depthWrite);
+  const key=material.customProgramCacheKey();keys.push(key);
+  const compile=()=>{const shader={vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader,uniforms:{}};material.onBeforeCompile(shader);return shader;};
+  const shader=compile();assert.deepEqual(compile(),shader,'fixed shader does not accumulate edits or time uniforms');
+  assert.equal((shader.fragmentShader.match(/#include <map_fragment>/g)||[]).length,1,'retain stock map sample once');
+  const sampling=shader.fragmentShader.replace('#include <map_fragment>',THREE.ShaderChunk.map_fragment);
+  assert.equal((sampling.match(/texture2D\s*\(\s*map\s*,/g)||[]).length,1,'actual Three map chunk keeps exactly one source texture lookup');
+  assert.equal((shader.fragmentShader.match(/texture2D/g)||[]).length,(THREE.ShaderLib.basic.fragmentShader.match(/texture2D/g)||[]).length,'grading adds no lookup to stock shader, including its disabled light-map branch');
+  assert.equal(material.lightMap,null);assert.equal(material.envMap,null,'only the source map is enabled');
+  assert(shader.vertexShader.includes('vSkywayFrameUv=uv'),'screen-local mask remains independent of transformed crop UVs');
+  assert(shader.fragmentShader.indexOf('skywayQuietColor')>shader.fragmentShader.indexOf('#include <map_fragment>'));
+  assert(shader.fragmentShader.indexOf('skywayQuietColor')<shader.fragmentShader.indexOf('#include <colorspace_fragment>'),'grade linear light before stock output conversion');
+  assert(shader.fragmentShader.includes('#include <opaque_fragment>'),'background remains opaque with the stock alpha path');
+  assert(!shader.fragmentShader.includes('diffuseColor.a='),'grading cannot fade actors or background coverage');
+  assert.equal(Object.keys(shader.uniforms).length,0,'no viewport/time/postprocess uniforms');
+  const beforeResources=[...view.materials,...view.geometries],hook=material.onBeforeCompile;view.setActive(false);view.setActive(true);
+  assert.equal(material.customProgramCacheKey(),key);assert.equal(material.onBeforeCompile,hook);assert.deepEqual([...view.materials,...view.geometries],beforeResources);
+  assert.equal(unrelated.customProgramCacheKey(),unrelatedKey);assert.equal(unrelated.onBeforeCompile,unrelatedHook,'no mutation of shared material prototypes');
+  measurements.push({mobile,shaderKey:key,backgroundSamples:1,extraTextureSamples:0,extraDraws:0,extraUniforms:0});view.dispose();
+ }
+ assert.notEqual(keys[0],keys[1],'mobile grading variant has a distinct program cache key');unrelated.dispose();
+});
+
+await check('Rain keeps two fixed batches and one program, with a clip-space central fade instead of a new full-screen pass',()=>{
+ const {view}=makeSkyway(true);view.setActive(true);const far=view.group.getObjectByName('skyway-far-rain'),near=view.group.getObjectByName('skyway-near-rain');
+ assert.equal(view.group.children.length,3);assert.equal(view.materials.length,4);assert.equal(view.geometries.length,2);assert.equal(view.state().drawCalls,3);
+ assert.equal(far.material.customProgramCacheKey(),near.material.customProgramCacheKey());assert.notEqual(far.material.customProgramCacheKey(),view.group.getObjectByName('skyway-painted-route').material.customProgramCacheKey());
+ for(const material of[far.material,near.material]){
+  assert(material.transparent&&!material.depthWrite);assert.equal(material.map,null,'rain adds no sampler');
+  const shader={vertexShader:THREE.ShaderLib.basic.vertexShader,fragmentShader:THREE.ShaderLib.basic.fragmentShader,uniforms:{}};material.onBeforeCompile(shader);
+  assert(shader.vertexShader.indexOf('vSkywayRainSide=gl_Position.x/gl_Position.w')>shader.vertexShader.indexOf('#include <project_vertex>'),'mask uses projected rain position including instance transform');
+  assert(shader.fragmentShader.indexOf('diffuseColor.a*=')<shader.fragmentShader.indexOf('#include <opaque_fragment>'),'fade applied to transparent stock output alpha');
+  assert.equal((shader.fragmentShader.match(/texture2D/g)||[]).length,(THREE.ShaderLib.basic.fragmentShader.match(/texture2D/g)||[]).length,'central rain fade adds no texture lookup');assert.equal(material.lightMap,null);assert.equal(material.envMap,null);assert.equal(Object.keys(shader.uniforms).length,0);assert(material.opacity<=.22);
+ }
+ const ids=view.group.children.map(x=>x.uuid),versions=[far.instanceMatrix.version,near.instanceMatrix.version];
+ for(let i=0;i<6000;i++)view.tick(1/60,false);
+ assert.deepEqual(view.group.children.map(x=>x.uuid),ids);assert.deepEqual([far.instanceMatrix.version,near.instanceMatrix.version],versions,'paused grading/rain uploads nothing');
+ assert.equal(view.state().quietCombatCenter,true);assert.equal(view.state().rainInMargins,true);view.dispose();
 });
 
 await check('Finite rain pools remain fixed for 20k frames, pause/idle cause no uploads and mobile animation is slower at 30Hz',()=>{

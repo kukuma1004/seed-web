@@ -134,3 +134,15 @@ body.arbor-mode #encounter{color:#f1edcf;letter-spacing:.3px;text-shadow:0 1px 3
 body.phone-landscape.arbor-mode #encounter{display:block!important;visibility:visible;top:9px!important;left:50%;transform:translateX(-50%);font:10px/1.3 system-ui;max-width:55vw;letter-spacing:0}
 body.phone-landscape.arbor-mode:has(#boss-hud:not([hidden])) #encounter{display:none!important}
 body.phone-landscape.arbor-mode #growth-progress{top:34px!important}
+
+/* Act5 has one compact status lane; command/repair feedback lives here too. */
+#crystal-siege-ui{width:230px;padding:7px 10px;font-size:11px;line-height:1.45;background:#10291fe0;border-left-width:2px}
+#crystal-siege-ui strong{font-size:12px;line-height:1.35;margin-bottom:2px}
+#crystal-siege-ui span{display:block}
+#crystal-siege-ui small:empty{display:none}
+#crystal-siege-ui[data-phase="boss"] strong{display:none}
+#crystal-siege-ui[data-phase="defense"][data-alert="none"][data-command="none"][data-cleanup="false"] small{display:none}
+#crystal-siege-ui[data-alert="danger"]{border-color:#ff9b7a}
+body:has(#crystal-siege-ui:not([hidden])) #help,body:has(#crystal-siege-ui:not([hidden])) #journey-signature{display:none}
+body:has(#crystal-siege-ui:not([hidden])) #journey-cue:is([data-kind="support"],[data-kind="repair"],[data-kind="night"]){display:none}
+@media(max-height:500px){#crystal-siege-ui{width:164px;max-width:30vw;padding:5px 7px;font-size:10px}#crystal-siege-ui strong{font-size:10px}#crystal-siege-ui small{font-size:9px;line-height:1.3}#crystal-siege-ui:is([data-alert="danger"],[data-alert="feedback"],[data-command="active"],[data-cleanup="true"]) small{display:block}}

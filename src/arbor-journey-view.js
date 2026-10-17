@@ -16,33 +16,39 @@ const BASE_URL=import.meta.env?.BASE_URL||'./';
 const finite=(v,fallback=0)=>Number.isFinite(v)?v:fallback;
 const clamp=(v,lo,hi)=>Math.max(lo,Math.min(hi,v));
 
-// A low, furrowed root fills the same rectangle used by the rules. Unlike a
-// billboard alone, this opaque body keeps long north/south cover legible too.
-// Its vertex shading is baked: no realtime light, shadow pass or per-root mesh.
+// A ground-hugging, curved root keeps the authored blocker bounds. Both its
+// opaque bark and painted skin share this one geometry: turning north/south
+// never turns a billboard sideways or hides its painting behind a flat beam.
+// The existing frontal root painting supplies moss along the crown and bark
+// on the flanks. All shape/colour work happens once, without lights or shaders.
 function livingRootGeometry(){
- const positions=[],colors=[],xs=[-.5,-.36,-.14,.1,.33,.5],zs=[-.5,-.28,0,.27,.5],heights=[.14,.64,.91,1,.68,.16];
- const vertex=(x,z,h)=>[x,h*(1-Math.abs(z)*1.1),z*(.72+.28*Math.sin((x+.5)*Math.PI))+Math.sin((x+.5)*Math.PI*2)*.06*(1-Math.abs(z)*2)];
- const triangle=(a,b,c,color)=>{positions.push(...a,...b,...c);for(let i=0;i<3;i++)colors.push(...color);};
- for(let i=0;i<xs.length-1;i++)for(let j=0;j<zs.length-1;j++){
-  const a=vertex(xs[i],zs[j],heights[i]),b=vertex(xs[i+1],zs[j],heights[i+1]),c=vertex(xs[i+1],zs[j+1],heights[i+1]),d=vertex(xs[i],zs[j+1],heights[i]);
-  const tone=j===0?[.065,.037,.017]:j===3?[.09,.055,.023]:j===1?[.12,.07,.03]:[.17,.105,.045];
-  triangle(a,c,b,tone);triangle(a,d,c,tone);
+ const positions=[],colors=[],uvs=[],lengthSteps=16,archSteps=8;
+ // One continuous, opaque moss-to-bark patch of arbor-root-v1 (1024x374;
+ // mobile halves both). Its 420..510 / 100..178 interior follows the grain.
+ // Sampling the full arch column-by-column made transverse caterpillar rings;
+ // the small longitudinal patch keeps one unbroken moss vein down the crown.
+ const vertex=(u,j)=>{
+  const a=j*Math.PI/archSteps,crown=Math.sin(a),along=Math.sin(u*Math.PI),bend=Math.sin(u*Math.PI*2)*along*.11;
+  const width=.5*(.10+.90*Math.pow(along,.55)),height=.07+.93*Math.pow(along,.7),grain=.92+.06*Math.sin(a*10+.7*along)+.02*Math.cos(a*17+u*1.4);
+  const moss=clamp((crown-.72)/.24,0,1),ridge=1-.07*Math.sin(a*5+u*.35)**2*crown;
+  const bark=[.105+crown*.045,.057+crown*.035,.022+crown*.012],green=[.09,.155,.04],color=bark.map((value,index)=>(value*(1-moss)+green[index]*moss)*grain);
+  const paintU=(420+90*u+.5)/1024,paintV=1-(178-78*Math.pow(crown,.7)+.5)/374;
+  return {p:[u-.5,height*Math.pow(crown,.85)*ridge,bend+Math.cos(a)*width],c:color,uv:[paintU,paintV]};
+ };
+ const triangle=(a,b,c)=>{for(const v of [a,b,c]){positions.push(...v.p);colors.push(...v.c);uvs.push(...v.uv);}};
+ for(let i=0;i<lengthSteps;i++)for(let j=0;j<archSteps;j++){
+  const a=vertex(i/lengthSteps,j),b=vertex((i+1)/lengthSteps,j),c=vertex((i+1)/lengthSteps,j+1),d=vertex(i/lengthSteps,j+1);
+  triangle(a,b,c);triangle(a,c,d);
  }
- for(const z of [-.5,.5])for(let i=0;i<xs.length-1;i++){
-  const a=vertex(xs[i],z,heights[i]),b=vertex(xs[i+1],z,heights[i+1]),c=[xs[i+1],0,z],d=[xs[i],0,z];
-  const tone=z<0?[.075,.042,.018]:[.035,.029,.014];
-  z<0?(triangle(a,b,c,tone),triangle(a,c,d,tone)):(triangle(a,c,b,tone),triangle(a,d,c,tone));
+ for(const u of [0,1])for(let j=0;j<archSteps;j++){
+  const a=vertex(u,j),b=vertex(u,j+1),base={p:[u-.5,0,0],c:[.065,.038,.017],uv:[(420+90*u+.5)/1024,1-178.5/374]};
+  u===0?triangle(a,b,base):triangle(a,base,b);
  }
- for(const i of [0,xs.length-1])for(let j=0;j<zs.length-1;j++){
-  const x=xs[i],a=vertex(x,zs[j],heights[i]),b=vertex(x,zs[j+1],heights[i]),c=[x,0,zs[j+1]],d=[x,0,zs[j]];
-  const tone=[.09,.054,.023];i===0?(triangle(a,c,b,tone),triangle(a,d,c,tone)):(triangle(a,b,c,tone),triangle(a,c,d,tone));
- }
- // Raised moss veins follow the bark without adding a material or draw call.
- for(const [x,z,size]of [[-.3,-.18,.13],[-.08,.22,.15],[.18,-.2,.12],[.34,.1,.11]]){
-  const i=Math.min(xs.length-2,Math.max(0,xs.findIndex(n=>n>=x)-1)),t=(x-xs[i])/(xs[i+1]-xs[i]),h=heights[i]*(1-t)+heights[i+1]*t,y=h*(1-Math.abs(z)*1.1)+.012;
-  triangle([x-size,y,z],[x+size,y,z+.035],[x+.03,y+.022,z+.12],[.13,.25,.065]);
- }
- const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.computeVertexNormals();g.computeBoundingBox();return g;
+ // Round ends and a wandering ridge still occupy exactly the old width/depth
+ // and unit height. Runtime scales only the visual emergence, never rules.
+ let minZ=Infinity,maxZ=-Infinity,maxY=0;for(let i=0;i<positions.length;i+=3){maxY=Math.max(maxY,positions[i+1]);minZ=Math.min(minZ,positions[i+2]);maxZ=Math.max(maxZ,positions[i+2]);}
+ for(let i=0;i<positions.length;i+=3){positions[i+1]/=maxY;positions[i+2]=(positions[i+2]-minZ)/(maxZ-minZ)-.5;}
+ const g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));g.setAttribute('color',new THREE.Float32BufferAttribute(colors,3));g.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));g.computeVertexNormals();g.computeBoundingBox();return g;
 }
 
 export function createArborJourneyView(scene,{camera=null,lowQuality=false,loader=null,base=BASE_URL}={}){
@@ -80,8 +86,8 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
   const tell=new THREE.Mesh(footprintGeometry,tellMaterial);tell.name='arbor-root-emergence-warning';tell.position.y=.068;slot.add(tell);
   const edgeMaterial=ownMaterial(new THREE.LineBasicMaterial({color:0xf1b64e,transparent:true,opacity:.5,depthWrite:false,toneMapped:false}));
   const edge=new THREE.LineSegments(edgeGeometry,edgeMaterial);edge.name='arbor-root-collision-edge';edge.position.y=.074;slot.add(edge);
-  const artMaterial=bind(ownMaterial(new THREE.SpriteMaterial({transparent:true,alphaTest:.08,depthWrite:false,toneMapped:false,color:0xffffff})),rootAsset);
-  const art=new THREE.Sprite(artMaterial);art.name='arbor-raised-living-root';art.center.set(.5,.12);art.position.y=.075;slot.add(art);
+  const artMaterial=bind(ownMaterial(new THREE.MeshBasicMaterial({transparent:true,alphaTest:.08,depthWrite:false,toneMapped:false,color:0xffffff,polygonOffset:true,polygonOffsetFactor:-1,polygonOffsetUnits:-1})),rootAsset);
+  const art=new THREE.Mesh(fallbackGeometry,artMaterial);art.name='arbor-raised-living-root';art.position.y=.073;slot.add(art);
   const fallback=new THREE.Mesh(fallbackGeometry,fallbackMaterial);fallback.name='arbor-root-loading-shape';fallback.position.y=.07;slot.add(fallback);
   rootSlots.push({slot,shadow,tell,edge,art,fallback,x:NaN,z:NaN,w:NaN,d:NaN,angle:NaN,rise:0,artWidth:1,artHeight:1,solid:false,hitTime:0});
  }
@@ -129,14 +135,11 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
    const w=clamp(finite(r.w,4),.3,6),d=clamp(finite(r.d,1),.3,6),x=finite(r.x),z=finite(r.z),angle=finite(r.angle);
    if(p.x!==x||p.z!==z||p.w!==w||p.d!==d||p.angle!==angle){
     p.x=x;p.z=z;p.w=w;p.d=d;p.angle=angle;p.slot.position.set(x,0,z);p.slot.rotation.y=angle;p.shadow.scale.set(w*1.035,1,d*1.15);p.tell.scale.set(w,1,d);p.edge.scale.set(w,1,d);if(p.hitTime){p.hitTime=0;p.art.material.color.setRGB(1,1,1);impactWrites++;}
-    // Sprites face the camera, so align the painted long axis to the actual
-    // ground axis after the fixed Act1 19/19 projection. Vertical cover must
-    // remain a long visible barrier, rather than a tiny horizontal root.
+    // Paint follows the real curved surface in world space. Rotating a long
+    // north/south root therefore preserves its mossy top and rounded ends.
     const vertical=d>w,long=vertical?d:w,minor=vertical?w:d;
-    const projectedX=vertical?Math.sin(angle):Math.cos(angle),projectedY=(vertical?-Math.cos(angle):Math.sin(angle))*Math.SQRT1_2;
-    p.art.material.rotation=Math.atan2(projectedY,projectedX);p.art.center.set(.5,vertical?.5:.12);
-    p.artWidth=long*1.02*Math.hypot(projectedX,projectedY);p.artHeight=vertical?minor*.8:long/4.5;
-    p.fallback.rotation.y=vertical?Math.PI/2:0;p.fallback.scale.set(long,.65,minor);poseWrites++;
+    p.artWidth=long;p.artHeight=minor;p.art.rotation.y=p.fallback.rotation.y=vertical?Math.PI/2:0;
+    p.art.scale.set(long,.65,minor);p.fallback.scale.set(long,.65,minor);poseWrites++;
    }
    const phase=r.phase||'rest';
    p.solid=phase==='active'&&r.active!==false;
@@ -150,7 +153,7 @@ export function createArborJourneyView(scene,{camera=null,lowQuality=false,loade
    p.tell.visible=phase==='warn';p.tell.material.opacity=phase==='warn'?(reducedMotion?.2:.14+.07*(1+Math.sin(clock*6))):0;
    p.edge.visible=phase==='warn';p.edge.material.opacity=phase==='warn'?.68:0;
    const raised=phase==='active'?Math.max(.5,p.rise):p.rise;
-   p.art.visible=rootAsset.ready&&raised>.025&&phase!=='warn'&&phase!=='rest';p.art.scale.set(p.artWidth,Math.max(.015,p.artHeight*raised),1);p.art.position.y=.18+.5*raised;p.art.material.opacity=phase==='lower'?.55:1;
+   p.art.visible=rootAsset.ready&&raised>.025&&phase!=='warn'&&phase!=='rest';p.art.scale.y=.65*raised;p.art.material.opacity=phase==='lower'?.55:1;
    p.fallback.visible=raised>.025&&phase!=='warn'&&phase!=='rest';p.fallback.scale.y=.65*raised;
   }
   if(boss){const actor=boss.actor||boss.g||boss;const phase=boss.phase||boss.state||'idle';setBossArt(actor,phase);}

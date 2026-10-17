@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import {readFileSync} from 'node:fs';
 import * as THREE from 'three';
 import {createMirrorPanels,MIRROR_PANELS} from '../src/mirror-fighter.js';
-import {createCrystalSiegeView} from '../src/crystal-siege-view.js';
+import {createCrystalSiegeView,CRYSTAL_SIEGE_PRESENTATION} from '../src/crystal-siege-view.js';
 import {createExpansionJourneyView} from '../src/expansion-journey-view.js';
 import {createCrystalSiege,buildCrystalSiege,startCrystalSiegeDefense} from '../src/crystal-siege-rules.js';
 
@@ -30,9 +30,11 @@ try{
  Object.assign(player,{x:-3,z:-2.5});update();assert.equal(context.hidden,false);assert.equal(context.textContent,'이 화단에 심기');assert.equal(choices.hidden,true);
  context.onclick();assert.equal(choices.hidden,false);assert.equal(view.preparationHeld(),true);update();assert(body.children.find(n=>n.id==='crystal-siege-ui').html.includes('준비 시간 멈춤'));buttons[0].onclick();assert.equal(view.preparationHeld(),false);update();assert.equal(calls.at(-1).ok,true);assert.equal(state.resources,0);assert.equal(state.pads[0].kind,'turret');assert.equal(choices.hidden,true);assert(context.textContent.includes('강화'));assert.equal(context.disabled,true,'cannot upgrade without paid resources');
  const facility=scene.getObjectByName('crystal-siege-facility-0'),worldCount=scene.children[0].children.length,paidState=JSON.stringify(state.pads);
- update({dt:.08});assert(facility.scale.x>2.45,'paid planting produces a short sprite settle cue');
- for(let i=0;i<5;i++)update({dt:.1});assert.equal(facility.scale.x,2.45);assert.equal(scene.children[0].children.length,worldCount);assert.equal(JSON.stringify(state.pads),paidState,'presentation changes neither facility combat nor object budget');
+ const settledSize=()=>CRYSTAL_SIEGE_PRESENTATION.facility+(state.pads[0].kind==='turret'?Math.max(0,state.pads[0].level-1)*CRYSTAL_SIEGE_PRESENTATION.levelStep:0);
+ update({dt:.08});assert(facility.scale.x>settledSize(),'paid planting produces a short sprite settle cue above its actual presentation size');
+ for(let i=0;i<5;i++)update({dt:.1});assert.equal(facility.scale.x,settledSize());assert.equal(facility.scale.y,settledSize());assert.equal(scene.children[0].children.length,worldCount);assert.equal(JSON.stringify(state.pads),paidState,'presentation changes neither facility combat nor object budget');
  state.resources=3;update();context.onclick();update();assert.equal(state.pads[0].level,2);assert(context.textContent.includes('심장 우선'));assert.equal(context.disabled,true);
+ update({dt:.08});assert(facility.scale.x>settledSize(),'paid upgrade settles around its level-specific size');for(let i=0;i<5;i++)update({dt:.1});assert.equal(facility.scale.x,settledSize());
  state.pads[0].hp=0;state.resources=3;update();assert(context.textContent.includes('다시 심기'));context.onclick();update();assert.equal(state.pads[0].level,2);assert(state.pads[0].hp>0,'normal rule retains paid level on rebuild');
  Object.assign(player,{x:3,z:2.5});state.resources=2;update();context.onclick();assert.equal(buttons[0].disabled,true);assert.equal(buttons[1].disabled,false);const count=calls.length;buttons[0].onclick();assert.equal(calls.length,count,'disabled actions emit no build intent');
  update({interactive:false});assert.equal(menu.hidden,true);assert.equal(choices.hidden,true);assert.equal(view.preparationHeld(),false);context.onclick();start.onclick();assert.equal(calls.length,count,'stale paused controls emit no intent');

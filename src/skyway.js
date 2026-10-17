@@ -6,8 +6,33 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
  // Perspective belongs to the painting. A camera-facing cover stays behind
  // combat, preserves its source aspect and never repeats or flips the gardens.
  const floorMat=new THREE.MeshBasicMaterial({color:0xffffff,toneMapped:false,fog:false,depthWrite:false});
- const edgeMat=new THREE.MeshBasicMaterial({color:0xbce9ee,transparent:true,opacity:.19,depthWrite:false,toneMapped:false,fog:false});
- const cloudMat=new THREE.MeshBasicMaterial({color:0xe4faff,transparent:true,opacity:.3,depthWrite:false,toneMapped:false,fog:false});
+ // Grade the existing sample before Three's output conversion. The central
+ // combat lane compresses cloud contrast and chroma into a quiet storm-blue
+ // midground; the peripheral garden painting keeps its original detail/value.
+ // This is part of the opaque background draw, not a veil over combat actors.
+ floorMat.onBeforeCompile=shader=>{
+  shader.vertexShader='varying vec2 vSkywayFrameUv;\n'+shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\n vSkywayFrameUv=uv;');
+  shader.fragmentShader='varying vec2 vSkywayFrameUv;\n'+shader.fragmentShader.replace('#include <map_fragment>',`#include <map_fragment>
+   float skywayRadius=length((vSkywayFrameUv-vec2(.5,.49))*vec2(1.36,1.0));
+   float skywayQuiet=(1.0-smoothstep(.18,.66,skywayRadius))*${mobile?'.92':'.86'};
+   float skywayLuma=dot(diffuseColor.rgb,vec3(.2126,.7152,.0722));
+   vec3 skywayQuietColor=mix(vec3(skywayLuma),diffuseColor.rgb,.48);
+   skywayQuietColor=mix(vec3(.015,.027,.045),skywayQuietColor,.42);
+   diffuseColor.rgb=mix(diffuseColor.rgb,skywayQuietColor,skywayQuiet);`);
+ };
+ floorMat.customProgramCacheKey=()=>mobile?'skyway-painted-hierarchy-mobile-v1':'skyway-painted-hierarchy-v1';
+ const edgeMat=new THREE.MeshBasicMaterial({color:0xbce9ee,transparent:true,opacity:.14,depthWrite:false,toneMapped:false,fog:false});
+ const cloudMat=new THREE.MeshBasicMaterial({color:0xe4faff,transparent:true,opacity:.22,depthWrite:false,toneMapped:false,fog:false});
+ // Keep a sense of travel in the margins without decorative rain crossing
+ // the seed/threat focal area at full contrast. Both batches share a program;
+ // no texture, uniform clock, new draw, or per-frame material update is needed.
+ for(const material of[edgeMat,cloudMat]){
+  material.onBeforeCompile=shader=>{
+   shader.vertexShader='varying float vSkywayRainSide;\n'+shader.vertexShader.replace('#include <project_vertex>','#include <project_vertex>\n vSkywayRainSide=gl_Position.x/gl_Position.w;');
+   shader.fragmentShader='varying float vSkywayRainSide;\n'+shader.fragmentShader.replace('#include <opaque_fragment>','diffuseColor.a*=mix(.2,1.0,smoothstep(.26,.74,abs(vSkywayRainSide)));\n #include <opaque_fragment>');
+  };
+  material.customProgramCacheKey=()=> 'skyway-rain-margins-v1';
+ }
  const darkMat=new THREE.MeshBasicMaterial({color:0x172b3d});
  const panelGeo=new THREE.PlaneGeometry(1,1),sea=new THREE.Mesh(panelGeo,floorMat);sea.name='skyway-painted-route';sea.renderOrder=-10;sea.frustumCulled=false;group.add(sea);
  const edgeGeo=new THREE.PlaneGeometry(.016,.86);
@@ -72,7 +97,7 @@ export function createSkyway(scene,{lights=[],hide=[],mobile=false}={}){
    rainClock+=safe;if(!mobile||rainClock>=1/30){rainClock%=1/30;updateInstances();}
   },
   setSpeed(value){speed=Math.max(0,Math.min(9,Number(value)||0));},
-  state:()=>({active,distance:+distance.toFixed(1),speed,drawCalls:3,instances:rain.length,openEnds:true,parallaxLayers:3,sourceAspect:map?.image?.width>0&&map?.image?.height>0?map.image.width/map.image.height:ROUTE_ASPECT,mobileMotion:mobile?.72:1,disposed}),
+  state:()=>({active,distance:+distance.toFixed(1),speed,drawCalls:3,instances:rain.length,openEnds:true,parallaxLayers:3,sourceAspect:map?.image?.width>0&&map?.image?.height>0?map.image.width/map.image.height:ROUTE_ASPECT,mobileMotion:mobile?.72:1,quietCombatCenter:true,backgroundSamples:1,rainInMargins:true,disposed}),
   dispose(){if(disposed)return;setActive(false);disposed=true;group.removeFromParent();map?.dispose();for(const material of[floorMat,edgeMat,cloudMat,darkMat])material.dispose();panelGeo.dispose();edgeGeo.dispose();}
  };
 }
