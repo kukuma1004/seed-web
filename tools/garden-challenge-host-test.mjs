@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
-const source=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
+// The same shipping source may use CRLF in a Windows checkout. Normalize only
+// line endings; keep the exact lazy-entry and hidden-control assertions.
+const source=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8').replace(/\r\n/g,'\n');
 const begin=source.indexOf('let gardenChallengeScreen=null,gardenChallengeLoadSerial=0;'),end=source.indexOf('let defenseLoadSerial=0;',begin);
 assert(begin>=0&&end>begin);
 let resolveImport,rejectImport,entryCurrent=true,mounted=0,closed=0;

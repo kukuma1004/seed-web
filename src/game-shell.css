@@ -1,0 +1,81 @@
+/* Shared menu affordances, not gameplay geometry. Keep the botanical art and
+   per-mode layouts; puzzle cells, placement pads and combat sticks keep their
+   own dimensions. This file is loaded after each mode's authored stylesheet. */
+:root{
+ --seed-control-focus:#f2dfa3;
+ --seed-control-ink:#10291f;
+ --seed-control-line:#d1c59b;
+ --seed-control-target:44px;
+}
+
+/* An inset ring stays visible in scrolling rosters, chapter cards and drawers.
+   The old 5px outside ring was cut off by their overflow boundary. */
+:is(.menu-panel,.garden-panel,.sd-paper,.sd-roster,.sp-paper,.gc-paper,.exv-panel,.gh-modal,.bt-modal,.sb-modal)
+ :is(button,a,input,select,textarea,summary):focus-visible{
+ outline:3px solid var(--seed-control-focus);
+ outline-offset:-3px;
+}
+body :is(#seed-defense,#seed-duel,#seed-expedition-v1,#seed-puzzle,
+ #seed-bounce,#seed-breakthrough,#garden-challenge,#garden-hub)
+ :is(button,input,select,textarea,summary):focus-visible{
+ outline:3px solid var(--seed-control-focus);
+ outline-offset:-3px;
+}
+
+/* Return/start/filter controls share a reliable thumb target. Deliberately do
+   not select every button: cells and in-world units have separate hit areas. */
+:is(.menu-panel,.garden-panel) :is(button,.menu-item),
+:is(.sd-roster-footer,.sd-story-footer,.sd-roster-links,.sd-dialogue-actions,
+ .sp-menu-actions,.sp-garden-actions,.gc-result-actions,.panel-actions) button,
+:is(.bt-modal,.sb-modal) article button,
+#garden-hub :is(.gh-top,.gh-tabs,.gh-extra) button{
+ min-height:var(--seed-control-target);
+ touch-action:manipulation;
+}
+
+#seed-expedition-v1 .exv-header-actions button{
+ min-height:var(--seed-control-target)!important;
+}
+#garden-hub .gh-back{min-width:var(--seed-control-target)}
+@media(max-width:850px){
+ /* This header is fixed at 51px by Expedition's compact layout. Keep the
+    existing main height while fitting a 44px control plus its 1px border. */
+ #seed-expedition-v1 .exv-header{padding-top:3px;padding-bottom:3px}
+}
+
+/* Never brighten or move an unavailable action on hover. Current mode-specific
+   lock artwork and opacity remain intact. Busy is static, so it adds no loop. */
+:is(.menu-panel,.garden-panel,.sd-paper,.sp-paper,.gc-paper,.exv-panel) button:disabled{
+ cursor:not-allowed;
+}
+:is(.menu-panel,.garden-panel,.sd-paper,.sp-paper,.gc-paper,.exv-panel) button:disabled:hover{
+ transform:none;
+}
+:is(.menu-panel,.garden-panel,.sd-paper,.sp-paper,.gc-paper,.exv-panel) button[aria-busy='true']{
+ cursor:progress;
+ border-style:dashed;
+}
+
+/* Scores and changing resource quantities should not shove nearby controls.
+   This only changes the numeral width, never game timing or the font family. */
+:is(.final-score,.survival-record,.survival-facts,.journey-shop-copy,.gh-wallet,
+ .exv-save,.sd-roster-footer,.sp-score,.td-wallet){
+ font-variant-numeric:tabular-nums;
+}
+
+/* Scrolling menus can bring the focused item fully into view without moving
+   their fixed return lane. No smooth scrolling that would delay selection. */
+:is(.dungeon-scroll,.sd-roster-scroll,.exv-main,.sp-stage-list,.gh-list){
+ scroll-padding-block:10px;
+ overscroll-behavior:contain;
+}
+
+@media(prefers-reduced-motion:reduce){
+ :is(.menu-panel,.garden-panel,.sd-paper,.sp-paper,.gc-paper,.exv-panel,.bt-modal,.sb-modal)
+ :is(button,.menu-item,.journey-card,.dungeon-mode){
+  transition:none!important;
+ }
+ :is(.menu-panel,.garden-panel) :is(.card,.menu-item,.journey-card,.dungeon-mode):hover{
+  transform:none;
+ }
+}

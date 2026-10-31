@@ -96,7 +96,7 @@ export function createAudioLimiter({maxVoices=12,now=()=>performance.now()}={}){
 }
 
 export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globalThis.webkitAudioContext,now=()=>performance.now(),baseUrl='./',fetcher=globalThis.fetch}={}){
- const limiter=createAudioLimiter({maxVoices:12,now}),unlockTargets=new Map(),fallbackNodes=new Set(),captureTaps=new Set();let ctx=null,master=null,sfxBus=null,musicBus=null,musicBank=null,effectBank=null,noiseBuffer=null,muted=false,paused=false,unlocked=false,musicScene='garden',musicClock=0,musicStep=0,duckUntil=0,variation=0,musicIntensity=1;
+ const limiter=createAudioLimiter({maxVoices:12,now}),unlockTargets=new Map(),fallbackNodes=new Set(),captureTaps=new Set();let ctx=null,master=null,sfxBus=null,musicBus=null,musicBank=null,effectBank=null,noiseBuffer=null,muted=false,paused=false,unlocked=false,musicScene='garden',musicClock=0,musicStep=0,duckUntil=0,variation=0,musicIntensity=1,unlockFlight=null,suspendFlight=null,disposed=false;
  const musicGain=()=>MUSIC_SCENES[musicScene].gain*musicIntensity*(duckUntil?.56:1);
  function applyMusicGain(fade){if(musicBus&&ctx)musicBus.gain.setTargetAtTime(musicGain(),ctx.currentTime,fade);}
  // Gain only: no source, decode, fetch, timer or autoplay side effect.
@@ -129,10 +129,27 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
   const melody=scene.melody[step];if(melody!==null)note(pitch(chord[0]+melody),at,scene.step*.88,.085,step%4===0?'sine':'triangle');
   if(scene.hat.includes(step))noise(at,.026,.045,musicBus);
  }
+ const canWake=()=>!disposed&&!muted&&!paused&&!globalThis.document?.hidden;
+ function suspendContext(){
+  if(!ctx||ctx.state==='closed')return Promise.resolve();
+  if(suspendFlight)return suspendFlight;
+  try{suspendFlight=Promise.resolve(ctx.suspend()).catch(()=>{});}catch{return Promise.resolve();}
+  const flight=suspendFlight;void flight.then(()=>{if(suspendFlight===flight)suspendFlight=null;});return flight;
+ }
  async function unlock(){
-  if(paused||globalThis.document?.hidden)return false;
-  if(!ensure())return false;
-  try{if(ctx.state!=='running')await ctx.resume();if(paused||globalThis.document?.hidden){await ctx.suspend();return false;}unlocked=ctx.state==='running';musicBank?.update(musicScene,unlocked&&!muted);return unlocked;}catch{return false;}
+  if(!canWake()||!ensure())return false;
+  // Pointer/key bursts share a single resume. A foreground gesture must wait
+  // for the previous background/mute suspend, or its late completion can
+  // silence an already-resumed game. Re-check intent after each await.
+  if(unlockFlight)return unlockFlight;
+  const flight=(async()=>{try{
+   if(suspendFlight)await suspendFlight;
+   if(!canWake())return false;
+   if(ctx.state!=='running')await ctx.resume();
+   if(!canWake()){await suspendContext();return false;}
+   unlocked=ctx.state==='running';musicBank?.update(musicScene,unlocked);return unlocked;
+  }catch{return false;}})();
+  unlockFlight=flight;try{return await flight;}finally{if(unlockFlight===flight)unlockFlight=null;}
  }
  function play(id,{intensity=1,pitch=1}={}){
   const spec=AUDIO_EVENTS[id];if(!spec||muted||paused||globalThis.document?.hidden||!unlocked||!ctx||ctx.state!=='running')return false;
@@ -163,7 +180,7 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
  function installUnlock(target=document){
   if(unlockTargets.has(target))return unlockTargets.get(target).wake;
   const wake=()=>{void unlock();};
-  const visibility=()=>{if(target.hidden){stopEffects();musicBank?.update(musicScene,false);if(ctx)void ctx.suspend().catch(()=>{});}else if(unlocked&&!paused)void unlock();};
+  const visibility=()=>{if(target.hidden){stopEffects();musicBank?.update(musicScene,false);void suspendContext();}else if(unlocked&&!paused&&!muted)void unlock();};
   target.addEventListener('pointerdown',wake,{capture:true,passive:true});target.addEventListener('keydown',wake,{capture:true,passive:true});target.addEventListener('visibilitychange',visibility);unlockTargets.set(target,{wake,visibility});return wake;
  }
  function setScene(id){const next=Object.hasOwn(MUSIC_SCENES,id)?id:'garden',changed=next!==musicScene,soft=musicIntensity!==1;musicIntensity=1;if(changed){musicScene=next;musicClock=0;musicStep=0;}if(changed||soft)applyMusicGain(.16);musicBank?.update(musicScene,unlocked&&!paused&&!muted&&!globalThis.document?.hidden);return musicScene;}
@@ -172,7 +189,7 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
   if(!unlocked||paused||muted||globalThis.document?.hidden||!ctx||ctx.state!=='running'||musicBank?.playing())return;
   const scene=MUSIC_SCENES[musicScene];musicClock+=Math.max(0,Math.min(.1,dt));if(musicClock<scene.step)return;musicClock-=scene.step;musicBeat();
  }
- async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){stopEffects();musicBank?.update(musicScene,false);try{await ctx.suspend();}catch{}}else await unlock();}
+ async function setPaused(value){paused=Boolean(value);if(!ctx)return;if(paused){stopEffects();musicBank?.update(musicScene,false);await suspendContext();}else await unlock();}
  // Inspection recording may tap the already-unlocked mix. Never call ensure
  // here, disconnect the speaker path, or wake a suspended/muted context.
  function captureOutput(){
@@ -181,5 +198,5 @@ export function createGameAudio({AudioContextCtor=globalThis.AudioContext||globa
   const tap={stream:null,stop(){if(stopped)return;stopped=true;captureTaps.delete(tap);if(destination){try{master.disconnect(destination);}catch{}try{destination.disconnect();}catch{}for(const track of destination.stream?.getTracks?.()||[])if(track.readyState!=='ended')try{track.stop();}catch{}}}};
   try{destination=ctx.createMediaStreamDestination();tap.stream=destination.stream;master.connect(destination);captureTaps.add(tap);return tap;}catch{tap.stop();return null;}
  }
- return {unlock,play,installUnlock,setPaused,setScene,setMusicIntensity,tick,captureOutput,setMuted(value){muted=Boolean(value);if(muted)stopEffects();if(master)master.gain.value=muted?0:.72;musicBank?.update(musicScene,unlocked&&!muted&&!paused&&!globalThis.document?.hidden);},reset(){stopEffects();setMusicIntensity(1);musicClock=0;musicBank?.reset();effectBank?.reset();},dispose(){for(const tap of [...captureTaps])tap.stop();stopEffects();musicBank?.reset();effectBank?.reset();for(const [target,{wake,visibility}] of unlockTargets){target.removeEventListener('pointerdown',wake,true);target.removeEventListener('keydown',wake,true);target.removeEventListener('visibilitychange',visibility);}unlockTargets.clear();limiter.reset();void ctx?.close?.();unlocked=false;},state:()=>({supported:Boolean(AudioContextCtor),contextState:ctx?.state||'uninitialized',unlocked,muted,paused,musicScene,musicStep,musicIntensity,musicDucked:Boolean(duckUntil),...(effectBank?.state()||{sfxReady:false,sfxLoading:false,sfxError:null,sfxSources:0,sfxBytes:0}),...(musicBank?.state()||{loadedMusic:null,loadingMusic:null,musicError:null,musicBuffers:0,musicSources:0,musicBytes:0}),...limiter.state()})};
+ return {unlock,play,installUnlock,setPaused,setScene,setMusicIntensity,tick,captureOutput,setMuted(value){const changed=muted!==Boolean(value);muted=Boolean(value);if(muted)stopEffects();if(master)master.gain.value=muted?0:.72;musicBank?.update(musicScene,unlocked&&!muted&&!paused&&!globalThis.document?.hidden);if(muted)void suspendContext();else if(changed)void unlock();},reset(){stopEffects();setMusicIntensity(1);musicClock=0;musicBank?.reset();effectBank?.reset();},dispose(){disposed=true;for(const tap of [...captureTaps])tap.stop();stopEffects();musicBank?.reset();effectBank?.reset();for(const [target,{wake,visibility}] of unlockTargets){target.removeEventListener('pointerdown',wake,true);target.removeEventListener('keydown',wake,true);target.removeEventListener('visibilitychange',visibility);}unlockTargets.clear();limiter.reset();void ctx?.close?.();unlocked=false;},state:()=>({supported:Boolean(AudioContextCtor),contextState:ctx?.state||'uninitialized',unlocked,muted,paused,musicScene,musicStep,musicIntensity,musicDucked:Boolean(duckUntil),...(effectBank?.state()||{sfxReady:false,sfxLoading:false,sfxError:null,sfxSources:0,sfxBytes:0}),...(musicBank?.state()||{loadedMusic:null,loadingMusic:null,musicError:null,musicBuffers:0,musicSources:0,musicBytes:0}),...limiter.state()})};
 }

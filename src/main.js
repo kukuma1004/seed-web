@@ -1,5 +1,7 @@
 import {isDuelCandidateLab} from './duel-inspection-gate.js';
 import {showModeEntryLoading} from './mode-entry-ui.js';
+import {createNearestTargetPicker} from './combat-targets.js';
+import {confirmRunSave} from './run-save-confirmation.js';
 import {applyDungeonMenuFocus} from './dungeon-menu-focus.js';
 import {createRunReflection,reflectRun,runReflectionHTML} from './run-reflection.js';
 import {focusRunResult,focusSurvivalSetup} from './run-result-view.js';
@@ -234,6 +236,7 @@ import {disposeObject} from './resources.js';
 import {createSeedEvolution,LAW_PRESENTATION} from './evolution.js';
 import {seedVisualEnabled,seedVisualReviewEnabled} from './seed-visual-language.js';
 import './seed-visual25d.css';
+import './game-shell.css';
 
 const seedVisualReview=seedVisualEnabled(location);
 const seedVisualDiagnostics=seedVisualReviewEnabled(location);
@@ -435,6 +438,7 @@ for(let i=0,counts=[0,0];i<45;i++){const x=(rng()-.5)*28,y=rng()*4,z=(rng()-.5)*
 for(const m of moteMeshes){m.frustumCulled=false;m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);scene.add(m);}
 const player=createSeedBody(scene,{occlusion:qualityLevel>0,criticalOcclusion:true});player.scale.setScalar(1.25);player.position.set(0,0,5);let hp=100,invuln=0,shootCD=0,mirrorBurst=null,elapsed=0,stage=0,mode='ready',paused=false,kills=0,runDashes=0,runDamageTaken=0;const chosen=new Set(),mutated=new Set(),levels=new Map();let shotPierce=false,bankedUpgrades=0;let LS=lawStats(levels),choicesTaken=0,choiceKills=0;let dashState=createDashState(),dashLock=0,cachedTarget=null,targetTimer=0;const pulls=[],orbitHits=new Map();let cycle=0,region='garden',mirrorSession=null,survivalSession=null,survivalArt=null;let roomCleared=false,exitOpen=false,skywayAdvance=0,roomStartKills=0,midReward=false,crowdLeft=0,crowdTimer=0,crowdIndex=0,autoAttack=true,playerSlow=0,orbitTime=0,orbitHitCD=0;const wells=[];const orbitGroup=new THREE.Group(),orbitRoll=new THREE.Quaternion(),orbitAxis=new V(0,0,1),orbitPaint=new THREE.MeshBasicMaterial({map:projectileSprites.baseTexture,transparent:true,alphaTest:.07,depthWrite:false,depthTest:true,side:THREE.DoubleSide,toneMapped:false});scene.add(orbitGroup);for(let i=0;i<7;i++){const o=mesh(baseOrbitGeo,orbitPaint,orbitGroup,0,.65,0);o.castShadow=false;o.receiveShadow=false;}orbitGroup.visible=false;let enemies=[],shots=[],effects=[],enemyShots=[];const keys=new Set(),lastMove=new V(0,0,1);let keyboardDash=false;const aim=new V(0,0,-3);
 const enemyIndex=createSpatialIndex(2.5),nearbyEnemies=[],explosionEnemies=[],separationEnemies=[];
+const nearestChainTargets=createNearestTargetPicker(),nearestFormChainTargets=createNearestTargetPicker({requireHp:false});
 const previousPlayer=new V(),moveVector=new V(),aimDirection=new V(),pullVector=new V(),wellVector=new V(),enemyVector=new V(),previousEnemy=new V(),previousShot=new V(),previousEnemyShot=new V(),shotOrigin=new V(),fanDir=new V();
 const contactShadows=createContactShadows(scene);
 const heldForms=new Map(),formCombats=new Map(),formCooldowns=new Map(),formAttacks=new Map();const AWAKEN_TWIN_STAGGER=5;const combatKey=(id,i)=>isTwinForm(id)?`${id}#${i}`:id;const combatsOf=id=>attackPartsOf(id).map((_,i)=>formCombats.get(combatKey(id,i))).filter(Boolean);let activeGauge=createActiveGauge(),activeReadyAnnounced=false;const finaleEchoes=[];const promptedSolo=new Set(),promptedAwaken=new Set(),promptedSecond=new Set();let guideTarget=null,rerollUsed=false;const promptedForms=new Set();let arena=arenaFor(0),escortWaves=0,bossDefeated=false;const pendingEscorts=[];
@@ -1450,7 +1454,7 @@ function formHit(e,amount,meta){
  if(has('orbit')&&!isBoss(e)&&e.type!=='turret'){e.g.position.addScaledVector(meta.direction,.3);collide(e.g.position,.4);}
  if(has('portal')){vfx.burst(e.g.position,'portal',7,.48);audio.play('portal');}
  if(supports('frost'))e.slow=Math.max(e.slow||0,LS.frostTime);
-  if(supports('chain'))for(const other of enemies.filter(o=>o!==e&&!o.dead&&o.g.position.distanceTo(e.g.position)<4).sort((a,b)=>a.g.position.distanceTo(e.g.position)-b.g.position.distanceTo(e.g.position)).slice(0,LS.chainTargets)){line(e.g.position,other.g.position);damageEnemy(other,amount*.18,false,false,meta);}
+  if(supports('chain'))for(const other of nearestFormChainTargets(enemies,e,4,LS.chainTargets)){line(e.g.position,other.g.position);damageEnemy(other,amount*.18,false,false,meta);}
   if(supports('burst')){vfx.explosion(e.g.position,'burst',Math.max(.8,LS.burstRadius*.45));for(const other of enemies)if(other!==e&&!other.dead&&other.g.position.distanceTo(e.g.position)<LS.burstRadius)damageEnemy(other,amount*.18,false,false,meta);}
  if(supports('gravity')){if(wells.length>=6)wells.shift();wells.push({pos:e.g.position.clone(),life:1.2,pulse:0});}
  if(e.hp<journeyContactHp)player.userData.pulseJourneyHit?.(meta.evolution||meta.kind,meta.kind);
@@ -1569,17 +1573,17 @@ $('#save-exit').onclick=async()=>{
   if(survivalSession.lab){finishSurvival(false,true);return;}
   if(!saveSurvival()){pauseBuild.setSaveStatus(survivalSaveMessage);return;}
   saveExitBusy=true;$('#save-exit').disabled=true;pauseBuild.setSaveStatus('기기에 저장했어요. 계정 저장을 확인하는 중…');
-  try{await survivalCloud.flush();}finally{saveExitBusy=false;$('#save-exit').disabled=false;}
+  try{const owner=account.user()?.uid||'guest',saved=await confirmRunSave({owner,currentOwner:()=>account.user()?.uid||'guest',required:Boolean(account.user()&&!account.user().isAnonymous),flush:()=>survivalCloud.flush(),accepted:r=>r.kind==='synced'});if(!saved.ok){pauseBuild.setSaveStatus(saved.reason==='account'?'계정이 바뀌어 화면을 유지합니다. 원래 계정으로 돌아와 저장을 다시 확인해 주세요.':'이 기기에는 저장했어요 · 계정 저장을 확인하지 못해 화면을 유지합니다. 연결을 확인하고 다시 저장해 주세요.');return;}}finally{saveExitBusy=false;$('#save-exit').disabled=false;}
   leavePausedRun();showSurvivalSetup();return;
  }
  if(developerRun||mirrorSession){leavePausedRun();return;}
+ if(currentJourneyOwner!==(account.user()?.uid||'guest')){pauseBuild.setSaveStatus('계정이 바뀌어 화면을 유지합니다. 원래 계정으로 돌아와 저장을 다시 확인해 주세요.');return;}
  if(!readCheckpoint(actStore())&&!exitWithoutSaveArmed){exitWithoutSaveArmed=true;pauseBuild.setSaveStatus('저장 기록이 없어요. 다시 누르면 저장하지 않고 나갑니다.');$('#save-exit').textContent=saveExitLabel();return;}
  if(exitWithoutSaveArmed){leavePausedRun();return;}
  if(!saveLeaveState()&&!roomCleared){exitWithoutSaveArmed=true;pauseBuild.setSaveStatus('이 방의 기록을 저장하지 못했어요. 다시 누르면 이전 기록만 남기고 나갑니다.');$('#save-exit').textContent=saveExitLabel();return;}
  saveExitBusy=true;pauseBuild.setSaveStatus('기기에 저장했어요. 다른 기기에서도 이어할 수 있도록 계정 저장을 확인하는 중…');$('#save-exit').disabled=true;$('#save-exit').textContent='계정에 저장하는 중…';
- let timeout;try{const result=await Promise.race([cloud.flush(),new Promise(resolve=>{timeout=setTimeout(()=>resolve({ok:false,reason:'timeout'}),10_000);})]);cloudSaveFailed=Boolean(account.user()&&!account.user().isAnonymous&&(!result.ok||cloud.isDirty()));}
- catch{cloudSaveFailed=Boolean(account.user()&&!account.user().isAnonymous);}
- finally{clearTimeout(timeout);saveExitBusy=false;$('#save-exit').disabled=false;}
+ try{const owner=currentJourneyOwner,saved=await confirmRunSave({owner,currentOwner:()=>account.user()?.uid||'guest',required:Boolean(account.user()&&!account.user().isAnonymous),flush:()=>cloud.flush(),accepted:r=>r.ok===true&&!cloud.isDirty()});cloudSaveFailed=!saved.ok;if(!saved.ok){pauseBuild.setSaveStatus(saved.reason==='account'?'계정이 바뀌어 화면을 유지합니다. 원래 계정으로 돌아와 저장을 다시 확인해 주세요.':'이 기기에는 저장했어요 · 계정 저장이 끝나지 않아 화면을 유지합니다. 연결을 확인하고 다시 저장해 주세요.');return;}}
+ finally{saveExitBusy=false;$('#save-exit').disabled=false;$('#save-exit').textContent=saveExitLabel();}
  leavePausedRun();
 };
 // Separate challenge: shares the real combat engine, never a journey checkpoint.
@@ -2146,9 +2150,9 @@ function damageEnemy(e,amount,chaining=true,critical=false,meta=null){
  const applied=Math.max(0,Math.min(before,before-Math.max(0,e.hp)));combatAnalysis.damage(meta?.evolution||meta?.kind||'seed',applied,elapsed);if(critical)combatAnalysis.utility('critical');
  e.hit=.14;
  if(meta?.direction){const side=meta.direction.x+meta.direction.z*.34;e.impactSide=Math.abs(side)>.04?Math.sign(side):1;}
- vfx.impact(e.g.position,critical?'amber':chaining?([...chosen][0]||'seed'):'chain',critical);audio.play('hit',{intensity:critical?1.3:isBoss(e)?1.15:.75});
+ vfx.impact(e.g.position,critical?'amber':chaining?(chosen.values().next().value||'seed'):'chain',critical);audio.play('hit',{intensity:critical?1.3:isBoss(e)?1.15:.75});
  if(chaining&&chosen.has('chain')){
-  const reach=chainRange(mutations),falloff=chainFalloff(mutations);let nearby=enemies.filter(o=>o!==e&&o.hp>0&&o.g.position.distanceTo(e.g.position)<reach).sort((a,b)=>a.g.position.distanceTo(e.g.position)-b.g.position.distanceTo(e.g.position)).slice(0,LS.chainTargets);
+  const reach=chainRange(mutations),falloff=chainFalloff(mutations),nearby=nearestChainTargets(enemies,e,reach,LS.chainTargets);
   for(const [index,o] of nearby.entries()){line(e.g.position,o.g.position);const spot=o.g.position.clone();damageEnemy(o,amount*(isBoss(o)?.325:falloff),false);if(hasMutation(mutations,'chain','rune'))dropRune(spot);if(hasMutation(mutations,'chain','burst')&&index===nearby.length-1)mutationBurst(spot,TUNE.chainBurst.radius,TUNE.chainBurst.damage);}
   if(nearby.length&&relics.equipped==='coil'&&e.hp>0)damageEnemy(e,amount*.18,false);
  }

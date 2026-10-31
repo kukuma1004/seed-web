@@ -38,7 +38,7 @@ for(const name of ['showSeedExpedition','showSeedAdventure','showSeedDuel','show
 {
  const start=source.indexOf("$('#save-exit').onclick=async()=>{"),end=source.indexOf('\n};',start)+3;
  let exit,leaves=0,setups=0,saves=0,ends=0;
- const ctx=vm.createContext({$:()=>({set onclick(fn){exit=fn;}}),saveExitBusy:false,expansionJourney:null,survivalSession:{lab:null},localInspection:true,leavePausedRun:()=>leaves++,showSurvivalSetup:()=>setups++,saveSurvival:()=>{saves++;return false;},finishSurvival:()=>ends++,pauseBuild:{setSaveStatus(){}},developerRun:false,mirrorSession:null});
+ const ctx=vm.createContext({$:()=>({set onclick(fn){exit=fn;}}),saveExitBusy:false,arborJourney:null,journeyCompletionPending:false,expansionJourney:null,survivalSession:{lab:null},localInspection:true,leavePausedRun:()=>leaves++,showSurvivalSetup:()=>setups++,saveSurvival:()=>{saves++;return false;},finishSurvival:()=>ends++,pauseBuild:{setSaveStatus(){}},developerRun:false,mirrorSession:null});
  vm.runInContext(source.slice(start,end),ctx);await exit();
  assert.deepEqual([leaves,setups,saves,ends],[1,1,0,0],'inspection exits without public save or result credit');
  ctx.survivalSaveMessage='';ctx.survivalSession={siegeReview:true};await exit();assert.equal(saves,1,'dedicated siege review still checks its own checkpoint');assert.equal(leaves,1,'failed siege checkpoint stays active');

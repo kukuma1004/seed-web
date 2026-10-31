@@ -279,9 +279,25 @@ body.menu-art #overlay.menu-screen:not(.survival-overlay):before,body.menu-art #
 .journey-shop-copy{display:flex;flex-direction:column;gap:3px;min-width:0}
 .journey-heading .journey-shop strong{font-size:16px;line-height:1.25}
 .journey-heading .journey-shop small{font-size:11px;line-height:1.4;letter-spacing:0;overflow-wrap:anywhere}
+/* Compact landscape keeps chapter art in the scroll lane rather than reserving
+   a quarter of the screen for an empty heading. Return stays fixed. */
 @media(max-height:500px) and (orientation:landscape){
- .journey-panel .journey-heading{min-height:92px}
+ .journey-panel .journey-heading{min-height:56px;align-items:center}
  .journey-panel .journey-heading .journey-shop{min-height:48px;padding:6px 10px!important;grid-template-columns:30px minmax(0,1fr) 10px;gap:8px}
  .journey-heading .journey-shop .potion-icon{width:30px;height:30px}
  .journey-heading .journey-shop strong{font-size:14px}
+ .journey-panel .journey-heading .menu-ornament{display:none}
+ .journey-panel .journey-heading .eyebrow{display:none}
+ .journey-panel .journey-heading h2{font-size:22px!important;line-height:1.25!important;margin:0!important}
+ .journey-panel .journey-heading .journey-shop{max-width:50%}
+ .journey-heading .journey-shop-copy small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+ .menu-panel.home-panel{padding-top:max(12px,env(safe-area-inset-top))}
+ .home-panel .name-field input{min-height:44px}
+ .home-panel .ranking-consent{min-height:44px}
+ #overlay:has(.home-panel) .menu-news-button{min-height:44px}
 }
+
+/* Focus is part of the card frame, so it survives overflow clipping. */
+.dungeon-panel :is(button,summary):focus-visible,
+.home-panel :is(button,input,a):focus-visible{outline:3px solid #f2dfa3;outline-offset:-3px}
+.home-panel .menu-item:hover:disabled{background:#20382e;transform:none;cursor:not-allowed}
