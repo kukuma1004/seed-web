@@ -88,7 +88,11 @@ export function createJourneyPresentationView(scene,{document:doc=globalThis.doc
   leaves.visible=!low;leafMat.opacity=Math.max(0,fade)*.72;
   if(!low){for(let i=0;i<6;i++){const a=i*Math.PI/3,r=.72+(reduced?0:progress*.3);pose.position.set(Math.cos(a)*r,.12+(reduced?0:Math.sin(Math.PI*progress)*.46),Math.sin(a)*r);pose.rotation.set(reduced?-.18:-.18-progress*.4,-a+Math.PI/2,0);pose.scale.setScalar(.6);pose.updateMatrix();leaves.setMatrixAt(i,pose.matrix);}leaves.instanceMatrix.needsUpdate=true;}
  }
- function decorateClear(panel){const heading=panel?.querySelector('h2');heading?.classList.add('journey-clear-heading');panel?.querySelector('.final-score')?.classList.add('journey-clear-score');}
+ function decorateClear(panel){
+  const heading=panel?.querySelector('h2');heading?.classList.add('journey-clear-heading');
+  const score=panel?.querySelector('.final-score');score?.classList.add('journey-clear-score');
+  panel?.querySelector('.clear-title,.run-harvest')?.classList.add('journey-clear-keepsake');
+ }
  return {update,hide,decorateClear,
   metrics:()=>({meshes:3,geometries:2,materials:2,leaves:6,textures:0,lights:0,raf:0,bannerNodes:4,disposed}),
   dispose(){if(disposed)return;disposed=true;hide();root.removeFromParent();leaves.dispose();ringGeo.dispose();leafGeo.dispose();ringMat.dispose();leafMat.dispose();banner.remove();}

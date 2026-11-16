@@ -16,14 +16,14 @@ export function showRelicChoice(root,r,offers,onDone,effectOf=null,bossName='오
  const finish=(id,revision)=>{if(!active(revision))return;completed=true;onDone(id);};
  const choose=(id,revision)=>{
   if(!active(revision)||!offers.includes(id))return;const detail=++view;
-  root.innerHTML=`<p>유물 획득</p><h2>${RELICS[id].name}</h2><div class="relic-detail">${tile(id,fx(id),true)}</div><p>장착한 1개만 효과가 있어요. 현재 유물 ${ownedRelics(r).length}/4개</p><div class="relic-actions"><button class="primary" data-keep="equip">${r.equipped?(r.stored.length<RELIC_STORAGE?'새 유물 장착 · 기존 유물 보관':'장착 유물을 버리고 교체'):'지금 장착하기'}</button>${r.stored.length<RELIC_STORAGE?'<button data-keep="store">보관하기 · 효과 없음</button>':r.stored.map(old=>`<button data-replace="${old}">${RELICS[old].name}을 버리고 보관</button>`).join('')}<button id="relic-back">다른 후보 보기</button></div>`;
+  root.innerHTML=`<p>유물 확인</p><h2>${RELICS[id].name}</h2><div class="relic-detail relic-detail-reveal">${tile(id,fx(id),true)}</div><p>장착한 1개만 효과가 있어요. 현재 유물 ${ownedRelics(r).length}/4개</p><div class="relic-actions"><button class="primary" data-keep="equip">${r.equipped?(r.stored.length<RELIC_STORAGE?'새 유물 장착 · 기존 유물 보관':'장착 유물을 버리고 교체'):'지금 장착하기'}</button>${r.stored.length<RELIC_STORAGE?'<button data-keep="store">보관하기 · 효과 없음</button>':r.stored.map(old=>`<button data-replace="${old}">${RELICS[old].name}을 버리고 보관</button>`).join('')}<button id="relic-back">다른 후보 보기</button></div>`;
   root.querySelectorAll('[data-keep]').forEach(b=>b.onclick=()=>{if(active(detail)&&keepRelic(r,id,b.dataset.keep,b.dataset.keep==='equip'?r.equipped:null))finish(id,detail);});
   root.querySelectorAll('[data-replace]').forEach(b=>b.onclick=()=>{if(active(detail)&&keepRelic(r,id,'store',b.dataset.replace))finish(id,detail);});
   root.querySelector('#relic-back').onclick=()=>{if(active(detail))draw();};
  };
  const draw=()=>{
   if(completed||relicChoiceOwners.get(root)!==owner)return;const revision=++view;
-  root.hidden=false;root.innerHTML=`<p data-relic-source></p><h2>이번 조합을 더 특별하게</h2><p>하나를 골라 장착하거나 보관하세요 · 장착 1개 + 보관 최대 3개</p><div class="relic-cards" style="--n:${offers.length}">${offers.map(id=>`<button data-relic="${id}" class="fx-${fx(id)?.state||'none'}">${tile(id,fx(id),true)}<small>선택하기</small></button>`).join('')}</div><button id="skip-relic">받지 않고 계속하기</button>`;
+  root.hidden=false;root.innerHTML=`<p data-relic-source></p><h2>이번 조합을 더 특별하게</h2><p>하나를 골라 장착하거나 보관하세요 · 장착 1개 + 보관 최대 3개</p><div class="relic-cards${revision===1?' relic-first-reveal':''}" style="--n:${offers.length}">${offers.map(id=>`<button data-relic="${id}" class="fx-${fx(id)?.state||'none'}">${tile(id,fx(id),true)}<small>선택하기</small></button>`).join('')}</div><button id="skip-relic">받지 않고 계속하기</button>`;
   root.querySelector('[data-relic-source]').textContent=bossName+'의 유물함';
   root.querySelectorAll('[data-relic]').forEach(b=>b.onclick=()=>choose(b.dataset.relic,revision));
   root.querySelector('#skip-relic').onclick=()=>finish(null,revision);

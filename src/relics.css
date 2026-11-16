@@ -10,3 +10,12 @@
 .relic-cards .relic-art{width:100px;height:100px;margin:auto}
 @media(max-width:600px){.relic-cards .relic-art{width:60px;height:60px;flex:none;margin:0}}
 @media(max-height:500px) and (orientation:landscape){.relic-cards .relic-art{width:56px;height:56px}}
+
+#overlay [data-relic-source]{color:#eed49b;font-weight:700;letter-spacing:.05em}
+.relic-detail-reveal{border-color:#d5b779}
+@media(prefers-reduced-motion:no-preference){
+ .relic-first-reveal>button .relic-art,.relic-detail-reveal .relic-art{animation:relic-art-reveal 270ms cubic-bezier(.18,.76,.28,1) both}
+ .relic-first-reveal>button:nth-child(2) .relic-art{animation-delay:40ms}
+ .relic-first-reveal>button:nth-child(3) .relic-art{animation-delay:80ms}
+}
+@keyframes relic-art-reveal{from{opacity:.6;transform:translateY(4px) scale(.89)}to{opacity:1;transform:translateY(0) scale(1)}}

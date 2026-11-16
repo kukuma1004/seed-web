@@ -94,9 +94,12 @@ function relicHost(state=emptyRelics()){
 }
 {
  const h=relicHost();h.open();const list=h.dom.root.querySelectorAll('[data-relic]'),skip=h.dom.$('#skip-relic');
+ assert.match(h.dom.root.innerHTML,/relic-first-reveal/);
  list[0].onclick();const keep=h.dom.root.querySelectorAll('[data-keep]')[0],back=h.dom.$('#relic-back');
+ assert.match(h.dom.root.innerHTML,/relic-detail-reveal/);assert.equal(h.state.equipped,null,'viewing the animated detail awards nothing');
  list[1].onclick();assert(h.dom.root.innerHTML.includes(RELICS.mirror.name),'a stale list choice cannot replace the current detail');
  back.onclick();keep.onclick();assert.equal(h.state.equipped,null,'a dismissed detail cannot award its relic');
+ assert.doesNotMatch(h.dom.root.innerHTML,/relic-first-reveal/,'returning to candidates must not replay the chest reveal');
  h.dom.root.querySelectorAll('[data-relic]')[1].onclick();h.dom.root.querySelectorAll('[data-keep]')[0].onclick();
  const renders=h.dom.renders();for(let i=0;i<20000;i++){skip.onclick();back.onclick();list[2].onclick();keep.onclick();}
  assert.equal(h.dom.renders(),renders,'discarded callbacks must not rebuild the overlay');

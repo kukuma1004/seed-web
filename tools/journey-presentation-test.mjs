@@ -172,7 +172,6 @@ for(const [hp,label] of [[1,'전운'],[.65,'뇌우'],[.32,'폭풍핵']]){
  assert.equal(observed.state().title,hp===1?TEMPEST_CARRIER.name:label);
  const serial=observed.state().serial;hudContext.renderBossHud(liveJohan);assert.equal(observed.state().serial,serial);
 }
-assert(main.indexOf('journeyPresentationView.decorateClear')>main.indexOf('showEnd(null,{cleared:true,newTitle,bonus})'),'clear flourish follows durable completion, never awards it');
 assert(main.includes("!reset&&journeyPresentationEnabled()&&['cards','forms'].includes(mode)"));
 assert(main.includes('boss.phasePending||boss.phase'),'warn for the actual pending phase, without waiting for the first faster attack');
 assert(main.includes("journeyPresentationEnabled()&&!paused&&['playing','evolving'].includes(mode)"));
@@ -181,6 +180,7 @@ assert(css.includes('pointer-events:none'));assert(css.includes('prefers-reduced
 // Execute the actual completion host, including its failed durable-save branch.
 // Storage/UI adapters are explicit mocks; this is not live account evidence.
 const normalized=main.replaceAll('\r\n','\n'),completeSource=normalized.slice(normalized.indexOf('function completeRun('),normalized.indexOf('\nfunction finalBossName('));
+assert(completeSource.indexOf('showEnd(null,{cleared:true,newTitle,bonus})')>=0&&completeSource.indexOf('journeyPresentationView.decorateClear')>completeSource.indexOf('showEnd(null,{cleared:true,newTitle,bonus})'),'clear flourish follows durable completion, never awards it');
 function completion(saved,region='garden'){
  const c={mode:'playing',region,developerRun:false,survivalSession:null,mirrorSession:null,trainingSession:null,expansionJourney:null,paused:false,journeyCompletionPending:false,
   score:900,elapsed:120,decorations:0,results:0,currentJourneyOwner:'guest',account:{user:()=>null},runStorage:{},enemyShots:[],

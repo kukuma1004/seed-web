@@ -739,6 +739,7 @@ function showArborResult(won){
  $('#arbor-ranking').onclick=()=>showRanking('arbor');
  if(ranked)online.flush().catch(()=>0).then(()=>{if(account.user()?.uid!==owner)throw Error('account');return online.submit(entry,500);}).then(()=>{if(serial===rankSerial)setText($('#arbor-result-rank'),'6막 랭킹에 기록했어요');}).catch(()=>{if(serial===rankSerial)setText($('#arbor-result-rank'),'기록을 보관했어요 · 랭킹에서 다시 연결합니다');});
  $('#arbor-retry').onclick=()=>void startArborJourney();$('#arbor-back').onclick=()=>{showIntro();showJourneys();};
+ if(won&&arborJourney.phase==='complete'&&typeof journeyPresentationView!=='undefined')journeyPresentationView.decorateClear($('#overlay'));
 }
 
 const expansionStore=act=>expansionChannel==='public'?createExpansionAccountSaveStore(rawStorage,act,expansionSaveOwner||expansionOwner(),{context:expansionPublicFacts,lease:expansionSaveLease}):createExpansionSaveStore(rawStorage,act,(expansionSaveOwner||expansionOwner())+(expansionJourney?.siege?':siege-review':''));
